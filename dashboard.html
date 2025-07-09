@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Oslira AI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dashboard">
+    <aside class="sidebar">
+        <div class="logo">Oslira AI</div>
+        
+        <nav class="menu">
+            <a href="/dashboard.html" class="active">Dashboard</a>
+            <a href="/generate.html">Generate Messages</a>
+            <a href="/leads.html">My Leads</a>
+            <a href="/credits.html">Buy Credits</a>
+            <a href="/settings.html">Settings</a>
+        </nav>
+        
+        <div class="credit-balance">
+            <h4>Credit Balance</h4>
+            <p class="credits" id="credit-count">247 credits</p>
+            <a href="/credits.html">Add More</a>
+        </div>
+        
+        <div class="user-info">
+            <p id="user-email">user@email.com</p>
+            <a href="#" onclick="logout()">Sign Out</a>
+        </div>
+    </aside>
+    
+    <main class="main-content">
+        <header>
+            <h1>Dashboard</h1>
+            <button class="primary-btn" onclick="location.href='/generate.html'">
+                Generate New Messages
+            </button>
+        </header>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Messages Sent</h3>
+                <p class="big-number">1,247</p>
+                <span class="trend up">+23% this week</span>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Response Rate</h3>
+                <p class="big-number">73%</p>
+                <span class="trend up">+5% vs average</span>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Meetings Booked</h3>
+                <p class="big-number">34</p>
+                <span class="trend">This month</span>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Credits Used</h3>
+                <p class="big-number">753</p>
+                <span>247 remaining</span>
+            </div>
+        </div>
+        
+        <section class="recent-activity">
+            <h2>Recent Activity</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Lead Name</th>
+                        <th>Channel</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="activity-table">
+                    <tr>
+                        <td>2 hours ago</td>
+                        <td>@johndoe</td>
+                        <td>Instagram</td>
+                        <td><span class="status responded">Responded</span></td>
+                        <td><button>View Details</button></td>
+                    </tr>
+                    <tr>
+                        <td>5 hours ago</td>
+                        <td>@janesmith</td>
+                        <td>LinkedIn</td>
+                        <td><span class="status sent">Sent</span></td>
+                        <td><button>View Details</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+</html>
