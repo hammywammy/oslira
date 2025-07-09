@@ -12,8 +12,7 @@
         
         <nav class="menu">
             <a href="/dashboard.html" class="active">Dashboard</a>
-            <a href="/generate.html">Generate Messages</a>
-            <a href="/leads.html">My Leads</a>
+            <a href="/leads.html">Lead Research</a>
             <a href="/credits.html">Buy Credits</a>
             <a href="/settings.html">Settings</a>
         </nav>
@@ -32,23 +31,52 @@
     
     <main class="main-content">
         <header>
-            <h1>Dashboard</h1>
-            <button class="primary-btn" onclick="location.href='/generate.html'">
-                Generate New Messages
+            <h1>Welcome back!</h1>
+            <button class="primary-btn" onclick="location.href='/leads.html'">
+                Research New Leads
             </button>
         </header>
         
+        <div class="quick-actions">
+            <h2>Quick Actions</h2>
+            <div class="action-cards">
+                <div class="action-card" onclick="location.href='/leads.html'">
+                    <div class="icon">🔍</div>
+                    <h3>Research a Lead</h3>
+                    <p>Analyze a profile and get personalized message</p>
+                </div>
+                
+                <div class="action-card" onclick="uploadCSV()">
+                    <div class="icon">📊</div>
+                    <h3>Bulk Upload</h3>
+                    <p>Upload CSV with multiple leads</p>
+                </div>
+                
+                <div class="action-card" onclick="location.href='/credits.html'">
+                    <div class="icon">💳</div>
+                    <h3>Buy Credits</h3>
+                    <p>Get more credits for lead research</p>
+                </div>
+            </div>
+        </div>
+        
         <div class="stats-grid">
             <div class="stat-card">
-                <h3>Messages Sent</h3>
-                <p class="big-number">1,247</p>
-                <span class="trend up">+23% this week</span>
+                <h3>Leads Researched</h3>
+                <p class="big-number">234</p>
+                <span class="trend up">+45 this week</span>
             </div>
             
             <div class="stat-card">
-                <h3>Response Rate</h3>
-                <p class="big-number">73%</p>
-                <span class="trend up">+5% vs average</span>
+                <h3>Average Score</h3>
+                <p class="big-number">78</p>
+                <span class="trend">Quality leads</span>
+            </div>
+            
+            <div class="stat-card">
+                <h3>Messages Sent</h3>
+                <p class="big-number">189</p>
+                <span class="trend up">+23% response rate</span>
             </div>
             
             <div class="stat-card">
@@ -56,43 +84,57 @@
                 <p class="big-number">34</p>
                 <span class="trend">This month</span>
             </div>
-            
-            <div class="stat-card">
-                <h3>Credits Used</h3>
-                <p class="big-number">753</p>
-                <span>247 remaining</span>
-            </div>
         </div>
         
         <section class="recent-activity">
-            <h2>Recent Activity</h2>
+            <h2>Recent Lead Activity</h2>
             <table>
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Lead Name</th>
-                        <th>Channel</th>
+                        <th>Time</th>
+                        <th>Lead</th>
+                        <th>Score</th>
                         <th>Status</th>
-                        <th>Actions</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="activity-table">
                     <tr>
                         <td>2 hours ago</td>
                         <td>@johndoe</td>
-                        <td>Instagram</td>
+                        <td><span class="score-badge">92</span></td>
                         <td><span class="status responded">Responded</span></td>
-                        <td><button>View Details</button></td>
+                        <td><button onclick="viewLead('johndoe')">View</button></td>
                     </tr>
                     <tr>
                         <td>5 hours ago</td>
-                        <td>@janesmith</td>
-                        <td>LinkedIn</td>
-                        <td><span class="status sent">Sent</span></td>
-                        <td><button>View Details</button></td>
+                        <td>@sarahtech</td>
+                        <td><span class="score-badge">88</span></td>
+                        <td><span class="status researched">Researched</span></td>
+                        <td><button onclick="viewLead('sarahtech')">View</button></td>
                     </tr>
                 </tbody>
             </table>
+        </section>
+        
+        <section class="insights">
+            <h2>AI Insights</h2>
+            <div class="insight-cards">
+                <div class="insight-card">
+                    <h4>Best Performing Message Type</h4>
+                    <p>Messages mentioning specific pain points get 3x more responses</p>
+                </div>
+                
+                <div class="insight-card">
+                    <h4>Optimal Outreach Time</h4>
+                    <p>Your leads respond most between 10-11 AM EST</p>
+                </div>
+                
+                <div class="insight-card">
+                    <h4>High-Value Pattern Detected</h4>
+                    <p>CEOs who post about growth challenges convert 5x better</p>
+                </div>
+            </div>
         </section>
     </main>
 
