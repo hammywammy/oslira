@@ -17,10 +17,6 @@
                 <button type="submit">Continue with Email</button>
             </form>
             
-            <div class="divider">or</div>
-            
-            <button class="oauth-btn" disabled>Continue with Google (coming soon)</button>
-            
             <p class="terms">
                 By continuing, you agree to our 
                 <a href="/terms.html">Terms of Service</a> and 
@@ -36,22 +32,32 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
     <script>
+        const supabaseUrl = 'YOUR_SUPABASE_URL';
+        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
         async function handleAuth(e) {
             e.preventDefault();
             const email = document.getElementById('email').value;
             
-            // Initialize Supabase client
-            const supabaseUrl = 'YOUR_SUPABASE_URL';
-            const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
-            const supabase = createClient(supabaseUrl, supabaseKey);
-            
             try {
+                // Check if user exists
+                const { data: existingUser } = await supabase
+                    .from('users')
+                    .select('onboarding_completed')
+                    .eq('email', email)
+                    .single();
+                
+                // Set redirect based on whether user has completed onboarding
+                const redirectTo = existingUser?.onboarding_completed 
+                    ? '/dashboard.html' 
+                    : '/onboarding.html';
+                
                 const { error } = await supabase.auth.signInWithOtp({
                     email: email,
                     options: {
-                        emailRedirectTo: window.location.origin + '/dashboard.html'
+                        emailRedirectTo: window.location.origin + redirectTo
                     }
                 });
                 
