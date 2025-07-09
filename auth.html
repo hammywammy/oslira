@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Oslira AI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-box" id="auth-form-container">
+            <h1>Welcome to Oslira</h1>
+            <p>Enter your email to sign in or create an account</p>
+            
+            <form id="auth-form" onsubmit="handleAuth(event)">
+                <input type="email" id="email" placeholder="your@email.com" required>
+                <button type="submit">Continue with Email</button>
+            </form>
+            
+            <div class="divider">or</div>
+            
+            <button class="oauth-btn" disabled>Continue with Google (coming soon)</button>
+            
+            <p class="terms">
+                By continuing, you agree to our 
+                <a href="/terms.html">Terms of Service</a> and 
+                <a href="/privacy.html">Privacy Policy</a>
+            </p>
+        </div>
+        
+        <div class="auth-success" id="auth-success" style="display:none;">
+            <h2>Check Your Email!</h2>
+            <p>We sent a magic link to <span id="email-sent"></span></p>
+            <p>Click the link in the email to sign in.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+    <script>
+        async function handleAuth(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            
+            // Initialize Supabase client
+            const supabaseUrl = 'YOUR_SUPABASE_URL';
+            const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+            const supabase = createClient(supabaseUrl, supabaseKey);
+            
+            try {
+                const { error } = await supabase.auth.signInWithOtp({
+                    email: email,
+                    options: {
+                        emailRedirectTo: window.location.origin + '/dashboard.html'
+                    }
+                });
+                
+                if (error) throw error;
+                
+                // Show success message
+                document.getElementById('auth-form-container').style.display = 'none';
+                document.getElementById('auth-success').style.display = 'block';
+                document.getElementById('email-sent').textContent = email;
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
