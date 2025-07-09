@@ -1,19 +1,16 @@
-import type { HandlerContext } from "@netlify/functions";
-
-export const handler = async (event: any, context: HandlerContext) => {
-  // Example Edge Function: simple auth check (stub)
-  const authHeader = event.headers.get("authorization") || "";
+export default async function (request: Request) {
+  const authHeader = request.headers.get("authorization") || "";
   if (!authHeader.startsWith("Bearer ")) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: "Unauthorized" }),
-    };
+    return new Response(
+      JSON.stringify({ error: "Unauthorized" }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   // Normally verify token here
 
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ message: "Authorized" }),
-  };
-};
+  return new Response(
+    JSON.stringify({ message: "Authorized" }),
+    { status: 200, headers: { "Content-Type": "application/json" } }
+  );
+}
