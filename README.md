@@ -4,8 +4,8 @@
 
 1. Clone repo  
 2. Run `npm install`  
-3. Create `.env` file with:
-4. Run `npm run dev` for local dev  
+3. Create `.env` file with necessary environment variables  
+4. Run `npm run dev` for local development  
 5. Run `npm run build` for production build  
 
 ## Deployment
@@ -20,7 +20,7 @@
 - `src/`: React frontend  
 - `netlify/`: Netlify config & edge functions  
 - `cloudflare-workers/`: API backend  
-- `.github/`: CI pipeline
+- `.github/`: CI pipeline  
 
 ## TODO
 
@@ -29,5 +29,3 @@
 - Add campaign management UI  
 - Add auth token validation in Edge functions  
 - Expand Cloudflare Workers API routes
-
-
