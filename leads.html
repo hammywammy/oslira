@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Research - Oslira AI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dashboard">
+    <aside class="sidebar">
+        <div class="logo">Oslira AI</div>
+        
+        <nav class="menu">
+            <a href="/dashboard.html">Dashboard</a>
+            <a href="/leads.html" class="active">Lead Research</a>
+            <a href="/credits.html">Buy Credits</a>
+            <a href="/settings.html">Settings</a>
+        </nav>
+        
+        <div class="credit-balance">
+            <h4>Credit Balance</h4>
+            <p class="credits" id="credit-count">247 credits</p>
+            <a href="/credits.html">Add More</a>
+        </div>
+        
+        <div class="user-info">
+            <p id="user-email">user@email.com</p>
+            <a href="#" onclick="logout()">Sign Out</a>
+        </div>
+    </aside>
+    
+    <main class="main-content">
+        <header>
+            <h1>Lead Research Center</h1>
+        </header>
+        
+        <!-- Lead Research Input -->
+        <div class="research-input">
+            <h2>Research a New Lead</h2>
+            <div class="input-group">
+                <input type="text" id="lead-url" placeholder="Paste Instagram or LinkedIn profile URL">
+                <button class="primary-btn" onclick="researchLead()">Analyze Lead</button>
+            </div>
+            <p class="hint">Or upload a CSV file with multiple leads</p>
+            <input type="file" id="csv-upload" accept=".csv" style="display:none;">
+            <button class="secondary-btn" onclick="document.getElementById('csv-upload').click()">Upload CSV</button>
+        </div>
+        
+        <!-- Current Lead Analysis -->
+        <div id="lead-analysis" class="lead-analysis-section" style="display:none;">
+            <h2>Lead Analysis</h2>
+            
+            <div class="lead-profile">
+                <div class="profile-header">
+                    <img src="" id="lead-avatar" class="avatar">
+                    <div class="profile-info">
+                        <h3 id="lead-name">@johndoe</h3>
+                        <p id="lead-bio">CEO at TechStartup | Building the future of AI</p>
+                        <div class="lead-metrics">
+                            <span>📍 New York</span>
+                            <span>👥 12.5K followers</span>
+                            <span>📊 324 posts</span>
+                        </div>
+                    </div>
+                    <div class="lead-score-box">
+                        <div class="score" id="lead-score">92</div>
+                        <p>Match Score</p>
+                    </div>
+                </div>
+                
+                <div class="analysis-details">
+                    <div class="detail-section">
+                        <h4>Why This Lead Scores High</h4>
+                        <ul id="score-reasons">
+                            <li>✅ CEO/Founder (decision maker)</li>
+                            <li>✅ Posted about scaling challenges yesterday</li>
+                            <li>✅ In your target industry (SaaS)</li>
+                            <li>✅ Active daily on platform</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h4>Recent Activity Insights</h4>
+                        <ul id="activity-insights">
+                            <li>🔥 Talking about hiring challenges</li>
+                            <li>💬 Engages with similar services</li>
+                            <li>📈 Company growing fast (hiring posts)</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="message-section">
+                    <h4>Personalized Message</h4>
+                    <div class="message-box">
+                        <textarea id="generated-message" rows="6">Hey John, saw your post about struggling to scale your sales team at TechStartup. 
+
+I help SaaS founders automate their outreach without hiring more SDRs - we just helped a similar startup book 47 demos in 30 days.
+
+Worth a quick chat to see if I could help you hit those aggressive growth targets you mentioned?</textarea>
+                        <div class="message-actions">
+                            <button onclick="copyMessage()">Copy Message</button>
+                            <button onclick="editMessage()">Edit</button>
+                            <button class="primary-btn" onclick="saveLead()">Save Lead & Message</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Related Leads Discovery -->
+        <div id="related-leads" class="related-leads-section" style="display:none;">
+            <h2>Related High-Value Leads</h2>
+            <p class="section-subtitle">Similar profiles worth researching next</p>
+            
+            <table class="related-leads-table">
+                <thead>
+                    <tr>
+                        <th>Profile</th>
+                        <th>Relevance</th>
+                        <th>Key Insights</th>
+                        <th>Score</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="related-leads-tbody">
+                    <tr>
+                        <td>
+                            <div class="mini-profile">
+                                <img src="" class="mini-avatar">
+                                <div>
+                                    <strong>@sarahtech</strong>
+                                    <br>
+                                    <small>CMO at CloudBase</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>Engaged with target's content</td>
+                        <td>Looking for automation tools</td>
+                        <td><span class="score-badge">88</span></td>
+                        <td><button onclick="researchRelated('sarahtech')">Research</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Saved Leads Table -->
+        <div class="saved-leads-section">
+            <h2>Your Lead Pipeline</h2>
+            
+            <div class="pipeline-filters">
+                <button class="filter-btn active">All Leads</button>
+                <button class="filter-btn">High Score (80+)</button>
+                <button class="filter-btn">Contacted</button>
+                <button class="filter-btn">Responded</button>
+                <button class="filter-btn">Meeting Booked</button>
+            </div>
+            
+            <table class="leads-table">
+                <thead>
+                    <tr>
+                        <th>Lead</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Last Action</th>
+                        <th>Response</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="leads-tbody">
+                    <!-- Populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+    <script>
+        async function researchLead() {
+            const url = document.getElementById('lead-url').value;
+            if (!url) {
+                alert('Please enter a profile URL');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('lead-analysis').style.display = 'block';
+            document.getElementById('related-leads').style.display = 'none';
+            
+            // Call API to analyze lead
+            // This would integrate with your Cloudflare Worker
+            try {
+                const response = await fetch('/api/analyze-lead', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url })
+                });
+                
+                const data = await response.json();
+                
+                // Populate lead analysis
+                populateLeadAnalysis(data);
+                
+                // Show related leads
+                document.getElementById('related-leads').style.display = 'block';
+                populateRelatedLeads(data.relatedLeads);
+                
+                // Deduct credit
+                updateCreditCount(-1);
+            } catch (error) {
+                alert('Error analyzing lead: ' + error.message);
+            }
+        }
+        
+        function populateLeadAnalysis(data) {
+            document.getElementById('lead-name').textContent = data.username;
+            document.getElementById('lead-bio').textContent = data.bio;
+            document.getElementById('lead-score').textContent = data.score;
+            document.getElementById('generated-message').value = data.message;
+            // ... populate other fields
+        }
+        
+        function copyMessage() {
+            const message = document.getElementById('generated-message');
+            message.select();
+            document.execCommand('copy');
+            alert('Message copied to clipboard!');
+        }
+        
+        function saveLead() {
+            // Save lead to database
+            alert('Lead saved to your pipeline!');
+            // Refresh the leads table
+            loadLeadsPipeline();
+        }
+    </script>
+</body>
+</html>
