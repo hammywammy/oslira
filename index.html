@@ -1,13 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AI Outreach Platform</title>
-    <link href="/src/index.css" rel="stylesheet" />
-  </head>
-  <body class="bg-gray-50">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oslira AI - Turn Any Profile Into Perfect Customers</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <div class="logo">Oslira AI</div>
+            <div class="nav-menu">
+                <a href="#how-it-works">How it Works</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#demo">Live Demo</a>
+                <a href="/auth.html">Login</a>
+                <a href="/auth.html" class="btn-primary">Start Free</a>
+            </div>
+        </div>
+    </nav>
+
+    <section id="hero">
+        <h1>Turn Any Instagram Profile Into 50 Perfect Customers in 60 Seconds</h1>
+        <p>AI-powered outreach that analyzes profiles, finds ideal prospects, and writes personalized messages that get 73% response rates</p>
+        
+        <div class="demo-box">
+            <input type="text" id="demo-url" placeholder="Paste any Instagram/LinkedIn URL...">
+            <button onclick="analyzeDemo()">Analyze Profile</button>
+        </div>
+        
+        <p class="social-proof">Join 1,247 businesses already using AI outreach</p>
+    </section>
+
+    <section id="how-it-works">
+        <h2>From Profile to Pipeline in 3 Steps</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Drop Any Link</h3>
+                <p>Paste an Instagram profile, LinkedIn URL, or upload a CSV of leads</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>AI Does the Magic</h3>
+                <p>Our AI analyzes profiles, scores relevance, and writes personalized messages</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Watch Responses Roll In</h3>
+                <p>Send messages across channels and track responses in real-time</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="results">
+        <h2>Real Results From Real Users</h2>
+        <div class="metrics-grid">
+            <div class="metric">
+                <h3>73%</h3>
+                <p>Average Response Rate</p>
+            </div>
+            <div class="metric">
+                <h3>12 min</h3>
+                <p>To First Response</p>
+            </div>
+            <div class="metric">
+                <h3>$47</h3>
+                <p>Cost Per Meeting Booked</p>
+            </div>
+            <div class="metric">
+                <h3>267%</h3>
+                <p>Average ROI</p>
+            </div>
+        </div>
+        
+        <div class="live-feed">
+            <h3>Live Activity</h3>
+            <div id="activity-feed">
+                <div class="feed-item">🔥 Sarah from NYC just booked 3 meetings</div>
+                <div class="feed-item">⚡ Mike analyzed 127 profiles in 4 minutes</div>
+                <div class="feed-item">💰 Tech Startup closed $50k deal from AI outreach</div>
+            </div>
+        </div>
+    </section>
+
+    <section id="pricing">
+        <h2>Pay Only For What You Use</h2>
+        <p>No subscriptions. No commitments. Just credits.</p>
+        
+        <div class="pricing-cards">
+            <div class="card">
+                <h3>Starter</h3>
+                <div class="price">$97</div>
+                <p>100 credits</p>
+                <ul>
+                    <li>$0.97 per lead</li>
+                    <li>Email support</li>
+                    <li>Basic analytics</li>
+                </ul>
+                <button onclick="location.href='/auth.html'">Get Started</button>
+            </div>
+            
+            <div class="card popular">
+                <div class="badge">Most Popular</div>
+                <h3>Growth</h3>
+                <div class="price">$397</div>
+                <p>500 credits</p>
+                <ul>
+                    <li>$0.79 per lead</li>
+                    <li>Priority support</li>
+                    <li>Advanced analytics</li>
+                    <li>API access</li>
+                </ul>
+                <button onclick="location.href='/auth.html'">Get Started</button>
+            </div>
+            
+            <div class="card">
+                <h3>Scale</h3>
+                <div class="price">$1,297</div>
+                <p>2,000 credits</p>
+                <ul>
+                    <li>$0.65 per lead</li>
+                    <li>Dedicated support</li>
+                    <li>Custom integrations</li>
+                    <li>White-label option</li>
+                </ul>
+                <button onclick="location.href='/auth.html'">Get Started</button>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="column">
+                <h4>Product</h4>
+                <a href="#features">Features</a>
+                <a href="#pricing">Pricing</a>
+                <a href="/api">API Docs</a>
+            </div>
+            <div class="column">
+                <h4>Company</h4>
+                <a href="/about">About</a>
+                <a href="/blog">Blog</a>
+                <a href="/careers">Careers</a>
+            </div>
+            <div class="column">
+                <h4>Legal</h4>
+                <a href="/terms.html">Terms of Service</a>
+                <a href="/privacy.html">Privacy Policy</a>
+                <a href="/refund.html">Refund Policy</a>
+            </div>
+            <div class="column">
+                <h4>Support</h4>
+                <a href="mailto:support@oslira.com">support@oslira.com</a>
+                <a href="/help">Help Center</a>
+                <a href="/status">System Status</a>
+            </div>
+        </div>
+        <div class="bottom">
+            <p>&copy; 2024 Oslira AI. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
 </html>
