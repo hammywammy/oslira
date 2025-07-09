@@ -1,11 +1,11 @@
 [build]
-  edge_functions = "netlify/edge-functions"
+  publish = "public"
   command = ""
-  publish = "."
+  edge_functions = "netlify/edge-functions"
 
 [functions]
   directory = "netlify/edge-functions"
 
 [[edge_functions]]
   path = "/api/*"
-  function = "auth"  # Example Edge Function name
+  function = "auth"
