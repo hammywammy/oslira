@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Your Ideal Customer Profile - Oslira AI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="onboarding-page">
+    <div class="onboarding-container">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress" style="width: 20%"></div>
+        </div>
+        
+        <form id="onboarding-form">
+            <!-- Step 1: Business Info -->
+            <div class="step" id="step-1">
+                <h2>Let's get to know your business</h2>
+                <p>This helps our AI find the perfect leads for you</p>
+                
+                <div class="form-group">
+                    <label>What's your business name?</label>
+                    <input type="text" id="business-name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>What do you offer?</label>
+                    <textarea id="business-offer" placeholder="e.g., Social media marketing services for restaurants" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>What's your website?</label>
+                    <input type="url" id="business-website" placeholder="https://yoursite.com">
+                </div>
+                
+                <button type="button" onclick="nextStep(2)">Next</button>
+            </div>
+            
+            <!-- Step 2: Ideal Customer -->
+            <div class="step" id="step-2" style="display:none;">
+                <h2>Describe your ideal customer</h2>
+                <p>Be specific - this directly impacts lead quality</p>
+                
+                <div class="form-group">
+                    <label>Industry/Niche</label>
+                    <input type="text" id="target-industry" placeholder="e.g., E-commerce, SaaS, Local restaurants" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Company Size</label>
+                    <select id="company-size">
+                        <option value="solo">Solopreneurs</option>
+                        <option value="small">1-10 employees</option>
+                        <option value="medium">11-50 employees</option>
+                        <option value="large">51-200 employees</option>
+                        <option value="enterprise">200+ employees</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Decision Maker Titles</label>
+                    <input type="text" id="decision-makers" placeholder="e.g., CEO, Marketing Manager, Founder" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Location Preferences</label>
+                    <input type="text" id="location-pref" placeholder="e.g., USA, Remote, Global">
+                </div>
+                
+                <button type="button" onclick="previousStep(1)">Back</button>
+                <button type="button" onclick="nextStep(3)">Next</button>
+            </div>
+            
+            <!-- Step 3: Pain Points -->
+            <div class="step" id="step-3" style="display:none;">
+                <h2>What problems do you solve?</h2>
+                <p>Understanding their pain points helps craft better messages</p>
+                
+                <div class="form-group">
+                    <label>Main pain points your customers face</label>
+                    <textarea id="pain-points" placeholder="e.g., Struggling to get consistent leads, Spending too much time on manual outreach, Low conversion rates" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>How do you solve these problems?</label>
+                    <textarea id="solution" placeholder="e.g., Automated lead generation that saves 10 hours per week" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>What makes you different?</label>
+                    <textarea id="differentiator" placeholder="e.g., Only agency that guarantees 30% response rate" required></textarea>
+                </div>
+                
+                <button type="button" onclick="previousStep(2)">Back</button>
+                <button type="button" onclick="nextStep(4)">Next</button>
+            </div>
+            
+            <!-- Step 4: Messaging Preferences -->
+            <div class="step" id="step-4" style="display:none;">
+                <h2>How should we communicate?</h2>
+                <p>This shapes your outreach tone and style</p>
+                
+                <div class="form-group">
+                    <label>Preferred tone</label>
+                    <select id="tone">
+                        <option value="professional">Professional & Formal</option>
+                        <option value="friendly">Friendly & Conversational</option>
+                        <option value="casual">Casual & Relaxed</option>
+                        <option value="enthusiastic">Enthusiastic & Energetic</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Primary outreach channel</label>
+                    <select id="primary-channel">
+                        <option value="instagram">Instagram DM</option>
+                        <option value="linkedin">LinkedIn Message</option>
+                        <option value="email">Email</option>
+                        <option value="multi">Multi-channel</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Value proposition (one sentence)</label>
+                    <input type="text" id="value-prop" placeholder="e.g., I help restaurants get 50+ new customers per month" required>
+                </div>
+                
+                <button type="button" onclick="previousStep(3)">Back</button>
+                <button type="button" onclick="nextStep(5)">Next</button>
+            </div>
+            
+            <!-- Step 5: Lead Scoring -->
+            <div class="step" id="step-5" style="display:none;">
+                <h2>What makes a lead perfect for you?</h2>
+                <p>We'll score leads based on these criteria</p>
+                
+                <div class="form-group">
+                    <label>Must-have indicators (comma separated)</label>
+                    <textarea id="must-haves" placeholder="e.g., Active on social media daily, Has 'CEO' in bio, Posted about growth recently" required></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Red flags to avoid</label>
+                    <textarea id="red-flags" placeholder="e.g., No recent activity, Competitor, Already using similar service"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Minimum follower count (if applicable)</label>
+                    <input type="number" id="min-followers" placeholder="1000">
+                </div>
+                
+                <button type="button" onclick="previousStep(4)">Back</button>
+                <button type="submit">Complete Setup</button>
+            </div>
+        </form>
+        
+        <div class="success-state" id="success" style="display:none;">
+            <h2>✅ Perfect! Your AI is ready</h2>
+            <p>We've saved your ideal customer profile and will use it to find perfect leads</p>
+            <button onclick="location.href='/leads.html'">Start Finding Leads</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const supabaseUrl = 'YOUR_SUPABASE_URL';
+        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        let currentStep = 1;
+        
+        function nextStep(step) {
+            document.getElementById(`step-${currentStep}`).style.display = 'none';
+            document.getElementById(`step-${step}`).style.display = 'block';
+            currentStep = step;
+            updateProgress();
+        }
+        
+        function previousStep(step) {
+            document.getElementById(`step-${currentStep}`).style.display = 'none';
+            document.getElementById(`step-${step}`).style.display = 'block';
+            currentStep = step;
+            updateProgress();
+        }
+        
+        function updateProgress() {
+            const progress = (currentStep / 5) * 100;
+            document.getElementById('progress').style.width = progress + '%';
+        }
+        
+        document.getElementById('onboarding-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Collect all form data
+            const profileData = {
+                business_name: document.getElementById('business-name').value,
+                business_offer: document.getElementById('business-offer').value,
+                business_website: document.getElementById('business-website').value,
+                target_industry: document.getElementById('target-industry').value,
+                company_size: document.getElementById('company-size').value,
+                decision_makers: document.getElementById('decision-makers').value,
+                location_pref: document.getElementById('location-pref').value,
+                pain_points: document.getElementById('pain-points').value,
+                solution: document.getElementById('solution').value,
+                differentiator: document.getElementById('differentiator').value,
+                tone: document.getElementById('tone').value,
+                primary_channel: document.getElementById('primary-channel').value,
+                value_prop: document.getElementById('value-prop').value,
+                must_haves: document.getElementById('must-haves').value,
+                red_flags: document.getElementById('red-flags').value,
+                min_followers: document.getElementById('min-followers').value || 0
+            };
+            
+            try {
+                // Save to database
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                const { error } = await supabase
+                    .from('ideal_customer_profiles')
+                    .insert({
+                        user_id: user.id,
+                        ...profileData
+                    });
+                
+                if (error) throw error;
+                
+                // Update user as onboarded
+                await supabase
+                    .from('users')
+                    .update({ onboarding_completed: true })
+                    .eq('id', user.id);
+                
+                // Show success
+                document.getElementById('onboarding-form').style.display = 'none';
+                document.getElementById('success').style.display = 'block';
+            } catch (error) {
+                alert('Error saving profile: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
