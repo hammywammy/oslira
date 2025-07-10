@@ -1,14 +1,28 @@
+// Add this at the very top to properly destructure createClient
+const { createClient } = window.supabase || {};
+
 // Initialize Supabase
 const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjQxMzUsImV4cCI6MjA2NzYwMDEzNX0.XMoC3iLcDbKNxPfhTHj8CQsEjelTIrivIddfPTO9P64';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseClient = createClient ? createClient(supabaseUrl, supabaseKey) : null;
 
 // Check authentication on protected pages
 async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser();
+    if (!supabaseClient) {
+        console.error('Supabase client not initialized');
+        return;
+    }
     
-    if (!user && !window.location.pathname.includes('auth.html') && !window.location.pathname.includes('terms') && !window.location.pathname.includes('privacy') && !window.location.pathname.includes('refund')) {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    
+    // List of public pages that don't require auth
+    const publicPages = ['/', '/index.html', '/auth.html', '/legal/terms.html', '/legal/privacy.html', '/legal/refund.html'];
+    const currentPath = window.location.pathname;
+    
+    // Check if current page is protected and user is not authenticated
+    if (!user && !publicPages.some(page => currentPath.includes(page))) {
         window.location.href = '/auth.html';
+        return;
     }
     
     if (user) {
@@ -24,8 +38,10 @@ async function checkAuth() {
 // Load credit balance
 async function loadCreditBalance() {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data, error } = await supabase
+        if (!supabaseClient) return;
+        
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        const { data, error } = await supabaseClient
             .from('users')
             .select('credits')
             .eq('id', user.id)
@@ -35,6 +51,12 @@ async function loadCreditBalance() {
             document.querySelectorAll('#credit-count').forEach(el => {
                 el.textContent = data.credits + ' credits';
             });
+            
+            // Also update any balance displays
+            const balanceDisplay = document.getElementById('balance-display');
+            if (balanceDisplay) {
+                balanceDisplay.textContent = data.credits;
+            }
         }
     } catch (error) {
         console.error('Error loading credits:', error);
@@ -43,16 +65,21 @@ async function loadCreditBalance() {
 
 // Logout function
 async function logout() {
-    await supabase.auth.signOut();
+    if (!supabaseClient) return;
+    
+    await supabaseClient.auth.signOut();
     window.location.href = '/';
 }
+
 // Update credit count
 async function updateCreditCount(change) {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        if (!supabaseClient) return;
+        
+        const { data: { user } } = await supabaseClient.auth.getUser();
         
         // Get current credits
-        const { data: currentData } = await supabase
+        const { data: currentData } = await supabaseClient
             .from('users')
             .select('credits')
             .eq('id', user.id)
@@ -61,7 +88,7 @@ async function updateCreditCount(change) {
         const newCredits = currentData.credits + change;
         
         // Update credits
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('users')
             .update({ credits: newCredits })
             .eq('id', user.id);
@@ -71,6 +98,12 @@ async function updateCreditCount(change) {
             document.querySelectorAll('#credit-count').forEach(el => {
                 el.textContent = newCredits + ' credits';
             });
+            
+            // Update balance display if exists
+            const balanceDisplay = document.getElementById('balance-display');
+            if (balanceDisplay) {
+                balanceDisplay.textContent = newCredits;
+            }
         }
     } catch (error) {
         console.error('Error updating credits:', error);
@@ -127,25 +160,50 @@ function viewLead(username) {
     window.location.href = `/leads.html?lead=${username}`;
 }
 
+// Upload CSV function
+function uploadCSV() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // In production, this would parse CSV and process leads
+            alert('CSV upload functionality coming soon!');
+        }
+    };
+    input.click();
+}
+
 // Load leads pipeline
 async function loadLeadsPipeline() {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        if (!supabaseClient) return;
         
-        const { data: leads, error } = await supabase
+        const { data: { user } } = await supabaseClient.auth.getUser();
+        
+        const { data: leads, error } = await supabaseClient
             .from('leads')
             .select('*')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false });
         
-        if (leads) {
+        if (leads && leads.length > 0) {
             const tbody = document.getElementById('leads-tbody');
-            tbody.innerHTML = '';
-            
-            leads.forEach(lead => {
-                const row = createLeadRow(lead);
-                tbody.appendChild(row);
-            });
+            if (tbody) {
+                tbody.innerHTML = '';
+                
+                leads.forEach(lead => {
+                    const row = createLeadRow(lead);
+                    tbody.appendChild(row);
+                });
+            }
+        } else {
+            // Show empty state
+            const tbody = document.getElementById('leads-tbody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No leads yet. Start by researching a profile above!</td></tr>';
+            }
         }
     } catch (error) {
         console.error('Error loading leads:', error);
@@ -157,11 +215,11 @@ function createLeadRow(lead) {
     tr.innerHTML = `
         <td>
             <div class="mini-profile">
-                <img src="${lead.avatar_url || '/default-avatar.png'}" class="mini-avatar">
+                <img src="${lead.avatar_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiNFNUU3RUIiLz4KPHBhdGggZD0iTTIwIDIyQzIzLjMxMzcgMjIgMjYgMTkuMzEzNyAyNiAxNkMyNiAxMi42ODYzIDIzLjMxMzcgMTAgMjAgMTBDMTYuNjg2MyAxMCAxNCAxMi42ODYzIDE0IDE2QzE0IDE5LjMxMzcgMTYuNjg2MyAyMiAyMCAyMloiIGZpbGw9IiM5Q0E0QUYiLz4KPHBhdGggZD0iTTEwIDMzQzEwIDI4LjU4MTcgMTQuNTgxNyAyNSAyMCAyNUMyNS40MTgzIDI1IDMwIDI4LjU4MTcgMzAgMzNWNDBIMTBWMzNaIiBmaWxsPSIjOUNBNEFGIi8+Cjwvc3ZnPg=='}" class="mini-avatar">
                 <div>
                     <strong>${lead.username}</strong>
                     <br>
-                    <small>${lead.bio_snippet}</small>
+                    <small>${lead.bio_snippet || 'No bio available'}</small>
                 </div>
             </div>
         </td>
@@ -176,6 +234,18 @@ function createLeadRow(lead) {
         </td>
     `;
     return tr;
+}
+
+// View lead details
+function viewLeadDetails(leadId) {
+    // In production, this would open a modal or navigate to lead detail page
+    console.log('Viewing lead:', leadId);
+}
+
+// Send message to lead
+function sendMessage(leadId) {
+    // In production, this would open message composer
+    console.log('Sending message to lead:', leadId);
 }
 
 function formatDate(dateString) {
@@ -194,7 +264,12 @@ function formatDate(dateString) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
+    // Only run auth check if Supabase is loaded
+    if (window.supabase && createClient) {
+        checkAuth();
+    }
+    
+    // Always run these regardless of auth
     updateActivityFeed();
     
     // Load page-specific data
@@ -202,4 +277,3 @@ document.addEventListener('DOMContentLoaded', () => {
         loadLeadsPipeline();
     }
 });
-//
