@@ -19,8 +19,8 @@
             
             <p class="terms">
                 By continuing, you agree to our 
-                <a href="/terms.html">Terms of Service</a> and 
-                <a href="/privacy.html">Privacy Policy</a>
+                <a href="/legal/terms.html">Terms of Service</a> and 
+                <a href="/legal/privacy.html">Privacy Policy</a>
             </p>
         </div>
         
@@ -30,20 +30,21 @@
             <p>Click the link in the email to sign in.</p>
         </div>
     </div>
-
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
-        const supabaseUrl = 'YOUR_SUPABASE_URL';
-        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
+        const { createClient } = supabase;
+        const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjQxMzUsImV4cCI6MjA2NzYwMDEzNX0.XMoC3iLcDbKNxPfhTHj8CQsEjelTIrivIddfPTO9P64';
+        const supabaseClient = createClient(supabaseUrl, supabaseKey);
+        
         async function handleAuth(e) {
             e.preventDefault();
             const email = document.getElementById('email').value;
             
             try {
                 // Check if user exists
-                const { data: existingUser } = await supabase
+                const { data: existingUser } = await supabaseClient
                     .from('users')
                     .select('onboarding_completed')
                     .eq('email', email)
@@ -54,7 +55,7 @@
                     ? '/dashboard.html' 
                     : '/onboarding.html';
                 
-                const { error } = await supabase.auth.signInWithOtp({
+                const { error } = await supabaseClient.auth.signInWithOtp({
                     email: email,
                     options: {
                         emailRedirectTo: window.location.origin + redirectTo
@@ -68,7 +69,21 @@
                 document.getElementById('auth-success').style.display = 'block';
                 document.getElementById('email-sent').textContent = email;
             } catch (error) {
-                alert('Error: ' + error.message);
+                // If user doesn't exist, they're new - still send magic link
+                const { error: signUpError } = await supabaseClient.auth.signInWithOtp({
+                    email: email,
+                    options: {
+                        emailRedirectTo: window.location.origin + '/onboarding.html'
+                    }
+                });
+                
+                if (signUpError) {
+                    alert('Error: ' + signUpError.message);
+                } else {
+                    document.getElementById('auth-form-container').style.display = 'none';
+                    document.getElementById('auth-success').style.display = 'block';
+                    document.getElementById('email-sent').textContent = email;
+                }
             }
         }
     </script>
