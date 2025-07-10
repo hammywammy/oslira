@@ -80,7 +80,7 @@
   </div>
 
   <!-- CDN + Error Logger -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.40.3/dist/umd/supabase.min.js"></script>
   <script>
     window.addEventListener("error", (e) => console.error("JS error:", e.message));
   </script>
@@ -121,18 +121,24 @@
       };
 
       try {
-        const {
-          data: { session },
-          error: sessionError
-        } = await supabaseClient.auth.getSession();
+        const waitForUser = async () => {
+  for (let i = 0; i < 10; i++) {
+    const user = supabaseClient.auth.user();
+    if (user) return user;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  return null;
+};
 
-        if (sessionError || !session || !session.user) {
-          alert("You're not signed in. Please log in.");
-          window.location.href = "/auth.html";
-          return;
-        }
+const user = await waitForUser();
 
-        const user = session.user;
+if (!user) {
+  alert("You're not signed in. Please log in.");
+  window.location.href = "/auth.html";
+  return;
+}
+
+
 
         // Insert user (ignore if duplicate)
         const { error: userError } = await supabaseClient
