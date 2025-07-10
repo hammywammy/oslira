@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Credits - Oslira AI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dashboard">
+    <aside class="sidebar">
+        <div class="logo">Oslira AI</div>
+        
+        <nav class="menu">
+            <a href="/dashboard.html">Dashboard</a>
+            <a href="/leads.html">Lead Research</a>
+            <a href="/credits.html" class="active">Buy Credits</a>
+            <a href="/settings.html">Settings</a>
+        </nav>
+        
+        <div class="credit-balance">
+            <h4>Credit Balance</h4>
+            <p class="credits" id="credit-count">5 credits</p>
+            <a href="/credits.html">Add More</a>
+        </div>
+        
+        <div class="user-info">
+            <p id="user-email">user@email.com</p>
+            <a href="#" onclick="logout()">Sign Out</a>
+        </div>
+    </aside>
+    
+    <main class="main-content">
+        <header>
+            <h1>Buy Credits</h1>
+        </header>
+        
+        <div class="credit-overview">
+            <div class="current-balance">
+                <h2>Current Balance</h2>
+                <p class="big-number" id="balance-display">5</p>
+                <p>credits remaining</p>
+                <p class="credit-info">
+                    <small>💡 1 credit = 1 basic lead | 2 credits = 1 detailed lead analysis</small>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Free Trial Notice -->
+        <div class="free-trial-notice" id="free-trial-notice">
+            <h3>🎉 You're using your 5 free credits!</h3>
+            <p>Test the system with your free credits. When you're ready for more, unlock full access below.</p>
+        </div>
+        
+        <div class="pricing-cards">
+            <!-- Impulse Pack - NEW -->
+            <div class="card impulse">
+                <div class="badge">Quick Start</div>
+                <h3>Impulse Pack</h3>
+                <div class="price">$19</div>
+                <p>20 credits</p>
+                <p class="per-credit">$0.95 per credit</p>
+                <ul>
+                    <li>Perfect for testing</li>
+                    <li>~20 basic leads</li>
+                    <li>Instant access</li>
+                </ul>
+                <button onclick="purchaseCredits('impulse')">Unlock Now</button>
+            </div>
+            
+            <div class="card">
+                <h3>Starter</h3>
+                <div class="price">$97</div>
+                <p>100 credits</p>
+                <p class="per-credit">$0.97 per credit</p>
+                <ul>
+                    <li>Best for solopreneurs</li>
+                    <li>Email support</li>
+                    <li>Basic analytics</li>
+                </ul>
+                <button onclick="purchaseCredits('starter')">Purchase</button>
+            </div>
+            
+            <div class="card popular">
+                <div class="badge">Most Popular</div>
+                <h3>Growth</h3>
+                <div class="price">$497</div>
+                <p>500 credits</p>
+                <p class="per-credit">$0.79 per credit</p>
+                <p class="savings">Save $88!</p>
+                <ul>
+                    <li>Growing agencies</li>
+                    <li>Priority support</li>
+                    <li>Advanced analytics</li>
+                    <li>API access</li>
+                </ul>
+                <button onclick="purchaseCredits('growth')">Purchase</button>
+            </div>
+            
+            <div class="card">
+                <h3>Scale</h3>
+                <div class="price">$997</div>
+                <p>1,500 credits</p>
+                <p class="per-credit">$0.66 per credit</p>
+                <p class="savings">Save $458!</p>
+                <ul>
+                    <li>High-volume teams</li>
+                    <li>Dedicated support</li>
+                    <li>Custom integrations</li>
+                    <li>White-label options</li>
+                </ul>
+                <button onclick="purchaseCredits('scale')">Purchase</button>
+            </div>
+        </div>
+        
+        <div class="payment-methods">
+            <p>Secure payment via Stripe. We accept:</p>
+            <div class="payment-icons">
+                <span>💳 Credit Card</span>
+                <span>🏦 Bank Transfer</span>
+                <span>📱 Apple Pay</span>
+                <span>🟢 Google Pay</span>
+            </div>
+        </div>
+        
+        <section class="usage-history">
+            <h2>Credit History</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Balance</th>
+                        <th>Invoice</th>
+                    </tr>
+                </thead>
+                <tbody id="credit-history">
+                    <tr>
+                        <td>Today</td>
+                        <td>+5</td>
+                        <td>Free Trial</td>
+                        <td>5</td>
+                        <td>-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+    <script>
+        async function purchaseCredits(plan) {
+            const plans = {
+                impulse: { credits: 20, price: 19 },
+                starter: { credits: 100, price: 97 },
+                growth: { credits: 500, price: 497 },
+                scale: { credits: 1500, price: 997 }
+            };
+            
+            const selectedPlan = plans[plan];
+            
+            // In production, this would initiate Stripe checkout
+            // For now, show what would happen
+            if (confirm(`Purchase ${selectedPlan.credits} credits for $${selectedPlan.price}?`)) {
+                alert('Stripe checkout would open here. Credits would be added after successful payment.');
+                // After payment success, update credits:
+                // updateCreditCount(selectedPlan.credits);
+            }
+        }
+    </script>
+</body>
+</html>
