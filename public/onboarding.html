@@ -1,178 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Your Business Profile - Oslira AI</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Setup Your Business Profile - Oslira AI</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="onboarding-page">
-    <div class="onboarding-container">
-        <div class="progress-bar">
-            <div class="progress-fill" id="progress" style="width: 33%"></div>
-        </div>
-        
-        <form id="onboarding-form">
-            <!-- Step 1: Business Basics -->
-            <div class="step" id="step-1">
-                <h2>Let's set up your first CRM workspace</h2>
-                <p>You can create multiple workspaces for different businesses later</p>
-                
-                <div class="form-group">
-                    <label>What's your business name?</label>
-                    <input type="text" id="business-name" placeholder="e.g., Sarah's Marketing Agency" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>What's your business website?</label>
-                    <input type="url" id="business-website" placeholder="https://yoursite.com">
-                </div>
-                
-                <div class="form-group">
-                    <label>What niche is your business in?</label>
-                    <input type="text" id="business-niche" placeholder="e.g., Digital Marketing, E-commerce, SaaS" required>
-                </div>
-                
-                <button type="button" onclick="nextStep(2)">Next</button>
-            </div>
-            
-            <!-- Step 2: Target Market -->
-            <div class="step" id="step-2" style="display:none;">
-                <h2>Who are your ideal customers?</h2>
-                <p>This helps our AI find and score the best leads for you</p>
-                
-                <div class="form-group">
-                    <label>What niche do you serve?</label>
-                    <input type="text" id="target-niche" placeholder="e.g., Local restaurants, E-commerce brands, Real estate agents" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Where are most of your customers located?</label>
-                    <input type="text" id="customer-location" placeholder="e.g., United States, Global, New York">
-                </div>
-                
-                <div class="form-group">
-                    <label>What platforms are your leads most active on?</label>
-                    <select id="primary-platform">
-                        <option value="instagram">Instagram</option>
-                        <option value="linkedin">LinkedIn</option>
-                        <option value="both">Both Instagram & LinkedIn</option>
-                    </select>
-                </div>
-                
-                <button type="button" onclick="previousStep(1)">Back</button>
-                <button type="button" onclick="nextStep(3)">Next</button>
-            </div>
-            
-            <!-- Step 3: Offering -->
-            <div class="step" id="step-3" style="display:none;">
-                <h2>What do you offer?</h2>
-                <p>This helps craft the perfect outreach messages</p>
-                
-                <div class="form-group">
-                    <label>What product or service do you sell?</label>
-                    <textarea id="product-service" placeholder="e.g., Social media management services that help restaurants get 50+ new customers per month" required></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label>What's your main value proposition?</label>
-                    <input type="text" id="value-prop" placeholder="e.g., Get 50+ new customers per month guaranteed" required>
-                </div>
-                
-                <button type="button" onclick="previousStep(2)">Back</button>
-                <button type="submit">Complete Setup</button>
-            </div>
-        </form>
-        
-        <div class="success-state" id="success" style="display:none;">
-            <h2>✅ Your CRM is ready!</h2>
-            <p>You've been credited with 5 free credits to test the system</p>
-            <button onclick="location.href='/dashboard.html'">Go to Dashboard</button>
-        </div>
+  <div class="onboarding-container">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress" style="width: 33%"></div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        const { createClient } = supabase;
-        const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjQxMzUsImV4cCI6MjA2NzYwMDEzNX0.XMoC3iLcDbKNxPfhTHj8CQsEjelTIrivIddfPTO9P64';
-        const supabaseClient = createClient(supabaseUrl, supabaseKey);
-        
-        let currentStep = 1;
-        
-        function nextStep(step) {
-            document.getElementById(`step-${currentStep}`).style.display = 'none';
-            document.getElementById(`step-${step}`).style.display = 'block';
-            currentStep = step;
-            updateProgress();
+    <form id="onboarding-form">
+      <!-- Step 1 -->
+      <div class="step" id="step-1">
+        <h2>Let's set up your first CRM workspace</h2>
+        <p>You can create multiple workspaces later.</p>
+        <div class="form-group">
+          <label>Business name</label>
+          <input type="text" id="business-name" required />
+        </div>
+        <div class="form-group">
+          <label>Website</label>
+          <input type="url" id="business-website" />
+        </div>
+        <div class="form-group">
+          <label>Business niche</label>
+          <input type="text" id="business-niche" required />
+        </div>
+        <button type="button" onclick="nextStep(2)">Next</button>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step" id="step-2" style="display: none;">
+        <h2>Your Target Market</h2>
+        <div class="form-group">
+          <label>Target niche</label>
+          <input type="text" id="target-niche" required />
+        </div>
+        <div class="form-group">
+          <label>Customer location</label>
+          <input type="text" id="customer-location" />
+        </div>
+        <div class="form-group">
+          <label>Primary platform</label>
+          <select id="primary-platform">
+            <option value="instagram">Instagram</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+        <button type="button" onclick="previousStep(1)">Back</button>
+        <button type="button" onclick="nextStep(3)">Next</button>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step" id="step-3" style="display: none;">
+        <h2>What Do You Offer?</h2>
+        <div class="form-group">
+          <label>Product/service</label>
+          <textarea id="product-service" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>Value proposition</label>
+          <input type="text" id="value-prop" required />
+        </div>
+        <button type="button" onclick="previousStep(2)">Back</button>
+        <button type="submit">Complete Setup</button>
+      </div>
+    </form>
+
+    <!-- Success -->
+    <div class="success-state" id="success" style="display: none;">
+      <h2>✅ Your CRM is ready!</h2>
+      <p>You’ve been credited with 5 free credits to test the system.</p>
+      <button onclick="location.href='/dashboard.html'">Go to Dashboard</button>
+    </div>
+  </div>
+
+  <!-- CDN + Error Logger -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    window.addEventListener("error", (e) => console.error("JS error:", e.message));
+  </script>
+
+  <script>
+    const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
+    const supabaseKey = 'YOUR_PUBLIC_ANON_KEY';
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+    let currentStep = 1;
+
+    function nextStep(step) {
+      document.getElementById(`step-${currentStep}`).style.display = 'none';
+      document.getElementById(`step-${step}`).style.display = 'block';
+      currentStep = step;
+      document.getElementById('progress').style.width = (step / 3) * 100 + '%';
+    }
+
+    function previousStep(step) {
+      document.getElementById(`step-${currentStep}`).style.display = 'none';
+      document.getElementById(`step-${step}`).style.display = 'block';
+      currentStep = step;
+      document.getElementById('progress').style.width = (step / 3) * 100 + '%';
+    }
+
+    document.getElementById("onboarding-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const businessData = {
+        business_name: document.getElementById("business-name").value,
+        business_website: document.getElementById("business-website").value,
+        business_niche: document.getElementById("business-niche").value,
+        target_niche: document.getElementById("target-niche").value,
+        customer_location: document.getElementById("customer-location").value,
+        primary_platform: document.getElementById("primary-platform").value,
+        product_service: document.getElementById("product-service").value,
+        value_prop: document.getElementById("value-prop").value,
+      };
+
+      try {
+        const {
+          data: { session },
+          error: sessionError
+        } = await supabaseClient.auth.getSession();
+
+        if (sessionError || !session || !session.user) {
+          alert("You're not signed in. Please log in.");
+          window.location.href = "/auth.html";
+          return;
         }
-        
-        function previousStep(step) {
-            document.getElementById(`step-${currentStep}`).style.display = 'none';
-            document.getElementById(`step-${step}`).style.display = 'block';
-            currentStep = step;
-            updateProgress();
-        }
-        
-        function updateProgress() {
-            const progress = (currentStep / 3) * 100;
-            document.getElementById('progress').style.width = progress + '%';
-        }
-        
-        document.getElementById('onboarding-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // Collect all form data
-            const businessData = {
-                business_name: document.getElementById('business-name').value,
-                business_website: document.getElementById('business-website').value,
-                business_niche: document.getElementById('business-niche').value,
-                target_niche: document.getElementById('target-niche').value,
-                customer_location: document.getElementById('customer-location').value,
-                primary_platform: document.getElementById('primary-platform').value,
-                product_service: document.getElementById('product-service').value,
-                value_prop: document.getElementById('value-prop').value
-            };
-            
-            try {
-                // Get current user
-                const { data: { user } } = await supabaseClient.auth.getUser();
-                
-                if (!user) {
-                    alert('Please sign in first');
-                    window.location.href = '/auth.html';
-                    return;
-                }
-                
-                // Create user record with 5 free credits
-                const { error: userError } = await supabaseClient
-                    .from('users')
-                    .insert({
-                        id: user.id,
-                        email: user.email,
-                        credits: 5,
-                        onboarding_completed: true
-                    });
-                
-                // Create business profile
-                const { error: profileError } = await supabaseClient
-                    .from('business_profiles')
-                    .insert({
-                        user_id: user.id,
-                        ...businessData,
-                        is_active: true
-                    });
-                
-                if (userError && !userError.message.includes('duplicate')) throw userError;
-                if (profileError) throw profileError;
-                
-                // Show success
-                document.getElementById('onboarding-form').style.display = 'none';
-                document.getElementById('success').style.display = 'block';
-            } catch (error) {
-                alert('Error saving profile: ' + error.message);
-            }
-        });
-    </script>
+
+        const user = session.user;
+
+        // Insert user (ignore if duplicate)
+        const { error: userError } = await supabaseClient
+          .from("users")
+          .insert({
+            id: user.id,
+            email: user.email,
+            credits: 5,
+            onboarding_completed: true
+          });
+
+        if (userError && !userError.message.includes("duplicate")) throw userError;
+
+        // Insert business profile
+        const { error: profileError } = await supabaseClient
+          .from("business_profiles")
+          .insert({
+            user_id: user.id,
+            ...businessData,
+            is_active: true
+          });
+
+        if (profileError) throw profileError;
+
+        // Show success state
+        document.getElementById("onboarding-form").style.display = "none";
+        document.getElementById("success").style.display = "block";
+      } catch (err) {
+        console.error("Submission error:", err);
+        alert("Something went wrong: " + err.message);
+      }
+    });
+  </script>
 </body>
 </html>
