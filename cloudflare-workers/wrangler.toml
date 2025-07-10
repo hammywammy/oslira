@@ -1,5 +1,11 @@
 name = "ai-outreach-api"
-type = "javascript"
-account_id = "your-account-id"
-workers_dev = true
+main = "src/index.ts"          # use .ts if you're writing in TypeScript
 compatibility_date = "2025-07-09"
+workers_dev = true
+
+# Replace with your real Cloudflare account ID
+account_id = "ec3a04af3fca5fbb10ec831616e63cfc"
+
+# Optional: Specify build for TypeScript if using
+[build]
+command = "npm run build"     # Optional if you use a bundler
