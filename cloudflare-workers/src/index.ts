@@ -239,10 +239,31 @@ Format: { "lead_score": 85, "summary": "...", "niche": "...", "match_reasons": [
       }),
     });
 
+    if (!openaiResult.ok) {
+      console.error('❌ OpenAI API error:', openaiResult.status);
+      throw new Error(`OpenAI API failed: ${openaiResult.status}`);
+    }
+
     const openaiData = await openaiResult.json();
-    let analysis = JSON.parse(openaiData.choices[0].message.content);
+    console.log('📝 OpenAI raw response:', openaiData.choices?.[0]?.message?.content);
     
-    console.log('✅ OpenAI analysis completed, score:', analysis.lead_score);
+    let analysis;
+    try {
+      analysis = JSON.parse(openaiData.choices[0].message.content);
+      console.log('✅ OpenAI analysis parsed successfully, score:', analysis.lead_score);
+    } catch (parseError) {
+      console.error('❌ Failed to parse OpenAI JSON:', parseError);
+      console.log('📝 Raw content:', openaiData.choices?.[0]?.message?.content);
+      
+      // Fallback analysis if JSON parsing fails
+      analysis = {
+        lead_score: 50,
+        summary: "Analysis completed but response format was invalid",
+        niche: "Unknown",
+        match_reasons: ["Unable to parse AI response"]
+      };
+      console.log('🔄 Using fallback analysis');
+    }
 
     // Deep analysis with Claude (if requested)
     if (analysisType === 'deep') {
