@@ -204,7 +204,7 @@ async function safeSupabaseResponse(response: Response, context: string): Promis
   }
 }
 
-// Clean username extraction with NO hardcoded values
+// Clean username extraction
 function extractUsername(profileUrl: string): string {
   try {
     if (!profileUrl || typeof profileUrl !== 'string') {
@@ -501,7 +501,7 @@ app.post('/analyze', async (c) => {
     const businessProfile: BusinessProfile = businessData[0];
     console.log('✅ Business profile loaded:', businessProfile.business_name);
 
-    // 7. INSTAGRAM PROFILE SCRAPING - NO HARDCODED VALUES
+    // 7. INSTAGRAM PROFILE SCRAPING - REAL DATA ONLY
     console.log(`🕷️ Starting ${analysis_type} scraping for USERNAME:`, username);
     let profileData: ProfileData | null = null;
     let scrapingSuccess = false;
@@ -522,226 +522,28 @@ app.post('/analyze', async (c) => {
         
         if (apifyResponse.ok) {
           const responseText = await apifyResponse.text();
+          console.log('📊 Light scraper response preview:', responseText.substring(0, 200));
+          
           if (responseText) {
             const apifyData = JSON.parse(responseText);
-            if (apifyData && apifyData[0] && apifyData[0].username === username) {
+            console.log('📊 Light scraper parsed data:', apifyData);
+            
+            if (apifyData && apifyData[0] && apifyData[0].username) {
               profileData = apifyData[0];
               scrapingSuccess = true;
-              console.log('✅ Light scraping SUCCESS for:', username);
+              console.log('✅ Light scraping SUCCESS for:', profileData.username, 'Followers:', profileData.followersCount);
+            } else {
+              console.warn('⚠️ Light scraper returned empty/invalid data');
             }
           }
+        } else {
+          console.error('❌ Light scraper HTTP error:', apifyResponse.status);
         }
       } else {
         console.log('📊 Running DEEP scraper for:', username);
         const apifyInput = {
           input: {
-        // Log transaction
-      fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
-        method: 'POST',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          user_id: userId,
-          amount: -creditsRequired,
-          transaction_type: 'analysis',
-          description: `${analysis_type} analysis of @${profileData.username}`,
-          lead_id: lead.id,
-          created_at: new Date().toISOString(),
-        }),
-      }).catch(err => {
-        console.warn('⚠️ Credit transaction logging failed:', err.message);
-      })
-    ]);
-
-    // 13. PERFORMANCE LOGGING
-    const processingTime = Date.now() - startTime;
-    console.log('🎯 ANALYSIS COMPLETED SUCCESSFULLY');
-    console.log('📊 Performance:', {
-      request_id: requestId,
-      username: profileData.username,
-      analysis_type,
-      processing_time_ms: processingTime,
-      scraping_success: scrapingSuccess,
-      analysis_success: analysisSuccess,
-      lead_score: analysis.lead_score,
-      credits_used: creditsRequired,
-      credits_remaining: newCreditBalance
-    });
-
-    // 14. CLEAN SUCCESS RESPONSE - FIXED FORMAT
-    return c.json({
-      success: true,
-      lead_id: lead.id,
-      profile: {
-        username: profileData.username,
-        full_name: profileData.fullName,
-        followers: profileData.followersCount,
-        following: profileData.followingCount,
-        posts: profileData.postsCount,
-        verified: profileData.isVerified || profileData.verified,
-        category: profileData.businessCategoryName || profileData.category,
-        external_url: profileData.externalUrl,
-        avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
-        scraping_success: scrapingSuccess
-      },
-      analysis: {
-        type: analysis_type, // FIXED: Use 'type' not 'analysisType'
-        lead_score: analysis.lead_score,
-        summary: analysis.summary,
-        niche: analysis.niche,
-        match_reasons: analysis.match_reasons,
-        analysis_success: analysisSuccess,
-        ...(analysis_type === 'deep' ? {
-          engagement_rate: analysis.engagement_rate,
-          selling_points: analysis.selling_points,
-          custom_notes: analysis.custom_notes,
-          outreach_message: outreachMessage,
-        } : {})
-      },
-      credits: {
-        used: creditsRequired,
-        remaining: newCreditBalance,
-      }
-    });
-
-  } catch (error) {
-    const processingTime = Date.now() - startTime;
-    console.error('💥 ANALYSIS FAILED:', requestId, error);
-    
-    return c.json({ 
-      error: 'Enterprise analysis failed', 
-      details: error.message,
-      timestamp: new Date().toISOString(),
-      processing_time_ms: processingTime,
-      support_id: requestId
-    }, 500);
-  }
-});
-
-// Health check endpoint
-app.get('/health', async (c) => {
-  const startTime = Date.now();
-  
-  try {
-    const {
-      SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE,
-      OPENAI_KEY,
-      CLAUDE_KEY,
-      APIFY_API_TOKEN,
-    } = c.env;
-
-    const envStatus = {
-      supabase: !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE),
-      openai: !!OPENAI_KEY,
-      claude: !!CLAUDE_KEY,
-      apify: !!APIFY_API_TOKEN,
-    };
-
-    let dbStatus = false;
-    try {
-      if (envStatus.supabase) {
-        const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?limit=1`, {
-          headers: {
-            apikey: SUPABASE_SERVICE_ROLE,
-            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
-          }
-        });
-        dbStatus = testResponse.status < 500;
-      }
-    } catch (dbError) {
-      console.warn('Database health check failed:', dbError.message);
-    }
-
-    const responseTime = Date.now() - startTime;
-    const allSystemsGo = Object.values(envStatus).every(status => status) && dbStatus;
-
-    return c.json({ 
-      status: allSystemsGo ? 'healthy' : 'degraded',
-      service: 'Oslira Enterprise AI Worker',
-      version: '3.0.0',
-      environment: {
-        ...envStatus,
-        database_connectivity: dbStatus
-      },
-      performance: {
-        response_time_ms: responseTime,
-        timestamp: new Date().toISOString()
-      },
-      capabilities: {
-        light_analysis: envStatus.supabase && envStatus.openai && envStatus.apify,
-        deep_analysis: envStatus.supabase && envStatus.openai && envStatus.claude && envStatus.apify,
-        profile_scraping: envStatus.apify,
-        ai_analysis: envStatus.openai,
-        message_generation: envStatus.claude
-      }
-    });
-  } catch (error) {
-    return c.json({
-      status: 'error',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }, 500);
-  }
-});
-
-// Service info endpoint
-app.get('/info', (c) => {
-  return c.json({
-    service: 'Oslira Enterprise AI Worker',
-    version: '3.0.0',
-    description: 'Clean B2B lead qualification platform',
-    features: [
-      'Dynamic Instagram profile scraping',
-      'AI-powered lead scoring',
-      'Personalized outreach generation',
-      'Zero hardcoded values',
-      'Contamination detection',
-      'Enterprise error handling'
-    ],
-    endpoints: [
-      'POST /analyze - Lead analysis',
-      'GET /health - System health',
-      'GET /info - Service info',
-      'GET / - Status'
-    ],
-    supported_analysis_types: ['light', 'deep'],
-    ai_models: ['gpt-4o', 'claude-3-sonnet'],
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Root endpoint
-app.get('/', (c) => {
-  return c.json({
-    message: '🚀 Oslira Enterprise AI Worker v3.0',
-    status: 'operational',
-    tagline: 'Clean enterprise lead intelligence',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Error handlers
-app.onError((err, c) => {
-  console.error('🚨 Unhandled error:', err);
-  return c.json({
-    error: 'Internal server error',
-    message: 'An unexpected error occurred',
-    timestamp: new Date().toISOString(),
-    support_id: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-  }, 500);
-});
-
-app.notFound((c) => {
-  return c.json({
-    error: 'Endpoint not found',
-    available_endpoints: ['/', '/health', '/info', '/analyze'],
-    timestamp: new Date().toISOString()
-  }, 404);
-});
-
-export default {
-  fetch: app.fetch
-};names: [username],
+            usernames: [username],
             searchType: 'user',
             maxItems: 1,
             proxy: { useApifyProxy: true },
@@ -759,56 +561,49 @@ export default {
         
         if (apifyResponse.ok) {
           const responseText = await apifyResponse.text();
+          console.log('📊 Deep scraper response preview:', responseText.substring(0, 200));
+          
           if (responseText) {
             const apifyData = JSON.parse(responseText);
-            if (apifyData && apifyData[0] && apifyData[0].username === username) {
+            console.log('📊 Deep scraper parsed data structure:', Array.isArray(apifyData) ? `Array[${apifyData.length}]` : typeof apifyData);
+            
+            if (apifyData && apifyData[0] && apifyData[0].username) {
               profileData = apifyData[0];
               scrapingSuccess = true;
-              console.log('✅ Deep scraping SUCCESS for:', username);
+              console.log('✅ Deep scraping SUCCESS for:', profileData.username, 'Followers:', profileData.followersCount);
+            } else {
+              console.warn('⚠️ Deep scraper returned empty/invalid data');
             }
           }
+        } else {
+          console.error('❌ Deep scraper HTTP error:', apifyResponse.status);
         }
       }
     } catch (apifyError) {
-      console.error('⚠️ Apify scraping failed for', username, ':', apifyError.message);
+      console.error('⚠️ Apify scraping exception for', username, ':', apifyError.message);
     }
 
-    // 8. CLEAN MOCK DATA FALLBACK - NO HARDCODED VALUES
-    if (!profileData?.username || profileData.username !== username) {
-      console.log('🎭 Scraping failed, generating CLEAN mock data for:', username);
+    // 8. NO MOCK DATA - FAIL IF SCRAPING FAILS
+    if (!profileData?.username || !scrapingSuccess) {
+      console.error('❌ Instagram scraping failed for:', username);
+      console.error('❌ Scraping success:', scrapingSuccess);
+      console.error('❌ Profile data:', profileData);
       
-      // Use username and timestamp for unique randomization
-      const usernameSeed = username.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const timeSeed = Date.now() % 10000;
-      const combinedSeed = usernameSeed + timeSeed;
-      
-      // Create deterministic but varied mock data
-      const mockRandom = (min: number, max: number) => {
-        return Math.floor((Math.sin(combinedSeed * Math.PI) * 10000) % (max - min + 1)) + min;
-      };
-      
-      profileData = {
-        username: username, // ALWAYS use the input username
-        fullName: `${username.charAt(0).toUpperCase()}${username.slice(1)} (Development)`,
-        biography: `Mock ${businessProfile.target_niche} profile for @${username}. Real data in production.`,
-        followersCount: Math.abs(mockRandom(1000, 50000)),
-        followingCount: Math.abs(mockRandom(100, 2000)),
-        postsCount: Math.abs(mockRandom(10, 500)),
-        isVerified: mockRandom(1, 10) > 8,
-        private: false,
-        profilePicUrl: `https://picsum.photos/150/150?random=${combinedSeed}`,
-        externalUrl: mockRandom(1, 10) > 6 ? `https://example.com/${username}` : undefined,
-        businessCategoryName: businessProfile.target_niche || 'Business',
-      };
-      
-      console.log('✅ Clean mock data generated for:', profileData.username, 'Followers:', profileData.followersCount);
+      return c.json({ 
+        error: 'Unable to scrape Instagram profile data', 
+        details: 'Profile may be private, username invalid, or Instagram blocking requests',
+        username: username,
+        scraping_attempted: true,
+        scraper_type: analysis_type,
+        debug_info: {
+          apify_token_present: !!APIFY_API_TOKEN,
+          profile_data_received: !!profileData,
+          scraping_success: scrapingSuccess
+        }
+      }, 400);
     }
 
-    // VERIFY NO CONTAMINATION
-    if (profileData.username !== username) {
-      console.error('🚨 USERNAME MISMATCH DETECTED - Expected:', username, 'Got:', profileData.username);
-      return c.json({ error: 'Profile data contamination detected' }, 500);
-    }
+    console.log('✅ Real Instagram data confirmed for:', profileData.username);
 
     // 9. CREATE LEAD RECORD WITH EXPLICIT TYPE
     console.log('💾 Creating lead record - Username:', profileData.username, 'Type:', analysis_type);
@@ -905,7 +700,482 @@ export default {
             engagement_rate: analysis.engagement_rate || null,
             selling_points: analysis.selling_points?.join(', ') || null,
             custom_notes: analysis.custom_notes || null,
-            created_at: new Date().toISOString(),
+        // Log transaction
+      fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
+        method: 'POST',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          user_id: userId,
+          amount: -creditsRequired,
+          transaction_type: 'analysis',
+          description: `${analysis_type} analysis of @${profileData.username}`,
+          created_at: new Date().toISOString(),
+        }),
+      }).catch(err => {
+        console.warn('⚠️ Credit transaction logging failed:', err.message);
+      })
+    ]);
+
+    // 13. PERFORMANCE LOGGING
+    const processingTime = Date.now() - startTime;
+    console.log('🎯 ANALYSIS COMPLETED SUCCESSFULLY');
+    console.log('📊 Performance:', {
+      request_id: requestId,
+      username: profileData.username,
+      analysis_type,
+      processing_time_ms: processingTime,
+      scraping_success: scrapingSuccess,
+      analysis_success: analysisSuccess,
+      lead_score: analysis.lead_score,
+      credits_used: creditsRequired,
+      credits_remaining: newCreditBalance
+    });
+
+    // 14. SEPARATE RETURN TYPES FOR LIGHT VS DEEP
+    console.log('🔍 FINAL RESPONSE CHECK:', { 
+      analysis_type, 
+      response_type: analysis_type,
+      lead_id: lead.id 
+    });
+
+    if (analysis_type === 'light') {
+      // LIGHT ANALYSIS RESPONSE
+      return c.json({
+        success: true,
+        lead_id: lead.id,
+        profile: {
+          username: profileData.username,
+          full_name: profileData.fullName,
+          followers: profileData.followersCount,
+          following: profileData.followingCount,
+          posts: profileData.postsCount,
+          verified: profileData.isVerified || profileData.verified,
+          category: profileData.businessCategoryName || profileData.category,
+          external_url: profileData.externalUrl,
+          avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
+          scraping_success: scrapingSuccess
+        },
+        analysis: {
+          type: 'light', // EXPLICIT LIGHT TYPE
+          lead_score: analysis.lead_score,
+          summary: analysis.summary,
+          niche: analysis.niche,
+          match_reasons: analysis.match_reasons,
+          analysis_success: analysisSuccess
+        },
+        credits: {
+          used: creditsRequired,
+          remaining: newCreditBalance,
+        }
+      });
+    } else {
+      // DEEP ANALYSIS RESPONSE
+      return c.json({
+        success: true,
+        lead_id: lead.id,
+        profile: {
+          username: profileData.username,
+          full_name: profileData.fullName,
+          followers: profileData.followersCount,
+          following: profileData.followingCount,
+          posts: profileData.postsCount,
+          verified: profileData.isVerified || profileData.verified,
+          category: profileData.businessCategoryName || profileData.category,
+          external_url: profileData.externalUrl,
+          avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
+          scraping_success: scrapingSuccess
+        },
+        analysis: {
+          type: 'deep', // EXPLICIT DEEP TYPE
+          lead_score: analysis.lead_score,
+          summary: analysis.summary,
+          niche: analysis.niche,
+          match_reasons: analysis.match_reasons,
+          analysis_success: analysisSuccess,
+          engagement_rate: analysis.engagement_rate,
+          selling_points: analysis.selling_points,
+          custom_notes: analysis.custom_notes,
+          outreach_message: outreachMessage
+        },
+        credits: {
+          used: creditsRequired,
+          remaining: newCreditBalance,
+        }
+      });
+    }
+
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    console.error('💥 ANALYSIS FAILED:', requestId, error);
+    
+    return c.json({ 
+      error: 'Enterprise analysis failed', 
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      processing_time_ms: processingTime,
+      support_id: requestId
+    }, 500);
+  }
+});
+
+// Health check endpoint
+app.get('/health', async (c) => {
+  const startTime = Date.now();
+  
+  try {
+    const {
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE,
+      OPENAI_KEY,
+      CLAUDE_KEY,
+      APIFY_API_TOKEN,
+    } = c.env;
+
+    const envStatus = {
+      supabase: !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE),
+      openai: !!OPENAI_KEY,
+      claude: !!CLAUDE_KEY,
+      apify: !!APIFY_API_TOKEN,
+    };
+
+    let dbStatus = false;
+    try {
+      if (envStatus.supabase) {
+        const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?limit=1`, {
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+          }
+        });
+        dbStatus = testResponse.status < 500;
+      }
+    } catch (dbError) {
+      console.warn('Database health check failed:', dbError.message);
+    }
+
+    const responseTime = Date.now() - startTime;
+    const allSystemsGo = Object.values(envStatus).every(status => status) && dbStatus;
+
+    return c.json({ 
+      status: allSystemsGo ? 'healthy' : 'degraded',
+      service: 'Oslira Enterprise AI Worker',
+      version: '3.0.0',
+      environment: {
+        ...envStatus,
+        database_connectivity: dbStatus
+      },
+      performance: {
+        response_time_ms: responseTime,
+        timestamp: new Date().toISOString()
+      },
+      capabilities: {
+        light_analysis: envStatus.supabase && envStatus.openai && envStatus.apify,
+        deep_analysis: envStatus.supabase && envStatus.openai && envStatus.claude && envStatus.apify,
+        profile_scraping: envStatus.apify,
+        ai_analysis: envStatus.openai,
+        message_generation: envStatus.claude
+      }
+    });
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+// Service info endpoint
+app.get('/info', (c) => {
+  return c.json({
+    service: 'Oslira Enterprise AI Worker',
+    version: '3.0.0',
+    description: 'Clean B2B lead qualification platform',
+    features: [
+      'Real Instagram profile scraping only',
+      'AI-powered lead scoring',
+      'Personalized outreach generation',
+      'Zero hardcoded values',
+      'Contamination detection',
+      'Separate light/deep response types'
+    ],
+    endpoints: [
+      'POST /analyze - Lead analysis',
+      'GET /health - System health',
+      'GET /info - Service info',
+      'GET / - Status'
+    ],
+    supported_analysis_types: ['light', 'deep'],
+    ai_models: ['gpt-4o', 'claude-3-sonnet'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
+app.get('/', (c) => {
+  return c.json({
+    message: '🚀 Oslira Enterprise AI Worker v3.0',
+    status: 'operational',
+    tagline: 'Real data only - no mock profiles',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handlers
+app.onError((err, c) => {
+  console.error('🚨 Unhandled error:', err);
+  return c.json({
+    error: 'Internal server error',
+    message: 'An unexpected error occurred',
+    timestamp: new Date().toISOString(),
+    support_id: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }, 500);
+});
+
+app.notFound((c) => {
+  return c.json({
+    error: 'Endpoint not found',
+    available_endpoints: ['/', '/health', '/info', '/analyze'],
+    timestamp: new Date().toISOString()
+  }, 404);
+});
+
+export default {
+  fetch: app.fetch
+};ISOString(),
+        }),
+      }).catch(err => {
+        console.warn('⚠️ Credit transaction logging failed:', err.message);
+      })
+    ]);
+
+    // 13. PERFORMANCE LOGGING
+    const processingTime = Date.now() - startTime;
+    console.log('🎯 ANALYSIS COMPLETED SUCCESSFULLY');
+    console.log('📊 Performance:', {
+      request_id: requestId,
+      username: profileData.username,
+      analysis_type,
+      processing_time_ms: processingTime,
+      scraping_success: scrapingSuccess,
+      analysis_success: analysisSuccess,
+      lead_score: analysis.lead_score,
+      credits_used: creditsRequired,
+      credits_remaining: newCreditBalance
+    });
+
+    // 14. SEPARATE RETURN TYPES FOR LIGHT VS DEEP
+    console.log('🔍 FINAL RESPONSE CHECK:', { 
+      analysis_type, 
+      response_type: analysis_type,
+      lead_id: lead.id 
+    });
+
+    if (analysis_type === 'light') {
+      // LIGHT ANALYSIS RESPONSE
+      return c.json({
+        success: true,
+        lead_id: lead.id,
+        profile: {
+          username: profileData.username,
+          full_name: profileData.fullName,
+          followers: profileData.followersCount,
+          following: profileData.followingCount,
+          posts: profileData.postsCount,
+          verified: profileData.isVerified || profileData.verified,
+          category: profileData.businessCategoryName || profileData.category,
+          external_url: profileData.externalUrl,
+          avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
+          scraping_success: scrapingSuccess
+        },
+        analysis: {
+          type: 'light', // EXPLICIT LIGHT TYPE
+          lead_score: analysis.lead_score,
+          summary: analysis.summary,
+          niche: analysis.niche,
+          match_reasons: analysis.match_reasons,
+          analysis_success: analysisSuccess
+        },
+        credits: {
+          used: creditsRequired,
+          remaining: newCreditBalance,
+        }
+      });
+    } else {
+      // DEEP ANALYSIS RESPONSE
+      return c.json({
+        success: true,
+        lead_id: lead.id,
+        profile: {
+          username: profileData.username,
+          full_name: profileData.fullName,
+          followers: profileData.followersCount,
+          following: profileData.followingCount,
+          posts: profileData.postsCount,
+          verified: profileData.isVerified || profileData.verified,
+          category: profileData.businessCategoryName || profileData.category,
+          external_url: profileData.externalUrl,
+          avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
+          scraping_success: scrapingSuccess
+        },
+        analysis: {
+          type: 'deep', // EXPLICIT DEEP TYPE
+          lead_score: analysis.lead_score,
+          summary: analysis.summary,
+          niche: analysis.niche,
+          match_reasons: analysis.match_reasons,
+          analysis_success: analysisSuccess,
+          engagement_rate: analysis.engagement_rate,
+          selling_points: analysis.selling_points,
+          custom_notes: analysis.custom_notes,
+          outreach_message: outreachMessage
+        },
+        credits: {
+          used: creditsRequired,
+          remaining: newCreditBalance,
+        }
+      });
+    }
+
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    console.error('💥 ANALYSIS FAILED:', requestId, error);
+    
+    return c.json({ 
+      error: 'Enterprise analysis failed', 
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      processing_time_ms: processingTime,
+      support_id: requestId
+    }, 500);
+  }
+});
+
+// Health check endpoint
+app.get('/health', async (c) => {
+  const startTime = Date.now();
+  
+  try {
+    const {
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE,
+      OPENAI_KEY,
+      CLAUDE_KEY,
+      APIFY_API_TOKEN,
+    } = c.env;
+
+    const envStatus = {
+      supabase: !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE),
+      openai: !!OPENAI_KEY,
+      claude: !!CLAUDE_KEY,
+      apify: !!APIFY_API_TOKEN,
+    };
+
+    let dbStatus = false;
+    try {
+      if (envStatus.supabase) {
+        const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?limit=1`, {
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+          }
+        });
+        dbStatus = testResponse.status < 500;
+      }
+    } catch (dbError) {
+      console.warn('Database health check failed:', dbError.message);
+    }
+
+    const responseTime = Date.now() - startTime;
+    const allSystemsGo = Object.values(envStatus).every(status => status) && dbStatus;
+
+    return c.json({ 
+      status: allSystemsGo ? 'healthy' : 'degraded',
+      service: 'Oslira Enterprise AI Worker',
+      version: '3.0.0',
+      environment: {
+        ...envStatus,
+        database_connectivity: dbStatus
+      },
+      performance: {
+        response_time_ms: responseTime,
+        timestamp: new Date().toISOString()
+      },
+      capabilities: {
+        light_analysis: envStatus.supabase && envStatus.openai && envStatus.apify,
+        deep_analysis: envStatus.supabase && envStatus.openai && envStatus.claude && envStatus.apify,
+        profile_scraping: envStatus.apify,
+        ai_analysis: envStatus.openai,
+        message_generation: envStatus.claude
+      }
+    });
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+// Service info endpoint
+app.get('/info', (c) => {
+  return c.json({
+    service: 'Oslira Enterprise AI Worker',
+    version: '3.0.0',
+    description: 'Clean B2B lead qualification platform',
+    features: [
+      'Real Instagram profile scraping only',
+      'AI-powered lead scoring',
+      'Personalized outreach generation',
+      'Zero hardcoded values',
+      'Contamination detection',
+      'Separate light/deep response types'
+    ],
+    endpoints: [
+      'POST /analyze - Lead analysis',
+      'GET /health - System health',
+      'GET /info - Service info',
+      'GET / - Status'
+    ],
+    supported_analysis_types: ['light', 'deep'],
+    ai_models: ['gpt-4o', 'claude-3-sonnet'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
+app.get('/', (c) => {
+  return c.json({
+    message: '🚀 Oslira Enterprise AI Worker v3.0',
+    status: 'operational',
+    tagline: 'Real data only - no mock profiles',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handlers
+app.onError((err, c) => {
+  console.error('🚨 Unhandled error:', err);
+  return c.json({
+    error: 'Internal server error',
+    message: 'An unexpected error occurred',
+    timestamp: new Date().toISOString(),
+    support_id: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }, 500);
+});
+
+app.notFound((c) => {
+  return c.json({
+    error: 'Endpoint not found',
+    available_endpoints: ['/', '/health', '/info', '/analyze'],
+    timestamp: new Date().toISOString()
+  }, 404);
+});
+
+export default {
+  fetch: app.fetch
+};ISOString(),
           }),
         });
         
@@ -959,7 +1229,7 @@ export default {
         }),
       }),
       
-      fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
+  fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
         method: 'POST',
         headers: supabaseHeaders,
         body: JSON.stringify({
