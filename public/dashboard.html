@@ -833,7 +833,7 @@
             </div>
             
             <div class="stat-card">
-                <h3>High-Value Leads</h3>
+                <h3>High-Value Leads (Score 80+)</h3>
                 <p class="big-number" id="high-value-leads">0</p>
                 <span class="trend up" id="high-value-trend">Score 80+</span>
             </div>
@@ -906,17 +906,20 @@
             <h3>🔍 Analyze Lead</h3>
             <form id="analysisForm" onsubmit="submitAnalysis(event)">
                 <div class="form-group">
-                    <label for="profile-url">Instagram Profile URL *</label>
-                    <input type="url" id="profile-url" placeholder="https://instagram.com/username" required>
-                </div>
-                
-                <div class="form-group">
                     <label for="analysis-type">Analysis Type *</label>
-                    <select id="analysis-type" required>
+                    <select id="analysis-type" required onchange="updateInputField()">
                         <option value="">Select analysis type...</option>
                         <option value="light">Light Analysis (1 credit) - Basic profile info</option>
                         <option value="deep">Deep Analysis (2 credits) - Full profile + outreach message</option>
                     </select>
+                </div>
+
+                <div class="form-group" id="input-field-container" style="display: none;">
+                    <label for="profile-input" id="input-label">Instagram Username *</label>
+                    <input type="text" id="profile-input" placeholder="username" required>
+                    <div id="input-help" style="font-size: 12px; color: #6b7280; margin-top: 4px;">
+                        Enter just the username (without @)
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1060,6 +1063,49 @@
             }
         }
 
+        // Update input field based on analysis type selection
+        function updateInputField() {
+            const analysisType = document.getElementById('analysis-type').value;
+            const inputContainer = document.getElementById('input-field-container');
+            const inputField = document.getElementById('profile-input');
+            const inputLabel = document.getElementById('input-label');
+            const inputHelp = document.getElementById('input-help');
+            
+            if (analysisType) {
+                inputContainer.style.display = 'block';
+                
+                if (analysisType === 'light') {
+                    inputLabel.textContent = 'Instagram Username *';
+                    inputField.placeholder = 'username';
+                    inputField.type = 'text';
+                    inputHelp.textContent = 'Enter just the username (without @)';
+                } else if (analysisType === 'deep') {
+                    inputLabel.textContent = 'Instagram Username *';
+                    inputField.placeholder = 'username';
+                    inputField.type = 'text';
+                    inputHelp.textContent = 'Enter just the username (without @) - we\'ll do the full analysis';
+                }
+            } else {
+                inputContainer.style.display = 'none';
+            }
+        }
+
+        // Validate Instagram username
+        function validateUsername(username) {
+            // Remove @ if user includes it
+            username = username.replace('@', '');
+            
+            // Instagram username rules:
+            // - Can only contain letters, numbers, periods, and underscores
+            // - Must be between 1 and 30 characters
+            // - Cannot start or end with a period
+            // - Cannot have consecutive periods
+            const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
+            const hasConsecutivePeriods = /\.{2,}/.test(username);
+            const startsOrEndsWithPeriod = /^\./.test(username) || /\.$/.test(username);
+            
+            return usernameRegex.test(username) && !hasConsecutivePeriods && !startsOrEndsWithPeriod;
+        }
         // Load ICP profiles for selected business (made optional)
         async function loadICPProfiles(businessId) {
             try {
@@ -1336,10 +1382,12 @@
             // Reset forms when closing
             if (modalId === 'analysisModal') {
                 document.getElementById('analysisForm').reset();
+                // Hide the input field container
+                document.getElementById('input-field-container').style.display = 'none';
             }
         }
 
-        // Submit analysis with comprehensive validation (removed ICP requirement)
+        // Submit analysis with username validation and URL construction
         async function submitAnalysis(event) {
             event.preventDefault();
             
@@ -1348,15 +1396,26 @@
             const originalText = submitBtn.textContent;
             
             try {
-                // Validate form data (removed ICP validation)
-                const profileUrl = document.getElementById('profile-url').value;
+                // Validate form data
                 const analysisType = document.getElementById('analysis-type').value;
+                const profileInput = document.getElementById('profile-input').value.trim();
                 const businessId = document.getElementById('business-id').value;
                 
-                if (!profileUrl || !analysisType || !businessId) {
+                if (!analysisType || !profileInput || !businessId) {
                     alert('Please fill in all required fields');
                     return;
                 }
+                
+                // Clean and validate username
+                let username = profileInput.replace('@', '').trim();
+                
+                if (!validateUsername(username)) {
+                    alert('Invalid username. Please check the username and try again.\n\nUsername rules:\n• Only letters, numbers, periods, and underscores\n• 1-30 characters\n• No consecutive periods\n• Cannot start or end with periods');
+                    return;
+                }
+                
+                // Construct profile URL
+                const profileUrl = `https://instagram.com/${username}`;
                 
                 // Check if user has sufficient credits
                 const { data: userData } = await supabase
@@ -1376,9 +1435,9 @@
                 submitBtn.disabled = true;
                 form.classList.add('loading');
                 
-                console.log('🔍 Starting analysis...', { profileUrl, analysisType, businessId });
+                console.log('🔍 Starting analysis...', { username, profileUrl, analysisType, businessId });
                 
-                // Call worker API (removed icp_id)
+                // Call worker API
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: {
@@ -1387,22 +1446,31 @@
                     },
                     body: JSON.stringify({
                         profile_url: profileUrl,
+                        username: username,
                         analysisType: analysisType,
                         business_id: businessId
-                        // Removed icp_id
                     })
                 });
 
                 const result = await response.json();
                 
                 if (!response.ok) {
+                    // Check for specific username-related errors
+                    if (result.error && (
+                        result.error.toLowerCase().includes('user not found') ||
+                        result.error.toLowerCase().includes('profile not found') ||
+                        result.error.toLowerCase().includes('invalid username') ||
+                        result.error.toLowerCase().includes('does not exist')
+                    )) {
+                        throw new Error(`Invalid username "${username}". Please check the username and try again.`);
+                    }
                     throw new Error(result.error || `Analysis failed: ${response.status}`);
                 }
 
                 console.log('✅ Analysis completed:', result);
                 
                 // Show success message
-                alert(`🎉 Analysis completed successfully!\n\nLead ID: ${result.lead_id}\nScore: ${result.analysis.lead_score}/100\nCredits used: ${result.credits.used}\nRemaining: ${result.credits.remaining}`);
+                alert(`🎉 Analysis completed successfully!\n\nUsername: @${username}\nLead ID: ${result.lead_id}\nScore: ${result.analysis.lead_score}/100\nCredits used: ${result.credits.used}\nRemaining: ${result.credits.remaining}`);
                 
                 // Close modal and refresh data
                 closeModal('analysisModal');
