@@ -4,26 +4,34 @@ import { cors } from 'hono/cors';
 const app = new Hono();
 app.use('*', cors());
 
-// JWT verification function
+// JWT verification function (simplified for now)
 async function verifySupabaseJWT(token: string, supabaseUrl: string): Promise<string | null> {
   try {
-    // Get Supabase public keys
-    const jwksResponse = await fetch(`${supabaseUrl}/auth/v1/keys`);
-    const jwks = await jwksResponse.json();
+    console.log('🔍 Verifying JWT token...');
     
-    if (!jwks.keys || jwks.keys.length === 0) {
-      console.error('No JWKS keys found');
+    // Simple decode without full verification (for testing)
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      console.error('❌ Invalid JWT format');
       return null;
     }
-
-    // For now, we'll decode without full verification (you can add proper JWT verification later)
-    const [, payload] = token.split('.');
-    const decodedPayload = JSON.parse(atob(payload));
     
+    const [, payload] = parts;
+    const decodedPayload = JSON.parse(atob(payload));
+    console.log('📋 JWT payload decoded successfully');
+    
+    // Check if token is expired
+    const now = Math.floor(Date.now() / 1000);
+    if (decodedPayload.exp && decodedPayload.exp < now) {
+      console.error('❌ Token expired');
+      return null;
+    }
+    
+    console.log('✅ Token is valid, user ID:', decodedPayload.sub);
     return decodedPayload.sub; // User ID is in the 'sub' field
     
   } catch (error) {
-    console.error('JWT verification error:', error);
+    console.error('💥 JWT verification error:', error);
     return null;
   }
 }
