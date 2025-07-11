@@ -186,12 +186,11 @@ app.post('/analyze', async (c) => {
       headers: supabaseHeaders,
       body: JSON.stringify({
         user_id: userId,
-        business_id: businessProfile.id,
-        profile_url,
-        profile_username: profileData.username,
-        profile_data: profileData,
+        username: profileData.username,
         platform: 'instagram',
-        match_score: 0, // Will be updated after analysis
+        profile_url,
+        avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD || null,
+        score: 0, // Will be updated after analysis
         status: 'analyzed',
         created_at: new Date().toISOString(),
       }),
@@ -304,7 +303,7 @@ Include:
       method: 'PATCH',
       headers: supabaseHeaders,
       body: JSON.stringify({
-        match_score: analysis.lead_score,
+        score: analysis.lead_score,
         updated_at: new Date().toISOString(),
       }),
     });
