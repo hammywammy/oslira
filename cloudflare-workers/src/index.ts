@@ -126,7 +126,21 @@ app.post('/analyze', async (c) => {
     const leadData = await leadRes.json();
     const lead = Array.isArray(leadData) ? leadData[0] : leadData;
 
-    const prompt = `Analyze this Instagram profile for business lead potential:\n\nProfile Data: ${JSON.stringify(profileData)}\nBusiness Context: ${business.business_name} (${business.target_niche})\n\nReturn JSON with:\n1. lead_score (0-100)\n2. summary\n3. niche\n4. match_reasons\n\nFormat: { "lead_score": 85, "summary": "...", "niche": "...", "match_reasons": ["...", "..."] }`;
+    const { username, biography, followersCount, followingCount, postsCount, isVerified, category } = profileData;
+const shortProfile = { username, biography, followersCount, followingCount, postsCount, isVerified, category };
+
+const prompt = `Analyze this Instagram profile for lead potential.
+
+Profile: ${JSON.stringify(shortProfile)}
+Business: ${business.business_name} (${business.target_niche})
+
+Respond with JSON: {
+  "lead_score": 0-100,
+  "summary": "...",
+  "niche": "...",
+  "match_reasons": ["...", "..."]
+}`;
+
 
     const openaiData = await runOpenAIAnalysis(prompt, OPENAI_KEY);
 
