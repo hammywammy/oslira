@@ -3,70 +3,205 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sign In - Oslira AI</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Setup Your Business Profile - Oslira AI</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Long-term fix: control step visibility with active class */
+    .step {
+      display: none;
+    }
+    .step.active {
+      display: block;
+    }
+    .progress-bar {
+      width: 100%;
+      background: #eee;
+      height: 10px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: #4caf50;
+      width: 33%;
+      transition: width 0.3s ease;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+  </style>
 </head>
-<body class="auth-page">
-  <div class="auth-container">
-    <div class="auth-box" id="auth-form-container">
-      <h1>Welcome to Oslira</h1>
-      <p>Enter your email to sign in or create an account</p>
-
-      <form id="auth-form">
-        <input type="email" id="email" placeholder="your@email.com" required>
-        <button type="submit">Continue with Email</button>
-      </form>
-
-      <p class="terms">
-        By continuing, you agree to our 
-        <a href="/legal/terms.html">Terms of Service</a> and 
-        <a href="/legal/privacy.html">Privacy Policy</a>
-      </p>
+<body class="onboarding-page">
+  <div class="onboarding-container" style="max-width: 500px; margin: auto; padding: 20px;">
+    <div class="progress-bar" aria-label="Progress">
+      <div class="progress-fill" id="progress" style="width: 33%"></div>
     </div>
 
-    <div class="auth-success" id="auth-success" style="display:none;">
-      <h2>Check Your Email!</h2>
-      <p>We sent a magic link to <span id="email-sent"></span></p>
+    <form id="onboarding-form" novalidate>
+      <!-- Step 1 -->
+      <div class="step active" id="step-1">
+        <h2>Let's set up your first CRM workspace</h2>
+        <p>You can create multiple workspaces later.</p>
+        <div class="form-group">
+          <label for="business-name">Business name</label>
+          <input type="text" id="business-name" required />
+        </div>
+        <div class="form-group">
+          <label for="business-website">Website</label>
+          <input type="url" id="business-website" />
+        </div>
+        <div class="form-group">
+          <label for="business-niche">Business niche</label>
+          <input type="text" id="business-niche" required />
+        </div>
+        <button type="button" onclick="nextStep(2)">Next</button>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="step" id="step-2">
+        <h2>Your Target Market</h2>
+        <div class="form-group">
+          <label for="target-niche">Target niche</label>
+          <input type="text" id="target-niche" required />
+        </div>
+        <div class="form-group">
+          <label for="customer-location">Customer location</label>
+          <input type="text" id="customer-location" />
+        </div>
+        <div class="form-group">
+          <label for="primary-platform">Primary platform</label>
+          <select id="primary-platform">
+            <option value="instagram">Instagram</option>
+            <option value="linkedin">LinkedIn</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+        <button type="button" onclick="previousStep(1)">Back</button>
+        <button type="button" onclick="nextStep(3)">Next</button>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="step" id="step-3">
+        <h2>What Do You Offer?</h2>
+        <div class="form-group">
+          <label for="product-service">Product/service</label>
+          <textarea id="product-service" required></textarea>
+        </div>
+        <div class="form-group">
+          <label for="value-prop">Value proposition</label>
+          <input type="text" id="value-prop" required />
+        </div>
+        <button type="button" onclick="previousStep(2)">Back</button>
+        <button type="submit">Complete Setup</button>
+      </div>
+    </form>
+
+    <!-- Success -->
+    <div class="success-state" id="success" style="display: none;">
+      <h2>✅ Your CRM is ready!</h2>
+      <p>You’ve been credited with 5 free credits to test the system.</p>
+      <button onclick="location.href='/dashboard.html'">Go to Dashboard</button>
     </div>
   </div>
 
-  <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+  <!-- Supabase JS (latest stable 2.x) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 
-    const supabase = createClient(
-      'https://jswzzihuqtjqvobfosks.supabase.co',
-      'YOUR_PUBLIC_ANON_KEY' // Replace with your actual anon key
-    );
+  <script>
+    const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjQxMzUsImV4cCI6MjA2NzYwMDEzNX0.XMoC3iLcDbKNxPfhTHj8CQsEjelTIrivIddfPTO9P64';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+    let currentStep = 1;
+
+    function nextStep(step) {
+      if (!validateStep(currentStep)) return; // validate current step before moving on
+      document.querySelector(`#step-${currentStep}`).classList.remove('active');
+      document.querySelector(`#step-${step}`).classList.add('active');
+      currentStep = step;
+      updateProgress();
+    }
+
+    function previousStep(step) {
+      document.querySelector(`#step-${currentStep}`).classList.remove('active');
+      document.querySelector(`#step-${step}`).classList.add('active');
+      currentStep = step;
+      updateProgress();
+    }
+
+    function updateProgress() {
+      const progressPercent = (currentStep / 3) * 100;
+      document.getElementById('progress').style.width = progressPercent + '%';
+    }
+
+    function validateStep(step) {
+      const stepEl = document.querySelector(`#step-${step}`);
+      const inputs = stepEl.querySelectorAll('input, textarea, select');
+      for (const input of inputs) {
+        if (!input.checkValidity()) {
+          input.reportValidity();
+          return false;
+        }
+      }
+      return true;
+    }
+
+    document.getElementById("onboarding-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const email = document.getElementById('email').value;
+
+      if (!validateStep(currentStep)) return;
+
+      const businessData = {
+        business_name: document.getElementById("business-name").value.trim(),
+        business_website: document.getElementById("business-website").value.trim(),
+        business_niche: document.getElementById("business-niche").value.trim(),
+        target_niche: document.getElementById("target-niche").value.trim(),
+        customer_location: document.getElementById("customer-location").value.trim(),
+        primary_platform: document.getElementById("primary-platform").value,
+        product_service: document.getElementById("product-service").value.trim(),
+        value_prop: document.getElementById("value-prop").value.trim(),
+      };
 
       try {
-        const { data: existingUser } = await supabase
-          .from('users')
-          .select('onboarding_completed')
-          .eq('email', email)
-          .maybeSingle();
+        // Get current session and user
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session || !session.user) {
+          alert("You're not signed in. Please log in.");
+          window.location.href = "/auth.html";
+          return;
+        }
+        const user = session.user;
 
-        const redirectTo = existingUser?.onboarding_completed
-          ? '/dashboard.html'
-          : '/onboarding.html';
+        // Insert user with credits and onboarding flag (ignore duplicates)
+        const { error: userError } = await supabase
+          .from("users")
+          .upsert({
+            id: user.id,
+            email: user.email,
+            credits: 5,
+            onboarding_completed: true
+          }, { onConflict: 'id' });
 
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: window.location.origin + redirectTo
-          }
-        });
+        if (userError) throw userError;
 
-        if (error) throw error;
+        // Insert business profile
+        const { error: profileError } = await supabase
+          .from("business_profiles")
+          .insert({
+            user_id: user.id,
+            ...businessData,
+            is_active: true
+          });
 
-        document.getElementById('auth-form-container').style.display = 'none';
-        document.getElementById('auth-success').style.display = 'block';
-        document.getElementById('email-sent').textContent = email;
+        if (profileError) throw profileError;
+
+        // Show success message
+        document.getElementById("onboarding-form").style.display = "none";
+        document.getElementById("success").style.display = "block";
       } catch (err) {
-        alert('Error: ' + err.message);
+        console.error("Submission error:", err);
+        alert("Something went wrong: " + err.message);
       }
     });
   </script>
