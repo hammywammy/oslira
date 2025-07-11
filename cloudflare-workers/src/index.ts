@@ -229,4 +229,4 @@ app.post('/analyze', async (c) => {
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 app.get('/', (c) => c.text('Oslira AI Worker is running!'));
 
-export default { fetch: app.fetch };
+export default { fetch: app.fetch }; 
