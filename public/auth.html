@@ -1,91 +1,74 @@
 <!DOCTYPE html>
-<html lang="en"> 
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - Oslira AI</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign In - Oslira AI</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body class="auth-page">
-    <div class="auth-container">
-        <div class="auth-box" id="auth-form-container">
-            <h1>Welcome to Oslira</h1>
-            <p>Enter your email to sign in or create an account</p>
-            
-            <form id="auth-form" onsubmit="handleAuth(event)">
-                <input type="email" id="email" placeholder="your@email.com" required>
-                <button type="submit">Continue with Email</button>
-            </form>
-            
-            <p class="terms">
-                By continuing, you agree to our 
-                <a href="/legal/terms.html">Terms of Service</a> and 
-                <a href="/legal/privacy.html">Privacy Policy</a>
-            </p>
-        </div>
-        
-        <div class="auth-success" id="auth-success" style="display:none;">
-            <h2>Check Your Email!</h2>
-            <p>We sent a magic link to <span id="email-sent"></span></p>
-            <p>Click the link in the email to sign in.</p>
-        </div>
+  <div class="auth-container">
+    <div class="auth-box" id="auth-form-container">
+      <h1>Welcome to Oslira</h1>
+      <p>Enter your email to sign in or create an account</p>
+
+      <form id="auth-form">
+        <input type="email" id="email" placeholder="your@email.com" required>
+        <button type="submit">Continue with Email</button>
+      </form>
+
+      <p class="terms">
+        By continuing, you agree to our 
+        <a href="/legal/terms.html">Terms of Service</a> and 
+        <a href="/legal/privacy.html">Privacy Policy</a>
+      </p>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        const { createClient } = supabase;
-        const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjQxMzUsImV4cCI6MjA2NzYwMDEzNX0.XMoC3iLcDbKNxPfhTHj8CQsEjelTIrivIddfPTO9P64';
-        const supabaseClient = createClient(supabaseUrl, supabaseKey);
-        
-        async function handleAuth(e) {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            
-            try {
-                // Check if user exists
-                const { data: existingUser } = await supabaseClient
-                    .from('users')
-                    .select('onboarding_completed')
-                    .eq('email', email)
-                    .single();
-                
-                // Set redirect based on whether user has completed onboarding
-                const redirectTo = existingUser?.onboarding_completed 
-                    ? '/dashboard.html' 
-                    : '/onboarding.html';
-                
-                const { error } = await supabaseClient.auth.signInWithOtp({
-                    email: email,
-                    options: {
-                        emailRedirectTo: window.location.origin + redirectTo
-                    }
-                });
-                
-                if (error) throw error;
-                
-                // Show success message
-                document.getElementById('auth-form-container').style.display = 'none';
-                document.getElementById('auth-success').style.display = 'block';
-                document.getElementById('email-sent').textContent = email;
-            } catch (error) {
-                // If user doesn't exist, they're new - still send magic link
-                const { error: signUpError } = await supabaseClient.auth.signInWithOtp({
-                    email: email,
-                    options: {
-                        emailRedirectTo: window.location.origin + '/onboarding.html'
-                    }
-                });
-                
-                if (signUpError) {
-                    alert('Error: ' + signUpError.message);
-                } else {
-                    document.getElementById('auth-form-container').style.display = 'none';
-                    document.getElementById('auth-success').style.display = 'block';
-                    document.getElementById('email-sent').textContent = email;
-                }
-            }
-        }
-    </script>
+
+    <div class="auth-success" id="auth-success" style="display:none;">
+      <h2>Check Your Email!</h2>
+      <p>We sent a magic link to <span id="email-sent"></span></p>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+    const supabase = createClient(
+      'https://jswzzihuqtjqvobfosks.supabase.co',
+      'YOUR_PUBLIC_ANON_KEY' // Replace with your actual anon key
+    );
+
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+
+      try {
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('onboarding_completed')
+          .eq('email', email)
+          .maybeSingle();
+
+        const redirectTo = existingUser?.onboarding_completed
+          ? '/dashboard.html'
+          : '/onboarding.html';
+
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: window.location.origin + redirectTo
+          }
+        });
+
+        if (error) throw error;
+
+        document.getElementById('auth-form-container').style.display = 'none';
+        document.getElementById('auth-success').style.display = 'block';
+        document.getElementById('email-sent').textContent = email;
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    });
+  </script>
 </body>
 </html>
