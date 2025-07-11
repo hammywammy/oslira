@@ -572,24 +572,29 @@ app.post('/analyze', async (c) => {
             
             console.log('📊 Profile extracted:', profileFromData);
             
-            if (profileFromData && (profileFromData.username || profileFromData.ownerUsername)) {
-              profileData = {
-                username: profileFromData.username || profileFromData.ownerUsername,
-                fullName: profileFromData.fullName || profileFromData.displayName,
-                biography: profileFromData.biography || profileFromData.bio,
-                followersCount: profileFromData.followersCount || profileFromData.followers || 0,
-                followingCount: profileFromData.followingCount || profileFromData.following || 0,
-                postsCount: profileFromData.postsCount || profileFromData.posts || 0,
-                isVerified: profileFromData.isVerified || profileFromData.verified || false,
-                profilePicUrl: profileFromData.profilePicUrl || profileFromData.avatar,
-                externalUrl: profileFromData.externalUrl || profileFromData.website,
-                businessCategoryName: profileFromData.businessCategoryName || profileFromData.category
-              };
-              scrapingSuccess = true;
-              console.log('✅ Deep scraping SUCCESS for:', profileData.username);
-            } else {
-              console.warn('⚠️ Deep scraper returned data but no username found');
-            }
+// Replace the deep scraper profile mapping section with this:
+
+if (profileFromData && (profileFromData.username || profileFromData.ownerUsername)) {
+  profileData = {
+    username: profileFromData.username || profileFromData.ownerUsername,
+    fullName: profileFromData.fullName || profileFromData.displayName,
+    biography: profileFromData.biography || profileFromData.bio,
+    followersCount: profileFromData.followersCount || profileFromData.followers || 0,
+    followingCount: profileFromData.followsCount || profileFromData.following || profileFromData.followingCount || 0, // FIXED: followsCount -> followingCount
+    postsCount: profileFromData.postsCount || (profileFromData.latestPosts ? profileFromData.latestPosts.length : 0) || 0, // FIXED: Use latestPosts length if postsCount missing
+    isVerified: profileFromData.isVerified || profileFromData.verified || false,
+    private: profileFromData.private || profileFromData.isPrivate || false, // FIXED: Add private field
+    profilePicUrl: profileFromData.profilePicUrl || profileFromData.avatar,
+    profilePicUrlHD: profileFromData.profilePicUrlHD || profileFromData.profilePicUrl || profileFromData.avatar, // FIXED: Add HD version
+    externalUrl: profileFromData.externalUrl || profileFromData.website,
+    businessCategoryName: profileFromData.businessCategoryName || profileFromData.category
+  };
+  scrapingSuccess = true;
+  console.log('✅ Deep scraping SUCCESS for:', profileData.username);
+} else {
+  console.warn('⚠️ Deep scraper returned data but no username found');
+  console.log('📊 Available fields:', Object.keys(profileFromData || {}));
+}
           }
         } else {
           const errorText = await apifyResponse.text();
