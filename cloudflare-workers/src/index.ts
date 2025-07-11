@@ -334,4 +334,6 @@ app.get('/', (c) => {
   return c.text('Oslira AI Worker is running!');
 });
 
-export default app;
+export default {
+  fetch: app.fetch
+};
