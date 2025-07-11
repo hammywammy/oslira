@@ -1060,7 +1060,7 @@ export default {
       credits_remaining: newCreditBalance
     });
 
-    // 14. COMPREHENSIVE SUCCESS RESPONSE
+// 14. COMPREHENSIVE SUCCESS RESPONSE - FIXED FORMAT
     return c.json({
       success: true,
       lead_id: lead.id,
@@ -1073,10 +1073,11 @@ export default {
         verified: profileData.isVerified || profileData.verified,
         category: profileData.businessCategoryName || profileData.category,
         external_url: profileData.externalUrl,
+        avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD, // FIX: Include avatar
         scraping_success: scrapingSuccess
       },
       analysis: {
-        type: analysis_type, // This will now be correctly returned
+        type: analysis_type, // FIX: Use 'type' not 'analysisType'
         lead_score: analysis.lead_score,
         summary: analysis.summary,
         niche: analysis.niche,
