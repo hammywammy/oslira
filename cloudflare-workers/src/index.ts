@@ -145,14 +145,34 @@ app.post('/analyze', async (c) => {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      const apifyData = await apifyResponse.json();
-      profileData = apifyData[0];
+      console.log('📊 Apify response status:', apifyResponse.status);
       
-      if (profileData?.username) {
-        console.log('✅ Profile data scraped successfully:', profileData.username);
-      } else {
-        console.log('⚠️ Apify returned no data, using mock data...');
+      if (!apifyResponse.ok) {
+        console.log('❌ Apify API error:', apifyResponse.status);
         profileData = null;
+      } else {
+        const responseText = await apifyResponse.text();
+        console.log('📝 Apify raw response:', responseText);
+        
+        if (!responseText || responseText.trim() === '') {
+          console.log('⚠️ Apify returned empty response');
+          profileData = null;
+        } else {
+          try {
+            const apifyData = JSON.parse(responseText);
+            profileData = apifyData[0];
+            
+            if (profileData?.username) {
+              console.log('✅ Profile data scraped successfully:', profileData.username);
+            } else {
+              console.log('⚠️ Apify returned data but no username found');
+              profileData = null;
+            }
+          } catch (parseError) {
+            console.log('⚠️ Failed to parse Apify JSON:', parseError.message);
+            profileData = null;
+          }
+        }
       }
     } catch (error) {
       console.log('⚠️ Apify scraper failed:', error.message);
