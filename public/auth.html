@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Your Business Profile - Oslira AI</title>
+    <title>Sign In - Oslira AI</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
         * {
             margin: 0;
@@ -20,72 +21,37 @@
             justify-content: center;
         }
         
-        .onboarding-container {
+        .auth-container {
             width: 100%;
-            max-width: 500px;
-            margin: auto;
+            max-width: 400px;
             padding: 20px;
         }
         
-        .onboarding-card {
+        .auth-box {
             background: white;
             border-radius: 12px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             padding: 40px;
+            text-align: center;
         }
         
-        .progress-bar {
-            width: 100%;
-            background: #eee;
-            height: 10px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background-color: #4caf50;
-            width: 33%;
-            transition: width 0.3s ease;
-        }
-        
-        .step {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        .step.active {
-            display: block;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        h2 {
+        h1 {
             color: #333;
             margin-bottom: 10px;
+            font-size: 24px;
         }
         
         p {
             color: #666;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
         
         .form-group {
-            margin-bottom: 1rem;
+            margin-bottom: 20px;
+            text-align: left;
         }
         
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-        }
-        
-        input, select, textarea {
+        input[type="email"] {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
@@ -94,53 +60,65 @@
             transition: border-color 0.3s ease;
         }
         
-        input:focus, select:focus, textarea:focus {
+        input[type="email"]:focus {
             outline: none;
             border-color: #4caf50;
         }
         
         button {
-            padding: 12px 24px;
+            width: 100%;
+            padding: 12px;
+            background-color: #4caf50;
+            color: white;
             border: none;
             border-radius: 8px;
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-right: 10px;
+            transition: background-color 0.3s ease;
         }
         
-        button[type="submit"], .btn-primary {
-            background-color: #4caf50;
-            color: white;
-        }
-        
-        button[type="submit"]:hover, .btn-primary:hover {
+        button:hover {
             background-color: #45a049;
         }
         
-        button[type="button"] {
-            background-color: #f0f0f0;
-            color: #333;
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
         
-        button[type="button"]:hover {
-            background-color: #e0e0e0;
+        .terms {
+            font-size: 14px;
+            color: #666;
+            margin-top: 20px;
         }
         
-        .auth-check, .loading-state, .error-state {
+        .terms a {
+            color: #4caf50;
+            text-decoration: none;
+        }
+        
+        .terms a:hover {
+            text-decoration: underline;
+        }
+        
+        .auth-success {
             text-align: center;
-            padding: 60px 20px;
+        }
+        
+        .auth-success h2 {
+            color: #4caf50;
+            margin-bottom: 10px;
         }
         
         .spinner {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #4caf50;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            margin: 10px auto;
         }
         
         @keyframes spin {
@@ -148,430 +126,150 @@
             100% { transform: rotate(360deg); }
         }
         
-        .error-message {
-            color: #f44336;
-            margin-bottom: 20px;
-        }
-        
-        .success-state {
-            background-color: #4caf50;
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        
-        .debug-info {
-            background-color: #f0f0f0;
-            padding: 10px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 14px;
-            font-family: monospace;
-            text-align: left;
-        }
-        
-        textarea {
-            resize: vertical;
-            min-height: 80px;
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
     </style>
 </head>
-<body class="onboarding-page">
-    <!-- Auth Check State -->
-    <div id="authCheck" class="onboarding-container">
-        <div class="onboarding-card auth-check">
-            <div class="spinner"></div>
-            <p>Verifying authentication...</p>
-        </div>
-    </div>
-    
-    <!-- Loading State -->
-    <div id="loadingState" class="onboarding-container" style="display: none;">
-        <div class="onboarding-card loading-state">
-            <div class="spinner"></div>
-            <p>Saving your profile...</p>
-        </div>
-    </div>
-    
-    <!-- Error State -->
-    <div id="errorState" class="onboarding-container" style="display: none;">
-        <div class="onboarding-card error-state">
-            <h2>Authentication Error</h2>
-            <p class="error-message" id="errorMessage">Unable to verify your session.</p>
-            <button class="btn-primary" onclick="window.location.href='auth.html'">Back to Login</button>
-            <div class="debug-info" id="debugInfo" style="display: none;"></div>
-        </div>
-    </div>
-    
-    <!-- Main Onboarding Form -->
-    <div id="onboardingMain" class="onboarding-container" style="display: none;">
-        <div class="onboarding-card">
-            <div class="progress-bar" aria-label="Progress">
-                <div class="progress-fill" id="progress" style="width: 33%"></div>
-            </div>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-box" id="auth-form-container">
+            <h1>Welcome to Oslira</h1>
+            <p>Enter your email to sign in or create an account</p>
 
-            <form id="onboarding-form" novalidate>
-                <!-- Step 1 -->
-                <div class="step active" id="step-1">
-                    <h2>Let's set up your first CRM workspace</h2>
-                    <p>You can create multiple workspaces later.</p>
-                    <div class="form-group">
-                        <label for="business-name">Business name</label>
-                        <input type="text" id="business-name" required />
-                    </div>
-                    <div class="form-group">
-                        <label for="business-website">Website</label>
-                        <input type="url" id="business-website" placeholder="https://example.com" />
-                    </div>
-                    <div class="form-group">
-                        <label for="business-niche">Business niche</label>
-                        <input type="text" id="business-niche" required />
-                    </div>
-                    <button type="button" onclick="nextStep(2)">Next</button>
+            <form id="auth-form">
+                <div class="form-group">
+                    <input type="email" id="email" placeholder="your@email.com" required>
                 </div>
-
-                <!-- Step 2 -->
-                <div class="step" id="step-2">
-                    <h2>Your Target Market</h2>
-                    <div class="form-group">
-                        <label for="target-niche">Target niche</label>
-                        <input type="text" id="target-niche" required />
-                    </div>
-                    <div class="form-group">
-                        <label for="customer-location">Customer location</label>
-                        <input type="text" id="customer-location" placeholder="e.g., United States, Europe" />
-                    </div>
-                    <div class="form-group">
-                        <label for="primary-platform">Primary platform</label>
-                        <select id="primary-platform">
-                            <option value="instagram">Instagram</option>
-                            <option value="linkedin">LinkedIn</option>
-                            <option value="both">Both</option>
-                        </select>
-                    </div>
-                    <button type="button" onclick="previousStep(1)">Back</button>
-                    <button type="button" onclick="nextStep(3)">Next</button>
-                </div>
-
-                <!-- Step 3 -->
-                <div class="step" id="step-3">
-                    <h2>What Do You Offer?</h2>
-                    <div class="form-group">
-                        <label for="product-service">Product/service</label>
-                        <textarea id="product-service" required placeholder="Describe what you offer..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="value-prop">Value proposition</label>
-                        <input type="text" id="value-prop" required placeholder="What makes you unique?" />
-                    </div>
-                    <button type="button" onclick="previousStep(2)">Back</button>
-                    <button type="submit">Complete Setup</button>
-                </div>
+                <button type="submit" id="submit-btn">Continue with Email</button>
             </form>
 
-            <!-- Success -->
-            <div class="success-state" id="success" style="display: none;">
-                <h2>✅ Your CRM is ready!</h2>
-                <p>You've been credited with 5 free credits to test the system.</p>
-                <p>Redirecting to dashboard...</p>
-            </div>
+            <p class="terms">
+                By continuing, you agree to our 
+                <a href="legal/terms.html">Terms of Service</a> and 
+                <a href="legal/privacy.html">Privacy Policy</a>
+            </p>
+        </div>
+
+        <div class="auth-success" id="auth-success" style="display:none;">
+            <h2>Check Your Email!</h2>
+            <p>We sent a magic link to <span id="email-sent"></span></p>
+            <p>Click the link in your email to continue.</p>
         </div>
     </div>
 
-    <!-- Supabase JS (latest stable 2.x) -->
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
-        // Replace with your actual Supabase credentials
         const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjQxMzUsImV4cCI6MjA2NzYwMDEzNX0.XMoC3iLcDbKNxPfhTHj8CQsEjelTIrivIddfPTO9P64';
         
-        // Initialize Supabase client - FIXED
+        // Initialize Supabase client
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        let currentStep = 1;
-        let currentUser = null;
-
-        // Initialize on page load
+        // Check if user is already logged in
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🚀 Onboarding page loaded at:', new Date().toISOString());
-            console.log('📍 Current URL:', window.location.href);
-            console.log('🔗 Hash params:', window.location.hash);
+            console.log('🔍 Checking existing session...');
             
-            await checkAuth();
+            const { data: { session }, error } = await supabase.auth.getSession();
+            
+            if (session) {
+                console.log('✅ User already logged in, checking onboarding status...');
+                
+                try {
+                    const { data: userData, error: userError } = await supabase
+                        .from('users')
+                        .select('onboarding_completed')
+                        .eq('id', session.user.id)
+                        .single();
+                    
+                    if (userData?.onboarding_completed) {
+                        console.log('🎯 Redirecting to dashboard...');
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        console.log('📝 Redirecting to onboarding...');
+                        window.location.href = 'onboarding.html';
+                    }
+                } catch (err) {
+                    console.error('Error checking onboarding status:', err);
+                    // Default to onboarding if we can't check
+                    window.location.href = 'onboarding.html';
+                }
+            }
         });
 
-        // Single auth check function - CLEANED UP
-        async function checkAuth() {
-            try {
-                console.log('🔍 Checking authentication...');
-                
-                // Check for magic link tokens in URL first
-                const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                const accessToken = hashParams.get('access_token');
-                const refreshToken = hashParams.get('refresh_token');
-                
-                if (accessToken) {
-                    console.log('🎟️ Magic link tokens found, processing...');
-                    
-                    // Wait for Supabase to process the tokens
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                    
-                    // Clean up URL
-                    if (window.history && window.history.replaceState) {
-                        window.history.replaceState(null, '', window.location.pathname);
-                    }
-                }
-                
-                // Get current session
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                
-                if (sessionError) {
-                    console.error('❌ Session error:', sessionError);
-                    showError('Session verification failed: ' + sessionError.message);
-                    return;
-                }
-                
-                if (!session) {
-                    console.log('🚫 No active session found');
-                    showError('No active session. Please log in first.');
-                    return;
-                }
-                
-                console.log('✅ Session found for user:', session.user.email);
-                currentUser = session.user;
-                
-                // Check if user already completed onboarding
-                await checkOnboardingStatus();
-                
-            } catch (err) {
-                console.error('💥 Auth check error:', err);
-                showError('Authentication error: ' + err.message);
+        // Handle form submission
+        document.getElementById('auth-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const submitBtn = document.getElementById('submit-btn');
+            
+            if (!email) {
+                alert('Please enter your email address.');
+                return;
             }
-        }
-        
-        // Check if user already completed onboarding
-        async function checkOnboardingStatus() {
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="loading"><div class="spinner"></div> Sending...</div>';
+
             try {
-                const { data: userData, error: userError } = await supabase
+                console.log('📧 Sending magic link to:', email);
+                
+                // Check if user exists and their onboarding status
+                const { data: existingUser } = await supabase
                     .from('users')
                     .select('onboarding_completed')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (userError && userError.code !== 'PGRST116') { // PGRST116 = no rows returned
-                    console.error('❌ User lookup error:', userError);
-                }
-                
-                if (userData?.onboarding_completed) {
-                    console.log('✅ User already completed onboarding, redirecting...');
-                    window.location.href = 'dashboard.html';
-                    return;
-                }
-                
-                console.log('📝 Showing onboarding form');
-                showOnboardingForm();
-                
+                    .eq('email', email)
+                    .maybeSingle();
+
+                // Determine redirect destination
+                const redirectTo = existingUser?.onboarding_completed
+                    ? window.location.origin + '/dashboard.html'
+                    : window.location.origin + '/onboarding.html';
+
+                console.log('🎯 Redirect destination:', redirectTo);
+
+                // Send magic link
+                const { error } = await supabase.auth.signInWithOtp({
+                    email,
+                    options: {
+                        emailRedirectTo: redirectTo,
+                        shouldCreateUser: true
+                    }
+                });
+
+                if (error) throw error;
+
+                console.log('✅ Magic link sent successfully');
+
+                // Show success message
+                document.getElementById('auth-form-container').style.display = 'none';
+                document.getElementById('auth-success').style.display = 'block';
+                document.getElementById('email-sent').textContent = email;
+
             } catch (err) {
-                console.error('💥 Onboarding status check error:', err);
-                // Show form anyway if we can't check status
-                showOnboardingForm();
+                console.error('❌ Auth error:', err);
+                alert('Error: ' + err.message);
+                
+                // Reset button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Continue with Email';
             }
-        }
+        });
 
         // Listen for auth state changes
         supabase.auth.onAuthStateChange((event, session) => {
-            console.log('🔄 Auth state changed:', event, session?.user?.email || 'no user');
+            console.log('🔄 Auth state changed:', event);
             
             if (event === 'SIGNED_IN' && session) {
-                currentUser = session.user;
-                showOnboardingForm();
-            } else if (event === 'SIGNED_OUT') {
-                console.log('👋 User signed out, redirecting to auth...');
-                window.location.href = 'auth.html';
-            }
-        });
-
-        // Show/hide UI states
-        function showOnboardingForm() {
-            document.getElementById('authCheck').style.display = 'none';
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('errorState').style.display = 'none';
-            document.getElementById('onboardingMain').style.display = 'block';
-        }
-
-        function showError(message) {
-            document.getElementById('authCheck').style.display = 'none';
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('onboardingMain').style.display = 'none';
-            document.getElementById('errorState').style.display = 'block';
-            document.getElementById('errorMessage').textContent = message;
-            
-            // Show debug info in development
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                const debugInfo = document.getElementById('debugInfo');
-                debugInfo.style.display = 'block';
-                debugInfo.innerHTML = `
-                    <strong>Debug Info:</strong><br>
-                    URL: ${window.location.href}<br>
-                    Hash: ${window.location.hash}<br>
-                    User Agent: ${navigator.userAgent}<br>
-                    Timestamp: ${new Date().toISOString()}
-                `;
-            }
-        }
-
-        function showLoading() {
-            document.getElementById('authCheck').style.display = 'none';
-            document.getElementById('errorState').style.display = 'none';
-            document.getElementById('onboardingMain').style.display = 'none';
-            document.getElementById('loadingState').style.display = 'block';
-        }
-
-        // Step navigation functions
-        function nextStep(step) {
-            if (!validateStep(currentStep)) return;
-            
-            document.querySelector(`#step-${currentStep}`).classList.remove('active');
-            document.querySelector(`#step-${step}`).classList.add('active');
-            currentStep = step;
-            updateProgress();
-        }
-
-        function previousStep(step) {
-            document.querySelector(`#step-${currentStep}`).classList.remove('active');
-            document.querySelector(`#step-${step}`).classList.add('active');
-            currentStep = step;
-            updateProgress();
-        }
-
-        function updateProgress() {
-            const progressPercent = (currentStep / 3) * 100;
-            document.getElementById('progress').style.width = progressPercent + '%';
-        }
-
-        function validateStep(step) {
-            const stepEl = document.querySelector(`#step-${step}`);
-            const requiredInputs = stepEl.querySelectorAll('input[required], textarea[required], select[required]');
-            let isValid = true;
-            
-            requiredInputs.forEach(input => {
-                const value = input.value.trim();
-                if (!value) {
-                    input.style.borderColor = '#f44336';
-                    isValid = false;
-                } else {
-                    input.style.borderColor = '#ddd';
-                }
-            });
-            
-            if (!isValid) {
-                alert('Please fill in all required fields.');
-            }
-            
-            return isValid;
-        }
-
-        // Form submission - FIXED with proper session check
-        document.getElementById("onboarding-form").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            console.log('📝 Form submitted');
-
-            if (!validateStep(currentStep)) return;
-
-            try {
-                // Verify current session before submitting
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                if (sessionError || !session || !session.user) {
-                    alert("Session expired. Please log in again.");
-                    window.location.href = "auth.html";
-                    return;
-                }
-                
-                const user = session.user;
-
-                const businessData = {
-                    business_name: document.getElementById("business-name").value.trim(),
-                    business_website: document.getElementById("business-website").value.trim(),
-                    business_niche: document.getElementById("business-niche").value.trim(),
-                    target_niche: document.getElementById("target-niche").value.trim(),
-                    customer_location: document.getElementById("customer-location").value.trim(),
-                    primary_platform: document.getElementById("primary-platform").value,
-                    product_service: document.getElementById("product-service").value.trim(),
-                    value_prop: document.getElementById("value-prop").value.trim(),
-                };
-
-                showLoading();
-
-                console.log('💾 Saving user data...');
-                
-                // Insert/update user with credits and onboarding flag
-                const { error: userError } = await supabase
-                    .from("users")
-                    .upsert({
-                        id: user.id,
-                        email: user.email,
-                        credits: 5,
-                        onboarding_completed: true
-                    }, { 
-                        onConflict: 'id',
-                        ignoreDuplicates: false 
-                    });
-
-                if (userError) {
-                    console.error('❌ User upsert error:', userError);
-                    throw userError;
-                }
-
-                console.log('💼 Saving business profile...');
-                
-                // Insert business profile
-                const { error: profileError } = await supabase
-                    .from("business_profiles")
-                    .insert({
-                        user_id: user.id,
-                        ...businessData,
-                        is_active: true
-                    });
-
-                if (profileError) {
-                    console.error('❌ Business profile error:', profileError);
-                    throw profileError;
-                }
-
-                console.log('✅ Data saved successfully');
-
-                // Show success and redirect
-                document.getElementById("loadingState").style.display = "none";
-                document.getElementById("onboarding-form").style.display = "none";
-                document.getElementById("success").style.display = "block";
-                
-                // Redirect after 3 seconds
-                setTimeout(() => {
-                    console.log('🎯 Redirecting to dashboard...');
-                    window.location.href = 'dashboard.html';
-                }, 3000);
-
-            } catch (err) {
-                console.error('💥 Submission error:', err);
-                document.getElementById("loadingState").style.display = "none";
-                document.getElementById("onboardingMain").style.display = "block";
-                alert("Something went wrong: " + err.message);
-            }
-        });
-
-        // Handle browser back button
-        window.addEventListener('popstate', (event) => {
-            // Prevent going back during onboarding
-            event.preventDefault();
-        });
-
-        // Prevent accidental page refresh
-        window.addEventListener('beforeunload', (event) => {
-            if (document.getElementById('onboardingMain').style.display !== 'none') {
-                event.preventDefault();
-                event.returnValue = 'Are you sure you want to leave? Your progress will be lost.';
+                console.log('✅ User signed in successfully');
+                // The redirect will be handled by the magic link
             }
         });
     </script>
