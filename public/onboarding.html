@@ -199,7 +199,7 @@
         <div class="onboarding-card error-state">
             <h2>Authentication Error</h2>
             <p class="error-message" id="errorMessage">Unable to verify your session.</p>
-            <button class="btn-primary" onclick="window.location.href='/public/auth.html'">Back to Login</button>
+            <button class="btn-primary" onclick="window.location.href='auth.html'">Back to Login</button>
             <div class="debug-info" id="debugInfo" style="display: none;"></div>
         </div>
     </div>
@@ -366,7 +366,7 @@
                 
                 if (userData?.onboarding_completed) {
                     console.log('✅ User already completed onboarding, redirecting...');
-                    window.location.href = '/public/dashboard.html';
+                    window.location.href = 'dashboard.html';
                     return;
                 }
                 
@@ -389,7 +389,7 @@
                 showOnboardingForm();
             } else if (event === 'SIGNED_OUT') {
                 console.log('👋 User signed out, redirecting to auth...');
-                window.location.href = '/public/auth.html';
+                window.location.href = 'auth.html';
             }
         });
 
@@ -485,7 +485,7 @@
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 if (sessionError || !session || !session.user) {
                     alert("Session expired. Please log in again.");
-                    window.location.href = "/public/auth.html";
+                    window.location.href = "auth.html";
                     return;
                 }
                 
@@ -550,7 +550,7 @@
                 // Redirect after 3 seconds
                 setTimeout(() => {
                     console.log('🎯 Redirecting to dashboard...');
-                    window.location.href = '/public/dashboard.html';
+                    window.location.href = 'dashboard.html';
                 }, 3000);
 
             } catch (err) {
