@@ -498,20 +498,14 @@ app.post('/analyze', async (c) => {
       if (analysis_type === 'light') {
         console.log('📊 Running LIGHT scraper for:', username);
         const apifyInput = { usernames: [username] };
-        console.log('📊 Light scraper input:', apifyInput);
         
         console.log('📊 Running LIGHT scraper for:', username);
 
-const apifyResponse = await fetch('https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
+const apifyResponse = await fetch('https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    usernames: [username],
-    resultsType: "posts",
-    resultsLimit: 1,
-    proxy: {
-      useApifyProxy: true
-    }
+    usernames: [username]
   }),
 });
 
@@ -546,20 +540,19 @@ const apifyResponse = await fetch('https://api.apify.com/v2/acts/apify~instagram
             proxy: { useApifyProxy: true },
           }
         };
-        console.log('📊 Deep scraper input usernames:', apifyInput.input.usernames);
-        
         console.log('📊 Running DEEP scraper for:', username);
 
-const apifyResponse = await fetch('https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
+const apifyResponse = await fetch('https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    usernames: [username],
-    resultsType: "posts",
+    directUrls: ['https://www.instagram.com/' + username + '/'],
     resultsLimit: 200,
-    proxy: {
-      useApifyProxy: true
-    }
+    resultsType: "details",
+    addParentData: false,
+    enhanceUserSearchWithFacebookPage: false,
+    isUserReelFeedURL: false,
+    isUserTaggedFeedURL: false
   }),
 });
 
