@@ -1221,19 +1221,17 @@ async function loadRecentActivity() {
         const tableBody = document.getElementById('activity-table');
         if (leads && leads.length > 0) {
             tableBody.innerHTML = leads.map(lead => {
-                // Determine analysis type 
                 const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
                 const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
                 
-                // FIXED: Proper avatar display with CORS handling
+                // FIXED: Only show avatar image, no letter fallback
                 let avatarDisplay = '';
                 if (lead.avatar_url) {
-                    // Use a CORS proxy for Instagram images or handle direct display
                     const proxyUrl = lead.avatar_url.includes('instagram') 
                         ? `https://images.weserv.nl/?url=${encodeURIComponent(lead.avatar_url)}&w=32&h=32&fit=cover&mask=circle`
                         : lead.avatar_url;
                     
-                    avatarDisplay = `<img src="${proxyUrl}" alt="@${lead.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">`;
+                    avatarDisplay = `<img src="${proxyUrl}" alt="@${lead.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;" onerror="this.style.display='none';">`;
                 }
                 
                 return `
@@ -1242,9 +1240,6 @@ async function loadRecentActivity() {
                         <td>
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 ${avatarDisplay}
-                                <div style="display: ${avatarDisplay ? 'none' : 'inline-block'}; width: 32px; height: 32px; background: linear-gradient(135deg, #2D6CDF, #8A6DF1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 600;">
-                                    ${lead.username.charAt(0).toUpperCase()}
-                                </div>
                                 <div>
                                     <div style="font-weight: 600; color: #1f2937;">@${lead.username}</div>
                                     <div style="font-size: 12px; color: #6b7280;">
@@ -1254,23 +1249,13 @@ async function loadRecentActivity() {
                                 </div>
                             </div>
                         </td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 4px;">
-                                📷 ${lead.platform || 'Instagram'}
-                            </span>
-                        </td>
+                        <td>📷 ${lead.platform || 'Instagram'}</td>
                         <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
-                        <td>
-                            <span class="status ${analysisType}">${analysisType}</span>
-                        </td>
+                        <td><span class="status ${analysisType}">${analysisType}</span></td>
                         <td><span class="status ${lead.status}">${lead.status}</span></td>
                         <td style="position: relative; padding-right: 35px;">
-                            <button class="btn-small" onclick="viewLead('${lead.id}')">
-                                📝 View
-                            </button>
-                            <button class="delete-btn" onclick="deleteLead('${lead.id}')" title="Delete lead">
-                                🗑️
-                            </button>
+                            <button class="btn-small" onclick="viewLead('${lead.id}')">📝 View</button>
+                            <button class="delete-btn" onclick="deleteLead('${lead.id}')" title="Delete lead">🗑️</button>
                         </td>
                     </tr>
                 `;
@@ -1659,6 +1644,7 @@ async function loadRecentActivity() {
 
         // Enhanced view lead function with comprehensive details for both light and deep analysis
 // Enhanced viewLead function with PROPER data extraction from analysis_data
+// Enhanced debugging version to see what data exists
 async function viewLead(leadId) {
     try {
         console.log('👁️ Loading lead details for:', leadId);
@@ -1669,14 +1655,7 @@ async function viewLead(leadId) {
             .select(`
                 *,
                 lead_analyses (
-                    analysis_data,
-                    score_reasons,
-                    activity_insights,
-                    outreach_message,
-                    engagement_rate,
-                    selling_points,
-                    custom_notes,
-                    created_at
+                    *
                 )
             `)
             .eq('id', leadId)
@@ -1688,17 +1667,20 @@ async function viewLead(leadId) {
         const analysisData = analysis?.analysis_data || {};
         const analysisType = lead.type || (analysis ? 'deep' : 'light');
         
-        console.log('🔍 Debug - Analysis Data:', {
-            analysisType,
-            rawAnalysisData: analysisData,
-            outreachMessage: analysis?.outreach_message,
-            engagementFromDB: analysis?.engagement_rate,
-            engagementFromAnalysis: analysisData.engagement_rate,
-            sellingPointsFromDB: analysis?.selling_points,
-            sellingPointsFromAnalysis: analysisData.selling_points
-        });
+        // COMPREHENSIVE DEBUGGING
+        console.log('🔍 FULL DEBUG DATA:');
+        console.log('- Lead object:', lead);
+        console.log('- Analysis object:', analysis);
+        console.log('- Analysis data (JSON):', analysisData);
+        console.log('- Analysis type:', analysisType);
+        console.log('- Raw outreach message:', analysis?.outreach_message);
+        console.log('- Raw engagement rate:', analysis?.engagement_rate);
+        console.log('- Raw selling points:', analysis?.selling_points);
+        console.log('- Analysis data selling_points:', analysisData.selling_points);
+        console.log('- Analysis data engagement_rate:', analysisData.engagement_rate);
+        console.log('- Analysis data custom_notes:', analysisData.custom_notes);
         
-        // FIXED: Proper avatar display with CORS handling
+        // FIXED: Only show avatar if it exists, no fallback
         let avatarSection = '';
         if (lead.avatar_url) {
             const proxyUrl = lead.avatar_url.includes('instagram') 
@@ -1712,9 +1694,19 @@ async function viewLead(leadId) {
             `;
         }
         
-        // Build detailed view with type-specific sections
+        // Build detailed view
         let detailsHtml = `
             ${avatarSection}
+            
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 8px; margin-bottom: 20px; font-family: monospace; font-size: 12px;">
+                <h4>🔍 DEBUG INFO (remove this in production)</h4>
+                <div><strong>Analysis Type:</strong> ${analysisType}</div>
+                <div><strong>Has Analysis Record:</strong> ${!!analysis}</div>
+                <div><strong>Outreach Message:</strong> ${analysis?.outreach_message || 'MISSING'}</div>
+                <div><strong>Engagement Rate:</strong> ${analysis?.engagement_rate || analysisData.engagement_rate || 'MISSING'}</div>
+                <div><strong>Selling Points:</strong> ${JSON.stringify(analysis?.selling_points || analysisData.selling_points || 'MISSING')}</div>
+                <div><strong>Custom Notes:</strong> ${analysis?.custom_notes || analysisData.custom_notes || 'MISSING'}</div>
+            </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
                 <div>
@@ -1745,11 +1737,6 @@ async function viewLead(leadId) {
                         <div class="detail-label">Verified:</div>
                         <div class="detail-value">${lead.is_verified ? '✅ Verified' : '❌ Not verified'}</div>
                     </div>
-                    
-                    <div class="detail-row">
-                        <div class="detail-label">Privacy:</div>
-                        <div class="detail-value">${lead.is_private ? '🔒 Private' : '🌍 Public'}</div>
-                    </div>
                 </div>
                 
                 <div>
@@ -1779,151 +1766,110 @@ async function viewLead(leadId) {
                         <div class="detail-label">Niche:</div>
                         <div class="detail-value">${analysisData.niche || lead.niche || 'Unknown'}</div>
                     </div>
-                    
-                    <div class="detail-row">
-                        <div class="detail-label">Created:</div>
-                        <div class="detail-value">${new Date(lead.created_at).toLocaleString()}</div>
-                    </div>
                 </div>
             </div>
         `;
-        
-        // Add follower stats if available
-        if (lead.followers_count || lead.following_count || lead.posts_count) {
-            detailsHtml += `
-                <div style="margin-bottom: 24px;">
-                    <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
-                        📈 Profile Statistics
-                    </h4>
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                        <div style="text-align: center; background: linear-gradient(135deg, #F5F9FF, #C9CEDC); padding: 16px; border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: #2D6CDF;">${lead.followers_count ? lead.followers_count.toLocaleString() : '0'}</div>
-                            <div style="font-size: 14px; color: #121417;">Followers</div>
-                        </div>
-                        <div style="text-align: center; background: linear-gradient(135deg, #F5F9FF, #C9CEDC); padding: 16px; border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: #2D6CDF;">${lead.following_count ? lead.following_count.toLocaleString() : '0'}</div>
-                            <div style="font-size: 14px; color: #121417;">Following</div>
-                        </div>
-                        <div style="text-align: center; background: linear-gradient(135deg, #F5F9FF, #C9CEDC); padding: 16px; border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: #2D6CDF;">${lead.posts_count || '0'}</div>
-                            <div style="font-size: 14px; color: #121417;">Posts</div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // Bio section
-        if (lead.bio) {
-            detailsHtml += `
-                <div style="margin-bottom: 24px;">
-                    <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
-                        📝 Bio
-                    </h4>
-                    <div style="background: linear-gradient(135deg, #F5F9FF, #E8F3FF); padding: 16px; border-radius: 8px; border-left: 4px solid #2D6CDF;">
-                        "${lead.bio}"
-                    </div>
-                </div>
-            `;
-        }
         
         // Summary section
-        detailsHtml += `
-            <div style="margin-bottom: 24px;">
-                <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
-                    🎯 Analysis Summary
-                </h4>
-                <div style="background: linear-gradient(135deg, #F0F4FF, #E8F3FF); padding: 16px; border-radius: 8px; border-left: 4px solid #8A6DF1;">
-                    ${analysisData.summary || lead.description || 'No summary available'}
-                </div>
-            </div>
-        `;
-        
-        // Match reasons
-        if (analysisData.match_reasons && analysisData.match_reasons.length > 0) {
+        if (analysisData.summary || lead.description) {
             detailsHtml += `
                 <div style="margin-bottom: 24px;">
                     <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
-                        ✅ Match Reasons
+                        🎯 Analysis Summary
                     </h4>
-                    <div style="background: linear-gradient(135deg, #F0FDF9, #E8FBF5); padding: 16px; border-radius: 8px; border-left: 4px solid #53E1C5;">
-                        ${analysisData.match_reasons.map(reason => `• ${reason}`).join('<br>')}
+                    <div style="background: linear-gradient(135deg, #F0F4FF, #E8F3FF); padding: 16px; border-radius: 8px; border-left: 4px solid #8A6DF1;">
+                        ${analysisData.summary || lead.description}
                     </div>
                 </div>
             `;
         }
         
-        // DEEP ANALYSIS EXCLUSIVE SECTIONS
-        if (analysisType === 'deep' && analysis) {
+        // DEEP ANALYSIS SECTIONS - Only show if data exists
+        if (analysisType === 'deep') {
             detailsHtml += `
                 <div style="border-top: 3px solid #8A6DF1; margin-top: 32px; padding-top: 24px;">
-                    <h3 style="color: #8A6DF1; margin-bottom: 24px; display: flex; align-items: center; gap: 8px;">
-                        🔍 Deep Analysis Insights
-                    </h3>
+                    <h3 style="color: #8A6DF1; margin-bottom: 24px;">🔍 Deep Analysis Insights</h3>
             `;
             
-            // FIXED: Engagement rate from correct source
-            const engagementRate = analysisData.engagement_rate || analysis.engagement_rate;
+            // Engagement rate - check multiple sources
+            const engagementRate = analysisData.engagement_rate || analysis?.engagement_rate;
             if (engagementRate) {
                 detailsHtml += `
                     <div style="margin-bottom: 20px;">
                         <h4 style="margin-bottom: 12px; color: #121417;">📊 Engagement Rate</h4>
                         <div style="background: linear-gradient(135deg, #FEF3E2, #FDE8CC); padding: 12px; border-radius: 8px; border-left: 4px solid #53E1C5;">
                             <span style="font-size: 20px; font-weight: 700; color: #121417;">${engagementRate}%</span>
-                            <span style="color: #121417; margin-left: 8px;">estimated engagement</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                detailsHtml += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 12px; color: #ef4444;">📊 Engagement Rate</h4>
+                        <div style="background: #fee2e2; padding: 12px; border-radius: 8px;">
+                            <span style="color: #dc2626;">No engagement rate data found</span>
                         </div>
                     </div>
                 `;
             }
             
-            // FIXED: Selling points from correct source
-            const sellingPoints = analysisData.selling_points || (analysis.selling_points ? analysis.selling_points.split(', ') : []);
-            if (sellingPoints && sellingPoints.length > 0) {
+            // Selling points - check multiple sources and formats
+            const sellingPoints = analysisData.selling_points || analysis?.selling_points;
+            if (sellingPoints) {
+                let pointsList = '';
+                if (Array.isArray(sellingPoints)) {
+                    pointsList = sellingPoints.map(point => `• ${point}`).join('<br>');
+                } else if (typeof sellingPoints === 'string') {
+                    pointsList = sellingPoints.split(',').map(point => `• ${point.trim()}`).join('<br>');
+                } else {
+                    pointsList = `• ${sellingPoints}`;
+                }
+                
                 detailsHtml += `
                     <div style="margin-bottom: 20px;">
                         <h4 style="margin-bottom: 12px; color: #121417;">💎 Key Selling Points</h4>
                         <div style="background: linear-gradient(135deg, #F0FDF9, #E8FBF5); padding: 16px; border-radius: 8px; border-left: 4px solid #53E1C5;">
-                            ${Array.isArray(sellingPoints) 
-                                ? sellingPoints.map(point => `• ${point}`).join('<br>')
-                                : `• ${sellingPoints}`
-                            }
+                            ${pointsList}
+                        </div>
+                    </div>
+                `;
+            } else {
+                detailsHtml += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 12px; color: #ef4444;">💎 Key Selling Points</h4>
+                        <div style="background: #fee2e2; padding: 12px; border-radius: 8px;">
+                            <span style="color: #dc2626;">No selling points data found</span>
                         </div>
                     </div>
                 `;
             }
             
-            // FIXED: Outreach message from correct source
-            const outreachMessage = analysis.outreach_message;
+            // Outreach message
+            const outreachMessage = analysis?.outreach_message;
             if (outreachMessage) {
                 detailsHtml += `
                     <div style="margin-bottom: 20px;">
-                        <h4 style="margin-bottom: 12px; color: #121417; display: flex; align-items: center; gap: 8px;">
-                            💬 Personalized Outreach Message
-                            <button onclick="copyText('${outreachMessage.replace(/'/g, "\\'")}', this)" style="background: #2D6CDF; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                        <h4 style="margin-bottom: 12px; color: #121417;">💬 Personalized Outreach Message</h4>
+                        <div style="background: linear-gradient(135deg, #F0F4FF, #E8F3FF); padding: 16px; border-radius: 8px; border-left: 4px solid #2D6CDF;">
+                            "${outreachMessage}"
+                            <button onclick="copyText('${outreachMessage.replace(/'/g, "\\'")}', this)" style="background: #2D6CDF; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-left: 8px;">
                                 📋 Copy
                             </button>
-                        </h4>
-                        <div style="background: linear-gradient(135deg, #F0F4FF, #E8F3FF); padding: 16px; border-radius: 8px; border-left: 4px solid #2D6CDF; font-style: italic;">
-                            "${outreachMessage}"
                         </div>
                     </div>
                 `;
-            }
-            
-            // FIXED: Custom notes from correct source
-            const customNotes = analysisData.custom_notes || analysis.custom_notes;
-            if (customNotes) {
+            } else {
                 detailsHtml += `
                     <div style="margin-bottom: 20px;">
-                        <h4 style="margin-bottom: 12px; color: #121417;">📝 Strategic Notes</h4>
-                        <div style="background: linear-gradient(135deg, #F9F5FF, #F3E8FF); padding: 16px; border-radius: 8px; border-left: 4px solid #8A6DF1;">
-                            ${customNotes}
+                        <h4 style="margin-bottom: 12px; color: #ef4444;">💬 Personalized Outreach Message</h4>
+                        <div style="background: #fee2e2; padding: 12px; border-radius: 8px;">
+                            <span style="color: #dc2626;">No outreach message found</span>
                         </div>
                     </div>
                 `;
             }
             
-            detailsHtml += '</div>'; // Close deep analysis section
+            detailsHtml += '</div>';
         }
         
         document.getElementById('leadDetails').innerHTML = detailsHtml;
