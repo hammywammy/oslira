@@ -556,6 +556,55 @@ const apifyResponse = await fetch('https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb
   }),
 });
 
+console.log('📊 Deep scraper response status:', apifyResponse.status);
+
+if (apifyResponse.ok) {
+  const responseText = await apifyResponse.text();
+  console.log('📊 Deep scraper FULL response:', responseText);
+  
+  if (responseText) {
+    const apifyData = JSON.parse(responseText);
+    console.log('📊 Deep scraper parsed data:', JSON.stringify(apifyData, null, 2));
+    
+    // Try different data structures
+    let profileFromData = null;
+    
+    if (apifyData && Array.isArray(apifyData) && apifyData.length > 0) {
+      profileFromData = apifyData[0];
+    } else if (apifyData && apifyData.data && Array.isArray(apifyData.data)) {
+      profileFromData = apifyData.data[0];
+    } else if (apifyData && apifyData.items && Array.isArray(apifyData.items)) {
+      profileFromData = apifyData.items[0];
+    } else if (apifyData && typeof apifyData === 'object') {
+      profileFromData = apifyData;
+    }
+    
+    console.log('📊 Profile extracted:', profileFromData);
+    
+    if (profileFromData && (profileFromData.username || profileFromData.ownerUsername)) {
+      profileData = {
+        username: profileFromData.username || profileFromData.ownerUsername,
+        fullName: profileFromData.fullName || profileFromData.displayName,
+        biography: profileFromData.biography || profileFromData.bio,
+        followersCount: profileFromData.followersCount || profileFromData.followers || 0,
+        followingCount: profileFromData.followingCount || profileFromData.following || 0,
+        postsCount: profileFromData.postsCount || profileFromData.posts || 0,
+        isVerified: profileFromData.isVerified || profileFromData.verified || false,
+        profilePicUrl: profileFromData.profilePicUrl || profileFromData.avatar,
+        externalUrl: profileFromData.externalUrl || profileFromData.website,
+        businessCategoryName: profileFromData.businessCategoryName || profileFromData.category
+      };
+      scrapingSuccess = true;
+      console.log('✅ Deep scraping SUCCESS for:', profileData.username);
+    } else {
+      console.warn('⚠️ Deep scraper returned data but no username found');
+    }
+  }
+} else {
+  const errorText = await apifyResponse.text();
+  console.error('❌ Deep scraper HTTP error:', apifyResponse.status, errorText);
+}
+
         console.log('📊 Deep scraper response status:', apifyResponse.status);
         
         if (apifyResponse.ok) {
