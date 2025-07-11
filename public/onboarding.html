@@ -199,7 +199,7 @@
         <div class="onboarding-card error-state">
             <h2>Authentication Error</h2>
             <p class="error-message" id="errorMessage">Unable to verify your session.</p>
-            <button class="btn-primary" onclick="window.location.href='/auth.html'">Back to Login</button>
+            <button class="btn-primary" onclick="window.location.href='/public/auth.html'">Back to Login</button>
             <div class="debug-info" id="debugInfo" style="display: none;"></div>
         </div>
     </div>
@@ -287,7 +287,7 @@
         const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIwMjQxMzUsImV4cCI6MjA2NzYwMDEzNX0.XMoC3iLcDbKNxPfhTHj8CQsEjelTIrivIddfPTO9P64';
         
-        // Initialize Supabase client
+        // Initialize Supabase client - FIXED
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         let currentStep = 1;
@@ -302,7 +302,7 @@
             await checkAuth();
         });
 
-        // Check authentication status with robust error handling
+        // Single auth check function - CLEANED UP
         async function checkAuth() {
             try {
                 console.log('🔍 Checking authentication...');
@@ -366,7 +366,7 @@
                 
                 if (userData?.onboarding_completed) {
                     console.log('✅ User already completed onboarding, redirecting...');
-                    window.location.href = '/dashboard.html';
+                    window.location.href = '/public/dashboard.html';
                     return;
                 }
                 
@@ -389,7 +389,7 @@
                 showOnboardingForm();
             } else if (event === 'SIGNED_OUT') {
                 console.log('👋 User signed out, redirecting to auth...');
-                window.location.href = '/auth.html';
+                window.location.href = '/public/auth.html';
             }
         });
 
@@ -473,42 +473,45 @@
             return isValid;
         }
 
-        // Form submission
+        // Form submission - FIXED with proper session check
         document.getElementById("onboarding-form").addEventListener("submit", async (e) => {
             e.preventDefault();
             console.log('📝 Form submitted');
 
             if (!validateStep(currentStep)) return;
 
-            // Check if user is still authenticated
-            if (!currentUser) {
-                alert("Session expired. Please log in again.");
-                window.location.href = "/auth.html";
-                return;
-            }
-
-            const businessData = {
-                business_name: document.getElementById("business-name").value.trim(),
-                business_website: document.getElementById("business-website").value.trim(),
-                business_niche: document.getElementById("business-niche").value.trim(),
-                target_niche: document.getElementById("target-niche").value.trim(),
-                customer_location: document.getElementById("customer-location").value.trim(),
-                primary_platform: document.getElementById("primary-platform").value,
-                product_service: document.getElementById("product-service").value.trim(),
-                value_prop: document.getElementById("value-prop").value.trim(),
-            };
-
-            showLoading();
-
             try {
+                // Verify current session before submitting
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                if (sessionError || !session || !session.user) {
+                    alert("Session expired. Please log in again.");
+                    window.location.href = "/public/auth.html";
+                    return;
+                }
+                
+                const user = session.user;
+
+                const businessData = {
+                    business_name: document.getElementById("business-name").value.trim(),
+                    business_website: document.getElementById("business-website").value.trim(),
+                    business_niche: document.getElementById("business-niche").value.trim(),
+                    target_niche: document.getElementById("target-niche").value.trim(),
+                    customer_location: document.getElementById("customer-location").value.trim(),
+                    primary_platform: document.getElementById("primary-platform").value,
+                    product_service: document.getElementById("product-service").value.trim(),
+                    value_prop: document.getElementById("value-prop").value.trim(),
+                };
+
+                showLoading();
+
                 console.log('💾 Saving user data...');
                 
                 // Insert/update user with credits and onboarding flag
                 const { error: userError } = await supabase
                     .from("users")
                     .upsert({
-                        id: currentUser.id,
-                        email: currentUser.email,
+                        id: user.id,
+                        email: user.email,
                         credits: 5,
                         onboarding_completed: true
                     }, { 
@@ -527,7 +530,7 @@
                 const { error: profileError } = await supabase
                     .from("business_profiles")
                     .insert({
-                        user_id: currentUser.id,
+                        user_id: user.id,
                         ...businessData,
                         is_active: true
                     });
@@ -547,7 +550,7 @@
                 // Redirect after 3 seconds
                 setTimeout(() => {
                     console.log('🎯 Redirecting to dashboard...');
-                    window.location.href = '/dashboard.html';
+                    window.location.href = '/public/dashboard.html';
                 }, 3000);
 
             } catch (err) {
