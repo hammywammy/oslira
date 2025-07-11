@@ -7,6 +7,14 @@ main = "src/index.ts"
 [vars]
 SUPABASE_URL = "https://jswzzihuqtjqvobfosks.supabase.co"
 
+# wrangler.toml (wrangler v3.88.0^)
+[observability.logs]
+enabled = false
+
+
+
+
+
 # Secrets are set via 'wrangler secret put' command
 # SUPABASE_SERVICE_ROLE - set as secret
 # OPENAI_KEY - set as secret  
