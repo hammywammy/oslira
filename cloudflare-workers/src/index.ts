@@ -128,29 +128,34 @@ app.post('/analyze', async (c) => {
 
     const { biography, followersCount, followingCount, postsCount, isVerified, category } = profileData;
     const trimmedProfile = { username, biography, followersCount, followingCount, postsCount, isVerified, category };
+
     const prompt = `
-You are a professional lead scoring assistant.
+You are a senior lead generation strategist for a B2B platform. Your job is to evaluate whether an Instagram profile is a strong fit for outreach based on the provided business goals.
 
-Given the Instagram profile data and the business context, analyze the profile and output ONLY a JSON object with the following fields:
+Return ONLY a valid JSON object with the following fields:
 
-- lead_score: an integer from 0 to 100 indicating how good a lead this is.
-- summary: a one-sentence summary of the profile's relevance.
-- niche: the best matching industry or category.
-- match_reasons: an array of strings listing key reasons why this profile is a good or poor match.
+- lead_score: integer from 0 to 100 (100 = ideal ICP match)
+- summary: a one-sentence summary of this profile's relevance
+- niche: best-fit category or niche based on content and bio
+- match_reasons: array of 2–4 concise reasons for the score
 
-Do NOT include any explanation or extra text—only the JSON.
+DO NOT return explanations, markdown, or commentary—ONLY the JSON object.
 
-Profile Data:
-${JSON.stringify(profileData)}
+## Profile Data:
+${JSON.stringify(trimmedProfile, null, 2)}
 
-Business Context:
-Business Name: ${businessProfile.business_name}
-Target Niche: ${businessProfile.target_niche}
-`;
+## Business Context:
+- Business Name: ${business.business_name}
+- Target Niche: ${business.target_niche}
+- Outreach Goals: Identify ideal leads who are aligned with this niche, show signals of being decision-makers or personal brands, and have potential to engage in partnerships, sponsorships, or service offerings.
+
+If the profile is private, fake, empty, or outside the niche, reduce the score accordingly.
+`.trim();
+
+    const openaiData = await runOpenAIAnalysis(prompt, OPENAI_KEY);
 
     let analysis;
     try {
-      console.log("📝 Raw AI output:", openaiData.choices[0].message.content);
       analysis = JSON.parse(openaiData.choices[0].message.content);
     } catch {
       analysis = {
@@ -246,4 +251,4 @@ Target Niche: ${businessProfile.target_niche}
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 app.get('/', (c) => c.text('Oslira AI Worker is running!'));
 
-export default { fetch: app.fetch }; 
+export default { fetch: app.fetch };
