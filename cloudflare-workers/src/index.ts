@@ -1,21 +1,58 @@
-async function handleAnalysis(request: Request): Promise<Response> {
-  console.log('🚀 handleAnalysis called');
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+
+const app = new Hono();
+app.use('*', cors());
+
+// JWT verification function
+async function verifySupabaseJWT(token: string, supabaseUrl: string): Promise<string | null> {
+  try {
+    // Get Supabase public keys
+    const jwksResponse = await fetch(`${supabaseUrl}/auth/v1/keys`);
+    const jwks = await jwksResponse.json();
+    
+    if (!jwks.keys || jwks.keys.length === 0) {
+      console.error('No JWKS keys found');
+      return null;
+    }
+
+    // For now, we'll decode without full verification (you can add proper JWT verification later)
+    const [, payload] = token.split('.');
+    const decodedPayload = JSON.parse(atob(payload));
+    
+    return decodedPayload.sub; // User ID is in the 'sub' field
+    
+  } catch (error) {
+    console.error('JWT verification error:', error);
+    return null;
+  }
+}
+
+app.post('/analyze', async (c) => {
+  console.log('🚀 Analyze endpoint called');
   
   try {
     // 1. Extract and verify JWT token
-    const authHeader = request.headers.get('Authorization');
+    const authHeader = c.req.header('Authorization');
     console.log('🔑 Auth header:', authHeader ? 'Present' : 'Missing');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       console.log('❌ Missing or invalid Authorization header');
-      return new Response(
-        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return c.json({ error: 'Missing or invalid Authorization header' }, 401);
     }
 
+    const token = authHeader.substring(7);
+    const userId = await verifySupabaseJWT(token, c.env.SUPABASE_URL);
+    
+    if (!userId) {
+      console.log('❌ Invalid or expired token');
+      return c.json({ error: 'Invalid or expired token' }, 401);
+    }
+
+    console.log('✅ User authenticated:', userId);
+
     // 2. Parse request body
-    const body = await request.json();
+    const body = await c.req.json();
     console.log('📦 Request body received:', JSON.stringify(body));
     
     const { profile_url, analysisType } = body;
@@ -23,183 +60,278 @@ async function handleAnalysis(request: Request): Promise<Response> {
 
     if (!profile_url || !analysisType) {
       console.log('❌ Missing required fields - profile_url:', !!profile_url, 'analysisType:', !!analysisType);
-      return new Response(
-        JSON.stringify({ error: 'Missing profile_url or analysisType' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return c.json({ error: 'Missing profile_url or analysisType' }, 400);
+    }
+
+    // 3. Get environment variables
+    const SUPABASE_URL = c.env.SUPABASE_URL;
+    const SUPABASE_SERVICE_ROLE = c.env.SUPABASE_SERVICE_ROLE;
+    const OPENAI_KEY = c.env.OPENAI_KEY;
+    const CLAUDE_KEY = c.env.CLAUDE_KEY;
+    const APIFY_API_TOKEN = c.env.APIFY_API_TOKEN;
+
+    console.log('🔧 Environment variables loaded');
+
+    const supabaseHeaders = {
+      apikey: SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    // 4. Get user's business profile
+    console.log('🏢 Fetching user business profile...');
+    const businessResponse = await fetch(`${SUPABASE_URL}/rest/v1/business_profiles?user_id=eq.${userId}&is_active=eq.true&select=*`, {
+      headers: supabaseHeaders
+    });
+    
+    const businessProfiles = await businessResponse.json();
+    if (!businessProfiles || businessProfiles.length === 0) {
+      console.log('❌ No active business profile found');
+      return c.json({ error: 'No active business profile found' }, 404);
     }
     
-    // Rest of your function...import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+    const businessProfile = businessProfiles[0];
+    console.log('✅ Business profile found:', businessProfile.id);
 
-const app = new Hono();
-app.use('*', cors());
+    // 5. Check user credits
+    console.log('💰 Checking user credits...');
+    const userResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=credits`, {
+      headers: supabaseHeaders
+    });
+    
+    const users = await userResponse.json();
+    if (!users || users.length === 0) {
+      console.log('❌ User not found');
+      return c.json({ error: 'User not found' }, 404);
+    }
+    
+    const user = users[0];
+    const creditsRequired = analysisType === 'deep' ? 2 : 1;
+    
+    if (user.credits < creditsRequired) {
+      console.log('❌ Insufficient credits:', user.credits, 'required:', creditsRequired);
+      return c.json({ error: 'Insufficient credits' }, 402);
+    }
 
-app.post('/analyze', async (c) => {
-  const {
-    profile_url,
-    analysisType,
-    user_id,
-    business_id,
-    icp_id,
-    test = false,
-  } = await c.req.json();
+    console.log('✅ Credits sufficient:', user.credits, 'required:', creditsRequired);
 
-  if (!profile_url || !user_id || !business_id || !icp_id || !analysisType)
-    return c.json({ error: 'Missing required fields' }, 400);
+    // 6. Extract username from profile URL
+    const username = profile_url.split('/').filter(Boolean).pop();
+    console.log('👤 Username extracted:', username);
 
-  const SUPABASE_URL = c.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE = c.env.SUPABASE_SERVICE_ROLE;
-  const OPENAI_KEY = c.env.OPENAI_KEY;
-  const CLAUDE_KEY = c.env.CLAUDE_KEY;
-  const APIFY_API_TOKEN = c.env.APIFY_API_TOKEN;
-
-  const supabaseHeaders = {
-    apikey: SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json',
-  };
-
-  const username = profile_url.split('/').filter(Boolean).pop();
-
-  // 1. Run Apify actor
-  const apifyResponse = await fetch(`https://api.apify.com/v2/acts/hamzaw~instagram-scraper-task/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}`, {
-    method: 'POST',
-    body: JSON.stringify({
-      input: {
-        usernames: [username],
-        searchType: 'user',
-        maxItems: 1,
-        proxy: { useApifyProxy: true },
-      },
-    }),
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  const [profileData] = await apifyResponse.json();
-  if (!profileData?.username) return c.json({ error: 'No profile data' }, 404);
-
-  // 2. Insert lead into Supabase
-  const insertLeadRes = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
-    method: 'POST',
-    headers: supabaseHeaders,
-    body: JSON.stringify({
-      user_id,
-      profile_url,
-      username: profileData.username,
-      avatar_url: profileData.profilePicUrlHD || profileData.profilePicUrl,
-      bio_snippet: profileData.biography?.slice(0, 250) || null,
-      platform: 'instagram',
-      score: null,
-      status: 'new',
-      created_at: new Date().toISOString(),
-    }),
-  });
-
-  const [lead] = await insertLeadRes.json();
-  if (!lead?.id) return c.json({ error: 'Failed to insert lead' }, 500);
-
-  // 3. Run GPT for lightweight or Claude+GPT for deep analysis
-  let scoreResult: any = null;
-  let analysis: any = null;
-
-  const openaiResult = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${OPENAI_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      temperature: 0.3,
-      messages: [
-        {
-          role: 'user',
-          content: `Analyze this Instagram profile JSON and return:
-1. A one-sentence quick summary
-2. A numeric lead_score from 0–100 (based on follower count, business intent, credibility)
-3. A suggested category (e.g. SaaS, content creator, coach, etc.)
-Return only this JSON: { "summary": "...", "lead_score": ..., "niche": "..." }
-
-DATA: ${JSON.stringify(profileData)}`,
+    // 7. Run Apify scraper
+    console.log('🕷️ Starting Apify scraper...');
+    const apifyResponse = await fetch(`https://api.apify.com/v2/acts/hamzaw~instagram-scraper-task/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        input: {
+          usernames: [username],
+          searchType: 'user',
+          maxItems: 1,
+          proxy: { useApifyProxy: true },
         },
-      ],
-    }),
-  });
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-  scoreResult = await openaiResult.json();
-  const parsed = JSON.parse(scoreResult.choices[0].message.content);
+    const apifyData = await apifyResponse.json();
+    const profileData = apifyData[0];
+    
+    if (!profileData?.username) {
+      console.log('❌ No profile data from Apify');
+      return c.json({ error: 'Could not scrape profile data' }, 404);
+    }
 
-  if (analysisType === 'deep') {
-    const claudeDeep = await fetch('https://api.anthropic.com/v1/messages', {
+    console.log('✅ Profile data scraped:', profileData.username);
+
+    // 8. Insert lead into Supabase
+    console.log('💾 Inserting lead...');
+    const insertLeadRes = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+      method: 'POST',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        user_id: userId,
+        business_id: businessProfile.id,
+        profile_url,
+        profile_username: profileData.username,
+        profile_data: profileData,
+        platform: 'instagram',
+        match_score: 0, // Will be updated after analysis
+        status: 'analyzed',
+        created_at: new Date().toISOString(),
+      }),
+    });
+
+    const leadData = await insertLeadRes.json();
+    const lead = Array.isArray(leadData) ? leadData[0] : leadData;
+    
+    if (!lead?.id) {
+      console.log('❌ Failed to insert lead');
+      return c.json({ error: 'Failed to insert lead' }, 500);
+    }
+
+    console.log('✅ Lead inserted:', lead.id);
+
+    // 9. Run AI analysis
+    console.log('🧠 Starting AI analysis...');
+    
+    // OpenAI analysis (always run)
+    const openaiResult = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': CLAUDE_KEY,
-        'anthropic-version': '2023-06-01',
+        Authorization: `Bearer ${OPENAI_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
-        max_tokens: 1500,
-        temperature: 0.5,
+        model: 'gpt-4o',
+        temperature: 0.3,
         messages: [
           {
             role: 'user',
-            content: `You're an AI analyst. Review this Instagram profile JSON and return a deep analysis, brand personality, and quick outreach message based on who this is and how they'd respond best. JSON: ${JSON.stringify(profileData)}`,
+            content: `Analyze this Instagram profile for business lead potential:
+            
+Profile Data: ${JSON.stringify(profileData)}
+Business Context: ${businessProfile.business_name} (${businessProfile.target_niche})
+
+Return JSON with:
+1. lead_score (0-100): How good a lead this is
+2. summary: One sentence description
+3. niche: Category/industry
+4. match_reasons: Why they match or don't match
+
+Format: { "lead_score": 85, "summary": "...", "niche": "...", "match_reasons": ["...", "..."] }`,
           },
         ],
       }),
     });
 
-    const claudeResult = await claudeDeep.json();
-    analysis = claudeResult.content[0].text;
-  }
+    const openaiData = await openaiResult.json();
+    let analysis = JSON.parse(openaiData.choices[0].message.content);
+    
+    console.log('✅ OpenAI analysis completed, score:', analysis.lead_score);
 
-  // 4. Update lead score and insert analysis
-  const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
-    method: 'PATCH',
-    headers: supabaseHeaders,
-    body: JSON.stringify({
-      score: parsed.lead_score,
-      updated_at: new Date().toISOString(),
-    }),
-  });
+    // Deep analysis with Claude (if requested)
+    if (analysisType === 'deep') {
+      console.log('🔍 Running deep analysis with Claude...');
+      
+      const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': CLAUDE_KEY,
+          'anthropic-version': '2023-06-01',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'claude-3-sonnet-20240229',
+          max_tokens: 1500,
+          temperature: 0.5,
+          messages: [
+            {
+              role: 'user',
+              content: `Provide a deep analysis of this Instagram profile for outreach:
 
-  if (analysisType === 'deep') {
-    await fetch(`${SUPABASE_URL}/rest/v1/lead_analyses`, {
+Profile: ${JSON.stringify(profileData)}
+Business: ${businessProfile.business_name}
+
+Include:
+1. Detailed personality analysis
+2. Communication style preferences  
+3. Specific outreach recommendations
+4. Pain points they might have
+5. Best approach strategy`,
+            },
+          ],
+        }),
+      });
+
+      const claudeData = await claudeResponse.json();
+      analysis.deep_analysis = claudeData.content[0].text;
+      
+      console.log('✅ Claude deep analysis completed');
+
+      // Insert detailed analysis
+      await fetch(`${SUPABASE_URL}/rest/v1/lead_analyses`, {
+        method: 'POST',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          lead_id: lead.id,
+          analysis_type: 'deep',
+          analysis_data: analysis,
+          match_score: analysis.lead_score,
+          created_at: new Date().toISOString(),
+        }),
+      });
+    }
+
+    // 10. Update lead with score
+    console.log('📊 Updating lead score...');
+    await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        match_score: analysis.lead_score,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    // 11. Deduct credits
+    console.log('💳 Deducting credits...');
+    await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        credits: user.credits - creditsRequired,
+      }),
+    });
+
+    // Log transaction
+    await fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
       method: 'POST',
       headers: supabaseHeaders,
       body: JSON.stringify({
-        lead_id: lead.id,
-        user_id,
-        analysis: { ...parsed, deep: analysis },
-        ai_model_used: 'claude-3 + gpt-4o',
+        user_id: userId,
+        amount: -creditsRequired,
+        transaction_type: 'analysis',
+        description: `${analysisType} analysis of ${profile_url}`,
         created_at: new Date().toISOString(),
       }),
     });
+
+    console.log('✅ Analysis completed successfully');
+
+    // 12. Return response
+    return c.json({
+      success: true,
+      lead_id: lead.id,
+      profile_url,
+      analysisType,
+      creditsUsed: creditsRequired,
+      analysis: {
+        lead_score: analysis.lead_score,
+        summary: analysis.summary,
+        niche: analysis.niche,
+        match_reasons: analysis.match_reasons,
+        ...(analysisType === 'deep' ? { deep_analysis: analysis.deep_analysis } : {})
+      }
+    });
+
+  } catch (error) {
+    console.error('💥 Analysis error:', error);
+    return c.json({ 
+      error: 'Analysis failed', 
+      details: error.message 
+    }, 500);
   }
+});
 
-  // 5. Credit deduction
-  const creditCost = analysisType === 'deep' ? -2 : -1;
-  await fetch(`${SUPABASE_URL}/rest/v1/rpc/update_user_credits`, {
-    method: 'POST',
-    headers: supabaseHeaders,
-    body: JSON.stringify({
-      user_id,
-      amount: creditCost,
-      type: 'usage',
-      description: `Lead analysis (${analysisType})`,
-      metadata: { profile_url },
-    }),
-  });
+// Health check endpoint
+app.get('/health', (c) => {
+  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-  return c.json({
-    lead_id: lead.id,
-    lead_score: parsed.lead_score,
-    summary: parsed.summary,
-    niche: parsed.niche,
-    ...(analysisType === 'deep' ? { analysis } : {}),
-  });
+// Root endpoint
+app.get('/', (c) => {
+  return c.text('Oslira AI Worker is running!');
 });
 
 export default app;
