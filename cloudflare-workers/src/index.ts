@@ -1,4 +1,35 @@
-import { Hono } from 'hono';
+async function handleAnalysis(request: Request): Promise<Response> {
+  console.log('🚀 handleAnalysis called');
+  
+  try {
+    // 1. Extract and verify JWT token
+    const authHeader = request.headers.get('Authorization');
+    console.log('🔑 Auth header:', authHeader ? 'Present' : 'Missing');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ Missing or invalid Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing or invalid Authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 2. Parse request body
+    const body = await request.json();
+    console.log('📦 Request body received:', JSON.stringify(body));
+    
+    const { profile_url, analysisType } = body;
+    console.log('🔍 Extracted fields:', { profile_url, analysisType });
+
+    if (!profile_url || !analysisType) {
+      console.log('❌ Missing required fields - profile_url:', !!profile_url, 'analysisType:', !!analysisType);
+      return new Response(
+        JSON.stringify({ error: 'Missing profile_url or analysisType' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Rest of your function...import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 const app = new Hono();
