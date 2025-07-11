@@ -458,6 +458,47 @@
             transform: translateY(-1px);
         }
 
+        /* Lead row styling with hover delete */
+        .lead-row {
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .lead-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        .lead-row:hover .delete-btn {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .delete-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%) translateX(10px);
+            opacity: 0;
+            background: #ef4444;
+            color: white;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .delete-btn:hover {
+            background: #dc2626;
+            transform: translateY(-50%) translateX(0) scale(1.1);
+        }
+
         .insights {
             background: white;
             padding: 24px;
@@ -885,13 +926,6 @@
                     </select>
                 </div>
                 
-                <div class="form-group">
-                    <label for="icp-id">Target ICP *</label>
-                    <select id="icp-id" required>
-                        <option value="">Select ideal customer profile...</option>
-                    </select>
-                </div>
-                
                 <button type="submit" class="primary-btn" style="width: 100%;">
                     🚀 Start Analysis
                 </button>
@@ -1026,7 +1060,7 @@
             }
         }
 
-        // Load ICP profiles for selected business
+        // Load ICP profiles for selected business (made optional)
         async function loadICPProfiles(businessId) {
             try {
                 const { data: icps, error } = await supabase
@@ -1037,15 +1071,8 @@
                 if (error) throw error;
                 
                 icpProfiles = icps || [];
-                const icpSelect = document.getElementById('icp-id');
                 
-                // Clear existing options
-                icpSelect.innerHTML = '<option value="">Select ideal customer profile...</option>';
-                
-                icpProfiles.forEach(icp => {
-                    const option = new Option(`${icp.business_name} - ${icp.target_industry}`, icp.id);
-                    icpSelect.add(option);
-                });
+                // ICP is now optional - no need to populate dropdown since it's removed
                 
             } catch (err) {
                 console.error('Error loading ICP profiles:', err);
@@ -1099,7 +1126,7 @@
             }
         }
 
-        // Load recent activity with enhanced display
+        // Load recent activity with enhanced display and delete functionality
         async function loadRecentActivity() {
             try {
                 const { data: leads, error } = await supabase
@@ -1122,12 +1149,12 @@
                 const tableBody = document.getElementById('activity-table');
                 if (leads && leads.length > 0) {
                     tableBody.innerHTML = leads.map(lead => {
-                        const hasDeepAnalysis = lead.lead_analyses && lead.lead_analyses.length > 0;
-                        const analysisType = hasDeepAnalysis ? 'deep' : 'light';
+                        // Determine analysis type from the new 'type' column or fallback to legacy logic
+                        const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
                         const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
                         
                         return `
-                            <tr>
+                            <tr class="lead-row">
                                 <td>${new Date(lead.created_at).toLocaleString()}</td>
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1146,9 +1173,12 @@
                                 <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
                                 <td><span class="status ${analysisType}">${analysisType}</span></td>
                                 <td><span class="status ${lead.status}">${lead.status}</span></td>
-                                <td>
+                                <td style="position: relative;">
                                     <button class="btn-small" onclick="viewLead('${lead.id}')">
-                                        👁️ View
+                                        📝 View
+                                    </button>
+                                    <button class="delete-btn" onclick="deleteLead('${lead.id}')" title="Delete lead">
+                                        🗑️
                                     </button>
                                 </td>
                             </tr>
@@ -1166,6 +1196,47 @@
                 
             } catch (err) {
                 console.error('Error loading activity:', err);
+            }
+        }
+
+        // Delete lead function
+        async function deleteLead(leadId) {
+            if (!confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                console.log('🗑️ Deleting lead:', leadId);
+
+                // Delete from lead_analyses first (foreign key constraint)
+                const { error: analysisError } = await supabase
+                    .from('lead_analyses')
+                    .delete()
+                    .eq('lead_id', leadId);
+
+                if (analysisError) {
+                    console.error('Error deleting lead analyses:', analysisError);
+                    // Continue anyway, might not have analyses
+                }
+
+                // Delete the lead
+                const { error: leadError } = await supabase
+                    .from('leads')
+                    .delete()
+                    .eq('id', leadId)
+                    .eq('user_id', currentUser.id); // Security check
+
+                if (leadError) throw leadError;
+
+                console.log('✅ Lead deleted successfully');
+                
+                // Refresh the activity table
+                await loadRecentActivity();
+                await loadStats(); // Update stats too
+
+            } catch (err) {
+                console.error('❌ Error deleting lead:', err);
+                alert('Failed to delete lead: ' + err.message);
             }
         }
 
@@ -1268,7 +1339,7 @@
             }
         }
 
-        // Submit analysis with comprehensive validation
+        // Submit analysis with comprehensive validation (removed ICP requirement)
         async function submitAnalysis(event) {
             event.preventDefault();
             
@@ -1277,13 +1348,12 @@
             const originalText = submitBtn.textContent;
             
             try {
-                // Validate form data
+                // Validate form data (removed ICP validation)
                 const profileUrl = document.getElementById('profile-url').value;
                 const analysisType = document.getElementById('analysis-type').value;
                 const businessId = document.getElementById('business-id').value;
-                const icpId = document.getElementById('icp-id').value;
                 
-                if (!profileUrl || !analysisType || !businessId || !icpId) {
+                if (!profileUrl || !analysisType || !businessId) {
                     alert('Please fill in all required fields');
                     return;
                 }
@@ -1306,9 +1376,9 @@
                 submitBtn.disabled = true;
                 form.classList.add('loading');
                 
-                console.log('🔍 Starting analysis...', { profileUrl, analysisType, businessId, icpId });
+                console.log('🔍 Starting analysis...', { profileUrl, analysisType, businessId });
                 
-                // Call worker API
+                // Call worker API (removed icp_id)
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: {
@@ -1318,8 +1388,8 @@
                     body: JSON.stringify({
                         profile_url: profileUrl,
                         analysisType: analysisType,
-                        business_id: businessId,
-                        icp_id: icpId
+                        business_id: businessId
+                        // Removed icp_id
                     })
                 });
 
@@ -1354,7 +1424,7 @@
             }
         }
 
-        // Enhanced view lead function with comprehensive details
+        // Enhanced view lead function with comprehensive details for both light and deep analysis
         async function viewLead(leadId) {
             try {
                 console.log('👁️ Loading lead details for:', leadId);
@@ -1381,6 +1451,7 @@
                 
                 const analysis = lead.lead_analyses?.[0];
                 const analysisData = analysis?.analysis_data || {};
+                const analysisType = lead.type || (analysis ? 'deep' : 'light');
                 
                 // Build detailed view
                 let detailsHtml = `
@@ -1410,68 +1481,119 @@
                     <div class="detail-row">
                         <div class="detail-label">Analysis Type:</div>
                         <div class="detail-value">
-                            <span class="status ${analysis ? 'deep' : 'light'}">
-                                ${analysis ? 'Deep Analysis' : 'Light Analysis'}
+                            <span class="status ${analysisType}">
+                                ${analysisType === 'deep' ? 'Deep Analysis' : 'Light Analysis'}
                             </span>
                         </div>
                     </div>
-                    
-                    <div class="detail-row">
-                        <div class="detail-label">Summary:</div>
-                        <div class="detail-value">${analysisData.summary || 'No summary available'}</div>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <div class="detail-label">Niche:</div>
-                        <div class="detail-value">${analysisData.niche || 'Unknown'}</div>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <div class="detail-label">Match Reasons:</div>
-                        <div class="detail-value">
-                            ${analysisData.match_reasons?.map(reason => `• ${reason}`).join('<br>') || 'No reasons provided'}
-                        </div>
-                    </div>
                 `;
-                
-                // Add deep analysis specific fields
-                if (analysis) {
-                    if (analysis.engagement_rate) {
-                        detailsHtml += `
-                            <div class="detail-row">
-                                <div class="detail-label">Engagement Rate:</div>
-                                <div class="detail-value">${analysis.engagement_rate}%</div>
+
+                // Show different data based on analysis type
+                if (analysisType === 'light') {
+                    // Light analysis - basic profile info
+                    detailsHtml += `
+                        <div class="detail-row">
+                            <div class="detail-label">Summary:</div>
+                            <div class="detail-value">${analysisData.summary || lead.description || 'No summary available'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Niche:</div>
+                            <div class="detail-value">${analysisData.niche || lead.niche || 'Unknown'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Match Reasons:</div>
+                            <div class="detail-value">
+                                ${analysisData.match_reasons?.map(reason => `• ${reason}`).join('<br>') || 'Basic profile analysis completed'}
                             </div>
-                        `;
-                    }
-                    
-                    if (analysis.selling_points) {
-                        detailsHtml += `
-                            <div class="detail-row">
-                                <div class="detail-label">Selling Points:</div>
-                                <div class="detail-value">${analysis.selling_points}</div>
+                        </div>
+                    `;
+                } else {
+                    // Deep analysis - full profile data
+                    detailsHtml += `
+                        <div class="detail-row">
+                            <div class="detail-label">Full Name:</div>
+                            <div class="detail-value">${lead.full_name || 'Not available'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Bio:</div>
+                            <div class="detail-value">${lead.bio || 'No bio available'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Followers:</div>
+                            <div class="detail-value">${lead.followers_count ? lead.followers_count.toLocaleString() : 'Unknown'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Following:</div>
+                            <div class="detail-value">${lead.following_count ? lead.following_count.toLocaleString() : 'Unknown'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Posts:</div>
+                            <div class="detail-value">${lead.posts_count || 'Unknown'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Summary:</div>
+                            <div class="detail-value">${analysisData.summary || lead.description || 'No summary available'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Niche:</div>
+                            <div class="detail-value">${analysisData.niche || lead.niche || 'Unknown'}</div>
+                        </div>
+                        
+                        <div class="detail-row">
+                            <div class="detail-label">Match Reasons:</div>
+                            <div class="detail-value">
+                                ${analysisData.match_reasons?.map(reason => `• ${reason}`).join('<br>') || 'No reasons provided'}
                             </div>
-                        `;
-                    }
+                        </div>
+                    `;
                     
-                    if (analysis.outreach_message) {
-                        detailsHtml += `
-                            <div class="detail-row">
-                                <div class="detail-label">Outreach Message:</div>
-                                <div class="detail-value" style="background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #4caf50;">
-                                    "${analysis.outreach_message}"
+                    // Add deep analysis specific fields
+                    if (analysis) {
+                        if (analysis.engagement_rate) {
+                            detailsHtml += `
+                                <div class="detail-row">
+                                    <div class="detail-label">Engagement Rate:</div>
+                                    <div class="detail-value">${analysis.engagement_rate}%</div>
                                 </div>
-                            </div>
-                        `;
-                    }
-                    
-                    if (analysis.custom_notes) {
-                        detailsHtml += `
-                            <div class="detail-row">
-                                <div class="detail-label">Custom Notes:</div>
-                                <div class="detail-value">${analysis.custom_notes}</div>
-                            </div>
-                        `;
+                            `;
+                        }
+                        
+                        if (analysis.selling_points) {
+                            detailsHtml += `
+                                <div class="detail-row">
+                                    <div class="detail-label">Selling Points:</div>
+                                    <div class="detail-value">${analysis.selling_points}</div>
+                                </div>
+                            `;
+                        }
+                        
+                        if (analysis.outreach_message) {
+                            detailsHtml += `
+                                <div class="detail-row">
+                                    <div class="detail-label">Outreach Message:</div>
+                                    <div class="detail-value" style="background: #f8f9fa; padding: 12px; border-radius: 8px; border-left: 4px solid #4caf50;">
+                                        "${analysis.outreach_message}"
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        if (analysis.custom_notes) {
+                            detailsHtml += `
+                                <div class="detail-row">
+                                    <div class="detail-label">Custom Notes:</div>
+                                    <div class="detail-value">${analysis.custom_notes}</div>
+                                </div>
+                            `;
+                        }
                     }
                 }
                 
@@ -1571,17 +1693,19 @@
                 }
                 
                 // Convert to CSV
-                const headers = ['Username', 'Profile URL', 'Score', 'Niche', 'Summary', 'Outreach Message', 'Created Date'];
+                const headers = ['Username', 'Profile URL', 'Score', 'Type', 'Niche', 'Summary', 'Outreach Message', 'Created Date'];
                 const csvContent = [
                     headers.join(','),
                     ...leads.map(lead => {
                         const analysis = lead.lead_analyses?.[0]?.analysis_data || {};
+                        const analysisType = lead.type || (lead.lead_analyses?.length > 0 ? 'deep' : 'light');
                         return [
                             lead.username,
                             lead.profile_url,
                             lead.score || 0,
-                            analysis.niche || '',
-                            `"${(analysis.summary || '').replace(/"/g, '""')}"`,
+                            analysisType,
+                            analysis.niche || lead.niche || '',
+                            `"${(analysis.summary || lead.description || '').replace(/"/g, '""')}"`,
                             `"${(lead.lead_analyses?.[0]?.outreach_message || '').replace(/"/g, '""')}"`,
                             new Date(lead.created_at).toLocaleDateString()
                         ].join(',');
