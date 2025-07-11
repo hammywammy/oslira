@@ -1197,7 +1197,8 @@
         }
 
         // Load recent activity with enhanced display and delete functionality
-       async function loadRecentActivity() {
+// Enhanced loadRecentActivity function with CLEAN display (no extra info in table)
+async function loadRecentActivity() {
     try {
         const { data: leads, error } = await supabase
             .from('leads')
@@ -1223,60 +1224,33 @@
                 // Determine analysis type 
                 const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
                 const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
-                const analysis = lead.lead_analyses?.[0];
-                const analysisData = analysis?.analysis_data || {};
                 
-                // Handle avatar URL
-                const avatarDisplay = lead.avatar_url && !lead.avatar_url.includes('fbcdn.net') 
-                    ? `<img src="${lead.avatar_url}" alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">` 
-                    : '';
-                
-                // Build quick summary based on analysis type
-                let quickSummary = '';
-                if (analysisType === 'light') {
-                    quickSummary = `
-                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
-                            <div><strong>Summary:</strong> ${(analysisData.summary || lead.description || 'Basic analysis completed').substring(0, 100)}${(analysisData.summary || lead.description || '').length > 100 ? '...' : ''}</div>
-                            <div><strong>Niche:</strong> ${analysisData.niche || lead.niche || 'Unknown'}</div>
-                        </div>
-                    `;
-                } else {
-                    // Deep analysis - show additional fields
-                    const outreachPreview = analysis?.outreach_message 
-                        ? `"${analysis.outreach_message.substring(0, 80)}${analysis.outreach_message.length > 80 ? '...' : ''}"`
-                        : 'No message generated';
+                // FIXED: Proper avatar display with CORS handling
+                let avatarDisplay = '';
+                if (lead.avatar_url) {
+                    // Use a CORS proxy for Instagram images or handle direct display
+                    const proxyUrl = lead.avatar_url.includes('instagram') 
+                        ? `https://images.weserv.nl/?url=${encodeURIComponent(lead.avatar_url)}&w=32&h=32&fit=cover&mask=circle`
+                        : lead.avatar_url;
                     
-                    const sellingPoints = analysisData.selling_points && Array.isArray(analysisData.selling_points)
-                        ? analysisData.selling_points.slice(0, 2).join(', ')
-                        : (analysis?.selling_points || 'Standard profile strengths');
-                    
-                    quickSummary = `
-                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">
-                            <div><strong>Summary:</strong> ${(analysisData.summary || lead.description || 'Deep analysis completed').substring(0, 80)}${(analysisData.summary || lead.description || '').length > 80 ? '...' : ''}</div>
-                            <div><strong>Niche:</strong> ${analysisData.niche || lead.niche || 'Unknown'}</div>
-                            <div><strong>Engagement:</strong> ${analysis?.engagement_rate || analysisData.engagement_rate || 'N/A'}%</div>
-                            <div><strong>Key Points:</strong> ${sellingPoints}</div>
-                            <div style="background: #f0f9ff; padding: 6px; border-radius: 4px; margin-top: 4px; border-left: 3px solid #0ea5e9;">
-                                <strong>Outreach:</strong> ${outreachPreview}
-                            </div>
-                        </div>
-                    `;
+                    avatarDisplay = `<img src="${proxyUrl}" alt="@${lead.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">`;
                 }
                 
                 return `
                     <tr class="lead-row">
                         <td>${new Date(lead.created_at).toLocaleString()}</td>
                         <td>
-                            <div style="display: flex; align-items: flex-start; gap: 8px;">
-                                ${avatarDisplay}<span style="display: ${avatarDisplay ? 'none' : 'inline'};">👤</span>
-                                <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                ${avatarDisplay}
+                                <div style="display: ${avatarDisplay ? 'none' : 'inline-block'}; width: 32px; height: 32px; background: linear-gradient(135deg, #2D6CDF, #8A6DF1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 600;">
+                                    ${lead.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
                                     <div style="font-weight: 600; color: #1f2937;">@${lead.username}</div>
-                                    <div style="font-size: 12px; color: #9ca3af;">${lead.full_name || 'No display name'}</div>
-                                    <div style="font-size: 11px; color: #6b7280;">
-                                        👥 ${lead.followers_count ? lead.followers_count.toLocaleString() : 'Unknown'} followers
+                                    <div style="font-size: 12px; color: #6b7280;">
+                                        ${lead.full_name || 'No display name'}
                                         ${lead.is_verified ? ' ✓' : ''}
                                     </div>
-                                    ${quickSummary}
                                 </div>
                             </div>
                         </td>
@@ -1288,18 +1262,12 @@
                         <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
                         <td>
                             <span class="status ${analysisType}">${analysisType}</span>
-                            ${analysisType === 'deep' ? '<div style="font-size: 10px; color: #059669; margin-top: 2px;">+ Message</div>' : ''}
                         </td>
                         <td><span class="status ${lead.status}">${lead.status}</span></td>
-                        <td style="position: relative; padding-right: 35px; height: auto; min-height: 60px;">
-                            <button class="btn-small" onclick="viewLead('${lead.id}')" style="margin-bottom: 4px;">
+                        <td style="position: relative; padding-right: 35px;">
+                            <button class="btn-small" onclick="viewLead('${lead.id}')">
                                 📝 View
                             </button>
-                            ${analysisType === 'deep' && analysis?.outreach_message ? `
-                                <button class="btn-small" onclick="copyOutreachMessage('${lead.id}')" style="background: #0ea5e9; margin-bottom: 4px;">
-                                    📋 Copy
-                                </button>
-                            ` : ''}
                             <button class="delete-btn" onclick="deleteLead('${lead.id}')" title="Delete lead">
                                 🗑️
                             </button>
@@ -1319,44 +1287,6 @@
         
     } catch (err) {
         console.error('Error loading activity:', err);
-    }
-}
-        async function copyOutreachMessage(leadId) {
-    try {
-        const { data: lead, error } = await supabase
-            .from('leads')
-            .select(`
-                username,
-                lead_analyses (outreach_message)
-            `)
-            .eq('id', leadId)
-            .single();
-        
-        if (error) throw error;
-        
-        const message = lead.lead_analyses?.[0]?.outreach_message;
-        if (message) {
-            await navigator.clipboard.writeText(message);
-            
-            // Show temporary success feedback
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = '✅ Copied!';
-            btn.style.background = '#10b981';
-            
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.style.background = '#0ea5e9';
-            }, 2000);
-            
-            console.log('✅ Outreach message copied for @' + lead.username);
-        } else {
-            alert('No outreach message available for this lead');
-        }
-        
-    } catch (err) {
-        console.error('Error copying message:', err);
-        alert('Failed to copy message: ' + err.message);
     }
 }
         // Delete lead function
@@ -1728,6 +1658,7 @@
         }
 
         // Enhanced view lead function with comprehensive details for both light and deep analysis
+// Enhanced viewLead function with PROPER data extraction from analysis_data
 async function viewLead(leadId) {
     try {
         console.log('👁️ Loading lead details for:', leadId);
@@ -1744,7 +1675,8 @@ async function viewLead(leadId) {
                     outreach_message,
                     engagement_rate,
                     selling_points,
-                    custom_notes
+                    custom_notes,
+                    created_at
                 )
             `)
             .eq('id', leadId)
@@ -1756,18 +1688,44 @@ async function viewLead(leadId) {
         const analysisData = analysis?.analysis_data || {};
         const analysisType = lead.type || (analysis ? 'deep' : 'light');
         
+        console.log('🔍 Debug - Analysis Data:', {
+            analysisType,
+            rawAnalysisData: analysisData,
+            outreachMessage: analysis?.outreach_message,
+            engagementFromDB: analysis?.engagement_rate,
+            engagementFromAnalysis: analysisData.engagement_rate,
+            sellingPointsFromDB: analysis?.selling_points,
+            sellingPointsFromAnalysis: analysisData.selling_points
+        });
+        
+        // FIXED: Proper avatar display with CORS handling
+        let avatarSection = '';
+        if (lead.avatar_url) {
+            const proxyUrl = lead.avatar_url.includes('instagram') 
+                ? `https://images.weserv.nl/?url=${encodeURIComponent(lead.avatar_url)}&w=80&h=80&fit=cover&mask=circle`
+                : lead.avatar_url;
+            
+            avatarSection = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="${proxyUrl}" alt="@${lead.username}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #2D6CDF;" onerror="this.style.display='none';">
+                </div>
+            `;
+        }
+        
         // Build detailed view with type-specific sections
         let detailsHtml = `
+            ${avatarSection}
+            
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
                 <div>
-                    <h4 style="margin-bottom: 16px; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                    <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
                         📋 Basic Profile Info
                     </h4>
                     
                     <div class="detail-row">
                         <div class="detail-label">Profile:</div>
                         <div class="detail-value">
-                            <a href="${lead.profile_url}" target="_blank" style="color: #4caf50; text-decoration: none;">
+                            <a href="${lead.profile_url}" target="_blank" style="color: #2D6CDF; text-decoration: none; font-weight: 600;">
                                 @${lead.username} 🔗
                             </a>
                         </div>
@@ -1795,7 +1753,7 @@ async function viewLead(leadId) {
                 </div>
                 
                 <div>
-                    <h4 style="margin-bottom: 16px; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                    <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
                         📊 Analysis Results
                     </h4>
                     
@@ -1834,21 +1792,21 @@ async function viewLead(leadId) {
         if (lead.followers_count || lead.following_count || lead.posts_count) {
             detailsHtml += `
                 <div style="margin-bottom: 24px;">
-                    <h4 style="margin-bottom: 16px; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                    <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
                         📈 Profile Statistics
                     </h4>
                     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                        <div style="text-align: center; background: #f8fafc; padding: 16px; border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${lead.followers_count ? lead.followers_count.toLocaleString() : '0'}</div>
-                            <div style="font-size: 14px; color: #6b7280;">Followers</div>
+                        <div style="text-align: center; background: linear-gradient(135deg, #F5F9FF, #C9CEDC); padding: 16px; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #2D6CDF;">${lead.followers_count ? lead.followers_count.toLocaleString() : '0'}</div>
+                            <div style="font-size: 14px; color: #121417;">Followers</div>
                         </div>
-                        <div style="text-align: center; background: #f8fafc; padding: 16px; border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${lead.following_count ? lead.following_count.toLocaleString() : '0'}</div>
-                            <div style="font-size: 14px; color: #6b7280;">Following</div>
+                        <div style="text-align: center; background: linear-gradient(135deg, #F5F9FF, #C9CEDC); padding: 16px; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #2D6CDF;">${lead.following_count ? lead.following_count.toLocaleString() : '0'}</div>
+                            <div style="font-size: 14px; color: #121417;">Following</div>
                         </div>
-                        <div style="text-align: center; background: #f8fafc; padding: 16px; border-radius: 8px;">
-                            <div style="font-size: 24px; font-weight: 700; color: #1f2937;">${lead.posts_count || '0'}</div>
-                            <div style="font-size: 14px; color: #6b7280;">Posts</div>
+                        <div style="text-align: center; background: linear-gradient(135deg, #F5F9FF, #C9CEDC); padding: 16px; border-radius: 8px;">
+                            <div style="font-size: 24px; font-weight: 700; color: #2D6CDF;">${lead.posts_count || '0'}</div>
+                            <div style="font-size: 14px; color: #121417;">Posts</div>
                         </div>
                     </div>
                 </div>
@@ -1859,10 +1817,10 @@ async function viewLead(leadId) {
         if (lead.bio) {
             detailsHtml += `
                 <div style="margin-bottom: 24px;">
-                    <h4 style="margin-bottom: 16px; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                    <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
                         📝 Bio
                     </h4>
-                    <div style="background: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #6b7280;">
+                    <div style="background: linear-gradient(135deg, #F5F9FF, #E8F3FF); padding: 16px; border-radius: 8px; border-left: 4px solid #2D6CDF;">
                         "${lead.bio}"
                     </div>
                 </div>
@@ -1872,10 +1830,10 @@ async function viewLead(leadId) {
         // Summary section
         detailsHtml += `
             <div style="margin-bottom: 24px;">
-                <h4 style="margin-bottom: 16px; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
                     🎯 Analysis Summary
                 </h4>
-                <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border-left: 4px solid #0ea5e9;">
+                <div style="background: linear-gradient(135deg, #F0F4FF, #E8F3FF); padding: 16px; border-radius: 8px; border-left: 4px solid #8A6DF1;">
                     ${analysisData.summary || lead.description || 'No summary available'}
                 </div>
             </div>
@@ -1885,10 +1843,10 @@ async function viewLead(leadId) {
         if (analysisData.match_reasons && analysisData.match_reasons.length > 0) {
             detailsHtml += `
                 <div style="margin-bottom: 24px;">
-                    <h4 style="margin-bottom: 16px; color: #374151; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+                    <h4 style="margin-bottom: 16px; color: #2D6CDF; border-bottom: 2px solid #C9CEDC; padding-bottom: 8px;">
                         ✅ Match Reasons
                     </h4>
-                    <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <div style="background: linear-gradient(135deg, #F0FDF9, #E8FBF5); padding: 16px; border-radius: 8px; border-left: 4px solid #53E1C5;">
                         ${analysisData.match_reasons.map(reason => `• ${reason}`).join('<br>')}
                     </div>
                 </div>
@@ -1898,67 +1856,68 @@ async function viewLead(leadId) {
         // DEEP ANALYSIS EXCLUSIVE SECTIONS
         if (analysisType === 'deep' && analysis) {
             detailsHtml += `
-                <div style="border-top: 3px solid #059669; margin-top: 32px; padding-top: 24px;">
-                    <h3 style="color: #059669; margin-bottom: 24px; display: flex; align-items: center; gap: 8px;">
+                <div style="border-top: 3px solid #8A6DF1; margin-top: 32px; padding-top: 24px;">
+                    <h3 style="color: #8A6DF1; margin-bottom: 24px; display: flex; align-items: center; gap: 8px;">
                         🔍 Deep Analysis Insights
                     </h3>
             `;
             
-            // Engagement rate
-            if (analysis.engagement_rate || analysisData.engagement_rate) {
+            // FIXED: Engagement rate from correct source
+            const engagementRate = analysisData.engagement_rate || analysis.engagement_rate;
+            if (engagementRate) {
                 detailsHtml += `
                     <div style="margin-bottom: 20px;">
-                        <h4 style="margin-bottom: 12px; color: #374151;">📊 Engagement Rate</h4>
-                        <div style="background: #fef3c7; padding: 12px; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                            <span style="font-size: 20px; font-weight: 700;">${analysis.engagement_rate || analysisData.engagement_rate}%</span>
-                            <span style="color: #92400e; margin-left: 8px;">estimated engagement</span>
+                        <h4 style="margin-bottom: 12px; color: #121417;">📊 Engagement Rate</h4>
+                        <div style="background: linear-gradient(135deg, #FEF3E2, #FDE8CC); padding: 12px; border-radius: 8px; border-left: 4px solid #53E1C5;">
+                            <span style="font-size: 20px; font-weight: 700; color: #121417;">${engagementRate}%</span>
+                            <span style="color: #121417; margin-left: 8px;">estimated engagement</span>
                         </div>
                     </div>
                 `;
             }
             
-            // Selling points
-            if (analysis.selling_points || analysisData.selling_points) {
-                const sellingPoints = analysisData.selling_points && Array.isArray(analysisData.selling_points)
-                    ? analysisData.selling_points
-                    : (analysis.selling_points ? analysis.selling_points.split(', ') : []);
-                
-                if (sellingPoints.length > 0) {
-                    detailsHtml += `
-                        <div style="margin-bottom: 20px;">
-                            <h4 style="margin-bottom: 12px; color: #374151;">💎 Key Selling Points</h4>
-                            <div style="background: #ecfdf5; padding: 16px; border-radius: 8px; border-left: 4px solid #10b981;">
-                                ${sellingPoints.map(point => `• ${point}`).join('<br>')}
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-            
-            // Outreach message
-            if (analysis.outreach_message) {
+            // FIXED: Selling points from correct source
+            const sellingPoints = analysisData.selling_points || (analysis.selling_points ? analysis.selling_points.split(', ') : []);
+            if (sellingPoints && sellingPoints.length > 0) {
                 detailsHtml += `
                     <div style="margin-bottom: 20px;">
-                        <h4 style="margin-bottom: 12px; color: #374151; display: flex; align-items: center; gap: 8px;">
+                        <h4 style="margin-bottom: 12px; color: #121417;">💎 Key Selling Points</h4>
+                        <div style="background: linear-gradient(135deg, #F0FDF9, #E8FBF5); padding: 16px; border-radius: 8px; border-left: 4px solid #53E1C5;">
+                            ${Array.isArray(sellingPoints) 
+                                ? sellingPoints.map(point => `• ${point}`).join('<br>')
+                                : `• ${sellingPoints}`
+                            }
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // FIXED: Outreach message from correct source
+            const outreachMessage = analysis.outreach_message;
+            if (outreachMessage) {
+                detailsHtml += `
+                    <div style="margin-bottom: 20px;">
+                        <h4 style="margin-bottom: 12px; color: #121417; display: flex; align-items: center; gap: 8px;">
                             💬 Personalized Outreach Message
-                            <button onclick="copyText('${analysis.outreach_message.replace(/'/g, "\\'")}', this)" style="background: #0ea5e9; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">
+                            <button onclick="copyText('${outreachMessage.replace(/'/g, "\\'")}', this)" style="background: #2D6CDF; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">
                                 📋 Copy
                             </button>
                         </h4>
-                        <div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border-left: 4px solid #0ea5e9; font-style: italic;">
-                            "${analysis.outreach_message}"
+                        <div style="background: linear-gradient(135deg, #F0F4FF, #E8F3FF); padding: 16px; border-radius: 8px; border-left: 4px solid #2D6CDF; font-style: italic;">
+                            "${outreachMessage}"
                         </div>
                     </div>
                 `;
             }
             
-            // Custom notes
-            if (analysis.custom_notes || analysisData.custom_notes) {
+            // FIXED: Custom notes from correct source
+            const customNotes = analysisData.custom_notes || analysis.custom_notes;
+            if (customNotes) {
                 detailsHtml += `
                     <div style="margin-bottom: 20px;">
-                        <h4 style="margin-bottom: 12px; color: #374151;">📝 Strategic Notes</h4>
-                        <div style="background: #faf5ff; padding: 16px; border-radius: 8px; border-left: 4px solid #8b5cf6;">
-                            ${analysis.custom_notes || analysisData.custom_notes}
+                        <h4 style="margin-bottom: 12px; color: #121417;">📝 Strategic Notes</h4>
+                        <div style="background: linear-gradient(135deg, #F9F5FF, #F3E8FF); padding: 16px; border-radius: 8px; border-left: 4px solid #8A6DF1;">
+                            ${customNotes}
                         </div>
                     </div>
                 `;
@@ -1978,17 +1937,18 @@ async function viewLead(leadId) {
         document.getElementById('leadModal').style.display = 'flex';
     }
 }
-        // Helper function to copy text to clipboard
+
+// Helper function to copy text to clipboard
 async function copyText(text, button) {
     try {
         await navigator.clipboard.writeText(text);
         const originalText = button.textContent;
         button.textContent = '✅ Copied!';
-        button.style.background = '#10b981';
+        button.style.background = '#53E1C5';
         
         setTimeout(() => {
             button.textContent = originalText;
-            button.style.background = '#0ea5e9';
+            button.style.background = '#2D6CDF';
         }, 2000);
     } catch (err) {
         console.error('Failed to copy text:', err);
