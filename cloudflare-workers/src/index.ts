@@ -998,15 +998,30 @@ export default {
         }
 
         // FIXED: Store deep analysis with proper error handling
+// ENHANCED: Store deep analysis with comprehensive debugging
         console.log('📊 Storing deep analysis data...');
-        console.log('📊 Data to store:', {
+        console.log('📊 Lead ID:', lead.id);
+        console.log('📊 User ID:', userId);
+        console.log('📊 Analysis object:', JSON.stringify(analysis, null, 2));
+        console.log('📊 Outreach message length:', outreachMessage?.length || 0);
+        console.log('📊 Outreach message content:', outreachMessage);
+        
+        // Prepare data with explicit validation
+        const analysisDataToStore = {
           lead_id: lead.id,
           user_id: userId,
-          analysis_data: analysis,
-          outreach_message: outreachMessage,
-          engagement_rate: analysis.engagement_rate,
-          selling_points: analysis.selling_points
-        });
+          analysis_data: analysis || {},
+          score_reasons: Array.isArray(analysis?.match_reasons) ? analysis.match_reasons : [],
+          outreach_message: outreachMessage || null,
+          engagement_rate: typeof analysis?.engagement_rate === 'number' ? analysis.engagement_rate : null,
+          selling_points: Array.isArray(analysis?.selling_points) 
+            ? analysis.selling_points.join(', ') 
+            : (typeof analysis?.selling_points === 'string' ? analysis.selling_points : null),
+          custom_notes: analysis?.custom_notes || null,
+          created_at: new Date().toISOString(),
+        };
+
+        console.log('📊 Prepared data for storage:', JSON.stringify(analysisDataToStore, null, 2));
         
         try {
           const analysisInsertResponse = await fetch(SUPABASE_URL + '/rest/v1/lead_analyses', {
@@ -1015,32 +1030,68 @@ export default {
               ...supabaseHeaders,
               'Prefer': 'return=representation'
             },
-            body: JSON.stringify({
-              lead_id: lead.id,
-              user_id: userId,
-              analysis_data: analysis,
-              score_reasons: analysis.match_reasons || [],
-              outreach_message: outreachMessage,
-              engagement_rate: analysis.engagement_rate || null,
-              selling_points: Array.isArray(analysis.selling_points) 
-                ? analysis.selling_points.join(', ') 
-                : (analysis.selling_points || null),
-              custom_notes: analysis.custom_notes || null,
-              created_at: new Date().toISOString(),
-            }),
+            body: JSON.stringify(analysisDataToStore),
           });
+
+          console.log('📊 Insert response status:', analysisInsertResponse.status);
+          console.log('📊 Insert response ok:', analysisInsertResponse.ok);
 
           if (!analysisInsertResponse.ok) {
             const errorText = await analysisInsertResponse.text();
             console.error('❌ Failed to store deep analysis:', analysisInsertResponse.status, errorText);
+            console.error('❌ Request body was:', JSON.stringify(analysisDataToStore, null, 2));
             throw new Error('Failed to store deep analysis: ' + errorText);
           }
 
-          const analysisData = await analysisInsertResponse.json();
-          console.log('✅ Deep analysis stored successfully:', analysisData);
+          const insertedData = await analysisInsertResponse.json();
+          console.log('✅ Deep analysis stored successfully:', insertedData);
+          
+          // VERIFICATION: Try to fetch the stored data immediately
+          console.log('🔍 Verifying storage - fetching back the data...');
+          const verifyResponse = await fetch(
+            SUPABASE_URL + '/rest/v1/lead_analyses?lead_id=eq.' + lead.id + '&select=*',
+            { headers: supabaseHeaders }
+          );
+          
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            console.log('✅ Verification successful - stored data:', verifyData);
+          } else {
+            console.warn('⚠️ Verification failed - could not fetch back stored data');
+          }
           
         } catch (analysisError) {
           console.error('❌ Error storing deep analysis:', analysisError);
+          console.error('❌ Analysis error message:', analysisError.message);
+          console.error('❌ Analysis error stack:', analysisError.stack);
+          
+          // Try a simpler storage approach as fallback
+          console.log('🔄 Attempting fallback storage...');
+          try {
+            const fallbackData = {
+              lead_id: lead.id,
+              user_id: userId,
+              analysis_data: analysis,
+              outreach_message: outreachMessage,
+              created_at: new Date().toISOString(),
+            };
+            
+            const fallbackResponse = await fetch(SUPABASE_URL + '/rest/v1/lead_analyses', {
+              method: 'POST',
+              headers: supabaseHeaders,
+              body: JSON.stringify(fallbackData),
+            });
+            
+            if (fallbackResponse.ok) {
+              console.log('✅ Fallback storage successful');
+            } else {
+              const fallbackError = await fallbackResponse.text();
+              console.error('❌ Fallback storage also failed:', fallbackError);
+            }
+          } catch (fallbackError) {
+            console.error('❌ Fallback storage exception:', fallbackError);
+          }
+          
           // Don't fail the entire request - just log the error
           console.warn('⚠️ Continuing without storing deep analysis details');
         }
