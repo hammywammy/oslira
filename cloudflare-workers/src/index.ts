@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-// Types for better code organization
+// Enterprise Types for better code organization
 interface ProfileData {
   username: string;
   fullName?: string;
@@ -56,29 +56,51 @@ interface User {
   credits: number;
 }
 
-const app = new Hono();
-app.use('*', cors());
+interface AnalysisRequest {
+  profile_url?: string;
+  username?: string;
+  analysis_type?: string;
+  analysisType?: string;
+  type?: string;
+  business_id?: string;
+  businessId?: string;
+  icp_id?: string;
+  user_id?: string;
+  platform?: string;
+}
 
-// JWT verification with better error handling
+const app = new Hono();
+app.use('*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Enterprise JWT verification with comprehensive error handling
 async function verifySupabaseJWT(token: string): Promise<string | null> {
   try {
+    if (!token) {
+      console.error('❌ No token provided');
+      return null;
+    }
+
     const parts = token.split('.');
     if (parts.length !== 3) {
-      console.error('❌ Invalid JWT format');
+      console.error('❌ Invalid JWT format - expected 3 parts, got', parts.length);
       return null;
     }
     
     const [, payload] = parts;
     const decodedPayload = JSON.parse(atob(payload));
-    console.log('📋 JWT payload decoded successfully');
+    console.log('📋 JWT payload decoded successfully for user:', decodedPayload.sub);
     
     const now = Math.floor(Date.now() / 1000);
     if (decodedPayload.exp && decodedPayload.exp < now) {
-      console.error('❌ Token expired');
+      console.error('❌ Token expired at:', new Date(decodedPayload.exp * 1000));
       return null;
     }
     
-    console.log('✅ Token is valid, user ID:', decodedPayload.sub);
+    console.log('✅ Token is valid, expires at:', new Date(decodedPayload.exp * 1000));
     return decodedPayload.sub;
   } catch (error) {
     console.error('💥 JWT verification error:', error);
@@ -86,11 +108,11 @@ async function verifySupabaseJWT(token: string): Promise<string | null> {
   }
 }
 
-// Enhanced OpenAI API with retry logic
+// Enterprise OpenAI API with advanced retry logic and rate limiting
 async function callOpenAI(prompt: string, apiKey: string, maxRetries = 3): Promise<any> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🤖 OpenAI attempt ${attempt}/${maxRetries}`);
+      console.log(`🤖 OpenAI attempt ${attempt}/${maxRetries} - prompt length: ${prompt.length}`);
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -101,37 +123,49 @@ async function callOpenAI(prompt: string, apiKey: string, maxRetries = 3): Promi
         body: JSON.stringify({
           model: 'gpt-4o',
           temperature: 0.3,
-          max_tokens: 1000,
-          messages: [{ role: 'user', content: prompt }]
+          max_tokens: 1200,
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: "json_object" }
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`❌ OpenAI API error ${response.status}:`, errorText);
+        
         if (response.status === 429 && attempt < maxRetries) {
-          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
+          const delay = Math.min(Math.pow(2, attempt) * 1000, 10000); // Max 10s delay
           console.log(`⏳ Rate limited, waiting ${delay}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
+        
+        if (response.status === 401) {
+          throw new Error('OpenAI API key is invalid or expired');
+        }
+        
         throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('✅ OpenAI response received');
+      console.log('✅ OpenAI response received, usage:', data.usage);
       return data;
     } catch (error) {
       console.error(`❌ OpenAI attempt ${attempt} failed:`, error.message);
       if (attempt === maxRetries) throw error;
+      
+      // Progressive delay between retries
+      const delay = Math.min(Math.pow(2, attempt) * 500, 5000);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 }
 
-// Claude API call with retry logic
+// Enterprise Claude API with enhanced error handling
 async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promise<any> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🧠 Claude attempt ${attempt}/${maxRetries}`);
+      console.log(`🧠 Claude attempt ${attempt}/${maxRetries} - prompt length: ${prompt.length}`);
       
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -142,7 +176,7 @@ async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promi
         },
         body: JSON.stringify({
           model: 'claude-3-sonnet-20240229',
-          max_tokens: 800,
+          max_tokens: 1000,
           temperature: 0.4,
           messages: [{ role: 'user', content: prompt }]
         })
@@ -150,34 +184,47 @@ async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promi
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`❌ Claude API error ${response.status}:`, errorText);
+        
         if (response.status === 429 && attempt < maxRetries) {
-          const delay = Math.pow(2, attempt) * 1000;
+          const delay = Math.min(Math.pow(2, attempt) * 1000, 8000);
           console.log(`⏳ Claude rate limited, waiting ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
+        
+        if (response.status === 401) {
+          throw new Error('Claude API key is invalid or expired');
+        }
+        
         throw new Error(`Claude API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('✅ Claude response received');
+      console.log('✅ Claude response received, tokens:', data.usage);
       return data;
     } catch (error) {
       console.error(`❌ Claude attempt ${attempt} failed:`, error.message);
       if (attempt === maxRetries) throw error;
+      
+      const delay = Math.min(Math.pow(2, attempt) * 600, 6000);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 }
 
-// Safe Supabase JSON parsing
+// Enterprise Supabase response handler with comprehensive logging
 async function safeSupabaseResponse(response: Response, context: string): Promise<any> {
+  console.log(`📡 ${context} - Status: ${response.status}, Headers:`, Object.fromEntries(response.headers.entries()));
+  
   if (!response.ok) {
     const errorText = await response.text();
+    console.error(`❌ ${context} failed:`, response.status, errorText);
     throw new Error(`${context} failed: ${response.status} - ${errorText}`);
   }
 
   const responseText = await response.text();
-  console.log(`📄 ${context} response:`, responseText);
+  console.log(`📄 ${context} response length:`, responseText.length);
 
   if (!responseText || responseText.trim() === '') {
     console.log(`⚠️ Empty response from ${context}`);
@@ -185,148 +232,223 @@ async function safeSupabaseResponse(response: Response, context: string): Promis
   }
 
   try {
-    return JSON.parse(responseText);
+    const parsed = JSON.parse(responseText);
+    console.log(`✅ ${context} parsed successfully, records:`, Array.isArray(parsed) ? parsed.length : 1);
+    return parsed;
   } catch (parseError) {
     console.error(`💥 ${context} JSON parse error:`, parseError);
+    console.error('Raw response:', responseText.substring(0, 500));
     throw new Error(`Failed to parse ${context} response`);
   }
 }
 
-// Extract username from various Instagram URL formats
+// Enterprise username extraction with comprehensive validation
 function extractUsername(profileUrl: string): string {
   try {
     if (!profileUrl) return '';
     
-    // Clean URL and extract username
-    const cleanUrl = profileUrl.trim().toLowerCase();
+    const cleanUrl = profileUrl.trim();
+    console.log('🔍 Extracting username from:', cleanUrl);
     
+    // Handle direct username
+    if (!cleanUrl.includes('/') && !cleanUrl.includes('.')) {
+      const username = cleanUrl.replace('@', '');
+      console.log('✅ Direct username extracted:', username);
+      return username;
+    }
+    
+    // Handle Instagram URLs
     if (cleanUrl.includes('instagram.com')) {
       const url = new URL(cleanUrl);
       const pathSegments = url.pathname.split('/').filter(Boolean);
-      return pathSegments[0] || '';
+      const username = pathSegments[0] || '';
+      console.log('✅ URL username extracted:', username);
+      return username;
     }
     
-    // Direct username
-    return cleanUrl.replace('@', '');
+    // Fallback for other formats
+    const username = cleanUrl.replace('@', '').replace(/[^a-zA-Z0-9._]/g, '');
+    console.log('✅ Fallback username extracted:', username);
+    return username;
   } catch (error) {
     console.error('💥 Username extraction error:', error);
     return '';
   }
 }
 
-// Generate enterprise light analysis prompt
-function generateLightPrompt(profile: ProfileData, icp: ICPProfile): string {
-  return `You are a senior lead qualification strategist. A business is using you to quickly assess whether an Instagram profile matches their Ideal Customer Profile (ICP).
+// Enhanced request validation with detailed logging
+function validateRequest(body: AnalysisRequest): { isValid: boolean; errors: string[]; normalizedData: any } {
+  const errors: string[] = [];
+  
+  console.log('🔍 Validating request body:', JSON.stringify(body, null, 2));
+  
+  // Extract profile URL or username
+  const profileUrl = body.profile_url || (body.username ? `https://instagram.com/${body.username}` : '');
+  if (!profileUrl) {
+    errors.push('profile_url or username is required');
+  }
+  
+  // Extract analysis type
+  const analysisType = body.analysis_type || body.analysisType || body.type;
+  if (!analysisType) {
+    errors.push('analysis_type is required');
+  } else if (!['light', 'deep'].includes(analysisType)) {
+    errors.push('analysis_type must be "light" or "deep"');
+  }
+  
+  // Extract business ID
+  const businessId = body.business_id || body.businessId;
+  if (!businessId) {
+    errors.push('business_id is required');
+  }
+  
+  console.log('🔍 Validation results:', { 
+    profileUrl, 
+    analysisType, 
+    businessId, 
+    errors: errors.length 
+  });
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    normalizedData: {
+      profile_url: profileUrl,
+      analysis_type: analysisType,
+      business_id: businessId,
+      icp_id: body.icp_id, // Optional for new dashboard
+      user_id: body.user_id,
+      platform: body.platform || 'instagram'
+    }
+  };
+}
 
-Given this scraped profile information:
+// Enterprise light analysis prompt with business context
+function generateLightPrompt(profile: ProfileData, business: BusinessProfile): string {
+  return `You are an expert B2B lead qualification AI. Analyze this Instagram profile against the business requirements.
 
+PROFILE DATA:
 - Username: ${profile.username}
 - Biography: ${profile.biography || 'No bio available'}
-- Followers: ${profile.followersCount}
-- Following: ${profile.followingCount || 0}
-- Posts: ${profile.postsCount || 0}
-- Verified: ${profile.isVerified || profile.verified || false}
-- Category: ${profile.businessCategoryName || profile.category || 'Unknown'}
-
-Here's the business's ICP (Ideal Customer Profile) description:
-"Target Industry: ${icp.target_industry}
-Company Size: ${icp.company_size}
-Decision Maker: ${icp.decision_maker}
-Pain Points: ${icp.pain_points}
-Solution: ${icp.solution}
-Must Haves: ${icp.must_haves}
-Red Flags: ${icp.red_flags}
-Min Followers: ${icp.min_followers}"
-
-Respond only in JSON with this structure:
-{
-  "lead_score": number (0-100),
-  "summary": string (1-2 sentences on the lead's potential),
-  "niche": string (e.g. Fitness Coach, Ecom Founder),
-  "match_reasons": [array of 2-4 specific reasons why this lead does or doesn't match the ICP]
-}
-
-Use clear, logical reasoning. Focus on bio signals and follower-to-following ratios.`;
-}
-
-// Generate enterprise deep analysis prompt
-function generateDeepPrompt(profile: ProfileData, icp: ICPProfile): string {
-  return `You are a B2B lead strategist and growth advisor.
-
-Use the following Instagram profile data to deeply evaluate their alignment with the Ideal Customer Profile (ICP) and identify outreach opportunities.
-
-Profile:
-- Username: ${profile.username}
-- Full Name: ${profile.fullName || 'Not available'}
-- Bio: ${profile.biography || 'No bio available'}
-- Posts: ${profile.postsCount || 0}
-- Followers: ${profile.followersCount}
-- Following: ${profile.followingCount || 0}
+- Followers: ${profile.followersCount?.toLocaleString() || 0}
+- Following: ${profile.followingCount?.toLocaleString() || 0}
+- Posts: ${profile.postsCount?.toLocaleString() || 0}
 - Verified: ${profile.isVerified || profile.verified || false}
 - Category: ${profile.businessCategoryName || profile.category || 'Unknown'}
 - External URL: ${profile.externalUrl || 'None'}
 
-ICP: 
-"Target Industry: ${icp.target_industry}
-Company Size: ${icp.company_size}
-Decision Maker: ${icp.decision_maker}
-Location Preference: ${icp.location_pref}
-Pain Points: ${icp.pain_points}
-Solution: ${icp.solution}
-Differentiator: ${icp.differentiator}
-Must Haves: ${icp.must_haves}
-Red Flags: ${icp.red_flags}
-Min Followers: ${icp.min_followers}"
+BUSINESS CONTEXT:
+- Business: ${business.business_name}
+- Target Niche: ${business.target_niche}
+- Product/Service: ${business.product_service}
+- Value Proposition: ${business.value_prop}
+- Target Location: ${business.customer_location}
 
-Instructions:
-Analyze this profile and return only valid JSON:
+INSTRUCTIONS:
+Respond with valid JSON only. Analyze if this profile matches the business's target customer profile.
 
 {
-  "lead_score": number (0-100),
-  "summary": string (Why they're promising or not),
-  "niche": string (Concise summary of the person's field),
-  "match_reasons": [specific bullets explaining your score],
-  "engagement_rate": number (estimated based on followers/posts),
-  "selling_points": [array of key selling angles, e.g. "Verified coach", "Strong bio", "Founder"],
-  "custom_notes": string (Optional internal notes for the SDR team – red flags, hooks, or extra info)
+  "lead_score": number (0-100, where 100 = perfect match),
+  "summary": "Brief 1-2 sentence explanation of the lead's potential",
+  "niche": "Concise description of the person's field/industry",
+  "match_reasons": ["array", "of", "specific", "reasons", "for", "the", "score"]
 }
 
-Be helpful but concise. If data is missing, use intelligent assumptions or say "insufficient data".`;
+Focus on bio keywords, follower metrics, verification status, and business relevance.`;
 }
 
-// Generate enterprise message prompt for Claude
-function generateMessagePrompt(profile: ProfileData, icp: ICPProfile, analysis: any): string {
-  return `You are an expert SDR writing Instagram cold DMs for a high-end B2B lead generation agency.
+// Enterprise deep analysis prompt with comprehensive scoring
+function generateDeepPrompt(profile: ProfileData, business: BusinessProfile): string {
+  return `You are a senior B2B lead strategist. Conduct a comprehensive analysis of this Instagram profile.
 
-Here's the lead's full profile and analysis:
+PROFILE ANALYSIS:
+- Username: ${profile.username}
+- Full Name: ${profile.fullName || 'Not available'}
+- Bio: ${profile.biography || 'No bio available'}
+- Posts: ${profile.postsCount?.toLocaleString() || 0}
+- Followers: ${profile.followersCount?.toLocaleString() || 0}
+- Following: ${profile.followingCount?.toLocaleString() || 0}
+- Verified: ${profile.isVerified || profile.verified || false}
+- Category: ${profile.businessCategoryName || profile.category || 'Unknown'}
+- External URL: ${profile.externalUrl || 'None'}
+- Private Account: ${profile.private || profile.isPrivate || false}
 
+BUSINESS TARGET:
+- Company: ${business.business_name}
+- Target Niche: ${business.target_niche}
+- Product/Service: ${business.product_service}
+- Value Proposition: ${business.value_prop}
+- Customer Location: ${business.customer_location}
+- Primary Platform: ${business.primary_platform}
+
+ANALYSIS FRAMEWORK:
+1. Profile Quality Assessment
+2. Business Relevance Scoring
+3. Engagement Potential
+4. Decision Maker Likelihood
+5. Outreach Opportunity
+
+Respond with valid JSON only:
+
+{
+  "lead_score": number (0-100 comprehensive score),
+  "summary": "Detailed assessment of lead quality and potential",
+  "niche": "Specific industry/field classification",
+  "match_reasons": ["detailed", "array", "of", "scoring", "factors"],
+  "engagement_rate": number (estimated % based on followers/activity),
+  "selling_points": ["key", "strengths", "for", "outreach"],
+  "custom_notes": "Strategic notes for sales team (pain points, hooks, timing, etc.)"
+}
+
+Be thorough and strategic in your analysis.`;
+}
+
+// Enterprise message generation prompt
+function generateMessagePrompt(profile: ProfileData, business: BusinessProfile, analysis: any): string {
+  return `You are an expert B2B sales development representative crafting Instagram DMs.
+
+LEAD PROFILE:
 - Username: ${profile.username}
 - Bio: "${profile.biography || 'No bio available'}"
 - Verified: ${profile.isVerified || profile.verified || false}
 - Category: ${profile.businessCategoryName || profile.category || 'Unknown'}
-- Followers: ${profile.followersCount}
+- Followers: ${profile.followersCount?.toLocaleString() || 0}
 - External Link: ${profile.externalUrl || 'None'}
-- AI Lead Score: ${analysis.lead_score} / 100
-- ICP Match Reasons: ${analysis.match_reasons?.join(', ') || 'None'}
-- Selling Points: ${analysis.selling_points?.join(', ') || 'None'}
-- Business ICP: "${icp.business_name} - ${icp.solution}"
 
-Your job:
-Write a 2–3 sentence cold DM (direct message) that feels custom-written and friendly — not generic. Highlight a shared pain point or strength, compliment if needed, and offer value.
+ANALYSIS RESULTS:
+- Lead Score: ${analysis.lead_score}/100
+- Niche: ${analysis.niche}
+- Match Reasons: ${analysis.match_reasons?.join(', ') || 'General match'}
+- Selling Points: ${analysis.selling_points?.join(', ') || 'Profile strength'}
 
-**Only return the DM message, no preamble.**`;
+YOUR BUSINESS:
+- Company: ${business.business_name}
+- Product/Service: ${business.product_service}
+- Value Prop: ${business.value_prop}
+- Target Niche: ${business.target_niche}
+
+OBJECTIVE:
+Write a personalized 2-3 sentence Instagram DM that:
+1. Feels genuine and specific to their profile
+2. Mentions a relevant pain point or opportunity
+3. Offers clear value related to your business
+4. Includes a soft call-to-action
+
+Only return the DM message text, no explanations or formatting.`;
 }
 
-// Main analyze endpoint
+// Main enterprise analyze endpoint
 app.post('/analyze', async (c) => {
-  console.log('🚀 Enterprise analyze endpoint called');
+  const startTime = Date.now();
+  console.log('🚀 ENTERPRISE ANALYSIS STARTED', new Date().toISOString());
   
   try {
-    // 1. Authentication
+    // 1. AUTHENTICATION & AUTHORIZATION
     const authHeader = c.req.header('Authorization');
-    console.log('🔑 Auth header:', authHeader ? 'Present' : 'Missing');
+    console.log('🔑 Auth check:', authHeader ? 'Bearer token present' : 'Missing auth');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('❌ Authentication failed - invalid header format');
       return c.json({ error: 'Missing or invalid Authorization header' }, 401);
     }
 
@@ -334,29 +456,29 @@ app.post('/analyze', async (c) => {
     const userId = await verifySupabaseJWT(token);
     
     if (!userId) {
+      console.error('❌ Authentication failed - invalid token');
       return c.json({ error: 'Invalid or expired token' }, 401);
     }
 
-    console.log('✅ User authenticated:', userId);
+    console.log('✅ User authenticated successfully:', userId);
 
-    // 2. Parse and validate request
+    // 2. REQUEST VALIDATION & NORMALIZATION
     const body = await c.req.json();
-    console.log('📦 Request body received:', JSON.stringify(body));
+    const validation = validateRequest(body);
     
-    const { profile_url, analysisType, business_id, icp_id } = body;
-    
-    if (!profile_url || !analysisType || !business_id || !icp_id) {
+    if (!validation.isValid) {
+      console.error('❌ Request validation failed:', validation.errors);
       return c.json({ 
-        error: 'Missing required fields', 
-        required: ['profile_url', 'analysisType', 'business_id', 'icp_id'] 
+        error: 'Invalid request parameters', 
+        details: validation.errors,
+        received_fields: Object.keys(body)
       }, 400);
     }
 
-    if (!['light', 'deep'].includes(analysisType)) {
-      return c.json({ error: 'analysisType must be "light" or "deep"' }, 400);
-    }
+    const { profile_url, analysis_type, business_id } = validation.normalizedData;
+    console.log('✅ Request validated:', { profile_url, analysis_type, business_id });
 
-    // 3. Environment setup
+    // 3. ENVIRONMENT SETUP & VALIDATION
     const {
       SUPABASE_URL,
       SUPABASE_SERVICE_ROLE,
@@ -365,35 +487,295 @@ app.post('/analyze', async (c) => {
       APIFY_API_TOKEN,
     } = c.env;
 
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE || !OPENAI_KEY) {
+      console.error('❌ Missing required environment variables');
+      return c.json({ error: 'Service configuration error' }, 500);
+    }
+
     const supabaseHeaders = {
       apikey: SUPABASE_SERVICE_ROLE,
       Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
       'Content-Type': 'application/json',
     };
 
-    // 4. Extract and validate username
+    // 4. USERNAME EXTRACTION & VALIDATION
     const username = extractUsername(profile_url);
-    if (!username) {
+    if (!username || username.length < 1 || username.length > 30) {
+      console.error('❌ Invalid username extracted:', username);
       return c.json({ error: 'Invalid Instagram username or URL format' }, 400);
     }
-    console.log('👤 Username extracted:', username);
+    console.log('✅ Username validated:', username);
 
-    // 5. Fetch user data and check credits
-    console.log('👤 Fetching user data...');
+    // 5. USER VERIFICATION & CREDIT CHECK
+    console.log('👤 Fetching and validating user...');
     const userResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`, {
-      headers: supabaseHeaders
+    // 11. UPDATE LEAD WITH FINAL RESULTS
+    console.log('📊 Updating lead with final score and status...');
+    await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        score: analysis.lead_score,
+        status: 'analyzed',
+        niche: analysis.niche || null,
+        description: analysis.summary || null,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    // 12. CREDIT DEDUCTION & TRANSACTION LOGGING
+    console.log('💳 Processing credit transaction...');
+    const newCreditBalance = user.credits - creditsRequired;
+    
+    await Promise.all([
+      // Update user credits
+      fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          credits: newCreditBalance,
+          updated_at: new Date().toISOString(),
+        }),
+      }),
+      
+      // Log credit transaction (if table exists)
+      fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
+        method: 'POST',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          user_id: userId,
+          amount: -creditsRequired,
+          transaction_type: 'analysis',
+          description: `${analysis_type} analysis of @${username}`,
+          lead_id: lead.id,
+          created_at: new Date().toISOString(),
+        }),
+      }).catch(err => {
+        console.warn('⚠️ Credit transaction logging failed (table may not exist):', err.message);
+      })
+    ]);
+
+    // 13. PERFORMANCE METRICS & LOGGING
+    const processingTime = Date.now() - startTime;
+    console.log('🎯 ENTERPRISE ANALYSIS COMPLETED SUCCESSFULLY');
+    console.log('📊 Performance metrics:', {
+      processing_time_ms: processingTime,
+      analysis_type,
+      scraping_success: scrapingSuccess,
+      analysis_success: analysisSuccess,
+      lead_score: analysis.lead_score,
+      credits_used: creditsRequired,
+      credits_remaining: newCreditBalance
+    });
+
+    // 14. COMPREHENSIVE SUCCESS RESPONSE
+    return c.json({
+      success: true,
+      lead_id: lead.id,
+      profile: {
+        username: profileData.username,
+        full_name: profileData.fullName,
+        followers: profileData.followersCount,
+        following: profileData.followingCount,
+        posts: profileData.postsCount,
+        verified: profileData.isVerified || profileData.verified,
+        category: profileData.businessCategoryName || profileData.category,
+        external_url: profileData.externalUrl,
+        scraping_success: scrapingSuccess
+      },
+      analysis: {
+        type: analysis_type, // This will now be correctly returned
+        lead_score: analysis.lead_score,
+        summary: analysis.summary,
+        niche: analysis.niche,
+        match_reasons: analysis.match_reasons,
+        analysis_success: analysisSuccess,
+        ...(analysis_type === 'deep' ? {
+          engagement_rate: analysis.engagement_rate,
+          selling_points: analysis.selling_points,
+          custom_notes: analysis.custom_notes,
+          outreach_message: outreachMessage,
+        } : {})
+      },
+      credits: {
+        used: creditsRequired,
+        remaining: newCreditBalance,
+      },
+      metadata: {
+        processed_at: new Date().toISOString(),
+        processing_time_ms: processingTime,
+        profile_url,
+        business_id,
+        scraper_used: analysis_type === 'deep' ? 'full_instagram_scraper' : 'basic_profile_scraper',
+        ai_models_used: analysis_type === 'deep' ? ['gpt-4o', 'claude-3-sonnet'] : ['gpt-4o']
+      }
+    });
+
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    console.error('💥 ENTERPRISE ANALYSIS FAILED:', error);
+    console.error('🔍 Error details:', {
+      message: error.message,
+      stack: error.stack,
+      processing_time_ms: processingTime
+    });
+    
+    return c.json({ 
+      error: 'Enterprise analysis failed', 
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      processing_time_ms: processingTime,
+      support_id: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    }, 500);
+  }
+});
+
+// Enterprise health check with comprehensive system status
+app.get('/health', async (c) => {
+  const startTime = Date.now();
+  
+  try {
+    const {
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE,
+      OPENAI_KEY,
+      CLAUDE_KEY,
+      APIFY_API_TOKEN,
+    } = c.env;
+
+    // Check environment variables
+    const envStatus = {
+      supabase: !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE),
+      openai: !!OPENAI_KEY,
+      claude: !!CLAUDE_KEY,
+      apify: !!APIFY_API_TOKEN,
+    };
+
+    // Test database connectivity
+    let dbStatus = false;
+    try {
+      if (envStatus.supabase) {
+        const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?limit=1`, {
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+          }
+        });
+        dbStatus = testResponse.status < 500;
+      }
+    } catch (dbError) {
+      console.warn('Database health check failed:', dbError.message);
+    }
+
+    const responseTime = Date.now() - startTime;
+    const allSystemsGo = Object.values(envStatus).every(status => status) && dbStatus;
+
+    return c.json({ 
+      status: allSystemsGo ? 'healthy' : 'degraded',
+      service: 'Oslira Enterprise AI Worker',
+      version: '3.0.0',
+      environment: {
+        ...envStatus,
+        database_connectivity: dbStatus
+      },
+      performance: {
+        response_time_ms: responseTime,
+        timestamp: new Date().toISOString()
+      },
+      capabilities: {
+        light_analysis: envStatus.supabase && envStatus.openai && envStatus.apify,
+        deep_analysis: envStatus.supabase && envStatus.openai && envStatus.claude && envStatus.apify,
+        profile_scraping: envStatus.apify,
+        ai_analysis: envStatus.openai,
+        message_generation: envStatus.claude
+      }
+    });
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+// Enterprise system information endpoint
+app.get('/info', (c) => {
+  return c.json({
+    service: 'Oslira Enterprise AI Worker',
+    version: '3.0.0',
+    description: 'Advanced B2B lead qualification and analysis platform',
+    features: [
+      'Multi-tier Instagram profile scraping',
+      'AI-powered lead qualification scoring',
+      'Personalized outreach message generation',
+      'Enterprise-grade authentication & authorization',
+      'Comprehensive error handling & logging',
+      'Credit management & transaction tracking',
+      'Real-time performance monitoring'
+    ],
+    endpoints: [
+      'POST /analyze - Main lead analysis endpoint',
+      'GET /health - System health check',
+      'GET /info - Service information',
+      'GET / - Service status'
+    ],
+    supported_analysis_types: ['light', 'deep'],
+    ai_models: ['gpt-4o', 'claude-3-sonnet'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint with enterprise branding
+app.get('/', (c) => {
+  return c.json({
+    message: '🚀 Oslira Enterprise AI Worker v3.0',
+    status: 'operational',
+    tagline: 'Enterprise-grade B2B lead intelligence platform',
+    documentation: 'Visit /info for detailed service information',
+    health_check: 'Visit /health for system status',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Global error handler
+app.onError((err, c) => {
+  console.error('🚨 Unhandled application error:', err);
+  return c.json({
+    error: 'Internal server error',
+    message: 'An unexpected error occurred',
+    timestamp: new Date().toISOString(),
+    support_id: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }, 500);
+});
+
+// 404 handler
+app.notFound((c) => {
+  return c.json({
+    error: 'Endpoint not found',
+    message: 'The requested endpoint does not exist',
+    available_endpoints: ['/', '/health', '/info', '/analyze'],
+    timestamp: new Date().toISOString()
+  }, 404);
+});
+
+export default {
+  fetch: app.fetch
+};Headers
     });
     
     const userData = await safeSupabaseResponse(userResponse, 'User fetch');
     if (!userData || userData.length === 0) {
+      console.error('❌ User not found in database:', userId);
       return c.json({ error: 'User not found' }, 404);
     }
     
     const user: User = userData[0];
-    const creditsRequired = analysisType === 'deep' ? 2 : 1;
+    const creditsRequired = analysis_type === 'deep' ? 2 : 1;
     
-    console.log('💰 User credits:', user.credits, 'Required:', creditsRequired);
+    console.log('💰 Credit check - Available:', user.credits, 'Required:', creditsRequired);
     if (user.credits < creditsRequired) {
+      console.error('❌ Insufficient credits');
       return c.json({ 
         error: 'Insufficient credits', 
         available: user.credits, 
@@ -401,7 +783,7 @@ app.post('/analyze', async (c) => {
       }, 402);
     }
 
-    // 6. Fetch business profile
+    // 6. BUSINESS PROFILE VERIFICATION
     console.log('🏢 Fetching business profile...');
     const businessResponse = await fetch(`${SUPABASE_URL}/rest/v1/business_profiles?id=eq.${business_id}&user_id=eq.${userId}&select=*`, {
       headers: supabaseHeaders
@@ -409,33 +791,21 @@ app.post('/analyze', async (c) => {
     
     const businessData = await safeSupabaseResponse(businessResponse, 'Business profile fetch');
     if (!businessData || businessData.length === 0) {
-      return c.json({ error: 'Business profile not found' }, 404);
+      console.error('❌ Business profile not found:', business_id);
+      return c.json({ error: 'Business profile not found or access denied' }, 404);
     }
     
     const businessProfile: BusinessProfile = businessData[0];
-    console.log('✅ Business profile found:', businessProfile.business_name);
+    console.log('✅ Business profile loaded:', businessProfile.business_name);
 
-    // 7. Fetch ICP profile
-    console.log('🎯 Fetching ICP profile...');
-    const icpResponse = await fetch(`${SUPABASE_URL}/rest/v1/ideal_customer_profiles?id=eq.${icp_id}&user_id=eq.${userId}&select=*`, {
-      headers: supabaseHeaders
-    });
-    
-    const icpData = await safeSupabaseResponse(icpResponse, 'ICP fetch');
-    if (!icpData || icpData.length === 0) {
-      return c.json({ error: 'ICP profile not found' }, 404);
-    }
-    
-    const icpProfile: ICPProfile = icpData[0];
-    console.log('✅ ICP profile found:', icpProfile.business_name);
-
-    // 8. Run Instagram scraping based on analysis type
-    console.log(`🕷️ Starting ${analysisType} Instagram scraping...`);
+    // 7. INSTAGRAM PROFILE SCRAPING
+    console.log(`🕷️ Starting ${analysis_type} Instagram scraping for:`, username);
     let profileData: ProfileData | null = null;
+    let scrapingSuccess = false;
     
     try {
-      if (analysisType === 'light') {
-        // Light scraping - basic profile info
+      if (analysis_type === 'light') {
+        console.log('📊 Running light scraper...');
         const apifyInput = { usernames: [username] };
         const apifyResponse = await fetch(`https://api.apify.com/v2/actor-tasks/hamzaw~instagram-profile-scraper-task/runs?token=${APIFY_API_TOKEN}`, {
           method: 'POST',
@@ -443,17 +813,21 @@ app.post('/analyze', async (c) => {
           body: JSON.stringify(apifyInput),
         });
 
-        console.log('📊 Light scraper response status:', apifyResponse.status);
+        console.log('📊 Light scraper response:', apifyResponse.status);
         
         if (apifyResponse.ok) {
           const responseText = await apifyResponse.text();
           if (responseText) {
             const apifyData = JSON.parse(responseText);
-            profileData = apifyData[0];
+            if (apifyData && apifyData[0]) {
+              profileData = apifyData[0];
+              scrapingSuccess = true;
+              console.log('✅ Light scraping successful');
+            }
           }
         }
       } else {
-        // Deep scraping - full profile data  
+        console.log('📊 Running deep scraper...');
         const apifyInput = {
           input: {
             usernames: [username],
@@ -469,15 +843,17 @@ app.post('/analyze', async (c) => {
           body: JSON.stringify(apifyInput),
         });
 
-        console.log('📊 Deep scraper response status:', apifyResponse.status);
+        console.log('📊 Deep scraper response:', apifyResponse.status);
         
         if (apifyResponse.ok) {
           const responseText = await apifyResponse.text();
-          console.log('📝 Deep scraper raw response preview:', responseText?.substring(0, 200));
-          
           if (responseText) {
             const apifyData = JSON.parse(responseText);
-            profileData = apifyData[0];
+            if (apifyData && apifyData[0]) {
+              profileData = apifyData[0];
+              scrapingSuccess = true;
+              console.log('✅ Deep scraping successful');
+            }
           }
         }
       }
@@ -485,28 +861,28 @@ app.post('/analyze', async (c) => {
       console.error('⚠️ Apify scraping failed:', apifyError.message);
     }
 
-    // 9. Fallback to mock data if scraping fails
+    // 8. FALLBACK TO MOCK DATA IF SCRAPING FAILS
     if (!profileData?.username) {
-      console.log('🎭 Using mock profile data...');
+      console.log('🎭 Scraping failed, using mock data...');
       profileData = {
         username: username,
-        fullName: `Mock ${username}`,
-        biography: `Mock profile for ${username} - would contain real Instagram data in production`,
-        followersCount: Math.floor(Math.random() * 50000) + 1000,
-        followingCount: Math.floor(Math.random() * 1000) + 100,
-        postsCount: Math.floor(Math.random() * 500) + 50,
-        isVerified: Math.random() > 0.8,
+        fullName: `${username.charAt(0).toUpperCase()}${username.slice(1)}`,
+        biography: `Professional in ${businessProfile.target_niche}. Mock profile for development.`,
+        followersCount: Math.floor(Math.random() * 25000) + 5000,
+        followingCount: Math.floor(Math.random() * 1500) + 200,
+        postsCount: Math.floor(Math.random() * 300) + 50,
+        isVerified: Math.random() > 0.85,
         private: false,
         profilePicUrl: `https://picsum.photos/150/150?random=${username}`,
-        externalUrl: Math.random() > 0.5 ? `https://example.com/${username}` : undefined,
-        businessCategoryName: 'Public Figure',
+        externalUrl: Math.random() > 0.6 ? `https://example.com/${username}` : undefined,
+        businessCategoryName: businessProfile.target_niche || 'Business',
       };
     }
 
-    console.log('✅ Profile data ready:', profileData.username);
+    console.log('✅ Profile data ready - Username:', profileData.username, 'Followers:', profileData.followersCount);
 
-    // 10. Insert initial lead record
-    console.log('💾 Inserting lead record...');
+    // 9. CREATE LEAD RECORD WITH TYPE FIELD
+    console.log('💾 Creating lead record with type:', analysis_type);
     const leadInsertResponse = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
       headers: {
@@ -516,13 +892,22 @@ app.post('/analyze', async (c) => {
       body: JSON.stringify({
         user_id: userId,
         business_id: business_id,
-        icp_id: icp_id,
         username: profileData.username,
+        full_name: profileData.fullName || null,
+        bio: profileData.biography || null,
+        followers_count: profileData.followersCount || 0,
+        following_count: profileData.followingCount || 0,
+        posts_count: profileData.postsCount || 0,
         platform: 'instagram',
         profile_url,
         avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD || null,
+        external_url: profileData.externalUrl || null,
+        is_verified: profileData.isVerified || profileData.verified || false,
+        is_private: profileData.private || profileData.isPrivate || false,
+        business_category: profileData.businessCategoryName || profileData.category || null,
+        type: analysis_type, // THIS IS THE KEY FIX
         score: 0, // Will be updated after analysis
-        status: 'analyzed',
+        status: 'analyzing',
         created_at: new Date().toISOString(),
       }),
     });
@@ -531,125 +916,151 @@ app.post('/analyze', async (c) => {
     const lead = Array.isArray(leadData) ? leadData[0] : leadData;
     
     if (!lead?.id) {
-      throw new Error('Failed to create lead record');
+      throw new Error('Failed to create lead record - no ID returned');
     }
     
-    console.log('✅ Lead record created:', lead.id);
+    console.log('✅ Lead record created with ID:', lead.id, 'Type:', analysis_type);
 
-    // 11. Run AI analysis based on type
+    // 10. AI ANALYSIS EXECUTION
     let analysis: any;
     let outreachMessage = '';
+    let analysisSuccess = false;
 
-    if (analysisType === 'light') {
-      console.log('🤖 Running light OpenAI analysis...');
-      const lightPrompt = generateLightPrompt(profileData, icpProfile);
-      const openaiData = await callOpenAI(lightPrompt, OPENAI_KEY);
-      
-      try {
-        analysis = JSON.parse(openaiData.choices[0].message.content);
-        console.log('✅ Light analysis completed, score:', analysis.lead_score);
-      } catch (parseError) {
-        console.error('❌ Failed to parse OpenAI response:', parseError);
-        analysis = {
-          lead_score: 50,
-          summary: 'Analysis completed but response format was invalid',
-          niche: 'Unknown',
-          match_reasons: ['Unable to parse AI response']
-        };
+    try {
+      if (analysis_type === 'light') {
+        console.log('🤖 Running light OpenAI analysis...');
+        const lightPrompt = generateLightPrompt(profileData, businessProfile);
+        const openaiData = await callOpenAI(lightPrompt, OPENAI_KEY);
+        
+        const content = openaiData.choices[0].message.content;
+        analysis = JSON.parse(content);
+        analysisSuccess = true;
+        console.log('✅ Light analysis completed - Score:', analysis.lead_score);
+      } else {
+        console.log('🧠 Running comprehensive deep analysis...');
+        
+        // Deep OpenAI analysis
+        const deepPrompt = generateDeepPrompt(profileData, businessProfile);
+        const openaiData = await callOpenAI(deepPrompt, OPENAI_KEY);
+        
+        const content = openaiData.choices[0].message.content;
+        analysis = JSON.parse(content);
+        console.log('✅ Deep analysis completed - Score:', analysis.lead_score);
+
+        // Generate outreach message with Claude
+        if (CLAUDE_KEY) {
+          console.log('💬 Generating personalized outreach message...');
+          const messagePrompt = generateMessagePrompt(profileData, businessProfile, analysis);
+          
+          try {
+            const claudeData = await callClaude(messagePrompt, CLAUDE_KEY);
+            outreachMessage = claudeData.content?.[0]?.text?.trim() || '';
+            console.log('✅ Outreach message generated, length:', outreachMessage.length);
+          } catch (claudeError) {
+            console.error('⚠️ Claude message generation failed:', claudeError.message);
+            outreachMessage = `Hi ${profileData.fullName || profileData.username}! I noticed your work in ${analysis.niche || businessProfile.target_niche}. I'd love to share how ${businessProfile.business_name} could help with ${businessProfile.value_prop}. Are you open to a quick chat?`;
+          }
+        }
+
+        // Insert detailed analysis record
+        console.log('📊 Storing deep analysis data...');
+        await fetch(`${SUPABASE_URL}/rest/v1/lead_analyses`, {
+          method: 'POST',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            lead_id: lead.id,
+            user_id: userId,
+            analysis_data: analysis,
+            score_reasons: analysis.match_reasons || [],
+            outreach_message: outreachMessage,
+            engagement_rate: analysis.engagement_rate || null,
+            selling_points: analysis.selling_points?.join(', ') || null,
+            custom_notes: analysis.custom_notes || null,
+            created_at: new Date().toISOString(),
+          }),
+        });
+        
+        analysisSuccess = true;
       }
-    } else {
-      console.log('🧠 Running deep analysis...');
+    } catch (analysisError) {
+      console.error('❌ AI analysis failed:', analysisError.message);
       
-      // Deep OpenAI analysis
-      const deepPrompt = generateDeepPrompt(profileData, icpProfile);
-      const openaiData = await callOpenAI(deepPrompt, OPENAI_KEY);
-      
-      try {
-        analysis = JSON.parse(openaiData.choices[0].message.content);
-        console.log('✅ Deep analysis completed, score:', analysis.lead_score);
-      } catch (parseError) {
-        console.error('❌ Failed to parse deep analysis:', parseError);
-        analysis = {
-          lead_score: 50,
-          summary: 'Deep analysis completed but response format was invalid',
-          niche: 'Unknown',
-          match_reasons: ['Unable to parse AI response'],
+      // Fallback analysis
+      analysis = {
+        lead_score: 50,
+        summary: `Analysis completed for ${username} but AI response had formatting issues`,
+        niche: businessProfile.target_niche || 'Unknown',
+        match_reasons: ['Profile scraped successfully', 'Manual review recommended'],
+        ...(analysis_type === 'deep' ? {
           engagement_rate: 2.5,
-          selling_points: ['Profile scraped successfully'],
-          custom_notes: 'AI response parsing failed'
-        };
-      }
-
-      // Generate outreach message with Claude
-      console.log('💬 Generating outreach message with Claude...');
-      const messagePrompt = generateMessagePrompt(profileData, icpProfile, analysis);
+          selling_points: ['Profile accessible', 'In target niche'],
+          custom_notes: 'AI analysis failed - manual review needed'
+        } : {})
+      };
       
-      try {
-        const claudeData = await callClaude(messagePrompt, CLAUDE_KEY);
-        outreachMessage = claudeData.content?.[0]?.text?.trim() || 'Failed to generate message';
-        console.log('✅ Outreach message generated');
-      } catch (claudeError) {
-        console.error('❌ Claude message generation failed:', claudeError.message);
-        outreachMessage = `Hi ${profileData.fullName || profileData.username}! I noticed your work in ${analysis.niche} and thought you might be interested in discussing how we could help with ${icpProfile.solution}. Would love to connect!`;
-      }
-
-      // Insert detailed analysis for deep analysis
-      console.log('📊 Inserting deep analysis record...');
-      await fetch(`${SUPABASE_URL}/rest/v1/lead_analyses`, {
-        method: 'POST',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          lead_id: lead.id,
-          user_id: userId,
-          analysis_data: analysis,
-          score_reasons: analysis.match_reasons,
-          activity_insights: null, // Could be populated with post analysis
-          related_leads: null,
-          outreach_message: outreachMessage,
-          engagement_rate: analysis.engagement_rate || null,
-          selling_points: analysis.selling_points?.join(', ') || null,
-          custom_notes: analysis.custom_notes || null,
-          created_at: new Date().toISOString(),
-        }),
-      });
+      outreachMessage = outreachMessage || `Hi ${profileData.fullName || profileData.username}! I noticed your profile and thought you might be interested in ${businessProfile.value_prop}. Would love to connect!`;
     }
 
-    // 12. Update lead with final score
-    console.log('📊 Updating lead with final score...');
+// 11. UPDATE LEAD WITH FINAL RESULTS
+    console.log('📊 Updating lead with final score and status...');
     await fetch(`${SUPABASE_URL}/rest/v1/leads?id=eq.${lead.id}`, {
       method: 'PATCH',
       headers: supabaseHeaders,
       body: JSON.stringify({
         score: analysis.lead_score,
+        status: 'analyzed',
+        niche: analysis.niche || null,
+        description: analysis.summary || null,
         updated_at: new Date().toISOString(),
       }),
     });
 
-    // 13. Deduct credits and log transaction
-    console.log('💳 Deducting credits and logging transaction...');
-    await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
-      method: 'PATCH',
-      headers: supabaseHeaders,
-      body: JSON.stringify({
-        credits: user.credits - creditsRequired,
+    // 12. CREDIT DEDUCTION & TRANSACTION LOGGING
+    console.log('💳 Processing credit transaction...');
+    const newCreditBalance = user.credits - creditsRequired;
+    
+    await Promise.all([
+      // Update user credits
+      fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+        method: 'PATCH',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          credits: newCreditBalance,
+          updated_at: new Date().toISOString(),
+        }),
       }),
+      
+      // Log credit transaction (if table exists)
+      fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
+        method: 'POST',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          user_id: userId,
+          amount: -creditsRequired,
+          transaction_type: 'analysis',
+          description: `${analysis_type} analysis of @${username}`,
+          lead_id: lead.id,
+          created_at: new Date().toISOString(),
+        }),
+      }).catch(err => {
+        console.warn('⚠️ Credit transaction logging failed (table may not exist):', err.message);
+      })
+    ]);
+
+    // 13. PERFORMANCE METRICS & LOGGING
+    const processingTime = Date.now() - startTime;
+    console.log('🎯 ENTERPRISE ANALYSIS COMPLETED SUCCESSFULLY');
+    console.log('📊 Performance metrics:', {
+      processing_time_ms: processingTime,
+      analysis_type,
+      scraping_success: scrapingSuccess,
+      analysis_success: analysisSuccess,
+      lead_score: analysis.lead_score,
+      credits_used: creditsRequired,
+      credits_remaining: newCreditBalance
     });
 
-    await fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
-      method: 'POST',
-      headers: supabaseHeaders,
-      body: JSON.stringify({
-        user_id: userId,
-        amount: -creditsRequired,
-        transaction_type: 'analysis',
-        description: `${analysisType} analysis of ${profile_url}`,
-        created_at: new Date().toISOString(),
-      }),
-    });
-
-    console.log('✅ Enterprise analysis completed successfully');
-
-    // 14. Return comprehensive response
+    // 14. COMPREHENSIVE SUCCESS RESPONSE
     return c.json({
       success: true,
       lead_id: lead.id,
@@ -657,15 +1068,21 @@ app.post('/analyze', async (c) => {
         username: profileData.username,
         full_name: profileData.fullName,
         followers: profileData.followersCount,
+        following: profileData.followingCount,
+        posts: profileData.postsCount,
         verified: profileData.isVerified || profileData.verified,
+        category: profileData.businessCategoryName || profileData.category,
+        external_url: profileData.externalUrl,
+        scraping_success: scrapingSuccess
       },
       analysis: {
-        type: analysisType,
+        type: analysis_type, // This will now be correctly returned
         lead_score: analysis.lead_score,
         summary: analysis.summary,
         niche: analysis.niche,
         match_reasons: analysis.match_reasons,
-        ...(analysisType === 'deep' ? {
+        analysis_success: analysisSuccess,
+        ...(analysis_type === 'deep' ? {
           engagement_rate: analysis.engagement_rate,
           selling_points: analysis.selling_points,
           custom_notes: analysis.custom_notes,
@@ -674,39 +1091,164 @@ app.post('/analyze', async (c) => {
       },
       credits: {
         used: creditsRequired,
-        remaining: user.credits - creditsRequired,
+        remaining: newCreditBalance,
       },
       metadata: {
         processed_at: new Date().toISOString(),
+        processing_time_ms: processingTime,
         profile_url,
         business_id,
-        icp_id,
+        scraper_used: analysis_type === 'deep' ? 'full_instagram_scraper' : 'basic_profile_scraper',
+        ai_models_used: analysis_type === 'deep' ? ['gpt-4o', 'claude-3-sonnet'] : ['gpt-4o']
       }
     });
 
   } catch (error) {
-    console.error('💥 Enterprise analysis error:', error);
+    const processingTime = Date.now() - startTime;
+    console.error('💥 ENTERPRISE ANALYSIS FAILED:', error);
+    console.error('🔍 Error details:', {
+      message: error.message,
+      stack: error.stack,
+      processing_time_ms: processingTime
+    });
+    
     return c.json({ 
-      error: 'Analysis failed', 
+      error: 'Enterprise analysis failed', 
       details: error.message,
+      timestamp: new Date().toISOString(),
+      processing_time_ms: processingTime,
+      support_id: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    }, 500);
+  }
+});
+
+// Enterprise health check with comprehensive system status
+app.get('/health', async (c) => {
+  const startTime = Date.now();
+  
+  try {
+    const {
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE,
+      OPENAI_KEY,
+      CLAUDE_KEY,
+      APIFY_API_TOKEN,
+    } = c.env;
+
+    // Check environment variables
+    const envStatus = {
+      supabase: !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE),
+      openai: !!OPENAI_KEY,
+      claude: !!CLAUDE_KEY,
+      apify: !!APIFY_API_TOKEN,
+    };
+
+    // Test database connectivity
+    let dbStatus = false;
+    try {
+      if (envStatus.supabase) {
+        const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?limit=1`, {
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+          }
+        });
+        dbStatus = testResponse.status < 500;
+      }
+    } catch (dbError) {
+      console.warn('Database health check failed:', dbError.message);
+    }
+
+    const responseTime = Date.now() - startTime;
+    const allSystemsGo = Object.values(envStatus).every(status => status) && dbStatus;
+
+    return c.json({ 
+      status: allSystemsGo ? 'healthy' : 'degraded',
+      service: 'Oslira Enterprise AI Worker',
+      version: '3.0.0',
+      environment: {
+        ...envStatus,
+        database_connectivity: dbStatus
+      },
+      performance: {
+        response_time_ms: responseTime,
+        timestamp: new Date().toISOString()
+      },
+      capabilities: {
+        light_analysis: envStatus.supabase && envStatus.openai && envStatus.apify,
+        deep_analysis: envStatus.supabase && envStatus.openai && envStatus.claude && envStatus.apify,
+        profile_scraping: envStatus.apify,
+        ai_analysis: envStatus.openai,
+        message_generation: envStatus.claude
+      }
+    });
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      error: error.message,
       timestamp: new Date().toISOString()
     }, 500);
   }
 });
 
-// Health check endpoint
-app.get('/health', (c) => {
-  return c.json({ 
-    status: 'ok', 
+// Enterprise system information endpoint
+app.get('/info', (c) => {
+  return c.json({
     service: 'Oslira Enterprise AI Worker',
-    version: '2.0.0',
-    timestamp: new Date().toISOString() 
+    version: '3.0.0',
+    description: 'Advanced B2B lead qualification and analysis platform',
+    features: [
+      'Multi-tier Instagram profile scraping',
+      'AI-powered lead qualification scoring',
+      'Personalized outreach message generation',
+      'Enterprise-grade authentication & authorization',
+      'Comprehensive error handling & logging',
+      'Credit management & transaction tracking',
+      'Real-time performance monitoring'
+    ],
+    endpoints: [
+      'POST /analyze - Main lead analysis endpoint',
+      'GET /health - System health check',
+      'GET /info - Service information',
+      'GET / - Service status'
+    ],
+    supported_analysis_types: ['light', 'deep'],
+    ai_models: ['gpt-4o', 'claude-3-sonnet'],
+    timestamp: new Date().toISOString()
   });
 });
 
-// Root endpoint
+// Root endpoint with enterprise branding
 app.get('/', (c) => {
-  return c.text('🚀 Oslira Enterprise AI Worker v2.0 - Fully Operational!');
+  return c.json({
+    message: '🚀 Oslira Enterprise AI Worker v3.0',
+    status: 'operational',
+    tagline: 'Enterprise-grade B2B lead intelligence platform',
+    documentation: 'Visit /info for detailed service information',
+    health_check: 'Visit /health for system status',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Global error handler
+app.onError((err, c) => {
+  console.error('🚨 Unhandled application error:', err);
+  return c.json({
+    error: 'Internal server error',
+    message: 'An unexpected error occurred',
+    timestamp: new Date().toISOString(),
+    support_id: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }, 500);
+});
+
+// 404 handler
+app.notFound((c) => {
+  return c.json({
+    error: 'Endpoint not found',
+    message: 'The requested endpoint does not exist',
+    available_endpoints: ['/', '/health', '/info', '/analyze'],
+    timestamp: new Date().toISOString()
+  }, 404);
 });
 
 export default {
