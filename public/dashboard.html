@@ -1395,10 +1395,15 @@
             }
         }
 
-        // Show analysis modal with form reset
+        // Show analysis modal with form reset and username clearing
         function showAnalysisModal() {
             // Reset the form completely first
-            document.getElementById('analysisForm').reset();
+            const form = document.getElementById('analysisForm');
+            form.reset();
+            
+            // Clear all input fields explicitly
+            document.getElementById('analysis-type').value = '';
+            document.getElementById('profile-input').value = '';
             document.getElementById('input-field-container').style.display = 'none';
             
             // Pre-select current business if available
@@ -1406,6 +1411,7 @@
                 document.getElementById('business-id').value = currentBusiness.id;
             }
             
+            console.log('🔄 Analysis modal opened - form reset and cleared');
             document.getElementById('analysisModal').style.display = 'flex';
         }
 
@@ -1414,15 +1420,21 @@
             document.getElementById('bulkModal').style.display = 'flex';
         }
 
-        // Close modal
+        // Close modal with complete cleanup
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
             
             // Reset forms when closing
             if (modalId === 'analysisModal') {
-                document.getElementById('analysisForm').reset();
-                // Hide the input field container
+                const form = document.getElementById('analysisForm');
+                form.reset();
+                
+                // Clear all fields explicitly to prevent lukealexxander issue
+                document.getElementById('analysis-type').value = '';
+                document.getElementById('profile-input').value = '';
                 document.getElementById('input-field-container').style.display = 'none';
+                
+                console.log('🧹 Analysis modal closed - all fields cleared');
             }
         }
 
@@ -1435,17 +1447,28 @@
             const originalText = submitBtn.textContent;
             
             try {
-                // Get form values with debugging
+                // Enhanced debugging to identify the lukealexander issue
                 const analysisTypeElement = document.getElementById('analysis-type');
                 const analysisType = analysisTypeElement.value;
                 const selectedOption = analysisTypeElement.options[analysisTypeElement.selectedIndex];
-                const profileInput = document.getElementById('profile-input').value.trim();
+                const profileInputElement = document.getElementById('profile-input');
+                const profileInput = profileInputElement.value.trim();
                 const businessId = document.getElementById('business-id').value;
                 
                 console.log('📝 Form values:', { analysisType, profileInput, businessId });
+                console.log('📝 Profile input element value:', profileInputElement.value);
+                console.log('📝 Profile input element placeholder:', profileInputElement.placeholder);
                 console.log('📝 Selected option text:', selectedOption ? selectedOption.text : 'none');
                 console.log('📝 Selected option value:', selectedOption ? selectedOption.value : 'none');
                 console.log('📝 Analysis type final:', analysisType);
+                
+                // Check for lukealexxander contamination
+                if (profileInput.includes('lukealexxander') || profileInput.includes('lukealexander')) {
+                    console.error('🚨 CONTAMINATION DETECTED - clearing field');
+                    profileInputElement.value = '';
+                    alert('Field contamination detected and cleared. Please enter the username again.');
+                    return;
+                }
                 
                 // Additional verification
                 if (analysisType === 'deep') {
