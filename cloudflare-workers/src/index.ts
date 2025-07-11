@@ -1060,50 +1060,41 @@ export default {
       credits_remaining: newCreditBalance
     });
 
-// 14. COMPREHENSIVE SUCCESS RESPONSE - FIXED FORMAT
-    return c.json({
-      success: true,
-      lead_id: lead.id,
-      profile: {
-        username: profileData.username,
-        full_name: profileData.fullName,
-        followers: profileData.followersCount,
-        following: profileData.followingCount,
-        posts: profileData.postsCount,
-        verified: profileData.isVerified || profileData.verified,
-        category: profileData.businessCategoryName || profileData.category,
-        external_url: profileData.externalUrl,
-        avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD, // FIX: Include avatar
-        scraping_success: scrapingSuccess
-      },
-      analysis: {
-        type: analysis_type, // FIX: Use 'type' not 'analysisType'
-        lead_score: analysis.lead_score,
-        summary: analysis.summary,
-        niche: analysis.niche,
-        match_reasons: analysis.match_reasons,
-        analysis_success: analysisSuccess,
-        ...(analysis_type === 'deep' ? {
-          engagement_rate: analysis.engagement_rate,
-          selling_points: analysis.selling_points,
-          custom_notes: analysis.custom_notes,
-          outreach_message: outreachMessage,
-        } : {})
-      },
-      credits: {
-        used: creditsRequired,
-        remaining: newCreditBalance,
-      },
-      metadata: {
-        processed_at: new Date().toISOString(),
-        processing_time_ms: processingTime,
-        profile_url,
-        business_id,
-        scraper_used: analysis_type === 'deep' ? 'full_instagram_scraper' : 'basic_profile_scraper',
-        ai_models_used: analysis_type === 'deep' ? ['gpt-4o', 'claude-3-sonnet'] : ['gpt-4o']
-      }
-    });
-
+// 14. CLEAN SUCCESS RESPONSE - NO METADATA BLOAT
+return c.json({
+  success: true,
+  lead_id: lead.id,
+  profile: {
+    username: profileData.username,
+    full_name: profileData.fullName,
+    followers: profileData.followersCount,
+    following: profileData.followingCount,
+    posts: profileData.postsCount,
+    verified: profileData.isVerified || profileData.verified,
+    category: profileData.businessCategoryName || profileData.category,
+    external_url: profileData.externalUrl,
+    avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
+    scraping_success: scrapingSuccess
+  },
+  analysis: {
+    type: analysis_type, // CRITICAL: 'type' not 'analysisType'
+    lead_score: analysis.lead_score,
+    summary: analysis.summary,
+    niche: analysis.niche,
+    match_reasons: analysis.match_reasons,
+    analysis_success: analysisSuccess,
+    ...(analysis_type === 'deep' ? {
+      engagement_rate: analysis.engagement_rate,
+      selling_points: analysis.selling_points,
+      custom_notes: analysis.custom_notes,
+      outreach_message: outreachMessage,
+    } : {})
+  },
+  credits: {
+    used: creditsRequired,
+    remaining: newCreditBalance,
+  }
+});
   } catch (error) {
     const processingTime = Date.now() - startTime;
     console.error('💥 ENTERPRISE ANALYSIS FAILED:', error);
