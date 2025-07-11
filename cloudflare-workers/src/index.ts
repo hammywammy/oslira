@@ -959,9 +959,209 @@ export default {
         }),
       }),
       
-      // Log transaction
       fetch(`${SUPABASE_URL}/rest/v1/credit_transactions`, {
         method: 'POST',
         headers: supabaseHeaders,
         body: JSON.stringify({
-          user
+          user_id: userId,
+          amount: -creditsRequired,
+          transaction_type: 'analysis',
+          description: `${analysis_type} analysis of @${profileData.username}`,
+          lead_id: lead.id,
+          created_at: new Date().toISOString(),
+        }),
+      }).catch(err => {
+        console.warn('⚠️ Credit transaction logging failed:', err.message);
+      })
+    ]);
+
+    // 13. PERFORMANCE LOGGING
+    const processingTime = Date.now() - startTime;
+    console.log('🎯 ANALYSIS COMPLETED SUCCESSFULLY');
+    console.log('📊 Performance:', {
+      request_id: requestId,
+      username: profileData.username,
+      analysis_type,
+      processing_time_ms: processingTime,
+      scraping_success: scrapingSuccess,
+      analysis_success: analysisSuccess,
+      lead_score: analysis.lead_score,
+      credits_used: creditsRequired,
+      credits_remaining: newCreditBalance
+    });
+
+    // 14. CLEAN SUCCESS RESPONSE - FIXED FORMAT
+    return c.json({
+      success: true,
+      lead_id: lead.id,
+      profile: {
+        username: profileData.username,
+        full_name: profileData.fullName,
+        followers: profileData.followersCount,
+        following: profileData.followingCount,
+        posts: profileData.postsCount,
+        verified: profileData.isVerified || profileData.verified,
+        category: profileData.businessCategoryName || profileData.category,
+        external_url: profileData.externalUrl,
+        avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
+        scraping_success: scrapingSuccess
+      },
+      analysis: {
+        type: analysis_type, // FIXED: Use 'type' not 'analysisType'
+        lead_score: analysis.lead_score,
+        summary: analysis.summary,
+        niche: analysis.niche,
+        match_reasons: analysis.match_reasons,
+        analysis_success: analysisSuccess,
+        ...(analysis_type === 'deep' ? {
+          engagement_rate: analysis.engagement_rate,
+          selling_points: analysis.selling_points,
+          custom_notes: analysis.custom_notes,
+          outreach_message: outreachMessage,
+        } : {})
+      },
+      credits: {
+        used: creditsRequired,
+        remaining: newCreditBalance,
+      }
+    });
+
+  } catch (error) {
+    const processingTime = Date.now() - startTime;
+    console.error('💥 ANALYSIS FAILED:', requestId, error);
+    
+    return c.json({ 
+      error: 'Enterprise analysis failed', 
+      details: error.message,
+      timestamp: new Date().toISOString(),
+      processing_time_ms: processingTime,
+      support_id: requestId
+    }, 500);
+  }
+});
+
+// Health check endpoint
+app.get('/health', async (c) => {
+  const startTime = Date.now();
+  
+  try {
+    const {
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE,
+      OPENAI_KEY,
+      CLAUDE_KEY,
+      APIFY_API_TOKEN,
+    } = c.env;
+
+    const envStatus = {
+      supabase: !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE),
+      openai: !!OPENAI_KEY,
+      claude: !!CLAUDE_KEY,
+      apify: !!APIFY_API_TOKEN,
+    };
+
+    let dbStatus = false;
+    try {
+      if (envStatus.supabase) {
+        const testResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?limit=1`, {
+          headers: {
+            apikey: SUPABASE_SERVICE_ROLE,
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+          }
+        });
+        dbStatus = testResponse.status < 500;
+      }
+    } catch (dbError) {
+      console.warn('Database health check failed:', dbError.message);
+    }
+
+    const responseTime = Date.now() - startTime;
+    const allSystemsGo = Object.values(envStatus).every(status => status) && dbStatus;
+
+    return c.json({ 
+      status: allSystemsGo ? 'healthy' : 'degraded',
+      service: 'Oslira Enterprise AI Worker',
+      version: '3.0.0',
+      environment: {
+        ...envStatus,
+        database_connectivity: dbStatus
+      },
+      performance: {
+        response_time_ms: responseTime,
+        timestamp: new Date().toISOString()
+      },
+      capabilities: {
+        light_analysis: envStatus.supabase && envStatus.openai && envStatus.apify,
+        deep_analysis: envStatus.supabase && envStatus.openai && envStatus.claude && envStatus.apify,
+        profile_scraping: envStatus.apify,
+        ai_analysis: envStatus.openai,
+        message_generation: envStatus.claude
+      }
+    });
+  } catch (error) {
+    return c.json({
+      status: 'error',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+// Service info endpoint
+app.get('/info', (c) => {
+  return c.json({
+    service: 'Oslira Enterprise AI Worker',
+    version: '3.0.0',
+    description: 'Clean B2B lead qualification platform',
+    features: [
+      'Dynamic Instagram profile scraping',
+      'AI-powered lead scoring',
+      'Personalized outreach generation',
+      'Zero hardcoded values',
+      'Contamination detection',
+      'Enterprise error handling'
+    ],
+    endpoints: [
+      'POST /analyze - Lead analysis',
+      'GET /health - System health',
+      'GET /info - Service info',
+      'GET / - Status'
+    ],
+    supported_analysis_types: ['light', 'deep'],
+    ai_models: ['gpt-4o', 'claude-3-sonnet'],
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Root endpoint
+app.get('/', (c) => {
+  return c.json({
+    message: '🚀 Oslira Enterprise AI Worker v3.0',
+    status: 'operational',
+    tagline: 'Clean enterprise lead intelligence',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Error handlers
+app.onError((err, c) => {
+  console.error('🚨 Unhandled error:', err);
+  return c.json({
+    error: 'Internal server error',
+    message: 'An unexpected error occurred',
+    timestamp: new Date().toISOString(),
+    support_id: `ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }, 500);
+});
+
+app.notFound((c) => {
+  return c.json({
+    error: 'Endpoint not found',
+    available_endpoints: ['/', '/health', '/info', '/analyze'],
+    timestamp: new Date().toISOString()
+  }, 404);
+});
+
+export default {
+  fetch: app.fetch
+};
