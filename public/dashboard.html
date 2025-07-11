@@ -1199,12 +1199,17 @@
                         const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
                         const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
                         
+                        // Handle avatar URL with CORS issues
+                        const avatarDisplay = lead.avatar_url && !lead.avatar_url.includes('fbcdn.net') 
+                            ? `<img src="${lead.avatar_url}" alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">` 
+                            : '';
+                        
                         return `
                             <tr class="lead-row">
                                 <td>${new Date(lead.created_at).toLocaleString()}</td>
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 8px;">
-                                        ${lead.avatar_url ? `<img src="${lead.avatar_url}" alt="" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;">` : '👤'}
+                                        ${avatarDisplay}<span style="display: ${avatarDisplay ? 'none' : 'inline'};">👤</span>
                                         <div>
                                             <div style="font-weight: 600; color: #1f2937;">@${lead.username}</div>
                                             <div style="font-size: 12px; color: #9ca3af;">${lead.profile_url}</div>
@@ -1339,24 +1344,35 @@
             }
         }
 
-        // Load credit usage stats
+        // Load credit usage stats with better error handling
         async function loadCreditUsage() {
             try {
+                // Check if credit_transactions table exists and is accessible
                 const { data: transactions, error } = await supabase
                     .from('credit_transactions')
                     .select('amount, created_at')
                     .eq('user_id', currentUser.id)
                     .eq('transaction_type', 'analysis')
-                    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()); // Last 30 days
+                    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()) // Last 30 days
+                    .limit(100); // Add limit to prevent large queries
                 
-                if (error) throw error;
+                if (error) {
+                    console.warn('Credit transactions table not accessible or doesn\'t exist:', error);
+                    // Set default values if table doesn't exist yet
+                    document.getElementById('credits-used').textContent = '0';
+                    document.getElementById('credits-trend').textContent = 'Last 30 days';
+                    return;
+                }
                 
                 const creditsUsed = transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
                 document.getElementById('credits-used').textContent = creditsUsed;
                 document.getElementById('credits-trend').textContent = 'Last 30 days';
                 
             } catch (err) {
-                console.error('Error loading credit usage:', err);
+                console.warn('Error loading credit usage (table may not exist yet):', err);
+                // Gracefully handle missing table
+                document.getElementById('credits-used').textContent = '0';
+                document.getElementById('credits-trend').textContent = 'Last 30 days';
             }
         }
 
@@ -1469,16 +1485,22 @@
 
                 console.log('✅ Analysis completed:', result);
                 
-                // Show success message
-                alert(`🎉 Analysis completed successfully!\n\nUsername: @${username}\nLead ID: ${result.lead_id}\nScore: ${result.analysis.lead_score}/100\nCredits used: ${result.credits.used}\nRemaining: ${result.credits.remaining}`);
+                // Show success message with safer property access
+                const leadId = result.lead_id || result.id || 'Unknown';
+                const leadScore = result.analysis?.lead_score || result.score || 'Unknown';
+                const creditsUsed = result.credits?.used || creditsRequired;
+                const creditsRemaining = result.credits?.remaining || 'Unknown';
+                
+                alert(`🎉 Analysis completed successfully!\n\nUsername: @${username}\nLead ID: ${leadId}\nScore: ${leadScore}/100\nCredits used: ${creditsUsed}\nRemaining: ${creditsRemaining}`);
                 
                 // Close modal and refresh data
                 closeModal('analysisModal');
                 await loadDashboardData();
                 
                 // Optionally show the new lead details
-                if (result.lead_id) {
-                    setTimeout(() => viewLead(result.lead_id), 500);
+                const finalLeadId = result.lead_id || result.id;
+                if (finalLeadId) {
+                    setTimeout(() => viewLead(finalLeadId), 500);
                 }
 
             } catch (err) {
