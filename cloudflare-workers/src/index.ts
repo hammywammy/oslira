@@ -500,11 +500,15 @@ app.post('/analyze', async (c) => {
         const apifyInput = { usernames: [username] };
         console.log('📊 Light scraper input:', apifyInput);
         
-        const apifyResponse = await fetch('https://api.apify.com/v2/actor-tasks/hamzaw~instagram-profile-scraper-task/runs?token=' + APIFY_API_TOKEN, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(apifyInput),
-        });
+        const apifyResponse = await fetch('https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    usernames: [username],
+    resultsType: "posts", 
+    resultsLimit: 200
+  }),
+});
 
         console.log('📊 Light scraper response status:', apifyResponse.status);
         
