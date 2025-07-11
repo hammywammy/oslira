@@ -1471,16 +1471,30 @@
                 
                 console.log('🔍 Starting analysis...', { username, profileUrl, analysisType, businessId });
                 
-                // Call worker API with proper data
+                // Try multiple API payload formats to ensure compatibility
                 const requestBody = {
+                    // Primary format
                     profile_url: profileUrl,
                     username: username,
-                    analysis_type: analysisType, // Changed from analysisType to analysis_type
+                    analysis_type: analysisType,
                     business_id: businessId,
-                    type: analysisType // Explicitly include type field
+                    type: analysisType,
+                    
+                    // Alternative formats your API might expect
+                    profileUrl: profileUrl,
+                    analysisType: analysisType,
+                    businessId: businessId,
+                    
+                    // Additional fields that might be expected
+                    user_id: currentUser.id,
+                    platform: 'instagram'
                 };
                 
                 console.log('🔍 Request body:', requestBody);
+                console.log('🔍 Request headers:', {
+                    'Authorization': `Bearer ${currentSession.access_token}`,
+                    'Content-Type': 'application/json'
+                });
                 
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
@@ -1491,20 +1505,30 @@
                     body: JSON.stringify(requestBody)
                 });
 
+                console.log('📥 Response status:', response.status);
+                console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
+                
                 const result = await response.json();
                 console.log('📥 API Response:', result);
                 
                 if (!response.ok) {
-                    // Check for specific username-related errors
+                    // Enhanced error handling for different error types
+                    let errorMessage = result.error || `Analysis failed: ${response.status}`;
+                    
                     if (result.error && (
                         result.error.toLowerCase().includes('user not found') ||
                         result.error.toLowerCase().includes('profile not found') ||
                         result.error.toLowerCase().includes('invalid username') ||
                         result.error.toLowerCase().includes('does not exist')
                     )) {
-                        throw new Error(`Invalid username "${username}". Please check the username and try again.`);
+                        errorMessage = `Invalid username "${username}". Please check the username and try again.`;
+                    } else if (result.error && result.error.toLowerCase().includes('missing fields')) {
+                        errorMessage = `Missing required fields. Please check your API configuration.\n\nSent fields: ${Object.keys(requestBody).join(', ')}\n\nError: ${result.error}`;
+                    } else if (result.error && result.error.toLowerCase().includes('unauthorized')) {
+                        errorMessage = 'Authentication failed. Please try logging out and back in.';
                     }
-                    throw new Error(result.error || `Analysis failed: ${response.status}`);
+                    
+                    throw new Error(errorMessage);
                 }
 
                 console.log('✅ Analysis completed:', result);
@@ -1529,7 +1553,17 @@
 
             } catch (err) {
                 console.error('❌ Analysis error:', err);
-                alert('Analysis failed: ' + err.message);
+                
+                // Show detailed error information
+                let alertMessage = 'Analysis failed: ' + err.message;
+                
+                if (err.message.includes('fetch')) {
+                    alertMessage += '\n\nThis might be a network issue. Please check your connection and try again.';
+                } else if (err.message.includes('Missing required fields')) {
+                    alertMessage += '\n\nPlease check the browser console for detailed field information.';
+                }
+                
+                alert(alertMessage);
             } finally {
                 // Reset UI
                 submitBtn.textContent = originalText;
