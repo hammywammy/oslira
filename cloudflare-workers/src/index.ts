@@ -155,16 +155,19 @@ If the profile is private, fake, empty, or outside the niche, reduce the score a
     const openaiData = await runOpenAIAnalysis(prompt, OPENAI_KEY);
 
     let analysis;
-    try {
-      analysis = JSON.parse(openaiData.choices[0].message.content);
-    } catch {
-      analysis = {
-        lead_score: 50,
-        summary: "Invalid AI response format",
-        niche: "Unknown",
-        match_reasons: ["Unable to parse AI response"]
-      };
-    }
+try {
+  const raw = openaiData.choices[0].message.content;
+  const match = raw.match(/\{[\s\S]*?\}/);
+  if (!match) throw new Error('No JSON object found in AI response');
+  analysis = JSON.parse(match[0]);
+} catch {
+  analysis = {
+    lead_score: 50,
+    summary: "Invalid AI response format",
+    niche: "Unknown",
+    match_reasons: ["Unable to parse AI response"]
+  };
+}
 
     if (analysisType === 'deep') {
       const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
