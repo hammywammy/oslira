@@ -1069,7 +1069,7 @@
             }
         }
 
-        // Update input field based on analysis type selection
+        // Update input field based on analysis type selection with COMPLETE field clearing
         function updateInputField() {
             const analysisType = document.getElementById('analysis-type').value;
             const inputContainer = document.getElementById('input-field-container');
@@ -1081,11 +1081,13 @@
             console.log('🔄 Select element value:', document.getElementById('analysis-type').value);
             console.log('🔄 Select element selected index:', document.getElementById('analysis-type').selectedIndex);
             
+            // NUCLEAR OPTION: Clear everything
+            inputField.value = '';
+            inputField.placeholder = '';
+            inputField.setAttribute('value', '');
+            
             if (analysisType) {
                 inputContainer.style.display = 'block';
-                
-                // Clear any existing value to prevent old data from sticking
-                inputField.value = '';
                 
                 if (analysisType === 'light') {
                     inputLabel.textContent = 'Instagram Username *';
@@ -1101,8 +1103,11 @@
                     inputHelp.style.color = '#059669';
                 }
                 
-                // Focus on the input field
-                setTimeout(() => inputField.focus(), 100);
+                // Force clear and focus
+                setTimeout(() => {
+                    inputField.value = '';
+                    inputField.focus();
+                }, 50);
             } else {
                 inputContainer.style.display = 'none';
                 inputField.value = '';
@@ -1447,7 +1452,7 @@
             const originalText = submitBtn.textContent;
             
             try {
-                // Enhanced debugging to identify the lukealexander issue
+                // NUCLEAR DEBUGGING - Track every single variable
                 const analysisTypeElement = document.getElementById('analysis-type');
                 const analysisType = analysisTypeElement.value;
                 const selectedOption = analysisTypeElement.options[analysisTypeElement.selectedIndex];
@@ -1455,14 +1460,28 @@
                 const profileInput = profileInputElement.value.trim();
                 const businessId = document.getElementById('business-id').value;
                 
-                console.log('📝 Form values:', { analysisType, profileInput, businessId });
-                console.log('📝 Profile input element value:', profileInputElement.value);
-                console.log('📝 Profile input element placeholder:', profileInputElement.placeholder);
-                console.log('📝 Selected option text:', selectedOption ? selectedOption.text : 'none');
-                console.log('📝 Selected option value:', selectedOption ? selectedOption.value : 'none');
-                console.log('📝 Analysis type final:', analysisType);
+                console.log('📝 FORM DEBUG - Raw Values:');
+                console.log('- analysisType:', analysisType);
+                console.log('- profileInput:', profileInput);
+                console.log('- businessId:', businessId);
+                console.log('📝 Profile input element:');
+                console.log('- element.value:', profileInputElement.value);
+                console.log('- element.getAttribute("value"):', profileInputElement.getAttribute('value'));
+                console.log('- element.placeholder:', profileInputElement.placeholder);
+                console.log('- element.defaultValue:', profileInputElement.defaultValue);
+                console.log('📝 Selected option:', selectedOption ? selectedOption.text : 'none');
+                console.log('📝 Analysis type verification:', analysisType);
                 
-                // Check for lukealexxander contamination
+                // CONTAMINATION CHECK
+                const allInputs = document.querySelectorAll('input, select');
+                allInputs.forEach(input => {
+                    if (input.value && (input.value.includes('lukealexxander') || input.value.includes('lukealexander'))) {
+                        console.error('🚨 CONTAMINATION FOUND IN:', input.id, input.name, 'VALUE:', input.value);
+                        input.value = '';
+                    }
+                });
+                
+                // Check for hardcoded values
                 if (profileInput.includes('lukealexxander') || profileInput.includes('lukealexander')) {
                     console.error('🚨 CONTAMINATION DETECTED - clearing field');
                     profileInputElement.value = '';
@@ -1470,13 +1489,11 @@
                     return;
                 }
                 
-                // Additional verification
-                if (analysisType === 'deep') {
-                    console.log('✅ DEEP analysis confirmed');
-                } else if (analysisType === 'light') {
-                    console.log('✅ LIGHT analysis confirmed');
-                } else {
-                    console.log('❌ Unknown analysis type:', analysisType);
+                // Verify no empty or default contamination
+                if (!profileInput || profileInput === 'username' || profileInput === 'lukealexxander') {
+                    console.error('🚨 Invalid input detected:', profileInput);
+                    alert('Please enter a valid username');
+                    return;
                 }
                 
                 if (!analysisType || !profileInput || !businessId) {
@@ -1517,27 +1534,26 @@
                 
                 console.log('🔍 Starting analysis...', { username, profileUrl, analysisType, businessId });
                 
-                // Try multiple API payload formats to ensure compatibility
+                // CRITICAL FIX: Build request with explicit type field
                 const requestBody = {
-                    // Primary format
                     profile_url: profileUrl,
                     username: username,
                     analysis_type: analysisType,
+                    type: analysisType,           // EXPLICIT TYPE FIELD
                     business_id: businessId,
-                    type: analysisType,
+                    user_id: currentUser.id,
+                    platform: 'instagram',
                     
-                    // Alternative formats your API might expect
+                    // Legacy format support
                     profileUrl: profileUrl,
                     analysisType: analysisType,
-                    businessId: businessId,
-                    
-                    // Additional fields that might be expected
-                    user_id: currentUser.id,
-                    platform: 'instagram'
+                    businessId: businessId
                 };
                 
-                console.log('🔍 Request body:', requestBody);
-                console.log('🔍 Analysis type being sent:', analysisType);
+                console.log('🔍 FINAL REQUEST BODY:', JSON.stringify(requestBody, null, 2));
+                console.log('🔍 TYPE VERIFICATION - analysisType:', analysisType);
+                console.log('🔍 TYPE VERIFICATION - type field:', requestBody.type);
+                console.log('🔍 USERNAME VERIFICATION:', username);
                 console.log('🔍 Request headers:', {
                     'Authorization': `Bearer ${currentSession.access_token}`,
                     'Content-Type': 'application/json'
