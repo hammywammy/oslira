@@ -2,12 +2,8 @@ name = "ai-outreach-api"
 account_id = "ec3a04af3fca5fbb10ec831616e63cfc"
 workers_dev = true
 compatibility_date = "2025-07-09"
-main = "src/index.ts"
+main = "src/index.ts"  # Changed from index.ts to index.js
 
 [vars]
 SUPABASE_URL = "https://jswzzihuqtjqvobfosks.supabase.co"
-SUPABASE_SERVICE_ROLE = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjAyNDEzNSwiZXhwIjoyMDY3NjAwMTM1fQ.yHF6Ityix7N5lvQUl0C19BsbZ1go76MwUc0HJvBvHKQ"
-OPENAI_KEY = "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"
-CLAUDE_KEY = "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"
-APIFY_API_TOKEN = "apify_api_RdTWAw7Wb4D1dfXR5ysAe4BLLWgscO31ecyM"
 
