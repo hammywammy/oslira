@@ -391,6 +391,7 @@
             text-align: left;
             padding: 16px 12px;
             border-bottom: 1px solid #f3f4f6;
+            vertical-align: middle;
         }
 
         th {
@@ -479,22 +480,22 @@
 
         .delete-btn {
             position: absolute;
-            right: 8px;
+            right: 6px;
             top: 50%;
-            transform: translateY(-50%) translateX(10px);
+            transform: translateY(-50%) translateX(8px);
             opacity: 0;
             background: #ef4444;
             color: white;
             border: none;
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 11px;
+            font-size: 10px;
             z-index: 10;
             line-height: 1;
         }
@@ -1242,7 +1243,7 @@
                                 <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
                                 <td><span class="status ${analysisType}">${analysisType}</span></td>
                                 <td><span class="status ${lead.status}">${lead.status}</span></td>
-                                <td style="position: relative; padding-right: 40px;">
+                                <td style="position: relative; padding-right: 35px; height: 60px;">
                                     <button class="btn-small" onclick="viewLead('${lead.id}')">
                                         📝 View
                                     </button>
@@ -1556,13 +1557,20 @@
 
                 console.log('✅ Analysis completed:', result);
                 
+                // DEBUG: Show the actual API response to help fix the type issue
+                console.log('🔍 DEBUG - Full API Response Structure:');
+                console.log('- result.type:', result.type);
+                console.log('- result.analysis_type:', result.analysis_type);
+                console.log('- result.analysisType:', result.analysisType);
+                console.log('- Full result object:', JSON.stringify(result, null, 2));
+                
                 // Show success message with safer property access
                 const leadId = result.lead_id || result.id || 'Unknown';
                 const leadScore = result.analysis?.lead_score || result.score || 'Unknown';
                 const creditsUsed = result.credits?.used || creditsRequired;
                 const creditsRemaining = result.credits?.remaining || 'Unknown';
                 
-                alert(`🎉 Analysis completed successfully!\n\nUsername: @${username}\nLead ID: ${leadId}\nScore: ${leadScore}/100\nCredits used: ${creditsUsed}\nRemaining: ${creditsRemaining}`);
+                alert(`🎉 Analysis completed successfully!\n\nUsername: @${username}\nLead ID: ${leadId}\nScore: ${leadScore}/100\nType sent: ${analysisType}\nCredits used: ${creditsUsed}\nRemaining: ${creditsRemaining}`);
                 
                 // Close modal and refresh data
                 closeModal('analysisModal');
