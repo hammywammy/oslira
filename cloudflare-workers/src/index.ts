@@ -157,15 +157,29 @@ If the profile is private, fake, empty, or outside the niche, reduce the score a
     let analysis;
 try {
   const raw = openaiData.choices[0].message.content;
+
+  // Extract first JSON object from AI response, even if wrapped in text
   const match = raw.match(/\{[\s\S]*?\}/);
   if (!match) throw new Error('No JSON object found in AI response');
-  analysis = JSON.parse(match[0]);
-} catch {
+
+  const parsed = JSON.parse(match[0]);
+
+  // Validate structure
+  if (
+    typeof parsed.lead_score !== 'number' ||
+    typeof parsed.summary !== 'string' ||
+    typeof parsed.niche !== 'string' ||
+    !Array.isArray(parsed.match_reasons)
+  ) throw new Error('JSON missing required fields');
+
+  analysis = parsed;
+} catch (err) {
+  console.warn("⚠️ Failed to parse or validate AI response:", err);
   analysis = {
     lead_score: 50,
     summary: "Invalid AI response format",
     niche: "Unknown",
-    match_reasons: ["Unable to parse AI response"]
+    match_reasons: ["Unable to parse or validate AI response"]
   };
 }
 
