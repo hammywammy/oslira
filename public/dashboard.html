@@ -482,21 +482,22 @@
             background: #ef4444;
             color: white;
             border: none;
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 12px;
             z-index: 10;
+            line-height: 1;
         }
 
         .delete-btn:hover {
             background: #dc2626;
-            transform: translateY(-50%) translateX(0) scale(1.1);
+            transform: translateY(-50%) translateX(0) scale(1.05);
         }
 
         .insights {
@@ -1071,8 +1072,13 @@
             const inputLabel = document.getElementById('input-label');
             const inputHelp = document.getElementById('input-help');
             
+            console.log('🔄 Analysis type changed to:', analysisType);
+            
             if (analysisType) {
                 inputContainer.style.display = 'block';
+                
+                // Clear any existing value to prevent old data from sticking
+                inputField.value = '';
                 
                 if (analysisType === 'light') {
                     inputLabel.textContent = 'Instagram Username *';
@@ -1085,8 +1091,12 @@
                     inputField.type = 'text';
                     inputHelp.textContent = 'Enter just the username (without @) - we\'ll do the full analysis';
                 }
+                
+                // Focus on the input field
+                setTimeout(() => inputField.focus(), 100);
             } else {
                 inputContainer.style.display = 'none';
+                inputField.value = '';
             }
         }
 
@@ -1376,8 +1386,12 @@
             }
         }
 
-        // Show analysis modal
+        // Show analysis modal with form reset
         function showAnalysisModal() {
+            // Reset the form completely first
+            document.getElementById('analysisForm').reset();
+            document.getElementById('input-field-container').style.display = 'none';
+            
             // Pre-select current business if available
             if (currentBusiness) {
                 document.getElementById('business-id').value = currentBusiness.id;
@@ -1412,10 +1426,12 @@
             const originalText = submitBtn.textContent;
             
             try {
-                // Validate form data
+                // Get form values with debugging
                 const analysisType = document.getElementById('analysis-type').value;
                 const profileInput = document.getElementById('profile-input').value.trim();
                 const businessId = document.getElementById('business-id').value;
+                
+                console.log('📝 Form values:', { analysisType, profileInput, businessId });
                 
                 if (!analysisType || !profileInput || !businessId) {
                     alert('Please fill in all required fields');
@@ -1424,6 +1440,7 @@
                 
                 // Clean and validate username
                 let username = profileInput.replace('@', '').trim();
+                console.log('🧹 Cleaned username:', username);
                 
                 if (!validateUsername(username)) {
                     alert('Invalid username. Please check the username and try again.\n\nUsername rules:\n• Only letters, numbers, periods, and underscores\n• 1-30 characters\n• No consecutive periods\n• Cannot start or end with periods');
@@ -1432,6 +1449,7 @@
                 
                 // Construct profile URL
                 const profileUrl = `https://instagram.com/${username}`;
+                console.log('🔗 Constructed URL:', profileUrl);
                 
                 // Check if user has sufficient credits
                 const { data: userData } = await supabase
@@ -1453,22 +1471,28 @@
                 
                 console.log('🔍 Starting analysis...', { username, profileUrl, analysisType, businessId });
                 
-                // Call worker API
+                // Call worker API with proper data
+                const requestBody = {
+                    profile_url: profileUrl,
+                    username: username,
+                    analysis_type: analysisType, // Changed from analysisType to analysis_type
+                    business_id: businessId,
+                    type: analysisType // Explicitly include type field
+                };
+                
+                console.log('🔍 Request body:', requestBody);
+                
                 const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${currentSession.access_token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        profile_url: profileUrl,
-                        username: username,
-                        analysisType: analysisType,
-                        business_id: businessId
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 const result = await response.json();
+                console.log('📥 API Response:', result);
                 
                 if (!response.ok) {
                     // Check for specific username-related errors
