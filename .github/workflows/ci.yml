@@ -1,28 +1,30 @@
-name: CI
+name: Deploy Cloudflare Worker
 
 on:
   push:
+    paths:
+      - 'cloudflare-workers/**'
     branches:
       - main
-  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
-
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run build
-        run: npm run build
-
-      - name: Run tests
-        run: npm test || echo "No tests configured"
+          node-version: '18'
+          
+      - name: Install Wrangler
+        run: npm install -g wrangler
+        
+      - name: Deploy Worker
+        run: wrangler deploy
+        working-directory: cloudflare-workers
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
