@@ -196,12 +196,22 @@ app.post('/analyze', async (c) => {
       }),
     });
 
+    console.log('📊 Lead insert response status:', insertLeadRes.status);
+    
+    if (!insertLeadRes.ok) {
+      const errorText = await insertLeadRes.text();
+      console.error('❌ Lead insert failed:', errorText);
+      throw new Error(`Failed to insert lead: ${insertLeadRes.status} - ${errorText}`);
+    }
+
     const leadData = await insertLeadRes.json();
+    console.log('📋 Lead insert response:', JSON.stringify(leadData));
+    
     const lead = Array.isArray(leadData) ? leadData[0] : leadData;
     
     if (!lead?.id) {
-      console.log('❌ Failed to insert lead');
-      return c.json({ error: 'Failed to insert lead' }, 500);
+      console.log('❌ No lead ID in response');
+      return c.json({ error: 'Failed to insert lead - no ID returned' }, 500);
     }
 
     console.log('✅ Lead inserted:', lead.id);
