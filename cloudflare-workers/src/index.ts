@@ -128,12 +128,29 @@ app.post('/analyze', async (c) => {
 
     const { biography, followersCount, followingCount, postsCount, isVerified, category } = profileData;
     const trimmedProfile = { username, biography, followersCount, followingCount, postsCount, isVerified, category };
-    const prompt = `Analyze this Instagram profile for lead potential.\n\nProfile: ${JSON.stringify(trimmedProfile)}\nBusiness: ${business.business_name} (${business.target_niche})\n\nRespond with JSON: {\n  "lead_score": 0-100,\n  "summary": "...",\n  "niche": "...",\n  "match_reasons": ["...", "..."]\n}`;
+    const prompt = `
+You are a professional lead scoring assistant.
 
-    const openaiData = await runOpenAIAnalysis(prompt, OPENAI_KEY);
+Given the Instagram profile data and the business context, analyze the profile and output ONLY a JSON object with the following fields:
+
+- lead_score: an integer from 0 to 100 indicating how good a lead this is.
+- summary: a one-sentence summary of the profile's relevance.
+- niche: the best matching industry or category.
+- match_reasons: an array of strings listing key reasons why this profile is a good or poor match.
+
+Do NOT include any explanation or extra text—only the JSON.
+
+Profile Data:
+${JSON.stringify(profileData)}
+
+Business Context:
+Business Name: ${businessProfile.business_name}
+Target Niche: ${businessProfile.target_niche}
+`;
 
     let analysis;
     try {
+      console.log("📝 Raw AI output:", openaiData.choices[0].message.content);
       analysis = JSON.parse(openaiData.choices[0].message.content);
     } catch {
       analysis = {
