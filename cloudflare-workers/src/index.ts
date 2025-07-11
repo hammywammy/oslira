@@ -500,13 +500,18 @@ app.post('/analyze', async (c) => {
         const apifyInput = { usernames: [username] };
         console.log('📊 Light scraper input:', apifyInput);
         
-        const apifyResponse = await fetch('https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
+        console.log('📊 Running LIGHT scraper for:', username);
+
+const apifyResponse = await fetch('https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     usernames: [username],
-    resultsType: "posts", 
-    resultsLimit: 200
+    resultsType: "posts",
+    resultsLimit: 1,
+    proxy: {
+      useApifyProxy: true
+    }
   }),
 });
 
@@ -543,11 +548,20 @@ app.post('/analyze', async (c) => {
         };
         console.log('📊 Deep scraper input usernames:', apifyInput.input.usernames);
         
-        const apifyResponse = await fetch('https://api.apify.com/v2/actor-tasks/hamzaw~instagram-scraper-task/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(apifyInput),
-        });
+        console.log('📊 Running DEEP scraper for:', username);
+
+const apifyResponse = await fetch('https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    usernames: [username],
+    resultsType: "posts",
+    resultsLimit: 200,
+    proxy: {
+      useApifyProxy: true
+    }
+  }),
+});
 
         console.log('📊 Deep scraper response status:', apifyResponse.status);
         
