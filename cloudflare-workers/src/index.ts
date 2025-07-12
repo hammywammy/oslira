@@ -1269,6 +1269,168 @@ export default {
     }, 500);
   }
 });
+// Add these two endpoints to your existing worker (after your /analyze endpoint)
+
+// NEW: Create Stripe checkout session
+app.post('/create-checkout-session', async (c) => {
+  try {
+    // Verify authentication
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const token = authHeader.substring(7);
+    const userId = await verifySupabaseJWT(token);
+    if (!userId) {
+      return c.json({ error: 'Invalid token' }, 401);
+    }
+
+    const { lookup_key, customer_email } = await c.req.json();
+    
+    if (!lookup_key) {
+      return c.json({ error: 'Missing lookup_key' }, 400);
+    }
+
+    // Get price by lookup key
+    const priceResponse = await fetch(`https://api.stripe.com/v1/prices?lookup_keys[]=${lookup_key}`, {
+      headers: {
+        'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+      },
+    });
+
+    const priceData = await priceResponse.json();
+    if (!priceData.data || priceData.data.length === 0) {
+      return c.json({ error: 'Price not found' }, 404);
+    }
+
+    const price = priceData.data[0];
+
+    // Create checkout session
+    const sessionData = new URLSearchParams({
+      'payment_method_types[]': 'card',
+      'line_items[0][price]': price.id,
+      'line_items[0][quantity]': '1',
+      'mode': 'payment',
+      'success_url': `${c.env.FRONTEND_URL}/credits.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      'cancel_url': `${c.env.FRONTEND_URL}/credits.html?canceled=true`,
+      'customer_email': customer_email,
+      'metadata[user_id]': userId,
+      'metadata[credits]': getCreditsForLookupKey(lookup_key),
+      'metadata[plan]': lookup_key.replace('_credits', ''),
+    });
+
+    const sessionResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: sessionData,
+    });
+
+    const session = await sessionResponse.json();
+
+    if (!sessionResponse.ok) {
+      return c.json({ error: session.error?.message || 'Session creation failed' }, 400);
+    }
+
+    return c.json({ url: session.url, session_id: session.id });
+
+  } catch (error) {
+    console.error('Checkout session error:', error);
+    return c.json({ error: 'Failed to create checkout session' }, 500);
+  }
+});
+
+// NEW: Stripe webhook handler
+app.post('/webhook', async (c) => {
+  try {
+    const body = await c.req.text();
+    const sig = c.req.header('stripe-signature');
+
+    if (!sig || !c.env.STRIPE_WEBHOOK_SECRET) {
+      return c.text('Missing signature or secret', 400);
+    }
+
+    // Parse webhook event
+    const event = JSON.parse(body);
+    console.log('Webhook received:', event.type);
+
+    if (event.type === 'checkout.session.completed') {
+      await handleCheckoutCompleted(event.data.object, c.env);
+    }
+
+    return c.text('Success', 200);
+
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return c.text('Webhook error', 400);
+  }
+});
+
+// Helper function to map lookup keys to credits
+function getCreditsForLookupKey(lookup_key) {
+  const creditMap = {
+    'starter_40_credits': '40',
+    'growth_100_credits': '100',
+    'professional_500_credits': '500',
+    'enterprise_2000_credits': '2000'
+  };
+  return creditMap[lookup_key] || '40';
+}
+
+// Handle successful payment
+async function handleCheckoutCompleted(session, env) {
+  try {
+    console.log('Processing payment:', session.id);
+
+    const { user_id, credits } = session.metadata;
+    if (!user_id || !credits) return;
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Get current user credits
+    const userResponse = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}&select=credits`,
+      { headers: supabaseHeaders }
+    );
+
+    const userData = await userResponse.json();
+    const currentCredits = userData[0]?.credits || 0;
+    const newCredits = currentCredits + parseInt(credits);
+
+    // Update user credits
+    await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({ credits: newCredits }),
+    });
+
+    // Log transaction
+    await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
+      method: 'POST',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        user_id,
+        amount: parseInt(credits),
+        transaction_type: 'purchase',
+        balance_after: newCredits,
+        stripe_session_id: session.id,
+        created_at: new Date().toISOString(),
+      }),
+    });
+
+    console.log(`✅ Added ${credits} credits to user ${user_id}`);
+
+  } catch (error) {
+    console.error('Payment fulfillment error:', error);
+  }
+}
 
 // Health check endpoint
 app.get('/health', async (c) => {
