@@ -3,171 +3,1389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buy Credits - Oslira AI</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Credits & Pricing - Oslira</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F5F9FF;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(45, 108, 223, 0.1);
+            padding: 24px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2D6CDF;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-image {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+        .menu {
+            margin-bottom: 32px;
+        }
+
+        .menu-section {
+            margin-bottom: 24px;
+        }
+
+        .menu-section h4 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #6B7280;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #6B7280;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .menu a:hover, .menu a.active {
+            background-color: #2D6CDF;
+            color: white;
+            transform: translateX(2px);
+        }
+
+        .menu a .icon {
+            font-size: 18px;
+            width: 20px;
+        }
+
+        .credit-balance {
+            background: linear-gradient(135deg, #53E1C5 0%, #8A6DF1 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            color: white;
+        }
+
+        .credit-balance h4 {
+            margin-bottom: 8px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .credits {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .credit-balance a {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            opacity: 0.9;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .user-info {
+            padding-top: 20px;
+            border-top: 1px solid #C9CEDC;
+        }
+
+        .user-info p {
+            margin-bottom: 8px;
+            color: #6B7280;
+            font-size: 14px;
+        }
+
+        .user-info a {
+            color: #8A6DF1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 24px;
+            background: #F5F9FF;
+        }
+
+        /* Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 48px;
+            background: white;
+            padding: 48px 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(45, 108, 223, 0.1);
+        }
+
+        .page-header h1 {
+            font-size: 48px;
+            font-weight: 800;
+            color: #121417;
+            margin-bottom: 16px;
+        }
+
+        .page-header p {
+            font-size: 20px;
+            color: #6B7280;
+            max-width: 600px;
+            margin: 0 auto 32px;
+            line-height: 1.6;
+        }
+
+        /* Current Balance Card */
+        .balance-overview {
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
+            color: white;
+            padding: 32px;
+            border-radius: 16px;
+            margin-bottom: 48px;
+            text-align: center;
+        }
+
+        .balance-overview h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            opacity: 0.9;
+        }
+
+        .balance-number {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .balance-label {
+            font-size: 18px;
+            opacity: 0.9;
+            margin-bottom: 24px;
+        }
+
+        .credit-info {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Pricing Grid */
+        .pricing-section {
+            margin-bottom: 48px;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .section-header h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #121417;
+            margin-bottom: 12px;
+        }
+
+        .section-header p {
+            font-size: 18px;
+            color: #6B7280;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: white;
+            border: 2px solid #C9CEDC;
+            border-radius: 16px;
+            padding: 32px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(45, 108, 223, 0.15);
+        }
+
+        .pricing-card.popular {
+            border-color: #2D6CDF;
+            background: linear-gradient(135deg, #F5F9FF, #E8F3FF);
+            transform: scale(1.05);
+        }
+
+        .pricing-card.popular:hover {
+            transform: scale(1.05) translateY(-8px);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
+            color: white;
+            padding: 6px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #121417;
+            margin-bottom: 8px;
+        }
+
+        .card-price {
+            font-size: 48px;
+            font-weight: 800;
+            color: #2D6CDF;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .card-credits {
+            font-size: 16px;
+            color: #6B7280;
+            margin-bottom: 8px;
+        }
+
+        .card-per-credit {
+            font-size: 14px;
+            color: #8A6DF1;
+            font-weight: 600;
+        }
+
+        .card-savings {
+            background: #53E1C5;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: 32px;
+        }
+
+        .card-features li {
+            padding: 8px 0;
+            color: #6B7280;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-features li::before {
+            content: "✓";
+            color: #53E1C5;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .card-button {
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #2D6CDF;
+            color: white;
+            box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
+        }
+
+        .card-button:hover {
+            background: #8A6DF1;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(45, 108, 223, 0.4);
+        }
+
+        .pricing-card.popular .card-button {
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Payment Methods */
+        .payment-section {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            margin-bottom: 48px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(45, 108, 223, 0.1);
+        }
+
+        .payment-section h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #121417;
+            margin-bottom: 16px;
+        }
+
+        .payment-methods {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .payment-method {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: #F5F9FF;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6B7280;
+        }
+
+        .security-note {
+            font-size: 14px;
+            color: #6B7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Usage History */
+        .history-section {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 20px rgba(45, 108, 223, 0.1);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .history-header h3 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #121417;
+        }
+
+        .history-filters {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-btn {
+            padding: 6px 12px;
+            background: #F5F9FF;
+            border: 1px solid #C9CEDC;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #6B7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn.active {
+            background: #2D6CDF;
+            color: white;
+            border-color: #2D6CDF;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th {
+            background: #F5F9FF;
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #121417;
+            font-size: 14px;
+            border-bottom: 2px solid #C9CEDC;
+        }
+
+        .history-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #F5F9FF;
+            color: #6B7280;
+            font-size: 14px;
+        }
+
+        .history-table tr:hover {
+            background: #F5F9FF;
+        }
+
+        .transaction-type {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .type-purchase {
+            background: #F0FDF9;
+            color: #53E1C5;
+        }
+
+        .type-usage {
+            background: #FEF3E2;
+            color: #F59E0B;
+        }
+
+        .type-bonus {
+            background: #F0F4FF;
+            color: #8A6DF1;
+        }
+
+        .amount-positive {
+            color: #53E1C5;
+            font-weight: 600;
+        }
+
+        .amount-negative {
+            color: #F59E0B;
+            font-weight: 600;
+        }
+
+        /* FAQ Section */
+        .faq-section {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-top: 32px;
+            box-shadow: 0 4px 20px rgba(45, 108, 223, 0.1);
+        }
+
+        .faq-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .faq-header h3 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #121417;
+            margin-bottom: 8px;
+        }
+
+        .faq-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .faq-item {
+            padding: 20px;
+            background: #F5F9FF;
+            border-radius: 12px;
+            border: 1px solid #C9CEDC;
+        }
+
+        .faq-question {
+            font-weight: 600;
+            color: #121417;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        .faq-answer {
+            color: #6B7280;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-card.popular {
+                transform: none;
+            }
+
+            .pricing-card.popular:hover {
+                transform: translateY(-8px);
+            }
+
+            .payment-methods {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .history-filters {
+                flex-direction: column;
+            }
+        }
+
+        /* Loading state */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body class="dashboard">
     <aside class="sidebar">
-        <div class="logo">Oslira AI</div>
+        <div class="logo">
+            <img src="./assets/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+            Oslira
+        </div>
         
         <nav class="menu">
-            <a href="/dashboard.html">Dashboard</a>
-            <a href="/leads.html">Lead Research</a>
-            <a href="/credits.html" class="active">Buy Credits</a>
-            <a href="/settings.html">Settings</a>
+            <div class="menu-section">
+                <h4>Main</h4>
+                <a href="/dashboard.html">
+                    <span class="icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="/leads.html">
+                    <span class="icon">🔍</span>
+                    Lead Intelligence
+                </a>
+                <a href="/analytics.html">
+                    <span class="icon">📈</span>
+                    Analytics
+                </a>
+            </div>
+            
+            <div class="menu-section">
+                <h4>Tools</h4>
+                <a href="/bulk-upload.html">
+                    <span class="icon">📤</span>
+                    Bulk Research
+                </a>
+                <a href="/messages.html">
+                    <span class="icon">💬</span>
+                    Message Studio
+                </a>
+                <a href="/integrations.html">
+                    <span class="icon">🔗</span>
+                    Integrations
+                </a>
+            </div>
+            
+            <div class="menu-section">
+                <h4>Account</h4>
+                <a href="/credits.html" class="active">
+                    <span class="icon">💳</span>
+                    Credits & Billing
+                </a>
+                <a href="/settings.html">
+                    <span class="icon">⚙️</span>
+                    Settings
+                </a>
+            </div>
         </nav>
         
         <div class="credit-balance">
             <h4>Credit Balance</h4>
-            <p class="credits" id="credit-count">5 credits</p>
-            <a href="/credits.html">Add More</a>
+            <p class="credits" id="credit-count">Loading...</p>
+            <a href="/credits.html">Manage Credits</a>
         </div>
         
         <div class="user-info">
-            <p id="user-email">user@email.com</p>
+            <p id="user-email">Loading...</p>
             <a href="#" onclick="logout()">Sign Out</a>
         </div>
     </aside>
     
     <main class="main-content">
-        <header>
-            <h1>Buy Credits</h1>
-        </header>
-        
-        <div class="credit-overview">
-            <div class="current-balance">
-                <h2>Current Balance</h2>
-                <p class="big-number" id="balance-display">5</p>
-                <p>credits remaining</p>
-                <p class="credit-info">
-                    <small>💡 1 credit = 1 basic lead | 2 credits = 1 detailed lead analysis</small>
-                </p>
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1>Credits & Pricing</h1>
+            <p>Scale your lead research with flexible credit packages. No subscriptions, no commitments - pay only for what you use.</p>
+        </div>
+
+        <!-- Current Balance -->
+        <div class="balance-overview">
+            <h2>Your Current Balance</h2>
+            <div class="balance-number" id="balance-display">0</div>
+            <div class="balance-label">credits available</div>
+            <div class="credit-info">
+                💡 <strong>1 credit</strong> = Light analysis • <strong>2 credits</strong> = Deep analysis with messaging • <strong>No expiration</strong>
             </div>
         </div>
-        
-        <!-- Free Trial Notice -->
-        <div class="free-trial-notice" id="free-trial-notice">
-            <h3>🎉 You're using your 5 free credits!</h3>
-            <p>Test the system with your free credits. When you're ready for more, unlock full access below.</p>
-        </div>
-        
-        <div class="pricing-cards">
-            <!-- Impulse Pack - NEW -->
-            <div class="card impulse">
-                <div class="badge">Quick Start</div>
-                <h3>Impulse Pack</h3>
-                <div class="price">$19</div>
-                <p>20 credits</p>
-                <p class="per-credit">$0.95 per credit</p>
-                <ul>
-                    <li>Perfect for testing</li>
-                    <li>~20 basic leads</li>
-                    <li>Instant access</li>
-                </ul>
-                <button onclick="purchaseCredits('impulse')">Unlock Now</button>
+
+        <!-- Pricing Section -->
+        <section class="pricing-section">
+            <div class="section-header">
+                <h2>Choose Your Plan</h2>
+                <p>Flexible credit packages designed for teams of all sizes</p>
+            </div>
+
+            <div class="pricing-grid">
+                <!-- Starter Pack -->
+                <div class="pricing-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Starter</h3>
+                        <div class="card-price">$39</div>
+                        <div class="card-credits">40 credits</div>
+                        <div class="card-per-credit">$0.98 per credit</div>
+                    </div>
+                    <ul class="card-features">
+                        <li>Perfect for testing</li>
+                        <li>20 deep analyses</li>
+                        <li>Email support</li>
+                        <li>Basic analytics dashboard</li>
+                        <li>CSV export</li>
+                        <li>Standard processing speed</li>
+                    </ul>
+                    <button class="card-button" onclick="purchaseCredits('starter', 40, 39)">
+                        Get Started
+                    </button>
+                </div>
+
+                <!-- Growth Pack - Popular -->
+                <div class="pricing-card popular">
+                    <div class="popular-badge">Most Popular</div>
+                    <div class="card-header">
+                        <h3 class="card-title">Growth</h3>
+                        <div class="card-price">$85</div>
+                        <div class="card-credits">100 credits</div>
+                        <div class="card-per-credit">$0.85 per credit</div>
+                        <div class="card-savings">Save $13</div>
+                    </div>
+                    <ul class="card-features">
+                        <li>All Starter benefits +</li>
+                        <li>50 deep analyses</li>
+                        <li>Priority email support</li>
+                        <li>Advanced analytics</li>
+                        <li>API access</li>
+                        <li>Bulk processing (up to 100)</li>
+                        <li>Premium processing speed</li>
+                    </ul>
+                    <button class="card-button" onclick="purchaseCredits('growth', 100, 85)">
+                        Get Started
+                    </button>
+                </div>
+
+                <!-- Professional Pack -->
+                <div class="pricing-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Professional</h3>
+                        <div class="card-price">$297</div>
+                        <div class="card-credits">500 credits</div>
+                        <div class="card-per-credit">$0.59 per credit</div>
+                        <div class="card-savings">Save $188</div>
+                    </div>
+                    <ul class="card-features">
+                        <li>All Growth benefits +</li>
+                        <li>250 deep analyses</li>
+                        <li>Live chat support</li>
+                        <li>Custom integrations</li>
+                        <li>White-label options</li>
+                        <li>Advanced reporting suite</li>
+                        <li>Bulk processing (up to 500)</li>
+                        <li>Priority processing queue</li>
+                    </ul>
+                    <button class="card-button" onclick="purchaseCredits('professional', 500, 297)">
+                        Get Started
+                    </button>
+                </div>
+
+                <!-- Enterprise Pack -->
+                <div class="pricing-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Enterprise</h3>
+                        <div class="card-price">$997</div>
+                        <div class="card-credits">2,000 credits</div>
+                        <div class="card-per-credit">$0.50 per credit</div>
+                        <div class="card-savings">Save $943</div>
+                    </div>
+                    <ul class="card-features">
+                        <li>All Professional benefits +</li>
+                        <li>1,000 deep analyses</li>
+                        <li>24/7 phone & chat support</li>
+                        <li>Dedicated account manager</li>
+                        <li>Custom AI model training</li>
+                        <li>SLA guarantees (99.9% uptime)</li>
+                        <li>Unlimited bulk processing</li>
+                        <li>Instant processing priority</li>
+                        <li>On-premise deployment option</li>
+                        <li>Advanced security & compliance</li>
+                    </ul>
+                    <button class="card-button" onclick="purchaseCredits('enterprise', 2000, 997)">
+                        Get Started
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Payment Methods -->
+        <section class="payment-section">
+            <h3>Secure Payment Options</h3>
+            <div class="payment-methods">
+                <div class="payment-method">
+                    <span>💳</span> Credit & Debit Cards
+                </div>
+                <div class="payment-method">
+                    <span>🏦</span> Bank Transfer
+                </div>
+                <div class="payment-method">
+                    <span>📱</span> Apple Pay
+                </div>
+                <div class="payment-method">
+                    <span>🟢</span> Google Pay
+                </div>
+            </div>
+            <div class="security-note">
+                <span>🔒</span> Payments secured by Stripe with enterprise-grade encryption
+            </div>
+        </section>
+
+        <!-- Usage History -->
+        <section class="history-section">
+            <div class="history-header">
+                <h3>Credit History</h3>
+                <div class="history-filters">
+                    <button class="filter-btn active" onclick="filterHistory('all')">All</button>
+                    <button class="filter-btn" onclick="filterHistory('purchases')">Purchases</button>
+                    <button class="filter-btn" onclick="filterHistory('usage')">Usage</button>
+                </div>
             </div>
             
-            <div class="card">
-                <h3>Starter</h3>
-                <div class="price">$97</div>
-                <p>100 credits</p>
-                <p class="per-credit">$0.97 per credit</p>
-                <ul>
-                    <li>Best for solopreneurs</li>
-                    <li>Email support</li>
-                    <li>Basic analytics</li>
-                </ul>
-                <button onclick="purchaseCredits('starter')">Purchase</button>
-            </div>
-            
-            <div class="card popular">
-                <div class="badge">Most Popular</div>
-                <h3>Growth</h3>
-                <div class="price">$497</div>
-                <p>500 credits</p>
-                <p class="per-credit">$0.79 per credit</p>
-                <p class="savings">Save $88!</p>
-                <ul>
-                    <li>Growing agencies</li>
-                    <li>Priority support</li>
-                    <li>Advanced analytics</li>
-                    <li>API access</li>
-                </ul>
-                <button onclick="purchaseCredits('growth')">Purchase</button>
-            </div>
-            
-            <div class="card">
-                <h3>Scale</h3>
-                <div class="price">$997</div>
-                <p>1,500 credits</p>
-                <p class="per-credit">$0.66 per credit</p>
-                <p class="savings">Save $458!</p>
-                <ul>
-                    <li>High-volume teams</li>
-                    <li>Dedicated support</li>
-                    <li>Custom integrations</li>
-                    <li>White-label options</li>
-                </ul>
-                <button onclick="purchaseCredits('scale')">Purchase</button>
-            </div>
-        </div>
-        
-        <div class="payment-methods">
-            <p>Secure payment via Stripe. We accept:</p>
-            <div class="payment-icons">
-                <span>💳 Credit Card</span>
-                <span>🏦 Bank Transfer</span>
-                <span>📱 Apple Pay</span>
-                <span>🟢 Google Pay</span>
-            </div>
-        </div>
-        
-        <section class="usage-history">
-            <h2>Credit History</h2>
-            <table>
+            <table class="history-table">
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Amount</th>
+                        <th>Description</th>
                         <th>Type</th>
+                        <th>Amount</th>
                         <th>Balance</th>
                         <th>Invoice</th>
                     </tr>
                 </thead>
                 <tbody id="credit-history">
-                    <tr>
-                        <td>Today</td>
-                        <td>+5</td>
-                        <td>Free Trial</td>
-                        <td>5</td>
-                        <td>-</td>
-                    </tr>
+                    <!-- Data populated by JavaScript -->
                 </tbody>
             </table>
+        </section>
+
+        <!-- FAQ Section -->
+        <section class="faq-section">
+            <div class="faq-header">
+                <h3>Frequently Asked Questions</h3>
+            </div>
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <div class="faq-question">Do credits expire?</div>
+                    <div class="faq-answer">No! All credits purchased never expire. Use them at your own pace without any time pressure.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Can I upgrade anytime?</div>
+                    <div class="faq-answer">Yes! You can purchase additional credits at any time. Unused credits from smaller packages carry over.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">What's the difference between light and deep analysis?</div>
+                    <div class="faq-answer">Light analysis provides basic profile info and scoring. Deep analysis includes personalized messaging, engagement rates, and detailed insights.</div>
+                </div>
+                <div class="faq-item">
+                    <div class="faq-question">Do you offer refunds?</div>
+                    <div class="faq-answer">All sales are final. We do not offer refunds on credit purchases. Please choose your package carefully.</div>
+                </div>
+            </div>
         </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
     <script>
-        async function purchaseCredits(plan) {
-            const plans = {
-                impulse: { credits: 20, price: 19 },
-                starter: { credits: 100, price: 97 },
-                growth: { credits: 500, price: 497 },
-                scale: { credits: 1500, price: 997 }
-            };
-            
-            const selectedPlan = plans[plan];
-            
-            // In production, this would initiate Stripe checkout
-            // For now, show what would happen
-            if (confirm(`Purchase ${selectedPlan.credits} credits for $${selectedPlan.price}?`)) {
-                alert('Stripe checkout would open here. Credits would be added after successful payment.');
-                // After payment success, update credits:
-                // updateCreditCount(selectedPlan.credits);
+        const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNTc2NDQsImV4cCI6MjA2NzgzMzY0NH0.Cz909ngJHcBkxp1aeFUn-ZvCrKRFf3phtGlrBvTCvWg';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let currentUser = null;
+        let currentSession = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('💳 Credits page loaded');
+            await checkAuth();
+            await loadUserCredits();
+            await loadCreditHistory();
+        });
+
+        // Authentication check
+        async function checkAuth() {
+            try {
+                const historyTable = document.getElementById('credit-history');
+                
+                if (error) {
+                    console.warn('Credit transactions table not accessible:', error);
+                    // Show sample data if table doesn't exist
+                    historyTable.innerHTML = `
+                        <tr>
+                            <td>Today</td>
+                            <td>Account signup bonus</td>
+                            <td><span class="transaction-type type-bonus">Bonus</span></td>
+                            <td><span class="amount-positive">+5</span></td>
+                            <td>5</td>
+                            <td>-</td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                if (transactions && transactions.length > 0) {
+                    historyTable.innerHTML = transactions.map(transaction => {
+                        const date = new Date(transaction.created_at).toLocaleDateString();
+                        const isPositive = transaction.amount > 0;
+                        const type = transaction.transaction_type || 'usage';
+                        
+                        let typeClass = 'type-usage';
+                        let description = 'Lead analysis';
+                        
+                        if (type === 'purchase') {
+                            typeClass = 'type-purchase';
+                            description = 'Credit purchase';
+                        } else if (type === 'bonus') {
+                            typeClass = 'type-bonus';
+                            description = 'Signup bonus';
+                        }
+                        
+                        return `
+                            <tr>
+                                <td>${date}</td>
+                                <td>${description}</td>
+                                <td><span class="transaction-type ${typeClass}">${type}</span></td>
+                                <td><span class="${isPositive ? 'amount-positive' : 'amount-negative'}">${isPositive ? '+' : ''}${transaction.amount}</span></td>
+                                <td>${transaction.balance_after || '-'}</td>
+                                <td>${transaction.invoice_id ? `<a href="#" onclick="downloadInvoice('${transaction.invoice_id}')">📄 View</a>` : '-'}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    // Show empty state
+                    historyTable.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #6B7280;">
+                                No transaction history yet. Purchase credits to get started!
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+            } catch (err) {
+                console.error('Error loading credit history:', err);
+                document.getElementById('credit-history').innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #F59E0B;">
+                            Unable to load transaction history
+                        </td>
+                    </tr>
+                `;
             }
         }
+
+        // Purchase credits function
+        async function purchaseCredits(plan, credits, price) {
+            try {
+                // Show loading state
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '🔄 Processing...';
+                button.disabled = true;
+                button.classList.add('loading');
+
+                // Here you would integrate with Stripe
+                // For now, we'll simulate the purchase flow
+                
+                console.log(`Initiating purchase for ${plan}: ${credits} credits for ${price}`);
+                
+                // STRIPE INTEGRATION PLACEHOLDER
+                // const stripe = Stripe('your_publishable_key');
+                // const { error } = await stripe.redirectToCheckout({
+                //     lineItems: [{
+                //         price: `price_${plan}`, // Your Stripe price ID
+                //         quantity: 1,
+                //     }],
+                //     mode: 'payment',
+                //     successUrl: `${window.location.origin}/credits.html?success=true`,
+                //     cancelUrl: `${window.location.origin}/credits.html?canceled=true`,
+                //     customerEmail: currentUser.email,
+                //     metadata: {
+                //         user_id: currentUser.id,
+                //         credits: credits,
+                //         plan: plan
+                //     }
+                // });
+                
+                // Simulate successful purchase for demo
+                if (confirm(`Purchase ${credits} credits for ${price}?\n\nThis will redirect to Stripe checkout.`)) {
+                    // In production, redirect to Stripe
+                    alert('🚀 Stripe checkout would open here!\n\nAfter successful payment:\n• Credits added to account\n• Receipt emailed\n• Transaction logged');
+                    
+                    // For demo purposes, simulate adding credits
+                    // await addCreditsToAccount(credits, plan, price);
+                }
+                
+            } catch (err) {
+                console.error('Purchase error:', err);
+                alert('Purchase failed: ' + err.message);
+            } finally {
+                // Reset button state
+                const button = event.target;
+                button.textContent = 'Get Started';
+                button.disabled = false;
+                button.classList.remove('loading');
+            }
+        }
+
+        // Simulate adding credits (for demo purposes)
+        async function addCreditsToAccount(credits, plan, price) {
+            try {
+                // Update user credits in database
+                const { data: currentUser, error: fetchError } = await supabase
+                    .from('users')
+                    .select('credits')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (fetchError) throw fetchError;
+                
+                const newBalance = (currentUser.credits || 0) + credits;
+                
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ credits: newBalance })
+                    .eq('id', currentUser.id);
+                
+                if (updateError) throw updateError;
+                
+                // Log transaction
+                const { error: transactionError } = await supabase
+                    .from('credit_transactions')
+                    .insert({
+                        user_id: currentUser.id,
+                        amount: credits,
+                        transaction_type: 'purchase',
+                        balance_after: newBalance,
+                        metadata: { plan, price }
+                    });
+                
+                if (transactionError) console.warn('Failed to log transaction:', transactionError);
+                
+                // Refresh UI
+                await loadUserCredits();
+                await loadCreditHistory();
+                
+                alert(`✅ Success! ${credits} credits added to your account.`);
+                
+            } catch (err) {
+                console.error('Error adding credits:', err);
+                throw err;
+            }
+        }
+
+        // Filter credit history
+        function filterHistory(type) {
+            // Update filter button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filter logic would go here
+            console.log('Filtering history by:', type);
+            
+            // For now, just reload all data
+            loadCreditHistory();
+        }
+
+        // Download invoice (placeholder)
+        function downloadInvoice(invoiceId) {
+            alert(`Downloading invoice ${invoiceId}...\n\nThis would fetch the PDF from your billing system.`);
+        }
+
+        // Handle URL parameters (success/cancel from Stripe)
+        function handleUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.get('success') === 'true') {
+                alert('🎉 Payment successful! Your credits have been added to your account.');
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                // Refresh data
+                loadUserCredits();
+                loadCreditHistory();
+            }
+            
+            if (urlParams.get('canceled') === 'true') {
+                alert('Payment was canceled. No charges were made.');
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+        // Call on page load
+        document.addEventListener('DOMContentLoaded', handleUrlParams);
+
+        // Logout function
+        function logout() {
+            supabase.auth.signOut().then(() => {
+                window.location.href = 'auth.html';
+            });
+        }
+
+        // Listen for auth changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || !session) {
+                window.location.href = 'auth.html';
+            }
+        });
+    </script>
+</body>
+</html> { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error || !session) {
+                    window.location.href = 'auth.html';
+                    return;
+                }
+                
+                currentSession = session;
+                currentUser = session.user;
+                document.getElementById('user-email').textContent = currentUser.email;
+                
+            } catch (err) {
+                console.error('Auth check error:', err);
+                window.location.href = 'auth.html';
+            }
+        }
+
+        // Load user credits
+        async function loadUserCredits() {
+            try {
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('credits')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error) throw error;
+                
+                const credits = userData?.credits || 0;
+                document.getElementById('credit-count').textContent = `${credits} credits`;
+                document.getElementById('balance-display').textContent = credits;
+                
+            } catch (err) {
+                console.error('Error loading credits:', err);
+                document.getElementById('credit-count').textContent = 'Error loading';
+                document.getElementById('balance-display').textContent = '0';
+            }
+        }
+
+        // Load credit history
+        async function loadCreditHistory() {
+            try {
+                // Try to load credit transactions
+                const { data: transactions, error } = await supabase
+                    .from('credit_transactions')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+                
+                const historyTable = document.getElementById('credit-history');
+                
+                if (error) {
+                    console.warn('Credit transactions table not accessible:', error);
+                    // Show sample data if table doesn't exist
+                    historyTable.innerHTML = `
+                        <tr>
+                            <td>Today</td>
+                            <td>Account signup bonus</td>
+                            <td><span class="transaction-type type-bonus">Bonus</span></td>
+                            <td><span class="amount-positive">+5</span></td>
+                            <td>5</td>
+                            <td>-</td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                if (transactions && transactions.length > 0) {
+                    historyTable.innerHTML = transactions.map(transaction => {
+                        const date = new Date(transaction.created_at).toLocaleDateString();
+                        const isPositive = transaction.amount > 0;
+                        const type = transaction.transaction_type || 'usage';
+                        
+                        let typeClass = 'type-usage';
+                        let description = 'Lead analysis';
+                        
+                        if (type === 'purchase') {
+                            typeClass = 'type-purchase';
+                            description = 'Credit purchase';
+                        } else if (type === 'bonus') {
+                            typeClass = 'type-bonus';
+                            description = 'Signup bonus';
+                        }
+                        
+                        return `
+                            <tr>
+                                <td>${date}</td>
+                                <td>${description}</td>
+                                <td><span class="transaction-type ${typeClass}">${type}</span></td>
+                                <td><span class="${isPositive ? 'amount-positive' : 'amount-negative'}">${isPositive ? '+' : ''}${transaction.amount}</span></td>
+                                <td>${transaction.balance_after || '-'}</td>
+                                <td>${transaction.invoice_id ? `<a href="#" onclick="downloadInvoice('${transaction.invoice_id}')">📄 View</a>` : '-'}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    // Show empty state
+                    historyTable.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #6B7280;">
+                                No transaction history yet. Purchase credits to get started!
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+            } catch (err) {
+                console.error('Error loading credit history:', err);
+                document.getElementById('credit-history').innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #F59E0B;">
+                            Unable to load transaction history
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Purchase credits function
+        async function purchaseCredits(plan, credits, price) {
+            try {
+                // Show loading state
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '🔄 Processing...';
+                button.disabled = true;
+                button.classList.add('loading');
+
+                // Here you would integrate with Stripe
+                // For now, we'll simulate the purchase flow
+                
+                console.log(`Initiating purchase for ${plan}: ${credits} credits for $${price}`);
+                
+                // STRIPE INTEGRATION PLACEHOLDER
+                // const stripe = Stripe('your_publishable_key');
+                // const { error } = await stripe.redirectToCheckout({
+                //     lineItems: [{
+                //         price: `price_${plan}`, // Your Stripe price ID
+                //         quantity: 1,
+                //     }],
+                //     mode: 'payment',
+                //     successUrl: `${window.location.origin}/credits.html?success=true`,
+                //     cancelUrl: `${window.location.origin}/credits.html?canceled=true`,
+                //     customerEmail: currentUser.email,
+                //     metadata: {
+                //         user_id: currentUser.id,
+                //         credits: credits,
+                //         plan: plan
+                //     }
+                // });
+                
+                // Simulate successful purchase for demo
+                if (confirm(`Purchase ${credits} credits for $${price}?\n\nThis will redirect to Stripe checkout.`)) {
+                    // In production, redirect to Stripe
+                    alert('🚀 Stripe checkout would open here!\n\nAfter successful payment:\n• Credits added to account\n• Receipt emailed\n• Transaction logged');
+                    
+                    // For demo purposes, simulate adding credits
+                    // await addCreditsToAccount(credits, plan, price);
+                }
+                
+            } catch (err) {
+                console.error('Purchase error:', err);
+                alert('Purchase failed: ' + err.message);
+            } finally {
+                // Reset button state
+                const button = event.target;
+                button.textContent = 'Get Started';
+                button.disabled = false;
+                button.classList.remove('loading');
+            }
+        }
+
+        // Simulate adding credits (for demo purposes)
+        async function addCreditsToAccount(credits, plan, price) {
+            try {
+                // Update user credits in database
+                const { data: currentUserData, error: fetchError } = await supabase
+                    .from('users')
+                    .select('credits')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (fetchError) throw fetchError;
+                
+                const newBalance = (currentUserData.credits || 0) + credits;
+                
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ credits: newBalance })
+                    .eq('id', currentUser.id);
+                
+                if (updateError) throw updateError;
+                
+                // Log transaction
+                const { error: transactionError } = await supabase
+                    .from('credit_transactions')
+                    .insert({
+                        user_id: currentUser.id,
+                        amount: credits,
+                        transaction_type: 'purchase',
+                        balance_after: newBalance,
+                        metadata: { plan, price }
+                    });
+                
+                if (transactionError) console.warn('Failed to log transaction:', transactionError);
+                
+                // Refresh UI
+                await loadUserCredits();
+                await loadCreditHistory();
+                
+                alert(`✅ Success! ${credits} credits added to your account.`);
+                
+            } catch (err) {
+                console.error('Error adding credits:', err);
+                throw err;
+            }
+        }
+
+        // Filter credit history
+        function filterHistory(type) {
+            // Update filter button states
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Filter logic would go here
+            console.log('Filtering history by:', type);
+            
+            // For now, just reload all data
+            loadCreditHistory();
+        }
+
+        // Download invoice (placeholder)
+        function downloadInvoice(invoiceId) {
+            alert(`Downloading invoice ${invoiceId}...\n\nThis would fetch the PDF from your billing system.`);
+        }
+
+        // Handle URL parameters (success/cancel from Stripe)
+        function handleUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            if (urlParams.get('success') === 'true') {
+                alert('🎉 Payment successful! Your credits have been added to your account.');
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                // Refresh data
+                loadUserCredits();
+                loadCreditHistory();
+            }
+            
+            if (urlParams.get('canceled') === 'true') {
+                alert('Payment was canceled. No charges were made.');
+                // Clean URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+        // Call on page load
+        document.addEventListener('DOMContentLoaded', handleUrlParams);
+
+        // Logout function
+        function logout() {
+            supabase.auth.signOut().then(() => {
+                window.location.href = 'auth.html';
+            });
+        }
+
+        // Listen for auth changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || !session) {
+                window.location.href = 'auth.html';
+            }
+        });
     </script>
 </body>
 </html>
