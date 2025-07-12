@@ -3,194 +3,777 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oslira AI - Turn Any Profile Into Perfect Customers</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Oslira - AI-Powered Lead Intelligence Platform</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F5F9FF;
+            color: #121417;
+            line-height: 1.6;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(45, 108, 223, 0.1);
+            z-index: 1000;
+            padding: 0 24px;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #2D6CDF;
+        }
+
+        .logo-image {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #6B7280;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-menu a:hover {
+            color: #2D6CDF;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1) !important;
+            color: white !important;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(45, 108, 223, 0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 24px 80px;
+            background: linear-gradient(135deg, #F5F9FF 0%, #E8F3FF 100%);
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: clamp(40px, 5vw, 64px);
+            font-weight: 800;
+            color: #121417;
+            margin-bottom: 24px;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .hero .subtitle {
+            font-size: 24px;
+            color: #6B7280;
+            margin-bottom: 48px;
+            font-weight: 400;
+            line-height: 1.4;
+        }
+
+        /* Hook Demo Box */
+        .hook-demo {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(45, 108, 223, 0.15);
+            border: 1px solid rgba(45, 108, 223, 0.1);
+            margin: 48px 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hook-demo h3 {
+            color: #121417;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .demo-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .demo-input {
+            padding: 16px 20px;
+            border: 2px solid #C9CEDC;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            background: #F5F9FF;
+        }
+
+        .demo-input:focus {
+            outline: none;
+            border-color: #2D6CDF;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(45, 108, 223, 0.1);
+        }
+
+        .demo-button {
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
+        }
+
+        .demo-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(45, 108, 223, 0.4);
+        }
+
+        .demo-button:active {
+            transform: translateY(0);
+        }
+
+        .demo-note {
+            font-size: 14px;
+            color: #6B7280;
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        /* Trust Indicators */
+        .trust-section {
+            text-align: center;
+            margin-top: 64px;
+        }
+
+        .trust-text {
+            color: #6B7280;
+            font-size: 16px;
+            margin-bottom: 32px;
+        }
+
+        .trust-metrics {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            flex-wrap: wrap;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2D6CDF;
+            display: block;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: #6B7280;
+            font-weight: 500;
+        }
+
+        /* How It Works */
+        .how-it-works {
+            padding: 120px 24px;
+            background: white;
+        }
+
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .section-header h2 {
+            font-size: 48px;
+            font-weight: 700;
+            color: #121417;
+            margin-bottom: 16px;
+        }
+
+        .section-header p {
+            font-size: 20px;
+            color: #6B7280;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 48px;
+            margin-top: 80px;
+        }
+
+        .step {
+            text-align: center;
+            position: relative;
+        }
+
+        .step-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin: 0 auto 24px;
+            box-shadow: 0 8px 24px rgba(45, 108, 223, 0.3);
+        }
+
+        .step h3 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #121417;
+            margin-bottom: 16px;
+        }
+
+        .step p {
+            font-size: 16px;
+            color: #6B7280;
+            line-height: 1.6;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        /* Features Grid */
+        .features {
+            padding: 120px 24px;
+            background: #F5F9FF;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 32px;
+            margin-top: 80px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 32px;
+            border-radius: 16px;
+            border: 1px solid rgba(45, 108, 223, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(45, 108, 223, 0.15);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #53E1C5, #8A6DF1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #121417;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            color: #6B7280;
+            line-height: 1.6;
+        }
+
+        /* CTA Section */
+        .cta-section {
+            padding: 120px 24px;
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
+            text-align: center;
+        }
+
+        .cta-content {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .cta-section h2 {
+            font-size: 48px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 24px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .cta-section p {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 40px;
+        }
+
+        .cta-button {
+            background: white;
+            color: #2D6CDF;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            background: #121417;
+            color: white;
+            padding: 80px 24px 40px;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 48px;
+            margin-bottom: 48px;
+        }
+
+        .footer-column h4 {
+            color: white;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .footer-column a {
+            color: #C9CEDC;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 8px;
+            transition: color 0.2s ease;
+        }
+
+        .footer-column a:hover {
+            color: #53E1C5;
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-top: 32px;
+            border-top: 1px solid #2D6CDF;
+            text-align: center;
+            color: #C9CEDC;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-menu {
+                gap: 16px;
+            }
+
+            .nav-menu a:not(.btn-primary) {
+                display: none;
+            }
+
+            .hero {
+                padding: 100px 16px 60px;
+            }
+
+            .hook-demo {
+                padding: 24px;
+                margin: 32px 16px;
+            }
+
+            .trust-metrics {
+                gap: 24px;
+            }
+
+            .steps-grid {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 32px;
+            }
+        }
+
+        /* Animation for demo interaction */
+        .demo-loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .demo-loading .demo-button {
+            background: #C9CEDC;
+        }
+
+        .demo-loading .demo-button::after {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <nav>
         <div class="nav-container">
-            <div class="logo">Oslira AI</div>
+            <div class="logo">
+                <img src="./assets/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+                Oslira
+            </div>
             <div class="nav-menu">
                 <a href="#how-it-works">How it Works</a>
-                <a href="#pricing">Pricing</a>
-                <a href="#demo">Live Demo</a>
+                <a href="#features">Features</a>
                 <a href="/auth.html">Login</a>
                 <a href="/auth.html" class="btn-primary">Start Free</a>
             </div>
         </div>
     </nav>
 
-    <section id="hero">
-        <h1>Turn Any Instagram Profile Into 50 Perfect Customers in 60 Seconds</h1>
-        <p>AI-powered outreach that analyzes profiles, finds ideal prospects, and writes personalized messages that get 73% response rates</p>
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Turn Instagram Profiles Into Perfect Customers</h1>
+            <p class="subtitle">AI-powered lead intelligence that finds your ideal prospects and crafts personalized outreach in seconds</p>
 
-        <div class="demo-box">
-            <input type="text" id="demo-url" placeholder="Paste any Instagram/LinkedIn URL...">
-            <button onclick="analyzeDemo()">Analyze Profile</button>
-        </div>
+            <div class="hook-demo">
+                <h3>See Your Next Customer in 10 Seconds</h3>
+                <form class="demo-form" onsubmit="handleDemo(event)">
+                    <input 
+                        type="text" 
+                        class="demo-input" 
+                        placeholder="Paste any Instagram username (e.g., @johndoe)"
+                        required
+                        id="demo-input"
+                    >
+                    <button type="submit" class="demo-button">Analyze Profile</button>
+                </form>
+                <p class="demo-note">No signup required • See instant results</p>
+            </div>
 
-        <p class="social-proof">Join 1,247 businesses already using AI outreach</p>
-    </section>
-
-    <section id="how-it-works">
-        <h2>From Profile to Pipeline in 3 Steps</h2>
-        <div class="steps">
-            <div class="step">
-                <div class="step-number">1</div>
-                <h3>Drop Any Link</h3>
-                <p>Paste an Instagram profile, LinkedIn URL, or upload a CSV of leads</p>
-            </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <h3>AI Does the Magic</h3>
-                <p>Our AI analyzes profiles, scores relevance, and writes personalized messages</p>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <h3>Watch Responses Roll In</h3>
-                <p>Send messages across channels and track responses in real-time</p>
-            </div>
-        </div>
-    </section>
-
-    <section id="results">
-        <h2>Real Results From Real Users</h2>
-        <div class="metrics-grid">
-            <div class="metric">
-                <h3>73%</h3>
-                <p>Average Response Rate</p>
-            </div>
-            <div class="metric">
-                <h3>12 min</h3>
-                <p>To First Response</p>
-            </div>
-            <div class="metric">
-                <h3>$47</h3>
-                <p>Cost Per Meeting Booked</p>
-            </div>
-            <div class="metric">
-                <h3>267%</h3>
-                <p>Average ROI</p>
-            </div>
-        </div>
-
-        <div class="live-feed">
-            <h3>Live Activity</h3>
-            <div id="activity-feed">
-                <div class="feed-item">🔥 Sarah from NYC just booked 3 meetings</div>
-                <div class="feed-item">⚡ Mike analyzed 127 profiles in 4 minutes</div>
-                <div class="feed-item">💰 Tech Startup closed $50k deal from AI outreach</div>
+            <div class="trust-section">
+                <p class="trust-text">Trusted by growth teams at fast-moving companies</p>
+                <div class="trust-metrics">
+                    <div class="metric">
+                        <span class="metric-number">1,200+</span>
+                        <span class="metric-label">Active Users</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-number">85%</span>
+                        <span class="metric-label">Response Rate</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-number">2.4x</span>
+                        <span class="metric-label">ROI Increase</span>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <section id="pricing">
-        <h2>Pay Only For What You Use</h2>
-        <p>No subscriptions. No commitments. Just credits.</p>
-
-        <div class="pricing-cards">
-            <div class="card">
-                <h3>Starter</h3>
-                <div class="price">$97</div>
-                <p>100 credits</p>
-                <ul>
-                    <li>$0.97 per lead</li>
-                    <li>Email support</li>
-                    <li>Basic analytics</li>
-                </ul>
-                <button onclick="location.href='/auth.html'">Get Started</button>
+    <section id="how-it-works" class="how-it-works">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>How Oslira Works</h2>
+                <p>From profile to personalized outreach in three simple steps</p>
             </div>
-
-            <div class="card popular">
-                <div class="badge">Most Popular</div>
-                <h3>Growth</h3>
-                <div class="price">$397</div>
-                <p>500 credits</p>
-                <ul>
-                    <li>$0.79 per lead</li>
-                    <li>Priority support</li>
-                    <li>Advanced analytics</li>
-                    <li>API access</li>
-                </ul>
-                <button onclick="location.href='/auth.html'">Get Started</button>
+            
+            <div class="steps-grid">
+                <div class="step">
+                    <div class="step-icon">🔗</div>
+                    <h3>Drop Any Profile</h3>
+                    <p>Paste Instagram usernames, LinkedIn URLs, or upload CSV files with hundreds of leads at once</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-icon">🧠</div>
+                    <h3>AI Analysis</h3>
+                    <p>Our AI analyzes profiles, scores lead quality, identifies pain points, and generates personalized messaging</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-icon">🚀</div>
+                    <h3>Export & Engage</h3>
+                    <p>Get detailed reports, personalized messages, and contact information ready for your outreach campaigns</p>
+                </div>
             </div>
+        </div>
+    </section>
 
-            <div class="card">
-                <h3>Scale</h3>
-                <div class="price">$1,297</div>
-                <p>2,000 credits</p>
-                <ul>
-                    <li>$0.65 per lead</li>
-                    <li>Dedicated support</li>
-                    <li>Custom integrations</li>
-                    <li>White-label option</li>
-                </ul>
-                <button onclick="location.href='/auth.html'">Get Started</button>
+    <section id="features" class="features">
+        <div class="section-container">
+            <div class="section-header">
+                <h2>Everything You Need to Convert</h2>
+                <p>Powerful AI tools designed for modern growth teams</p>
             </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Instant Profile Analysis</h3>
+                    <p>Analyze any social profile in seconds with AI-powered insights about interests, behavior, and buying signals</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Lead Scoring</h3>
+                    <p>Automatically score leads based on your ideal customer profile and focus on the highest-value prospects</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">✍️</div>
+                    <h3>Personalized Messaging</h3>
+                    <p>Generate custom outreach messages that reference specific interests and pain points for each prospect</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Bulk Processing</h3>
+                    <p>Upload CSV files and analyze hundreds of leads simultaneously with detailed export reports</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Enterprise Security</h3>
+                    <p>SOC 2 compliant with enterprise-grade security and privacy protection for your data</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🔌</div>
+                    <h3>API Integration</h3>
+                    <p>Integrate with your existing CRM and sales tools through our comprehensive API platform</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2>Ready to Transform Your Outreach?</h2>
+            <p>Join hundreds of growth teams using AI to find and convert their perfect customers</p>
+            <button class="cta-button" onclick="location.href='/auth.html'">
+                Start Free Trial
+            </button>
         </div>
     </section>
 
     <footer>
         <div class="footer-content">
-            <div class="column">
+            <div class="footer-column">
                 <h4>Product</h4>
                 <a href="#features">Features</a>
-                <a href="#pricing">Pricing</a>
-                <a href="/api">API Docs</a>
+                <a href="/pricing">Pricing</a>
+                <a href="/api">API Documentation</a>
+                <a href="/integrations">Integrations</a>
             </div>
-            <div class="column">
+            
+            <div class="footer-column">
                 <h4>Company</h4>
-                <a href="/about">About</a>
+                <a href="/about">About Us</a>
                 <a href="/blog">Blog</a>
                 <a href="/careers">Careers</a>
+                <a href="/press">Press</a>
             </div>
-            <div class="column">
-                <h4>Legal</h4>
-                <a href="/terms.html">Terms of Service</a>
-                <a href="/privacy.html">Privacy Policy</a>
-                <a href="/refund.html">Refund Policy</a>
-            </div>
-            <div class="column">
-                <h4>Support</h4>
-                <a href="mailto:support@oslira.com">support@oslira.com</a>
+            
+            <div class="footer-column">
+                <h4>Resources</h4>
                 <a href="/help">Help Center</a>
+                <a href="/guides">Guides</a>
+                <a href="/case-studies">Case Studies</a>
                 <a href="/status">System Status</a>
             </div>
-<!-- Replace the footer section in index.html with this -->
-<footer>
-    <div class="footer-content">
-        <div class="column">
-            <h4>Product</h4>
-            <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
-            <a href="/api">API Docs</a>
+            
+            <div class="footer-column">
+                <h4>Legal</h4>
+                <a href="/legal/terms">Terms of Service</a>
+                <a href="/legal/privacy">Privacy Policy</a>
+                <a href="/legal/security">Security</a>
+                <a href="/legal/refund">Refund Policy</a>
+            </div>
         </div>
-        <div class="column">
-            <h4>Company</h4>
-            <a href="/about">About</a>
-            <a href="/blog">Blog</a>
-            <a href="/careers">Careers</a>
-        </div>
-        <div class="column">
-            <h4>Legal</h4>
-            <a href="/legal/terms.html">Terms of Service</a>
-            <a href="/legal/privacy.html">Privacy Policy</a>
-            <a href="/legal/refund.html">Refund Policy</a>
-        </div>
-        <div class="bottom">
-            <p>&copy; 2024 Oslira AI. All rights reserved.</p>
-        <div class="column">
-            <h4>Support</h4>
-            <a href="mailto:support@oslira.com">support@oslira.com</a>
-            <a href="/help">Help Center</a>
-            <a href="/status">System Status</a>
+        
+        <div class="footer-bottom">
+            <p>&copy; 2024 Oslira. All rights reserved.</p>
         </div>
     </footer>
-    </div>
-    <div class="bottom">
-        <p>&copy; 2024 Oslira AI. All rights reserved.</p>
-    </div>
-</footer>
 
-    <script src="app.js"></script>
+    <script>
+        // Demo form handler
+        async function handleDemo(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const input = document.getElementById('demo-input');
+            const username = input.value.trim().replace('@', '');
+            
+            if (!username) {
+                alert('Please enter a valid Instagram username');
+                return;
+            }
+            
+            // Add loading state
+            form.classList.add('demo-loading');
+            const button = form.querySelector('.demo-button');
+            const originalText = button.textContent;
+            button.textContent = 'Analyzing...';
+            
+            try {
+                // Simulate analysis delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Store the username for the auth page
+                localStorage.setItem('demo_username', username);
+                
+                // Redirect to signup with demo context
+                window.location.href = `/auth.html?demo=${encodeURIComponent(username)}`;
+                
+            } catch (error) {
+                console.error('Demo error:', error);
+                alert('Something went wrong. Please try again.');
+            } finally {
+                // Remove loading state
+                form.classList.remove('demo-loading');
+                button.textContent = originalText;
+            }
+        }
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add scroll effect to navigation
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            if (window.scrollY > 100) {
+                nav.style.background = 'rgba(255, 255, 255, 0.98)';
+                nav.style.boxShadow = '0 4px 20px rgba(45, 108, 223, 0.1)';
+            } else {
+                nav.style.background = 'rgba(255, 255, 255, 0.95)';
+                nav.style.boxShadow = 'none';
+            }
+        });
+
+        // Animate features on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe feature cards for animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const featureCards = document.querySelectorAll('.feature-card');
+            featureCards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = `opacity 0.6s ease ${index * 0.1}s, transform 0.6s ease ${index * 0.1}s`;
+                observer.observe(card);
+            });
+        });
+    </script>
 </body>
+</html>
