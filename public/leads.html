@@ -3,239 +3,1409 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lead Research - Oslira AI</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Lead Intelligence Hub - Oslira</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #F5F9FF;
+            min-height: 100vh;
+        }
+
+        .dashboard {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: white;
+            box-shadow: 2px 0 10px rgba(45, 108, 223, 0.1);
+            padding: 24px;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2D6CDF;
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .menu {
+            margin-bottom: 32px;
+        }
+
+        .menu-section {
+            margin-bottom: 24px;
+        }
+
+        .menu-section h4 {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #6B7280;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .menu a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            text-decoration: none;
+            color: #6B7280;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .menu a:hover, .menu a.active {
+            background-color: #2D6CDF;
+            color: white;
+            transform: translateX(2px);
+        }
+
+        .menu a .icon {
+            font-size: 18px;
+            width: 20px;
+        }
+
+        .credit-balance {
+            background: linear-gradient(135deg, #53E1C5 0%, #8A6DF1 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            color: white;
+        }
+
+        .credit-balance h4 {
+            margin-bottom: 8px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .credits {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .credit-balance a {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            opacity: 0.9;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .user-info {
+            padding-top: 20px;
+            border-top: 1px solid #C9CEDC;
+        }
+
+        .user-info p {
+            margin-bottom: 8px;
+            color: #6B7280;
+            font-size: 14px;
+        }
+
+        .user-info a {
+            color: #8A6DF1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 24px;
+            background: #F5F9FF;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(45, 108, 223, 0.1);
+        }
+
+        header h1 {
+            color: #121417;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .header-subtitle {
+            color: #6B7280;
+            font-size: 16px;
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Research Hub */
+        .research-hub {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 20px rgba(45, 108, 223, 0.1);
+            border: 1px solid rgba(45, 108, 223, 0.1);
+        }
+
+        .hub-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .hub-header h2 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #121417;
+            margin-bottom: 8px;
+        }
+
+        .hub-header p {
+            font-size: 18px;
+            color: #6B7280;
+        }
+
+        .research-modes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .research-mode {
+            background: linear-gradient(135deg, #F5F9FF, #E8F3FF);
+            border: 2px solid #C9CEDC;
+            border-radius: 12px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .research-mode.active {
+            border-color: #2D6CDF;
+            background: linear-gradient(135deg, #E8F3FF, #F0F4FF);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(45, 108, 223, 0.15);
+        }
+
+        .research-mode h3 {
+            color: #121417;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .research-mode p {
+            color: #6B7280;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .mode-features {
+            list-style: none;
+        }
+
+        .mode-features li {
+            color: #6B7280;
+            font-size: 13px;
+            margin-bottom: 4px;
+            padding-left: 16px;
+            position: relative;
+        }
+
+        .mode-features li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #53E1C5;
+            font-weight: 600;
+        }
+
+        /* Research Input */
+        .research-input {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+            border: 1px solid #C9CEDC;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .research-field {
+            flex: 1;
+            padding: 16px 20px;
+            border: 2px solid #C9CEDC;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .research-field:focus {
+            outline: none;
+            border-color: #2D6CDF;
+            box-shadow: 0 0 0 4px rgba(45, 108, 223, 0.1);
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
+            white-space: nowrap;
+        }
+
+        .primary-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(45, 108, 223, 0.4);
+        }
+
+        .secondary-btn {
+            background: white;
+            color: #2D6CDF;
+            border: 2px solid #2D6CDF;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .secondary-btn:hover {
+            background: #2D6CDF;
+            color: white;
+        }
+
+        .bulk-upload {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px;
+            background: #F5F9FF;
+            border-radius: 8px;
+            border: 2px dashed #C9CEDC;
+            transition: all 0.2s ease;
+        }
+
+        .bulk-upload:hover {
+            border-color: #2D6CDF;
+            background: #E8F3FF;
+        }
+
+        /* Analysis Results */
+        .analysis-results {
+            display: none;
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 20px rgba(45, 108, 223, 0.1);
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #F5F9FF;
+        }
+
+        .lead-profile-card {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: linear-gradient(135deg, #F5F9FF, #E8F3FF);
+            border-radius: 12px;
+            border: 1px solid #C9CEDC;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #2D6CDF;
+        }
+
+        .profile-details {
+            flex: 1;
+        }
+
+        .profile-details h3 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #121417;
+            margin-bottom: 8px;
+        }
+
+        .profile-bio {
+            color: #6B7280;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+
+        .profile-metrics {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .metric-item {
+            color: #6B7280;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .lead-score-display {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(45, 108, 223, 0.15);
+        }
+
+        .score-number {
+            font-size: 48px;
+            font-weight: 800;
+            color: #2D6CDF;
+            line-height: 1;
+        }
+
+        .score-label {
+            color: #6B7280;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        /* Intelligence Grid */
+        .intelligence-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .intelligence-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #C9CEDC;
+            transition: all 0.3s ease;
+        }
+
+        .intelligence-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 28px rgba(45, 108, 223, 0.15);
+        }
+
+        .intelligence-card h4 {
+            color: #121417;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .insight-list {
+            list-style: none;
+        }
+
+        .insight-list li {
+            padding: 8px 0;
+            color: #6B7280;
+            font-size: 14px;
+            border-bottom: 1px solid #F5F9FF;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .insight-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* Message Generator */
+        .message-generator {
+            background: linear-gradient(135deg, #F0FDF9, #E8FBF5);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #53E1C5;
+        }
+
+        .message-generator h4 {
+            color: #121417;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .message-textarea {
+            width: 100%;
+            min-height: 140px;
+            padding: 16px;
+            border: 2px solid #C9CEDC;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .btn-small {
+            background: #53E1C5;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-small:hover {
+            background: #2D6CDF;
+            transform: translateY(-1px);
+        }
+
+        /* Discovery Engine */
+        .discovery-engine {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 20px rgba(45, 108, 223, 0.1);
+        }
+
+        .discovery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .discovery-header h3 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #121417;
+        }
+
+        .discovery-filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 8px 16px;
+            background: #F5F9FF;
+            border: 1px solid #C9CEDC;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: #6B7280;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-chip.active {
+            background: #2D6CDF;
+            color: white;
+            border-color: #2D6CDF;
+        }
+
+        /* Leads Table */
+        .leads-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(45, 108, 223, 0.1);
+        }
+
+        .leads-table th {
+            background: #F5F9FF;
+            padding: 16px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #121417;
+            font-size: 14px;
+            border-bottom: 1px solid #C9CEDC;
+        }
+
+        .leads-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #F5F9FF;
+            color: #6B7280;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        .leads-table tr:hover {
+            background: #F5F9FF;
+        }
+
+        .lead-mini-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mini-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #C9CEDC;
+        }
+
+        .score-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 24px;
+            background: #53E1C5;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-new { background: #E8F3FF; color: #2D6CDF; }
+        .status-contacted { background: #FEF3E2; color: #F59E0B; }
+        .status-responded { background: #F0FDF9; color: #53E1C5; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .research-modes {
+                grid-template-columns: 1fr;
+            }
+
+            .intelligence-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .input-row {
+                flex-direction: column;
+            }
+
+            .discovery-filters {
+                justify-content: center;
+            }
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #2D6CDF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body class="dashboard">
     <aside class="sidebar">
-        <div class="logo">Oslira AI</div>
+        <div class="logo">
+            <img src="./assets/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+            Oslira
+        </div>
         
         <nav class="menu">
-            <a href="/dashboard.html">Dashboard</a>
-            <a href="/leads.html" class="active">Lead Research</a>
-            <a href="/credits.html">Buy Credits</a>
-            <a href="/settings.html">Settings</a>
+            <div class="menu-section">
+                <h4>Main</h4>
+                <a href="/dashboard.html">
+                    <span class="icon">📊</span>
+                    Dashboard
+                </a>
+                <a href="/leads.html" class="active">
+                    <span class="icon">🔍</span>
+                    Lead Intelligence
+                </a>
+                <a href="/analytics.html">
+                    <span class="icon">📈</span>
+                    Analytics
+                </a>
+            </div>
+            
+            <div class="menu-section">
+                <h4>Tools</h4>
+                <a href="/bulk-upload.html">
+                    <span class="icon">📤</span>
+                    Bulk Research
+                </a>
+                <a href="/messages.html">
+                    <span class="icon">💬</span>
+                    Message Studio
+                </a>
+                <a href="/integrations.html">
+                    <span class="icon">🔗</span>
+                    Integrations
+                </a>
+            </div>
+            
+            <div class="menu-section">
+                <h4>Account</h4>
+                <a href="/credits.html">
+                    <span class="icon">💳</span>
+                    Buy Credits
+                </a>
+                <a href="/settings.html">
+                    <span class="icon">⚙️</span>
+                    Settings
+                </a>
+            </div>
         </nav>
         
         <div class="credit-balance">
             <h4>Credit Balance</h4>
-            <p class="credits" id="credit-count">247 credits</p>
-            <a href="/credits.html">Add More</a>
+            <p class="credits" id="credit-count">Loading...</p>
+            <a href="/credits.html">Add More Credits</a>
         </div>
         
         <div class="user-info">
-            <p id="user-email">user@email.com</p>
+            <p id="user-email">Loading...</p>
             <a href="#" onclick="logout()">Sign Out</a>
         </div>
     </aside>
     
     <main class="main-content">
         <header>
-            <h1>Lead Research Center</h1>
+            <div>
+                <h1>Lead Intelligence Hub</h1>
+                <p class="header-subtitle">Advanced lead research and discovery powered by AI</p>
+            </div>
+            <div class="header-actions">
+                <button class="secondary-btn" onclick="exportLeads()">
+                    📥 Export Data
+                </button>
+                <button class="primary-btn" onclick="showBulkResearch()">
+                    🚀 Bulk Research
+                </button>
+            </div>
         </header>
         
-        <!-- Lead Research Input -->
-        <div class="research-input">
-            <h2>Research a New Lead</h2>
-            <div class="input-group">
-                <input type="text" id="lead-url" placeholder="Paste Instagram or LinkedIn profile URL">
-                <button class="primary-btn" onclick="researchLead()">Analyze Lead</button>
+        <!-- Research Hub -->
+        <section class="research-hub">
+            <div class="hub-header">
+                <h2>AI-Powered Lead Discovery</h2>
+                <p>Analyze profiles, discover similar leads, and generate personalized outreach at scale</p>
             </div>
-            <p class="hint">Or upload a CSV file with multiple leads</p>
-            <input type="file" id="csv-upload" accept=".csv" style="display:none;">
-            <button class="secondary-btn" onclick="document.getElementById('csv-upload').click()">Upload CSV</button>
-        </div>
-        
-        <!-- Current Lead Analysis -->
-        <div id="lead-analysis" class="lead-analysis-section" style="display:none;">
-            <h2>Lead Analysis</h2>
             
-            <div class="lead-profile">
-                <div class="profile-header">
-                    <img src="" id="lead-avatar" class="avatar">
-                    <div class="profile-info">
-                        <h3 id="lead-name">@johndoe</h3>
-                        <p id="lead-bio">CEO at TechStartup | Building the future of AI</p>
-                        <div class="lead-metrics">
-                            <span>📍 New York</span>
-                            <span>👥 12.5K followers</span>
-                            <span>📊 324 posts</span>
-                        </div>
-                    </div>
-                    <div class="lead-score-box">
-                        <div class="score" id="lead-score">92</div>
-                        <p>Match Score</p>
-                    </div>
+            <div class="research-modes">
+                <div class="research-mode active" onclick="selectMode('individual')">
+                    <h3>🎯 Individual Research</h3>
+                    <p>Deep analysis of specific profiles with personalized messaging</p>
+                    <ul class="mode-features">
+                        <li>Complete profile analysis</li>
+                        <li>AI-generated outreach messages</li>
+                        <li>Engagement rate calculation</li>
+                        <li>Pain point identification</li>
+                    </ul>
                 </div>
                 
-                <div class="analysis-details">
-                    <div class="detail-section">
-                        <h4>Why This Lead Scores High</h4>
-                        <ul id="score-reasons">
-                            <li>✅ CEO/Founder (decision maker)</li>
-                            <li>✅ Posted about scaling challenges yesterday</li>
-                            <li>✅ In your target industry (SaaS)</li>
-                            <li>✅ Active daily on platform</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="detail-section">
-                        <h4>Recent Activity Insights</h4>
-                        <ul id="activity-insights">
-                            <li>🔥 Talking about hiring challenges</li>
-                            <li>💬 Engages with similar services</li>
-                            <li>📈 Company growing fast (hiring posts)</li>
-                        </ul>
-                    </div>
+                <div class="research-mode" onclick="selectMode('discovery')">
+                    <h3>🔍 Lead Discovery</h3>
+                    <p>Find similar high-value prospects based on your best leads</p>
+                    <ul class="mode-features">
+                        <li>Lookalike lead discovery</li>
+                        <li>Network connection mapping</li>
+                        <li>Competitor audience analysis</li>
+                        <li>Industry influence tracking</li>
+                    </ul>
                 </div>
                 
-                <div class="message-section">
-                    <h4>Personalized Message</h4>
-                    <div class="message-box">
-                        <textarea id="generated-message" rows="6">Hey John, saw your post about struggling to scale your sales team at TechStartup. 
+                <div class="research-mode" onclick="selectMode('bulk')">
+                    <h3>📊 Bulk Intelligence</h3>
+                    <p>Process hundreds of leads simultaneously with batch analysis</p>
+                    <ul class="mode-features">
+                        <li>CSV upload processing</li>
+                        <li>Batch scoring and ranking</li>
+                        <li>Mass message generation</li>
+                        <li>Export-ready reports</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="research-input">
+                <div class="input-row">
+                    <input type="text" id="research-input" class="research-field" placeholder="Enter Instagram username, LinkedIn URL, or search terms...">
+                    <button class="primary-btn" onclick="startResearch()">
+                        Analyze Lead
+                    </button>
+                </div>
+                
+                <div class="bulk-upload" onclick="triggerFileUpload()">
+                    <span style="font-size: 24px;">📁</span>
+                    <div>
+                        <strong>Upload CSV for Bulk Research</strong>
+                        <p style="color: #6B7280; font-size: 14px; margin: 0;">Drag & drop or click to select file</p>
+                    </div>
+                    <input type="file" id="csv-upload" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+                </div>
+            </div>
+        </section>
+        
+        <!-- Analysis Results -->
+        <section id="analysis-results" class="analysis-results">
+            <div class="results-header">
+                <h3>Lead Analysis Results</h3>
+                <div>
+                    <button class="btn-small" onclick="regenerateAnalysis()">🔄 Regenerate</button>
+                    <button class="btn-small" onclick="findSimilarLeads()">🔍 Find Similar</button>
+                </div>
+            </div>
+            
+            <div class="lead-profile-card">
+                <img src="https://via.placeholder.com/80" alt="Profile" class="profile-avatar" id="profile-avatar">
+                <div class="profile-details">
+                    <h3 id="profile-name">@johndoe</h3>
+                    <p class="profile-bio" id="profile-bio">CEO at TechStartup | Building the future of AI | 🚀 Scaling fast</p>
+                    <div class="profile-metrics">
+                        <span class="metric-item">📍 <span id="profile-location">San Francisco</span></span>
+                        <span class="metric-item">👥 <span id="profile-followers">15.2K followers</span></span>
+                        <span class="metric-item">📊 <span id="profile-posts">127 posts</span></span>
+                        <span class="metric-item">📈 <span id="profile-engagement">3.2% engagement</span></span>
+                    </div>
+                </div>
+                <div class="lead-score-display">
+                    <div class="score-number" id="lead-score">92</div>
+                    <div class="score-label">Match Score</div>
+                </div>
+            </div>
+            
+            <div class="intelligence-grid">
+                <div class="intelligence-card">
+                    <h4>🎯 Match Factors</h4>
+                    <ul class="insight-list" id="match-factors">
+                        <li>✅ C-level executive (decision maker)</li>
+                        <li>✅ Posted about scaling challenges</li>
+                        <li>✅ In target industry (SaaS/Tech)</li>
+                        <li>✅ Active engagement patterns</li>
+                        <li>✅ Growing team size indicators</li>
+                    </ul>
+                </div>
+                
+                <div class="intelligence-card">
+                    <h4>🔥 Recent Activity</h4>
+                    <ul class="insight-list" id="recent-activity">
+                        <li>💼 Posted about hiring challenges (2 days ago)</li>
+                        <li>📈 Shared growth milestone update</li>
+                        <li>🤝 Engaged with sales automation content</li>
+                        <li>💬 Active in founder communities</li>
+                    </ul>
+                </div>
+                
+                <div class="intelligence-card">
+                    <h4>💰 Business Signals</h4>
+                    <ul class="insight-list" id="business-signals">
+                        <li>🚀 Company recently raised funding</li>
+                        <li>📊 Actively hiring sales roles</li>
+                        <li>🔍 Researching automation tools</li>
+                        <li>💡 Pain points in current process</li>
+                    </ul>
+                </div>
+                
+                <div class="intelligence-card message-generator">
+                    <h4>✍️ AI-Generated Message</h4>
+                    <textarea class="message-textarea" id="generated-message" placeholder="Personalized message will appear here...">Hi John! 👋
 
-I help SaaS founders automate their outreach without hiring more SDRs - we just helped a similar startup book 47 demos in 30 days.
+Saw your recent post about the challenges of scaling your sales team at TechStartup. The struggle is real when you're growing fast!
 
-Worth a quick chat to see if I could help you hit those aggressive growth targets you mentioned?</textarea>
-                        <div class="message-actions">
-                            <button onclick="copyMessage()">Copy Message</button>
-                            <button onclick="editMessage()">Edit</button>
-                            <button class="primary-btn" onclick="saveLead()">Save Lead & Message</button>
-                        </div>
+I help SaaS founders like yourself automate their outreach without the overhead of hiring more SDRs. We just helped a similar Y Combinator startup book 47 qualified demos in 30 days.
+
+Worth a quick 15-min chat to see if we could help you hit those aggressive Q4 targets you mentioned? 🚀</textarea>
+                    <div class="message-actions">
+                        <button class="btn-small" onclick="copyMessage()">📋 Copy</button>
+                        <button class="btn-small" onclick="regenerateMessage()">🔄 Regenerate</button>
+                        <button class="btn-small" onclick="customizeMessage()">✏️ Customize</button>
+                        <button class="primary-btn" onclick="saveLead()">💾 Save Lead</button>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
         
-        <!-- Related Leads Discovery -->
-        <div id="related-leads" class="related-leads-section" style="display:none;">
-            <h2>Related High-Value Leads</h2>
-            <p class="section-subtitle">Similar profiles worth researching next</p>
+        <!-- Discovery Engine -->
+        <section class="discovery-engine">
+            <div class="discovery-header">
+                <h3>🔍 Lead Discovery Engine</h3>
+                <button class="secondary-btn" onclick="runDiscovery()">
+                    🚀 Discover Similar Leads
+                </button>
+            </div>
             
-            <table class="related-leads-table">
-                <thead>
-                    <tr>
-                        <th>Profile</th>
-                        <th>Relevance</th>
-                        <th>Key Insights</th>
-                        <th>Score</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="related-leads-tbody">
-                    <tr>
-                        <td>
-                            <div class="mini-profile">
-                                <img src="" class="mini-avatar">
-                                <div>
-                                    <strong>@sarahtech</strong>
-                                    <br>
-                                    <small>CMO at CloudBase</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>Engaged with target's content</td>
-                        <td>Looking for automation tools</td>
-                        <td><span class="score-badge">88</span></td>
-                        <td><button onclick="researchRelated('sarahtech')">Research</button></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-        <!-- Saved Leads Table -->
-        <div class="saved-leads-section">
-            <h2>Your Lead Pipeline</h2>
-            
-            <div class="pipeline-filters">
-                <button class="filter-btn active">All Leads</button>
-                <button class="filter-btn">High Score (80+)</button>
-                <button class="filter-btn">Contacted</button>
-                <button class="filter-btn">Responded</button>
-                <button class="filter-btn">Meeting Booked</button>
+            <div class="discovery-filters">
+                <div class="filter-chip active" onclick="toggleFilter(this, 'all')">All Industries</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'saas')">SaaS</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'ecommerce')">E-commerce</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'fintech')">Fintech</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'healthcare')">Healthcare</div>
+                <div class="filter-chip" onclick="toggleFilter(this, 'education')">Education</div>
             </div>
             
             <table class="leads-table">
                 <thead>
                     <tr>
-                        <th>Lead</th>
+                        <th>Lead Profile</th>
+                        <th>Similarity</th>
                         <th>Score</th>
+                        <th>Key Insights</th>
                         <th>Status</th>
-                        <th>Last Action</th>
-                        <th>Response</th>
-                        <th>Notes</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody id="leads-tbody">
-                    <!-- Populated dynamically -->
+                <tbody id="discovery-results">
+                    <tr>
+                        <td>
+                            <div class="lead-mini-profile">
+                                <img src="https://via.placeholder.com/40" alt="Sarah" class="mini-avatar">
+                                <div>
+                                    <strong>@sarahtech</strong><br>
+                                    <small style="color: #6B7280;">CMO at CloudBase</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 60px; height: 4px; background: #E5E7EB; border-radius: 2px;">
+                                    <div style="width: 88%; height: 100%; background: #53E1C5; border-radius: 2px;"></div>
+                                </div>
+                                <span style="font-size: 12px; color: #6B7280;">88%</span>
+                            </div>
+                        </td>
+                        <td><span class="score-badge">85</span></td>
+                        <td>
+                            <div style="font-size: 12px; color: #6B7280;">
+                                • Engaged with automation content<br>
+                                • Posted about scaling challenges<br>
+                                • Active in same communities
+                            </div>
+                        </td>
+                        <td><span class="status-badge status-new">New</span></td>
+                        <td>
+                            <button class="btn-small" onclick="analyzeDiscoveredLead('sarahtech')">🔍 Analyze</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="lead-mini-profile">
+                                <img src="https://via.placeholder.com/40" alt="Mike" class="mini-avatar">
+                                <div>
+                                    <strong>@mikefounder</strong><br>
+                                    <small style="color: #6B7280;">CEO at ScaleUp Inc</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 60px; height: 4px; background: #E5E7EB; border-radius: 2px;">
+                                    <div style="width: 82%; height: 100%; background: #53E1C5; border-radius: 2px;"></div>
+                                </div>
+                                <span style="font-size: 12px; color: #6B7280;">82%</span>
+                            </div>
+                        </td>
+                        <td><span class="score-badge">78</span></td>
+                        <td>
+                            <div style="font-size: 12px; color: #6B7280;">
+                                • Similar company stage<br>
+                                • Looking for growth tools<br>
+                                • High engagement rate
+                            </div>
+                        </td>
+                        <td><span class="status-badge status-contacted">Contacted</span></td>
+                        <td>
+                            <button class="btn-small" onclick="viewLeadHistory('mikefounder')">📋 History</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="lead-mini-profile">
+                                <img src="https://via.placeholder.com/40" alt="Lisa" class="mini-avatar">
+                                <div>
+                                    <strong>@lisagrowth</strong><br>
+                                    <small style="color: #6B7280;">VP Growth at TechFlow</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 60px; height: 4px; background: #E5E7EB; border-radius: 2px;">
+                                    <div style="width: 75%; height: 100%; background: #8A6DF1; border-radius: 2px;"></div>
+                                </div>
+                                <span style="font-size: 12px; color: #6B7280;">75%</span>
+                            </div>
+                        </td>
+                        <td><span class="score-badge">71</span></td>
+                        <td>
+                            <div style="font-size: 12px; color: #6B7280;">
+                                • Growth-focused role<br>
+                                • Shares relevant content<br>
+                                • Network connections
+                            </div>
+                        </td>
+                        <td><span class="status-badge status-responded">Responded</span></td>
+                        <td>
+                            <button class="btn-small" onclick="continueConversation('lisagrowth')">💬 Continue</button>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
-        </div>
+        </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
     <script>
-        async function researchLead() {
-            const url = document.getElementById('lead-url').value;
-            if (!url) {
-                alert('Please enter a profile URL');
+        const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNTc2NDQsImV4cCI6MjA2NzgzMzY0NH0.Cz909ngJHcBkxp1aeFUn-ZvCrKRFf3phtGlrBvTCvWg';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const WORKER_URL = 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev/analyze';
+
+        let currentUser = null;
+        let currentSession = null;
+        let selectedMode = 'individual';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔍 Lead Intelligence Hub loaded');
+            await checkAuth();
+            await loadUserCredits();
+        });
+
+        // Authentication check
+        async function checkAuth() {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error || !session) {
+                    window.location.href = 'auth.html';
+                    return;
+                }
+                
+                currentSession = session;
+                currentUser = session.user;
+                document.getElementById('user-email').textContent = currentUser.email;
+                
+            } catch (err) {
+                console.error('Auth check error:', err);
+                window.location.href = 'auth.html';
+            }
+        }
+
+        // Load user credits
+        async function loadUserCredits() {
+            try {
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('credits')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error) throw error;
+                
+                const credits = userData?.credits || 0;
+                document.getElementById('credit-count').textContent = `${credits} credits`;
+                
+            } catch (err) {
+                console.error('Error loading credits:', err);
+                document.getElementById('credit-count').textContent = 'Error loading';
+            }
+        }
+
+        // Research mode selection
+        function selectMode(mode) {
+            selectedMode = mode;
+            
+            // Update UI
+            document.querySelectorAll('.research-mode').forEach(el => {
+                el.classList.remove('active');
+            });
+            event.target.closest('.research-mode').classList.add('active');
+            
+            // Update placeholder based on mode
+            const input = document.getElementById('research-input');
+            switch(mode) {
+                case 'individual':
+                    input.placeholder = 'Enter Instagram username or LinkedIn URL for detailed analysis...';
+                    break;
+                case 'discovery':
+                    input.placeholder = 'Enter a competitor or ideal customer profile to find similar leads...';
+                    break;
+                case 'bulk':
+                    input.placeholder = 'Upload CSV file or enter multiple profiles separated by commas...';
+                    break;
+            }
+        }
+
+        // Start research
+        async function startResearch() {
+            const input = document.getElementById('research-input');
+            const query = input.value.trim();
+            
+            if (!query) {
+                alert('Please enter a profile to research');
                 return;
             }
-            
-            // Show loading state
-            document.getElementById('lead-analysis').style.display = 'block';
-            document.getElementById('related-leads').style.display = 'none';
-            
-            // Call API to analyze lead
-            // This would integrate with your Cloudflare Worker
+
             try {
-                const response = await fetch('/api/analyze-lead', {
+                // Show loading state
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '🔄 Analyzing...';
+                button.disabled = true;
+
+                // Determine analysis type based on mode
+                let analysisType = selectedMode === 'discovery' ? 'discovery' : 'deep';
+                
+                // Clean username if it's Instagram
+                let username = query.replace('@', '').trim();
+                if (username.includes('instagram.com/')) {
+                    username = username.split('instagram.com/')[1].split('/')[0];
+                }
+
+                // Call the analysis API
+                const response = await fetch(WORKER_URL, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentSession.access_token}`,
+                        'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ url })
+                    body: JSON.stringify({
+                        profile_url: `https://instagram.com/${username}`,
+                        username: username,
+                        analysis_type: analysisType,
+                        type: analysisType,
+                        user_id: currentUser.id,
+                        platform: 'instagram'
+                    })
                 });
+
+                if (!response.ok) {
+                    throw new Error('Analysis failed');
+                }
+
+                const result = await response.json();
+                console.log('✅ Analysis completed:', result);
+
+                // Display results
+                displayAnalysisResults(result);
                 
-                const data = await response.json();
+                // Update credits
+                await loadUserCredits();
                 
-                // Populate lead analysis
-                populateLeadAnalysis(data);
-                
-                // Show related leads
-                document.getElementById('related-leads').style.display = 'block';
-                populateRelatedLeads(data.relatedLeads);
-                
-                // Deduct credit
-                updateCreditCount(-1);
-            } catch (error) {
-                alert('Error analyzing lead: ' + error.message);
+                // Clear input
+                input.value = '';
+
+            } catch (err) {
+                console.error('❌ Research error:', err);
+                alert('Research failed: ' + err.message);
+            } finally {
+                // Reset button
+                const button = document.querySelector('.primary-btn');
+                button.textContent = 'Analyze Lead';
+                button.disabled = false;
             }
         }
-        
-        function populateLeadAnalysis(data) {
-            document.getElementById('lead-name').textContent = data.username;
-            document.getElementById('lead-bio').textContent = data.bio;
-            document.getElementById('lead-score').textContent = data.score;
-            document.getElementById('generated-message').value = data.message;
-            // ... populate other fields
+
+        // Display analysis results
+        function displayAnalysisResults(data) {
+            // Show results section
+            document.getElementById('analysis-results').style.display = 'block';
+            
+            // Scroll to results
+            document.getElementById('analysis-results').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+
+            // Populate profile data
+            document.getElementById('profile-name').textContent = `@${data.username || 'unknown'}`;
+            document.getElementById('profile-bio').textContent = data.analysis?.summary || data.description || 'No bio available';
+            document.getElementById('lead-score').textContent = data.analysis?.lead_score || data.score || '0';
+
+            // Populate metrics if available
+            if (data.analysis) {
+                const analysis = data.analysis;
+                document.getElementById('profile-followers').textContent = `${analysis.followers || 'N/A'} followers`;
+                document.getElementById('profile-engagement').textContent = `${analysis.engagement_rate || 'N/A'}% engagement`;
+            }
+
+            // Populate insights
+            populateMatchFactors(data.analysis);
+            populateRecentActivity(data.analysis);
+            populateBusinessSignals(data.analysis);
+
+            // Set generated message
+            const messageElement = document.getElementById('generated-message');
+            if (data.outreach_message) {
+                messageElement.value = data.outreach_message;
+            } else {
+                messageElement.value = generateFallbackMessage(data);
+            }
         }
-        
-        function copyMessage() {
-            const message = document.getElementById('generated-message');
-            message.select();
-            document.execCommand('copy');
-            alert('Message copied to clipboard!');
+
+        // Populate match factors
+        function populateMatchFactors(analysis) {
+            const container = document.getElementById('match-factors');
+            if (!analysis || !analysis.match_reasons) {
+                return;
+            }
+
+            container.innerHTML = analysis.match_reasons.map(reason => 
+                `<li>✅ ${reason}</li>`
+            ).join('');
         }
-        
-        function saveLead() {
-            // Save lead to database
-            alert('Lead saved to your pipeline!');
-            // Refresh the leads table
-            loadLeadsPipeline();
+
+        // Populate recent activity
+        function populateRecentActivity(analysis) {
+            const container = document.getElementById('recent-activity');
+            const activities = [
+                `💼 Active in ${analysis?.niche || 'business'} community`,
+                `📈 Recent engagement with growth content`,
+                `🤝 Connects with industry leaders`,
+                `💬 Regular posting activity`
+            ];
+
+            container.innerHTML = activities.map(activity => 
+                `<li>${activity}</li>`
+            ).join('');
         }
+
+        // Populate business signals
+        function populateBusinessSignals(analysis) {
+            const container = document.getElementById('business-signals');
+            const signals = [
+                `🚀 Growing ${analysis?.niche || 'business'} presence`,
+                `📊 Engaged audience base`,
+                `🔍 Shows interest in automation`,
+                `💡 Demonstrates growth mindset`
+            ];
+
+            container.innerHTML = signals.map(signal => 
+                `<li>${signal}</li>`
+            ).join('');
+        }
+
+        // Generate fallback message
+        function generateFallbackMessage(data) {
+            const username = data.username || 'there';
+            const niche = data.analysis?.niche || 'your industry';
+            
+            return `Hi ${username}! 👋
+
+I noticed your profile and your work in ${niche}. Your content shows you're focused on growth and scaling.
+
+I help businesses like yours automate their outreach and find qualified leads without the manual work. We've helped similar companies increase their pipeline by 2-3x.
+
+Would love to share some insights that might be relevant to your goals. Worth a quick chat? 🚀`;
+        }
+
+        // Message actions
+        async function copyMessage() {
+            const messageText = document.getElementById('generated-message').value;
+            try {
+                await navigator.clipboard.writeText(messageText);
+                
+                // Visual feedback
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = '✅ Copied!';
+                button.style.background = '#53E1C5';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = '';
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy message:', err);
+                alert('Failed to copy message');
+            }
+        }
+
+        function regenerateMessage() {
+            // Placeholder for message regeneration
+            alert('Message regeneration coming soon! This will use AI to create alternative versions.');
+        }
+
+        function customizeMessage() {
+            const textarea = document.getElementById('generated-message');
+            textarea.focus();
+            textarea.select();
+        }
+
+        async function saveLead() {
+            // This would save the analyzed lead to the database
+            alert('Lead saved to your pipeline! View it in the Dashboard.');
+        }
+
+        // Discovery functions
+        function runDiscovery() {
+            alert('Discovery engine will find similar leads based on your analysis. Feature coming soon!');
+        }
+
+        function toggleFilter(element, filter) {
+            // Remove active class from all filters
+            document.querySelectorAll('.filter-chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+            
+            // Add active class to clicked filter
+            element.classList.add('active');
+            
+            // Filter logic would go here
+            console.log('Filtering by:', filter);
+        }
+
+        function analyzeDiscoveredLead(username) {
+            // Set the input and trigger analysis
+            document.getElementById('research-input').value = username;
+            startResearch();
+        }
+
+        function viewLeadHistory(username) {
+            alert(`Viewing history for ${username}. This will show all past interactions and analysis.`);
+        }
+
+        function continueConversation(username) {
+            alert(`Opening conversation thread with ${username}. This will show message history and suggest next steps.`);
+        }
+
+        // Bulk research
+        function showBulkResearch() {
+            alert('Bulk research feature allows you to upload CSV files and analyze hundreds of leads at once. Coming soon!');
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('csv-upload').click();
+        }
+
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                alert(`Selected: ${file.name}. Bulk analysis feature coming soon!`);
+            }
+        }
+
+        // Export leads
+        function exportLeads() {
+            alert('Export functionality will download all your analyzed leads in CSV format. Coming soon!');
+        }
+
+        // Logout
+        function logout() {
+            supabase.auth.signOut().then(() => {
+                window.location.href = 'auth.html';
+            });
+        }
+
+        // Listen for auth changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || !session) {
+                window.location.href = 'auth.html';
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(event) {
+            // Enter key triggers analysis
+            if (event.key === 'Enter' && event.target.id === 'research-input') {
+                event.preventDefault();
+                startResearch();
+            }
+        });
     </script>
 </body>
 </html>
