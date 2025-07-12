@@ -1271,6 +1271,8 @@ export default {
 });
 // Add these two endpoints to your existing worker (after your /analyze endpoint)
 
+// Add these two endpoints to your worker after the /analyze endpoint
+
 // NEW: Create Stripe checkout session
 app.post('/create-checkout-session', async (c) => {
   try {
@@ -1312,8 +1314,8 @@ app.post('/create-checkout-session', async (c) => {
       'line_items[0][price]': price.id,
       'line_items[0][quantity]': '1',
       'mode': 'payment',
-      'success_url': `${c.env.FRONTEND_URL}/credits.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      'cancel_url': `${c.env.FRONTEND_URL}/credits.html?canceled=true`,
+      'success_url': `${c.env.FRONTEND_URL || 'https://your-domain.com'}/credits.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      'cancel_url': `${c.env.FRONTEND_URL || 'https://your-domain.com'}/credits.html?canceled=true`,
       'customer_email': customer_email,
       'metadata[user_id]': userId,
       'metadata[credits]': getCreditsForLookupKey(lookup_key),
@@ -1332,6 +1334,7 @@ app.post('/create-checkout-session', async (c) => {
     const session = await sessionResponse.json();
 
     if (!sessionResponse.ok) {
+      console.error('Stripe session creation failed:', session);
       return c.json({ error: session.error?.message || 'Session creation failed' }, 400);
     }
 
@@ -1386,7 +1389,10 @@ async function handleCheckoutCompleted(session, env) {
     console.log('Processing payment:', session.id);
 
     const { user_id, credits } = session.metadata;
-    if (!user_id || !credits) return;
+    if (!user_id || !credits) {
+      console.error('Missing metadata:', session.metadata);
+      return;
+    }
 
     const supabaseHeaders = {
       apikey: env.SUPABASE_SERVICE_ROLE,
@@ -1400,16 +1406,30 @@ async function handleCheckoutCompleted(session, env) {
       { headers: supabaseHeaders }
     );
 
+    if (!userResponse.ok) {
+      throw new Error('Failed to fetch user');
+    }
+
     const userData = await userResponse.json();
     const currentCredits = userData[0]?.credits || 0;
     const newCredits = currentCredits + parseInt(credits);
 
     // Update user credits
-    await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
-      method: 'PATCH',
-      headers: supabaseHeaders,
-      body: JSON.stringify({ credits: newCredits }),
-    });
+    const updateResponse = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+      {
+        method: 'PATCH',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          credits: newCredits,
+          updated_at: new Date().toISOString(),
+        }),
+      }
+    );
+
+    if (!updateResponse.ok) {
+      throw new Error('Failed to update user credits');
+    }
 
     // Log transaction
     await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
@@ -1421,11 +1441,12 @@ async function handleCheckoutCompleted(session, env) {
         transaction_type: 'purchase',
         balance_after: newCredits,
         stripe_session_id: session.id,
+        description: `Credit purchase - ${credits} credits`,
         created_at: new Date().toISOString(),
       }),
     });
 
-    console.log(`✅ Added ${credits} credits to user ${user_id}`);
+    console.log(`✅ Added ${credits} credits to user ${user_id}. New balance: ${newCredits}`);
 
   } catch (error) {
     console.error('Payment fulfillment error:', error);
