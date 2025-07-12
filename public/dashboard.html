@@ -42,9 +42,10 @@
             gap: 8px;
         }
 
-        .logo::before {
-            content: "🚀";
-            font-size: 24px;
+        .logo-image {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
         }
 
         .menu {
@@ -697,7 +698,10 @@
 </head>
 <body class="dashboard">
     <aside class="sidebar">
-        <div class="logo">Oslira</div>
+        <div class="logo">
+            <img src="./assets/oslira-log.png" alt="Oslira Logo" class="logo-image">
+            Oslira
+        </div>
         
         <div class="business-selector">
             <h4>Active Business</h4>
