@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Credits & Pricing - Oslira</title>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * {
             margin: 0;
@@ -360,6 +362,13 @@
             box-shadow: 0 8px 20px rgba(45, 108, 223, 0.4);
         }
 
+        .card-button:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
         .pricing-card.popular .card-button {
             background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
@@ -432,29 +441,6 @@
             color: #121417;
         }
 
-        .history-filters {
-            display: flex;
-            gap: 8px;
-        }
-
-        .filter-btn {
-            padding: 6px 12px;
-            background: #F5F9FF;
-            border: 1px solid #C9CEDC;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            color: #6B7280;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .filter-btn.active {
-            background: #2D6CDF;
-            color: white;
-            border-color: #2D6CDF;
-        }
-
         .history-table {
             width: 100%;
             border-collapse: collapse;
@@ -499,11 +485,6 @@
             color: #F59E0B;
         }
 
-        .type-bonus {
-            background: #F0F4FF;
-            color: #8A6DF1;
-        }
-
         .amount-positive {
             color: #53E1C5;
             font-weight: 600;
@@ -514,51 +495,38 @@
             font-weight: 600;
         }
 
-        /* FAQ Section */
-        .faq-section {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            margin-top: 32px;
-            box-shadow: 0 4px 20px rgba(45, 108, 223, 0.1);
-        }
-
-        .faq-header {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .faq-header h3 {
-            font-size: 24px;
-            font-weight: 700;
-            color: #121417;
-            margin-bottom: 8px;
-        }
-
-        .faq-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-        }
-
-        .faq-item {
-            padding: 20px;
-            background: #F5F9FF;
-            border-radius: 12px;
-            border: 1px solid #C9CEDC;
-        }
-
-        .faq-question {
+        /* Success/Error Messages */
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            color: white;
             font-weight: 600;
-            color: #121417;
-            margin-bottom: 8px;
-            font-size: 16px;
+            z-index: 10000;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
         }
 
-        .faq-answer {
-            color: #6B7280;
-            font-size: 14px;
-            line-height: 1.5;
+        .message.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .message.success {
+            background: linear-gradient(135deg, #10B981, #34D399);
+        }
+
+        .message.error {
+            background: linear-gradient(135deg, #EF4444, #F87171);
+        }
+
+        /* Loading State */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
         }
 
         /* Responsive */
@@ -583,21 +551,6 @@
             .pricing-card.popular:hover {
                 transform: translateY(-8px);
             }
-
-            .payment-methods {
-                flex-direction: column;
-                gap: 12px;
-            }
-
-            .history-filters {
-                flex-direction: column;
-            }
-        }
-
-        /* Loading state */
-        .loading {
-            opacity: 0.7;
-            pointer-events: none;
         }
     </style>
 </head>
@@ -814,11 +767,6 @@
         <section class="history-section">
             <div class="history-header">
                 <h3>Credit History</h3>
-                <div class="history-filters">
-                    <button class="filter-btn active" onclick="filterHistory('all')">All</button>
-                    <button class="filter-btn" onclick="filterHistory('purchases')">Purchases</button>
-                    <button class="filter-btn" onclick="filterHistory('usage')">Usage</button>
-                </div>
             </div>
             
             <table class="history-table">
@@ -829,7 +777,6 @@
                         <th>Type</th>
                         <th>Amount</th>
                         <th>Balance</th>
-                        <th>Invoice</th>
                     </tr>
                 </thead>
                 <tbody id="credit-history">
@@ -837,35 +784,11 @@
                 </tbody>
             </table>
         </section>
-
-        <!-- FAQ Section -->
-        <section class="faq-section">
-            <div class="faq-header">
-                <h3>Frequently Asked Questions</h3>
-            </div>
-            <div class="faq-grid">
-                <div class="faq-item">
-                    <div class="faq-question">Do credits expire?</div>
-                    <div class="faq-answer">No! All credits purchased never expire. Use them at your own pace without any time pressure.</div>
-                </div>
-                <div class="faq-item">
-                    <div class="faq-question">Can I upgrade anytime?</div>
-                    <div class="faq-answer">Yes! You can purchase additional credits at any time. Unused credits from smaller packages carry over.</div>
-                </div>
-                <div class="faq-item">
-                    <div class="faq-question">What's the difference between light and deep analysis?</div>
-                    <div class="faq-answer">Light analysis provides basic profile info and scoring. Deep analysis includes personalized messaging, engagement rates, and detailed insights.</div>
-                </div>
-                <div class="faq-item">
-                    <div class="faq-question">Do you offer refunds?</div>
-                    <div class="faq-answer">All sales are final. We do not offer refunds on credit purchases. Please choose your package carefully.</div>
-                </div>
-            </div>
-        </section>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
+        // Configuration
+        const WORKER_URL = 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
         const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNTc2NDQsImV4cCI6MjA2NzgzMzY0NH0.Cz909ngJHcBkxp1aeFUn-ZvCrKRFf3phtGlrBvTCvWg';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
@@ -879,239 +802,13 @@
             await checkAuth();
             await loadUserCredits();
             await loadCreditHistory();
+            handleUrlParams();
         });
 
         // Authentication check
         async function checkAuth() {
             try {
-                const historyTable = document.getElementById('credit-history');
-                
-                if (error) {
-                    console.warn('Credit transactions table not accessible:', error);
-                    // Show sample data if table doesn't exist
-                    historyTable.innerHTML = `
-                        <tr>
-                            <td>Today</td>
-                            <td>Account signup bonus</td>
-                            <td><span class="transaction-type type-bonus">Bonus</span></td>
-                            <td><span class="amount-positive">+5</span></td>
-                            <td>5</td>
-                            <td>-</td>
-                        </tr>
-                    `;
-                    return;
-                }
-                
-                if (transactions && transactions.length > 0) {
-                    historyTable.innerHTML = transactions.map(transaction => {
-                        const date = new Date(transaction.created_at).toLocaleDateString();
-                        const isPositive = transaction.amount > 0;
-                        const type = transaction.transaction_type || 'usage';
-                        
-                        let typeClass = 'type-usage';
-                        let description = 'Lead analysis';
-                        
-                        if (type === 'purchase') {
-                            typeClass = 'type-purchase';
-                            description = 'Credit purchase';
-                        } else if (type === 'bonus') {
-                            typeClass = 'type-bonus';
-                            description = 'Signup bonus';
-                        }
-                        
-                        return `
-                            <tr>
-                                <td>${date}</td>
-                                <td>${description}</td>
-                                <td><span class="transaction-type ${typeClass}">${type}</span></td>
-                                <td><span class="${isPositive ? 'amount-positive' : 'amount-negative'}">${isPositive ? '+' : ''}${transaction.amount}</span></td>
-                                <td>${transaction.balance_after || '-'}</td>
-                                <td>${transaction.invoice_id ? `<a href="#" onclick="downloadInvoice('${transaction.invoice_id}')">📄 View</a>` : '-'}</td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    // Show empty state
-                    historyTable.innerHTML = `
-                        <tr>
-                            <td colspan="6" style="text-align: center; padding: 40px; color: #6B7280;">
-                                No transaction history yet. Purchase credits to get started!
-                            </td>
-                        </tr>
-                    `;
-                }
-                
-            } catch (err) {
-                console.error('Error loading credit history:', err);
-                document.getElementById('credit-history').innerHTML = `
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 40px; color: #F59E0B;">
-                            Unable to load transaction history
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        // Purchase credits function
-        async function purchaseCredits(plan, credits, price) {
-            try {
-                // Show loading state
-                const button = event.target;
-                const originalText = button.textContent;
-                button.textContent = '🔄 Processing...';
-                button.disabled = true;
-                button.classList.add('loading');
-
-                // Here you would integrate with Stripe
-                // For now, we'll simulate the purchase flow
-                
-                console.log(`Initiating purchase for ${plan}: ${credits} credits for ${price}`);
-                
-                // STRIPE INTEGRATION PLACEHOLDER
-                // const stripe = Stripe('your_publishable_key');
-                // const { error } = await stripe.redirectToCheckout({
-                //     lineItems: [{
-                //         price: `price_${plan}`, // Your Stripe price ID
-                //         quantity: 1,
-                //     }],
-                //     mode: 'payment',
-                //     successUrl: `${window.location.origin}/credits.html?success=true`,
-                //     cancelUrl: `${window.location.origin}/credits.html?canceled=true`,
-                //     customerEmail: currentUser.email,
-                //     metadata: {
-                //         user_id: currentUser.id,
-                //         credits: credits,
-                //         plan: plan
-                //     }
-                // });
-                
-                // Simulate successful purchase for demo
-                if (confirm(`Purchase ${credits} credits for ${price}?\n\nThis will redirect to Stripe checkout.`)) {
-                    // In production, redirect to Stripe
-                    alert('🚀 Stripe checkout would open here!\n\nAfter successful payment:\n• Credits added to account\n• Receipt emailed\n• Transaction logged');
-                    
-                    // For demo purposes, simulate adding credits
-                    // await addCreditsToAccount(credits, plan, price);
-                }
-                
-            } catch (err) {
-                console.error('Purchase error:', err);
-                alert('Purchase failed: ' + err.message);
-            } finally {
-                // Reset button state
-                const button = event.target;
-                button.textContent = 'Get Started';
-                button.disabled = false;
-                button.classList.remove('loading');
-            }
-        }
-
-        // Simulate adding credits (for demo purposes)
-        async function addCreditsToAccount(credits, plan, price) {
-            try {
-                // Update user credits in database
-                const { data: currentUser, error: fetchError } = await supabase
-                    .from('users')
-                    .select('credits')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (fetchError) throw fetchError;
-                
-                const newBalance = (currentUser.credits || 0) + credits;
-                
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update({ credits: newBalance })
-                    .eq('id', currentUser.id);
-                
-                if (updateError) throw updateError;
-                
-                // Log transaction
-                const { error: transactionError } = await supabase
-                    .from('credit_transactions')
-                    .insert({
-                        user_id: currentUser.id,
-                        amount: credits,
-                        transaction_type: 'purchase',
-                        balance_after: newBalance,
-                        metadata: { plan, price }
-                    });
-                
-                if (transactionError) console.warn('Failed to log transaction:', transactionError);
-                
-                // Refresh UI
-                await loadUserCredits();
-                await loadCreditHistory();
-                
-                alert(`✅ Success! ${credits} credits added to your account.`);
-                
-            } catch (err) {
-                console.error('Error adding credits:', err);
-                throw err;
-            }
-        }
-
-        // Filter credit history
-        function filterHistory(type) {
-            // Update filter button states
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Filter logic would go here
-            console.log('Filtering history by:', type);
-            
-            // For now, just reload all data
-            loadCreditHistory();
-        }
-
-        // Download invoice (placeholder)
-        function downloadInvoice(invoiceId) {
-            alert(`Downloading invoice ${invoiceId}...\n\nThis would fetch the PDF from your billing system.`);
-        }
-
-        // Handle URL parameters (success/cancel from Stripe)
-        function handleUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            if (urlParams.get('success') === 'true') {
-                alert('🎉 Payment successful! Your credits have been added to your account.');
-                // Clean URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-                // Refresh data
-                loadUserCredits();
-                loadCreditHistory();
-            }
-            
-            if (urlParams.get('canceled') === 'true') {
-                alert('Payment was canceled. No charges were made.');
-                // Clean URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-        }
-
-        // Call on page load
-        document.addEventListener('DOMContentLoaded', handleUrlParams);
-
-        // Logout function
-        function logout() {
-            supabase.auth.signOut().then(() => {
-                window.location.href = 'auth.html';
-            });
-        }
-
-        // Listen for auth changes
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT' || !session) {
-                window.location.href = 'auth.html';
-            }
-        });
-    </script>
-</body>
-</html> { data: { session }, error } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
                 
                 if (error || !session) {
                     window.location.href = 'auth.html';
@@ -1153,7 +850,6 @@
         // Load credit history
         async function loadCreditHistory() {
             try {
-                // Try to load credit transactions
                 const { data: transactions, error } = await supabase
                     .from('credit_transactions')
                     .select('*')
@@ -1165,15 +861,11 @@
                 
                 if (error) {
                     console.warn('Credit transactions table not accessible:', error);
-                    // Show sample data if table doesn't exist
                     historyTable.innerHTML = `
                         <tr>
-                            <td>Today</td>
-                            <td>Account signup bonus</td>
-                            <td><span class="transaction-type type-bonus">Bonus</span></td>
-                            <td><span class="amount-positive">+5</span></td>
-                            <td>5</td>
-                            <td>-</td>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: #6B7280;">
+                                No transaction history yet. Purchase credits to get started!
+                            </td>
                         </tr>
                     `;
                     return;
@@ -1186,14 +878,11 @@
                         const type = transaction.transaction_type || 'usage';
                         
                         let typeClass = 'type-usage';
-                        let description = 'Lead analysis';
+                        let description = transaction.description || 'Lead analysis';
                         
                         if (type === 'purchase') {
                             typeClass = 'type-purchase';
                             description = 'Credit purchase';
-                        } else if (type === 'bonus') {
-                            typeClass = 'type-bonus';
-                            description = 'Signup bonus';
                         }
                         
                         return `
@@ -1203,15 +892,13 @@
                                 <td><span class="transaction-type ${typeClass}">${type}</span></td>
                                 <td><span class="${isPositive ? 'amount-positive' : 'amount-negative'}">${isPositive ? '+' : ''}${transaction.amount}</span></td>
                                 <td>${transaction.balance_after || '-'}</td>
-                                <td>${transaction.invoice_id ? `<a href="#" onclick="downloadInvoice('${transaction.invoice_id}')">📄 View</a>` : '-'}</td>
                             </tr>
                         `;
                     }).join('');
                 } else {
-                    // Show empty state
                     historyTable.innerHTML = `
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 40px; color: #6B7280;">
+                            <td colspan="5" style="text-align: center; padding: 40px; color: #6B7280;">
                                 No transaction history yet. Purchase credits to get started!
                             </td>
                         </tr>
@@ -1222,7 +909,7 @@
                 console.error('Error loading credit history:', err);
                 document.getElementById('credit-history').innerHTML = `
                     <tr>
-                        <td colspan="6" style="text-align: center; padding: 40px; color: #F59E0B;">
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #F59E0B;">
                             Unable to load transaction history
                         </td>
                     </tr>
@@ -1230,148 +917,120 @@
             }
         }
 
-        // Purchase credits function
+        // Purchase credits with Stripe integration
         async function purchaseCredits(plan, credits, price) {
             try {
-                // Show loading state
                 const button = event.target;
                 const originalText = button.textContent;
                 button.textContent = '🔄 Processing...';
                 button.disabled = true;
-                button.classList.add('loading');
 
-                // Here you would integrate with Stripe
-                // For now, we'll simulate the purchase flow
-                
-                console.log(`Initiating purchase for ${plan}: ${credits} credits for $${price}`);
-                
-                // STRIPE INTEGRATION PLACEHOLDER
-                // const stripe = Stripe('your_publishable_key');
-                // const { error } = await stripe.redirectToCheckout({
-                //     lineItems: [{
-                //         price: `price_${plan}`, // Your Stripe price ID
-                //         quantity: 1,
-                //     }],
-                //     mode: 'payment',
-                //     successUrl: `${window.location.origin}/credits.html?success=true`,
-                //     cancelUrl: `${window.location.origin}/credits.html?canceled=true`,
-                //     customerEmail: currentUser.email,
-                //     metadata: {
-                //         user_id: currentUser.id,
-                //         credits: credits,
-                //         plan: plan
-                //     }
-                // });
-                
-                // Simulate successful purchase for demo
-                if (confirm(`Purchase ${credits} credits for $${price}?\n\nThis will redirect to Stripe checkout.`)) {
-                    // In production, redirect to Stripe
-                    alert('🚀 Stripe checkout would open here!\n\nAfter successful payment:\n• Credits added to account\n• Receipt emailed\n• Transaction logged');
-                    
-                    // For demo purposes, simulate adding credits
-                    // await addCreditsToAccount(credits, plan, price);
+                // Get current session
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                if (sessionError || !session) {
+                    showMessage('Please log in to purchase credits', 'error');
+                    window.location.href = 'auth.html';
+                    return;
                 }
+
+                // Map plan to lookup key
+                const lookupKeys = {
+                    starter: 'starter_40_credits',
+                    growth: 'growth_100_credits', 
+                    professional: 'professional_500_credits',
+                    enterprise: 'enterprise_2000_credits'
+                };
+
+                const lookup_key = lookupKeys[plan];
+                if (!lookup_key) {
+                    throw new Error('Invalid plan selected');
+                }
+
+                console.log('Creating checkout session for:', { plan, credits, price, lookup_key });
+
+                // Create checkout session via your worker
+                const response = await fetch(`${WORKER_URL}/create-checkout-session`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        lookup_key,
+                        customer_email: session.user.email,
+                        metadata: {
+                            user_id: session.user.id,
+                            credits: credits.toString(),
+                            plan,
+                            price: price.toString()
+                        }
+                    })
+                });
+
+                const data = await response.json();
                 
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create checkout session');
+                }
+
+                // Redirect to Stripe Checkout
+                console.log('Redirecting to Stripe checkout:', data.url);
+                window.location.href = data.url;
+
             } catch (err) {
                 console.error('Purchase error:', err);
-                alert('Purchase failed: ' + err.message);
-            } finally {
-                // Reset button state
+                showMessage('Purchase failed: ' + err.message, 'error');
+                
+                // Reset button
                 const button = event.target;
-                button.textContent = 'Get Started';
+                button.textContent = originalText;
                 button.disabled = false;
-                button.classList.remove('loading');
             }
-        }
-
-        // Simulate adding credits (for demo purposes)
-        async function addCreditsToAccount(credits, plan, price) {
-            try {
-                // Update user credits in database
-                const { data: currentUserData, error: fetchError } = await supabase
-                    .from('users')
-                    .select('credits')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (fetchError) throw fetchError;
-                
-                const newBalance = (currentUserData.credits || 0) + credits;
-                
-                const { error: updateError } = await supabase
-                    .from('users')
-                    .update({ credits: newBalance })
-                    .eq('id', currentUser.id);
-                
-                if (updateError) throw updateError;
-                
-                // Log transaction
-                const { error: transactionError } = await supabase
-                    .from('credit_transactions')
-                    .insert({
-                        user_id: currentUser.id,
-                        amount: credits,
-                        transaction_type: 'purchase',
-                        balance_after: newBalance,
-                        metadata: { plan, price }
-                    });
-                
-                if (transactionError) console.warn('Failed to log transaction:', transactionError);
-                
-                // Refresh UI
-                await loadUserCredits();
-                await loadCreditHistory();
-                
-                alert(`✅ Success! ${credits} credits added to your account.`);
-                
-            } catch (err) {
-                console.error('Error adding credits:', err);
-                throw err;
-            }
-        }
-
-        // Filter credit history
-        function filterHistory(type) {
-            // Update filter button states
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            // Filter logic would go here
-            console.log('Filtering history by:', type);
-            
-            // For now, just reload all data
-            loadCreditHistory();
-        }
-
-        // Download invoice (placeholder)
-        function downloadInvoice(invoiceId) {
-            alert(`Downloading invoice ${invoiceId}...\n\nThis would fetch the PDF from your billing system.`);
         }
 
         // Handle URL parameters (success/cancel from Stripe)
-        function handleUrlParams() {
+        async function handleUrlParams() {
             const urlParams = new URLSearchParams(window.location.search);
             
             if (urlParams.get('success') === 'true') {
-                alert('🎉 Payment successful! Your credits have been added to your account.');
+                showMessage('🎉 Payment successful! Your credits have been added to your account.', 'success');
                 // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
                 // Refresh data
-                loadUserCredits();
-                loadCreditHistory();
+                setTimeout(async () => {
+                    await loadUserCredits();
+                    await loadCreditHistory();
+                }, 1000);
             }
             
             if (urlParams.get('canceled') === 'true') {
-                alert('Payment was canceled. No charges were made.');
+                showMessage('Payment was canceled. No charges were made.', 'error');
                 // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
 
-        // Call on page load
-        document.addEventListener('DOMContentLoaded', handleUrlParams);
+        // Show message function
+        function showMessage(text, type = 'success') {
+            // Remove existing messages
+            const existingMessages = document.querySelectorAll('.message');
+            existingMessages.forEach(msg => msg.remove());
+
+            // Create new message
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.textContent = text;
+            document.body.appendChild(message);
+
+            // Show message
+            setTimeout(() => message.classList.add('show'), 100);
+
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                message.classList.remove('show');
+                setTimeout(() => message.remove(), 300);
+            }, 5000);
+        }
 
         // Logout function
         function logout() {
