@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - Oslira AI</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Sign In - Oslira</title>
     <style>
         * {
             margin: 0;
@@ -14,111 +13,193 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #F5F9FF 0%, #E8F3FF 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 24px;
         }
         
         .auth-container {
             width: 100%;
-            max-width: 400px;
-            padding: 20px;
+            max-width: 480px;
+            margin: auto;
         }
         
-        .auth-box {
+        .auth-card {
             background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(45, 108, 223, 0.15);
+            padding: 48px;
+            border: 1px solid rgba(45, 108, 223, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #2D6CDF, #8A6DF1, #53E1C5);
+        }
+        
+        .auth-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .logo {
+            margin-bottom: 24px;
+        }
+        
+        .logo img {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+        }
+        
+        .logo h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: #2D6CDF;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
+        }
+        
+        .auth-subtitle {
+            color: #6B7280;
+            font-size: 18px;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        
+        .auth-description {
+            color: #6B7280;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .demo-context {
+            background: linear-gradient(135deg, #F0F4FF, #E8F3FF);
+            padding: 16px;
             border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 40px;
+            margin-bottom: 32px;
+            border: 1px solid #C9CEDC;
             text-align: center;
         }
         
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 24px;
+        .demo-context h3 {
+            color: #2D6CDF;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
         }
         
-        p {
-            color: #666;
-            margin-bottom: 30px;
+        .demo-context p {
+            color: #6B7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .demo-username {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #2D6CDF;
+            font-weight: 600;
+            border: 1px solid #C9CEDC;
         }
         
         .form-group {
-            margin-bottom: 20px;
-            text-align: left;
+            margin-bottom: 24px;
         }
         
-        input[type="email"] {
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #121417;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-input {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            padding: 16px 20px;
+            border: 2px solid #C9CEDC;
+            border-radius: 12px;
             font-size: 16px;
-            transition: border-color 0.3s ease;
+            transition: all 0.2s ease;
+            background: #F5F9FF;
         }
         
-        input[type="email"]:focus {
+        .form-input:focus {
             outline: none;
-            border-color: #4caf50;
+            border-color: #2D6CDF;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(45, 108, 223, 0.1);
         }
         
-        button {
+        .form-input.error {
+            border-color: #8A6DF1;
+            box-shadow: 0 0 0 4px rgba(138, 109, 241, 0.1);
+        }
+        
+        .auth-button {
             width: 100%;
-            padding: 12px;
-            background-color: #4caf50;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
+            position: relative;
+            overflow: hidden;
         }
         
-        button:hover {
-            background-color: #45a049;
+        .auth-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(45, 108, 223, 0.4);
         }
         
-        button:disabled {
-            background-color: #ccc;
+        .auth-button:disabled {
+            opacity: 0.7;
             cursor: not-allowed;
+            transform: none;
         }
         
-        .terms {
-            font-size: 14px;
-            color: #666;
-            margin-top: 20px;
+        .auth-button .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
-        .terms a {
-            color: #4caf50;
-            text-decoration: none;
+        .auth-button.loading .loading {
+            display: flex;
         }
         
-        .terms a:hover {
-            text-decoration: underline;
-        }
-        
-        .auth-success {
-            text-align: center;
-        }
-        
-        .auth-success h2 {
-            color: #4caf50;
-            margin-bottom: 10px;
+        .auth-button.loading .button-text {
+            display: none;
         }
         
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #4caf50;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top: 2px solid white;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
             animation: spin 1s linear infinite;
-            margin: 10px auto;
         }
         
         @keyframes spin {
@@ -126,146 +207,353 @@
             100% { transform: rotate(360deg); }
         }
         
-        .loading {
+        .auth-footer {
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #F5F9FF;
+        }
+        
+        .terms-text {
+            font-size: 13px;
+            color: #6B7280;
+            line-height: 1.5;
+        }
+        
+        .terms-text a {
+            color: #2D6CDF;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .terms-text a:hover {
+            text-decoration: underline;
+        }
+        
+        .security-badge {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-        }
-
-        .jwt-display {
-            background: #f0f8ff;
-            border: 1px solid #4caf50;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            text-align: left;
-            word-break: break-all;
-            font-family: monospace;
+            gap: 8px;
+            margin-top: 16px;
+            color: #6B7280;
             font-size: 12px;
         }
-
-        .copy-btn {
-            background: #2196f3;
-            margin-top: 10px;
-            padding: 8px 16px;
+        
+        /* Success State */
+        .auth-success {
+            text-align: center;
+            display: none;
+        }
+        
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #53E1C5, #8A6DF1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 24px;
+        }
+        
+        .success-title {
+            color: #121417;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        
+        .success-description {
+            color: #6B7280;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+        
+        .success-email {
+            color: #2D6CDF;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .success-instructions {
+            background: #F5F9FF;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 24px;
+            border: 1px solid #C9CEDC;
+        }
+        
+        .success-instructions h4 {
+            color: #121417;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .success-instructions p {
+            color: #6B7280;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        /* Processing State */
+        .auth-processing {
+            text-align: center;
+            display: none;
+        }
+        
+        .processing-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid #F5F9FF;
+            border-top: 4px solid #2D6CDF;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px;
+        }
+        
+        .processing-title {
+            color: #121417;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .processing-description {
+            color: #6B7280;
             font-size: 14px;
         }
-
-        .copy-btn:hover {
-            background: #1976d2;
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+            
+            .auth-card {
+                padding: 32px 24px;
+            }
+            
+            .logo h1 {
+                font-size: 28px;
+            }
+            
+            .auth-subtitle {
+                font-size: 16px;
+            }
+        }
+        
+        /* Error states */
+        .error-message {
+            background: #FEF3F3;
+            border: 1px solid rgba(138, 109, 241, 0.3);
+            color: #8A6DF1;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            display: none;
         }
     </style>
 </head>
 <body class="auth-page">
     <div class="auth-container">
-        <div class="auth-box" id="auth-form-container">
-            <h1>Welcome to Oslira</h1>
-            <p>Enter your email to sign in or create an account</p>
+        <!-- Main Auth Form -->
+        <div class="auth-card" id="auth-form-container">
+            <div class="auth-header">
+                <div class="logo">
+                    <img src="./assets/oslira-logo.png" alt="Oslira Logo">
+                    <h1>Welcome to Oslira</h1>
+                </div>
+                <p class="auth-subtitle">AI-powered lead intelligence platform</p>
+                <p class="auth-description">Enter your email to access your account or create a new one</p>
+            </div>
+            
+            <!-- Demo Context (if coming from homepage demo) -->
+            <div class="demo-context" id="demo-context" style="display: none;">
+                <h3>🎯 Analyze This Profile</h3>
+                <p>You're about to analyze:</p>
+                <div class="demo-username" id="demo-username-display"></div>
+                <p style="margin-top: 8px; font-size: 12px;">Sign in to see your AI analysis results</p>
+            </div>
 
             <form id="auth-form">
+                <div class="error-message" id="error-message"></div>
+                
                 <div class="form-group">
-                    <input type="email" id="email" placeholder="your@email.com" required>
+                    <label class="form-label" for="email">Email Address</label>
+                    <input type="email" id="email" class="form-input" placeholder="you@company.com" required autocomplete="email">
                 </div>
-                <button type="submit" id="submit-btn">Continue with Email</button>
+                
+                <button type="submit" id="submit-btn" class="auth-button">
+                    <span class="button-text">Continue with Email</span>
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Sending secure link...</span>
+                    </div>
+                </button>
             </form>
 
-            <p class="terms">
-                By continuing, you agree to our 
-                <a href="legal/terms.html">Terms of Service</a> and 
-                <a href="legal/privacy.html">Privacy Policy</a>
-            </p>
+            <div class="auth-footer">
+                <p class="terms-text">
+                    By continuing, you agree to our 
+                    <a href="legal/terms.html">Terms of Service</a> and 
+                    <a href="legal/privacy.html">Privacy Policy</a>
+                </p>
+                <div class="security-badge">
+                    <span>🔒</span>
+                    <span>Secured with enterprise-grade encryption</span>
+                </div>
+            </div>
         </div>
 
-        <div class="auth-success" id="auth-success" style="display:none;">
-            <h2>Check Your Email!</h2>
-            <p>We sent a magic link to <span id="email-sent"></span></p>
-            <p>Click the link in your email to continue.</p>
+        <!-- Success State -->
+        <div class="auth-card auth-success" id="auth-success">
+            <div class="success-icon">📧</div>
+            <h2 class="success-title">Check Your Email</h2>
+            <p class="success-description">We sent a secure login link to:</p>
+            <p class="success-email" id="email-sent"></p>
+            
+            <div class="success-instructions">
+                <h4>Next Steps:</h4>
+                <p>1. Check your email inbox (and spam folder)<br>
+                2. Click the secure login link<br>
+                3. You'll be automatically signed in</p>
+            </div>
         </div>
 
-        <div class="auth-box" id="jwt-container" style="display:none;">
-            <h2>✅ Login Successful!</h2>
-            <p>Here's your JWT token for testing:</p>
-            <div class="jwt-display" id="jwt-display"></div>
-            <button class="copy-btn" id="copy-jwt">Copy JWT Token</button>
-            <button id="continue-btn" style="margin-top: 10px;">Continue to Dashboard</button>
+        <!-- Processing State -->
+        <div class="auth-card auth-processing" id="auth-processing">
+            <div class="processing-spinner"></div>
+            <h2 class="processing-title">Signing you in...</h2>
+            <p class="processing-description">Please wait while we verify your authentication</p>
         </div>
     </div>
 
-    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <script>
         const supabaseUrl = 'https://jswzzihuqtjqvobfosks.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNTc2NDQsImV4cCI6MjA2NzgzMzY0NH0.Cz909ngJHcBkxp1aeFUn-ZvCrKRFf3phtGlrBvTCvWg';
         
-        // Initialize Supabase client
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Check if this is a magic link callback
-        const urlParams = new URLSearchParams(window.location.search);
-        const isCallback = urlParams.has('access_token') || urlParams.has('refresh_token') || window.location.hash.includes('access_token');
-
-        // Function to display JWT token
-        function displayJWT(session) {
-            console.log('🎯 JWT Token:', session.access_token);
-            console.log('🎯 User ID:', session.user.id);
+        // Check for demo context from homepage
+        function checkDemoContext() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const demoUsername = urlParams.get('demo');
             
-            // Hide other containers
+            if (demoUsername) {
+                console.log('🎯 Demo context found:', demoUsername);
+                document.getElementById('demo-context').style.display = 'block';
+                document.getElementById('demo-username-display').textContent = `@${demoUsername}`;
+                
+                // Store demo context for after login
+                sessionStorage.setItem('demo_username', demoUsername);
+            }
+        }
+
+        // Show different states
+        function showAuthForm() {
+            document.getElementById('auth-form-container').style.display = 'block';
+            document.getElementById('auth-success').style.display = 'none';
+            document.getElementById('auth-processing').style.display = 'none';
+        }
+
+        function showSuccess(email) {
+            document.getElementById('auth-form-container').style.display = 'none';
+            document.getElementById('auth-success').style.display = 'block';
+            document.getElementById('auth-processing').style.display = 'none';
+            document.getElementById('email-sent').textContent = email;
+        }
+
+        function showProcessing() {
             document.getElementById('auth-form-container').style.display = 'none';
             document.getElementById('auth-success').style.display = 'none';
+            document.getElementById('auth-processing').style.display = 'block';
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error-message');
+            errorEl.textContent = message;
+            errorEl.style.display = 'block';
             
-            // Show JWT container
-            document.getElementById('jwt-container').style.display = 'block';
-            document.getElementById('jwt-display').textContent = session.access_token;
-            
-            // Copy functionality
-            document.getElementById('copy-jwt').addEventListener('click', () => {
-                navigator.clipboard.writeText(session.access_token);
-                alert('JWT token copied to clipboard!');
-            });
-            
-            // Continue button
-            document.getElementById('continue-btn').addEventListener('click', async () => {
-                try {
-                    const { data: userData, error: userError } = await supabase
-                        .from('users')
-                        .select('onboarding_completed')
-                        .eq('id', session.user.id)
-                        .single();
-                    
-                    if (userData?.onboarding_completed) {
-                        window.location.href = 'dashboard.html';
-                    } else {
-                        window.location.href = 'onboarding.html';
-                    }
-                } catch (err) {
-                    console.error('Error checking onboarding status:', err);
+            // Clear error after 5 seconds
+            setTimeout(() => {
+                errorEl.style.display = 'none';
+            }, 5000);
+        }
+
+        // Handle authentication flow
+        async function handleAuthFlow(session) {
+            try {
+                console.log('✅ User authenticated:', session.user.email);
+                
+                // Check if user has completed onboarding
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('onboarding_completed')
+                    .eq('id', session.user.id)
+                    .single();
+                
+                // Check for demo context
+                const demoUsername = sessionStorage.getItem('demo_username');
+                if (demoUsername) {
+                    sessionStorage.removeItem('demo_username');
+                    console.log('🎯 Redirecting to demo analysis for:', demoUsername);
+                    window.location.href = `dashboard.html?demo_analysis=${encodeURIComponent(demoUsername)}`;
+                    return;
+                }
+                
+                // Standard flow
+                if (userData?.onboarding_completed) {
+                    console.log('🎯 Redirecting to dashboard');
+                    window.location.href = 'dashboard.html';
+                } else {
+                    console.log('📝 Redirecting to onboarding');
                     window.location.href = 'onboarding.html';
                 }
-            });
+                
+            } catch (err) {
+                console.error('❌ Error in auth flow:', err);
+                window.location.href = 'onboarding.html';
+            }
         }
 
         // Check for existing session on page load
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🔍 Checking existing session...');
-            console.log('🔍 Is callback URL?', isCallback);
+            console.log('🔍 Checking authentication state...');
             
-            // If this is a magic link callback, wait for auth to complete
-            if (isCallback) {
-                console.log('⏳ Magic link callback detected, waiting for auth...');
-                await new Promise(resolve => setTimeout(resolve, 3000));
+            checkDemoContext();
+            
+            // Check if this is a magic link callback
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const accessToken = hashParams.get('access_token');
+            
+            if (accessToken) {
+                console.log('🔗 Magic link detected, processing...');
+                showProcessing();
+                
+                // Wait for Supabase to process the authentication
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Clean up URL
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                }
             }
             
+            // Check for existing session
             const { data: { session }, error } = await supabase.auth.getSession();
             
             if (session) {
-                console.log('✅ User logged in successfully');
-                displayJWT(session);
-            } else if (!isCallback) {
-                console.log('ℹ️ No session found, showing login form');
-                // Only show login form if this isn't a callback
-                document.getElementById('auth-form-container').style.display = 'block';
+                console.log('✅ Existing session found');
+                await handleAuthFlow(session);
+            } else {
+                console.log('ℹ️ No session found, showing auth form');
+                showAuthForm();
             }
         });
 
@@ -275,55 +563,89 @@
             
             const email = document.getElementById('email').value.trim();
             const submitBtn = document.getElementById('submit-btn');
+            const emailInput = document.getElementById('email');
+            
+            // Clear previous errors
+            document.getElementById('error-message').style.display = 'none';
+            emailInput.classList.remove('error');
             
             if (!email) {
-                alert('Please enter your email address.');
+                emailInput.classList.add('error');
+                showError('Please enter your email address');
+                return;
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                emailInput.classList.add('error');
+                showError('Please enter a valid email address');
                 return;
             }
 
             // Show loading state
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<div class="loading"><div class="spinner"></div> Sending...</div>';
+            submitBtn.classList.add('loading');
 
             try {
-                console.log('📧 Sending magic link to:', email);
+                console.log('📧 Sending secure login link to:', email);
                 
-                // Send magic link that redirects back to this same page
+                // Build redirect URL with demo context if present
+                let redirectUrl = `${window.location.origin}/auth.html`;
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('demo')) {
+                    redirectUrl += `?demo=${encodeURIComponent(urlParams.get('demo'))}`;
+                }
+                
                 const { error } = await supabase.auth.signInWithOtp({
                     email,
                     options: {
-                        emailRedirectTo: window.location.origin + '/auth.html',
+                        emailRedirectTo: redirectUrl,
                         shouldCreateUser: true
                     }
                 });
 
                 if (error) throw error;
 
-                console.log('✅ Magic link sent successfully');
-
-                // Show success message
-                document.getElementById('auth-form-container').style.display = 'none';
-                document.getElementById('auth-success').style.display = 'block';
-                document.getElementById('email-sent').textContent = email;
+                console.log('✅ Secure login link sent successfully');
+                showSuccess(email);
 
             } catch (err) {
-                console.error('❌ Auth error:', err);
-                alert('Error: ' + err.message);
+                console.error('❌ Authentication error:', err);
                 
-                // Reset button
+                let errorMessage = 'Unable to send login link. Please try again.';
+                if (err.message.includes('rate limit')) {
+                    errorMessage = 'Too many requests. Please wait a moment before trying again.';
+                } else if (err.message.includes('invalid')) {
+                    errorMessage = 'Invalid email address. Please check and try again.';
+                }
+                
+                showError(errorMessage);
+                emailInput.classList.add('error');
+                
+            } finally {
+                // Reset button state
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Continue with Email';
+                submitBtn.classList.remove('loading');
             }
         });
 
         // Listen for auth state changes
-        supabase.auth.onAuthStateChange((event, session) => {
+        supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('🔄 Auth state changed:', event);
             
             if (event === 'SIGNED_IN' && session) {
                 console.log('✅ User signed in successfully');
-                displayJWT(session);
+                await handleAuthFlow(session);
+            } else if (event === 'SIGNED_OUT') {
+                console.log('👋 User signed out');
+                showAuthForm();
             }
+        });
+
+        // Handle browser back/forward navigation
+        window.addEventListener('popstate', () => {
+            checkDemoContext();
         });
     </script>
 </body>
