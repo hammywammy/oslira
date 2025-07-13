@@ -510,14 +510,9 @@
             }
 
             async initializeSupabase() {
-                // Check if config loading failed
-                if (window.configLoadFailed) {
-                    throw new Error('Configuration loading failed');
-                }
-
-                const config = this.getConfiguration();
+                const config = await this.getConfiguration();
                 
-                if (!config.supabaseUrl || !config.supabaseKey) {
+                if (!config.supabaseUrl || !config.supabaseAnonKey) {
                     throw new Error('Missing Supabase configuration');
                 }
 
@@ -525,30 +520,42 @@
                     throw new Error('Supabase client library not loaded');
                 }
 
-                this.supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
+                this.supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
                 
                 // Set up auth state listener
                 this.supabase.auth.onAuthStateChange(this.handleAuthStateChange.bind(this));
             }
 
-            getConfiguration() {
-                // Priority: Window variables (set by hosting platform) > Config object
-                const supabaseUrl = 
-                    window.SUPABASE_URL || 
-                    window.CONFIG?.supabaseUrl;
-                
-                const supabaseKey = 
-                    window.SUPABASE_ANON_KEY ||
-                    window.CONFIG?.supabaseKey;
-
-                const workerUrl = 
-                    window.WORKER_URL;
-
-                return { 
-                    supabaseUrl, 
-                    supabaseKey, 
-                    workerUrl 
-                };
+            async getConfiguration() {
+                // Try to get config from edge function
+                try {
+                    const response = await fetch('/api/config');
+                    if (!response.ok) {
+                        throw new Error(`Config API returned ${response.status}`);
+                    }
+                    
+                    const config = await response.json();
+                    
+                    if (config.error) {
+                        throw new Error(config.error);
+                    }
+                    
+                    return {
+                        supabaseUrl: config.supabaseUrl,
+                        supabaseAnonKey: config.supabaseAnonKey,
+                        workerUrl: config.workerUrl
+                    };
+                    
+                } catch (error) {
+                    console.error('Failed to load config from edge function:', error);
+                    
+                    // Fallback to window variables (for local development)
+                    return {
+                        supabaseUrl: window.SUPABASE_URL,
+                        supabaseAnonKey: window.SUPABASE_ANON_KEY,
+                        workerUrl: window.WORKER_URL
+                    };
+                }
             }
 
             checkDemoContext() {
