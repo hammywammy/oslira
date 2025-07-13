@@ -9,7 +9,3 @@
 [[edge_functions]]
   path = "/api/*"
   function = "auth"
-
-[[edge_functions]]
-  path = "/api/config"
-  function = "config"
