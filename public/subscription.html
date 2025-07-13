@@ -41,11 +41,10 @@
             border-radius: 4px;
         }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-gradient);
-            min-height: 100vh;
-        }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-display: swap;
+}
 
         .skip-nav {
             position: absolute;
@@ -306,6 +305,7 @@
             border-radius: 16px;
             padding: 32px;
             position: relative;
+            padding-top: 40px;
             transition: all 0.3s ease;
             overflow: hidden;
         }
@@ -340,19 +340,21 @@
             background: linear-gradient(135deg, #F0FDF9, #F0F9FF);
         }
 
-        .popular-badge, .current-badge {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            padding: 6px 20px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
+.popular-badge, .current-badge {
+    position: absolute;
+    top: -8px; /* Adjust positioning */
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    padding: 8px 16px; /* Increase padding */
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap; /* Prevent text wrapping */
+    z-index: 10; /* Ensure badges appear above other elements */
+}
 
         .popular-badge {
             background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple));
@@ -956,7 +958,7 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 
-    <script>
+<script>
 // Global state
 let supabase = null;
 let currentUser = null;
@@ -979,16 +981,20 @@ function setupEventListeners() {
     });
 
     // Manage billing button
-    document.getElementById('manage-billing-btn').addEventListener('click', manageBilling);
+    document.getElementById('manage-billing-btn').addEventListener('click', function(e) {
+        e.preventDefault();
+        manageBilling();
+    });
 
     // Plan subscription buttons
     document.querySelectorAll('.card-button').forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
             const card = this.closest('.pricing-card');
             const plan = card.getAttribute('data-plan');
             const priceText = card.querySelector('.card-price').textContent;
             const price = parseInt(priceText.replace(/[^0-9]/g, ''));
-            subscribeToplan(plan, price);
+            subscribeToplan(plan, price, this); // Pass button reference
         });
     });
 }
@@ -1029,6 +1035,7 @@ async function initializePage() {
         handleUrlParams();
 
     } catch (error) {
+        console.error('Initialization error:', error);
         showMessage(`Initialization failed: ${error.message}`, 'error');
     }
 }
@@ -1052,6 +1059,13 @@ async function fetchConfig() {
             throw new Error('Invalid configuration received from API');
         }
 
+        // Log config for debugging (remove in production)
+        console.log('Config loaded:', {
+            hasSupabase: !!configData.supabaseUrl,
+            hasStripe: !!configData.stripePublishableKey,
+            hasWorker: !!configData.workerUrl
+        });
+
         return configData;
 
     } catch (error) {
@@ -1074,6 +1088,7 @@ async function checkAuth() {
         document.getElementById('user-email').textContent = currentUser.email;
         
     } catch (err) {
+        console.error('Auth check failed:', err);
         window.location.href = 'auth.html';
     }
 }
@@ -1185,21 +1200,24 @@ function updatePricingCards(currentPlan) {
         const cardPlan = card.getAttribute('data-plan');
         const button = card.querySelector('.card-button');
         
+        // Remove existing badges
+        const existingBadge = card.querySelector('.current-badge');
+        if (existingBadge) existingBadge.remove();
+        
         if (cardPlan === currentPlan) {
             card.classList.add('current-plan-card');
-            if (!card.querySelector('.current-badge')) {
-                const badge = document.createElement('div');
-                badge.className = 'current-badge';
-                badge.textContent = 'Current Plan';
-                card.appendChild(badge);
-            }
+            
+            // Add current plan badge
+            const badge = document.createElement('div');
+            badge.className = 'current-badge';
+            badge.textContent = 'Current Plan';
+            card.appendChild(badge);
+            
             button.textContent = 'Current Plan';
             button.classList.add('current');
             button.disabled = true;
         } else {
             card.classList.remove('current-plan-card');
-            const badge = card.querySelector('.current-badge');
-            if (badge) badge.remove();
             
             button.classList.remove('current');
             button.disabled = false;
@@ -1213,90 +1231,33 @@ function updatePricingCards(currentPlan) {
     });
 }
 
-// Load billing history
+// Load billing history (simplified for now)
 async function loadBillingHistory() {
-    try {
-        const { data: invoices, error } = await supabase
-            .from('billing_history')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false })
-            .limit(10);
-        
-        const historyTable = document.getElementById('billing-history');
-        
-        if (error) {
-            console.warn('Billing history not accessible:', error);
-            historyTable.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        No billing history yet. Subscribe to a plan to see your invoices here.
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        if (invoices && invoices.length > 0) {
-            historyTable.innerHTML = invoices.map(invoice => {
-                const date = new Date(invoice.created_at).toLocaleDateString();
-                const amount = `$${(invoice.amount / 100).toFixed(2)}`;
-                const status = invoice.status || 'pending';
-                
-                let statusClass = 'status-pending';
-                if (status === 'paid') statusClass = 'status-paid';
-                if (status === 'failed') statusClass = 'status-failed';
-                
-                return `
-                    <tr>
-                        <td>${date}</td>
-                        <td>${invoice.description || 'Monthly subscription'}</td>
-                        <td>${amount}</td>
-                        <td><span class="status-badge ${statusClass}">${status}</span></td>
-                        <td>
-                            ${invoice.invoice_url ? 
-                                `<a href="${invoice.invoice_url}" target="_blank" style="color: var(--primary-blue);">View</a>` : 
-                                '-'
-                            }
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        } else {
-            historyTable.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        No billing history yet. Subscribe to a plan to see your invoices here.
-                    </td>
-                </tr>
-            `;
-        }
-        
-    } catch (err) {
-        console.error('Error loading billing history:', err);
-        document.getElementById('billing-history').innerHTML = `
-            <tr>
-                <td colspan="5" style="text-align: center; padding: 40px; color: var(--warning);">
-                    Unable to load billing history
-                </td>
-            </tr>
-        `;
-    }
+    const historyTable = document.getElementById('billing-history');
+    historyTable.innerHTML = `
+        <tr>
+            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                No billing history yet. Subscribe to a plan to see your invoices here.
+            </td>
+        </tr>
+    `;
 }
 
-// Subscribe to plan
-async function subscribeToplan(plan, price) {
+// Subscribe to plan - CORRECTED VERSION
+async function subscribeToplan(plan, price, buttonElement) {
     if (plan === 'enterprise') {
-        window.open('mailto:sales@oslira.com?subject=Enterprise Plan Inquiry', '_blank');
+        window.open('mailto:sales@oslira.com?subject=Enterprise Plan Inquiry&body=Hi, I\'m interested in the Enterprise plan for Oslira. Please contact me to discuss pricing and features.', '_blank');
         return;
     }
 
+    const button = buttonElement;
+    const originalText = button.textContent;
+    
     try {
-        const button = event.target;
-        const originalText = button.textContent;
         button.textContent = '🔄 Processing...';
         button.disabled = true;
 
+        // Check authentication
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError || !session) {
             showMessage('Please log in to subscribe', 'error');
@@ -1304,58 +1265,63 @@ async function subscribeToplan(plan, price) {
             return;
         }
 
-        const productCodes = {
-            starter: 'oslira_starter_29',
-            growth: 'oslira_growth_79', 
-            professional: 'oslira_professional_199'
+        // Use your actual Stripe Price IDs
+        const priceIds = {
+            starter: 'price_1234567890', // Replace with your actual Stripe Price ID
+            growth: 'price_0987654321',   // Replace with your actual Stripe Price ID
+            professional: 'price_1122334455' // Replace with your actual Stripe Price ID
         };
 
-        const productCode = productCodes[plan];
-        if (!productCode) {
-            throw new Error('Invalid plan selected');
+        const priceId = priceIds[plan];
+        if (!priceId) {
+            throw new Error('Price ID not configured for plan: ' + plan);
         }
 
-        const response = await fetch(`${config.workerUrl}/create-subscription`, {
+        // Create checkout session
+        const response = await fetch(`${config.workerUrl}/billing/create-checkout-session`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                product_code: productCode,
-                plan_name: plan,
+                price_id: priceId,
                 customer_email: session.user.email,
-                trial_days: 7,
-                success_url: `${window.location.origin}/subscription.html?success=true`,
+                success_url: `${window.location.origin}/subscription.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${window.location.origin}/subscription.html?canceled=true`,
                 metadata: {
                     user_id: session.user.id,
-                    plan,
-                    price: price.toString(),
-                    product_code: productCode
-                }
+                    plan: plan
+                },
+                trial_period_days: 7
             })
         });
 
-        const data = await response.json();
-        
         if (!response.ok) {
-            throw new Error(data.error || 'Failed to create subscription');
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
         }
 
+        const data = await response.json();
+        
+        if (!data.url) {
+            throw new Error('No checkout URL received from server');
+        }
+
+        // Redirect to Stripe Checkout
         window.location.href = data.url;
 
     } catch (err) {
         console.error('Subscription error:', err);
         showMessage('Subscription failed: ' + err.message, 'error');
         
-        const button = event.target;
-        button.textContent = plan === 'enterprise' ? 'Contact Sales' : 'Start Free Trial';
+        // Reset button
+        button.textContent = originalText;
         button.disabled = false;
     }
 }
 
-// Manage billing
+// Manage billing - CORRECTED VERSION
 async function manageBilling() {
     try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -1364,24 +1330,30 @@ async function manageBilling() {
             return;
         }
 
-        const response = await fetch(`${config.workerUrl}/create-portal-session`, {
+        const response = await fetch(`${config.workerUrl}/billing/create-portal-session`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                return_url: window.location.href,
-                customer_email: session.user.email
+                customer_email: session.user.email,
+                return_url: window.location.href
             })
         });
 
-        const data = await response.json();
-        
         if (!response.ok) {
-            throw new Error(data.error || 'Failed to access billing portal');
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
         }
 
+        const data = await response.json();
+        
+        if (!data.url) {
+            throw new Error('No portal URL received from server');
+        }
+
+        // Redirect to Stripe Customer Portal
         window.location.href = data.url;
 
     } catch (err) {
@@ -1429,9 +1401,11 @@ function showMessage(text, type = 'success') {
 
 // Logout function
 function logout() {
-    supabase.auth.signOut().then(() => {
-        window.location.href = 'auth.html';
-    });
+    if (supabase) {
+        supabase.auth.signOut().then(() => {
+            window.location.href = 'auth.html';
+        });
+    }
 }
 
 // Listen for auth changes
