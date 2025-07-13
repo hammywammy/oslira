@@ -577,7 +577,10 @@
                 console.log('✅ User authenticated:', session.user.email);
                 
                 // Clear processing timeout
-                if (authTimeout) clearTimeout(authTimeout);
+                if (authTimeout) {
+                    clearTimeout(authTimeout);
+                    authTimeout = null;
+                }
                 
                 // Check if user has completed onboarding
                 const { data: userData, error } = await supabase
@@ -591,17 +594,17 @@
                 if (demoUsername) {
                     sessionStorage.removeItem('demo_username');
                     console.log('🎯 Redirecting to demo analysis for:', demoUsername);
-                    window.location.href = `dashboard.html?demo_analysis=${encodeURIComponent(demoUsername)}`;
+                    window.location.replace(`dashboard.html?demo_analysis=${encodeURIComponent(demoUsername)}`);
                     return;
                 }
                 
                 // Standard flow
                 if (userData?.onboarding_completed) {
                     console.log('🎯 Redirecting to dashboard');
-                    window.location.href = 'dashboard.html';
+                    window.location.replace('dashboard.html');
                 } else {
                     console.log('📝 Redirecting to onboarding');
-                    window.location.href = 'onboarding.html';
+                    window.location.replace('onboarding.html');
                 }
                 
             } catch (err) {
@@ -610,7 +613,7 @@
                 // If onboarding check fails, go to onboarding anyway
                 if (err.message.includes('not found') || err.message.includes('users')) {
                     console.log('📝 User not in database, redirecting to onboarding');
-                    window.location.href = 'onboarding.html';
+                    window.location.replace('onboarding.html');
                 } else {
                     showError('There was a problem accessing your account. Please try again.');
                 }
@@ -777,10 +780,24 @@
         supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('🔄 Auth state changed:', event);
             
-            if (event === 'SIGNED_IN' && session && !processingAuth) {
+            if (event === 'SIGNED_IN' && session) {
                 console.log('✅ User signed in via auth state change');
-                showProcessing();
-                await handleAuthFlow(session);
+                
+                // Don't show processing if we're already processing
+                if (!processingAuth) {
+                    showProcessing();
+                }
+                
+                // Add a small delay to ensure UI updates
+                setTimeout(async () => {
+                    try {
+                        await handleAuthFlow(session);
+                    } catch (err) {
+                        console.error('❌ Error in auth state change handler:', err);
+                        showError('Authentication completed but there was an error accessing your account. Please try again.');
+                    }
+                }, 500);
+                
             } else if (event === 'SIGNED_OUT') {
                 console.log('👋 User signed out');
                 showAuthForm();
