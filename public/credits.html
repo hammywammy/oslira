@@ -1287,33 +1287,38 @@
                     return;
                 }
 
-                // Map plan to Stripe price ID
-                const priceIds = {
-                    starter: 'price_starter_monthly',
-                    growth: 'price_growth_monthly',
-                    professional: 'price_professional_monthly'
+                // Map plan to your Stripe product codes
+                const productCodes = {
+                    starter: 'oslira_starter_29',
+                    growth: 'oslira_growth_79', 
+                    professional: 'oslira_professional_199',
+                    enterprise: 'oslira_enterprise_499'
                 };
 
-                const priceId = priceIds[plan];
-                if (!priceId) {
+                const productCode = productCodes[plan];
+                if (!productCode) {
                     throw new Error('Invalid plan selected');
                 }
 
                 // Create subscription via your worker
-                const response = await fetch(`${WORKER_URL}/create-subscription`, {
+                const response = await fetch(`${config.workerUrl}/create-subscription`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${session.access_token}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        price_id: priceId,
+                        product_code: productCode,
+                        plan_name: plan,
                         customer_email: session.user.email,
                         trial_days: 7, // 7-day free trial
+                        success_url: `${window.location.origin}/subscription.html?success=true`,
+                        cancel_url: `${window.location.origin}/subscription.html?canceled=true`,
                         metadata: {
                             user_id: session.user.id,
                             plan,
-                            price: price.toString()
+                            price: price.toString(),
+                            product_code: productCode
                         }
                     })
                 });
@@ -1347,14 +1352,15 @@
                     return;
                 }
 
-                const response = await fetch(`${WORKER_URL}/create-portal-session`, {
+                const response = await fetch(`${config.workerUrl}/create-portal-session`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${session.access_token}`,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        return_url: window.location.href
+                        return_url: window.location.href,
+                        customer_email: session.user.email
                     })
                 });
 
