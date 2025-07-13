@@ -1031,6 +1031,32 @@
         </section>
     </main>
 
+        <!-- Support Contact Widget -->
+    <div class="support-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 999;">
+        <button class="support-btn" onclick="showSupportModal()" style="background: linear-gradient(135deg, #2D6CDF, #8A6DF1); color: white; border: none; padding: 12px 20px; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3); font-weight: 600;">
+            💬 Need Help?
+        </button>
+    </div>
+
+    <!-- Support Modal -->
+    <div class="modal" id="supportModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('supportModal')">×</button>
+            <h3>Contact Support</h3>
+            <div class="support-options" style="display: grid; gap: 16px; margin-top: 20px;">
+                <button onclick="contactSupport('support')" style="background: #F5F9FF; border: 2px solid #2D6CDF; color: #2D6CDF; padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    🎧 General Support
+                </button>
+                <button onclick="contactSupport('billing')" style="background: #F5F9FF; border: 2px solid #2D6CDF; color: #2D6CDF; padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    💳 Billing Help
+                </button>
+                <button onclick="contactSupport('security')" style="background: #F5F9FF; border: 2px solid #2D6CDF; color: #2D6CDF; padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    🔒 Security Issue
+                </button>
+            </div>
+        </div>
+    </div>
+
 <!-- Replace your current AI Insights section with this -->
 <section class="insights">
     <div class="section-header">
