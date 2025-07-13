@@ -786,9 +786,26 @@
         </section>
     </main>
 
+<script
+  src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js"
+  crossorigin="anonymous"
+></script>
+
+<!-- Your existing scripts -->
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+    // Initialize Sentry (add this right after the scripts)
+    Sentry.init({
+        environment: 'production',
+        beforeSend(event) {
+            // Filter out network errors to save quota
+            if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
+                return null;
+            }
+            return event;
+        }
+    });
     const supabaseUrl = CONFIG.supabaseUrl;
     const supabaseKey = CONFIG.supabaseKey;
     const WORKER_URL = CONFIG.workerUrl;
