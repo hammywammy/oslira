@@ -5,16 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
-                   script-src 'self' https://cdn.jsdelivr.net;
+                   script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
                    style-src 'self' 'unsafe-inline';
                    connect-src 'self' https://*.supabase.co https://*.workers.dev;
                    img-src 'self' data: https: https://*.weserv.nl;
                    frame-src https://js.stripe.com;">
     <title>Dashboard - Oslira</title>
-    <link rel="preload" href="/styles.css" as="style">
-    <link rel="preload" href="/auth-utils.js" as="script">
-    <link rel="preload" href="/assets/oslira-logo.png" as="image">
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <style>
         :root {
             --primary-blue: #2D6CDF;
@@ -970,7 +966,7 @@
             
             <div class="business-selector">
                 <h4>Active Business</h4>
-                <select id="business-select" onchange="switchBusiness()" aria-label="Select active business">
+                <select id="business-select" aria-label="Select active business">
                     <option value="">Select Business...</option>
                 </select>
             </div>
@@ -1029,7 +1025,7 @@
             
             <div class="user-info">
                 <p id="user-email">Loading...</p>
-                <a href="#" onclick="logout()">Sign Out</a>
+                <a href="#" id="logout-link">Sign Out</a>
             </div>
         </aside>
         
@@ -1040,37 +1036,37 @@
                     <p class="header-subtitle">Here's what's happening with your lead generation</p>
                 </div>
                 <div class="header-actions">
-                    <button class="secondary-btn" onclick="showBulkUpload()">
+                    <button class="secondary-btn" id="bulk-upload-btn">
                         📤 Bulk Upload
                     </button>
-                    <button class="primary-btn" onclick="showAnalysisModal()">
+                    <button class="primary-btn" id="research-lead-btn">
                         🔍 Research Lead
                     </button>
                 </div>
             </header>
             
             <div class="action-cards">
-                <div class="action-card" onclick="showAnalysisModal()">
+                <div class="action-card" id="research-action-card">
                     <div class="icon">🎯</div>
                     <h3>Research a Lead</h3>
                     <p>Analyze any Instagram profile with AI-powered insights and get personalized outreach messages</p>
                     <span class="badge">1-2 Credits</span>
                 </div>
                 
-                <div class="action-card" onclick="showBulkUpload()">
+                <div class="action-card" id="bulk-action-card">
                     <div class="icon">📊</div>
                     <h3>Bulk Analysis</h3>
                     <p>Upload a CSV with multiple leads and analyze them all at once with batch processing</p>
                     <span class="badge">Coming Soon</span>
                 </div>
                 
-                <div class="action-card" onclick="location.href='/subscription.html'">
+                <div class="action-card" id="subscription-action-card">
                     <div class="icon">💳</div>
                     <h3>Manage Subscription</h3>
                     <p>Upgrade your plan or manage billing preferences for unlimited lead research</p>
                 </div>
                 
-                <div class="action-card" onclick="exportLeads()">
+                <div class="action-card" id="export-action-card">
                     <div class="icon">📥</div>
                     <h3>Export Data</h3>
                     <p>Download your leads and analysis results in CSV format for external use</p>
@@ -1107,13 +1103,13 @@
                 <div class="section-header">
                     <h2>Recent Lead Activity</h2>
                     <div class="time-filter">
-                        <select id="timeframe-filter" onchange="filterByTimeframe()" aria-label="Filter by timeframe">
+                        <select id="timeframe-filter" aria-label="Filter by timeframe">
                             <option value="today">Today</option>
                             <option value="week">This Week</option>
                             <option value="month" selected>This Month</option>
                             <option value="all">All Time</option>
                         </select>
-                        <select id="activity-filter" onchange="filterActivity()" aria-label="Filter by activity type">
+                        <select id="activity-filter" aria-label="Filter by activity type">
                             <option value="all">All Types</option>
                             <option value="light">Light Analysis</option>
                             <option value="deep">Deep Analysis</option>
@@ -1122,7 +1118,7 @@
                             <option value="recent">Most Recent</option>
                             <option value="oldest">Oldest First</option>
                         </select>
-                        <button class="btn-small" onclick="refreshActivity()">🔄 Refresh</button>
+                        <button class="btn-small" id="refresh-activity-btn">🔄 Refresh</button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -1152,7 +1148,7 @@
             <section class="insights">
                 <div class="section-header">
                     <h2>🧠 AI Insights & Recommendations</h2>
-                    <button class="btn-small" onclick="generateInsights()">🔄 Refresh Insights</button>
+                    <button class="btn-small" id="generate-insights-btn">🔄 Refresh Insights</button>
                 </div>
                 
                 <div class="loading-insights" id="loading-insights" style="display: none;">
@@ -1166,7 +1162,7 @@
                         <div class="insight-icon">🚀</div>
                         <h3>Welcome to Oslira!</h3>
                         <p>Start researching leads to unlock AI-powered insights and recommendations tailored to your data.</p>
-                        <button class="insight-cta" onclick="showAnalysisModal()">Research Your First Lead</button>
+                        <button class="insight-cta" id="welcome-cta-btn">Research Your First Lead</button>
                     </div>
                 </div>
             </section>
@@ -1175,7 +1171,7 @@
 
     <!-- Support Contact Widget -->
     <div class="support-widget">
-        <button class="support-btn" onclick="showSupportModal()">
+        <button class="support-btn" id="support-btn">
             💬 Need Help?
         </button>
     </div>
@@ -1183,16 +1179,16 @@
     <!-- Support Modal -->
     <div class="modal" id="supportModal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('supportModal')">×</button>
+            <button class="modal-close" id="support-modal-close">×</button>
             <h3>Contact Support</h3>
             <div class="support-options" style="display: grid; gap: 16px; margin-top: 20px;">
-                <button onclick="contactSupport('support')" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                <button id="general-support-btn" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                     🎧 General Support
                 </button>
-                <button onclick="contactSupport('billing')" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                <button id="billing-support-btn" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                     💳 Billing Help
                 </button>
-                <button onclick="contactSupport('security')" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                <button id="security-support-btn" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                     🔒 Security Issue
                 </button>
             </div>
@@ -1202,7 +1198,7 @@
     <!-- Lead Details Modal -->
     <div class="modal" id="leadModal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('leadModal')">×</button>
+            <button class="modal-close" id="lead-modal-close">×</button>
             <h3>📋 Lead Details</h3>
             <div id="leadDetails">Loading...</div>
         </div>
@@ -1211,12 +1207,12 @@
     <!-- Analysis Modal -->
     <div class="modal" id="analysisModal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('analysisModal')">×</button>
+            <button class="modal-close" id="analysis-modal-close">×</button>
             <h3>🔍 Research a Lead</h3>
-            <form id="analysisForm" onsubmit="submitAnalysis(event)">
+            <form id="analysisForm">
                 <div class="form-group">
                     <label for="analysis-type">Analysis Type *</label>
-                    <select id="analysis-type" onchange="updateInputField()" required>
+                    <select id="analysis-type" required>
                         <option value="">Select analysis type...</option>
                         <option value="light">⚡ Light Analysis (1 credit) - Basic profile info</option>
                         <option value="deep">🔍 Deep Analysis (2 credits) - Full insights + outreach message</option>
@@ -1248,7 +1244,7 @@
     <!-- Bulk Upload Modal -->
     <div class="modal" id="bulkModal">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('bulkModal')">×</button>
+            <button class="modal-close" id="bulk-modal-close">×</button>
             <h3>📤 Bulk Upload</h3>
             <p style="margin-bottom: 20px; color: var(--text-secondary);">Upload a CSV file with Instagram URLs for batch analysis</p>
             
@@ -1268,10 +1264,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" 
-            crossorigin="anonymous" 
-            onload="initializePage()"
-            onerror="handleSupabaseLoadError()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 
     <script>
         // Global state
@@ -1281,6 +1274,62 @@
         let currentBusiness = null;
         let businessProfiles = [];
         let allLeads = [];
+
+        // Initialize page when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePage();
+            setupEventListeners();
+        });
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Business selector
+            document.getElementById('business-select').addEventListener('change', switchBusiness);
+            
+            // Header buttons
+            document.getElementById('bulk-upload-btn').addEventListener('click', showBulkUpload);
+            document.getElementById('research-lead-btn').addEventListener('click', showAnalysisModal);
+            
+            // Action cards
+            document.getElementById('research-action-card').addEventListener('click', showAnalysisModal);
+            document.getElementById('bulk-action-card').addEventListener('click', showBulkUpload);
+            document.getElementById('subscription-action-card').addEventListener('click', () => location.href='/subscription.html');
+            document.getElementById('export-action-card').addEventListener('click', exportLeads);
+            
+            // Filter controls
+            document.getElementById('timeframe-filter').addEventListener('change', filterByTimeframe);
+            document.getElementById('activity-filter').addEventListener('change', filterActivity);
+            document.getElementById('refresh-activity-btn').addEventListener('click', refreshActivity);
+            
+            // Insights
+            document.getElementById('generate-insights-btn').addEventListener('click', generateInsights);
+            document.getElementById('welcome-cta-btn').addEventListener('click', showAnalysisModal);
+            
+            // Support
+            document.getElementById('support-btn').addEventListener('click', showSupportModal);
+            document.getElementById('general-support-btn').addEventListener('click', () => contactSupport('support'));
+            document.getElementById('billing-support-btn').addEventListener('click', () => contactSupport('billing'));
+            document.getElementById('security-support-btn').addEventListener('click', () => contactSupport('security'));
+            
+            // Modal close buttons
+            document.getElementById('support-modal-close').addEventListener('click', () => closeModal('supportModal'));
+            document.getElementById('lead-modal-close').addEventListener('click', () => closeModal('leadModal'));
+            document.getElementById('analysis-modal-close').addEventListener('click', () => closeModal('analysisModal'));
+            document.getElementById('bulk-modal-close').addEventListener('click', () => closeModal('bulkModal'));
+            
+            // Form handlers
+            document.getElementById('analysisForm').addEventListener('submit', submitAnalysis);
+            document.getElementById('analysis-type').addEventListener('change', updateInputField);
+            
+            // Logout
+            document.getElementById('logout-link').addEventListener('click', logout);
+            
+            // Close modals on outside click
+            window.addEventListener('click', handleModalClick);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
+        }
 
         // Handle Supabase load error
         function handleSupabaseLoadError() {
@@ -1635,6 +1684,79 @@
             }
         }
 
+        // Continue with remaining functions...
+        // [The rest of the JavaScript functions would continue here, but I'll include the key ones]
+
+        // Show analysis modal
+        function showAnalysisModal() {
+            const form = document.getElementById('analysisForm');
+            form.reset();
+            
+            document.getElementById('analysis-type').value = '';
+            document.getElementById('profile-input').value = '';
+            document.getElementById('input-field-container').style.display = 'none';
+            
+            if (currentBusiness) {
+                document.getElementById('business-id').value = currentBusiness.id;
+            }
+            
+            document.getElementById('analysisModal').style.display = 'flex';
+        }
+
+        // Show bulk upload modal
+        function showBulkUpload() {
+            document.getElementById('bulkModal').style.display = 'flex';
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            
+            if (modalId === 'analysisModal') {
+                const form = document.getElementById('analysisForm');
+                form.reset();
+                document.getElementById('analysis-type').value = '';
+                document.getElementById('profile-input').value = '';
+                document.getElementById('input-field-container').style.display = 'none';
+            }
+        }
+
+        // Update input field based on analysis type
+        function updateInputField() {
+            const analysisType = document.getElementById('analysis-type').value;
+            const inputContainer = document.getElementById('input-field-container');
+            const inputField = document.getElementById('profile-input');
+            const inputLabel = document.getElementById('input-label');
+            const inputHelp = document.getElementById('input-help');
+            
+            inputField.value = '';
+            inputField.placeholder = '';
+            
+            if (analysisType) {
+                inputContainer.style.display = 'block';
+                
+                if (analysisType === 'light') {
+                    inputLabel.textContent = 'Instagram Username *';
+                    inputField.placeholder = 'username';
+                    inputHelp.textContent = 'Enter just the username (without @)';
+                    inputHelp.style.color = 'var(--primary-blue)';
+                } else if (analysisType === 'deep') {
+                    inputLabel.textContent = 'Instagram Username *';
+                    inputField.placeholder = 'username';
+                    inputHelp.textContent = 'Enter just the username (without @) - we\'ll do the FULL DEEP analysis';
+                    inputHelp.style.color = 'var(--accent-teal)';
+                }
+                
+                setTimeout(() => {
+                    inputField.value = '';
+                    inputField.focus();
+                }, 50);
+            } else {
+                inputContainer.style.display = 'none';
+                inputField.value = '';
+            }
+        }
+
         // Load stats
         async function loadStats() {
             try {
@@ -1870,76 +1992,6 @@
                     ` : ''}
                 </div>
             `).join('');
-        }
-
-        // Show analysis modal
-        function showAnalysisModal() {
-            const form = document.getElementById('analysisForm');
-            form.reset();
-            
-            document.getElementById('analysis-type').value = '';
-            document.getElementById('profile-input').value = '';
-            document.getElementById('input-field-container').style.display = 'none';
-            
-            if (currentBusiness) {
-                document.getElementById('business-id').value = currentBusiness.id;
-            }
-            
-            document.getElementById('analysisModal').style.display = 'flex';
-        }
-
-        // Show bulk upload modal
-        function showBulkUpload() {
-            document.getElementById('bulkModal').style.display = 'flex';
-        }
-
-        // Close modal
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-            
-            if (modalId === 'analysisModal') {
-                const form = document.getElementById('analysisForm');
-                form.reset();
-                document.getElementById('analysis-type').value = '';
-                document.getElementById('profile-input').value = '';
-                document.getElementById('input-field-container').style.display = 'none';
-            }
-        }
-
-        // Update input field based on analysis type
-        function updateInputField() {
-            const analysisType = document.getElementById('analysis-type').value;
-            const inputContainer = document.getElementById('input-field-container');
-            const inputField = document.getElementById('profile-input');
-            const inputLabel = document.getElementById('input-label');
-            const inputHelp = document.getElementById('input-help');
-            
-            inputField.value = '';
-            inputField.placeholder = '';
-            
-            if (analysisType) {
-                inputContainer.style.display = 'block';
-                
-                if (analysisType === 'light') {
-                    inputLabel.textContent = 'Instagram Username *';
-                    inputField.placeholder = 'username';
-                    inputHelp.textContent = 'Enter just the username (without @)';
-                    inputHelp.style.color = 'var(--primary-blue)';
-                } else if (analysisType === 'deep') {
-                    inputLabel.textContent = 'Instagram Username *';
-                    inputField.placeholder = 'username';
-                    inputHelp.textContent = 'Enter just the username (without @) - we\'ll do the FULL DEEP analysis';
-                    inputHelp.style.color = 'var(--accent-teal)';
-                }
-                
-                setTimeout(() => {
-                    inputField.value = '';
-                    inputField.focus();
-                }, 50);
-            } else {
-                inputContainer.style.display = 'none';
-                inputField.value = '';
-            }
         }
 
         // Validate username
@@ -2447,7 +2499,7 @@
         });
 
         // Close modals on outside click
-        window.onclick = function(event) {
+        function handleModalClick(event) {
             const modals = document.querySelectorAll('.modal');
             modals.forEach(modal => {
                 if (event.target === modal) {
@@ -2457,7 +2509,7 @@
         }
 
         // Keyboard shortcuts
-        document.addEventListener('keydown', function(event) {
+        function handleKeyboardShortcuts(event) {
             if (event.key === 'Escape') {
                 const openModal = document.querySelector('.modal[style*="flex"]');
                 if (openModal) {
@@ -2469,7 +2521,14 @@
                 event.preventDefault();
                 showAnalysisModal();
             }
-        });
+        }
+
+        // Make functions globally available for onclick handlers
+        window.viewLead = viewLead;
+        window.deleteLead = deleteLead;
+        window.copyText = copyText;
+        window.showAnalysisModal = showAnalysisModal;
+        window.generateInsights = generateInsights;
     </script>
 </body>
 </html>
