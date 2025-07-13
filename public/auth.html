@@ -5,15 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
-                   script-src 'self' https://cdn.jsdelivr.net;
+                   script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
                    style-src 'self' 'unsafe-inline';
                    connect-src 'self' https://*.supabase.co https://*.workers.dev;
                    img-src 'self' data: https:;">
     <title>Sign In - Oslira</title>
-    <link rel="preload" href="/styles.css" as="style">
-    <link rel="preload" href="/auth-utils.js" as="script">
-    <link rel="preload" href="/assets/oslira-logo.png" as="image">
-    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
     <style>
         :root {
             --primary-blue: #2D6CDF;
@@ -316,20 +312,12 @@
         </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" 
-            crossorigin="anonymous" 
-            onload="initializeAuth()"
-            onerror="handleSupabaseLoadError()"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
 
     <script>
         // Global state
         let supabase = null;
         let isLoading = false;
-
-        // Handle Supabase load error
-        function handleSupabaseLoadError() {
-            showError('Failed to load authentication library. Please check your internet connection and try again.');
-        }
 
         // Initialize authentication system
         async function initializeAuth() {
@@ -419,6 +407,7 @@
 
             } catch (error) {
                 // Continue to show login form
+                console.error('Auth check failed:', error);
             }
         }
 
@@ -557,6 +546,11 @@
             document.getElementById('main-card').style.display = 'none';
             document.getElementById('success-card').style.display = 'block';
         }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeAuth();
+        });
 
         // Handle auth state changes
         window.addEventListener('load', () => {
