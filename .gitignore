@@ -8,4 +8,4 @@ node_modules/
 package-lock.json
 
 # Configuration files with sensitive data
-config.js
+config.js 
