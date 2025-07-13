@@ -902,6 +902,18 @@
     
     <main class="main-content">
         <header>
+            <!-- Temporary test button - remove after testing -->
+<button onclick="testSentry()" style="position: fixed; top: 10px; right: 10px; z-index: 9999; background: red; color: white; padding: 10px;">
+    Test Sentry
+</button>
+
+<script>
+function testSentry() {
+    // This will trigger a test error in Sentry
+    Sentry.captureException(new Error('Test error from Oslira dashboard'));
+    alert('Test error sent to Sentry! Check your Sentry dashboard in a few minutes.');
+}
+</script>
             <div>
                 <h1>Welcome back! 👋</h1>
                 <p class="header-subtitle">Here's what's happening with your lead generation</p>
