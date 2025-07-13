@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setup Your AI Outreach Profile - Oslira</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.sentry-cdn.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:;">
     <style>
         * {
             margin: 0;
@@ -44,6 +45,7 @@
             width: 48px;
             height: 48px;
             margin-bottom: 12px;
+            object-fit: contain;
         }
         
         .logo h1 {
@@ -191,6 +193,12 @@
             transition: all 0.2s ease;
             flex: 1;
         }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
         
         .btn-primary {
             background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
@@ -199,7 +207,7 @@
             box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
         }
         
-        .btn-primary:hover {
+        .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(45, 108, 223, 0.4);
         }
@@ -210,7 +218,7 @@
             border: 2px solid #2D6CDF;
         }
         
-        .btn-secondary:hover {
+        .btn-secondary:hover:not(:disabled) {
             background: #2D6CDF;
             color: white;
         }
@@ -236,7 +244,7 @@
         }
         
         .error-message {
-            color: #8A6DF1;
+            color: #EF4444;
             margin-bottom: 20px;
             font-weight: 500;
         }
@@ -302,6 +310,54 @@
             left: 0;
             font-weight: 600;
         }
+
+        /* Field validation states */
+        .field-error {
+            border-color: #EF4444 !important;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+        }
+
+        .field-success {
+            border-color: #10B981 !important;
+        }
+
+        .validation-message {
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .validation-message.error {
+            color: #EF4444;
+            display: block;
+        }
+
+        .validation-message.success {
+            color: #10B981;
+            display: block;
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles */
+        button:focus,
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid #2D6CDF;
+            outline-offset: 2px;
+        }
         
         /* Responsive */
         @media (max-width: 768px) {
@@ -319,6 +375,15 @@
             
             button {
                 width: 100%;
+            }
+
+            .logo h1 {
+                font-size: 24px;
+            }
+
+            .logo img {
+                width: 40px;
+                height: 40px;
             }
         }
     </style>
@@ -345,7 +410,7 @@
         <div class="onboarding-card error-state">
             <h2>Authentication Error</h2>
             <p class="error-message" id="errorMessage">Unable to verify your session.</p>
-            <button class="btn-primary" onclick="window.location.href='auth.html'">Back to Login</button>
+            <button class="btn-primary" id="back-to-login-btn">Back to Login</button>
         </div>
     </div>
     
@@ -379,8 +444,15 @@
                             Business Name
                             <div class="label-help">Your company or personal brand name</div>
                         </label>
-                        <input type="text" id="business-name" required placeholder="e.g., TechFlow Solutions" />
-                        <div class="input-example">This will appear in your outreach messages</div>
+                        <input 
+                            type="text" 
+                            id="business-name" 
+                            required 
+                            placeholder="e.g., TechFlow Solutions"
+                            aria-describedby="business-name-help business-name-error"
+                        />
+                        <div class="input-example" id="business-name-help">This will appear in your outreach messages</div>
+                        <div class="validation-message" id="business-name-error"></div>
                     </div>
                     
                     <div class="form-group">
@@ -388,12 +460,19 @@
                             Your Industry/Niche
                             <div class="label-help">What sector do you operate in?</div>
                         </label>
-                        <input type="text" id="business-niche" required placeholder="e.g., SaaS, E-commerce, Consulting" />
-                        <div class="input-example">Helps AI understand your market positioning</div>
+                        <input 
+                            type="text" 
+                            id="business-niche" 
+                            required 
+                            placeholder="e.g., SaaS, E-commerce, Consulting"
+                            aria-describedby="business-niche-help business-niche-error"
+                        />
+                        <div class="input-example" id="business-niche-help">Helps AI understand your market positioning</div>
+                        <div class="validation-message" id="business-niche-error"></div>
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-primary" onclick="nextStep(2)">Continue</button>
+                        <button type="button" class="btn-primary" id="step-1-next">Continue</button>
                     </div>
                 </div>
 
@@ -410,8 +489,15 @@
                             Target Audience
                             <div class="label-help">Who is your ideal customer?</div>
                         </label>
-                        <input type="text" id="target-audience" required placeholder="e.g., SaaS founders, E-commerce CMOs, Tech VPs" />
-                        <div class="input-example">Be specific about roles, company types, or demographics</div>
+                        <input 
+                            type="text" 
+                            id="target-audience" 
+                            required 
+                            placeholder="e.g., SaaS founders, E-commerce CMOs, Tech VPs"
+                            aria-describedby="target-audience-help target-audience-error"
+                        />
+                        <div class="input-example" id="target-audience-help">Be specific about roles, company types, or demographics</div>
+                        <div class="validation-message" id="target-audience-error"></div>
                     </div>
                     
                     <div class="form-group">
@@ -419,13 +505,19 @@
                             What Problems Do They Have?
                             <div class="label-help">What challenges or pain points do they face?</div>
                         </label>
-                        <textarea id="target-problems" required placeholder="e.g., Struggling to scale their sales team, manual lead qualification taking too much time, low response rates from cold outreach"></textarea>
-                        <div class="input-example">This helps AI craft messages that resonate with their actual needs</div>
+                        <textarea 
+                            id="target-problems" 
+                            required 
+                            placeholder="e.g., Struggling to scale their sales team, manual lead qualification taking too much time, low response rates from cold outreach"
+                            aria-describedby="target-problems-help target-problems-error"
+                        ></textarea>
+                        <div class="input-example" id="target-problems-help">This helps AI craft messages that resonate with their actual needs</div>
+                        <div class="validation-message" id="target-problems-error"></div>
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="previousStep(1)">Back</button>
-                        <button type="button" class="btn-primary" onclick="nextStep(3)">Continue</button>
+                        <button type="button" class="btn-secondary" id="step-2-back">Back</button>
+                        <button type="button" class="btn-primary" id="step-2-next">Continue</button>
                     </div>
                 </div>
 
@@ -442,13 +534,19 @@
                             How Do You Solve Their Problems?
                             <div class="label-help">What specific value or outcome do you provide?</div>
                         </label>
-                        <textarea id="value-proposition" required placeholder="e.g., We help SaaS companies automate their lead qualification process, reducing manual work by 80% while increasing qualified leads by 3x through AI-powered prospect analysis"></textarea>
-                        <div class="input-example">Focus on specific outcomes and benefits</div>
+                        <textarea 
+                            id="value-proposition" 
+                            required 
+                            placeholder="e.g., We help SaaS companies automate their lead qualification process, reducing manual work by 80% while increasing qualified leads by 3x through AI-powered prospect analysis"
+                            aria-describedby="value-proposition-help value-proposition-error"
+                        ></textarea>
+                        <div class="input-example" id="value-proposition-help">Focus on specific outcomes and benefits</div>
+                        <div class="validation-message" id="value-proposition-error"></div>
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="previousStep(2)">Back</button>
-                        <button type="button" class="btn-primary" onclick="nextStep(4)">Continue</button>
+                        <button type="button" class="btn-secondary" id="step-3-back">Back</button>
+                        <button type="button" class="btn-primary" id="step-3-next">Continue</button>
                     </div>
                 </div>
 
@@ -465,7 +563,11 @@
                             Your Communication Style
                             <div class="label-help">How do you typically reach out to prospects?</div>
                         </label>
-                        <select id="communication-style" required>
+                        <select 
+                            id="communication-style" 
+                            required
+                            aria-describedby="communication-style-error"
+                        >
                             <option value="">Choose your style...</option>
                             <option value="professional-formal">Professional & Formal</option>
                             <option value="friendly-casual">Friendly & Casual</option>
@@ -473,6 +575,7 @@
                             <option value="consultative-helpful">Consultative & Helpful</option>
                             <option value="data-driven-analytical">Data-Driven & Analytical</option>
                         </select>
+                        <div class="validation-message" id="communication-style-error"></div>
                     </div>
                     
                     <div class="form-group">
@@ -480,13 +583,17 @@
                             Sample Message (Optional)
                             <div class="label-help">Share an example of how you typically reach out</div>
                         </label>
-                        <textarea id="message-example" placeholder="e.g., Hi John, saw your recent post about scaling challenges. I help SaaS founders like you automate their sales process without adding headcount. Worth a quick chat?"></textarea>
-                        <div class="input-example">This helps AI learn your specific voice and approach</div>
+                        <textarea 
+                            id="message-example" 
+                            placeholder="e.g., Hi John, saw your recent post about scaling challenges. I help SaaS founders like you automate their sales process without adding headcount. Worth a quick chat?"
+                            aria-describedby="message-example-help"
+                        ></textarea>
+                        <div class="input-example" id="message-example-help">This helps AI learn your specific voice and approach</div>
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="previousStep(3)">Back</button>
-                        <button type="button" class="btn-primary" onclick="nextStep(5)">Continue</button>
+                        <button type="button" class="btn-secondary" id="step-4-back">Back</button>
+                        <button type="button" class="btn-primary" id="step-4-next">Continue</button>
                     </div>
                 </div>
 
@@ -503,7 +610,11 @@
                             Ideal Outcome from Outreach
                             <div class="label-help">What happens when outreach works perfectly?</div>
                         </label>
-                        <select id="success-outcome" required>
+                        <select 
+                            id="success-outcome" 
+                            required
+                            aria-describedby="success-outcome-error"
+                        >
                             <option value="">Choose primary outcome...</option>
                             <option value="book-demo">Book a product demo</option>
                             <option value="schedule-call">Schedule discovery call</option>
@@ -512,6 +623,7 @@
                             <option value="partnership-discussion">Discuss partnership opportunities</option>
                             <option value="custom">Other (specify below)</option>
                         </select>
+                        <div class="validation-message" id="success-outcome-error"></div>
                     </div>
                     
                     <div class="form-group">
@@ -519,13 +631,20 @@
                             Your Typical Call-to-Action
                             <div class="label-help">How do you typically ask for the next step?</div>
                         </label>
-                        <input type="text" id="call-to-action" required placeholder="e.g., Worth a 15-min chat?, Open to a quick call?, Interested in seeing how this works?" />
-                        <div class="input-example">Keep it conversational and low-pressure</div>
+                        <input 
+                            type="text" 
+                            id="call-to-action" 
+                            required 
+                            placeholder="e.g., Worth a 15-min chat?, Open to a quick call?, Interested in seeing how this works?"
+                            aria-describedby="call-to-action-help call-to-action-error"
+                        />
+                        <div class="input-example" id="call-to-action-help">Keep it conversational and low-pressure</div>
+                        <div class="validation-message" id="call-to-action-error"></div>
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="previousStep(4)">Back</button>
-                        <button type="submit" class="btn-primary">Complete Setup</button>
+                        <button type="button" class="btn-secondary" id="step-5-back">Back</button>
+                        <button type="submit" class="btn-primary" id="complete-setup-btn">Complete Setup</button>
                     </div>
                 </div>
             </form>
@@ -539,41 +658,123 @@
         </div>
     </div>
 
-<script
-  src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js"
-  crossorigin="anonymous"
-></script>
+    <!-- Configuration -->
+    <script>
+        window.CONFIG = {
+            supabaseUrl: 'your-supabase-url',
+            supabaseKey: 'your-supabase-key',
+            workerUrl: 'your-worker-url'
+        };
+    </script>
 
-<!-- Your existing scripts -->
-<script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    // Initialize Sentry (add this right after the scripts)
-    Sentry.init({
-        environment: 'production',
-        beforeSend(event) {
-            // Filter out network errors to save quota
-            if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
-                return null;
-            }
-            return event;
+    <!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js" crossorigin="anonymous"></script>
+
+    <script>
+        // Initialize Sentry if available
+        if (typeof Sentry !== 'undefined') {
+            Sentry.init({
+                environment: 'production',
+                beforeSend(event) {
+                    // Filter out network errors to save quota
+                    if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
+                        return null;
+                    }
+                    return event;
+                }
+            });
         }
-    });
-    const supabaseUrl = CONFIG.supabaseUrl;
-    const supabaseKey = CONFIG.supabaseKey;
-    const WORKER_URL = CONFIG.workerUrl;
-    
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        // Application state
         let currentStep = 1;
         let currentUser = null;
+        let supabase = null;
 
+        // Initialize application
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 Oslira onboarding loaded');
+            initializeSupabase();
+            setupEventListeners();
             await checkAuth();
         });
 
+        // Initialize Supabase
+        function initializeSupabase() {
+            if (window.CONFIG && window.supabase) {
+                supabase = window.supabase.createClient(
+                    window.CONFIG.supabaseUrl, 
+                    window.CONFIG.supabaseKey
+                );
+            } else {
+                console.error('❌ Configuration or Supabase not available');
+            }
+        }
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Step navigation buttons
+            document.getElementById('step-1-next')?.addEventListener('click', () => handleStepNavigation(2));
+            document.getElementById('step-2-back')?.addEventListener('click', () => handleStepNavigation(1));
+            document.getElementById('step-2-next')?.addEventListener('click', () => handleStepNavigation(3));
+            document.getElementById('step-3-back')?.addEventListener('click', () => handleStepNavigation(2));
+            document.getElementById('step-3-next')?.addEventListener('click', () => handleStepNavigation(4));
+            document.getElementById('step-4-back')?.addEventListener('click', () => handleStepNavigation(3));
+            document.getElementById('step-4-next')?.addEventListener('click', () => handleStepNavigation(5));
+            document.getElementById('step-5-back')?.addEventListener('click', () => handleStepNavigation(4));
+
+            // Form submission
+            document.getElementById('onboarding-form')?.addEventListener('submit', handleFormSubmission);
+
+            // Back to login button
+            document.getElementById('back-to-login-btn')?.addEventListener('click', () => {
+                window.location.href = 'auth.html';
+            });
+
+            // Real-time validation
+            setupFieldValidation();
+
+            // Keyboard navigation
+            document.addEventListener('keydown', handleKeyboardNavigation);
+        }
+
+        // Setup real-time field validation
+        function setupFieldValidation() {
+            const fields = [
+                'business-name', 'business-niche', 'target-audience', 
+                'target-problems', 'value-proposition', 'communication-style',
+                'success-outcome', 'call-to-action'
+            ];
+
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.addEventListener('blur', () => validateField(fieldId));
+                    field.addEventListener('input', () => clearFieldError(fieldId));
+                }
+            });
+        }
+
+        // Handle keyboard navigation
+        function handleKeyboardNavigation(event) {
+            // Allow Enter to advance steps on non-textarea fields
+            if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+                event.preventDefault();
+                const nextButton = document.querySelector(`#step-${currentStep} .btn-primary`);
+                if (nextButton && !nextButton.disabled) {
+                    nextButton.click();
+                }
+            }
+        }
+
+        // Authentication check
         async function checkAuth() {
+            if (!supabase) {
+                console.log('⚠️ Supabase not initialized, using demo mode');
+                setupDemoMode();
+                return;
+            }
+
             try {
                 console.log('🔍 Checking authentication...');
                 
@@ -608,7 +809,20 @@
             }
         }
 
+        // Setup demo mode for development
+        function setupDemoMode() {
+            console.log('🔧 Running in demo mode');
+            currentUser = { id: 'demo', email: 'demo@oslira.com' };
+            showOnboardingForm();
+        }
+
+        // Check onboarding status
         async function checkOnboardingStatus() {
+            if (!supabase) {
+                showOnboardingForm();
+                return;
+            }
+
             try {
                 const { data: userData, error } = await supabase
                     .from('users')
@@ -630,38 +844,40 @@
             }
         }
 
+        // Show different states
         function showOnboardingForm() {
-            document.getElementById('authCheck').style.display = 'none';
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('errorState').style.display = 'none';
+            hideAllStates();
             document.getElementById('onboardingMain').style.display = 'block';
         }
 
         function showError(message) {
-            document.getElementById('authCheck').style.display = 'none';
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('onboardingMain').style.display = 'none';
+            hideAllStates();
             document.getElementById('errorState').style.display = 'block';
             document.getElementById('errorMessage').textContent = message;
         }
 
         function showLoading() {
-            document.getElementById('authCheck').style.display = 'none';
-            document.getElementById('errorState').style.display = 'none';
-            document.getElementById('onboardingMain').style.display = 'none';
+            hideAllStates();
             document.getElementById('loadingState').style.display = 'block';
         }
 
-        function nextStep(step) {
-            if (!validateStep(currentStep)) return;
-            
-            document.querySelector(`#step-${currentStep}`).classList.remove('active');
-            document.querySelector(`#step-${step}`).classList.add('active');
-            currentStep = step;
-            updateProgress();
+        function hideAllStates() {
+            document.getElementById('authCheck').style.display = 'none';
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('onboardingMain').style.display = 'none';
         }
 
-        function previousStep(step) {
+        // Step navigation
+        function handleStepNavigation(targetStep) {
+            if (targetStep > currentStep && !validateStep(currentStep)) {
+                return;
+            }
+            
+            navigateToStep(targetStep);
+        }
+
+        function navigateToStep(step) {
             document.querySelector(`#step-${currentStep}`).classList.remove('active');
             document.querySelector(`#step-${step}`).classList.add('active');
             currentStep = step;
@@ -674,138 +890,324 @@
             document.getElementById('progress-text').textContent = `Step ${currentStep} of 5`;
         }
 
+        // Field validation
+        function validateField(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            
+            if (!field) return true;
+
+            const value = field.value.trim();
+            const isRequired = field.hasAttribute('required');
+            
+            // Clear previous validation states
+            field.classList.remove('field-error', 'field-success');
+            if (errorElement) {
+                errorElement.classList.remove('error', 'success');
+                errorElement.textContent = '';
+            }
+
+            // Validate required fields
+            if (isRequired && !value) {
+                setFieldError(field, errorElement, 'This field is required');
+                return false;
+            }
+
+            // Field-specific validation
+            if (value) {
+                switch (fieldId) {
+                    case 'business-name':
+                        if (value.length < 2) {
+                            setFieldError(field, errorElement, 'Business name must be at least 2 characters');
+                            return false;
+                        }
+                        break;
+                    case 'target-problems':
+                    case 'value-proposition':
+                        if (value.length < 20) {
+                            setFieldError(field, errorElement, 'Please provide more detail (at least 20 characters)');
+                            return false;
+                        }
+                        break;
+                    case 'call-to-action':
+                        if (value.length < 5) {
+                            setFieldError(field, errorElement, 'Please provide a meaningful call-to-action');
+                            return false;
+                        }
+                        break;
+                }
+            }
+
+            // Field is valid
+            if (value && errorElement) {
+                setFieldSuccess(field, errorElement, '✓ Looks good');
+            }
+            
+            return true;
+        }
+
+        function setFieldError(field, errorElement, message) {
+            field.classList.add('field-error');
+            if (errorElement) {
+                errorElement.classList.add('error');
+                errorElement.textContent = message;
+            }
+        }
+
+        function setFieldSuccess(field, errorElement, message) {
+            field.classList.add('field-success');
+            if (errorElement) {
+                errorElement.classList.add('success');
+                errorElement.textContent = message;
+            }
+        }
+
+        function clearFieldError(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            
+            if (field) {
+                field.classList.remove('field-error');
+            }
+            if (errorElement) {
+                errorElement.classList.remove('error');
+                errorElement.textContent = '';
+            }
+        }
+
         function validateStep(step) {
-            const stepEl = document.querySelector(`#step-${step}`);
-            const requiredInputs = stepEl.querySelectorAll('input[required], textarea[required], select[required]');
+            const stepElement = document.querySelector(`#step-${step}`);
+            const requiredFields = stepElement.querySelectorAll('input[required], textarea[required], select[required]');
             let isValid = true;
             
-            requiredInputs.forEach(input => {
-                const value = input.value.trim();
-                if (!value) {
-                    input.style.borderColor = '#8A6DF1';
-                    input.style.boxShadow = '0 0 0 4px rgba(138, 109, 241, 0.1)';
+            requiredFields.forEach(field => {
+                const fieldValid = validateField(field.id);
+                if (!fieldValid) {
                     isValid = false;
-                } else {
-                    input.style.borderColor = '#C9CEDC';
-                    input.style.boxShadow = 'none';
                 }
             });
             
             if (!isValid) {
-                alert('Please fill in all required fields.');
+                showNotification('Please fill in all required fields correctly.', 'error');
             }
             
             return isValid;
         }
 
-        // Replace your form submission handler with this improved version
-document.getElementById("onboarding-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    console.log('📝 Form submitted');
+        // Form submission
+        async function handleFormSubmission(event) {
+            event.preventDefault();
+            console.log('📝 Form submitted');
 
-    if (!validateStep(currentStep)) return;
+            if (!validateStep(currentStep)) return;
 
-    try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) {
-            alert("Session expired. Please log in again.");
-            window.location.href = "auth.html";
-            return;
+            try {
+                // Verify session
+                if (supabase) {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    if (error || !session) {
+                        showNotification("Session expired. Please log in again.", 'error');
+                        window.location.href = "auth.html";
+                        return;
+                    }
+                    currentUser = session.user;
+                }
+
+                const profileData = collectFormData();
+                
+                showLoading();
+
+                if (supabase) {
+                    await saveToDatabase(profileData);
+                } else {
+                    await simulateSave(profileData);
+                }
+
+                showSuccess();
+                
+            } catch (err) {
+                console.error('💥 Submission error:', err);
+                showOnboardingForm();
+                
+                let errorMessage = "Something went wrong: " + err.message;
+                if (err.message.includes('updated_at')) {
+                    errorMessage = "Database configuration error. Please contact support or try again in a few minutes.";
+                }
+                
+                showNotification(errorMessage, 'error');
+            }
         }
-        
-        const user = session.user;
 
-        const profileData = {
-            user_id: user.id, // Explicitly set user_id
-            business_name: document.getElementById("business-name").value.trim(),
-            business_niche: document.getElementById("business-niche").value.trim(),
-            target_audience: document.getElementById("target-audience").value.trim(),
-            target_problems: document.getElementById("target-problems").value.trim(),
-            value_proposition: document.getElementById("value-proposition").value.trim(),
-            communication_style: document.getElementById("communication-style").value,
-            message_example: document.getElementById("message-example").value.trim(),
-            success_outcome: document.getElementById("success-outcome").value,
-            call_to_action: document.getElementById("call-to-action").value.trim(),
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-
-        showLoading();
-
-        console.log('💾 Saving user data...');
-        
-        // First, update user with credits and onboarding flag
-        const { error: userError } = await supabase
-            .from("users")
-            .upsert({
-                id: user.id,
-                email: user.email,
-                credits: 5,
-                onboarding_completed: true,
+        // Collect form data
+        function collectFormData() {
+            return {
+                user_id: currentUser?.id || 'demo',
+                business_name: document.getElementById("business-name").value.trim(),
+                business_niche: document.getElementById("business-niche").value.trim(),
+                target_audience: document.getElementById("target-audience").value.trim(),
+                target_problems: document.getElementById("target-problems").value.trim(),
+                value_proposition: document.getElementById("value-proposition").value.trim(),
+                communication_style: document.getElementById("communication-style").value,
+                message_example: document.getElementById("message-example").value.trim(),
+                success_outcome: document.getElementById("success-outcome").value,
+                call_to_action: document.getElementById("call-to-action").value.trim(),
+                is_active: true,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
-            }, { 
-                onConflict: 'id',
-                ignoreDuplicates: false 
-            });
-
-        if (userError) {
-            console.error('❌ User upsert error:', userError);
-            throw new Error(`User update failed: ${userError.message}`);
+            };
         }
 
-        console.log('✅ User updated successfully');
+        // Save to database
+        async function saveToDatabase(profileData) {
+            console.log('💾 Saving user data...');
+            
+            // First, update user with credits and onboarding flag
+            const { error: userError } = await supabase
+                .from("users")
+                .upsert({
+                    id: currentUser.id,
+                    email: currentUser.email,
+                    credits: 5,
+                    onboarding_completed: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }, { 
+                    onConflict: 'id',
+                    ignoreDuplicates: false 
+                });
 
-        console.log('💾 Saving business profile...', profileData);
-        
-        // Save business profile
-        const { data: profileResult, error: profileError } = await supabase
-            .from("business_profiles")
-            .insert(profileData)
-            .select()
-            .single();
+            if (userError) {
+                console.error('❌ User upsert error:', userError);
+                throw new Error(`User update failed: ${userError.message}`);
+            }
 
-        if (profileError) {
-            console.error('❌ Profile error:', profileError);
-            throw new Error(`Profile creation failed: ${profileError.message}`);
+            console.log('✅ User updated successfully');
+
+            console.log('💾 Saving business profile...', profileData);
+            
+            // Save business profile
+            const { data: profileResult, error: profileError } = await supabase
+                .from("business_profiles")
+                .insert(profileData)
+                .select()
+                .single();
+
+            if (profileError) {
+                console.error('❌ Profile error:', profileError);
+                throw new Error(`Profile creation failed: ${profileError.message}`);
+            }
+
+            console.log('✅ Business profile saved:', profileResult);
         }
 
-        console.log('✅ Business profile saved:', profileResult);
-
-        // Show success and redirect
-        document.getElementById("loadingState").style.display = "none";
-        document.getElementById("onboarding-form").style.display = "none";
-        document.getElementById("success").style.display = "block";
-        
-        setTimeout(() => {
-            console.log('🎯 Redirecting to dashboard...');
-            window.location.href = 'dashboard.html';
-        }, 3000);
-
-    } catch (err) {
-        console.error('💥 Submission error:', err);
-        document.getElementById("loadingState").style.display = "none";
-        document.getElementById("onboardingMain").style.display = "block";
-        
-        // Show more helpful error message
-        let errorMessage = "Something went wrong: " + err.message;
-        if (err.message.includes('updated_at')) {
-            errorMessage = "Database configuration error. Please contact support or try again in a few minutes.";
+        // Simulate save for demo mode
+        async function simulateSave(profileData) {
+            console.log('🔧 Simulating save in demo mode...', profileData);
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
-        
-        alert(errorMessage);
-    }
-});
+
+        // Show success state
+        function showSuccess() {
+            hideAllStates();
+            document.getElementById("onboarding-form").style.display = "none";
+            document.getElementById("success").style.display = "block";
+            
+            setTimeout(() => {
+                console.log('🎯 Redirecting to dashboard...');
+                window.location.href = 'dashboard.html';
+            }, 3000);
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 16px 24px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 400px;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            // Set colors based on type
+            switch (type) {
+                case 'error':
+                    notification.style.background = '#EF4444';
+                    break;
+                case 'success':
+                    notification.style.background = '#10B981';
+                    break;
+                default:
+                    notification.style.background = '#2D6CDF';
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
         // Auth state listener
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_IN' && session) {
-                currentUser = session.user;
-                showOnboardingForm();
-            } else if (event === 'SIGNED_OUT') {
-                window.location.href = 'auth.html';
+        if (window.supabase) {
+            window.supabase.auth?.onAuthStateChange?.((event, session) => {
+                if (event === 'SIGNED_IN' && session) {
+                    currentUser = session.user;
+                    showOnboardingForm();
+                } else if (event === 'SIGNED_OUT') {
+                    window.location.href = 'auth.html';
+                }
+            });
+        }
+
+        // Global error handler
+        window.addEventListener('error', (event) => {
+            console.error('💥 Global error:', event.error);
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(event.error);
             }
         });
+
+        // Global unhandled promise rejection handler
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('💥 Unhandled promise rejection:', event.reason);
+            if (typeof Sentry !== 'undefined') {
+                Sentry.captureException(event.reason);
+            }
+        });
+
+        // Add CSS animation for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Global functions for any dynamically generated content
+        window.osliraOnboarding = {
+            navigateToStep,
+            validateField,
+            showNotification,
+            handleFormSubmission
+        };
     </script>
 </body>
 </html>
