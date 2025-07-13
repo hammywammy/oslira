@@ -1031,42 +1031,346 @@
         </section>
     </main>
 
-    <!-- Lead Analysis Modal -->
-    <div class="modal" id="analysisModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal('analysisModal')">×</button>
-            <h3>🔍 Analyze Lead</h3>
-            <form id="analysisForm" onsubmit="submitAnalysis(event)">
-                <div class="form-group">
-                    <label for="analysis-type">Analysis Type *</label>
-                    <select id="analysis-type" required onchange="updateInputField()">
-                        <option value="">Select analysis type...</option>
-                        <option value="light">Light Analysis (1 credit) - Basic profile info</option>
-                        <option value="deep">Deep Analysis (2 credits) - Full profile + outreach message</option>
-                    </select>
-                </div>
-
-                <div class="form-group" id="input-field-container" style="display: none;">
-                    <label for="profile-input" id="input-label">Instagram Username *</label>
-                    <input type="text" id="profile-input" placeholder="username" required>
-                    <div id="input-help" style="font-size: 12px; color: #6B7280; margin-top: 4px;">
-                        Enter just the username (without @)
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="business-id">Business Profile *</label>
-                    <select id="business-id" required>
-                        <option value="">Select business profile...</option>
-                    </select>
-                </div>
-                
-                <button type="submit" class="primary-btn" style="width: 100%;">
-                    🚀 Start Analysis
-                </button>
-            </form>
+<!-- Replace your current AI Insights section with this -->
+<section class="insights">
+    <div class="section-header">
+        <h2>🧠 AI Insights & Recommendations</h2>
+        <button class="btn-small" onclick="generateInsights()">🔄 Refresh Insights</button>
+    </div>
+    
+    <div class="loading-insights" id="loading-insights" style="display: none;">
+        <div style="text-align: center; padding: 40px;">
+            <div class="spinner" style="margin: 0 auto 20px;"></div>
+            <p style="color: #6B7280;">🤖 AI is analyzing your data and generating fresh insights...</p>
         </div>
     </div>
+    
+    <div class="insight-cards" id="insights-container">
+        <div class="insight-card welcome">
+            <div class="insight-icon">🚀</div>
+            <h3>Welcome to Oslira!</h3>
+            <p>Start researching leads to unlock AI-powered insights and recommendations tailored to your data.</p>
+            <button class="insight-cta" onclick="showAnalysisModal()">Research Your First Lead</button>
+        </div>
+    </div>
+</section>
+
+<style>
+/* AI Insights Styling */
+.insights {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(45, 108, 223, 0.1);
+    border: 1px solid #C9CEDC;
+    margin-bottom: 32px;
+}
+
+.insights .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #F5F9FF;
+}
+
+.insights .section-header h2 {
+    color: #121417;
+    font-size: 20px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.insight-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.insight-card {
+    background: linear-gradient(135deg, #F5F9FF 0%, #E8F3FF 100%);
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.insight-card:hover {
+    transform: translateY(-4px);
+    border-color: #2D6CDF;
+    box-shadow: 0 8px 25px rgba(45, 108, 223, 0.15);
+}
+
+.insight-card.welcome {
+    border-left: 4px solid #2D6CDF;
+    text-align: center;
+}
+
+.insight-card.performance {
+    border-left: 4px solid #53E1C5;
+}
+
+.insight-card.recommendation {
+    border-left: 4px solid #8A6DF1;
+}
+
+.insight-card.warning {
+    border-left: 4px solid #F59E0B;
+}
+
+.insight-icon {
+    font-size: 36px;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.insight-card h3 {
+    color: #121417;
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.insight-card p {
+    color: #6B7280;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.insight-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 12px 0;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+}
+
+.insight-metric .label {
+    font-weight: 600;
+    color: #121417;
+    font-size: 14px;
+}
+
+.insight-metric .value {
+    font-weight: 700;
+    color: #2D6CDF;
+    font-size: 16px;
+}
+
+.insight-cta {
+    background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.insight-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
+}
+
+.insight-cta.secondary {
+    background: white;
+    color: #2D6CDF;
+    border: 2px solid #2D6CDF;
+}
+
+.insight-cta.secondary:hover {
+    background: #2D6CDF;
+    color: white;
+}
+
+.loading-insights {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .insight-cards {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Add this JavaScript function to generate insights
+async function generateInsights() {
+    const container = document.getElementById('insights-container');
+    const loading = document.getElementById('loading-insights');
+    
+    // Show loading
+    container.style.display = 'none';
+    loading.style.display = 'block';
+    
+    try {
+        // Load user's data
+        const { data: leads } = await supabase
+            .from('leads')
+            .select('*')
+            .eq('user_id', currentUser.id);
+        
+        const { data: userData } = await supabase
+            .from('users')
+            .select('credits')
+            .eq('id', currentUser.id)
+            .single();
+        
+        // Generate insights based on data
+        let insights = [];
+        
+        if (!leads || leads.length === 0) {
+            // Welcome insight for new users
+            insights.push({
+                type: 'welcome',
+                icon: '🚀',
+                title: 'Welcome to Oslira!',
+                content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+                cta: 'Research Your First Lead',
+                action: 'showAnalysisModal()'
+            });
+        } else {
+            // Performance insights
+            const avgScore = leads.reduce((sum, lead) => sum + (lead.score || 0), 0) / leads.length;
+            const highValueLeads = leads.filter(lead => (lead.score || 0) >= 80).length;
+            const recentLeads = leads.filter(lead => 
+                new Date(lead.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            ).length;
+            
+            // Quality insight
+            if (avgScore >= 70) {
+                insights.push({
+                    type: 'performance',
+                    icon: '🎯',
+                    title: 'Excellent Lead Quality!',
+                    content: `Your average lead score of ${Math.round(avgScore)} shows you're targeting high-quality prospects. ${highValueLeads} out of ${leads.length} leads are premium quality (80+ score).`,
+                    metrics: [
+                        { label: 'Average Score', value: `${Math.round(avgScore)}/100` },
+                        { label: 'High-Value Rate', value: `${Math.round((highValueLeads/leads.length)*100)}%` }
+                    ]
+                });
+            } else if (avgScore >= 50) {
+                insights.push({
+                    type: 'recommendation',
+                    icon: '📈',
+                    title: 'Room for Improvement',
+                    content: `Your average lead score is ${Math.round(avgScore)}. Try refining your target criteria to find higher-quality prospects.`,
+                    cta: 'Analyze New Leads',
+                    action: 'showAnalysisModal()'
+                });
+            } else {
+                insights.push({
+                    type: 'warning',
+                    icon: '⚠️',
+                    title: 'Lead Quality Alert',
+                    content: `Your average lead score of ${Math.round(avgScore)} suggests you may need to adjust your targeting strategy.`,
+                    cta: 'Research Better Leads',
+                    action: 'showAnalysisModal()'
+                });
+            }
+            
+            // Activity insight
+            if (recentLeads > 0) {
+                insights.push({
+                    type: 'performance',
+                    icon: '🔥',
+                    title: 'Active Research',
+                    content: `You've researched ${recentLeads} leads this week. Consistent activity leads to better results!`,
+                    metrics: [
+                        { label: 'This Week', value: recentLeads },
+                        { label: 'Total Leads', value: leads.length }
+                    ]
+                });
+            }
+            
+            // Credit insight
+            const credits = userData?.credits || 0;
+            if (credits < 5) {
+                insights.push({
+                    type: 'warning',
+                    icon: '💳',
+                    title: 'Low Credit Balance',
+                    content: `You have ${credits} credits remaining. Consider purchasing more to continue your research momentum.`,
+                    cta: 'Buy More Credits',
+                    action: 'location.href="/credits.html"'
+                });
+            }
+            
+            // If we don't have enough insights, add a general recommendation
+            if (insights.length < 2) {
+                insights.push({
+                    type: 'recommendation',
+                    icon: '🎲',
+                    title: 'Keep Growing',
+                    content: 'The more leads you research, the better our AI insights become. Each analysis helps us understand your ideal customer profile.',
+                    cta: 'Research More Leads',
+                    action: 'showAnalysisModal()'
+                });
+            }
+        }
+        
+        // Render insights
+        setTimeout(() => {
+            renderInsights(insights);
+            loading.style.display = 'none';
+            container.style.display = 'grid';
+        }, 1500);
+        
+    } catch (err) {
+        console.error('Error generating insights:', err);
+        loading.style.display = 'none';
+        container.style.display = 'grid';
+        container.innerHTML = `
+            <div class="insight-card warning">
+                <div class="insight-icon">❌</div>
+                <h3>Error Loading Insights</h3>
+                <p>Unable to generate insights at this time. Please try again later.</p>
+                <button class="insight-cta secondary" onclick="generateInsights()">Retry</button>
+            </div>
+        `;
+    }
+}
+
+function renderInsights(insights) {
+    const container = document.getElementById('insights-container');
+    
+    container.innerHTML = insights.map(insight => `
+        <div class="insight-card ${insight.type}">
+            <div class="insight-icon">${insight.icon}</div>
+            <h3>${insight.title}</h3>
+            <p>${insight.content}</p>
+            
+            ${insight.metrics ? insight.metrics.map(metric => `
+                <div class="insight-metric">
+                    <span class="label">${metric.label}:</span>
+                    <span class="value">${metric.value}</span>
+                </div>
+            `).join('') : ''}
+            
+            ${insight.cta ? `
+                <button class="insight-cta ${insight.type === 'warning' ? 'secondary' : ''}" onclick="${insight.action}">
+                    ${insight.cta}
+                </button>
+            ` : ''}
+        </div>
+    `).join('');
+}
+</script>
 
     <!-- Lead Details Modal -->
     <div class="modal" id="leadModal">
