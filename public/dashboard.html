@@ -1015,6 +1015,20 @@
                 </table>
             </div>
         </section>
+
+        <section class="insights">
+            <div class="insights-header">
+                <h2><span class="ai-brain">🧠</span> AI Insights & Recommendations</h2>
+                <button class="btn-small" onclick="generateInsights()">🔄 Refresh Insights</button>
+            </div>
+            <div class="loading-insights" id="loading-insights">
+                <div class="ai-thinking">🤖</div>
+                <p>AI is analyzing your data and generating fresh insights...</p>
+            </div>
+            <div class="insight-cards" id="insights-container">
+                <!-- Dynamic insights populated by JavaScript -->
+            </div>
+        </section>
     </main>
 
     <!-- Lead Analysis Modal -->
@@ -1104,6 +1118,11 @@
             console.log('🚀 Enterprise Dashboard loaded');
             await checkAuth();
             await loadInitialData();
+            
+            // Generate initial insights after a short delay
+            setTimeout(() => {
+                generateInsights();
+            }, 1000);
         });
 
         // Check authentication
@@ -1193,9 +1212,6 @@
                 loadStats(),
                 loadCreditUsage()
             ]);
-            
-            // Generate initial AI insights
-            await generateInsights();
         }
 
         // Load user credits
