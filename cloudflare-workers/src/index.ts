@@ -86,6 +86,32 @@ async function verifySupabaseJWT(token: string): Promise<string | null> {
   }
 }
 
+// Email notification webhook
+async function handleEmailNotification(request) {
+    const { type, email, data } = await request.json();
+    
+    const notifications = {
+        new_user: {
+            to: 'hello@oslira.com',
+            subject: `New user signup: ${email}`,
+            template: 'new_user'
+        },
+        billing_issue: {
+            to: 'billing@oslira.com', 
+            subject: `Billing issue: ${email}`,
+            template: 'billing_alert'
+        },
+        security_alert: {
+            to: 'security@oslira.com',
+            subject: `Security Alert: ${data.alert_type}`,
+            template: 'security_alert'
+        }
+    };
+    
+    // Send via Zoho API or SMTP
+    await sendEmail(notifications[type]);
+}
+
 // OpenAI API with retry logic
 async function callOpenAI(prompt: string, apiKey: string, maxRetries = 3): Promise<any> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
