@@ -791,10 +791,10 @@
 <script>
     const supabaseUrl = CONFIG.supabaseUrl;
     const supabaseKey = CONFIG.supabaseKey;
+    const WORKER_URL = CONFIG.workerUrl;
     
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-        const WORKER_URL = 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
-        
+
         let currentUser = null;
         let currentSession = null;
 
