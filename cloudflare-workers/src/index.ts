@@ -326,55 +326,69 @@ function generateMessagePrompt(profile: ProfileData, business: BusinessProfile, 
 }
 
 // =====================================================
-// STRIPE SUBSCRIPTION ENDPOINTS
+// STRIPE SUBSCRIPTION ENDPOINTS - UPDATED WITH CORRECT PRICE IDs
 // =====================================================
 
-// Create subscription checkout session
-app.post('/create-subscription', async (c) => {
+// Create subscription checkout session - UPDATED
+app.post('/billing/create-checkout-session', async (c) => {
   try {
+    console.log('🔄 Creating Stripe checkout session...');
+    
     // Verify authentication
     const authHeader = c.req.header('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
-      return c.json({ error: 'Unauthorized' }, 401);
+      console.log('❌ Missing or invalid auth header');
+      return c.json({ error: 'Unauthorized - missing or invalid authorization header' }, 401);
     }
 
     const token = authHeader.substring(7);
     const userId = await verifySupabaseJWT(token);
     if (!userId) {
-      return c.json({ error: 'Invalid token' }, 401);
+      console.log('❌ Invalid JWT token');
+      return c.json({ error: 'Unauthorized - invalid or expired token' }, 401);
     }
+
+    const requestBody = await c.req.json();
+    console.log('📋 Request body:', JSON.stringify(requestBody, null, 2));
 
     const { 
-      product_code, 
-      plan_name, 
+      price_id,
       customer_email, 
-      trial_days = 7,
       success_url,
       cancel_url,
-      metadata 
-    } = await c.req.json();
+      metadata,
+      trial_period_days = 7
+    } = requestBody;
     
-    if (!product_code || !plan_name || !customer_email) {
-      return c.json({ error: 'Missing required fields' }, 400);
+    if (!price_id || !customer_email) {
+      console.log('❌ Missing required fields:', { price_id: !!price_id, customer_email: !!customer_email });
+      return c.json({ error: 'Missing required fields: price_id and customer_email are required' }, 400);
     }
 
-    // Map your product codes to Stripe price IDs
-    const PRODUCT_CODE_TO_PRICE_ID = {
-      'oslira_starter_29': c.env.STRIPE_STARTER_PRICE_ID,
-      'oslira_growth_79': c.env.STRIPE_GROWTH_PRICE_ID,
-      'oslira_professional_199': c.env.STRIPE_PROFESSIONAL_PRICE_ID,
-      'oslira_enterprise_499': c.env.STRIPE_ENTERPRISE_PRICE_ID
-    };
+    // Validate price_id against our known price IDs
+    const VALID_PRICE_IDS = [
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU', // starter
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN', // growth  
+      'price_1RkCLtJzvcRSqGG30FfJSpau', // professional
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw'  // enterprise
+    ];
 
-    const priceId = PRODUCT_CODE_TO_PRICE_ID[product_code];
-    if (!priceId) {
-      return c.json({ error: 'Invalid product code' }, 400);
+    if (!VALID_PRICE_IDS.includes(price_id)) {
+      console.log('❌ Invalid price_id:', price_id);
+      return c.json({ error: 'Invalid price_id provided' }, 400);
     }
+
+    if (!c.env.STRIPE_SECRET_KEY) {
+      console.log('❌ Missing Stripe secret key');
+      return c.json({ error: 'Stripe configuration missing' }, 500);
+    }
+
+    console.log('✅ Valid price_id:', price_id);
 
     // Create or get customer
     let customerId = null;
     
-    // Check if customer exists
+    console.log('🔍 Searching for existing customer...');
     const customerSearchResponse = await fetch(
       `https://api.stripe.com/v1/customers/search?query=email:'${customer_email}'`,
       {
@@ -384,12 +398,21 @@ app.post('/create-subscription', async (c) => {
       }
     );
 
+    if (!customerSearchResponse.ok) {
+      const errorText = await customerSearchResponse.text();
+      console.log('❌ Customer search failed:', errorText);
+      return c.json({ error: 'Failed to search for existing customer' }, 500);
+    }
+
     const customerSearchData = await customerSearchResponse.json();
+    console.log('📊 Customer search result:', customerSearchData);
     
     if (customerSearchData.data && customerSearchData.data.length > 0) {
       customerId = customerSearchData.data[0].id;
+      console.log('✅ Found existing customer:', customerId);
     } else {
-      // Create new customer
+      console.log('🆕 Creating new customer...');
+      
       const customerData = new URLSearchParams({
         email: customer_email,
         'metadata[user_id]': userId,
@@ -404,26 +427,30 @@ app.post('/create-subscription', async (c) => {
         body: customerData,
       });
 
-      const newCustomer = await customerResponse.json();
       if (!customerResponse.ok) {
-        return c.json({ error: 'Failed to create customer' }, 400);
+        const errorText = await customerResponse.text();
+        console.log('❌ Customer creation failed:', errorText);
+        return c.json({ error: 'Failed to create customer: ' + errorText }, 400);
       }
+
+      const newCustomer = await customerResponse.json();
       customerId = newCustomer.id;
+      console.log('✅ Created new customer:', customerId);
     }
 
     // Create checkout session for subscription
+    console.log('🏪 Creating checkout session...');
     const sessionData = new URLSearchParams({
       'payment_method_types[]': 'card',
-      'line_items[0][price]': priceId,
+      'line_items[0][price]': price_id,
       'line_items[0][quantity]': '1',
       'mode': 'subscription',
       'success_url': success_url || `${c.env.FRONTEND_URL || 'https://oslira.com'}/subscription.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
       'cancel_url': cancel_url || `${c.env.FRONTEND_URL || 'https://oslira.com'}/subscription.html?canceled=true`,
       'customer': customerId,
-      'subscription_data[trial_period_days]': trial_days.toString(),
+      'subscription_data[trial_period_days]': trial_period_days.toString(),
       'subscription_data[metadata][user_id]': userId,
-      'subscription_data[metadata][plan_name]': plan_name,
-      'subscription_data[metadata][product_code]': product_code,
+      'allow_promotion_codes': 'true',
     });
 
     // Add additional metadata if provided
@@ -445,10 +472,15 @@ app.post('/create-subscription', async (c) => {
     const session = await sessionResponse.json();
 
     if (!sessionResponse.ok) {
-      console.error('Stripe session creation failed:', session);
-      return c.json({ error: session.error?.message || 'Session creation failed' }, 400);
+      console.error('❌ Stripe session creation failed:', session);
+      return c.json({ 
+        error: session.error?.message || 'Session creation failed',
+        details: session
+      }, 400);
     }
 
+    console.log('✅ Checkout session created successfully:', session.id);
+    
     return c.json({ 
       url: session.url, 
       session_id: session.id,
@@ -456,14 +488,16 @@ app.post('/create-subscription', async (c) => {
     });
 
   } catch (error) {
-    console.error('Subscription creation error:', error);
-    return c.json({ error: 'Failed to create subscription' }, 500);
+    console.error('❌ Subscription creation error:', error);
+    return c.json({ error: 'Failed to create subscription: ' + error.message }, 500);
   }
 });
 
-// Create customer portal session
-app.post('/create-portal-session', async (c) => {
+// Create customer portal session - UPDATED
+app.post('/billing/create-portal-session', async (c) => {
   try {
+    console.log('🔄 Creating Stripe portal session...');
+    
     // Verify authentication
     const authHeader = c.req.header('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -482,6 +516,8 @@ app.post('/create-portal-session', async (c) => {
       return c.json({ error: 'Missing customer_email' }, 400);
     }
 
+    console.log('🔍 Finding customer for portal access...');
+
     // Find customer by email
     const customerSearchResponse = await fetch(
       `https://api.stripe.com/v1/customers/search?query=email:'${customer_email}'`,
@@ -495,10 +531,11 @@ app.post('/create-portal-session', async (c) => {
     const customerSearchData = await customerSearchResponse.json();
     
     if (!customerSearchData.data || customerSearchData.data.length === 0) {
-      return c.json({ error: 'Customer not found' }, 404);
+      return c.json({ error: 'Customer not found - please subscribe to a plan first' }, 404);
     }
 
     const customerId = customerSearchData.data[0].id;
+    console.log('✅ Found customer for portal:', customerId);
 
     // Create portal session
     const portalData = new URLSearchParams({
@@ -518,25 +555,29 @@ app.post('/create-portal-session', async (c) => {
     const portal = await portalResponse.json();
 
     if (!portalResponse.ok) {
-      console.error('Portal session creation failed:', portal);
+      console.error('❌ Portal session creation failed:', portal);
       return c.json({ error: portal.error?.message || 'Portal creation failed' }, 400);
     }
 
+    console.log('✅ Portal session created successfully');
     return c.json({ url: portal.url });
 
   } catch (error) {
-    console.error('Portal session error:', error);
-    return c.json({ error: 'Failed to create portal session' }, 500);
+    console.error('❌ Portal session error:', error);
+    return c.json({ error: 'Failed to create portal session: ' + error.message }, 500);
   }
 });
 
-// Stripe webhook handler
+// Stripe webhook handler - UPDATED
 app.post('/stripe-webhook', async (c) => {
   try {
     const body = await c.req.text();
     const sig = c.req.header('stripe-signature');
 
+    console.log('🔔 Webhook received, signature present:', !!sig);
+
     if (!sig || !c.env.STRIPE_WEBHOOK_SECRET) {
+      console.log('❌ Missing signature or webhook secret');
       return c.text('Missing signature or secret', 400);
     }
 
@@ -544,7 +585,7 @@ app.post('/stripe-webhook', async (c) => {
     // For now, we'll just parse the event
     const event = JSON.parse(body);
     
-    console.log('Webhook received:', event.type);
+    console.log('📬 Webhook event type:', event.type);
 
     // Handle different event types
     switch (event.type) {
@@ -564,22 +605,27 @@ app.post('/stripe-webhook', async (c) => {
         await handlePaymentFailed(event.data.object, c.env);
         break;
       default:
-        console.log('Unhandled event type:', event.type);
+        console.log('ℹ️ Unhandled event type:', event.type);
     }
 
     return c.text('Success', 200);
 
   } catch (error) {
-    console.error('Webhook error:', error);
-    return c.text('Webhook error', 400);
+    console.error('❌ Webhook error:', error);
+    return c.text('Webhook error: ' + error.message, 400);
   }
 });
 
-// Handle subscription created
+// Handle subscription created - UPDATED
 async function handleSubscriptionCreated(subscription: any, env: any) {
   try {
-    const { user_id, plan_name, product_code } = subscription.metadata;
-    if (!user_id || !plan_name) return;
+    console.log('🆕 Processing subscription created:', subscription.id);
+    
+    const { user_id } = subscription.metadata;
+    if (!user_id) {
+      console.log('❌ No user_id in subscription metadata');
+      return;
+    }
 
     const supabaseHeaders = {
       apikey: env.SUPABASE_SERVICE_ROLE,
@@ -587,22 +633,32 @@ async function handleSubscriptionCreated(subscription: any, env: any) {
       'Content-Type': 'application/json',
     };
 
-    // Map plan to credits
-    const planCredits = {
-      'starter': 50,
-      'growth': 150,
-      'professional': 500,
-      'enterprise': -1 // unlimited
+    // Map price_id to plan name and credits
+    const priceIdToPlan = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
+      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: -1 } // unlimited
     };
 
-    const monthlyLimit = planCredits[plan_name] || 0;
+    const priceId = subscription.items.data[0]?.price?.id;
+    const planInfo = priceIdToPlan[priceId];
+    
+    if (!planInfo) {
+      console.log('❌ Unknown price_id:', priceId);
+      return;
+    }
+
+    const monthlyLimit = planInfo.credits;
+
+    console.log('📋 Plan info:', planInfo);
 
     // Update user subscription
-    await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
+    const userUpdateResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
       method: 'PATCH',
       headers: supabaseHeaders,
       body: JSON.stringify({
-        subscription_plan: plan_name,
+        subscription_plan: planInfo.name,
         subscription_status: subscription.status,
         stripe_customer_id: subscription.customer,
         stripe_subscription_id: subscription.id,
@@ -616,6 +672,13 @@ async function handleSubscriptionCreated(subscription: any, env: any) {
       }),
     });
 
+    if (!userUpdateResponse.ok) {
+      const errorText = await userUpdateResponse.text();
+      console.log('❌ Failed to update user:', errorText);
+    } else {
+      console.log('✅ User updated successfully');
+    }
+
     // Log subscription history
     await fetch(`${env.SUPABASE_URL}/rest/v1/subscription_history`, {
       method: 'POST',
@@ -623,7 +686,7 @@ async function handleSubscriptionCreated(subscription: any, env: any) {
       body: JSON.stringify({
         user_id,
         subscription_id: subscription.id,
-        plan_name,
+        plan_name: planInfo.name,
         status: subscription.status,
         amount: subscription.items.data[0]?.price?.unit_amount || 0,
         billing_cycle_start: new Date(subscription.current_period_start * 1000).toISOString(),
@@ -634,16 +697,18 @@ async function handleSubscriptionCreated(subscription: any, env: any) {
       }),
     });
 
-    console.log(`✅ Subscription created for user ${user_id}: ${plan_name}`);
+    console.log(`✅ Subscription created for user ${user_id}: ${planInfo.name}`);
 
   } catch (error) {
-    console.error('Error handling subscription created:', error);
+    console.error('❌ Error handling subscription created:', error);
   }
 }
 
 // Handle subscription updated
 async function handleSubscriptionUpdated(subscription: any, env: any) {
   try {
+    console.log('🔄 Processing subscription updated:', subscription.id);
+    
     const { user_id } = subscription.metadata;
     if (!user_id) return;
 
@@ -668,13 +733,15 @@ async function handleSubscriptionUpdated(subscription: any, env: any) {
     console.log(`✅ Subscription updated for user ${user_id}: ${subscription.status}`);
 
   } catch (error) {
-    console.error('Error handling subscription updated:', error);
+    console.error('❌ Error handling subscription updated:', error);
   }
 }
 
 // Handle subscription canceled
 async function handleSubscriptionCanceled(subscription: any, env: any) {
   try {
+    console.log('❌ Processing subscription canceled:', subscription.id);
+    
     const { user_id } = subscription.metadata;
     if (!user_id) return;
 
@@ -700,13 +767,15 @@ async function handleSubscriptionCanceled(subscription: any, env: any) {
     console.log(`✅ Subscription canceled for user ${user_id}`);
 
   } catch (error) {
-    console.error('Error handling subscription canceled:', error);
+    console.error('❌ Error handling subscription canceled:', error);
   }
 }
 
 // Handle payment succeeded
 async function handlePaymentSucceeded(invoice: any, env: any) {
   try {
+    console.log('💰 Processing payment succeeded:', invoice.id);
+    
     const subscription_id = invoice.subscription;
     if (!subscription_id) return;
 
@@ -728,6 +797,29 @@ async function handlePaymentSucceeded(invoice: any, env: any) {
     
     if (!user_id) return;
 
+    // Reset monthly credits for paid plans
+    const priceId = subscription.items.data[0]?.price?.id;
+    const priceIdToPlan = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
+      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: -1 }
+    };
+
+    const planInfo = priceIdToPlan[priceId];
+    if (planInfo) {
+      // Reset credits for the new billing period
+      await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
+        method: 'PATCH',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          credits: planInfo.credits === -1 ? 999999 : planInfo.credits,
+          credits_reset_date: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }),
+      });
+    }
+
     // Log billing history
     await fetch(`${env.SUPABASE_URL}/rest/v1/billing_history`, {
       method: 'POST',
@@ -747,16 +839,18 @@ async function handlePaymentSucceeded(invoice: any, env: any) {
       }),
     });
 
-    console.log(`✅ Payment succeeded for user ${user_id}: $${invoice.amount_paid / 100}`);
+    console.log(`✅ Payment succeeded for user ${user_id}: ${invoice.amount_paid / 100}`);
 
   } catch (error) {
-    console.error('Error handling payment succeeded:', error);
+    console.error('❌ Error handling payment succeeded:', error);
   }
 }
 
 // Handle payment failed
 async function handlePaymentFailed(invoice: any, env: any) {
   try {
+    console.log('💳 Processing payment failed:', invoice.id);
+    
     const subscription_id = invoice.subscription;
     if (!subscription_id) return;
 
@@ -808,7 +902,7 @@ async function handlePaymentFailed(invoice: any, env: any) {
     console.log(`❌ Payment failed for user ${user_id}: ${invoice.amount_due / 100}`);
 
   } catch (error) {
-    console.error('Error handling payment failed:', error);
+    console.error('❌ Error handling payment failed:', error);
   }
 }
 
@@ -1272,7 +1366,7 @@ app.get('/health', async (c) => {
     return c.json({ 
       status: allSystemsGo ? 'healthy' : 'degraded',
       service: 'Oslira Enterprise AI Worker',
-      version: '4.0.0',
+      version: '4.1.0',
       environment: {
         ...envStatus,
         database_connectivity: dbStatus
@@ -1288,6 +1382,12 @@ app.get('/health', async (c) => {
         profile_scraping: envStatus.apify,
         ai_analysis: envStatus.openai,
         message_generation: envStatus.claude
+      },
+      stripe_price_ids: {
+        starter: 'price_1RkCKjJzvcRSqGG3Hq4WNNSU',
+        growth: 'price_1RkCLGJzvcRSqGG3XqDyhYZN',
+        professional: 'price_1RkCLtJzvcRSqGG30FfJSpau',
+        enterprise: 'price_1RkCMlJzvcRSqGG3HHFoX1fw'
       }
     });
   } catch (error) {
@@ -1303,28 +1403,33 @@ app.get('/health', async (c) => {
 app.get('/info', (c) => {
   return c.json({
     service: 'Oslira Enterprise AI Worker',
-    version: '4.0.0',
+    version: '4.1.0',
     description: 'Enterprise B2B lead qualification with subscription billing',
     features: [
-      'Monthly subscription billing',
+      'Monthly subscription billing with Stripe',
       'Real Instagram profile scraping',
       'AI-powered lead scoring', 
       'Personalized outreach generation',
-      'Stripe integration',
+      'Stripe integration with webhooks',
       'Credit-based usage tracking',
-      'Webhook handling'
+      'Multi-tier subscription plans'
     ],
     endpoints: [
       'POST /analyze - Lead analysis',
-      'POST /create-subscription - Create Stripe subscription',
-      'POST /create-portal-session - Stripe customer portal',
+      'POST /billing/create-checkout-session - Create Stripe subscription',
+      'POST /billing/create-portal-session - Stripe customer portal',
       'POST /stripe-webhook - Stripe webhook handler',
       'GET /health - System health',
       'GET /info - Service info',
       'GET / - Status'
     ],
     supported_analysis_types: ['light', 'deep'],
-    subscription_plans: ['free', 'starter', 'growth', 'professional', 'enterprise'],
+    subscription_plans: {
+      starter: { price_id: 'price_1RkCKjJzvcRSqGG3Hq4WNNSU', credits: 50, price: 29 },
+      growth: { price_id: 'price_1RkCLGJzvcRSqGG3XqDyhYZN', credits: 150, price: 79 },
+      professional: { price_id: 'price_1RkCLtJzvcRSqGG30FfJSpau', credits: 500, price: 199 },
+      enterprise: { price_id: 'price_1RkCMlJzvcRSqGG3HHFoX1fw', credits: 'unlimited', price: 499 }
+    },
     ai_models: ['gpt-4o', 'claude-3-sonnet'],
     timestamp: new Date().toISOString()
   });
@@ -1333,9 +1438,14 @@ app.get('/info', (c) => {
 // Root endpoint
 app.get('/', (c) => {
   return c.json({
-    message: '🚀 Oslira Enterprise AI Worker v4.0',
+    message: '🚀 Oslira Enterprise AI Worker v4.1',
     status: 'operational',
     tagline: 'Subscription-based lead intelligence platform',
+    stripe_integration: 'active',
+    billing_endpoints: [
+      '/billing/create-checkout-session',
+      '/billing/create-portal-session'
+    ],
     timestamp: new Date().toISOString()
   });
 });
@@ -1354,7 +1464,15 @@ app.onError((err, c) => {
 app.notFound((c) => {
   return c.json({
     error: 'Endpoint not found',
-    available_endpoints: ['/', '/health', '/info', '/analyze', '/create-subscription', '/create-portal-session', '/stripe-webhook'],
+    available_endpoints: [
+      '/', 
+      '/health', 
+      '/info', 
+      '/analyze', 
+      '/billing/create-checkout-session', 
+      '/billing/create-portal-session', 
+      '/stripe-webhook'
+    ],
     timestamp: new Date().toISOString()
   }, 404);
 });
