@@ -405,22 +405,47 @@
             margin-bottom: 16px;
             display: none;
         }
+
+        /* Debug panel */
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 300px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .debug-panel.show {
+            display: block;
+        }
     </style>
 </head>
 <body class="auth-page">
+    <!-- Debug Panel -->
+    <div class="debug-panel" id="debug-panel">
+        <div id="debug-content">Loading...</div>
+    </div>
+
     <div class="auth-container">
         <!-- Main Auth Form -->
         <div class="auth-card" id="auth-form-container">
             <div class="auth-header">
                 <div class="logo">
-                    <img src="./assets/oslira-logo.png" alt="Oslira Logo">
+                    <img src="./assets/oslira-logo.png" alt="Oslira Logo" onerror="this.style.display='none'">
                     <h1>Welcome to Oslira</h1>
                 </div>
                 <p class="auth-subtitle">AI-powered lead intelligence platform</p>
                 <p class="auth-description">Enter your email to access your account or create a new one</p>
             </div>
             
-            <!-- Demo Context (if coming from homepage demo) -->
+            <!-- Demo Context -->
             <div class="demo-context" id="demo-context" style="display: none;">
                 <h3>🎯 Analyze This Profile</h3>
                 <p>You're about to analyze:</p>
@@ -446,12 +471,11 @@
             </form>
 
             <div class="auth-footer">
-                <!-- Update the terms links in auth.html -->
-<p class="terms-text">
-    By continuing, you agree to our 
-    <a href="/footer/legal/terms.html">Terms of Service</a> and 
-    <a href="/footer/legal/privacy.html">Privacy Policy</a>
-</p>
+                <p class="terms-text">
+                    By continuing, you agree to our 
+                    <a href="/footer/legal/terms.html">Terms of Service</a> and 
+                    <a href="/footer/legal/privacy.html">Privacy Policy</a>
+                </p>
                 <div class="security-badge">
                     <span>🔒</span>
                     <span>Secured with enterprise-grade encryption</span>
@@ -488,77 +512,106 @@
             <p class="error-description" id="error-description-text">There was a problem signing you in. Please try again.</p>
             <button class="retry-button" onclick="retryAuth()">Try Again</button>
         </div>
-</div>
+    </div>
     
-<script
-  src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js"
-  crossorigin="anonymous"
-></script>
-
-<!-- Your existing scripts -->
-<script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-    // Initialize Sentry (add this right after the scripts)
-    Sentry.init({
-        environment: 'production',
-        beforeSend(event) {
-            // Filter out network errors to save quota
-            if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
-                return null;
+    <script>
+        // Debug helper
+        let debugMode = localStorage.getItem('oslira_debug') === 'true';
+        
+        function debugLog(message, data = null) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            
+            console.log(logMessage, data || '');
+            
+            if (debugMode) {
+                const debugPanel = document.getElementById('debug-panel');
+                const debugContent = document.getElementById('debug-content');
+                
+                debugPanel.classList.add('show');
+                debugContent.innerHTML = `
+                    <div><strong>Debug Mode</strong> (Press Ctrl+D to toggle)</div>
+                    <div>${logMessage}</div>
+                    ${data ? `<div><pre>${JSON.stringify(data, null, 2)}</pre></div>` : ''}
+                `;
             }
-            return event;
         }
-    });
-    const supabaseUrl = CONFIG.supabaseUrl;
-    const supabaseKey = CONFIG.supabaseKey;
-    
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        // Toggle debug mode with Ctrl+D
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'd') {
+                e.preventDefault();
+                debugMode = !debugMode;
+                localStorage.setItem('oslira_debug', debugMode.toString());
+                
+                if (debugMode) {
+                    document.getElementById('debug-panel').classList.add('show');
+                    debugLog('Debug mode enabled');
+                } else {
+                    document.getElementById('debug-panel').classList.remove('show');
+                }
+            }
+        });
+
+        // Initialize Supabase (with error handling)
+        let supabase = null;
+        
+        function initializeSupabase() {
+            try {
+                // Check if config is loaded
+                if (typeof CONFIG === 'undefined') {
+                    throw new Error('CONFIG not loaded - check config.js');
+                }
+                
+                if (!CONFIG.supabaseUrl || !CONFIG.supabaseKey) {
+                    throw new Error('Supabase configuration missing');
+                }
+                
+                if (typeof window.supabase === 'undefined') {
+                    throw new Error('Supabase client library not loaded');
+                }
+                
+                supabase = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
+                debugLog('✅ Supabase initialized successfully');
+                return true;
+                
+            } catch (error) {
+                debugLog('❌ Supabase initialization failed', error);
+                showError('Configuration error. Please contact support.');
+                return false;
+            }
+        }
+
+        // Global state
         let processingAuth = false;
         let authTimeout = null;
 
-        // Check for demo context from homepage
+        // Check for demo context
         function checkDemoContext() {
             const urlParams = new URLSearchParams(window.location.search);
             const demoUsername = urlParams.get('demo');
             
             if (demoUsername) {
-                console.log('🎯 Demo context found:', demoUsername);
+                debugLog('🎯 Demo context found', { username: demoUsername });
                 document.getElementById('demo-context').style.display = 'block';
                 document.getElementById('demo-username-display').textContent = `@${demoUsername}`;
-                
-                // Store demo context for after login
                 sessionStorage.setItem('demo_username', demoUsername);
             }
         }
 
-        const CONTACT_EMAILS = {
-    support: 'support@oslira.com',
-    billing: 'billing@oslira.com', 
-    legal: 'legal@oslira.com',
-    security: 'security@oslira.com',
-    general: 'hello@oslira.com'
-};
-
-// Function to open email client
-function contactSupport(type = 'support') {
-    const email = CONTACT_EMAILS[type];
-    const subject = encodeURIComponent(`Oslira ${type.charAt(0).toUpperCase() + type.slice(1)} Request`);
-    window.location.href = `mailto:${email}?subject=${subject}`;
-}
-
-        // Show different states
+        // Show different UI states
         function showAuthForm() {
+            debugLog('📋 Showing auth form');
             document.getElementById('auth-form-container').style.display = 'block';
             document.getElementById('auth-success').style.display = 'none';
             document.getElementById('auth-processing').style.display = 'none';
             document.getElementById('auth-error').style.display = 'none';
             processingAuth = false;
-            if (authTimeout) clearTimeout(authTimeout);
+            clearAuthTimeout();
         }
 
         function showSuccess(email) {
+            debugLog('✅ Showing success state', { email });
             document.getElementById('auth-form-container').style.display = 'none';
             document.getElementById('auth-success').style.display = 'block';
             document.getElementById('auth-processing').style.display = 'none';
@@ -567,6 +620,7 @@ function contactSupport(type = 'support') {
         }
 
         function showProcessing() {
+            debugLog('⏳ Showing processing state');
             document.getElementById('auth-form-container').style.display = 'none';
             document.getElementById('auth-success').style.display = 'none';
             document.getElementById('auth-processing').style.display = 'block';
@@ -575,164 +629,272 @@ function contactSupport(type = 'support') {
             
             // Set timeout for processing state
             authTimeout = setTimeout(() => {
-                console.warn('⚠️ Auth processing timeout - showing error');
+                debugLog('⚠️ Auth processing timeout');
                 showError('Authentication is taking longer than expected. Please try again.');
-            }, 15000); // 15 second timeout
+            }, 30000); // 30 second timeout
         }
 
         function showError(message) {
+            debugLog('❌ Showing error state', { message });
             document.getElementById('auth-form-container').style.display = 'none';
             document.getElementById('auth-success').style.display = 'none';
             document.getElementById('auth-processing').style.display = 'none';
             document.getElementById('auth-error').style.display = 'block';
             document.getElementById('error-description-text').textContent = message;
             processingAuth = false;
-            if (authTimeout) clearTimeout(authTimeout);
-        }
-
-        function retryAuth() {
-            showAuthForm();
+            clearAuthTimeout();
         }
 
         function showFormError(message) {
+            debugLog('⚠️ Showing form error', { message });
             const errorEl = document.getElementById('error-message');
             errorEl.textContent = message;
             errorEl.style.display = 'block';
             
-            // Clear error after 5 seconds
             setTimeout(() => {
                 errorEl.style.display = 'none';
             }, 5000);
         }
 
-        // FIXED: Handle authentication flow with better error handling
+        function clearAuthTimeout() {
+            if (authTimeout) {
+                clearTimeout(authTimeout);
+                authTimeout = null;
+            }
+        }
+
+        function retryAuth() {
+            debugLog('🔄 Retrying auth');
+            showAuthForm();
+        }
+
+        // Parse URL parameters more reliably
+        function parseAuthParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            
+            return {
+                access_token: hashParams.get('access_token') || urlParams.get('access_token'),
+                refresh_token: hashParams.get('refresh_token') || urlParams.get('refresh_token'),
+                token_type: hashParams.get('token_type') || urlParams.get('token_type'),
+                expires_in: hashParams.get('expires_in') || urlParams.get('expires_in'),
+                error: hashParams.get('error') || urlParams.get('error'),
+                error_description: hashParams.get('error_description') || urlParams.get('error_description'),
+                error_code: hashParams.get('error_code') || urlParams.get('error_code')
+            };
+        }
+
+        // Clean URL from auth parameters
+        function cleanUrl() {
+            const cleanPath = window.location.pathname;
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Remove auth-related parameters
+            ['access_token', 'refresh_token', 'token_type', 'expires_in', 'error', 'error_description', 'error_code'].forEach(param => {
+                urlParams.delete(param);
+            });
+            
+            const cleanSearch = urlParams.toString();
+            const newUrl = cleanPath + (cleanSearch ? `?${cleanSearch}` : '');
+            
+            window.history.replaceState(null, '', newUrl);
+            debugLog('🧹 URL cleaned', { newUrl });
+        }
+
+        // Handle authentication flow
         async function handleAuthFlow(session) {
+            if (!session) {
+                throw new Error('No session provided');
+            }
+
+            debugLog('🔐 Handling auth flow', { 
+                userId: session.user.id, 
+                email: session.user.email 
+            });
+            
+            clearAuthTimeout();
+            
             try {
-                console.log('✅ User authenticated:', session.user.email);
-                
-                // Clear processing timeout
-                if (authTimeout) {
-                    clearTimeout(authTimeout);
-                    authTimeout = null;
-                }
-                
-                // Check if user has completed onboarding
-                const { data: userData, error } = await supabase
+                // Check if user exists and has completed onboarding
+                const { data: userData, error: userError } = await supabase
                     .from('users')
                     .select('onboarding_completed')
                     .eq('id', session.user.id)
                     .single();
                 
+                if (userError && userError.code !== 'PGRST116') { // PGRST116 is "not found"
+                    throw userError;
+                }
+                
                 // Check for demo context
                 const demoUsername = sessionStorage.getItem('demo_username');
                 if (demoUsername) {
                     sessionStorage.removeItem('demo_username');
-                    console.log('🎯 Redirecting to demo analysis for:', demoUsername);
-                    window.location.replace(`dashboard.html?demo_analysis=${encodeURIComponent(demoUsername)}`);
+                    debugLog('🎯 Redirecting to demo analysis', { username: demoUsername });
+                    window.location.href = `dashboard.html?demo_analysis=${encodeURIComponent(demoUsername)}`;
                     return;
                 }
                 
                 // Standard flow
                 if (userData?.onboarding_completed) {
-                    console.log('🎯 Redirecting to dashboard');
-                    window.location.replace('dashboard.html');
+                    debugLog('🎯 User onboarded, redirecting to dashboard');
+                    window.location.href = 'dashboard.html';
                 } else {
-                    console.log('📝 Redirecting to onboarding');
-                    window.location.replace('onboarding.html');
+                    debugLog('📝 User needs onboarding');
+                    window.location.href = 'onboarding.html';
                 }
                 
-            } catch (err) {
-                console.error('❌ Error in auth flow:', err);
+            } catch (error) {
+                debugLog('❌ Error in auth flow', error);
                 
-                // If onboarding check fails, go to onboarding anyway
-                if (err.message.includes('not found') || err.message.includes('users')) {
-                    console.log('📝 User not in database, redirecting to onboarding');
-                    window.location.replace('onboarding.html');
+                if (error.message.includes('not found') || error.code === 'PGRST116') {
+                    debugLog('📝 User not found, redirecting to onboarding');
+                    window.location.href = 'onboarding.html';
                 } else {
-                    showError('There was a problem accessing your account. Please try again.');
+                    throw error;
                 }
             }
         }
 
-        // ENHANCED: Check for existing session and magic links on page load
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🔍 Checking authentication state...');
+        // Handle magic link authentication
+        async function handleMagicLink(authParams) {
+            if (!authParams.access_token || !authParams.refresh_token) {
+                throw new Error('Missing tokens in magic link');
+            }
+
+            debugLog('🔗 Processing magic link', { 
+                hasAccessToken: !!authParams.access_token,
+                hasRefreshToken: !!authParams.refresh_token 
+            });
             
+            showProcessing();
+            
+            try {
+                const { data, error } = await supabase.auth.setSession({
+                    access_token: authParams.access_token,
+                    refresh_token: authParams.refresh_token
+                });
+                
+                if (error) throw error;
+                
+                debugLog('✅ Magic link session set', { userId: data.session?.user?.id });
+                
+                // Clean URL immediately
+                cleanUrl();
+                
+                if (data.session) {
+                    await handleAuthFlow(data.session);
+                } else {
+                    throw new Error('No session created from magic link');
+                }
+                
+            } catch (error) {
+                debugLog('❌ Magic link error', error);
+                throw error;
+            }
+        }
+
+        // Form submission handler
+        async function handleFormSubmit(email) {
+            debugLog('📧 Sending magic link', { email });
+            
+            try {
+                const baseUrl = window.location.origin;
+                let redirectUrl = `${baseUrl}/auth.html`;
+                
+                // Preserve demo context
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('demo')) {
+                    redirectUrl += `?demo=${encodeURIComponent(urlParams.get('demo'))}`;
+                }
+                
+                debugLog('🔗 Redirect URL', { redirectUrl });
+                
+                const { data, error } = await supabase.auth.signInWithOtp({
+                    email: email,
+                    options: {
+                        emailRedirectTo: redirectUrl,
+                        shouldCreateUser: true
+                    }
+                });
+
+                if (error) throw error;
+                
+                debugLog('✅ Magic link sent successfully', data);
+                return true;
+                
+            } catch (error) {
+                debugLog('❌ Magic link error', error);
+                throw error;
+            }
+        }
+
+        // Initialize application
+        async function initializeApp() {
+            debugLog('🚀 Initializing application');
+            
+            // Initialize Supabase
+            if (!initializeSupabase()) {
+                return; // Error already shown
+            }
+            
+            // Check for demo context
             checkDemoContext();
             
-            // FIXED: Better magic link detection
-            const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            // Check for access token in hash or URL params
-            const accessToken = hashParams.get('access_token') || urlParams.get('access_token');
-            const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token');
-            const error = hashParams.get('error') || urlParams.get('error');
-            const errorDescription = hashParams.get('error_description') || urlParams.get('error_description');
+            // Parse auth parameters
+            const authParams = parseAuthParams();
+            debugLog('🔍 Auth params parsed', authParams);
             
             // Handle auth errors
-            if (error) {
-                console.error('❌ Auth error from URL:', error, errorDescription);
-                showError(errorDescription || 'Authentication failed. Please try again.');
-                
-                // Clean URL
-                window.history.replaceState(null, '', window.location.pathname);
+            if (authParams.error) {
+                const errorMsg = authParams.error_description || 'Authentication failed. Please try again.';
+                debugLog('❌ Auth error from URL', { error: authParams.error, description: errorMsg });
+                showError(errorMsg);
+                cleanUrl();
                 return;
             }
             
             // Handle magic link
-            if (accessToken && refreshToken) {
-                console.log('🔗 Magic link tokens detected, processing...');
-                showProcessing();
-                
+            if (authParams.access_token && authParams.refresh_token) {
                 try {
-                    // FIXED: Properly set session with both tokens
-                    const { data, error: sessionError } = await supabase.auth.setSession({
-                        access_token: accessToken,
-                        refresh_token: refreshToken
-                    });
-                    
-                    if (sessionError) throw sessionError;
-                    
-                    console.log('✅ Session set from magic link');
-                    
-                    // Clean up URL immediately
-                    window.history.replaceState(null, '', window.location.pathname + (window.location.search.replace(/[?&](access_token|refresh_token|token_type|expires_in)=[^&]*/g, '').replace(/^&/, '?') || ''));
-                    
-                    // Handle the authenticated session
-                    if (data.session) {
-                        await handleAuthFlow(data.session);
-                    } else {
-                        throw new Error('No session created from tokens');
-                    }
-                    
-                } catch (err) {
-                    console.error('❌ Magic link processing error:', err);
+                    await handleMagicLink(authParams);
+                    return;
+                } catch (error) {
                     showError('There was a problem with your login link. Please try signing in again.');
+                    return;
                 }
-                return;
             }
             
-            // Check for existing session (not from magic link)
+            // Check for existing session
             try {
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabase.auth.getSession();
                 
-                if (sessionError) throw sessionError;
+                if (error) throw error;
                 
-                if (session && !processingAuth) {
-                    console.log('✅ Existing session found');
+                if (session) {
+                    debugLog('✅ Existing session found');
                     await handleAuthFlow(session);
                 } else {
-                    console.log('ℹ️ No session found, showing auth form');
+                    debugLog('ℹ️ No session found, showing auth form');
                     showAuthForm();
                 }
-            } catch (err) {
-                console.error('❌ Session check error:', err);
+                
+            } catch (error) {
+                debugLog('❌ Session check error', error);
+                showFormError('Unable to check authentication status. Please try again.');
                 showAuthForm();
             }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            debugLog('🎬 DOM loaded, initializing app');
+            
+            // Small delay to ensure all scripts are loaded
+            setTimeout(initializeApp, 100);
         });
 
-        // Handle form submission
+        // Form submission
         document.getElementById('auth-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -744,13 +906,13 @@ function contactSupport(type = 'support') {
             document.getElementById('error-message').style.display = 'none';
             emailInput.classList.remove('error');
             
+            // Validate email
             if (!email) {
                 emailInput.classList.add('error');
                 showFormError('Please enter your email address');
                 return;
             }
 
-            // Validate email format
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
                 emailInput.classList.add('error');
@@ -763,40 +925,18 @@ function contactSupport(type = 'support') {
             submitBtn.classList.add('loading');
 
             try {
-                console.log('📧 Sending secure login link to:', email);
-                
-                // FIXED: Better redirect URL construction
-                const baseUrl = window.location.origin;
-                let redirectUrl = `${baseUrl}/auth.html`;
-                
-                // Add demo context if present
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('demo')) {
-                    redirectUrl += `?demo=${encodeURIComponent(urlParams.get('demo'))}`;
-                }
-                
-                const { error } = await supabase.auth.signInWithOtp({
-                    email,
-                    options: {
-                        emailRedirectTo: redirectUrl,
-                        shouldCreateUser: true
-                    }
-                });
-
-                if (error) throw error;
-
-                console.log('✅ Secure login link sent successfully');
+                await handleFormSubmit(email);
                 showSuccess(email);
-
-            } catch (err) {
-                console.error('❌ Authentication error:', err);
+                
+            } catch (error) {
+                debugLog('❌ Form submission error', error);
                 
                 let errorMessage = 'Unable to send login link. Please try again.';
-                if (err.message.includes('rate limit')) {
+                if (error.message.includes('rate limit')) {
                     errorMessage = 'Too many requests. Please wait a moment before trying again.';
-                } else if (err.message.includes('invalid')) {
+                } else if (error.message.includes('invalid')) {
                     errorMessage = 'Invalid email address. Please check and try again.';
-                } else if (err.message.includes('Email not confirmed')) {
+                } else if (error.message.includes('Email not confirmed')) {
                     errorMessage = 'Please check your email and click the confirmation link.';
                 }
                 
@@ -804,63 +944,95 @@ function contactSupport(type = 'support') {
                 emailInput.classList.add('error');
                 
             } finally {
-                // Reset button state
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('loading');
             }
         });
 
-        // ENHANCED: Listen for auth state changes with better handling
-        supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('🔄 Auth state changed:', event);
-            
-            if (event === 'SIGNED_IN' && session) {
-                console.log('✅ User signed in via auth state change');
+        // Auth state change listener
+        if (supabase) {
+            supabase.auth.onAuthStateChange(async (event, session) => {
+                debugLog('🔄 Auth state changed', { event, userId: session?.user?.id });
                 
-                // Don't show processing if we're already processing
-                if (!processingAuth) {
+                if (event === 'SIGNED_IN' && session && !processingAuth) {
                     showProcessing();
+                    
+                    setTimeout(async () => {
+                        try {
+                            await handleAuthFlow(session);
+                        } catch (error) {
+                            debugLog('❌ Auth state change handler error', error);
+                            showError('Authentication completed but there was an error accessing your account. Please try again.');
+                        }
+                    }, 500);
+                    
+                } else if (event === 'SIGNED_OUT') {
+                    debugLog('👋 User signed out');
+                    showAuthForm();
+                } else if (event === 'TOKEN_REFRESHED') {
+                    debugLog('🔄 Token refreshed');
+                    // Don't redirect on token refresh
                 }
-                
-                // Add a small delay to ensure UI updates
-                setTimeout(async () => {
-                    try {
+            });
+        }
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', async () => {
+            if (!document.hidden && !processingAuth && supabase) {
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session && document.getElementById('auth-form-container').style.display !== 'none') {
+                        debugLog('✅ Session found on page focus');
                         await handleAuthFlow(session);
-                    } catch (err) {
-                        console.error('❌ Error in auth state change handler:', err);
-                        showError('Authentication completed but there was an error accessing your account. Please try again.');
                     }
-                }, 500);
-                
-            } else if (event === 'SIGNED_OUT') {
-                console.log('👋 User signed out');
-                showAuthForm();
-            } else if (event === 'TOKEN_REFRESHED' && session) {
-                console.log('🔄 Token refreshed');
-                // Don't redirect on token refresh, just update session
+                } catch (error) {
+                    debugLog('❌ Error checking session on page focus', error);
+                }
             }
         });
 
-        // Handle browser back/forward navigation
+        // Handle browser navigation
         window.addEventListener('popstate', () => {
             checkDemoContext();
         });
 
-        // ENHANCED: Handle page visibility changes (user switching tabs)
-        document.addEventListener('visibilitychange', async () => {
-            if (!document.hidden && !processingAuth) {
-                // Page became visible, check for session updates
-                try {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (session && document.getElementById('auth-form-container').style.display !== 'none') {
-                        console.log('✅ Session found on page focus');
-                        await handleAuthFlow(session);
-                    }
-                } catch (err) {
-                    console.error('❌ Error checking session on page focus:', err);
-                }
-            }
+        // Add error boundary for unhandled errors
+        window.addEventListener('error', (event) => {
+            debugLog('💥 Unhandled error', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno
+            });
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            debugLog('💥 Unhandled promise rejection', {
+                reason: event.reason
+            });
         });
     </script>
+
+    <!-- Load external dependencies -->
+    <script>
+        // Load Sentry if available
+        if (typeof Sentry !== 'undefined') {
+            Sentry.init({
+                environment: 'production',
+                beforeSend(event) {
+                    if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
+                        return null;
+                    }
+                    return event;
+                }
+            });
+        }
+    </script>
+
+    <!-- Load configuration and Supabase -->
+    <script src="config.js" onerror="console.error('Failed to load config.js')"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" onerror="console.error('Failed to load Supabase')"></script>
+    
+    <!-- Sentry (optional) -->
+    <script src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js" crossorigin="anonymous" onerror="console.warn('Sentry not loaded')"></script>
 </body>
 </html>
