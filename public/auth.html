@@ -527,20 +527,17 @@
             }
 
             getConfiguration() {
-                // Priority: Environment variables > Worker URL > Config object
+                // Priority: Window variables (set by hosting platform) > Config object
                 const supabaseUrl = 
                     window.SUPABASE_URL || 
-                    process?.env?.SUPABASE_URL ||
                     window.CONFIG?.supabaseUrl;
                 
                 const supabaseKey = 
                     window.SUPABASE_ANON_KEY ||
-                    process?.env?.SUPABASE_ANON_KEY ||
                     window.CONFIG?.supabaseKey;
 
                 const workerUrl = 
-                    window.WORKER_URL ||
-                    process?.env?.WORKER_URL;
+                    window.WORKER_URL;
 
                 return { 
                     supabaseUrl, 
@@ -777,16 +774,34 @@
             }
 
             showConfigError() {
+                const config = this.getConfiguration();
                 const errorHtml = `
                     <div class="config-error">
                         <h3>⚙️ Configuration Required</h3>
-                        <p>Please set up your Supabase environment variables.</p>
+                        <p>Your Supabase environment variables are not configured.</p>
                         <div class="config-error-content">
-                            <strong>Required Environment Variables:</strong>
+                            <strong>Current Configuration:</strong>
                             <ul>
-                                <li><code>SUPABASE_URL</code> = your project URL</li>
-                                <li><code>SUPABASE_ANON_KEY</code> = your anon public key</li>
-                                <li><code>WORKER_URL</code> = your worker endpoint</li>
+                                <li>SUPABASE_URL: ${config.supabaseUrl ? '✅ Set' : '❌ Missing'}</li>
+                                <li>SUPABASE_ANON_KEY: ${config.supabaseKey ? '✅ Set' : '❌ Missing'}</li>
+                                <li>WORKER_URL: ${config.workerUrl ? '✅ Set' : '❌ Missing'}</li>
+                            </ul>
+                            
+                            <h4>Quick Fix Options:</h4>
+                            
+                            <strong>Option 1: Inline Script (Quick Test)</strong>
+                            <p>Add this before the closing &lt;/head&gt; tag:</p>
+                            <pre><code>&lt;script&gt;
+window.SUPABASE_URL = 'https://your-project-id.supabase.co';
+window.SUPABASE_ANON_KEY = 'your-anon-key-here';
+window.WORKER_URL = 'https://your-worker.workers.dev';
+&lt;/script&gt;</code></pre>
+                            
+                            <strong>Option 2: Hosting Platform Environment Variables</strong>
+                            <ul>
+                                <li><strong>Vercel:</strong> Project Settings → Environment Variables</li>
+                                <li><strong>Netlify:</strong> Site Settings → Environment Variables</li>
+                                <li><strong>Cloudflare Pages:</strong> Pages → Settings → Environment Variables</li>
                             </ul>
                         </div>
                         <button onclick="location.reload()" style="background: #2D6CDF; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
@@ -898,9 +913,20 @@
         }
     </script>
 
+    <!-- Environment Configuration -->
+    <script>
+        // Set these values via your hosting platform's environment variable injection
+        // Example for Vercel/Netlify: Replace during build time
+        window.SUPABASE_URL = window.SUPABASE_URL || '__SUPABASE_URL__';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || '__SUPABASE_ANON_KEY__';
+        window.WORKER_URL = window.WORKER_URL || '__WORKER_URL__';
+        
+        // Clean up placeholder values
+        if (window.SUPABASE_URL.startsWith('__')) window.SUPABASE_URL = undefined;
+        if (window.SUPABASE_ANON_KEY.startsWith('__')) window.SUPABASE_ANON_KEY = undefined;
+        if (window.WORKER_URL.startsWith('__')) window.WORKER_URL = undefined;
+    </script>
     <!-- External Dependencies -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" 
-            onerror="console.error('Failed to load Supabase client')"></script>
     
     <!-- Optional: Sentry for error tracking -->
     <script src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js" 
