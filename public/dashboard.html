@@ -2407,8 +2407,19 @@ function renderInsights(insights) {
         }
 
         // Enhanced error handling with email contact
-        function handleDashboardError(error, context) {
-            console.error(`Dashboard error in ${context}:`, error);
+function handleDashboardError(error, context) {
+    // Log to Sentry with context
+    Sentry.withScope((scope) => {
+        scope.setTag('component', 'dashboard');
+        scope.setContext('error_context', {
+            location: context,
+            user_id: currentUser?.id,
+            timestamp: new Date().toISOString()
+        });
+        Sentry.captureException(error);
+    });
+    
+    console.error(`Dashboard error in ${context}:`, error);
             
             const errorModal = `
                 <div class="error-modal" style="background: white; padding: 32px; border-radius: 16px; text-align: center;">
@@ -2435,6 +2446,17 @@ function renderInsights(insights) {
                 }
             };
         }
+    function trackAuthError(error, email) {
+    Sentry.withScope((scope) => {
+        scope.setTag('auth_error', true);
+        scope.setUser({ email: email });
+        scope.setContext('auth_attempt', {
+            timestamp: new Date().toISOString(),
+            user_agent: navigator.userAgent
+        });
+        Sentry.captureException(error);
+    });
+}
     </script>
 </body>
 </html>
