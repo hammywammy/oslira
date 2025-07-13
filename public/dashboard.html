@@ -2366,6 +2366,58 @@ function renderInsights(insights) {
                 showAnalysisModal();
             }
         });
+});
+
+        // Support widget functions
+        const CONTACT_EMAILS = {
+            support: 'support@oslira.com',
+            billing: 'billing@oslira.com', 
+            legal: 'legal@oslira.com',
+            security: 'security@oslira.com',
+            general: 'hello@oslira.com'
+        };
+
+        // Function to open email client
+        function contactSupport(type = 'support') {
+            const email = CONTACT_EMAILS[type];
+            const subject = encodeURIComponent(`Oslira ${type.charAt(0).toUpperCase() + type.slice(1)} Request`);
+            window.location.href = `mailto:${email}?subject=${subject}`;
+        }
+
+        // Show support modal
+        function showSupportModal() {
+            document.getElementById('supportModal').style.display = 'flex';
+        }
+
+        // Enhanced error handling with email contact
+        function handleDashboardError(error, context) {
+            console.error(`Dashboard error in ${context}:`, error);
+            
+            const errorModal = `
+                <div class="error-modal" style="background: white; padding: 32px; border-radius: 16px; text-align: center;">
+                    <h3>Something went wrong</h3>
+                    <p>We're sorry, but there was an error: ${error.message}</p>
+                    <div class="error-actions" style="display: flex; gap: 12px; margin-top: 20px; justify-content: center;">
+                        <button onclick="contactSupport('support')" style="background: #2D6CDF; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">Contact Support</button>
+                        <button onclick="location.reload()" style="background: #6B7280; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer;">Retry</button>
+                    </div>
+                </div>
+            `;
+            
+            // Create modal container
+            const modalContainer = document.createElement('div');
+            modalContainer.className = 'modal';
+            modalContainer.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;';
+            modalContainer.innerHTML = errorModal;
+            document.body.appendChild(modalContainer);
+            
+            // Close on outside click
+            modalContainer.onclick = (e) => {
+                if (e.target === modalContainer) {
+                    document.body.removeChild(modalContainer);
+                }
+            };
+        }
     </script>
 </body>
 </html>
