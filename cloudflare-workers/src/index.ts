@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 // Enterprise Types
-interface ProfileData {
+interface ProfileData { 
   username: string;
   fullName?: string;
   biography?: string;
