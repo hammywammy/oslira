@@ -327,6 +327,54 @@
             font-size: 14px;
         }
         
+        /* Error State */
+        .auth-error {
+            text-align: center;
+            display: none;
+        }
+        
+        .error-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #8A6DF1, #F87171);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 24px;
+        }
+        
+        .error-title {
+            color: #121417;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        
+        .error-description {
+            color: #6B7280;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+        
+        .retry-button {
+            background: #2D6CDF;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .retry-button:hover {
+            background: #8A6DF1;
+            transform: translateY(-1px);
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             body {
@@ -346,7 +394,7 @@
             }
         }
         
-        /* Error states */
+        /* Error message */
         .error-message {
             background: #FEF3F3;
             border: 1px solid rgba(138, 109, 241, 0.3);
@@ -431,6 +479,14 @@
             <h2 class="processing-title">Signing you in...</h2>
             <p class="processing-description">Please wait while we verify your authentication</p>
         </div>
+
+        <!-- Error State -->
+        <div class="auth-card auth-error" id="auth-error">
+            <div class="error-icon">⚠️</div>
+            <h2 class="error-title">Authentication Error</h2>
+            <p class="error-description" id="error-description-text">There was a problem signing you in. Please try again.</p>
+            <button class="retry-button" onclick="retryAuth()">Try Again</button>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -439,6 +495,9 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIyNTc2NDQsImV4cCI6MjA2NzgzMzY0NH0.Cz909ngJHcBkxp1aeFUn-ZvCrKRFf3phtGlrBvTCvWg';
         
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let processingAuth = false;
+        let authTimeout = null;
 
         // Check for demo context from homepage
         function checkDemoContext() {
@@ -460,12 +519,16 @@
             document.getElementById('auth-form-container').style.display = 'block';
             document.getElementById('auth-success').style.display = 'none';
             document.getElementById('auth-processing').style.display = 'none';
+            document.getElementById('auth-error').style.display = 'none';
+            processingAuth = false;
+            if (authTimeout) clearTimeout(authTimeout);
         }
 
         function showSuccess(email) {
             document.getElementById('auth-form-container').style.display = 'none';
             document.getElementById('auth-success').style.display = 'block';
             document.getElementById('auth-processing').style.display = 'none';
+            document.getElementById('auth-error').style.display = 'none';
             document.getElementById('email-sent').textContent = email;
         }
 
@@ -473,9 +536,31 @@
             document.getElementById('auth-form-container').style.display = 'none';
             document.getElementById('auth-success').style.display = 'none';
             document.getElementById('auth-processing').style.display = 'block';
+            document.getElementById('auth-error').style.display = 'none';
+            processingAuth = true;
+            
+            // Set timeout for processing state
+            authTimeout = setTimeout(() => {
+                console.warn('⚠️ Auth processing timeout - showing error');
+                showError('Authentication is taking longer than expected. Please try again.');
+            }, 15000); // 15 second timeout
         }
 
         function showError(message) {
+            document.getElementById('auth-form-container').style.display = 'none';
+            document.getElementById('auth-success').style.display = 'none';
+            document.getElementById('auth-processing').style.display = 'none';
+            document.getElementById('auth-error').style.display = 'block';
+            document.getElementById('error-description-text').textContent = message;
+            processingAuth = false;
+            if (authTimeout) clearTimeout(authTimeout);
+        }
+
+        function retryAuth() {
+            showAuthForm();
+        }
+
+        function showFormError(message) {
             const errorEl = document.getElementById('error-message');
             errorEl.textContent = message;
             errorEl.style.display = 'block';
@@ -486,10 +571,13 @@
             }, 5000);
         }
 
-        // Handle authentication flow
+        // FIXED: Handle authentication flow with better error handling
         async function handleAuthFlow(session) {
             try {
                 console.log('✅ User authenticated:', session.user.email);
+                
+                // Clear processing timeout
+                if (authTimeout) clearTimeout(authTimeout);
                 
                 // Check if user has completed onboarding
                 const { data: userData, error } = await supabase
@@ -518,41 +606,91 @@
                 
             } catch (err) {
                 console.error('❌ Error in auth flow:', err);
-                window.location.href = 'onboarding.html';
+                
+                // If onboarding check fails, go to onboarding anyway
+                if (err.message.includes('not found') || err.message.includes('users')) {
+                    console.log('📝 User not in database, redirecting to onboarding');
+                    window.location.href = 'onboarding.html';
+                } else {
+                    showError('There was a problem accessing your account. Please try again.');
+                }
             }
         }
 
-        // Check for existing session on page load
+        // ENHANCED: Check for existing session and magic links on page load
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🔍 Checking authentication state...');
             
             checkDemoContext();
             
-            // Check if this is a magic link callback
+            // FIXED: Better magic link detection
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
-            const accessToken = hashParams.get('access_token');
+            const urlParams = new URLSearchParams(window.location.search);
             
-            if (accessToken) {
-                console.log('🔗 Magic link detected, processing...');
-                showProcessing();
+            // Check for access token in hash or URL params
+            const accessToken = hashParams.get('access_token') || urlParams.get('access_token');
+            const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token');
+            const error = hashParams.get('error') || urlParams.get('error');
+            const errorDescription = hashParams.get('error_description') || urlParams.get('error_description');
+            
+            // Handle auth errors
+            if (error) {
+                console.error('❌ Auth error from URL:', error, errorDescription);
+                showError(errorDescription || 'Authentication failed. Please try again.');
                 
-                // Wait for Supabase to process the authentication
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                // Clean up URL
-                if (window.history && window.history.replaceState) {
-                    window.history.replaceState(null, '', window.location.pathname + window.location.search);
-                }
+                // Clean URL
+                window.history.replaceState(null, '', window.location.pathname);
+                return;
             }
             
-            // Check for existing session
-            const { data: { session }, error } = await supabase.auth.getSession();
+            // Handle magic link
+            if (accessToken && refreshToken) {
+                console.log('🔗 Magic link tokens detected, processing...');
+                showProcessing();
+                
+                try {
+                    // FIXED: Properly set session with both tokens
+                    const { data, error: sessionError } = await supabase.auth.setSession({
+                        access_token: accessToken,
+                        refresh_token: refreshToken
+                    });
+                    
+                    if (sessionError) throw sessionError;
+                    
+                    console.log('✅ Session set from magic link');
+                    
+                    // Clean up URL immediately
+                    window.history.replaceState(null, '', window.location.pathname + (window.location.search.replace(/[?&](access_token|refresh_token|token_type|expires_in)=[^&]*/g, '').replace(/^&/, '?') || ''));
+                    
+                    // Handle the authenticated session
+                    if (data.session) {
+                        await handleAuthFlow(data.session);
+                    } else {
+                        throw new Error('No session created from tokens');
+                    }
+                    
+                } catch (err) {
+                    console.error('❌ Magic link processing error:', err);
+                    showError('There was a problem with your login link. Please try signing in again.');
+                }
+                return;
+            }
             
-            if (session) {
-                console.log('✅ Existing session found');
-                await handleAuthFlow(session);
-            } else {
-                console.log('ℹ️ No session found, showing auth form');
+            // Check for existing session (not from magic link)
+            try {
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) throw sessionError;
+                
+                if (session && !processingAuth) {
+                    console.log('✅ Existing session found');
+                    await handleAuthFlow(session);
+                } else {
+                    console.log('ℹ️ No session found, showing auth form');
+                    showAuthForm();
+                }
+            } catch (err) {
+                console.error('❌ Session check error:', err);
                 showAuthForm();
             }
         });
@@ -571,7 +709,7 @@
             
             if (!email) {
                 emailInput.classList.add('error');
-                showError('Please enter your email address');
+                showFormError('Please enter your email address');
                 return;
             }
 
@@ -579,7 +717,7 @@
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
                 emailInput.classList.add('error');
-                showError('Please enter a valid email address');
+                showFormError('Please enter a valid email address');
                 return;
             }
 
@@ -590,8 +728,11 @@
             try {
                 console.log('📧 Sending secure login link to:', email);
                 
-                // Build redirect URL with demo context if present
-                let redirectUrl = `${window.location.origin}/auth.html`;
+                // FIXED: Better redirect URL construction
+                const baseUrl = window.location.origin;
+                let redirectUrl = `${baseUrl}/auth.html`;
+                
+                // Add demo context if present
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('demo')) {
                     redirectUrl += `?demo=${encodeURIComponent(urlParams.get('demo'))}`;
@@ -618,9 +759,11 @@
                     errorMessage = 'Too many requests. Please wait a moment before trying again.';
                 } else if (err.message.includes('invalid')) {
                     errorMessage = 'Invalid email address. Please check and try again.';
+                } else if (err.message.includes('Email not confirmed')) {
+                    errorMessage = 'Please check your email and click the confirmation link.';
                 }
                 
-                showError(errorMessage);
+                showFormError(errorMessage);
                 emailInput.classList.add('error');
                 
             } finally {
@@ -630,22 +773,42 @@
             }
         });
 
-        // Listen for auth state changes
+        // ENHANCED: Listen for auth state changes with better handling
         supabase.auth.onAuthStateChange(async (event, session) => {
             console.log('🔄 Auth state changed:', event);
             
-            if (event === 'SIGNED_IN' && session) {
-                console.log('✅ User signed in successfully');
+            if (event === 'SIGNED_IN' && session && !processingAuth) {
+                console.log('✅ User signed in via auth state change');
+                showProcessing();
                 await handleAuthFlow(session);
             } else if (event === 'SIGNED_OUT') {
                 console.log('👋 User signed out');
                 showAuthForm();
+            } else if (event === 'TOKEN_REFRESHED' && session) {
+                console.log('🔄 Token refreshed');
+                // Don't redirect on token refresh, just update session
             }
         });
 
         // Handle browser back/forward navigation
         window.addEventListener('popstate', () => {
             checkDemoContext();
+        });
+
+        // ENHANCED: Handle page visibility changes (user switching tabs)
+        document.addEventListener('visibilitychange', async () => {
+            if (!document.hidden && !processingAuth) {
+                // Page became visible, check for session updates
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session && document.getElementById('auth-form-container').style.display !== 'none') {
+                        console.log('✅ Session found on page focus');
+                        await handleAuthFlow(session);
+                    }
+                } catch (err) {
+                    console.error('❌ Error checking session on page focus:', err);
+                }
+            }
         });
     </script>
 </body>
