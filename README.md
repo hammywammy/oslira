@@ -1,88 +1,78 @@
 # Oslira - AI-Powered Lead Generation Platform
 
 [![Deploy Status](https://api.netlify.com/api/v1/badges/your-site-id/deploy-status)](https://app.netlify.com/sites/oslira/deploys)
-[![Security](https://img.shields.io/badge/security-enterprise-green.svg)](https://oslira.com/security)
-[![License](https://img.shields.io/badge/license-proprietary-red.svg)](LICENSE)
 
-> Enterprise-grade AI platform for lead research, analysis, and personalized outreach generation.
+> AI platform for lead research, analysis, and personalized outreach generation.
 
-## 🚀 Quick Start
+## 🚀 Development Setup
 
 ### Prerequisites
 - Node.js 18.x or higher
-- npm or yarn package manager
 - Supabase account with database setup
 - Stripe account for payment processing
+- Cloudflare Workers account
 
-### Installation
+### Local Development
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/oslira-frontend.git
+git clone [repository-url]
 cd oslira-frontend
 
-# Install dependencies
-npm install
+# No npm install needed - this is a static HTML/CSS/JS project
 
-# Copy environment template
-cp .env.example .env
+# Copy environment template  
+cp config.example.js config.js
 
-# Configure environment variables (see Configuration section)
-# Edit .env with your actual values
+# Configure your API keys in config.js
+# Edit config.js with your Supabase credentials
 
-# Run development server
-npm run dev
+# Serve locally (use any static server)
+python -m http.server 8000
+# or
+npx serve .
 ```
 
-Visit `http://localhost:3000` to access the development environment.
+Visit `http://localhost:8000` to access the development environment.
 
 ## 📋 Configuration
 
-### Environment Variables
-Create a `.env` file with the following variables:
+### JavaScript Configuration
+Create a `config.js` file with your credentials:
 
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-
-# Stripe Configuration
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your-stripe-key
-STRIPE_SECRET_KEY=sk_test_your-stripe-secret
-
-# Cloudflare Workers API
-VITE_API_ENDPOINT=https://ai-outreach-api.your-domain.workers.dev
-
-# Analytics (Optional)
-VITE_GOOGLE_ANALYTICS_ID=GA_MEASUREMENT_ID
-
-# Development
-NODE_ENV=development
-VITE_APP_ENV=development
+```javascript
+const CONFIG = {
+    supabaseUrl: 'https://jswzzihuqtjqvobfosks.supabase.co',
+    supabaseKey: 'your-supabase-anon-key-here'
+};
 ```
 
 ### Database Setup
-Ensure your Supabase database has the required tables:
+Run the SQL schema in your Supabase SQL editor:
 
 ```sql
--- Run the complete schema from /sql/complete-schema.sql
--- This includes: users, business_profiles, leads, credit_transactions, etc.
+-- Tables needed: users, business_profiles, leads, credit_transactions
+-- Full schema available in the SQL artifacts provided
 ```
+
+### Required Services
+- **Supabase**: Database, authentication, real-time updates
+- **Stripe**: Payment processing for subscriptions
+- **Cloudflare Workers**: API backend for AI processing
 
 ## 🏗️ Architecture
 
 ### Frontend Stack
-- **Framework**: Vanilla HTML/CSS/JavaScript (Enterprise Static)
+- **Framework**: Static HTML/CSS/JavaScript
 - **Styling**: Custom CSS with modern design system
 - **Authentication**: Supabase Auth with magic links
-- **State Management**: Native JavaScript with Supabase real-time
-- **Payment Processing**: Stripe Elements integration
+- **Database**: Supabase (PostgreSQL with RLS)
+- **Payment Processing**: Stripe subscription model
 
 ### Backend Infrastructure
-- **Database**: Supabase (PostgreSQL with Row Level Security)
-- **API**: Cloudflare Workers (Edge computing)
+- **API**: Cloudflare Workers for AI processing
+- **Database**: Supabase with Row Level Security
 - **Authentication**: Supabase JWT tokens
-- **File Storage**: Supabase Storage for assets
-- **Analytics**: Custom analytics + Google Analytics
+- **Hosting**: Netlify for static files
 
 ### Deployment Architecture
 ```
@@ -99,169 +89,123 @@ Ensure your Supabase database has the required tables:
 
 ```
 oslira-frontend/
-├── 📁 public/                    # Static assets
-│   ├── assets/                   # Images, icons, logos
-│   ├── favicon.ico              # Site favicon
-│   └── manifest.json            # PWA manifest
-├── 📁 src/                      # Source files (if using build process)
-│   ├── components/              # Reusable components
-│   ├── pages/                   # Page-specific files
-│   └── utils/                   # Utility functions
-├── 📁 netlify/                  # Netlify configuration
-│   ├── edge-functions/          # Netlify Edge Functions
-│   ├── functions/               # Netlify Functions
-│   └── netlify.toml            # Netlify config
-├── 📁 cloudflare-workers/       # API backend
-│   ├── src/                     # Worker source code
-│   ├── wrangler.toml           # Cloudflare config
-│   └── package.json            # Worker dependencies
-├── 📁 sql/                      # Database schemas
-│   ├── complete-schema.sql      # Full database setup
-│   └── migrations/              # Schema migrations
-├── 📁 .github/                  # GitHub workflows
-│   └── workflows/
-│       ├── ci.yml              # Continuous Integration
-│       └── deploy.yml          # Deployment pipeline
-├── 📁 docs/                     # Documentation
-│   ├── API.md                  # API documentation
-│   ├── DEPLOYMENT.md           # Deployment guide
-│   └── SECURITY.md             # Security protocols
-├── .env.example                # Environment template
-├── package.json                # Project dependencies
-├── README.md                   # This file
-└── LICENSE                     # License information
+├── 📁 assets/                   # Images, icons, logos
+├── 📄 index.html               # Landing page
+├── 📄 auth.html                # Authentication page
+├── 📄 onboarding.html          # User onboarding flow
+├── 📄 dashboard.html           # Main dashboard
+├── 📄 pricing.html             # Pricing page
+├── 📄 security.html            # Security information
+├── 📄 privacy.html             # Privacy policy
+├── 📄 disclaimer.html          # Legal disclaimer
+├── 📄 refund.html              # Refund policy
+├── 📄 terms.html               # Terms of service
+├── 📄 config.js                # Configuration file (gitignored)
+├── 📄 config.example.js        # Configuration template
+├── 📁 cloudflare-workers/      # API backend
+│   ├── src/                    # Worker source code
+│   └── wrangler.toml          # Cloudflare config
+├── 📁 sql/                     # Database schemas
+│   └── complete-schema.sql     # Full database setup
+└── README.md                   # This file
 ```
 
 ## 🚀 Deployment
 
-### Production Deployment
+### Static File Hosting
+The frontend is static HTML/CSS/JS files that can be hosted anywhere:
+- **Netlify** (current setup)
+- **Vercel**
+- **GitHub Pages**
+- **Any static hosting service**
 
-#### Netlify (Frontend)
+### API Backend
 ```bash
-# Build for production
-npm run build
-
-# Deploy to Netlify (automated via GitHub)
-# Or manual deploy:
-netlify deploy --prod --dir=dist
-```
-
-#### Cloudflare Workers (API)
-```bash
-# Navigate to workers directory
+# Deploy Cloudflare Worker
 cd cloudflare-workers
-
-# Deploy to Cloudflare
 npx wrangler deploy
 ```
 
-### Environment-Specific Deployments
-- **Development**: `npm run dev` (localhost:3000)
-- **Staging**: Automated deployment on push to `develop` branch
-- **Production**: Automated deployment on push to `main` branch
-
-### CI/CD Pipeline
-Our GitHub Actions workflow automatically:
-1. Runs tests and security scans
-2. Builds optimized production assets
-3. Deploys to Netlify and Cloudflare Workers
-4. Sends deployment notifications
+### Database
+- Set up Supabase project
+- Run the SQL schema
+- Configure RLS policies
 
 ## 🔧 Development
 
-### Available Scripts
-```bash
-# Development
-npm run dev              # Start development server
-npm run build           # Build for production
-npm run preview         # Preview production build
+### Technology Stack
+- **Frontend**: Pure HTML/CSS/JavaScript (no build process)
+- **Database**: Supabase (PostgreSQL)
+- **API**: Cloudflare Workers
+- **Authentication**: Supabase Auth
+- **Payments**: Stripe
+- **Hosting**: Netlify
 
-# Code Quality
-npm run lint            # Run ESLint
-npm run format          # Format code with Prettier
-npm run type-check      # TypeScript type checking
-
-# Testing
-npm run test            # Run unit tests
-npm run test:e2e        # Run end-to-end tests
-npm run test:coverage   # Generate coverage report
-
-# Deployment
-npm run deploy:staging  # Deploy to staging
-npm run deploy:prod     # Deploy to production
-```
-
-### Development Workflow
-1. Create feature branch from `develop`
-2. Make changes and test locally
-3. Commit with conventional commit messages
-4. Push and create pull request
-5. Automated tests and reviews
-6. Merge to `develop` for staging deployment
-7. Merge to `main` for production deployment
+### Key Features Implemented
+- User authentication and onboarding
+- Subscription + credits billing model
+- AI lead analysis via Cloudflare Workers
+- Real-time dashboard with lead management
+- Legal pages (privacy, terms, disclaimer, refund)
+- Responsive design across all pages
 
 ## 🛡️ Security
 
-### Security Features
-- **Authentication**: Supabase Auth with JWT tokens
-- **Authorization**: Row Level Security (RLS) in database
-- **Data Encryption**: TLS 1.3 for all communications
-- **Input Validation**: Server-side validation for all inputs
-- **Rate Limiting**: API rate limiting via Cloudflare
-- **CSRF Protection**: Token-based CSRF protection
-- **XSS Prevention**: Content Security Policy headers
+### Current Implementation
+- **Authentication**: Supabase Auth with magic links
+- **Database Security**: Row Level Security (RLS) 
+- **API Protection**: JWT token validation
+- **Payment Security**: Stripe Elements
+- **HTTPS**: TLS encryption for all communications
 
-### Security Best Practices
-- All sensitive data encrypted at rest and in transit
-- Regular security audits and dependency updates
-- SOC 2 compliant infrastructure
-- GDPR and CCPA compliance implementations
-- Regular penetration testing
+### Database Security
+All tables use Row Level Security to ensure users can only access their own data.
 
-## 📊 Features
+## 📊 Current Features
 
-### Core Platform Features
-- ✅ **AI Lead Analysis**: Advanced profile scoring and insights
-- ✅ **Personalized Outreach**: AI-generated messaging
-- ✅ **Subscription Management**: Flexible credit-based billing
-- ✅ **Enterprise Security**: SOC 2 compliant infrastructure
-- ✅ **Real-time Analytics**: Performance tracking and insights
-- ✅ **Team Collaboration**: Multi-user business profiles
-- ✅ **API Access**: RESTful API for integrations
-- ✅ **Export Capabilities**: CSV export for all data
+### Implemented
+- ✅ **User Authentication**: Magic link login via Supabase
+- ✅ **Onboarding Flow**: 5-step business profile setup  
+- ✅ **Subscription Billing**: Monthly plans with included credits
+- ✅ **Lead Analysis**: AI-powered Instagram profile analysis
+- ✅ **Dashboard**: Lead management and analytics
+- ✅ **Legal Pages**: Privacy, terms, disclaimer, refund policies
+- ✅ **Responsive Design**: Mobile-friendly across all pages
 
-### Business Intelligence
-- Lead scoring algorithms (0-100 scale)
-- Industry-specific analysis
-- Engagement rate predictions
-- Optimal outreach timing
-- A/B testing for message effectiveness
+### Technical Implementation
+- Credit-based analysis system (1-2 credits per analysis)
+- Real-time dashboard updates via Supabase
+- AI analysis via Cloudflare Workers API
+- Stripe integration for subscription management
+- Row Level Security for data protection
 
-### Integration Capabilities
-- Stripe payment processing
-- Supabase real-time database
-- Cloudflare edge computing
-- Google Analytics tracking
-- Webhook support for external systems
-
-## 🔄 API Documentation
+## 🔄 API Integration
 
 ### Authentication
 ```javascript
-// All API requests require authentication header
+// Include Supabase session token in requests
+const { data: { session } } = await supabase.auth.getSession();
 headers: {
-  'Authorization': `Bearer ${supabaseToken}`,
+  'Authorization': `Bearer ${session.access_token}`,
   'Content-Type': 'application/json'
 }
 ```
 
-### Core Endpoints
-```
-POST   /api/analyze          # Analyze lead profile
-GET    /api/leads             # Get user's leads
-DELETE /api/leads/:id         # Delete specific lead
-POST   /api/credits/purchase  # Purchase additional credits
-GET    /api/analytics         # Get usage analytics
+### Cloudflare Workers API
+```javascript
+// Example: Analyze lead profile
+const response = await fetch('https://ai-outreach-api.your-domain.workers.dev/analyze', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    profile_url: 'https://instagram.com/username',
+    analysis_type: 'deep',
+    business_id: 'user-business-id'
+  })
+});
 ```
 
 ## 📈 Monitoring & Analytics
@@ -282,68 +226,57 @@ GET    /api/analytics         # Get usage analytics
 ## 🤝 Contributing
 
 ### Development Guidelines
-1. Follow conventional commit message format
-2. Maintain 80%+ test coverage
-3. Update documentation for new features
-4. Follow existing code style and conventions
-5. Test across multiple browsers and devices
+This is a static HTML/CSS/JavaScript project focused on:
+1. Clean, maintainable code
+2. Responsive design principles  
+3. Supabase integration patterns
+4. Stripe payment flows
+5. Real-time dashboard updates
 
-### Pull Request Process
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Create Pull Request with detailed description
+### Areas for Contribution
+- UI/UX improvements
+- Additional payment integrations
+- Enhanced analytics features
+- Mobile app development
+- API optimizations
+- Database schema improvements
 
-## 📞 Support
+### Getting Started
+1. Set up your own Supabase project
+2. Configure the database schema
+3. Add your API credentials to config.js
+4. Start with local development
+5. Test with your own data
 
-### Getting Help
-- **Documentation**: [docs.oslira.com](https://docs.oslira.com)
-- **Support Email**: [support@oslira.com](mailto:support@oslira.com)
-- **Security Issues**: [security@oslira.com](mailto:security@oslira.com)
-- **Business Inquiries**: [hello@oslira.com](mailto:hello@oslira.com)
+## 📞 Technical Support
 
-### Enterprise Support
-Enterprise customers receive:
-- 24/7 phone and chat support
-- Dedicated account manager
-- Custom integration assistance
-- Priority feature requests
-- SLA guarantees
+### Architecture Questions
+- Supabase integration patterns
+- Cloudflare Workers development
+- Stripe subscription implementation
+- Real-time dashboard design
 
-## 📄 License
-
-This project is proprietary software owned by Oslira Inc. All rights reserved.
-
-See [LICENSE](LICENSE) file for details.
+### Development Resources
+- [Supabase Documentation](https://supabase.com/docs)
+- [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
+- [Stripe API Reference](https://stripe.com/docs/api)
 
 ---
 
-## 🎯 Roadmap
+## 🎯 Development Roadmap
 
-### Q1 2025
+### Potential Improvements
+- [ ] Email integration capabilities
 - [ ] Advanced analytics dashboard
-- [ ] Bulk lead analysis (CSV upload)
-- [ ] Email integration (Gmail, Outlook)
-- [ ] Mobile app development
-- [ ] Advanced AI model improvements
-
-### Q2 2025
-- [ ] CRM integrations (Salesforce, HubSpot)
-- [ ] Multi-language support
-- [ ] Advanced team collaboration features
-- [ ] White-label options for enterprise
-- [ ] Advanced reporting and exports
-
-### Q3 2025
-- [ ] LinkedIn integration
-- [ ] Advanced automation workflows
-- [ ] Custom AI model training
-- [ ] Enterprise SSO integration
-- [ ] Advanced compliance features
+- [ ] Bulk analysis features
+- [ ] Mobile-responsive optimizations
+- [ ] Additional payment gateways
+- [ ] Enhanced AI model integration
+- [ ] Team collaboration features
+- [ ] Advanced export options
 
 ---
 
-**Built with ❤️ by the Oslira Team**
+**Technical Stack**: Static HTML/CSS/JS + Supabase + Cloudflare Workers + Stripe
 
-*Empowering businesses with AI-driven lead generation and personalized outreach.*
+*Built for developers who want to understand modern SaaS architecture with AI integration.*
