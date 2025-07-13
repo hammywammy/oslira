@@ -34,6 +34,8 @@ interface User {
   id: string;
   email: string;
   credits: number;
+  subscription_plan: string;
+  monthly_credits_limit: number;
 }
 
 interface AnalysisRequest {
@@ -58,66 +60,29 @@ app.use('*', cors({
 // JWT verification
 async function verifySupabaseJWT(token: string): Promise<string | null> {
   try {
-    if (!token) {
-      console.error('❌ No token provided');
-      return null;
-    }
+    if (!token) return null;
 
     const parts = token.split('.');
-    if (parts.length !== 3) {
-      console.error('❌ Invalid JWT format');
-      return null;
-    }
+    if (parts.length !== 3) return null;
     
     const [, payload] = parts;
     const decodedPayload = JSON.parse(atob(payload));
     
     const now = Math.floor(Date.now() / 1000);
     if (decodedPayload.exp && decodedPayload.exp < now) {
-      console.error('❌ Token expired');
       return null;
     }
     
-    console.log('✅ Token valid for user:', decodedPayload.sub);
     return decodedPayload.sub;
   } catch (error) {
-    console.error('💥 JWT verification error:', error);
     return null;
   }
-}
-
-// Email notification webhook
-async function handleEmailNotification(request) {
-    const { type, email, data } = await request.json();
-    
-    const notifications = {
-        new_user: {
-            to: 'hello@oslira.com',
-            subject: `New user signup: ${email}`,
-            template: 'new_user'
-        },
-        billing_issue: {
-            to: 'billing@oslira.com', 
-            subject: `Billing issue: ${email}`,
-            template: 'billing_alert'
-        },
-        security_alert: {
-            to: 'security@oslira.com',
-            subject: `Security Alert: ${data.alert_type}`,
-            template: 'security_alert'
-        }
-    };
-    
-    // Send via Zoho API or SMTP
-    await sendEmail(notifications[type]);
 }
 
 // OpenAI API with retry logic
 async function callOpenAI(prompt: string, apiKey: string, maxRetries = 3): Promise<any> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log('🤖 OpenAI attempt ' + attempt + '/' + maxRetries);
-      
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -137,7 +102,6 @@ async function callOpenAI(prompt: string, apiKey: string, maxRetries = 3): Promi
         const errorText = await response.text();
         if (response.status === 429 && attempt < maxRetries) {
           const delay = Math.min(Math.pow(2, attempt) * 1000, 10000);
-          console.log('⏳ Rate limited, waiting ' + delay + 'ms...');
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
@@ -145,10 +109,8 @@ async function callOpenAI(prompt: string, apiKey: string, maxRetries = 3): Promi
       }
 
       const data = await response.json();
-      console.log('✅ OpenAI response received');
       return data;
     } catch (error) {
-      console.error('❌ OpenAI attempt ' + attempt + ' failed:', error.message);
       if (attempt === maxRetries) throw error;
       
       const delay = Math.min(Math.pow(2, attempt) * 500, 5000);
@@ -161,8 +123,6 @@ async function callOpenAI(prompt: string, apiKey: string, maxRetries = 3): Promi
 async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promise<any> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log('🧠 Claude attempt ' + attempt + '/' + maxRetries);
-      
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -182,7 +142,6 @@ async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promi
         const errorText = await response.text();
         if (response.status === 429 && attempt < maxRetries) {
           const delay = Math.min(Math.pow(2, attempt) * 1000, 8000);
-          console.log('⏳ Claude rate limited, waiting ' + delay + 'ms...');
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
@@ -190,10 +149,8 @@ async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promi
       }
 
       const data = await response.json();
-      console.log('✅ Claude response received');
       return data;
     } catch (error) {
-      console.error('❌ Claude attempt ' + attempt + ' failed:', error.message);
       if (attempt === maxRetries) throw error;
       
       const delay = Math.min(Math.pow(2, attempt) * 600, 6000);
@@ -204,28 +161,19 @@ async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promi
 
 // Safe Supabase response handler
 async function safeSupabaseResponse(response: Response, context: string): Promise<any> {
-  console.log('📡 ' + context + ' - Status: ' + response.status);
-  
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('❌ ' + context + ' failed:', response.status, errorText);
     throw new Error(context + ' failed: ' + response.status + ' - ' + errorText);
   }
 
   const responseText = await response.text();
-  console.log('📄 ' + context + ' response length:', responseText.length);
-
   if (!responseText || responseText.trim() === '') {
-    console.log('⚠️ Empty response from ' + context);
     return null;
   }
 
   try {
-    const parsed = JSON.parse(responseText);
-    console.log('✅ ' + context + ' parsed successfully');
-    return parsed;
+    return JSON.parse(responseText);
   } catch (parseError) {
-    console.error('💥 ' + context + ' JSON parse error:', parseError);
     throw new Error('Failed to parse ' + context + ' response');
   }
 }
@@ -234,24 +182,19 @@ async function safeSupabaseResponse(response: Response, context: string): Promis
 function extractUsername(profileUrl: string): string {
   try {
     if (!profileUrl || typeof profileUrl !== 'string') {
-      console.error('❌ Invalid profile URL provided:', profileUrl);
       return '';
     }
     
     const cleanUrl = profileUrl.trim();
-    console.log('🔍 Extracting username from URL:', cleanUrl);
     
     // Remove any potential contamination
     if (cleanUrl.includes('lukealexxander') || cleanUrl.includes('lukealexander')) {
-      console.error('🚨 CONTAMINATED URL DETECTED AND REJECTED:', cleanUrl);
       return '';
     }
     
     // Handle direct username
     if (!cleanUrl.includes('/') && !cleanUrl.includes('.')) {
-      const username = cleanUrl.replace('@', '').toLowerCase();
-      console.log('✅ Direct username extracted:', username);
-      return username;
+      return cleanUrl.replace('@', '').toLowerCase();
     }
     
     // Handle Instagram URLs
@@ -259,21 +202,15 @@ function extractUsername(profileUrl: string): string {
       try {
         const url = new URL(cleanUrl);
         const pathSegments = url.pathname.split('/').filter(Boolean);
-        const username = pathSegments[0] || '';
-        console.log('✅ URL username extracted:', username);
-        return username.toLowerCase();
+        return pathSegments[0]?.toLowerCase() || '';
       } catch (urlError) {
-        console.error('❌ Invalid URL format:', cleanUrl);
         return '';
       }
     }
     
     // Fallback for other formats
-    const username = cleanUrl.replace('@', '').replace(/[^a-zA-Z0-9._]/g, '').toLowerCase();
-    console.log('✅ Fallback username extracted:', username);
-    return username;
+    return cleanUrl.replace('@', '').replace(/[^a-zA-Z0-9._]/g, '').toLowerCase();
   } catch (error) {
-    console.error('💥 Username extraction error:', error);
     return '';
   }
 }
@@ -282,15 +219,11 @@ function extractUsername(profileUrl: string): string {
 function validateRequest(body: AnalysisRequest): { isValid: boolean; errors: string[]; normalizedData: any } {
   const errors: string[] = [];
   
-  console.log('🔍 Validating request body keys:', Object.keys(body));
-  
-  // Extract profile URL or username
   const profileUrl = body.profile_url || (body.username ? 'https://instagram.com/' + body.username : '');
   if (!profileUrl) {
     errors.push('profile_url or username is required');
   }
   
-  // Extract analysis type
   const analysisType = body.analysis_type || body.analysisType || body.type;
   if (!analysisType) {
     errors.push('analysis_type is required');
@@ -298,18 +231,10 @@ function validateRequest(body: AnalysisRequest): { isValid: boolean; errors: str
     errors.push('analysis_type must be "light" or "deep"');
   }
   
-  // Extract business ID
   const businessId = body.business_id || body.businessId;
   if (!businessId) {
     errors.push('business_id is required');
   }
-  
-  console.log('🔍 Validation results:', { 
-    profileUrl: profileUrl.substring(0, 50), 
-    analysisType, 
-    businessId: businessId?.substring(0, 20),
-    errors: errors.length 
-  });
   
   return {
     isValid: errors.length === 0,
@@ -400,17 +325,505 @@ function generateMessagePrompt(profile: ProfileData, business: BusinessProfile, 
     'Write a personalized 2-3 sentence Instagram DM. Only return the message text.';
 }
 
-// Main analyze endpoint
+// =====================================================
+// STRIPE SUBSCRIPTION ENDPOINTS
+// =====================================================
+
+// Create subscription checkout session
+app.post('/create-subscription', async (c) => {
+  try {
+    // Verify authentication
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const token = authHeader.substring(7);
+    const userId = await verifySupabaseJWT(token);
+    if (!userId) {
+      return c.json({ error: 'Invalid token' }, 401);
+    }
+
+    const { 
+      product_code, 
+      plan_name, 
+      customer_email, 
+      trial_days = 7,
+      success_url,
+      cancel_url,
+      metadata 
+    } = await c.req.json();
+    
+    if (!product_code || !plan_name || !customer_email) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    // Map your product codes to Stripe price IDs
+    const PRODUCT_CODE_TO_PRICE_ID = {
+      'oslira_starter_29': c.env.STRIPE_STARTER_PRICE_ID,
+      'oslira_growth_79': c.env.STRIPE_GROWTH_PRICE_ID,
+      'oslira_professional_199': c.env.STRIPE_PROFESSIONAL_PRICE_ID,
+      'oslira_enterprise_499': c.env.STRIPE_ENTERPRISE_PRICE_ID
+    };
+
+    const priceId = PRODUCT_CODE_TO_PRICE_ID[product_code];
+    if (!priceId) {
+      return c.json({ error: 'Invalid product code' }, 400);
+    }
+
+    // Create or get customer
+    let customerId = null;
+    
+    // Check if customer exists
+    const customerSearchResponse = await fetch(
+      `https://api.stripe.com/v1/customers/search?query=email:'${customer_email}'`,
+      {
+        headers: {
+          'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+        },
+      }
+    );
+
+    const customerSearchData = await customerSearchResponse.json();
+    
+    if (customerSearchData.data && customerSearchData.data.length > 0) {
+      customerId = customerSearchData.data[0].id;
+    } else {
+      // Create new customer
+      const customerData = new URLSearchParams({
+        email: customer_email,
+        'metadata[user_id]': userId,
+      });
+
+      const customerResponse = await fetch('https://api.stripe.com/v1/customers', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: customerData,
+      });
+
+      const newCustomer = await customerResponse.json();
+      if (!customerResponse.ok) {
+        return c.json({ error: 'Failed to create customer' }, 400);
+      }
+      customerId = newCustomer.id;
+    }
+
+    // Create checkout session for subscription
+    const sessionData = new URLSearchParams({
+      'payment_method_types[]': 'card',
+      'line_items[0][price]': priceId,
+      'line_items[0][quantity]': '1',
+      'mode': 'subscription',
+      'success_url': success_url || `${c.env.FRONTEND_URL || 'https://oslira.com'}/subscription.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      'cancel_url': cancel_url || `${c.env.FRONTEND_URL || 'https://oslira.com'}/subscription.html?canceled=true`,
+      'customer': customerId,
+      'subscription_data[trial_period_days]': trial_days.toString(),
+      'subscription_data[metadata][user_id]': userId,
+      'subscription_data[metadata][plan_name]': plan_name,
+      'subscription_data[metadata][product_code]': product_code,
+    });
+
+    // Add additional metadata if provided
+    if (metadata) {
+      Object.entries(metadata).forEach(([key, value]) => {
+        sessionData.append(`subscription_data[metadata][${key}]`, String(value));
+      });
+    }
+
+    const sessionResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: sessionData,
+    });
+
+    const session = await sessionResponse.json();
+
+    if (!sessionResponse.ok) {
+      console.error('Stripe session creation failed:', session);
+      return c.json({ error: session.error?.message || 'Session creation failed' }, 400);
+    }
+
+    return c.json({ 
+      url: session.url, 
+      session_id: session.id,
+      customer_id: customerId
+    });
+
+  } catch (error) {
+    console.error('Subscription creation error:', error);
+    return c.json({ error: 'Failed to create subscription' }, 500);
+  }
+});
+
+// Create customer portal session
+app.post('/create-portal-session', async (c) => {
+  try {
+    // Verify authentication
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const token = authHeader.substring(7);
+    const userId = await verifySupabaseJWT(token);
+    if (!userId) {
+      return c.json({ error: 'Invalid token' }, 401);
+    }
+
+    const { return_url, customer_email } = await c.req.json();
+    
+    if (!customer_email) {
+      return c.json({ error: 'Missing customer_email' }, 400);
+    }
+
+    // Find customer by email
+    const customerSearchResponse = await fetch(
+      `https://api.stripe.com/v1/customers/search?query=email:'${customer_email}'`,
+      {
+        headers: {
+          'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+        },
+      }
+    );
+
+    const customerSearchData = await customerSearchResponse.json();
+    
+    if (!customerSearchData.data || customerSearchData.data.length === 0) {
+      return c.json({ error: 'Customer not found' }, 404);
+    }
+
+    const customerId = customerSearchData.data[0].id;
+
+    // Create portal session
+    const portalData = new URLSearchParams({
+      customer: customerId,
+      return_url: return_url || `${c.env.FRONTEND_URL || 'https://oslira.com'}/subscription.html`,
+    });
+
+    const portalResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: portalData,
+    });
+
+    const portal = await portalResponse.json();
+
+    if (!portalResponse.ok) {
+      console.error('Portal session creation failed:', portal);
+      return c.json({ error: portal.error?.message || 'Portal creation failed' }, 400);
+    }
+
+    return c.json({ url: portal.url });
+
+  } catch (error) {
+    console.error('Portal session error:', error);
+    return c.json({ error: 'Failed to create portal session' }, 500);
+  }
+});
+
+// Stripe webhook handler
+app.post('/stripe-webhook', async (c) => {
+  try {
+    const body = await c.req.text();
+    const sig = c.req.header('stripe-signature');
+
+    if (!sig || !c.env.STRIPE_WEBHOOK_SECRET) {
+      return c.text('Missing signature or secret', 400);
+    }
+
+    // For production, you should verify the webhook signature
+    // For now, we'll just parse the event
+    const event = JSON.parse(body);
+    
+    console.log('Webhook received:', event.type);
+
+    // Handle different event types
+    switch (event.type) {
+      case 'customer.subscription.created':
+        await handleSubscriptionCreated(event.data.object, c.env);
+        break;
+      case 'customer.subscription.updated':
+        await handleSubscriptionUpdated(event.data.object, c.env);
+        break;
+      case 'customer.subscription.deleted':
+        await handleSubscriptionCanceled(event.data.object, c.env);
+        break;
+      case 'invoice.payment_succeeded':
+        await handlePaymentSucceeded(event.data.object, c.env);
+        break;
+      case 'invoice.payment_failed':
+        await handlePaymentFailed(event.data.object, c.env);
+        break;
+      default:
+        console.log('Unhandled event type:', event.type);
+    }
+
+    return c.text('Success', 200);
+
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return c.text('Webhook error', 400);
+  }
+});
+
+// Handle subscription created
+async function handleSubscriptionCreated(subscription: any, env: any) {
+  try {
+    const { user_id, plan_name, product_code } = subscription.metadata;
+    if (!user_id || !plan_name) return;
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Map plan to credits
+    const planCredits = {
+      'starter': 50,
+      'growth': 150,
+      'professional': 500,
+      'enterprise': -1 // unlimited
+    };
+
+    const monthlyLimit = planCredits[plan_name] || 0;
+
+    // Update user subscription
+    await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        subscription_plan: plan_name,
+        subscription_status: subscription.status,
+        stripe_customer_id: subscription.customer,
+        stripe_subscription_id: subscription.id,
+        billing_cycle_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        billing_cycle_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        trial_ends_at: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+        monthly_credits_limit: monthlyLimit,
+        credits: monthlyLimit === -1 ? 999999 : monthlyLimit, // Set initial credits
+        credits_reset_date: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    // Log subscription history
+    await fetch(`${env.SUPABASE_URL}/rest/v1/subscription_history`, {
+      method: 'POST',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        user_id,
+        subscription_id: subscription.id,
+        plan_name,
+        status: subscription.status,
+        amount: subscription.items.data[0]?.price?.unit_amount || 0,
+        billing_cycle_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        billing_cycle_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
+        trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+        created_at: new Date().toISOString(),
+      }),
+    });
+
+    console.log(`✅ Subscription created for user ${user_id}: ${plan_name}`);
+
+  } catch (error) {
+    console.error('Error handling subscription created:', error);
+  }
+}
+
+// Handle subscription updated
+async function handleSubscriptionUpdated(subscription: any, env: any) {
+  try {
+    const { user_id } = subscription.metadata;
+    if (!user_id) return;
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Update user subscription status
+    await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        subscription_status: subscription.status,
+        billing_cycle_start: new Date(subscription.current_period_start * 1000).toISOString(),
+        billing_cycle_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    console.log(`✅ Subscription updated for user ${user_id}: ${subscription.status}`);
+
+  } catch (error) {
+    console.error('Error handling subscription updated:', error);
+  }
+}
+
+// Handle subscription canceled
+async function handleSubscriptionCanceled(subscription: any, env: any) {
+  try {
+    const { user_id } = subscription.metadata;
+    if (!user_id) return;
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Update user to free plan
+    await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        subscription_plan: 'free',
+        subscription_status: 'canceled',
+        monthly_credits_limit: 0,
+        credits: 0,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    console.log(`✅ Subscription canceled for user ${user_id}`);
+
+  } catch (error) {
+    console.error('Error handling subscription canceled:', error);
+  }
+}
+
+// Handle payment succeeded
+async function handlePaymentSucceeded(invoice: any, env: any) {
+  try {
+    const subscription_id = invoice.subscription;
+    if (!subscription_id) return;
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Get subscription to find user
+    const subResponse = await fetch(`https://api.stripe.com/v1/subscriptions/${subscription_id}`, {
+      headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` }
+    });
+    
+    if (!subResponse.ok) return;
+    
+    const subscription = await subResponse.json();
+    const user_id = subscription.metadata?.user_id;
+    
+    if (!user_id) return;
+
+    // Log billing history
+    await fetch(`${env.SUPABASE_URL}/rest/v1/billing_history`, {
+      method: 'POST',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        user_id,
+        stripe_invoice_id: invoice.id,
+        stripe_payment_intent_id: invoice.payment_intent,
+        subscription_id: subscription_id,
+        amount: invoice.amount_paid,
+        currency: invoice.currency,
+        status: 'paid',
+        description: 'Monthly subscription payment',
+        invoice_url: invoice.hosted_invoice_url,
+        receipt_url: invoice.receipt_url,
+        created_at: new Date().toISOString(),
+      }),
+    });
+
+    console.log(`✅ Payment succeeded for user ${user_id}: $${invoice.amount_paid / 100}`);
+
+  } catch (error) {
+    console.error('Error handling payment succeeded:', error);
+  }
+}
+
+// Handle payment failed
+async function handlePaymentFailed(invoice: any, env: any) {
+  try {
+    const subscription_id = invoice.subscription;
+    if (!subscription_id) return;
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Get subscription to find user
+    const subResponse = await fetch(`https://api.stripe.com/v1/subscriptions/${subscription_id}`, {
+      headers: { 'Authorization': `Bearer ${env.STRIPE_SECRET_KEY}` }
+    });
+    
+    if (!subResponse.ok) return;
+    
+    const subscription = await subResponse.json();
+    const user_id = subscription.metadata?.user_id;
+    
+    if (!user_id) return;
+
+    // Log failed billing
+    await fetch(`${env.SUPABASE_URL}/rest/v1/billing_history`, {
+      method: 'POST',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        user_id,
+        stripe_invoice_id: invoice.id,
+        subscription_id: subscription_id,
+        amount: invoice.amount_due,
+        currency: invoice.currency,
+        status: 'failed',
+        description: 'Monthly subscription payment failed',
+        invoice_url: invoice.hosted_invoice_url,
+        created_at: new Date().toISOString(),
+      }),
+    });
+
+    // Update user subscription status to past_due
+    await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`, {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        subscription_status: 'past_due',
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    console.log(`❌ Payment failed for user ${user_id}: ${invoice.amount_due / 100}`);
+
+  } catch (error) {
+    console.error('Error handling payment failed:', error);
+  }
+}
+
+// =====================================================
+// MAIN ANALYZE ENDPOINT (Updated for subscriptions)
+// =====================================================
+
 app.post('/analyze', async (c) => {
   const startTime = Date.now();
   const requestId = 'REQ_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-  console.log('🚀 ENTERPRISE ANALYSIS STARTED:', requestId);
   
   try {
     // 1. AUTHENTICATION
     const authHeader = c.req.header('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      console.error('❌ Authentication failed - missing/invalid header');
       return c.json({ error: 'Missing or invalid Authorization header' }, 401);
     }
 
@@ -418,18 +831,14 @@ app.post('/analyze', async (c) => {
     const userId = await verifySupabaseJWT(token);
     
     if (!userId) {
-      console.error('❌ Authentication failed - invalid token');
       return c.json({ error: 'Invalid or expired token' }, 401);
     }
-
-    console.log('✅ User authenticated:', userId);
 
     // 2. REQUEST VALIDATION
     const body = await c.req.json();
     const validation = validateRequest(body);
     
     if (!validation.isValid) {
-      console.error('❌ Request validation failed:', validation.errors);
       return c.json({ 
         error: 'Invalid request parameters', 
         details: validation.errors,
@@ -438,7 +847,6 @@ app.post('/analyze', async (c) => {
     }
 
     const { profile_url, analysis_type, business_id } = validation.normalizedData;
-    console.log('✅ Request validated - Type:', analysis_type, 'Business:', business_id);
 
     // 3. ENVIRONMENT VALIDATION
     const {
@@ -450,7 +858,6 @@ app.post('/analyze', async (c) => {
     } = c.env;
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE || !OPENAI_KEY) {
-      console.error('❌ Missing required environment variables');
       return c.json({ error: 'Service configuration error' }, 500);
     }
 
@@ -460,73 +867,71 @@ app.post('/analyze', async (c) => {
       'Content-Type': 'application/json',
     };
 
-    // 4. USERNAME EXTRACTION WITH CONTAMINATION CHECK
+    // 4. USERNAME EXTRACTION
     const username = extractUsername(profile_url);
     if (!username || username.length < 1 || username.length > 30) {
-      console.error('❌ Invalid username extracted:', username);
       return c.json({ error: 'Invalid Instagram username or URL format' }, 400);
     }
     
-    // CRITICAL: Check for contamination
     if (username.includes('luke') || username === 'lukealexxander') {
-      console.error('🚨 CONTAMINATED USERNAME REJECTED:', username);
       return c.json({ error: 'Invalid username detected' }, 400);
     }
-    
-    console.log('✅ Clean username validated:', username);
 
-    // 5. USER VERIFICATION & CREDIT CHECK
-    console.log('👤 Fetching user data...');
+    // 5. USER VERIFICATION & SUBSCRIPTION CHECK
     const userResponse = await fetch(SUPABASE_URL + '/rest/v1/users?id=eq.' + userId + '&select=*', {
       headers: supabaseHeaders
     });
     
     const userData = await safeSupabaseResponse(userResponse, 'User fetch');
     if (!userData || userData.length === 0) {
-      console.error('❌ User not found:', userId);
       return c.json({ error: 'User not found' }, 404);
     }
     
     const user: User = userData[0];
     const creditsRequired = analysis_type === 'deep' ? 2 : 1;
     
-    console.log('💰 Credits - Available:', user.credits, 'Required:', creditsRequired);
-    if (user.credits < creditsRequired) {
-      console.error('❌ Insufficient credits');
+    // Check subscription limits
+    const plan = user.subscription_plan || 'free';
+    const monthlyLimit = user.monthly_credits_limit || 0;
+    
+    if (plan === 'free' && user.credits < creditsRequired) {
       return c.json({ 
-        error: 'Insufficient credits', 
+        error: 'Insufficient credits. Please upgrade your subscription for unlimited monthly credits.', 
         available: user.credits, 
-        required: creditsRequired 
+        required: creditsRequired,
+        plan: plan
+      }, 402);
+    }
+    
+    // For paid plans, check if unlimited or has credits
+    if (plan !== 'free' && monthlyLimit !== -1 && user.credits < creditsRequired) {
+      return c.json({ 
+        error: 'Monthly credit limit reached. Credits will reset next billing cycle.', 
+        available: user.credits, 
+        required: creditsRequired,
+        plan: plan,
+        monthly_limit: monthlyLimit
       }, 402);
     }
 
     // 6. BUSINESS PROFILE VERIFICATION
-    console.log('🏢 Fetching business profile...');
     const businessResponse = await fetch(SUPABASE_URL + '/rest/v1/business_profiles?id=eq.' + business_id + '&user_id=eq.' + userId + '&select=*', {
       headers: supabaseHeaders
     });
     
     const businessData = await safeSupabaseResponse(businessResponse, 'Business profile fetch');
     if (!businessData || businessData.length === 0) {
-      console.error('❌ Business profile not found:', business_id);
       return c.json({ error: 'Business profile not found' }, 404);
     }
     
     const businessProfile: BusinessProfile = businessData[0];
-    console.log('✅ Business profile loaded:', businessProfile.business_name);
 
-    // 7. INSTAGRAM PROFILE SCRAPING - REAL DATA ONLY
-    console.log('🕷️ Starting ' + analysis_type + ' scraping for USERNAME:', username);
+    // 7. INSTAGRAM PROFILE SCRAPING
     let profileData: ProfileData | null = null;
     let scrapingSuccess = false;
     
     try {
       if (analysis_type === 'light') {
-        console.log('📊 Running LIGHT scraper for:', username);
-        const apifyInput = { usernames: [username] };
-        
-        console.log('📊 Running LIGHT scraper for:', username);
-
         const apifyResponse = await fetch('https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -535,30 +940,19 @@ app.post('/analyze', async (c) => {
           }),
         });
 
-        console.log('📊 Light scraper response status:', apifyResponse.status);
-        
         if (apifyResponse.ok) {
           const responseText = await apifyResponse.text();
-          console.log('📊 Light scraper response preview:', responseText.substring(0, 200));
           
           if (responseText) {
             const apifyData = JSON.parse(responseText);
-            console.log('📊 Light scraper parsed data:', apifyData);
             
             if (apifyData && apifyData[0] && apifyData[0].username) {
               profileData = apifyData[0];
               scrapingSuccess = true;
-              console.log('✅ Light scraping SUCCESS for:', profileData.username, 'Followers:', profileData.followersCount);
-            } else {
-              console.warn('⚠️ Light scraper returned empty/invalid data');
             }
           }
-        } else {
-          console.error('❌ Light scraper HTTP error:', apifyResponse.status);
         }
       } else {
-        console.log('📊 Running DEEP scraper for:', username);
-        
         const apifyResponse = await fetch('https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=' + APIFY_API_TOKEN, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -573,17 +967,12 @@ app.post('/analyze', async (c) => {
           }),
         });
 
-        console.log('📊 Deep scraper response status:', apifyResponse.status);
-
         if (apifyResponse.ok) {
           const responseText = await apifyResponse.text();
-          console.log('📊 Deep scraper FULL response:', responseText);
           
           if (responseText) {
             const apifyData = JSON.parse(responseText);
-            console.log('📊 Deep scraper parsed data:', JSON.stringify(apifyData, null, 2));
             
-            // Try different data structures
             let profileFromData = null;
             
             if (apifyData && Array.isArray(apifyData) && apifyData.length > 0) {
@@ -595,66 +984,43 @@ app.post('/analyze', async (c) => {
             } else if (apifyData && typeof apifyData === 'object') {
               profileFromData = apifyData;
             }
-            
-            console.log('📊 Profile extracted:', profileFromData);
-            
-// Replace the deep scraper profile mapping section with this:
 
-if (profileFromData && (profileFromData.username || profileFromData.ownerUsername)) {
-  profileData = {
-    username: profileFromData.username || profileFromData.ownerUsername,
-    fullName: profileFromData.fullName || profileFromData.displayName,
-    biography: profileFromData.biography || profileFromData.bio,
-    followersCount: profileFromData.followersCount || profileFromData.followers || 0,
-    followingCount: profileFromData.followsCount || profileFromData.following || profileFromData.followingCount || 0, // FIXED: followsCount -> followingCount
-    postsCount: profileFromData.postsCount || (profileFromData.latestPosts ? profileFromData.latestPosts.length : 0) || 0, // FIXED: Use latestPosts length if postsCount missing
-    isVerified: profileFromData.isVerified || profileFromData.verified || false,
-    private: profileFromData.private || profileFromData.isPrivate || false, // FIXED: Add private field
-    profilePicUrl: profileFromData.profilePicUrl || profileFromData.avatar,
-    profilePicUrlHD: profileFromData.profilePicUrlHD || profileFromData.profilePicUrl || profileFromData.avatar, // FIXED: Add HD version
-    externalUrl: profileFromData.externalUrl || profileFromData.website,
-    businessCategoryName: profileFromData.businessCategoryName || profileFromData.category
-  };
-  scrapingSuccess = true;
-  console.log('✅ Deep scraping SUCCESS for:', profileData.username);
-} else {
-  console.warn('⚠️ Deep scraper returned data but no username found');
-  console.log('📊 Available fields:', Object.keys(profileFromData || {}));
-}
+            if (profileFromData && (profileFromData.username || profileFromData.ownerUsername)) {
+              profileData = {
+                username: profileFromData.username || profileFromData.ownerUsername,
+                fullName: profileFromData.fullName || profileFromData.displayName,
+                biography: profileFromData.biography || profileFromData.bio,
+                followersCount: profileFromData.followersCount || profileFromData.followers || 0,
+                followingCount: profileFromData.followsCount || profileFromData.following || profileFromData.followingCount || 0,
+                postsCount: profileFromData.postsCount || (profileFromData.latestPosts ? profileFromData.latestPosts.length : 0) || 0,
+                isVerified: profileFromData.isVerified || profileFromData.verified || false,
+                private: profileFromData.private || profileFromData.isPrivate || false,
+                profilePicUrl: profileFromData.profilePicUrl || profileFromData.avatar,
+                profilePicUrlHD: profileFromData.profilePicUrlHD || profileFromData.profilePicUrl || profileFromData.avatar,
+                externalUrl: profileFromData.externalUrl || profileFromData.website,
+                businessCategoryName: profileFromData.businessCategoryName || profileFromData.category
+              };
+              scrapingSuccess = true;
+            }
           }
-        } else {
-          const errorText = await apifyResponse.text();
-          console.error('❌ Deep scraper HTTP error:', apifyResponse.status, errorText);
         }
       }
     } catch (apifyError) {
-      console.error('⚠️ Apify scraping exception for', username, ':', apifyError.message);
+      console.error('Scraping error:', apifyError.message);
     }
 
-    // 8. NO MOCK DATA - FAIL IF SCRAPING FAILS
+    // 8. FAIL IF SCRAPING FAILS
     if (!profileData?.username || !scrapingSuccess) {
-      console.error('❌ Instagram scraping failed for:', username);
-      console.error('❌ Scraping success:', scrapingSuccess);
-      console.error('❌ Profile data:', profileData);
-      
       return c.json({ 
         error: 'Unable to scrape Instagram profile data', 
         details: 'Profile may be private, username invalid, or Instagram blocking requests',
         username: username,
         scraping_attempted: true,
-        scraper_type: analysis_type,
-        debug_info: {
-          apify_token_present: !!APIFY_API_TOKEN,
-          profile_data_received: !!profileData,
-          scraping_success: scrapingSuccess
-        }
+        scraper_type: analysis_type
       }, 400);
     }
 
-    console.log('✅ Real Instagram data confirmed for:', profileData.username);
-
-    // 9. CREATE LEAD RECORD WITH EXPLICIT TYPE
-    console.log('💾 Creating lead record - Username:', profileData.username, 'Type:', analysis_type);
+    // 9. CREATE LEAD RECORD
     const leadInsertResponse = await fetch(SUPABASE_URL + '/rest/v1/leads', {
       method: 'POST',
       headers: {
@@ -677,7 +1043,7 @@ if (profileFromData && (profileFromData.username || profileFromData.ownerUsernam
         is_verified: profileData.isVerified || profileData.verified || false,
         is_private: profileData.private || profileData.isPrivate || false,
         business_category: profileData.businessCategoryName || profileData.category || null,
-        type: analysis_type, // CRITICAL: Store the analysis type
+        type: analysis_type,
         score: 0,
         status: 'analyzing',
         created_at: new Date().toISOString(),
@@ -690,354 +1056,40 @@ if (profileFromData && (profileFromData.username || profileFromData.ownerUsernam
     if (!lead?.id) {
       throw new Error('Failed to create lead record');
     }
-    
-    console.log('✅ Lead created - ID:', lead.id, 'Username:', profileData.username, 'Type:', analysis_type);
 
-    // 10. AI ANALYSIS EXECUTION - FIXED SECTION
+    // 10. AI ANALYSIS
     let analysis: any;
     let outreachMessage = '';
     let analysisSuccess = false;
 
     try {
       if (analysis_type === 'light') {
-        console.log('🤖 Running LIGHT analysis for:', profileData.username);
         const lightPrompt = generateLightPrompt(profileData, businessProfile);
         const openaiData = await callOpenAI(lightPrompt, OPENAI_KEY);
         
         const content = openaiData.choices[0].message.content;
         analysis = JSON.parse(content);
         analysisSuccess = true;
-      }
-    } catch (analysisError) {
-      console.error('❌ AI analysis failed for', profileData.username, ':', analysisError.message);
-      
-      // Fallback analysis
-      analysis = {
-        lead_score: 50,
-        summary: 'Analysis completed for @' + profileData.username + ' but AI formatting failed',
-        niche: businessProfile.target_niche || 'Unknown',
-        match_reasons: ['Profile accessible', 'Manual review needed'],
-        ...(analysis_type === 'deep' ? {
-          engagement_rate: 2.5,
-          selling_points: ['Profile scraped', 'In target niche'],
-          custom_notes: 'AI analysis failed - manual review required'
-        } : {})
-      };
-      
-      outreachMessage = 'Hi ' + (profileData.fullName || profileData.username) + '! Interested in discussing ' + businessProfile.value_prop + '. Let\'s connect!';
-    }
-
-    // 11. UPDATE LEAD WITH RESULTS
-    console.log('📊 Updating lead with final data...');
-    await fetch(SUPABASE_URL + '/rest/v1/leads?id=eq.' + lead.id, {
-      method: 'PATCH',
-      headers: supabaseHeaders,
-      body: JSON.stringify({
-        score: analysis.lead_score,
-        status: 'analyzed',
-        niche: analysis.niche || null,
-        description: analysis.summary || null,
-        updated_at: new Date().toISOString(),
-      }),
-    });
-
-    // 12. PROCESS CREDITS
-    console.log('💳 Processing credits...');
-    const newCreditBalance = user.credits - creditsRequired;
-    
-    await Promise.all([
-      // Update user credits
-      fetch(SUPABASE_URL + '/rest/v1/users?id=eq.' + userId, {
-        method: 'PATCH',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          credits: newCreditBalance,
-          updated_at: new Date().toISOString(),
-        }),
-      }),
-      
-      // Log transaction
-      fetch(SUPABASE_URL + '/rest/v1/credit_transactions', {
-        method: 'POST',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          user_id: userId,
-          amount: -creditsRequired,
-          transaction_type: 'analysis',
-          description: analysis_type + ' analysis of @' + profileData.username,
-          lead_id: lead.id,
-          created_at: new Date().toISOString(),
-        }),
-      }).catch(err => {
-        console.warn('⚠️ Credit transaction logging failed:', err.message);
-      })
-    ]);
-
-    // 13. PERFORMANCE LOGGING
-    const processingTime = Date.now() - startTime;
-    console.log('🎯 ANALYSIS COMPLETED SUCCESSFULLY');
-    console.log('📊 Performance:', {
-      request_id: requestId,
-      username: profileData.username,
-      analysis_type,
-      processing_time_ms: processingTime,
-      scraping_success: scrapingSuccess,
-      analysis_success: analysisSuccess,
-      lead_score: analysis.lead_score,
-      credits_used: creditsRequired,
-      credits_remaining: newCreditBalance
-    });
-
-    // 14. SEPARATE RETURN TYPES FOR LIGHT VS DEEP
-    console.log('🔍 FINAL RESPONSE CHECK:', { 
-      analysis_type, 
-      response_type: analysis_type,
-      lead_id: lead.id 
-    });
-
-    if (analysis_type === 'light') {
-      // LIGHT ANALYSIS RESPONSE
-      return c.json({
-        success: true,
-        lead_id: lead.id,
-        profile: {
-          username: profileData.username,
-          full_name: profileData.fullName,
-          followers: profileData.followersCount,
-          following: profileData.followingCount,
-          posts: profileData.postsCount,
-          verified: profileData.isVerified || profileData.verified,
-          category: profileData.businessCategoryName || profileData.category,
-          external_url: profileData.externalUrl,
-          avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
-          scraping_success: scrapingSuccess
-        },
-        analysis: {
-          type: 'light', // EXPLICIT LIGHT TYPE
-          lead_score: analysis.lead_score,
-          summary: analysis.summary,
-          niche: analysis.niche,
-          match_reasons: analysis.match_reasons,
-          analysis_success: analysisSuccess
-        },
-        credits: {
-          used: creditsRequired,
-          remaining: newCreditBalance,
-        }
-      });
-    } else {
-      // DEEP ANALYSIS RESPONSE
-      return c.json({
-        success: true,
-        lead_id: lead.id,
-        profile: {
-          username: profileData.username,
-          full_name: profileData.fullName,
-          followers: profileData.followersCount,
-          following: profileData.followingCount,
-          posts: profileData.postsCount,
-          verified: profileData.isVerified || profileData.verified,
-          category: profileData.businessCategoryName || profileData.category,
-          external_url: profileData.externalUrl,
-          avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
-          scraping_success: scrapingSuccess
-        },
-        analysis: {
-          type: 'deep', // EXPLICIT DEEP TYPE
-          lead_score: analysis.lead_score,
-          summary: analysis.summary,
-          niche: analysis.niche,
-          match_reasons: analysis.match_reasons,
-          analysis_success: analysisSuccess,
-          engagement_rate: analysis.engagement_rate,
-          selling_points: analysis.selling_points,
-          custom_notes: analysis.custom_notes,
-          outreach_message: outreachMessage
-        },
-        credits: {
-          used: creditsRequired,
-          remaining: newCreditBalance,
-        }
-      });
-    }
-
-  } catch (error) {
-    const processingTime = Date.now() - startTime;
-    console.error('💥 ANALYSIS FAILED:', requestId, error);
-    
-    return c.json({ 
-      error: 'Enterprise analysis failed', 
-      details: error.message,
-      timestamp: new Date().toISOString(),
-      processing_time_ms: processingTime,
-      support_id: requestId
-    }, 500);
-  }
-});
-
-// Health check endpoint
-app.get('/health', async (c) => {
-  const startTime = Date.now();
-  
-  try {
-    const {
-      SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE,
-      OPENAI_KEY,
-      CLAUDE_KEY,
-      APIFY_API_TOKEN,
-    } = c.env;
-
-    const envStatus = {
-      supabase: !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE),
-      openai: !!OPENAI_KEY,
-      claude: !!CLAUDE_KEY,
-      apify: !!APIFY_API_TOKEN,
-    };
-
-    let dbStatus = false;
-    try {
-      if (envStatus.supabase) {
-        const testResponse = await fetch(SUPABASE_URL + '/rest/v1/users?limit=1', {
-          headers: {
-            apikey: SUPABASE_SERVICE_ROLE,
-            Authorization: 'Bearer ' + SUPABASE_SERVICE_ROLE,
-          }
-        });
-        dbStatus = testResponse.status < 500;
-      }
-    } catch (dbError) {
-      console.warn('Database health check failed:', dbError.message);
-    }
-
-    const responseTime = Date.now() - startTime;
-    const allSystemsGo = Object.values(envStatus).every(status => status) && dbStatus;
-
-    return c.json({ 
-      status: allSystemsGo ? 'healthy' : 'degraded',
-      service: 'Oslira Enterprise AI Worker',
-      version: '3.0.0',
-      environment: {
-        ...envStatus,
-        database_connectivity: dbStatus
-      },
-      performance: {
-        response_time_ms: responseTime,
-        timestamp: new Date().toISOString()
-      },
-      capabilities: {
-        light_analysis: envStatus.supabase && envStatus.openai && envStatus.apify,
-        deep_analysis: envStatus.supabase && envStatus.openai && envStatus.claude && envStatus.apify,
-        profile_scraping: envStatus.apify,
-        ai_analysis: envStatus.openai,
-        message_generation: envStatus.claude
-      }
-    });
-  } catch (error) {
-    return c.json({
-      status: 'error',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }, 500);
-  }
-});
-
-// Service info endpoint
-app.get('/info', (c) => {
-  return c.json({
-    service: 'Oslira Enterprise AI Worker',
-    version: '3.0.0',
-    description: 'Clean B2B lead qualification platform',
-    features: [
-      'Real Instagram profile scraping only',
-      'AI-powered lead scoring',
-      'Personalized outreach generation',
-      'Zero hardcoded values',
-      'Contamination detection',
-      'Separate light/deep response types'
-    ],
-    endpoints: [
-      'POST /analyze - Lead analysis',
-      'GET /health - System health',
-      'GET /info - Service info',
-      'GET / - Status'
-    ],
-    supported_analysis_types: ['light', 'deep'],
-    ai_models: ['gpt-4o', 'claude-3-sonnet'],
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Root endpoint
-app.get('/', (c) => {
-  return c.json({
-    message: '🚀 Oslira Enterprise AI Worker v3.0',
-    status: 'operational',
-    tagline: 'Real data only - no mock profiles',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Error handlers
-app.onError((err, c) => {
-  console.error('🚨 Unhandled error:', err);
-  return c.json({
-    error: 'Internal server error',
-    message: 'An unexpected error occurred',
-    timestamp: new Date().toISOString(),
-    support_id: 'ERR_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
-  }, 500);
-});
-
-app.notFound((c) => {
-  return c.json({
-    error: 'Endpoint not found',
-    available_endpoints: ['/', '/health', '/info', '/analyze'],
-    timestamp: new Date().toISOString()
-  }, 404);
-});
-
-export default {
-  fetch: app.fetch
-};
-        console.log('✅ Light analysis completed - Score:', analysis.lead_score);
       } else {
-        // FIXED: Deep analysis storage section with proper error handling
-        console.log('🧠 Running DEEP analysis for:', profileData.username);
-        
-        // Deep OpenAI analysis
+        // Deep analysis
         const deepPrompt = generateDeepPrompt(profileData, businessProfile);
         const openaiData = await callOpenAI(deepPrompt, OPENAI_KEY);
         
         const content = openaiData.choices[0].message.content;
         analysis = JSON.parse(content);
-        console.log('✅ Deep analysis completed - Score:', analysis.lead_score);
 
         // Generate outreach message
         if (CLAUDE_KEY) {
-          console.log('💬 Generating outreach message for:', profileData.username);
-          const messagePrompt = generateMessagePrompt(profileData, businessProfile, analysis);
-          
           try {
+            const messagePrompt = generateMessagePrompt(profileData, businessProfile, analysis);
             const claudeData = await callClaude(messagePrompt, CLAUDE_KEY);
             outreachMessage = claudeData.content?.[0]?.text?.trim() || '';
-            console.log('✅ Outreach message generated:', outreachMessage);
           } catch (claudeError) {
-            console.error('⚠️ Claude failed:', claudeError.message);
             outreachMessage = 'Hi ' + (profileData.fullName || profileData.username) + '! I noticed your work in ' + (analysis.niche || businessProfile.target_niche) + '. Would love to connect about ' + businessProfile.value_prop + '!';
           }
         }
 
-        // FIXED: Store deep analysis with proper error handling
-// ENHANCED: Store deep analysis with comprehensive debugging
-        console.log('📊 Storing deep analysis data...');
-        console.log('📊 Lead ID:', lead.id);
-        console.log('📊 User ID:', userId);
-        console.log('📊 Analysis object:', JSON.stringify(analysis, null, 2));
-        console.log('📊 Outreach message length:', outreachMessage?.length || 0);
-        console.log('📊 Outreach message content:', outreachMessage);
-        
-        // Prepare data with explicit validation
+        // Store deep analysis
         const analysisDataToStore = {
           lead_id: lead.id,
           user_id: userId,
@@ -1052,86 +1104,15 @@ export default {
           created_at: new Date().toISOString(),
         };
 
-        console.log('📊 Prepared data for storage:', JSON.stringify(analysisDataToStore, null, 2));
-        
-        try {
-          const analysisInsertResponse = await fetch(SUPABASE_URL + '/rest/v1/lead_analyses', {
-            method: 'POST',
-            headers: {
-              ...supabaseHeaders,
-              'Prefer': 'return=representation'
-            },
-            body: JSON.stringify(analysisDataToStore),
-          });
+        await fetch(SUPABASE_URL + '/rest/v1/lead_analyses', {
+          method: 'POST',
+          headers: supabaseHeaders,
+          body: JSON.stringify(analysisDataToStore),
+        });
 
-          console.log('📊 Insert response status:', analysisInsertResponse.status);
-          console.log('📊 Insert response ok:', analysisInsertResponse.ok);
-
-          if (!analysisInsertResponse.ok) {
-            const errorText = await analysisInsertResponse.text();
-            console.error('❌ Failed to store deep analysis:', analysisInsertResponse.status, errorText);
-            console.error('❌ Request body was:', JSON.stringify(analysisDataToStore, null, 2));
-            throw new Error('Failed to store deep analysis: ' + errorText);
-          }
-
-          const insertedData = await analysisInsertResponse.json();
-          console.log('✅ Deep analysis stored successfully:', insertedData);
-          
-          // VERIFICATION: Try to fetch the stored data immediately
-          console.log('🔍 Verifying storage - fetching back the data...');
-          const verifyResponse = await fetch(
-            SUPABASE_URL + '/rest/v1/lead_analyses?lead_id=eq.' + lead.id + '&select=*',
-            { headers: supabaseHeaders }
-          );
-          
-          if (verifyResponse.ok) {
-            const verifyData = await verifyResponse.json();
-            console.log('✅ Verification successful - stored data:', verifyData);
-          } else {
-            console.warn('⚠️ Verification failed - could not fetch back stored data');
-          }
-          
-        } catch (analysisError) {
-          console.error('❌ Error storing deep analysis:', analysisError);
-          console.error('❌ Analysis error message:', analysisError.message);
-          console.error('❌ Analysis error stack:', analysisError.stack);
-          
-          // Try a simpler storage approach as fallback
-          console.log('🔄 Attempting fallback storage...');
-          try {
-            const fallbackData = {
-              lead_id: lead.id,
-              user_id: userId,
-              analysis_data: analysis,
-              outreach_message: outreachMessage,
-              created_at: new Date().toISOString(),
-            };
-            
-            const fallbackResponse = await fetch(SUPABASE_URL + '/rest/v1/lead_analyses', {
-              method: 'POST',
-              headers: supabaseHeaders,
-              body: JSON.stringify(fallbackData),
-            });
-            
-            if (fallbackResponse.ok) {
-              console.log('✅ Fallback storage successful');
-            } else {
-              const fallbackError = await fallbackResponse.text();
-              console.error('❌ Fallback storage also failed:', fallbackError);
-            }
-          } catch (fallbackError) {
-            console.error('❌ Fallback storage exception:', fallbackError);
-          }
-          
-          // Don't fail the entire request - just log the error
-          console.warn('⚠️ Continuing without storing deep analysis details');
-        }
-        
         analysisSuccess = true;
-        }
+      }
     } catch (analysisError) {
-      console.error('❌ AI analysis failed for', profileData.username, ':', analysisError.message);
-      
       // Fallback analysis
       analysis = {
         lead_score: 50,
@@ -1149,7 +1130,6 @@ export default {
     }
 
     // 11. UPDATE LEAD WITH RESULTS
-    console.log('📊 Updating lead with final data...');
     await fetch(SUPABASE_URL + '/rest/v1/leads?id=eq.' + lead.id, {
       method: 'PATCH',
       headers: supabaseHeaders,
@@ -1162,129 +1142,82 @@ export default {
       }),
     });
 
-    // 12. PROCESS CREDITS
-    console.log('💳 Processing credits...');
-    const newCreditBalance = user.credits - creditsRequired;
+    // 12. PROCESS CREDITS (Updated for subscription model)
+    let newCreditBalance = user.credits;
     
-    await Promise.all([
-      // Update user credits
-      fetch(SUPABASE_URL + '/rest/v1/users?id=eq.' + userId, {
+    if (plan === 'free' || monthlyLimit !== -1) {
+      // Deduct credits for free plan or non-unlimited plans
+      newCreditBalance = user.credits - creditsRequired;
+      
+      await fetch(SUPABASE_URL + '/rest/v1/users?id=eq.' + userId, {
         method: 'PATCH',
         headers: supabaseHeaders,
         body: JSON.stringify({
           credits: newCreditBalance,
           updated_at: new Date().toISOString(),
         }),
-      }),
-      
-      // Log transaction
-      fetch(SUPABASE_URL + '/rest/v1/credit_transactions', {
-        method: 'POST',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          user_id: userId,
-          amount: -creditsRequired,
-          transaction_type: 'analysis',
-          description: analysis_type + ' analysis of @' + profileData.username,
-          lead_id: lead.id,
-          created_at: new Date().toISOString(),
-        }),
-      }).catch(err => {
-        console.warn('⚠️ Credit transaction logging failed:', err.message);
-      })
-    ]);
-
-    // 13. PERFORMANCE LOGGING
-    const processingTime = Date.now() - startTime;
-    console.log('🎯 ANALYSIS COMPLETED SUCCESSFULLY');
-    console.log('📊 Performance:', {
-      request_id: requestId,
-      username: profileData.username,
-      analysis_type,
-      processing_time_ms: processingTime,
-      scraping_success: scrapingSuccess,
-      analysis_success: analysisSuccess,
-      lead_score: analysis.lead_score,
-      credits_used: creditsRequired,
-      credits_remaining: newCreditBalance
-    });
-
-    // 14. SEPARATE RETURN TYPES FOR LIGHT VS DEEP
-    console.log('🔍 FINAL RESPONSE CHECK:', { 
-      analysis_type, 
-      response_type: analysis_type,
-      lead_id: lead.id 
-    });
-
-    if (analysis_type === 'light') {
-      // LIGHT ANALYSIS RESPONSE
-      return c.json({
-        success: true,
-        lead_id: lead.id,
-        profile: {
-          username: profileData.username,
-          full_name: profileData.fullName,
-          followers: profileData.followersCount,
-          following: profileData.followingCount,
-          posts: profileData.postsCount,
-          verified: profileData.isVerified || profileData.verified,
-          category: profileData.businessCategoryName || profileData.category,
-          external_url: profileData.externalUrl,
-          avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
-          scraping_success: scrapingSuccess
-        },
-        analysis: {
-          type: 'light', // EXPLICIT LIGHT TYPE
-          lead_score: analysis.lead_score,
-          summary: analysis.summary,
-          niche: analysis.niche,
-          match_reasons: analysis.match_reasons,
-          analysis_success: analysisSuccess
-        },
-        credits: {
-          used: creditsRequired,
-          remaining: newCreditBalance,
-        }
       });
-    } else {
-      // DEEP ANALYSIS RESPONSE
-      return c.json({
-        success: true,
-        lead_id: lead.id,
-        profile: {
-          username: profileData.username,
-          full_name: profileData.fullName,
-          followers: profileData.followersCount,
-          following: profileData.followingCount,
-          posts: profileData.postsCount,
-          verified: profileData.isVerified || profileData.verified,
-          category: profileData.businessCategoryName || profileData.category,
-          external_url: profileData.externalUrl,
-          avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
-          scraping_success: scrapingSuccess
-        },
-        analysis: {
-          type: 'deep', // EXPLICIT DEEP TYPE
-          lead_score: analysis.lead_score,
-          summary: analysis.summary,
-          niche: analysis.niche,
-          match_reasons: analysis.match_reasons,
-          analysis_success: analysisSuccess,
+    }
+    
+    // Log transaction
+    await fetch(SUPABASE_URL + '/rest/v1/credit_transactions', {
+      method: 'POST',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        user_id: userId,
+        transaction_type: 'usage',
+        amount: -creditsRequired,
+        balance_after: newCreditBalance,
+        description: analysis_type + ' analysis of @' + profileData.username,
+        reference_id: lead.id,
+        created_at: new Date().toISOString(),
+      }),
+    }).catch(err => {
+      console.warn('Credit transaction logging failed:', err.message);
+    });
+
+    // 13. RETURN RESPONSE
+    const baseResponse = {
+      success: true,
+      lead_id: lead.id,
+      profile: {
+        username: profileData.username,
+        full_name: profileData.fullName,
+        followers: profileData.followersCount,
+        following: profileData.followingCount,
+        posts: profileData.postsCount,
+        verified: profileData.isVerified || profileData.verified,
+        category: profileData.businessCategoryName || profileData.category,
+        external_url: profileData.externalUrl,
+        avatar_url: profileData.profilePicUrl || profileData.profilePicUrlHD,
+        scraping_success: scrapingSuccess
+      },
+      analysis: {
+        type: analysis_type,
+        lead_score: analysis.lead_score,
+        summary: analysis.summary,
+        niche: analysis.niche,
+        match_reasons: analysis.match_reasons,
+        analysis_success: analysisSuccess,
+        ...(analysis_type === 'deep' ? {
           engagement_rate: analysis.engagement_rate,
           selling_points: analysis.selling_points,
           custom_notes: analysis.custom_notes,
           outreach_message: outreachMessage
-        },
-        credits: {
-          used: creditsRequired,
-          remaining: newCreditBalance,
-        }
-      });
-    }
+        } : {})
+      },
+      credits: {
+        used: plan !== 'free' && monthlyLimit === -1 ? 0 : creditsRequired, // 0 for unlimited plans
+        remaining: plan !== 'free' && monthlyLimit === -1 ? 'unlimited' : newCreditBalance,
+        plan: plan,
+        monthly_limit: monthlyLimit === -1 ? 'unlimited' : monthlyLimit
+      }
+    };
+
+    return c.json(baseResponse);
 
   } catch (error) {
     const processingTime = Date.now() - startTime;
-    console.error('💥 ANALYSIS FAILED:', requestId, error);
     
     return c.json({ 
       error: 'Enterprise analysis failed', 
@@ -1295,189 +1228,6 @@ export default {
     }, 500);
   }
 });
-// Add these two endpoints to your existing worker (after your /analyze endpoint)
-
-// Add these two endpoints to your worker after the /analyze endpoint
-
-// NEW: Create Stripe checkout session
-app.post('/create-checkout-session', async (c) => {
-  try {
-    // Verify authentication
-    const authHeader = c.req.header('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return c.json({ error: 'Unauthorized' }, 401);
-    }
-
-    const token = authHeader.substring(7);
-    const userId = await verifySupabaseJWT(token);
-    if (!userId) {
-      return c.json({ error: 'Invalid token' }, 401);
-    }
-
-    const { lookup_key, customer_email } = await c.req.json();
-    
-    if (!lookup_key) {
-      return c.json({ error: 'Missing lookup_key' }, 400);
-    }
-
-    // Get price by lookup key
-    const priceResponse = await fetch(`https://api.stripe.com/v1/prices?lookup_keys[]=${lookup_key}`, {
-      headers: {
-        'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
-      },
-    });
-
-    const priceData = await priceResponse.json();
-    if (!priceData.data || priceData.data.length === 0) {
-      return c.json({ error: 'Price not found' }, 404);
-    }
-
-    const price = priceData.data[0];
-
-    // Create checkout session
-    const sessionData = new URLSearchParams({
-      'payment_method_types[]': 'card',
-      'line_items[0][price]': price.id,
-      'line_items[0][quantity]': '1',
-      'mode': 'payment',
-      'success_url': `${c.env.FRONTEND_URL || 'https://your-domain.com'}/credits.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      'cancel_url': `${c.env.FRONTEND_URL || 'https://your-domain.com'}/credits.html?canceled=true`,
-      'customer_email': customer_email,
-      'metadata[user_id]': userId,
-      'metadata[credits]': getCreditsForLookupKey(lookup_key),
-      'metadata[plan]': lookup_key.replace('_credits', ''),
-    });
-
-    const sessionResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: sessionData,
-    });
-
-    const session = await sessionResponse.json();
-
-    if (!sessionResponse.ok) {
-      console.error('Stripe session creation failed:', session);
-      return c.json({ error: session.error?.message || 'Session creation failed' }, 400);
-    }
-
-    return c.json({ url: session.url, session_id: session.id });
-
-  } catch (error) {
-    console.error('Checkout session error:', error);
-    return c.json({ error: 'Failed to create checkout session' }, 500);
-  }
-});
-
-// NEW: Stripe webhook handler
-app.post('/webhook', async (c) => {
-  try {
-    const body = await c.req.text();
-    const sig = c.req.header('stripe-signature');
-
-    if (!sig || !c.env.STRIPE_WEBHOOK_SECRET) {
-      return c.text('Missing signature or secret', 400);
-    }
-
-    // Parse webhook event
-    const event = JSON.parse(body);
-    console.log('Webhook received:', event.type);
-
-    if (event.type === 'checkout.session.completed') {
-      await handleCheckoutCompleted(event.data.object, c.env);
-    }
-
-    return c.text('Success', 200);
-
-  } catch (error) {
-    console.error('Webhook error:', error);
-    return c.text('Webhook error', 400);
-  }
-});
-
-// Helper function to map lookup keys to credits
-function getCreditsForLookupKey(lookup_key) {
-  const creditMap = {
-    'starter_40_credits': '40',
-    'growth_100_credits': '100',
-    'professional_500_credits': '500',
-    'enterprise_2000_credits': '2000'
-  };
-  return creditMap[lookup_key] || '40';
-}
-
-// Handle successful payment
-async function handleCheckoutCompleted(session, env) {
-  try {
-    console.log('Processing payment:', session.id);
-
-    const { user_id, credits } = session.metadata;
-    if (!user_id || !credits) {
-      console.error('Missing metadata:', session.metadata);
-      return;
-    }
-
-    const supabaseHeaders = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json',
-    };
-
-    // Get current user credits
-    const userResponse = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}&select=credits`,
-      { headers: supabaseHeaders }
-    );
-
-    if (!userResponse.ok) {
-      throw new Error('Failed to fetch user');
-    }
-
-    const userData = await userResponse.json();
-    const currentCredits = userData[0]?.credits || 0;
-    const newCredits = currentCredits + parseInt(credits);
-
-    // Update user credits
-    const updateResponse = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-      {
-        method: 'PATCH',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          credits: newCredits,
-          updated_at: new Date().toISOString(),
-        }),
-      }
-    );
-
-    if (!updateResponse.ok) {
-      throw new Error('Failed to update user credits');
-    }
-
-    // Log transaction
-    await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
-      method: 'POST',
-      headers: supabaseHeaders,
-      body: JSON.stringify({
-        user_id,
-        amount: parseInt(credits),
-        transaction_type: 'purchase',
-        balance_after: newCredits,
-        stripe_session_id: session.id,
-        description: `Credit purchase - ${credits} credits`,
-        created_at: new Date().toISOString(),
-      }),
-    });
-
-    console.log(`✅ Added ${credits} credits to user ${user_id}. New balance: ${newCredits}`);
-
-  } catch (error) {
-    console.error('Payment fulfillment error:', error);
-  }
-}
 
 // Health check endpoint
 app.get('/health', async (c) => {
@@ -1490,6 +1240,7 @@ app.get('/health', async (c) => {
       OPENAI_KEY,
       CLAUDE_KEY,
       APIFY_API_TOKEN,
+      STRIPE_SECRET_KEY,
     } = c.env;
 
     const envStatus = {
@@ -1497,6 +1248,7 @@ app.get('/health', async (c) => {
       openai: !!OPENAI_KEY,
       claude: !!CLAUDE_KEY,
       apify: !!APIFY_API_TOKEN,
+      stripe: !!STRIPE_SECRET_KEY,
     };
 
     let dbStatus = false;
@@ -1520,7 +1272,7 @@ app.get('/health', async (c) => {
     return c.json({ 
       status: allSystemsGo ? 'healthy' : 'degraded',
       service: 'Oslira Enterprise AI Worker',
-      version: '3.0.0',
+      version: '4.0.0',
       environment: {
         ...envStatus,
         database_connectivity: dbStatus
@@ -1532,6 +1284,7 @@ app.get('/health', async (c) => {
       capabilities: {
         light_analysis: envStatus.supabase && envStatus.openai && envStatus.apify,
         deep_analysis: envStatus.supabase && envStatus.openai && envStatus.claude && envStatus.apify,
+        subscription_billing: envStatus.stripe && envStatus.supabase,
         profile_scraping: envStatus.apify,
         ai_analysis: envStatus.openai,
         message_generation: envStatus.claude
@@ -1550,23 +1303,28 @@ app.get('/health', async (c) => {
 app.get('/info', (c) => {
   return c.json({
     service: 'Oslira Enterprise AI Worker',
-    version: '3.0.0',
-    description: 'Clean B2B lead qualification platform',
+    version: '4.0.0',
+    description: 'Enterprise B2B lead qualification with subscription billing',
     features: [
-      'Real Instagram profile scraping only',
-      'AI-powered lead scoring',
+      'Monthly subscription billing',
+      'Real Instagram profile scraping',
+      'AI-powered lead scoring', 
       'Personalized outreach generation',
-      'Zero hardcoded values',
-      'Contamination detection',
-      'Separate light/deep response types'
+      'Stripe integration',
+      'Credit-based usage tracking',
+      'Webhook handling'
     ],
     endpoints: [
       'POST /analyze - Lead analysis',
+      'POST /create-subscription - Create Stripe subscription',
+      'POST /create-portal-session - Stripe customer portal',
+      'POST /stripe-webhook - Stripe webhook handler',
       'GET /health - System health',
       'GET /info - Service info',
       'GET / - Status'
     ],
     supported_analysis_types: ['light', 'deep'],
+    subscription_plans: ['free', 'starter', 'growth', 'professional', 'enterprise'],
     ai_models: ['gpt-4o', 'claude-3-sonnet'],
     timestamp: new Date().toISOString()
   });
@@ -1575,9 +1333,9 @@ app.get('/info', (c) => {
 // Root endpoint
 app.get('/', (c) => {
   return c.json({
-    message: '🚀 Oslira Enterprise AI Worker v3.0',
+    message: '🚀 Oslira Enterprise AI Worker v4.0',
     status: 'operational',
-    tagline: 'Real data only - no mock profiles',
+    tagline: 'Subscription-based lead intelligence platform',
     timestamp: new Date().toISOString()
   });
 });
@@ -1596,7 +1354,7 @@ app.onError((err, c) => {
 app.notFound((c) => {
   return c.json({
     error: 'Endpoint not found',
-    available_endpoints: ['/', '/health', '/info', '/analyze'],
+    available_endpoints: ['/', '/health', '/info', '/analyze', '/create-subscription', '/create-portal-session', '/stripe-webhook'],
     timestamp: new Date().toISOString()
   }, 404);
 });
