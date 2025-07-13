@@ -1,6 +1,6 @@
 [build]
   publish = "public"
-  command = "node inject-env.js"
+  command = ""
   edge_functions = "netlify/edge-functions"
 
 [functions]
@@ -10,6 +10,6 @@
   path = "/api/*"
   function = "auth"
 
-# Add environment variable injection for static files
-[build.environment]
-  NODE_VERSION = "18"
+[[edge_functions]]
+  path = "/api/config"
+  function = "config"
