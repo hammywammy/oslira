@@ -510,20 +510,28 @@
             }
 
             async initializeSupabase() {
+                // Double-check Supabase is loaded
+                if (typeof window.supabase === 'undefined') {
+                    throw new Error('Supabase client library not loaded. Please check your internet connection.');
+                }
+
                 const config = await this.getConfiguration();
                 
                 if (!config.supabaseUrl || !config.supabaseAnonKey) {
                     throw new Error('Missing Supabase configuration');
                 }
 
-                if (typeof window.supabase === 'undefined') {
-                    throw new Error('Supabase client library not loaded');
+                try {
+                    this.supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+                    
+                    // Test the connection
+                    await this.supabase.auth.getSession();
+                    
+                    // Set up auth state listener
+                    this.supabase.auth.onAuthStateChange(this.handleAuthStateChange.bind(this));
+                } catch (error) {
+                    throw new Error(`Failed to initialize Supabase: ${error.message}`);
                 }
-
-                this.supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-                
-                // Set up auth state listener
-                this.supabase.auth.onAuthStateChange(this.handleAuthStateChange.bind(this));
             }
 
             async getConfiguration() {
@@ -789,35 +797,28 @@
                 const config = this.getConfiguration();
                 const errorHtml = `
                     <div class="config-error">
-                        <h3>⚙️ Configuration Required</h3>
-                        <p>Your Supabase environment variables are not configured.</p>
+                        <h3>⚙️ Configuration Error</h3>
+                        <p>Unable to load Supabase configuration from the server.</p>
                         <div class="config-error-content">
-                            <strong>Current Configuration:</strong>
-                            <ul>
-                                <li>SUPABASE_URL: ${config.supabaseUrl ? '✅ Set' : '❌ Missing'}</li>
-                                <li>SUPABASE_ANON_KEY: ${config.supabaseKey ? '✅ Set' : '❌ Missing'}</li>
-                                <li>WORKER_URL: ${config.workerUrl ? '✅ Set' : '❌ Missing'}</li>
-                            </ul>
-                            
-                            <h4>Quick Fix Options:</h4>
-                            
-                            <strong>Option 1: Inline Script (Quick Test)</strong>
-                            <p>Add this before the closing &lt;/head&gt; tag:</p>
-                            <pre><code>&lt;script&gt;
-window.SUPABASE_URL = 'https://your-project-id.supabase.co';
-window.SUPABASE_ANON_KEY = 'your-anon-key-here';
-window.WORKER_URL = 'https://your-worker.workers.dev';
-&lt;/script&gt;</code></pre>
-                            
-                            <strong>Option 2: Hosting Platform Environment Variables</strong>
-                            <ul>
-                                <li><strong>Vercel:</strong> Project Settings → Environment Variables</li>
-                                <li><strong>Netlify:</strong> Site Settings → Environment Variables</li>
-                                <li><strong>Cloudflare Pages:</strong> Pages → Settings → Environment Variables</li>
-                            </ul>
+                            <strong>Troubleshooting Steps:</strong>
+                            <ol>
+                                <li>Check that your Netlify environment variables are set:
+                                    <ul>
+                                        <li><code>SUPABASE_URL</code></li>
+                                        <li><code>SUPABASE_ANON_KEY</code></li>
+                                        <li><code>WORKER_URL</code></li>
+                                    </ul>
+                                </li>
+                                <li>Verify your edge function is deployed correctly</li>
+                                <li>Check the browser console for detailed error messages</li>
+                                <li>Try accessing <a href="/api/config" target="_blank">/api/config</a> directly</li>
+                            </ol>
                         </div>
                         <button onclick="location.reload()" style="background: #2D6CDF; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
-                            Retry After Setup
+                            Retry
+                        </button>
+                        <button onclick="window.open('/api/config', '_blank')" style="background: #6B7280; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-left: 10px;">
+                            Test Config API
                         </button>
                     </div>
                 `;
@@ -915,13 +916,23 @@ window.WORKER_URL = 'https://your-worker.workers.dev';
             console.error('[Auth] Unhandled promise rejection:', event.reason);
         });
 
-        // Initialize when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
-                window.authHandler = new AuthHandler();
-            });
-        } else {
+        // Initialize when DOM is ready and dependencies are loaded
+        function initializeWhenReady() {
+            // Check if Supabase is loaded
+            if (typeof window.supabase === 'undefined') {
+                console.warn('Supabase client not loaded yet, retrying...');
+                setTimeout(initializeWhenReady, 100);
+                return;
+            }
+            
+            // Initialize the auth handler
             window.authHandler = new AuthHandler();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeWhenReady);
+        } else {
+            initializeWhenReady();
         }
     </script>
 
