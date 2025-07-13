@@ -510,6 +510,11 @@
             }
 
             async initializeSupabase() {
+                // Check if config loading failed
+                if (window.configLoadFailed) {
+                    throw new Error('Configuration loading failed');
+                }
+
                 const config = this.getConfiguration();
                 
                 if (!config.supabaseUrl || !config.supabaseKey) {
