@@ -9,7 +9,7 @@ export default async function (request) {
   
   // Allow public endpoints without authentication
   if (publicEndpoints.includes(url.pathname)) {
-    switch (url.pathname) {
+    switch (url.pathname) {  
       case '/api/config':
         return handleConfig(request);
       case '/api/health':
