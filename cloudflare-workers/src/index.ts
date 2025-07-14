@@ -20,14 +20,18 @@ interface ProfileData {
   category?: string;
 }
 
+// Updated interface to match your Supabase schema
 interface BusinessProfile {
   id: string;
   business_name: string;
-  target_niche: string;
-  customer_location: string;
-  primary_platform: string;
-  product_service: string;
-  value_prop: string;
+  business_niche: string;
+  target_audience: string;
+  target_problems: string;
+  value_proposition: string;
+  communication_style: string;
+  message_example: string;
+  success_outcome: string;
+  call_to_action: string;
 }
 
 interface User {
@@ -249,7 +253,7 @@ function validateRequest(body: AnalysisRequest): { isValid: boolean; errors: str
   };
 }
 
-// Light analysis prompt
+// Light analysis prompt - Updated to use correct business fields
 function generateLightPrompt(profile: ProfileData, business: BusinessProfile): string {
   return 'You are an expert B2B lead qualification AI. Analyze this Instagram profile.\n\n' +
     'PROFILE DATA:\n' +
@@ -262,9 +266,9 @@ function generateLightPrompt(profile: ProfileData, business: BusinessProfile): s
     '- Category: ' + (profile.businessCategoryName || profile.category || 'Unknown') + '\n\n' +
     'BUSINESS CONTEXT:\n' +
     '- Business: ' + business.business_name + '\n' +
-    '- Target Niche: ' + business.target_niche + '\n' +
-    '- Product/Service: ' + business.product_service + '\n' +
-    '- Value Proposition: ' + business.value_prop + '\n\n' +
+    '- Business Niche: ' + business.business_niche + '\n' +
+    '- Target Audience: ' + business.target_audience + '\n' +
+    '- Value Proposition: ' + business.value_proposition + '\n\n' +
     'Respond with valid JSON only:\n\n' +
     '{\n' +
     '  "lead_score": number (0-100),\n' +
@@ -274,7 +278,7 @@ function generateLightPrompt(profile: ProfileData, business: BusinessProfile): s
     '}';
 }
 
-// Deep analysis prompt
+// Deep analysis prompt - Updated to use correct business fields
 function generateDeepPrompt(profile: ProfileData, business: BusinessProfile): string {
   return 'You are a senior B2B lead strategist. Analyze this Instagram profile comprehensively.\n\n' +
     'PROFILE ANALYSIS:\n' +
@@ -290,9 +294,11 @@ function generateDeepPrompt(profile: ProfileData, business: BusinessProfile): st
     '- Private: ' + (profile.private || profile.isPrivate || false) + '\n\n' +
     'BUSINESS TARGET:\n' +
     '- Company: ' + business.business_name + '\n' +
-    '- Target Niche: ' + business.target_niche + '\n' +
-    '- Product/Service: ' + business.product_service + '\n' +
-    '- Value Proposition: ' + business.value_prop + '\n\n' +
+    '- Business Niche: ' + business.business_niche + '\n' +
+    '- Target Audience: ' + business.target_audience + '\n' +
+    '- Target Problems: ' + business.target_problems + '\n' +
+    '- Value Proposition: ' + business.value_proposition + '\n' +
+    '- Communication Style: ' + business.communication_style + '\n\n' +
     'Respond with valid JSON only:\n\n' +
     '{\n' +
     '  "lead_score": number (0-100),\n' +
@@ -305,7 +311,15 @@ function generateDeepPrompt(profile: ProfileData, business: BusinessProfile): st
     '}';
 }
 
-profile.externalUrl) accountInsights.push('has business website');
+// Generate message prompt - Fixed the floating code
+function generateMessagePrompt(profile: ProfileData, business: BusinessProfile, analysis: any): string {
+  const followRatio = profile.followersCount && profile.followingCount 
+    ? (profile.followersCount / profile.followingCount).toFixed(2) 
+    : null;
+  
+  const accountInsights: string[] = [];
+  if (profile.isVerified || profile.verified) accountInsights.push('verified account');
+  if (profile.externalUrl) accountInsights.push('has business website');
   if (followRatio && parseFloat(followRatio) > 1) accountInsights.push('strong follower ratio');
   if (profile.followersCount > 10000) accountInsights.push('large following');
   if (profile.postsCount && profile.postsCount > 100) accountInsights.push('active content creator');
@@ -335,9 +349,11 @@ LEAD ANALYSIS RESULTS:
 
 YOUR BUSINESS:
 - Company: ${business.business_name}
-- Product/Service: ${business.product_service}
-- Value Proposition: ${business.value_prop}
-- Target Niche: ${business.target_niche}
+- Target Audience: ${business.target_audience}
+- Target Problems: ${business.target_problems}
+- Value Proposition: ${business.value_proposition}
+- Communication Style: ${business.communication_style}
+- Call to Action: ${business.call_to_action}
 
 OUTREACH GUIDELINES:
 1. Start with their name if available, or username if not
@@ -348,8 +364,14 @@ OUTREACH GUIDELINES:
 6. Keep it 2-3 sentences maximum
 7. Sound conversational and human, not salesy
 8. Avoid generic phrases like "I came across your profile"
+9. Use the communication style: ${business.communication_style}
 
-Write ONLY the Instagram DM message text. No quotes, no formatting, just the raw message.`;
+Respond with valid JSON only:
+{
+  "main_message": "Direct professional message",
+  "friendly_message": "Casual friendly approach", 
+  "soft_message": "Very light touch message"
+}`;
 }
 
 // =====================================================
@@ -1181,6 +1203,8 @@ app.post('/analyze', async (c) => {
     // 10. AI ANALYSIS
     let analysis: any;
     let outreachMessage = '';
+    let friendlyMessage = '';
+    let softMessage = '';
     let analysisSuccess = false;
 
     try {
@@ -1210,24 +1234,24 @@ app.post('/analyze', async (c) => {
             try {
               const messageVariations = JSON.parse(claudeResponse);
               outreachMessage = messageVariations.main_message || 'Error generating message';
-              var friendlyMessage = messageVariations.friendly_message || 'Error generating message';
-              var softMessage = messageVariations.soft_message || 'Error generating message';
+              friendlyMessage = messageVariations.friendly_message || 'Error generating message';
+              softMessage = messageVariations.soft_message || 'Error generating message';
             } catch (parseError) {
               console.error('Failed to parse Claude JSON response:', parseError.message);
               outreachMessage = 'Error generating message';
-              var friendlyMessage = 'Error generating message';
-              var softMessage = 'Error generating message';
+              friendlyMessage = 'Error generating message';
+              softMessage = 'Error generating message';
             }
           } catch (claudeError) {
             console.error('Claude message generation failed:', claudeError.message);
             outreachMessage = 'Error generating message';
-            var friendlyMessage = 'Error generating message';
-            var softMessage = 'Error generating message';
+            friendlyMessage = 'Error generating message';
+            softMessage = 'Error generating message';
           }
         } else {
           outreachMessage = 'Error generating message';
-          var friendlyMessage = 'Error generating message';
-          var softMessage = 'Error generating message';
+          friendlyMessage = 'Error generating message';
+          softMessage = 'Error generating message';
         }
 
         // Store deep analysis with 3 message variations
@@ -1260,7 +1284,7 @@ app.post('/analyze', async (c) => {
       analysis = {
         lead_score: 50,
         summary: 'Analysis completed for @' + profileData.username + ' but AI formatting failed',
-        niche: businessProfile.target_niche || 'Unknown',
+        niche: businessProfile.business_niche || 'Unknown',
         match_reasons: ['Profile accessible', 'Manual review needed'],
         ...(analysis_type === 'deep' ? {
           engagement_rate: 2.5,
@@ -1270,8 +1294,8 @@ app.post('/analyze', async (c) => {
       };
       
       outreachMessage = 'Error generating message';
-      var friendlyMessage = 'Error generating message';
-      var softMessage = 'Error generating message';
+      friendlyMessage = 'Error generating message';
+      softMessage = 'Error generating message';
     }
 
     // 11. UPDATE LEAD WITH RESULTS
@@ -1349,8 +1373,8 @@ app.post('/analyze', async (c) => {
           selling_points: analysis.selling_points,
           custom_notes: analysis.custom_notes,
           main_outreach_message: outreachMessage,
-          outreach_message_2: typeof friendlyMessage !== 'undefined' ? friendlyMessage : null,
-          outreach_message_3: typeof softMessage !== 'undefined' ? softMessage : null
+          outreach_message_2: friendlyMessage,
+          outreach_message_3: softMessage
         } : {})
       },
       credits: {
