@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Setup Your AI Outreach Profile - Oslira</title>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.sentry-cdn.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' 'unsafe-inline' https://js.sentry-cdn.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net; 
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+                   font-src 'self' https://fonts.gstatic.com;
+                   img-src 'self' data: https:; 
+                   connect-src 'self' https://*.supabase.co https://*.workers.dev; 
+                   frame-src 'none';">
     <style>
         * {
             margin: 0;
@@ -658,34 +665,10 @@
         </div>
     </div>
 
-    <!-- Configuration -->
-    <script>
-        window.CONFIG = {
-            supabaseUrl: 'your-supabase-url',
-            supabaseKey: 'your-supabase-key',
-            workerUrl: 'your-worker-url'
-        };
-    </script>
-
     <!-- External Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js" crossorigin="anonymous"></script>
 
     <script>
-        // Initialize Sentry if available
-        if (typeof Sentry !== 'undefined') {
-            Sentry.init({
-                environment: 'production',
-                beforeSend(event) {
-                    // Filter out network errors to save quota
-                    if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
-                        return null;
-                    }
-                    return event;
-                }
-            });
-        }
-
         // Application state
         let currentStep = 1;
         let currentUser = null;
@@ -694,20 +677,41 @@
         // Initialize application
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 Oslira onboarding loaded');
-            initializeSupabase();
+            await initializeSupabase();
             setupEventListeners();
             await checkAuth();
         });
 
         // Initialize Supabase
-        function initializeSupabase() {
-            if (window.CONFIG && window.supabase) {
-                supabase = window.supabase.createClient(
-                    window.CONFIG.supabaseUrl, 
-                    window.CONFIG.supabaseKey
-                );
-            } else {
-                console.error('❌ Configuration or Supabase not available');
+        async function initializeSupabase() {
+            try {
+                console.log('🔍 Initializing Supabase...');
+                
+                // Fetch configuration from API
+                const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error(`Config API returned ${response.status}`);
+                }
+                
+                const config = await response.json();
+                if (config.error || !config.supabaseUrl || !config.supabaseAnonKey) {
+                    throw new Error('Invalid configuration received');
+                }
+                
+                console.log('✅ Configuration loaded');
+                
+                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+                    auth: {
+                        autoRefreshToken: true,
+                        persistSession: true
+                    }
+                });
+                
+                console.log('✅ Supabase initialized');
+                
+            } catch (error) {
+                console.error('❌ Supabase initialization failed:', error);
+                showError(`Configuration error: ${error.message}`);
             }
         }
 
@@ -770,8 +774,7 @@
         // Authentication check
         async function checkAuth() {
             if (!supabase) {
-                console.log('⚠️ Supabase not initialized, using demo mode');
-                setupDemoMode();
+                console.log('❌ Supabase not available');
                 return;
             }
 
@@ -809,20 +812,23 @@
             }
         }
 
-        // Setup demo mode for development
-        function setupDemoMode() {
-            console.log('🔧 Running in demo mode');
-            currentUser = { id: 'demo', email: 'demo@oslira.com' };
-            showOnboardingForm();
-        }
-
         // Check onboarding status
         async function checkOnboardingStatus() {
-            if (!supabase) {
-                showOnboardingForm();
-                return;
-            }
-
+            try {
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('onboarding_completed')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (userData?.onboarding_completed) {
+                    console.log('✅ User already completed onboarding');
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+                
+        // Check onboarding status
+        async function checkOnboardingStatus() {
             try {
                 const { data: userData, error } = await supabase
                     .from('users')
@@ -1017,11 +1023,7 @@
                 
                 showLoading();
 
-                if (supabase) {
-                    await saveToDatabase(profileData);
-                } else {
-                    await simulateSave(profileData);
-                }
+                await saveToDatabase(profileData);
 
                 showSuccess();
                 
@@ -1043,14 +1045,16 @@
             return {
                 user_id: currentUser?.id || 'demo',
                 business_name: document.getElementById("business-name").value.trim(),
-                business_niche: document.getElementById("business-niche").value.trim(),
-                target_audience: document.getElementById("target-audience").value.trim(),
-                target_problems: document.getElementById("target-problems").value.trim(),
-                value_proposition: document.getElementById("value-proposition").value.trim(),
+                target_niche: document.getElementById("business-niche").value.trim(),
+                customer_location: 'Global', // Default value
+                primary_platform: 'instagram', // Default value
+                product_service: document.getElementById("target-audience").value.trim(),
+                value_prop: document.getElementById("value-proposition").value.trim(),
                 communication_style: document.getElementById("communication-style").value,
                 message_example: document.getElementById("message-example").value.trim(),
                 success_outcome: document.getElementById("success-outcome").value,
                 call_to_action: document.getElementById("call-to-action").value.trim(),
+                target_problems: document.getElementById("target-problems").value.trim(),
                 is_active: true,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -1068,6 +1072,8 @@
                     id: currentUser.id,
                     email: currentUser.email,
                     credits: 5,
+                    subscription_plan: 'free',
+                    monthly_credits_limit: 5,
                     onboarding_completed: true,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
@@ -1098,12 +1104,6 @@
             }
 
             console.log('✅ Business profile saved:', profileResult);
-        }
-
-        // Simulate save for demo mode
-        async function simulateSave(profileData) {
-            console.log('🔧 Simulating save in demo mode...', profileData);
-            await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
         // Show success state
@@ -1159,12 +1159,16 @@
 
         // Auth state listener
         if (window.supabase) {
-            window.supabase.auth?.onAuthStateChange?.((event, session) => {
-                if (event === 'SIGNED_IN' && session) {
-                    currentUser = session.user;
-                    showOnboardingForm();
-                } else if (event === 'SIGNED_OUT') {
-                    window.location.href = 'auth.html';
+            window.addEventListener('load', () => {
+                if (supabase) {
+                    supabase.auth.onAuthStateChange((event, session) => {
+                        if (event === 'SIGNED_IN' && session) {
+                            currentUser = session.user;
+                            showOnboardingForm();
+                        } else if (event === 'SIGNED_OUT') {
+                            window.location.href = 'auth.html';
+                        }
+                    });
                 }
             });
         }
@@ -1172,17 +1176,11 @@
         // Global error handler
         window.addEventListener('error', (event) => {
             console.error('💥 Global error:', event.error);
-            if (typeof Sentry !== 'undefined') {
-                Sentry.captureException(event.error);
-            }
         });
 
         // Global unhandled promise rejection handler
         window.addEventListener('unhandledrejection', (event) => {
             console.error('💥 Unhandled promise rejection:', event.reason);
-            if (typeof Sentry !== 'undefined') {
-                Sentry.captureException(event.reason);
-            }
         });
 
         // Add CSS animation for notifications
@@ -1200,14 +1198,381 @@
             }
         `;
         document.head.appendChild(style);
+    </script>
+</body>
+</html>Form();
+                
+} catch (err) {
+    console.error('💥 Onboarding status check error:', err);
+    showOnboardingForm();
+}
+// Check onboarding status
+        async function checkOnboardingStatus() {
+            try {
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('onboarding_completed')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (userData?.onboarding_completed) {
+                    console.log('✅ User already completed onboarding');
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+                
+                showOnboardingForm();
+                
+            } catch (err) {
+                console.error('💥 Onboarding status check error:', err);
+                showOnboardingForm();
+            }
+        }
 
-        // Global functions for any dynamically generated content
-        window.osliraOnboarding = {
-            navigateToStep,
-            validateField,
-            showNotification,
-            handleFormSubmission
-        };
+        // Show different states
+        function showOnboardingForm() {
+            hideAllStates();
+            document.getElementById('onboardingMain').style.display = 'block';
+        }
+
+        function showError(message) {
+            hideAllStates();
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function showLoading() {
+            hideAllStates();
+            document.getElementById('loadingState').style.display = 'block';
+        }
+
+        function hideAllStates() {
+            document.getElementById('authCheck').style.display = 'none';
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('onboardingMain').style.display = 'none';
+        }
+
+        // Step navigation
+        function handleStepNavigation(targetStep) {
+            if (targetStep > currentStep && !validateStep(currentStep)) {
+                return;
+            }
+            
+            navigateToStep(targetStep);
+        }
+
+        function navigateToStep(step) {
+            document.querySelector(`#step-${currentStep}`).classList.remove('active');
+            document.querySelector(`#step-${step}`).classList.add('active');
+            currentStep = step;
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const progressPercent = (currentStep / 5) * 100;
+            document.getElementById('progress').style.width = progressPercent + '%';
+            document.getElementById('progress-text').textContent = `Step ${currentStep} of 5`;
+        }
+
+        // Field validation
+        function validateField(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            
+            if (!field) return true;
+
+            const value = field.value.trim();
+            const isRequired = field.hasAttribute('required');
+            
+            // Clear previous validation states
+            field.classList.remove('field-error', 'field-success');
+            if (errorElement) {
+                errorElement.classList.remove('error', 'success');
+                errorElement.textContent = '';
+            }
+
+            // Validate required fields
+            if (isRequired && !value) {
+                setFieldError(field, errorElement, 'This field is required');
+                return false;
+            }
+
+            // Field-specific validation
+            if (value) {
+                switch (fieldId) {
+                    case 'business-name':
+                        if (value.length < 2) {
+                            setFieldError(field, errorElement, 'Business name must be at least 2 characters');
+                            return false;
+                        }
+                        break;
+                    case 'target-problems':
+                    case 'value-proposition':
+                        if (value.length < 20) {
+                            setFieldError(field, errorElement, 'Please provide more detail (at least 20 characters)');
+                            return false;
+                        }
+                        break;
+                    case 'call-to-action':
+                        if (value.length < 5) {
+                            setFieldError(field, errorElement, 'Please provide a meaningful call-to-action');
+                            return false;
+                        }
+                        break;
+                }
+            }
+
+            // Field is valid
+            if (value && errorElement) {
+                setFieldSuccess(field, errorElement, '✓ Looks good');
+            }
+            
+            return true;
+        }
+
+        function setFieldError(field, errorElement, message) {
+            field.classList.add('field-error');
+            if (errorElement) {
+                errorElement.classList.add('error');
+                errorElement.textContent = message;
+            }
+        }
+
+        function setFieldSuccess(field, errorElement, message) {
+            field.classList.add('field-success');
+            if (errorElement) {
+                errorElement.classList.add('success');
+                errorElement.textContent = message;
+            }
+        }
+
+        function clearFieldError(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            
+            if (field) {
+                field.classList.remove('field-error');
+            }
+            if (errorElement) {
+                errorElement.classList.remove('error');
+                errorElement.textContent = '';
+            }
+        }
+
+        function validateStep(step) {
+            const stepElement = document.querySelector(`#step-${step}`);
+            const requiredFields = stepElement.querySelectorAll('input[required], textarea[required], select[required]');
+            let isValid = true;
+            
+            requiredFields.forEach(field => {
+                const fieldValid = validateField(field.id);
+                if (!fieldValid) {
+                    isValid = false;
+                }
+            });
+            
+            if (!isValid) {
+                showNotification('Please fill in all required fields correctly.', 'error');
+            }
+            
+            return isValid;
+        }
+
+        // Form submission
+        async function handleFormSubmission(event) {
+            event.preventDefault();
+            console.log('📝 Form submitted');
+
+            if (!validateStep(currentStep)) return;
+
+            try {
+                // Verify session
+                if (supabase) {
+                    const { data: { session }, error } = await supabase.auth.getSession();
+                    if (error || !session) {
+                        showNotification("Session expired. Please log in again.", 'error');
+                        window.location.href = "auth.html";
+                        return;
+                    }
+                    currentUser = session.user;
+                }
+
+                const profileData = collectFormData();
+                
+                showLoading();
+
+                await saveToDatabase(profileData);
+
+                showSuccess();
+                
+            } catch (err) {
+                console.error('💥 Submission error:', err);
+                showOnboardingForm();
+                
+                let errorMessage = "Something went wrong: " + err.message;
+                if (err.message.includes('updated_at')) {
+                    errorMessage = "Database configuration error. Please contact support or try again in a few minutes.";
+                }
+                
+                showNotification(errorMessage, 'error');
+            }
+        }
+
+        // Collect form data
+        function collectFormData() {
+            return {
+                user_id: currentUser?.id || 'demo',
+                business_name: document.getElementById("business-name").value.trim(),
+                target_niche: document.getElementById("business-niche").value.trim(),
+                customer_location: 'Global',
+                primary_platform: 'instagram',
+                product_service: document.getElementById("target-audience").value.trim(),
+                value_prop: document.getElementById("value-proposition").value.trim(),
+                communication_style: document.getElementById("communication-style").value,
+                message_example: document.getElementById("message-example").value.trim(),
+                success_outcome: document.getElementById("success-outcome").value,
+                call_to_action: document.getElementById("call-to-action").value.trim(),
+                target_problems: document.getElementById("target-problems").value.trim(),
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
+        }
+
+        // Save to database
+        async function saveToDatabase(profileData) {
+            console.log('💾 Saving user data...');
+            
+            // First, update user with credits and onboarding flag
+            const { error: userError } = await supabase
+                .from("users")
+                .upsert({
+                    id: currentUser.id,
+                    email: currentUser.email,
+                    credits: 5,
+                    subscription_plan: 'free',
+                    monthly_credits_limit: 5,
+                    onboarding_completed: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }, { 
+                    onConflict: 'id',
+                    ignoreDuplicates: false 
+                });
+
+            if (userError) {
+                console.error('❌ User upsert error:', userError);
+                throw new Error(`User update failed: ${userError.message}`);
+            }
+
+            console.log('✅ User updated successfully');
+
+            console.log('💾 Saving business profile...', profileData);
+            
+            // Save business profile
+            const { data: profileResult, error: profileError } = await supabase
+                .from("business_profiles")
+                .insert(profileData)
+                .select()
+                .single();
+
+            if (profileError) {
+                console.error('❌ Profile error:', profileError);
+                throw new Error(`Profile creation failed: ${profileError.message}`);
+            }
+
+            console.log('✅ Business profile saved:', profileResult);
+        }
+
+        // Show success state
+        function showSuccess() {
+            hideAllStates();
+            document.getElementById("onboarding-form").style.display = "none";
+            document.getElementById("success").style.display = "block";
+            
+            setTimeout(() => {
+                console.log('🎯 Redirecting to dashboard...');
+                window.location.href = 'dashboard.html';
+            }, 3000);
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 16px 24px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                max-width: 400px;
+                animation: slideIn 0.3s ease;
+            `;
+            
+            switch (type) {
+                case 'error':
+                    notification.style.background = '#EF4444';
+                    break;
+                case 'success':
+                    notification.style.background = '#10B981';
+                    break;
+                default:
+                    notification.style.background = '#2D6CDF';
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+
+        // Auth state listener
+        if (window.supabase) {
+            window.addEventListener('load', () => {
+                if (supabase) {
+                    supabase.auth.onAuthStateChange((event, session) => {
+                        if (event === 'SIGNED_IN' && session) {
+                            currentUser = session.user;
+                            showOnboardingForm();
+                        } else if (event === 'SIGNED_OUT') {
+                            window.location.href = 'auth.html';
+                        }
+                    });
+                }
+            });
+        }
+
+        // Global error handlers
+        window.addEventListener('error', (event) => {
+            console.error('💥 Global error:', event.error);
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('💥 Unhandled promise rejection:', event.reason);
+        });
+
+        // Add CSS animation for notifications
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
