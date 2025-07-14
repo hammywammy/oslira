@@ -723,75 +723,72 @@
             return isValid;
         }
 
- async function submitForm() {
-        try {
-            if (!validateCurrentStep()) return;
-            if (!currentUser || !supabase) throw new Error('Not properly authenticated');
+async function submitForm() {
+    try {
+        if (!validateCurrentStep()) return;
+        if (!currentUser || !supabase) throw new Error('Not properly authenticated');
 
-            showLoading();
+        showLoading();
 
-            // Collect form data
-            const userUpdate = {
-                id: currentUser.id,
-                email: currentUser.email,
-                credits: 5,
-                subscription_plan: 'free',
-                subscription_status: 'active',
-                onboarding_completed: true,
-                updated_at: new Date().toISOString()
-            };
+        // User table update
+        const userUpdate = {
+            id: currentUser.id,
+            email: currentUser.email,
+            credits: 5,
+            subscription_plan: 'free',
+            subscription_status: 'active',
+            onboarding_completed: true,
+            updated_at: new Date().toISOString()
+        };
 
-            const profileData = {
-                user_id: currentUser.id,
-                business_name: document.getElementById("business-name").value.trim(),
-                business_niche: document.getElementById("business-niche").value.trim(),
-                target_audience: document.getElementById("target-audience").value.trim(),
-                target_problems: document.getElementById("target-problems").value.trim(),
-                value_proposition: document.getElementById("value-proposition").value.trim(),
-                communication_style: document.getElementById("communication-style").value,
-                message_example: document.getElementById("message-example").value.trim(),
-                success_outcome: document.getElementById("success-outcome").value,
-                call_to_action: document.getElementById("call-to-action").value.trim(),
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
+        // Business profiles table insertion
+        const profileData = {
+            user_id: currentUser.id,
+            business_name: document.getElementById("business-name").value.trim(),
+            business_niche: document.getElementById("business-niche").value.trim(),
+            target_audience: document.getElementById("target-audience").value.trim(),
+            target_problems: document.getElementById("target-problems").value.trim(),
+            value_proposition: document.getElementById("value-proposition").value.trim(),
+            communication_style: document.getElementById("communication-style").value,
+            message_example: document.getElementById("message-example").value.trim(),
+            success_outcome: document.getElementById("success-outcome").value,
+            call_to_action: document.getElementById("call-to-action").value.trim(),
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
 
-            // Update user table
-            const { error: userError } = await supabase
-                .from("users")
-                .upsert(userUpdate, { onConflict: 'id' });
+        // Insert user data
+        const { error: userError } = await supabase
+            .from("users")
+            .upsert(userUpdate, { onConflict: 'id' });
 
-            if (userError) throw new Error(`User update failed: ${userError.message}`);
+        if (userError) throw new Error(`User update failed: ${userError.message}`);
 
-            // Insert data into leads table
-            const { error: leadsError } = await supabase
-                .from("leads")
-                .insert({
-                    user_id: currentUser.id,
-                    username: profileData.business_name,
-                    type: profileData.business_niche,
-                    created_at: profileData.created_at,
-                    updated_at: profileData.updated_at
-                });
+        // Insert profile data
+        const { error: profileError } = await supabase
+            .from("business_profiles")
+            .insert(profileData);
 
-            if (leadsError) throw new Error(`Leads table insertion failed: ${leadsError.message}`);
+        if (profileError) throw new Error(`Profile insertion failed: ${profileError.message}`);
 
-            hideAllStates();
-            document.getElementById('onboarding-form').style.display = 'none';
-            document.getElementById('success').style.display = 'block';
+        hideAllStates();
+        document.getElementById('onboarding-form').style.display = 'none';
+        document.getElementById('success').style.display = 'block';
 
-            setTimeout(() => window.location.href = 'dashboard.html', 3000);
+        setTimeout(() => window.location.href = 'dashboard.html', 3000);
 
-        } catch (err) {
-            console.error('Form submission error:', err);
-            showError(`Setup failed: ${err.message}`);
-        }
+    } catch (err) {
+        console.error('Form submission error:', err);
+        showError(`Setup failed: ${err.message}`);
     }
+}
 
-    document.getElementById('onboarding-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        submitForm();
-    });
+document.getElementById('onboarding-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    submitForm();
+});
+
 
         // Handle enter key
         document.addEventListener('keydown', function(e) {
