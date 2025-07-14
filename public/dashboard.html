@@ -2379,7 +2379,7 @@ if (mainOutreachMessage) {
                         *,
                         lead_analyses (
                             analysis_data,
-                            outreach_message,
+                            main_outreach_message,
                             engagement_rate
                         )
                     `)
@@ -2406,7 +2406,7 @@ if (mainOutreachMessage) {
                             analysisType,
                             analysis.niche || lead.niche || '',
                             `"${(analysis.summary || lead.description || '').replace(/"/g, '""')}"`,
-                            `"${(lead.lead_analyses?.[0]?.outreach_message || '').replace(/"/g, '""')}"`,
+                            `"${(lead.lead_analyses?.[0]?.main_outreach_message || '').replace(/"/g, '""')}"`,
                             new Date(lead.created_at).toLocaleDateString()
                         ].join(',');
                     })
