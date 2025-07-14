@@ -305,16 +305,7 @@ function generateDeepPrompt(profile: ProfileData, business: BusinessProfile): st
     '}';
 }
 
-// ENHANCED Message generation prompt with more data
-function generateMessagePrompt(profile: ProfileData, business: BusinessProfile, analysis: any): string {
-  // Format follower/following ratio insight
-  const followRatio = profile.followingCount && profile.followersCount 
-    ? (profile.followersCount / profile.followingCount).toFixed(1)
-    : null;
-  
-  const accountInsights = [];
-  if (profile.isVerified || profile.verified) accountInsights.push('verified account');
-  if (profile.externalUrl) accountInsights.push('has business website');
+profile.externalUrl) accountInsights.push('has business website');
   if (followRatio && parseFloat(followRatio) > 1) accountInsights.push('strong follower ratio');
   if (profile.followersCount > 10000) accountInsights.push('large following');
   if (profile.postsCount && profile.postsCount > 100) accountInsights.push('active content creator');
@@ -1208,27 +1199,46 @@ app.post('/analyze', async (c) => {
         const content = openaiData.choices[0].message.content;
         analysis = JSON.parse(content);
 
-        // Generate outreach message with ENHANCED PROMPT
+        // Generate outreach message with ENHANCED PROMPT (3 variations)
         if (CLAUDE_KEY) {
           try {
             const messagePrompt = generateMessagePrompt(profileData, businessProfile, analysis);
             const claudeData = await callClaude(messagePrompt, CLAUDE_KEY);
-            outreachMessage = claudeData.content?.[0]?.text?.trim() || '';
+            const claudeResponse = claudeData.content?.[0]?.text?.trim() || '';
+            
+            // Parse the JSON response for 3 message variations
+            try {
+              const messageVariations = JSON.parse(claudeResponse);
+              outreachMessage = messageVariations.main_message || 'Error generating message';
+              var friendlyMessage = messageVariations.friendly_message || 'Error generating message';
+              var softMessage = messageVariations.soft_message || 'Error generating message';
+            } catch (parseError) {
+              console.error('Failed to parse Claude JSON response:', parseError.message);
+              outreachMessage = 'Error generating message';
+              var friendlyMessage = 'Error generating message';
+              var softMessage = 'Error generating message';
+            }
           } catch (claudeError) {
             console.error('Claude message generation failed:', claudeError.message);
             outreachMessage = 'Error generating message';
+            var friendlyMessage = 'Error generating message';
+            var softMessage = 'Error generating message';
           }
         } else {
           outreachMessage = 'Error generating message';
+          var friendlyMessage = 'Error generating message';
+          var softMessage = 'Error generating message';
         }
 
-        // Store deep analysis
+        // Store deep analysis with 3 message variations
         const analysisDataToStore = {
           lead_id: lead.id,
           user_id: userId,
           analysis_data: analysis || {},
           score_reasons: Array.isArray(analysis?.match_reasons) ? analysis.match_reasons : [],
-          outreach_message: outreachMessage || null,
+          main_outreach_message: outreachMessage || null,
+          outreach_message_2: friendlyMessage || null,
+          outreach_message_3: softMessage || null,
           engagement_rate: typeof analysis?.engagement_rate === 'number' ? analysis.engagement_rate : null,
           selling_points: Array.isArray(analysis?.selling_points) 
             ? analysis.selling_points.join(', ') 
@@ -1260,6 +1270,8 @@ app.post('/analyze', async (c) => {
       };
       
       outreachMessage = 'Error generating message';
+      var friendlyMessage = 'Error generating message';
+      var softMessage = 'Error generating message';
     }
 
     // 11. UPDATE LEAD WITH RESULTS
@@ -1336,7 +1348,9 @@ app.post('/analyze', async (c) => {
           engagement_rate: analysis.engagement_rate,
           selling_points: analysis.selling_points,
           custom_notes: analysis.custom_notes,
-          outreach_message: outreachMessage
+          main_outreach_message: outreachMessage,
+          outreach_message_2: typeof friendlyMessage !== 'undefined' ? friendlyMessage : null,
+          outreach_message_3: typeof softMessage !== 'undefined' ? softMessage : null
         } : {})
       },
       credits: {
