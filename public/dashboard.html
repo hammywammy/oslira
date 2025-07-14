@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" 
-      content="default-src 'self'; 
-               script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
-               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-               font-src 'self' https://fonts.gstatic.com;
-               connect-src 'self' https://*.supabase.co https://*.workers.dev;
-               img-src 'self' data: https: https://*.weserv.nl;
-               frame-src https://js.stripe.com;">
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                   font-src 'self' https://fonts.gstatic.com;
+                   connect-src 'self' https://*.supabase.co https://*.workers.dev;
+                   img-src 'self' data: https: https://*.weserv.nl;
+                   frame-src https://js.stripe.com;">
     <title>Dashboard - Oslira</title>
     <style>
         :root {
@@ -1275,73 +1275,19 @@
         let currentBusiness = null;
         let businessProfiles = [];
         let allLeads = [];
-
-        // Configuration - Replace these with your actual values
-        const CONFIG = {
-            supabaseUrl: 'YOUR_SUPABASE_URL',
-            supabaseAnonKey: 'YOUR_SUPABASE_ANON_KEY',
-            workerUrl: 'YOUR_WORKER_URL'
-        };
+        let config = null;
 
         // Initialize page when DOM is ready
         document.addEventListener('DOMContentLoaded', function() {
             initializePage();
-            setupEventListeners();
         });
-
-        // Set up all event listeners
-        function setupEventListeners() {
-            // Business selector
-            document.getElementById('business-select').addEventListener('change', switchBusiness);
-            
-            // Header buttons
-            document.getElementById('bulk-upload-btn').addEventListener('click', showBulkUpload);
-            document.getElementById('research-lead-btn').addEventListener('click', showAnalysisModal);
-            
-            // Action cards
-            document.getElementById('research-action-card').addEventListener('click', showAnalysisModal);
-            document.getElementById('bulk-action-card').addEventListener('click', showBulkUpload);
-            document.getElementById('subscription-action-card').addEventListener('click', () => location.href='/subscription.html');
-            document.getElementById('export-action-card').addEventListener('click', exportLeads);
-            
-            // Filter controls
-            document.getElementById('timeframe-filter').addEventListener('change', filterByTimeframe);
-            document.getElementById('activity-filter').addEventListener('change', filterActivity);
-            document.getElementById('refresh-activity-btn').addEventListener('click', refreshActivity);
-            
-            // Insights
-            document.getElementById('generate-insights-btn').addEventListener('click', generateInsights);
-            document.getElementById('welcome-cta-btn').addEventListener('click', showAnalysisModal);
-            
-            // Support
-            document.getElementById('support-btn').addEventListener('click', showSupportModal);
-            document.getElementById('general-support-btn').addEventListener('click', () => contactSupport('support'));
-            document.getElementById('billing-support-btn').addEventListener('click', () => contactSupport('billing'));
-            document.getElementById('security-support-btn').addEventListener('click', () => contactSupport('security'));
-            
-            // Modal close buttons
-            document.getElementById('support-modal-close').addEventListener('click', () => closeModal('supportModal'));
-            document.getElementById('lead-modal-close').addEventListener('click', () => closeModal('leadModal'));
-            document.getElementById('analysis-modal-close').addEventListener('click', () => closeModal('analysisModal'));
-            document.getElementById('bulk-modal-close').addEventListener('click', () => closeModal('bulkModal'));
-            
-            // Form handlers
-            document.getElementById('analysisForm').addEventListener('submit', submitAnalysis);
-            document.getElementById('analysis-type').addEventListener('change', updateInputField);
-            
-            // Logout
-            document.getElementById('logout-link').addEventListener('click', logout);
-            
-            // Close modals on outside click
-            window.addEventListener('click', handleModalClick);
-            
-            // Keyboard shortcuts
-            document.addEventListener('keydown', handleKeyboardShortcuts);
-        }
 
         // Initialize page
         async function initializePage() {
             try {
+                // Load configuration from Netlify function
+                await loadConfig();
+                
                 // Wait for Supabase to be available
                 let attempts = 0;
                 while (typeof window.supabase === 'undefined' && attempts < 50) {
@@ -1354,7 +1300,7 @@
                 }
 
                 // Initialize Supabase client
-                supabase = window.supabase.createClient(CONFIG.supabaseUrl, CONFIG.supabaseAnonKey, {
+                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
                     auth: {
                         autoRefreshToken: true,
                         persistSession: true,
@@ -1364,6 +1310,9 @@
                 
                 // Check authentication
                 await checkAuth();
+                
+                // Set up event listeners after auth check
+                setupEventListeners();
                 
                 // Load initial data
                 await loadInitialData();
@@ -1380,6 +1329,157 @@
                 // Show a fallback UI
                 showFallbackUI();
             }
+        }
+
+        // Load configuration from Netlify function
+        async function loadConfig() {
+            try {
+                const response = await fetch('/api/config');
+                if (!response.ok) {
+                    throw new Error(`Failed to load config: ${response.status}`);
+                }
+                config = await response.json();
+                
+                if (!config.supabaseUrl || !config.supabaseAnonKey) {
+                    throw new Error('Invalid configuration received');
+                }
+            } catch (error) {
+                console.error('Config loading error:', error);
+                throw new Error('Failed to load application configuration');
+            }
+        }
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Business selector
+            const businessSelect = document.getElementById('business-select');
+            if (businessSelect) {
+                businessSelect.addEventListener('change', switchBusiness);
+            }
+            
+            // Header buttons
+            const bulkUploadBtn = document.getElementById('bulk-upload-btn');
+            if (bulkUploadBtn) {
+                bulkUploadBtn.addEventListener('click', showBulkUpload);
+            }
+            
+            const researchLeadBtn = document.getElementById('research-lead-btn');
+            if (researchLeadBtn) {
+                researchLeadBtn.addEventListener('click', showAnalysisModal);
+            }
+            
+            // Action cards
+            const researchActionCard = document.getElementById('research-action-card');
+            if (researchActionCard) {
+                researchActionCard.addEventListener('click', showAnalysisModal);
+            }
+            
+            const bulkActionCard = document.getElementById('bulk-action-card');
+            if (bulkActionCard) {
+                bulkActionCard.addEventListener('click', showBulkUpload);
+            }
+            
+            const subscriptionActionCard = document.getElementById('subscription-action-card');
+            if (subscriptionActionCard) {
+                subscriptionActionCard.addEventListener('click', () => location.href='/subscription.html');
+            }
+            
+            const exportActionCard = document.getElementById('export-action-card');
+            if (exportActionCard) {
+                exportActionCard.addEventListener('click', exportLeads);
+            }
+            
+            // Filter controls
+            const timeframeFilter = document.getElementById('timeframe-filter');
+            if (timeframeFilter) {
+                timeframeFilter.addEventListener('change', filterByTimeframe);
+            }
+            
+            const activityFilter = document.getElementById('activity-filter');
+            if (activityFilter) {
+                activityFilter.addEventListener('change', filterActivity);
+            }
+            
+            const refreshActivityBtn = document.getElementById('refresh-activity-btn');
+            if (refreshActivityBtn) {
+                refreshActivityBtn.addEventListener('click', refreshActivity);
+            }
+            
+            // Insights
+            const generateInsightsBtn = document.getElementById('generate-insights-btn');
+            if (generateInsightsBtn) {
+                generateInsightsBtn.addEventListener('click', generateInsights);
+            }
+            
+            const welcomeCtaBtn = document.getElementById('welcome-cta-btn');
+            if (welcomeCtaBtn) {
+                welcomeCtaBtn.addEventListener('click', showAnalysisModal);
+            }
+            
+            // Support
+            const supportBtn = document.getElementById('support-btn');
+            if (supportBtn) {
+                supportBtn.addEventListener('click', showSupportModal);
+            }
+            
+            const generalSupportBtn = document.getElementById('general-support-btn');
+            if (generalSupportBtn) {
+                generalSupportBtn.addEventListener('click', () => contactSupport('support'));
+            }
+            
+            const billingSupportBtn = document.getElementById('billing-support-btn');
+            if (billingSupportBtn) {
+                billingSupportBtn.addEventListener('click', () => contactSupport('billing'));
+            }
+            
+            const securitySupportBtn = document.getElementById('security-support-btn');
+            if (securitySupportBtn) {
+                securitySupportBtn.addEventListener('click', () => contactSupport('security'));
+            }
+            
+            // Modal close buttons
+            const supportModalClose = document.getElementById('support-modal-close');
+            if (supportModalClose) {
+                supportModalClose.addEventListener('click', () => closeModal('supportModal'));
+            }
+            
+            const leadModalClose = document.getElementById('lead-modal-close');
+            if (leadModalClose) {
+                leadModalClose.addEventListener('click', () => closeModal('leadModal'));
+            }
+            
+            const analysisModalClose = document.getElementById('analysis-modal-close');
+            if (analysisModalClose) {
+                analysisModalClose.addEventListener('click', () => closeModal('analysisModal'));
+            }
+            
+            const bulkModalClose = document.getElementById('bulk-modal-close');
+            if (bulkModalClose) {
+                bulkModalClose.addEventListener('click', () => closeModal('bulkModal'));
+            }
+            
+            // Form handlers
+            const analysisForm = document.getElementById('analysisForm');
+            if (analysisForm) {
+                analysisForm.addEventListener('submit', submitAnalysis);
+            }
+            
+            const analysisType = document.getElementById('analysis-type');
+            if (analysisType) {
+                analysisType.addEventListener('change', updateInputField);
+            }
+            
+            // Logout
+            const logoutLink = document.getElementById('logout-link');
+            if (logoutLink) {
+                logoutLink.addEventListener('click', logout);
+            }
+            
+            // Close modals on outside click
+            window.addEventListener('click', handleModalClick);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', handleKeyboardShortcuts);
         }
 
         // Show fallback UI when Supabase isn't configured
@@ -1402,7 +1502,7 @@
                 font-weight: 600;
                 z-index: 10000;
             `;
-            demoMessage.textContent = '⚠️ Demo Mode - Please configure Supabase credentials to enable full functionality';
+            demoMessage.textContent = '⚠️ Demo Mode - Please configure environment variables to enable full functionality';
             document.body.insertBefore(demoMessage, document.body.firstChild);
         }
 
@@ -1430,9 +1530,11 @@
 
         // Load all initial data
         async function loadInitialData() {
-            await loadBusinessProfiles();
-            await loadSubscriptionData();
-            await loadDashboardData();
+            await Promise.all([
+                loadBusinessProfiles(),
+                loadSubscriptionData(),
+                loadDashboardData()
+            ]);
         }
 
         // Load business profiles
@@ -2070,9 +2172,9 @@
                     platform: 'instagram'
                 };
                 
-                console.log('🚀 Making request to:', CONFIG.workerUrl + '/analyze');
+                console.log('🚀 Making request to: /api/analyze');
 
-                const response = await fetch(CONFIG.workerUrl + '/analyze', {
+                const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${currentSession.access_token}`,
@@ -2488,10 +2590,13 @@
         }
 
         // Logout
-        function logout() {
-            supabase.auth.signOut().then(() => {
-                window.location.href = 'auth.html';
-            });
+        function logout(e) {
+            e.preventDefault();
+            if (supabase) {
+                supabase.auth.signOut().then(() => {
+                    window.location.href = 'auth.html';
+                });
+            }
         }
 
         // Auth state listener
