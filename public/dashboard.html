@@ -2268,20 +2268,21 @@
                     }
                     
                     // Outreach message with copy button
-                    const outreachMessage = analysis?.outreach_message;
-                    if (outreachMessage) {
-                        detailsHtml += `
-                            <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-blue); position: relative;">
-                                <h4 style="color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                                    💬 Personalized Outreach Message
-                                    <button onclick="copyText('${outreachMessage.replace(/'/g, "\\'")}', this)" style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
-                                        📋 Copy
-                                    </button>
-                                </h4>
-                                <div style="color: var(--text-primary); line-height: 1.6; font-style: italic; background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 6px;">"${outreachMessage}"</div>
-                            </div>
-                        `;
-                    }
+                // Main outreach message with copy button
+const mainOutreachMessage = analysis?.main_outreach_message;
+if (mainOutreachMessage) {
+    detailsHtml += `
+        <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-blue); position: relative;">
+            <h4 style="color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                💬 Personalized Outreach Message
+                <button onclick="copyText('${mainOutreachMessage.replace(/'/g, "\\'")}', this)" style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">
+                    📋 Copy
+                </button>
+            </h4>
+            <div style="color: var(--text-primary); line-height: 1.6; font-style: italic; background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 6px;">"${mainOutreachMessage}"</div>
+        </div>
+    `;
+}
                     
                     detailsHtml += '</div>';
                 }
