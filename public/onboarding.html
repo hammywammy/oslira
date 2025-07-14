@@ -1179,7 +1179,7 @@
         });
 
         // Global unhandled promise rejection handler
-        window.addEventListener('unhandledrejection', (event) => {
+       window.addEventListener('unhandledrejection', (event) => {
             console.error('💥 Unhandled promise rejection:', event.reason);
         });
 
@@ -1198,36 +1198,6 @@
             }
         `;
         document.head.appendChild(style);
-    </script>
-</body>
-</html>Form();
-                
-} catch (err) {
-    console.error('💥 Onboarding status check error:', err);
-    showOnboardingForm();
-}
-// Check onboarding status
-        async function checkOnboardingStatus() {
-            try {
-                const { data: userData, error } = await supabase
-                    .from('users')
-                    .select('onboarding_completed')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (userData?.onboarding_completed) {
-                    console.log('✅ User already completed onboarding');
-                    window.location.href = 'dashboard.html';
-                    return;
-                }
-                
-                showOnboardingForm();
-                
-            } catch (err) {
-                console.error('💥 Onboarding status check error:', err);
-                showOnboardingForm();
-            }
-        }
 
         // Show different states
         function showOnboardingForm() {
@@ -1549,30 +1519,10 @@
             });
         }
 
-        // Global error handlers
+        // Global error handlers  
         window.addEventListener('error', (event) => {
             console.error('💥 Global error:', event.error);
         });
-
-        window.addEventListener('unhandledrejection', (event) => {
-            console.error('💥 Unhandled promise rejection:', event.reason);
-        });
-
-        // Add CSS animation for notifications
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
