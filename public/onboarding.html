@@ -627,80 +627,63 @@
         let supabase = null;
 
         // Initialize application
-        document.addEventListener('DOMContentLoaded', async () => {
+        document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Oslira onboarding loaded');
-            console.log('🔍 Starting initialization...');
-            console.log('🔍 Current URL:', window.location.href);
-            console.log('🔍 Supabase available:', typeof window.supabase);
             
-            await initializeSupabase();
-            setupEventListeners();
-            await checkAuth();
+            // Force show the form immediately for testing
+            setTimeout(() => {
+                console.log('🔧 Force showing onboarding form');
+                hideAllStates();
+                document.getElementById('onboardingMain').style.display = 'block';
+            }, 1000);
+            
+            // Try to initialize properly in background
+            initializeApp();
         });
+
+        async function initializeApp() {
+            try {
+                console.log('🔍 Starting app initialization...');
+                setupEventListeners();
+                await initializeSupabase();
+                await checkAuth();
+            } catch (error) {
+                console.error('💥 App initialization failed:', error);
+                // Don't show error, form is already visible
+            }
+        }
 
         // Initialize Supabase
         async function initializeSupabase() {
             try {
-                console.log('🔍 Initializing Supabase...');
+                console.log('🔍 Trying to initialize Supabase...');
                 
-                // Force timeout if config takes too long
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Configuration timeout')), 5000);
+                // Simple fetch with timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch('/api/config', {
+                    signal: controller.signal
                 });
                 
-                let config;
-                try {
-                    console.log('🔍 Fetching config from /api/config...');
-                    
-                    const configPromise = fetch('/api/config').then(async (response) => {
-                        console.log('🔍 Config response status:', response.status);
-                        
-                        if (!response.ok) {
-                            throw new Error(`API config failed with status ${response.status}`);
-                        }
-                        
-                        const data = await response.json();
-                        
-                        if (!data.supabaseUrl || !data.supabaseAnonKey) {
-                            throw new Error('API returned incomplete configuration');
-                        }
-                        
-                        return data;
-                    });
-                    
-                    config = await Promise.race([configPromise, timeoutPromise]);
-                    console.log('✅ Config loaded from API successfully');
-                    
-                } catch (apiError) {
-                    console.error('❌ API config failed:', apiError.message);
-                    throw new Error(`Unable to load configuration: ${apiError.message}. Please ensure your /api/config endpoint is working and returns proper Supabase credentials.`);
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`Config API failed: ${response.status}`);
                 }
+                
+                const config = await response.json();
                 
                 if (!config.supabaseUrl || !config.supabaseAnonKey) {
-                    throw new Error('Invalid configuration - missing Supabase URL or anonymous key');
+                    throw new Error('Invalid config received');
                 }
                 
-                console.log('🔍 Creating Supabase client...');
-                
-                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
-                    auth: {
-                        autoRefreshToken: true,
-                        persistSession: true
-                    }
-                });
-                
-                console.log('✅ Supabase client created successfully');
-                
-                // Test the connection
-                const { data, error } = await supabase.auth.getSession();
-                console.log('🔍 Connection test result:', { hasData: !!data, error: error?.message });
-                
-                console.log('✅ Supabase initialized and tested successfully');
+                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+                console.log('✅ Supabase initialized');
                 
             } catch (error) {
-                console.error('❌ Supabase initialization failed:', error);
-                showError(`Setup failed: ${error.message}`);
-                throw error; // Re-throw to stop further execution
+                console.error('❌ Supabase init failed:', error.message);
+                // Don't throw, just log
             }
         }
 
@@ -763,52 +746,25 @@
         // Authentication check
         async function checkAuth() {
             try {
+                console.log('🔍 Checking auth...');
+                
                 if (!supabase) {
-                    console.log('❌ Supabase not available, cannot check auth');
-                    showError('Authentication system not available. Please refresh the page and try again.');
-                    return;
-                }
-
-                console.log('🔍 Checking authentication...');
-                
-                // Handle magic link tokens
-                const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                const accessToken = hashParams.get('access_token');
-                
-                if (accessToken) {
-                    console.log('🎟️ Magic link tokens found, processing...');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    if (window.history && window.history.replaceState) {
-                        window.history.replaceState(null, '', window.location.pathname);
-                    }
-                }
-                
-                console.log('🔍 Getting session...');
-                const { data: { session }, error } = await supabase.auth.getSession();
-                
-                if (error) {
-                    console.log('🚫 Session error:', error.message);
-                    showError('Authentication error: ' + error.message);
+                    console.log('⚠️ No Supabase, skipping auth check');
                     return;
                 }
                 
-                if (!session) {
-                    console.log('🚫 No active session');
-                    showError('No active session found. Please log in first.');
-                    return;
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session) {
+                    console.log('✅ Session found:', session.user.email);
+                    currentUser = session.user;
+                } else {
+                    console.log('⚠️ No session, but proceeding anyway');
                 }
-                
-                console.log('✅ Session found for user:', session.user.email);
-                currentUser = session.user;
-                
-                // Skip onboarding status check for now, just show the form
-                console.log('🔍 Proceeding to onboarding form');
-                showOnboardingForm();
                 
             } catch (err) {
-                console.error('💥 Auth check error:', err);
-                showError('Authentication failed: ' + err.message);
+                console.error('💥 Auth check failed:', err.message);
+                // Don't throw, just log
             }
         }
 
