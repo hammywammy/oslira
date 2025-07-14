@@ -356,17 +356,6 @@
             }
         }
 
-        // Clear rate limiting data (useful for testing)
-        function clearRateLimiting() {
-            const keys = Object.keys(localStorage);
-            keys.forEach(key => {
-                if (key.startsWith('last_auth_attempt')) {
-                    localStorage.removeItem(key);
-                    console.log('🧹 AUTH: Cleared rate limit for:', key);
-                }
-            });
-        }
-
         // Initialize authentication system
         async function initializeAuth() {
             try {
@@ -564,17 +553,48 @@
                 return;
             }
 
-            // Check for recent submission attempts - but only for the SAME email
-            const lastAttemptKey = `last_auth_attempt_${email}`;
-            const lastAttempt = localStorage.getItem(lastAttemptKey);
-            const now = Date.now();
+            // Smart rate limiting - only prevent actual abuse
+            const sessionKey = `auth_attempts_${Date.now().toString().slice(0, -5)}`; // 10-minute windows
+            const emailKey = `email_attempts_${email}`;
             
-            if (lastAttempt && (now - parseInt(lastAttempt)) < 30000) { // Reduced to 30 seconds and email-specific
-                const waitTime = Math.ceil((30000 - (now - parseInt(lastAttempt))) / 1000);
-                console.log('🔍 AUTH: Rate limiting - too soon since last attempt for this email, wait:', waitTime, 'seconds');
-                showError(`Please wait ${waitTime} seconds before trying again for this email.`);
+            const sessionAttempts = JSON.parse(sessionStorage.getItem(sessionKey) || '[]');
+            const emailAttempts = JSON.parse(localStorage.getItem(emailKey) || '{"attempts": [], "lastSuccess": 0}');
+            
+            const now = Date.now();
+            const fiveMinutesAgo = now - 5 * 60 * 1000;
+            const oneHourAgo = now - 60 * 60 * 1000;
+            
+            // Clean old attempts
+            const recentSessionAttempts = sessionAttempts.filter(time => time > fiveMinutesAgo);
+            const recentEmailAttempts = emailAttempts.attempts.filter(time => time > oneHourAgo);
+            
+            // Abuse detection
+            const isSessionAbuse = recentSessionAttempts.length >= 5; // 5 attempts in 5 minutes from same browser
+            const isEmailAbuse = recentEmailAttempts.length >= 3; // 3 attempts in 1 hour for same email
+            const hasRecentSuccess = emailAttempts.lastSuccess > fiveMinutesAgo; // Had success in last 5 minutes
+            
+            if (isSessionAbuse) {
+                console.log('🔍 AUTH: Session abuse detected - too many attempts from this browser');
+                showError('Too many attempts from this browser. Please wait 5 minutes.');
                 return;
             }
+            
+            if (isEmailAbuse && !hasRecentSuccess) {
+                console.log('🔍 AUTH: Email abuse detected - too many attempts for this email');
+                const nextAttempt = new Date(Math.max(...recentEmailAttempts) + 60 * 60 * 1000);
+                showError(`Too many attempts for this email. Try again after ${nextAttempt.toLocaleTimeString()}.`);
+                return;
+            }
+
+            // Record this attempt
+            recentSessionAttempts.push(now);
+            recentEmailAttempts.push(now);
+            
+            sessionStorage.setItem(sessionKey, JSON.stringify(recentSessionAttempts));
+            localStorage.setItem(emailKey, JSON.stringify({
+                attempts: recentEmailAttempts,
+                lastSuccess: emailAttempts.lastSuccess
+            }));
 
             // Show loading state
             isLoading = true;
@@ -583,26 +603,24 @@
             console.log('🔍 AUTH: Sending magic link...');
 
             try {
-                // Store attempt time for this specific email
-                localStorage.setItem(lastAttemptKey, now.toString());
-                
                 const { error } = await supabase.auth.signInWithOtp({
                     email: email,
                     options: {
                         emailRedirectTo: window.location.origin + '/auth.html',
-                        shouldCreateUser: true,
-                        data: {
-                            timestamp: now
-                        }
+                        shouldCreateUser: true
                     }
                 });
 
                 if (error) {
-                    // Remove the attempt timestamp on error so user can retry immediately
-                    localStorage.removeItem(lastAttemptKey);
                     console.log('🔍 AUTH: Supabase error:', error.message);
                     throw error;
                 }
+
+                // Mark successful attempt
+                localStorage.setItem(emailKey, JSON.stringify({
+                    attempts: [],
+                    lastSuccess: now
+                }));
 
                 console.log('🔍 AUTH: Magic link sent successfully to:', email);
                 showSuccess(email);
@@ -613,8 +631,12 @@
                 let errorMessage = 'Unable to send login link. Please try again.';
                 
                 if (error.message.includes('rate limit') || error.message.includes('too many')) {
-                    // This is a real Supabase rate limit, not our artificial one
-                    errorMessage = 'Supabase rate limit reached. Please wait 2-3 minutes before trying again.';
+                    // Remove our attempt record if Supabase rate limited us
+                    const currentData = JSON.parse(localStorage.getItem(emailKey) || '{"attempts": [], "lastSuccess": 0}');
+                    currentData.attempts.pop(); // Remove the last attempt
+                    localStorage.setItem(emailKey, JSON.stringify(currentData));
+                    
+                    errorMessage = 'Server rate limit reached. Please wait a moment and try again.';
                 } else if (error.message.includes('invalid') || error.message.includes('malformed')) {
                     errorMessage = 'Please check your email address and try again.';
                 }
