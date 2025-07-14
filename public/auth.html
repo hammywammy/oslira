@@ -322,14 +322,33 @@
         // Clear all authentication data
         async function clearAllAuthData() {
             try {
-                if (supabase) {
-                    await supabase.auth.signOut();
-                }
+                // Clear browser storage first
                 localStorage.clear();
                 sessionStorage.clear();
+                
+                // Clear cookies
                 document.cookie.split(";").forEach(function(c) { 
                     document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
                 });
+                
+                // Clear IndexedDB (where Supabase stores tokens)
+                if ('indexedDB' in window) {
+                    try {
+                        const databases = await indexedDB.databases();
+                        databases.forEach(db => {
+                            indexedDB.deleteDatabase(db.name);
+                        });
+                    } catch (e) {
+                        console.log('Could not clear IndexedDB');
+                    }
+                }
+                
+                // If Supabase is available, force sign out
+                if (supabase) {
+                    await supabase.auth.signOut({ scope: 'global' });
+                }
+                
+                console.log('All auth data cleared');
             } catch (error) {
                 console.error('Error clearing auth data:', error);
             }
@@ -405,7 +424,6 @@
 
                 if (error) {
                     cleanUrl();
-                    await clearAllAuthData();
                     showError('Authentication failed. Please try again.');
                     return;
                 }
@@ -415,7 +433,7 @@
                     return;
                 }
 
-                // Check for existing session
+                // Check for existing session and validate it
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 
                 if (sessionError) {
@@ -425,17 +443,43 @@
                 }
                 
                 if (session) {
-                    // Verify the session is actually valid by making a test API call
+                    // Verify the session is valid by checking if user exists in database
                     try {
                         const { data: user, error: userError } = await supabase.auth.getUser();
-                        if (userError || !user) {
-                            console.log('Invalid session detected, clearing...');
+                        
+                        if (userError || !user?.user) {
+                            console.log('Invalid session - user not found, clearing...');
                             await clearAllAuthData();
                             return;
                         }
-                        await redirectToDashboard();
+                        
+                        // Double-check by making a database call to verify account exists
+                        const config = await fetchConfig();
+                        const testResponse = await fetch(config.workerUrl.replace('/analyze', '/health'), {
+                            method: 'GET',
+                            headers: {
+                                'Authorization': `Bearer ${session.access_token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        
+                        // If the session works with our API, redirect to dashboard
+                        if (testResponse.ok) {
+                            console.log('Valid session found, redirecting to dashboard');
+                            await redirectToDashboard();
+                        } else if (testResponse.status === 401 || testResponse.status === 403) {
+                            // Session is invalid or account doesn't exist
+                            console.log('Session invalid with API, clearing auth data...');
+                            await clearAllAuthData();
+                            return;
+                        } else {
+                            // Other API error - continue with auth flow but don't clear session
+                            console.log('API unavailable, continuing with auth flow');
+                            return;
+                        }
+                        
                     } catch (verifyError) {
-                        console.log('Session verification failed, clearing...');
+                        console.log('Session verification failed:', verifyError.message);
                         await clearAllAuthData();
                         return;
                     }
@@ -443,7 +487,7 @@
 
             } catch (error) {
                 console.error('Auth check failed:', error);
-                await clearAllAuthData();
+                // Don't clear auth data for network errors
             }
         }
 
@@ -457,10 +501,21 @@
 
                 if (error) throw error;
 
-                cleanUrl();
-                await redirectToDashboard();
+                // Verify the user actually exists in the database
+                try {
+                    const { data: user, error: userError } = await supabase.auth.getUser();
+                    if (userError || !user) {
+                        throw new Error('User verification failed');
+                    }
+                    
+                    cleanUrl();
+                    await redirectToDashboard();
+                } catch (verifyError) {
+                    throw new Error('Account verification failed');
+                }
 
             } catch (error) {
+                console.error('Magic link error:', error);
                 cleanUrl();
                 await clearAllAuthData();
                 showError('There was a problem with your login link. Please try signing in again.');
