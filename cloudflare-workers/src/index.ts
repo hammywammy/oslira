@@ -12,7 +12,7 @@ interface ProfileData {
   isVerified?: boolean;
   verified?: boolean;
   private?: boolean;
-  isPrivate?: boolean;
+  isPrivate?: boolean; 
   profilePicUrl?: string;
   profilePicUrlHD?: string;
   externalUrl?: string;
