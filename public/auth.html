@@ -322,6 +322,8 @@
         // Clear all authentication data
         async function clearAllAuthData() {
             try {
+                console.log('🧹 AUTH: Clearing all authentication data...');
+                
                 // Clear browser storage first
                 localStorage.clear();
                 sessionStorage.clear();
@@ -339,7 +341,7 @@
                             indexedDB.deleteDatabase(db.name);
                         });
                     } catch (e) {
-                        console.log('Could not clear IndexedDB');
+                        console.log('🧹 AUTH: Could not clear IndexedDB');
                     }
                 }
                 
@@ -348,9 +350,9 @@
                     await supabase.auth.signOut({ scope: 'global' });
                 }
                 
-                console.log('All auth data cleared');
+                console.log('🧹 AUTH: All auth data cleared successfully');
             } catch (error) {
-                console.error('Error clearing auth data:', error);
+                console.error('🧹 AUTH: Error clearing auth data:', error);
             }
         }
 
@@ -423,99 +425,70 @@
                 const error = hashParams.get('error') || urlParams.get('error');
 
                 if (error) {
+                    console.log('🔍 AUTH: URL contains auth error:', error);
                     cleanUrl();
                     showError('Authentication failed. Please try again.');
                     return;
                 }
 
                 if (accessToken && refreshToken) {
+                    console.log('🔍 AUTH: Found magic link tokens in URL');
                     await handleMagicLink(accessToken, refreshToken);
                     return;
                 }
 
-                // Check for existing session and validate it
+                // Check for existing session
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 
                 if (sessionError) {
-                    console.error('Session error:', sessionError);
+                    console.log('🔍 AUTH: Session error:', sessionError.message);
                     await clearAllAuthData();
                     return;
                 }
                 
                 if (session) {
-                    // Verify the session is valid by checking if user exists in database
-                    try {
-                        const { data: user, error: userError } = await supabase.auth.getUser();
-                        
-                        if (userError || !user?.user) {
-                            console.log('Invalid session - user not found, clearing...');
-                            await clearAllAuthData();
-                            return;
-                        }
-                        
-                        // Double-check by making a database call to verify account exists
-                        const config = await fetchConfig();
-                        const testResponse = await fetch(config.workerUrl.replace('/analyze', '/health'), {
-                            method: 'GET',
-                            headers: {
-                                'Authorization': `Bearer ${session.access_token}`,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        
-                        // If the session works with our API, redirect to dashboard
-                        if (testResponse.ok) {
-                            console.log('Valid session found, redirecting to dashboard');
-                            await redirectToDashboard();
-                        } else if (testResponse.status === 401 || testResponse.status === 403) {
-                            // Session is invalid or account doesn't exist
-                            console.log('Session invalid with API, clearing auth data...');
-                            await clearAllAuthData();
-                            return;
-                        } else {
-                            // Other API error - continue with auth flow but don't clear session
-                            console.log('API unavailable, continuing with auth flow');
-                            return;
-                        }
-                        
-                    } catch (verifyError) {
-                        console.log('Session verification failed:', verifyError.message);
-                        await clearAllAuthData();
-                        return;
-                    }
+                    console.log('🔍 AUTH: Found existing session for user:', session.user?.email || 'Unknown email');
+                    console.log('🔍 AUTH: User ID:', session.user?.id || 'Unknown ID');
+                    console.log('🔍 AUTH: Session expires:', new Date(session.expires_at * 1000).toLocaleString());
+                    
+                    // Since you deleted all users from Supabase, any existing session is invalid
+                    console.log('🧹 AUTH: All Supabase users were deleted - clearing stale session');
+                    await clearAllAuthData();
+                    showError('Your account session has expired. Please sign in again.');
+                    return;
+                } else {
+                    console.log('🔍 AUTH: No existing session found - ready for fresh login');
                 }
 
             } catch (error) {
-                console.error('Auth check failed:', error);
-                // Don't clear auth data for network errors
+                console.error('🔍 AUTH: Auth check failed:', error);
+                await clearAllAuthData();
             }
         }
 
         // Handle magic link authentication
         async function handleMagicLink(accessToken, refreshToken) {
             try {
+                console.log('🔍 AUTH: Processing magic link authentication...');
+                
                 const { data, error } = await supabase.auth.setSession({
                     access_token: accessToken,
                     refresh_token: refreshToken
                 });
 
-                if (error) throw error;
-
-                // Verify the user actually exists in the database
-                try {
-                    const { data: user, error: userError } = await supabase.auth.getUser();
-                    if (userError || !user) {
-                        throw new Error('User verification failed');
-                    }
-                    
-                    cleanUrl();
-                    await redirectToDashboard();
-                } catch (verifyError) {
-                    throw new Error('Account verification failed');
+                if (error) {
+                    console.log('🔍 AUTH: Magic link session error:', error.message);
+                    throw error;
                 }
 
+                console.log('🔍 AUTH: Magic link successful for user:', data.user?.email || 'Unknown email');
+                console.log('🔍 AUTH: New user ID:', data.user?.id || 'Unknown ID');
+                
+                cleanUrl();
+                await redirectToDashboard();
+
             } catch (error) {
-                console.error('Magic link error:', error);
+                console.error('🔍 AUTH: Magic link failed:', error.message);
                 cleanUrl();
                 await clearAllAuthData();
                 showError('There was a problem with your login link. Please try signing in again.');
@@ -565,12 +538,15 @@
             const button = document.getElementById('submit-button');
             const emailInput = document.getElementById('email');
 
+            console.log('🔍 AUTH: Form submission for email:', email);
+
             // Clear previous errors
             clearError();
             emailInput.classList.remove('error');
 
             // Validate email
             if (!email || !isValidEmail(email)) {
+                console.log('🔍 AUTH: Invalid email format');
                 showError('Please enter a valid email address');
                 emailInput.classList.add('error');
                 emailInput.focus();
@@ -582,6 +558,7 @@
             const now = Date.now();
             
             if (lastAttempt && (now - parseInt(lastAttempt)) < 60000) {
+                console.log('🔍 AUTH: Rate limiting - too soon since last attempt');
                 showError('Please wait a moment before trying again.');
                 return;
             }
@@ -590,6 +567,7 @@
             isLoading = true;
             button.disabled = true;
             button.classList.add('loading');
+            console.log('🔍 AUTH: Sending magic link...');
 
             try {
                 // Store attempt time
@@ -608,13 +586,15 @@
 
                 if (error) {
                     localStorage.removeItem('last_auth_attempt');
+                    console.log('🔍 AUTH: Supabase error:', error.message);
                     throw error;
                 }
 
+                console.log('🔍 AUTH: Magic link sent successfully to:', email);
                 showSuccess(email);
 
             } catch (error) {
-                console.error('Auth error:', error);
+                console.error('🔍 AUTH: Form submission error:', error);
                 
                 let errorMessage = 'Unable to send login link. Please try again.';
                 
