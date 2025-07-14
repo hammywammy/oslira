@@ -282,43 +282,6 @@
             font-style: italic;
         }
         
-        .question-examples {
-            background: #F5F9FF;
-            padding: 16px;
-            border-radius: 8px;
-            margin-top: 8px;
-            border: 1px solid #C9CEDC;
-        }
-        
-        .question-examples h4 {
-            color: #121417;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        
-        .question-examples ul {
-            list-style: none;
-            padding: 0;
-        }
-        
-        .question-examples li {
-            color: #6B7280;
-            font-size: 13px;
-            margin-bottom: 4px;
-            padding-left: 16px;
-            position: relative;
-        }
-        
-        .question-examples li::before {
-            content: "•";
-            color: #53E1C5;
-            position: absolute;
-            left: 0;
-            font-weight: 600;
-        }
-
-        /* Field validation states */
         .field-error {
             border-color: #EF4444 !important;
             box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
@@ -344,26 +307,15 @@
             display: block;
         }
 
-        /* Accessibility */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        /* Focus styles */
-        button:focus,
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: 2px solid #2D6CDF;
-            outline-offset: 2px;
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
         
         /* Responsive */
@@ -415,7 +367,7 @@
     <!-- Error State -->
     <div id="errorState" class="onboarding-container" style="display: none;">
         <div class="onboarding-card error-state">
-            <h2>Authentication Error</h2>
+            <h2>Setup Issue</h2>
             <p class="error-message" id="errorMessage">Unable to verify your session.</p>
             <button class="btn-primary" id="back-to-login-btn">Back to Login</button>
         </div>
@@ -677,6 +629,10 @@
         // Initialize application
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 Oslira onboarding loaded');
+            console.log('🔍 Starting initialization...');
+            console.log('🔍 Current URL:', window.location.href);
+            console.log('🔍 Supabase available:', typeof window.supabase);
+            
             await initializeSupabase();
             setupEventListeners();
             await checkAuth();
@@ -687,18 +643,40 @@
             try {
                 console.log('🔍 Initializing Supabase...');
                 
-                // Fetch configuration from API
-                const response = await fetch('/api/config');
-                if (!response.ok) {
-                    throw new Error(`Config API returned ${response.status}`);
+                // Try to fetch configuration from API
+                let config;
+                try {
+                    console.log('🔍 Fetching config from /api/config...');
+                    const response = await fetch('/api/config');
+                    console.log('🔍 Config response status:', response.status);
+                    
+                    if (response.ok) {
+                        config = await response.json();
+                        console.log('✅ Config loaded from API');
+                    } else {
+                        throw new Error('API config not available');
+                    }
+                } catch (apiError) {
+                    console.log('⚠️ API config failed, checking environment variables');
+                    
+                    // Try environment variables or hardcoded fallback
+                    if (window.CONFIG && window.CONFIG.supabaseUrl) {
+                        config = window.CONFIG;
+                        console.log('✅ Config loaded from window.CONFIG');
+                    } else {
+                        throw new Error('No configuration source available');
+                    }
                 }
                 
-                const config = await response.json();
-                if (config.error || !config.supabaseUrl || !config.supabaseAnonKey) {
-                    throw new Error('Invalid configuration received');
+                if (!config.supabaseUrl || !config.supabaseAnonKey) {
+                    throw new Error('Invalid configuration - missing URL or key');
                 }
                 
-                console.log('✅ Configuration loaded');
+                console.log('🔍 Config received:', { 
+                    hasUrl: !!config.supabaseUrl, 
+                    hasKey: !!config.supabaseAnonKey,
+                    urlStart: config.supabaseUrl?.substring(0, 20) + '...'
+                });
                 
                 supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
                     auth: {
@@ -707,11 +685,11 @@
                     }
                 });
                 
-                console.log('✅ Supabase initialized');
+                console.log('✅ Supabase initialized successfully');
                 
             } catch (error) {
                 console.error('❌ Supabase initialization failed:', error);
-                showError(`Configuration error: ${error.message}`);
+                showError(`Configuration error: ${error.message}. Please ensure your Supabase configuration is properly set up.`);
             }
         }
 
@@ -774,7 +752,8 @@
         // Authentication check
         async function checkAuth() {
             if (!supabase) {
-                console.log('❌ Supabase not available');
+                console.log('❌ Supabase not available, cannot check auth');
+                showError('Authentication system not available. Please check your configuration.');
                 return;
             }
 
@@ -796,9 +775,15 @@
                 
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
-                if (error || !session) {
+                if (error) {
+                    console.log('🚫 Session error:', error.message);
+                    showError('Authentication error: ' + error.message);
+                    return;
+                }
+                
+                if (!session) {
                     console.log('🚫 No active session');
-                    showError('No active session. Please log in first.');
+                    showError('No active session found. Please log in first.');
                     return;
                 }
                 
@@ -815,26 +800,29 @@
         // Check onboarding status
         async function checkOnboardingStatus() {
             try {
+                console.log('🔍 Checking onboarding status for user:', currentUser.id);
+                
                 const { data: userData, error } = await supabase
                     .from('users')
                     .select('onboarding_completed')
                     .eq('id', currentUser.id)
                     .single();
-                
-                if (userData?.onboarding_completed) {
-                    console.log('✅ User already completed onboarding');
-                    window.location.href = 'dashboard.html';
-                    return;
-                }
                 
         // Check onboarding status
         async function checkOnboardingStatus() {
             try {
+                console.log('🔍 Checking onboarding status for user:', currentUser.id);
+                
                 const { data: userData, error } = await supabase
                     .from('users')
                     .select('onboarding_completed')
                     .eq('id', currentUser.id)
                     .single();
+                
+                if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+                    console.error('❌ Error checking onboarding status:', error);
+                    // Continue to onboarding anyway
+                }
                 
                 if (userData?.onboarding_completed) {
                     console.log('✅ User already completed onboarding');
@@ -842,6 +830,7 @@
                     return;
                 }
                 
+                console.log('🔍 User needs to complete onboarding');
                 showOnboardingForm();
                 
             } catch (err) {
@@ -849,355 +838,6 @@
                 showOnboardingForm();
             }
         }
-
-        // Show different states
-        function showOnboardingForm() {
-            hideAllStates();
-            document.getElementById('onboardingMain').style.display = 'block';
-        }
-
-        function showError(message) {
-            hideAllStates();
-            document.getElementById('errorState').style.display = 'block';
-            document.getElementById('errorMessage').textContent = message;
-        }
-
-        function showLoading() {
-            hideAllStates();
-            document.getElementById('loadingState').style.display = 'block';
-        }
-
-        function hideAllStates() {
-            document.getElementById('authCheck').style.display = 'none';
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('errorState').style.display = 'none';
-            document.getElementById('onboardingMain').style.display = 'none';
-        }
-
-        // Step navigation
-        function handleStepNavigation(targetStep) {
-            if (targetStep > currentStep && !validateStep(currentStep)) {
-                return;
-            }
-            
-            navigateToStep(targetStep);
-        }
-
-        function navigateToStep(step) {
-            document.querySelector(`#step-${currentStep}`).classList.remove('active');
-            document.querySelector(`#step-${step}`).classList.add('active');
-            currentStep = step;
-            updateProgress();
-        }
-
-        function updateProgress() {
-            const progressPercent = (currentStep / 5) * 100;
-            document.getElementById('progress').style.width = progressPercent + '%';
-            document.getElementById('progress-text').textContent = `Step ${currentStep} of 5`;
-        }
-
-        // Field validation
-        function validateField(fieldId) {
-            const field = document.getElementById(fieldId);
-            const errorElement = document.getElementById(`${fieldId}-error`);
-            
-            if (!field) return true;
-
-            const value = field.value.trim();
-            const isRequired = field.hasAttribute('required');
-            
-            // Clear previous validation states
-            field.classList.remove('field-error', 'field-success');
-            if (errorElement) {
-                errorElement.classList.remove('error', 'success');
-                errorElement.textContent = '';
-            }
-
-            // Validate required fields
-            if (isRequired && !value) {
-                setFieldError(field, errorElement, 'This field is required');
-                return false;
-            }
-
-            // Field-specific validation
-            if (value) {
-                switch (fieldId) {
-                    case 'business-name':
-                        if (value.length < 2) {
-                            setFieldError(field, errorElement, 'Business name must be at least 2 characters');
-                            return false;
-                        }
-                        break;
-                    case 'target-problems':
-                    case 'value-proposition':
-                        if (value.length < 20) {
-                            setFieldError(field, errorElement, 'Please provide more detail (at least 20 characters)');
-                            return false;
-                        }
-                        break;
-                    case 'call-to-action':
-                        if (value.length < 5) {
-                            setFieldError(field, errorElement, 'Please provide a meaningful call-to-action');
-                            return false;
-                        }
-                        break;
-                }
-            }
-
-            // Field is valid
-            if (value && errorElement) {
-                setFieldSuccess(field, errorElement, '✓ Looks good');
-            }
-            
-            return true;
-        }
-
-        function setFieldError(field, errorElement, message) {
-            field.classList.add('field-error');
-            if (errorElement) {
-                errorElement.classList.add('error');
-                errorElement.textContent = message;
-            }
-        }
-
-        function setFieldSuccess(field, errorElement, message) {
-            field.classList.add('field-success');
-            if (errorElement) {
-                errorElement.classList.add('success');
-                errorElement.textContent = message;
-            }
-        }
-
-        function clearFieldError(fieldId) {
-            const field = document.getElementById(fieldId);
-            const errorElement = document.getElementById(`${fieldId}-error`);
-            
-            if (field) {
-                field.classList.remove('field-error');
-            }
-            if (errorElement) {
-                errorElement.classList.remove('error');
-                errorElement.textContent = '';
-            }
-        }
-
-        function validateStep(step) {
-            const stepElement = document.querySelector(`#step-${step}`);
-            const requiredFields = stepElement.querySelectorAll('input[required], textarea[required], select[required]');
-            let isValid = true;
-            
-            requiredFields.forEach(field => {
-                const fieldValid = validateField(field.id);
-                if (!fieldValid) {
-                    isValid = false;
-                }
-            });
-            
-            if (!isValid) {
-                showNotification('Please fill in all required fields correctly.', 'error');
-            }
-            
-            return isValid;
-        }
-
-        // Form submission
-        async function handleFormSubmission(event) {
-            event.preventDefault();
-            console.log('📝 Form submitted');
-
-            if (!validateStep(currentStep)) return;
-
-            try {
-                // Verify session
-                if (supabase) {
-                    const { data: { session }, error } = await supabase.auth.getSession();
-                    if (error || !session) {
-                        showNotification("Session expired. Please log in again.", 'error');
-                        window.location.href = "auth.html";
-                        return;
-                    }
-                    currentUser = session.user;
-                }
-
-                const profileData = collectFormData();
-                
-                showLoading();
-
-                await saveToDatabase(profileData);
-
-                showSuccess();
-                
-            } catch (err) {
-                console.error('💥 Submission error:', err);
-                showOnboardingForm();
-                
-                let errorMessage = "Something went wrong: " + err.message;
-                if (err.message.includes('updated_at')) {
-                    errorMessage = "Database configuration error. Please contact support or try again in a few minutes.";
-                }
-                
-                showNotification(errorMessage, 'error');
-            }
-        }
-
-        // Collect form data
-        function collectFormData() {
-            return {
-                user_id: currentUser?.id || 'demo',
-                business_name: document.getElementById("business-name").value.trim(),
-                target_niche: document.getElementById("business-niche").value.trim(),
-                customer_location: 'Global', // Default value
-                primary_platform: 'instagram', // Default value
-                product_service: document.getElementById("target-audience").value.trim(),
-                value_prop: document.getElementById("value-proposition").value.trim(),
-                communication_style: document.getElementById("communication-style").value,
-                message_example: document.getElementById("message-example").value.trim(),
-                success_outcome: document.getElementById("success-outcome").value,
-                call_to_action: document.getElementById("call-to-action").value.trim(),
-                target_problems: document.getElementById("target-problems").value.trim(),
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-        }
-
-        // Save to database
-        async function saveToDatabase(profileData) {
-            console.log('💾 Saving user data...');
-            
-            // First, update user with credits and onboarding flag
-            const { error: userError } = await supabase
-                .from("users")
-                .upsert({
-                    id: currentUser.id,
-                    email: currentUser.email,
-                    credits: 5,
-                    subscription_plan: 'free',
-                    monthly_credits_limit: 5,
-                    onboarding_completed: true,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }, { 
-                    onConflict: 'id',
-                    ignoreDuplicates: false 
-                });
-
-            if (userError) {
-                console.error('❌ User upsert error:', userError);
-                throw new Error(`User update failed: ${userError.message}`);
-            }
-
-            console.log('✅ User updated successfully');
-
-            console.log('💾 Saving business profile...', profileData);
-            
-            // Save business profile
-            const { data: profileResult, error: profileError } = await supabase
-                .from("business_profiles")
-                .insert(profileData)
-                .select()
-                .single();
-
-            if (profileError) {
-                console.error('❌ Profile error:', profileError);
-                throw new Error(`Profile creation failed: ${profileError.message}`);
-            }
-
-            console.log('✅ Business profile saved:', profileResult);
-        }
-
-        // Show success state
-        function showSuccess() {
-            hideAllStates();
-            document.getElementById("onboarding-form").style.display = "none";
-            document.getElementById("success").style.display = "block";
-            
-            setTimeout(() => {
-                console.log('🎯 Redirecting to dashboard...');
-                window.location.href = 'dashboard.html';
-            }, 3000);
-        }
-
-        // Notification system
-        function showNotification(message, type = 'info') {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 16px 24px;
-                border-radius: 8px;
-                color: white;
-                font-weight: 500;
-                z-index: 10000;
-                max-width: 400px;
-                animation: slideIn 0.3s ease;
-            `;
-            
-            // Set colors based on type
-            switch (type) {
-                case 'error':
-                    notification.style.background = '#EF4444';
-                    break;
-                case 'success':
-                    notification.style.background = '#10B981';
-                    break;
-                default:
-                    notification.style.background = '#2D6CDF';
-            }
-            
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                notification.remove();
-            }, 5000);
-        }
-
-        // Auth state listener
-        if (window.supabase) {
-            window.addEventListener('load', () => {
-                if (supabase) {
-                    supabase.auth.onAuthStateChange((event, session) => {
-                        if (event === 'SIGNED_IN' && session) {
-                            currentUser = session.user;
-                            showOnboardingForm();
-                        } else if (event === 'SIGNED_OUT') {
-                            window.location.href = 'auth.html';
-                        }
-                    });
-                }
-            });
-        }
-
-        // Global error handler
-        window.addEventListener('error', (event) => {
-            console.error('💥 Global error:', event.error);
-        });
-
-        // Global unhandled promise rejection handler
-       window.addEventListener('unhandledrejection', (event) => {
-            console.error('💥 Unhandled promise rejection:', event.reason);
-        });
-
-        // Add CSS animation for notifications
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-        `;
-        document.head.appendChild(style);
 
         // Show different states
         function showOnboardingForm() {
@@ -1522,6 +1162,10 @@
         // Global error handlers  
         window.addEventListener('error', (event) => {
             console.error('💥 Global error:', event.error);
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('💥 Unhandled promise rejection:', event.reason);
         });
     </script>
 </body>
