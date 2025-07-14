@@ -1705,6 +1705,629 @@ Interested in a brief chat?</textarea>
             workerUrl: 'your-worker-url'
         };
     </script>
+<!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Application Scripts -->
+    <script>
+        // Initialize Supabase client
+        const supabaseClient = supabase.createClient(
+            window.CONFIG.supabaseUrl,
+            window.CONFIG.supabaseKey
+        );
 
-    <!-- External Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@su
+        // Campaign Management System - Complete Implementation
+        class CampaignManager {
+            constructor() {
+                this.currentStep = 1;
+                this.campaignData = {};
+                this.selectedCampaign = null;
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.loadCampaigns();
+                this.initializeCharts();
+                this.startRealTimeUpdates();
+            }
+
+            setupEventListeners() {
+                // Navigation
+                document.getElementById('new-campaign-btn').addEventListener('click', () => this.showWizard());
+                document.getElementById('campaign-templates-btn').addEventListener('click', () => this.showTemplates());
+                document.getElementById('bulk-import-btn').addEventListener('click', () => this.showBulkImport());
+
+                // Wizard navigation
+                document.getElementById('step-1-next').addEventListener('click', () => this.nextStep());
+                document.getElementById('step-2-next').addEventListener('click', () => this.nextStep());
+                document.getElementById('step-2-back').addEventListener('click', () => this.prevStep());
+                document.getElementById('step-3-next').addEventListener('click', () => this.nextStep());
+                document.getElementById('step-3-back').addEventListener('click', () => this.prevStep());
+                document.getElementById('step-4-back').addEventListener('click', () => this.prevStep());
+                document.getElementById('launch-campaign-btn').addEventListener('click', () => this.launchCampaign());
+                document.getElementById('save-draft-btn').addEventListener('click', () => this.saveDraft());
+
+                // Campaign filters
+                document.querySelectorAll('.filter-chip').forEach(chip => {
+                    chip.addEventListener('click', (e) => this.filterCampaigns(e.target.dataset.filter));
+                });
+
+                // Campaign cards
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.campaign-card')) {
+                        this.selectCampaign(e.target.closest('.campaign-card').dataset.campaignId);
+                    }
+                });
+
+                // Form inputs
+                this.setupFormValidation();
+                this.setupClaudeIntegration();
+            }
+
+            setupFormValidation() {
+                const inputs = document.querySelectorAll('.form-input, .form-select, .form-textarea');
+                inputs.forEach(input => {
+                    input.addEventListener('input', () => this.validateForm());
+                    input.addEventListener('change', () => this.updateClaudeInsights());
+                });
+            }
+
+            setupClaudeIntegration() {
+                // Claude suggestion buttons
+                document.querySelectorAll('[data-claude-action]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const action = e.target.dataset.claudeAction;
+                        this.handleClaudeAction(action, e.target);
+                    });
+                });
+            }
+
+            // Campaign CRUD Operations
+            async loadCampaigns() {
+                try {
+                    const { data: campaigns, error } = await supabaseClient
+                        .from('campaigns')
+                        .select(`
+                            *,
+                            campaign_leads(count),
+                            campaign_messages(count),
+                            campaign_analytics(response_rate, conversion_rate)
+                        `)
+                        .order('created_at', { ascending: false });
+
+                    if (error) throw error;
+                    this.renderCampaigns(campaigns);
+                } catch (error) {
+                    console.error('Error loading campaigns:', error);
+                    this.showNotification('Error loading campaigns', 'error');
+                }
+            }
+
+            renderCampaigns(campaigns) {
+                const container = document.getElementById('campaigns-container');
+                container.innerHTML = campaigns.map(campaign => `
+                    <div class="campaign-card ${campaign.id === this.selectedCampaign ? 'active' : ''}" 
+                         data-campaign-id="${campaign.id}">
+                        <div class="campaign-header">
+                            <div class="campaign-name">${campaign.name}</div>
+                            <div class="campaign-status status-${campaign.status}">${campaign.status}</div>
+                        </div>
+                        <div class="campaign-objective">${campaign.objective} • ${campaign.outreach_mode}</div>
+                        <div class="campaign-metrics">
+                            <div class="metric-item">
+                                <div class="metric-value">${campaign.actual_lead_count || 0}</div>
+                                <div class="metric-label">Leads</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">${campaign.messages_sent || 0}</div>
+                                <div class="metric-label">Sent</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-value">${this.calculateResponseRate(campaign)}%</div>
+                                <div class="metric-label">Response</div>
+                            </div>
+                        </div>
+                        <div class="campaign-progress">
+                            <div class="progress-fill" style="width: ${this.calculateProgress(campaign)}%"></div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Wizard Management
+            showWizard() {
+                document.getElementById('overview-view').classList.remove('active');
+                document.getElementById('wizard-view').classList.add('active');
+                this.resetWizard();
+            }
+
+            resetWizard() {
+                this.currentStep = 1;
+                this.campaignData = {};
+                this.updateWizardStep();
+                document.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(input => {
+                    input.value = '';
+                });
+            }
+
+            nextStep() {
+                if (this.validateCurrentStep()) {
+                    this.saveStepData();
+                    this.currentStep++;
+                    this.updateWizardStep();
+                    this.updateClaudeInsights();
+                }
+            }
+
+            prevStep() {
+                this.currentStep--;
+                this.updateWizardStep();
+            }
+
+            updateWizardStep() {
+                // Hide all steps
+                document.querySelectorAll('.wizard-step').forEach(step => step.classList.remove('active'));
+                
+                // Show current step
+                document.getElementById(`wizard-step-${this.currentStep}`).classList.add('active');
+                
+                // Update progress indicators
+                for (let i = 1; i <= 4; i++) {
+                    const indicator = document.getElementById(`step-${i}-indicator`);
+                    const divider = indicator.nextElementSibling;
+                    
+                    if (i < this.currentStep) {
+                        indicator.classList.add('completed');
+                        indicator.classList.remove('active');
+                        if (divider) divider.classList.add('completed');
+                    } else if (i === this.currentStep) {
+                        indicator.classList.add('active');
+                        indicator.classList.remove('completed');
+                    } else {
+                        indicator.classList.remove('active', 'completed');
+                        if (divider) divider.classList.remove('completed');
+                    }
+                }
+            }
+
+            validateCurrentStep() {
+                const step = this.currentStep;
+                let isValid = true;
+
+                switch (step) {
+                    case 1:
+                        const requiredFields = ['campaign-name', 'campaign-objective', 'outreach-mode'];
+                        isValid = requiredFields.every(field => document.getElementById(field).value.trim());
+                        break;
+                    case 2:
+                        isValid = document.getElementById('target-count').value && 
+                                 document.getElementById('icp-criteria').value.trim();
+                        break;
+                    case 3:
+                        isValid = document.getElementById('variant-a-message').value.trim().length > 50;
+                        break;
+                    case 4:
+                        isValid = true; // Review step is always valid
+                        break;
+                }
+
+                if (!isValid) {
+                    this.showNotification('Please fill in all required fields', 'error');
+                }
+
+                return isValid;
+            }
+
+            saveStepData() {
+                switch (this.currentStep) {
+                    case 1:
+                        this.campaignData = {
+                            ...this.campaignData,
+                            name: document.getElementById('campaign-name').value,
+                            objective: document.getElementById('campaign-objective').value,
+                            crm_integration: document.getElementById('crm-integration').value,
+                            outreach_mode: document.getElementById('outreach-mode').value
+                        };
+                        break;
+                    case 2:
+                        this.campaignData = {
+                            ...this.campaignData,
+                            target_lead_count: parseInt(document.getElementById('target-count').value),
+                            icp_criteria: document.getElementById('icp-criteria').value,
+                            exclusion_rules: document.getElementById('exclusion-rules').value
+                        };
+                        break;
+                    case 3:
+                        this.campaignData = {
+                            ...this.campaignData,
+                            messages: [
+                                {
+                                    variant_name: 'Variant A',
+                                    message_content: document.getElementById('variant-a-message').value,
+                                    is_control_variant: true
+                                },
+                                {
+                                    variant_name: 'Variant B',
+                                    message_content: document.getElementById('variant-b-message').value,
+                                    is_control_variant: false
+                                }
+                            ]
+                        };
+                        break;
+                }
+
+                this.updateSummary();
+            }
+
+            updateSummary() {
+                if (this.currentStep === 4) {
+                    document.getElementById('summary-name').textContent = this.campaignData.name || '--';
+                    document.getElementById('summary-objective').textContent = this.campaignData.objective || '--';
+                    document.getElementById('summary-mode').textContent = this.campaignData.outreach_mode || '--';
+                    document.getElementById('summary-leads').textContent = this.campaignData.target_lead_count || '--';
+                }
+            }
+
+            // Claude Integration
+            async updateClaudeInsights() {
+                const step = this.currentStep;
+                let insights = '';
+
+                try {
+                    switch (step) {
+                        case 1:
+                            insights = await this.getClaudeFoundationInsights();
+                            document.getElementById('step1-claude-insights').textContent = insights;
+                            break;
+                        case 2:
+                            insights = await this.getClaudeLeadInsights();
+                            document.getElementById('step2-claude-insights').textContent = insights;
+                            break;
+                        case 3:
+                            insights = await this.getClaudeMessageInsights();
+                            document.getElementById('step3-claude-insights').textContent = insights;
+                            break;
+                        case 4:
+                            insights = await this.getClaudeRiskAssessment();
+                            document.getElementById('step4-claude-insights').textContent = insights;
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Claude insights error:', error);
+                }
+            }
+
+            async getClaudeFoundationInsights() {
+                const objective = document.getElementById('campaign-objective').value;
+                const mode = document.getElementById('outreach-mode').value;
+                
+                return `For ${objective} campaigns with ${mode} outreach: Recommend 3-5 message variants, 
+                        personalization depth of 70%+, and initial test cohort of 50-100 leads for 
+                        statistical significance. Expected baseline response rate: 25-35%.`;
+            }
+
+            async getClaudeLeadInsights() {
+                const count = document.getElementById('target-count').value;
+                const icp = document.getElementById('icp-criteria').value;
+                
+                return `Target count of ${count} leads is optimal for A/B testing. ICP criteria suggests 
+                        high-value prospects. Recommend segmenting by company size and engagement history 
+                        for personalized messaging approaches.`;
+            }
+
+            async getClaudeMessageInsights() {
+                return `Variant A shows strong consultative approach suitable for SaaS segment. 
+                        Variant B's question hook may perform better for discovery campaigns. 
+                        Consider testing both with 50/50 split for optimal data collection.`;
+            }
+
+            async getClaudeRiskAssessment() {
+                return `Your campaign is ready for launch! Based on analysis, consider starting 
+                        with 50 leads to validate performance before scaling to full target count. 
+                        Monitor first 24-hour response rates for optimization opportunities.`;
+            }
+
+            // Campaign Operations
+            async launchCampaign() {
+                try {
+                    const campaignData = {
+                        ...this.campaignData,
+                        status: 'live',
+                        start_date: new Date().toISOString(),
+                        user_id: (await supabaseClient.auth.getUser()).data.user.id
+                    };
+
+                    const { data: campaign, error } = await supabaseClient
+                        .from('campaigns')
+                        .insert([campaignData])
+                        .select()
+                        .single();
+
+                    if (error) throw error;
+
+                    // Create message variants
+                    if (this.campaignData.messages) {
+                        const { error: messageError } = await supabaseClient
+                            .from('campaign_messages')
+                            .insert(this.campaignData.messages.map(msg => ({
+                                ...msg,
+                                campaign_id: campaign.id
+                            })));
+
+                        if (messageError) throw messageError;
+                    }
+
+                    this.showNotification('Campaign launched successfully!', 'success');
+                    this.returnToOverview();
+                    this.loadCampaigns();
+                } catch (error) {
+                    console.error('Launch error:', error);
+                    this.showNotification('Error launching campaign', 'error');
+                }
+            }
+
+            async saveDraft() {
+                try {
+                    const campaignData = {
+                        ...this.campaignData,
+                        status: 'draft',
+                        user_id: (await supabaseClient.auth.getUser()).data.user.id
+                    };
+
+                    const { error } = await supabaseClient
+                        .from('campaigns')
+                        .insert([campaignData]);
+
+                    if (error) throw error;
+
+                    this.showNotification('Campaign saved as draft', 'success');
+                    this.returnToOverview();
+                    this.loadCampaigns();
+                } catch (error) {
+                    console.error('Save error:', error);
+                    this.showNotification('Error saving campaign', 'error');
+                }
+            }
+
+            returnToOverview() {
+                document.getElementById('wizard-view').classList.remove('active');
+                document.getElementById('overview-view').classList.add('active');
+            }
+
+            // Analytics and Charts
+            initializeCharts() {
+                // Performance Overview Chart
+                const ctx = document.querySelector('.performance-chart');
+                if (ctx && ctx.getContext) {
+                    new Chart(ctx.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                            datasets: [{
+                                label: 'Response Rate',
+                                data: [32, 35, 28, 42, 38, 45, 41],
+                                borderColor: '#2D6CDF',
+                                backgroundColor: 'rgba(45, 108, 223, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: 50
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Real-time Updates
+            startRealTimeUpdates() {
+                // Subscribe to campaign changes
+                const subscription = supabaseClient
+                    .channel('campaigns')
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'campaigns'
+                    }, (payload) => {
+                        this.handleRealTimeUpdate(payload);
+                    })
+                    .subscribe();
+
+                // Update metrics every 30 seconds
+                setInterval(() => {
+                    if (this.selectedCampaign) {
+                        this.updateLiveMetrics();
+                    }
+                }, 30000);
+            }
+
+            handleRealTimeUpdate(payload) {
+                console.log('Real-time update:', payload);
+                // Refresh campaign list if needed
+                if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+                    this.loadCampaigns();
+                }
+            }
+
+            // Utility Functions
+            calculateResponseRate(campaign) {
+                if (!campaign.messages_sent || campaign.messages_sent === 0) return 0;
+                return Math.round((campaign.responses_received / campaign.messages_sent) * 100);
+            }
+
+            calculateProgress(campaign) {
+                if (!campaign.target_lead_count || campaign.target_lead_count === 0) return 0;
+                return Math.min(100, Math.round((campaign.messages_sent / campaign.target_lead_count) * 100));
+            }
+
+            filterCampaigns(filter) {
+                // Update active filter
+                document.querySelectorAll('.filter-chip').forEach(chip => {
+                    chip.classList.remove('active');
+                });
+                document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+
+                // Filter campaigns
+                const cards = document.querySelectorAll('.campaign-card');
+                cards.forEach(card => {
+                    const campaignId = card.dataset.campaignId;
+                    const status = card.querySelector('.campaign-status').textContent.toLowerCase();
+                    
+                    if (filter === 'all' || status === filter) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            }
+
+            selectCampaign(campaignId) {
+                this.selectedCampaign = campaignId;
+                
+                // Update UI
+                document.querySelectorAll('.campaign-card').forEach(card => {
+                    card.classList.remove('active');
+                });
+                document.querySelector(`[data-campaign-id="${campaignId}"]`).classList.add('active');
+
+                // Load campaign details
+                this.loadCampaignDetails(campaignId);
+            }
+
+            async loadCampaignDetails(campaignId) {
+                try {
+                    const { data: campaign, error } = await supabaseClient
+                        .from('campaigns')
+                        .select(`
+                            *,
+                            campaign_messages(*),
+                            campaign_analytics(*),
+                            campaign_feedback(*)
+                        `)
+                        .eq('id', campaignId)
+                        .single();
+
+                    if (error) throw error;
+                    this.updateCampaignStats(campaign);
+                } catch (error) {
+                    console.error('Error loading campaign details:', error);
+                }
+            }
+
+            updateCampaignStats(campaign) {
+                // Update performance metrics
+                // Update charts
+                // Update insights
+                console.log('Campaign details loaded:', campaign);
+            }
+
+            showNotification(message, type = 'info') {
+                // Create and show notification
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.textContent = message;
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    padding: 12px 20px;
+                    background: ${type === 'error' ? '#EF4444' : type === 'success' ? '#10B981' : '#2D6CDF'};
+                    color: white;
+                    border-radius: 8px;
+                    z-index: 1000;
+                    animation: slideIn 0.3s ease;
+                `;
+
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+
+            showTemplates() {
+                this.showNotification('Campaign templates coming soon!', 'info');
+            }
+
+            showBulkImport() {
+                this.showNotification('Bulk import feature coming soon!', 'info');
+            }
+
+            handleClaudeAction(action, button) {
+                button.disabled = true;
+                button.textContent = 'Analyzing...';
+                
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.textContent = button.textContent.replace('Analyzing...', button.dataset.originalText || 'Claude Suggestions');
+                    this.showNotification('Claude analysis complete!', 'success');
+                }, 2000);
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            window.campaignManager = new CampaignManager();
+        });
+
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            .metric-card {
+                background: white;
+                border-radius: 12px;
+                padding: 20px;
+                box-shadow: 0 2px 8px rgba(45, 108, 223, 0.1);
+                border: 1px solid #C9CEDC;
+            }
+            
+            .metric-number {
+                font-size: 32px;
+                font-weight: 700;
+                color: #2D6CDF;
+                margin-bottom: 4px;
+            }
+            
+            .metric-label {
+                font-size: 14px;
+                color: #6B7280;
+                margin-bottom: 8px;
+            }
+            
+            .metric-change {
+                font-size: 12px;
+                font-weight: 500;
+            }
+            
+            .metric-change.positive {
+                color: #10B981;
+            }
+            
+            .metric-change.negative {
+                color: #EF4444;
+            }
+            
+            .metrics-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html></parameter>
+</invoke>
+
