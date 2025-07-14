@@ -733,21 +733,22 @@
                 showLoading();
 
                 // Collect form data
-                const profileData = {
-                    user_id: currentUser.id,
-                    business_name: document.getElementById("business-name").value.trim(),
-                    target_niche: document.getElementById("business-niche").value.trim(),
-                    target_audience: document.getElementById("target-audience").value.trim(),
-                    value_prop: document.getElementById("value-proposition").value.trim(),
-                    communication_style: document.getElementById("communication-style").value,
-                    message_example: document.getElementById("message-example").value.trim(),
-                    success_outcome: document.getElementById("success-outcome").value,
-                    call_to_action: document.getElementById("call-to-action").value.trim(),
-                    target_problems: document.getElementById("target-problems").value.trim(),
-                    is_active: true,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                };
+// Collect form data
+const profileData = {
+    user_id: currentUser.id,
+    business_name: document.getElementById("business-name").value.trim(),
+    target_niche: document.getElementById("business-niche").value.trim(),
+    target_audience: document.getElementById("target-audience").value.trim(),
+    target_problems: document.getElementById("target-problems").value.trim(),
+    value_proposition: document.getElementById("value-proposition").value.trim(),
+    communication_style: document.getElementById("communication-style").value,
+    message_example: document.getElementById("message-example").value.trim(),
+    success_outcome: document.getElementById("success-outcome").value,
+    call_to_action: document.getElementById("call-to-action").value.trim(),
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+};
 
                 console.log('💾 Saving user data...');
                 
