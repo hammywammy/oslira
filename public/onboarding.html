@@ -643,40 +643,44 @@
             try {
                 console.log('🔍 Initializing Supabase...');
                 
-                // Try to fetch configuration from API
+                // Force timeout if config takes too long
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Configuration timeout')), 5000);
+                });
+                
                 let config;
                 try {
                     console.log('🔍 Fetching config from /api/config...');
-                    const response = await fetch('/api/config');
-                    console.log('🔍 Config response status:', response.status);
                     
-                    if (response.ok) {
-                        config = await response.json();
-                        console.log('✅ Config loaded from API');
-                    } else {
-                        throw new Error('API config not available');
-                    }
+                    const configPromise = fetch('/api/config').then(async (response) => {
+                        console.log('🔍 Config response status:', response.status);
+                        
+                        if (!response.ok) {
+                            throw new Error(`API config failed with status ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (!data.supabaseUrl || !data.supabaseAnonKey) {
+                            throw new Error('API returned incomplete configuration');
+                        }
+                        
+                        return data;
+                    });
+                    
+                    config = await Promise.race([configPromise, timeoutPromise]);
+                    console.log('✅ Config loaded from API successfully');
+                    
                 } catch (apiError) {
-                    console.log('⚠️ API config failed, checking environment variables');
-                    
-                    // Try environment variables or hardcoded fallback
-                    if (window.CONFIG && window.CONFIG.supabaseUrl) {
-                        config = window.CONFIG;
-                        console.log('✅ Config loaded from window.CONFIG');
-                    } else {
-                        throw new Error('No configuration source available');
-                    }
+                    console.error('❌ API config failed:', apiError.message);
+                    throw new Error(`Unable to load configuration: ${apiError.message}. Please ensure your /api/config endpoint is working and returns proper Supabase credentials.`);
                 }
                 
                 if (!config.supabaseUrl || !config.supabaseAnonKey) {
-                    throw new Error('Invalid configuration - missing URL or key');
+                    throw new Error('Invalid configuration - missing Supabase URL or anonymous key');
                 }
                 
-                console.log('🔍 Config received:', { 
-                    hasUrl: !!config.supabaseUrl, 
-                    hasKey: !!config.supabaseAnonKey,
-                    urlStart: config.supabaseUrl?.substring(0, 20) + '...'
-                });
+                console.log('🔍 Creating Supabase client...');
                 
                 supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
                     auth: {
@@ -685,11 +689,18 @@
                     }
                 });
                 
-                console.log('✅ Supabase initialized successfully');
+                console.log('✅ Supabase client created successfully');
+                
+                // Test the connection
+                const { data, error } = await supabase.auth.getSession();
+                console.log('🔍 Connection test result:', { hasData: !!data, error: error?.message });
+                
+                console.log('✅ Supabase initialized and tested successfully');
                 
             } catch (error) {
                 console.error('❌ Supabase initialization failed:', error);
-                showError(`Configuration error: ${error.message}. Please ensure your Supabase configuration is properly set up.`);
+                showError(`Setup failed: ${error.message}`);
+                throw error; // Re-throw to stop further execution
             }
         }
 
@@ -751,13 +762,13 @@
 
         // Authentication check
         async function checkAuth() {
-            if (!supabase) {
-                console.log('❌ Supabase not available, cannot check auth');
-                showError('Authentication system not available. Please check your configuration.');
-                return;
-            }
-
             try {
+                if (!supabase) {
+                    console.log('❌ Supabase not available, cannot check auth');
+                    showError('Authentication system not available. Please refresh the page and try again.');
+                    return;
+                }
+
                 console.log('🔍 Checking authentication...');
                 
                 // Handle magic link tokens
@@ -766,13 +777,14 @@
                 
                 if (accessToken) {
                     console.log('🎟️ Magic link tokens found, processing...');
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     
                     if (window.history && window.history.replaceState) {
                         window.history.replaceState(null, '', window.location.pathname);
                     }
                 }
                 
+                console.log('🔍 Getting session...');
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
                 if (error) {
@@ -787,13 +799,16 @@
                     return;
                 }
                 
-                console.log('✅ Session found:', session.user.email);
+                console.log('✅ Session found for user:', session.user.email);
                 currentUser = session.user;
-                await checkOnboardingStatus();
+                
+                // Skip onboarding status check for now, just show the form
+                console.log('🔍 Proceeding to onboarding form');
+                showOnboardingForm();
                 
             } catch (err) {
                 console.error('💥 Auth check error:', err);
-                showError('Authentication error: ' + err.message);
+                showError('Authentication failed: ' + err.message);
             }
         }
 
