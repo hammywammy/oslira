@@ -437,32 +437,38 @@
                     return;
                 }
 
-                // Check for existing session
+                // Check for existing session - be more lenient
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 
                 if (sessionError) {
                     console.log('🔍 AUTH: Session error:', sessionError.message);
-                    await clearAllAuthData();
+                    // Don't clear data immediately - could be network issue
                     return;
                 }
                 
-                if (session) {
+                if (session && session.user) {
                     console.log('🔍 AUTH: Found existing session for user:', session.user?.email || 'Unknown email');
                     console.log('🔍 AUTH: User ID:', session.user?.id || 'Unknown ID');
                     console.log('🔍 AUTH: Session expires:', new Date(session.expires_at * 1000).toLocaleString());
                     
-                    // Since you deleted all users from Supabase, any existing session is invalid
-                    console.log('🧹 AUTH: All Supabase users were deleted - clearing stale session');
-                    await clearAllAuthData();
-                    showError('Your account session has expired. Please sign in again.');
-                    return;
+                    // Check if session is still valid (not expired)
+                    const now = Date.now() / 1000;
+                    if (session.expires_at && session.expires_at > now) {
+                        console.log('🔍 AUTH: Valid session found, redirecting...');
+                        await redirectToDashboard();
+                        return;
+                    } else {
+                        console.log('🔍 AUTH: Session expired, clearing...');
+                        await clearAllAuthData();
+                        return;
+                    }
                 } else {
                     console.log('🔍 AUTH: No existing session found - ready for fresh login');
                 }
 
             } catch (error) {
                 console.error('🔍 AUTH: Auth check failed:', error);
-                await clearAllAuthData();
+                // Don't clear auth data for network errors
             }
         }
 
@@ -497,16 +503,42 @@
 
         // Redirect to dashboard
         async function redirectToDashboard() {
-            // Check for demo context
-            const demoUsername = sessionStorage.getItem('demo_username');
-            if (demoUsername) {
-                sessionStorage.removeItem('demo_username');
-                window.location.href = `dashboard.html?demo_analysis=${encodeURIComponent(demoUsername)}`;
-                return;
+            try {
+                // Check if user has completed onboarding by checking for business profiles
+                const { data: businessProfiles, error } = await supabase
+                    .from('business_profiles')
+                    .select('id, business_name')
+                    .limit(1);
+                
+                if (error) {
+                    console.log('🔍 AUTH: Error checking business profiles, assuming new user:', error.message);
+                    // If we can't check, assume new user and send to onboarding
+                    window.location.href = 'onboarding.html';
+                    return;
+                }
+                
+                if (!businessProfiles || businessProfiles.length === 0) {
+                    console.log('🔍 AUTH: No business profiles found - redirecting to onboarding');
+                    window.location.href = 'onboarding.html';
+                } else {
+                    console.log('🔍 AUTH: Business profiles found - redirecting to dashboard');
+                    
+                    // Check for demo context
+                    const demoUsername = sessionStorage.getItem('demo_username');
+                    if (demoUsername) {
+                        sessionStorage.removeItem('demo_username');
+                        window.location.href = `dashboard.html?demo_analysis=${encodeURIComponent(demoUsername)}`;
+                        return;
+                    }
+                    
+                    // Default redirect to dashboard
+                    window.location.href = 'dashboard.html';
+                }
+            } catch (error) {
+                console.error('🔍 AUTH: Error during redirect logic:', error);
+                // Default to onboarding if there's any error
+                window.location.href = 'onboarding.html';
             }
-
-            // Default redirect
-            window.location.href = 'dashboard.html';
         }
 
         // Clean authentication parameters from URL
