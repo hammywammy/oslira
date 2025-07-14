@@ -119,7 +119,7 @@ async function callOpenAI(prompt: string, apiKey: string, maxRetries = 3): Promi
   }
 }
 
-// Claude API with retry logic
+// Claude API with retry logic - UPDATED TO CLAUDE SONNET 4
 async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promise<any> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -131,9 +131,9 @@ async function callClaude(prompt: string, apiKey: string, maxRetries = 3): Promi
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'claude-3-sonnet-20240229',
-          max_tokens: 1000,
-          temperature: 0.4,
+          model: 'claude-sonnet-4-20250514', // UPDATED TO CLAUDE SONNET 4
+          max_tokens: 1200, // Increased for better message generation
+          temperature: 0.7, // Increased for more creative/natural messages
           messages: [{ role: 'user', content: prompt }]
         })
       });
@@ -305,24 +305,60 @@ function generateDeepPrompt(profile: ProfileData, business: BusinessProfile): st
     '}';
 }
 
-// Message generation prompt
+// ENHANCED Message generation prompt with more data
 function generateMessagePrompt(profile: ProfileData, business: BusinessProfile, analysis: any): string {
-  return 'You are an expert B2B SDR crafting Instagram DMs.\n\n' +
-    'LEAD PROFILE:\n' +
-    '- Username: ' + profile.username + '\n' +
-    '- Bio: "' + (profile.biography || 'No bio available') + '"\n' +
-    '- Verified: ' + (profile.isVerified || profile.verified || false) + '\n' +
-    '- Category: ' + (profile.businessCategoryName || profile.category || 'Unknown') + '\n' +
-    '- Followers: ' + (profile.followersCount?.toLocaleString() || 0) + '\n\n' +
-    'ANALYSIS:\n' +
-    '- Score: ' + analysis.lead_score + '/100\n' +
-    '- Niche: ' + analysis.niche + '\n' +
-    '- Selling Points: ' + (analysis.selling_points?.join(', ') || 'Profile strength') + '\n\n' +
-    'YOUR BUSINESS:\n' +
-    '- Company: ' + business.business_name + '\n' +
-    '- Product/Service: ' + business.product_service + '\n' +
-    '- Value Prop: ' + business.value_prop + '\n\n' +
-    'Write a personalized 2-3 sentence Instagram DM. Only return the message text.';
+  // Format follower/following ratio insight
+  const followRatio = profile.followingCount && profile.followersCount 
+    ? (profile.followersCount / profile.followingCount).toFixed(1)
+    : null;
+  
+  const accountInsights = [];
+  if (profile.isVerified || profile.verified) accountInsights.push('verified account');
+  if (profile.externalUrl) accountInsights.push('has business website');
+  if (followRatio && parseFloat(followRatio) > 1) accountInsights.push('strong follower ratio');
+  if (profile.followersCount > 10000) accountInsights.push('large following');
+  if (profile.postsCount && profile.postsCount > 100) accountInsights.push('active content creator');
+
+  return `You are an expert B2B sales development representative crafting personalized Instagram DMs that get responses. Your goal is to write a natural, conversational message that feels genuine and relevant.
+
+PROSPECT PROFILE:
+- Username: @${profile.username}
+- Full Name: ${profile.fullName || 'Not provided'}
+- Bio: "${profile.biography || 'No bio available'}"
+- Followers: ${profile.followersCount?.toLocaleString() || 0}
+- Following: ${profile.followingCount?.toLocaleString() || 0}
+- Posts: ${profile.postsCount?.toLocaleString() || 0}
+- Verified: ${profile.isVerified || profile.verified || false}
+- Category: ${profile.businessCategoryName || profile.category || 'Unknown'}
+- External Website: ${profile.externalUrl || 'None'}
+- Account Type: ${profile.private || profile.isPrivate ? 'Private' : 'Public'}
+- Account Insights: ${accountInsights.length > 0 ? accountInsights.join(', ') : 'Standard account'}
+
+LEAD ANALYSIS RESULTS:
+- Lead Score: ${analysis.lead_score}/100
+- Identified Niche: ${analysis.niche}
+- Why They're a Good Fit: ${Array.isArray(analysis.match_reasons) ? analysis.match_reasons.join(', ') : analysis.match_reasons || 'Profile match'}
+- Key Selling Points: ${Array.isArray(analysis.selling_points) ? analysis.selling_points.join(', ') : analysis.selling_points || 'Value alignment'}
+- Engagement Rate: ${analysis.engagement_rate || 'Not calculated'}%
+- Strategic Notes: ${analysis.custom_notes || 'Standard outreach approach'}
+
+YOUR BUSINESS:
+- Company: ${business.business_name}
+- Product/Service: ${business.product_service}
+- Value Proposition: ${business.value_prop}
+- Target Niche: ${business.target_niche}
+
+OUTREACH GUIDELINES:
+1. Start with their name if available, or username if not
+2. Reference something specific from their bio or profile insights
+3. Make a genuine connection to their niche/industry
+4. Briefly mention how your value prop could help them specifically
+5. End with a soft call-to-action (not pushy)
+6. Keep it 2-3 sentences maximum
+7. Sound conversational and human, not salesy
+8. Avoid generic phrases like "I came across your profile"
+
+Write ONLY the Instagram DM message text. No quotes, no formatting, just the raw message.`;
 }
 
 // =====================================================
@@ -1172,15 +1208,18 @@ app.post('/analyze', async (c) => {
         const content = openaiData.choices[0].message.content;
         analysis = JSON.parse(content);
 
-        // Generate outreach message
+        // Generate outreach message with ENHANCED PROMPT
         if (CLAUDE_KEY) {
           try {
             const messagePrompt = generateMessagePrompt(profileData, businessProfile, analysis);
             const claudeData = await callClaude(messagePrompt, CLAUDE_KEY);
             outreachMessage = claudeData.content?.[0]?.text?.trim() || '';
           } catch (claudeError) {
-            outreachMessage = 'Hi ' + (profileData.fullName || profileData.username) + '! I noticed your work in ' + (analysis.niche || businessProfile.target_niche) + '. Would love to connect about ' + businessProfile.value_prop + '!';
+            console.error('Claude message generation failed:', claudeError.message);
+            outreachMessage = 'Error generating message';
           }
+        } else {
+          outreachMessage = 'Error generating message';
         }
 
         // Store deep analysis
@@ -1220,7 +1259,7 @@ app.post('/analyze', async (c) => {
         } : {})
       };
       
-      outreachMessage = 'Hi ' + (profileData.fullName || profileData.username) + '! Interested in discussing ' + businessProfile.value_prop + '. Let\'s connect!';
+      outreachMessage = 'Error generating message';
     }
 
     // 11. UPDATE LEAD WITH RESULTS
@@ -1366,7 +1405,7 @@ app.get('/health', async (c) => {
     return c.json({ 
       status: allSystemsGo ? 'healthy' : 'degraded',
       service: 'Oslira Enterprise AI Worker',
-      version: '4.1.0',
+      version: '4.2.0',
       environment: {
         ...envStatus,
         database_connectivity: dbStatus
@@ -1388,7 +1427,8 @@ app.get('/health', async (c) => {
         growth: 'price_1RkCLGJzvcRSqGG3XqDyhYZN',
         professional: 'price_1RkCLtJzvcRSqGG30FfJSpau',
         enterprise: 'price_1RkCMlJzvcRSqGG3HHFoX1fw'
-      }
+      },
+      claude_model: 'claude-sonnet-4-20250514'
     });
   } catch (error) {
     return c.json({
@@ -1403,13 +1443,13 @@ app.get('/health', async (c) => {
 app.get('/info', (c) => {
   return c.json({
     service: 'Oslira Enterprise AI Worker',
-    version: '4.1.0',
-    description: 'Enterprise B2B lead qualification with subscription billing',
+    version: '4.2.0',
+    description: 'Enterprise B2B lead qualification with enhanced Claude messaging',
     features: [
       'Monthly subscription billing with Stripe',
       'Real Instagram profile scraping',
       'AI-powered lead scoring', 
-      'Personalized outreach generation',
+      'Enhanced personalized outreach generation with Claude Sonnet 4',
       'Stripe integration with webhooks',
       'Credit-based usage tracking',
       'Multi-tier subscription plans'
@@ -1430,7 +1470,7 @@ app.get('/info', (c) => {
       professional: { price_id: 'price_1RkCLtJzvcRSqGG30FfJSpau', credits: 500, price: 199 },
       enterprise: { price_id: 'price_1RkCMlJzvcRSqGG3HHFoX1fw', credits: 'unlimited', price: 499 }
     },
-    ai_models: ['gpt-4o', 'claude-3-sonnet'],
+    ai_models: ['gpt-4o', 'claude-sonnet-4-20250514'],
     timestamp: new Date().toISOString()
   });
 });
@@ -1438,10 +1478,11 @@ app.get('/info', (c) => {
 // Root endpoint
 app.get('/', (c) => {
   return c.json({
-    message: '🚀 Oslira Enterprise AI Worker v4.1',
+    message: '🚀 Oslira Enterprise AI Worker v4.2',
     status: 'operational',
-    tagline: 'Subscription-based lead intelligence platform',
+    tagline: 'Enhanced subscription-based lead intelligence with Claude Sonnet 4',
     stripe_integration: 'active',
+    claude_model: 'claude-sonnet-4-20250514',
     billing_endpoints: [
       '/billing/create-checkout-session',
       '/billing/create-portal-session'
