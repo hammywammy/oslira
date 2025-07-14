@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; 
-                   script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
-                   style-src 'self' 'unsafe-inline';
-                   connect-src 'self' https://*.supabase.co https://*.workers.dev;
-                   img-src 'self' data: https: https://*.weserv.nl;
-                   frame-src https://js.stripe.com;">
+<meta http-equiv="Content-Security-Policy" 
+      content="default-src 'self'; 
+               script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+               font-src 'self' https://fonts.gstatic.com;
+               connect-src 'self' https://*.supabase.co https://*.workers.dev;
+               img-src 'self' data: https: https://*.weserv.nl;
+               frame-src https://js.stripe.com;">
     <title>Dashboard - Oslira</title>
     <style>
         :root {
@@ -1354,7 +1355,14 @@
                 const config = await fetchConfig();
                 
                 // Initialize Supabase client
-                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+                // Initialize Supabase client - Fixed deprecated parameters
+supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+    auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+    }
+});
                 
                 // Check authentication
                 await checkAuth();
@@ -1372,31 +1380,34 @@
             }
         }
 
-        // Fetch configuration from API
-        async function fetchConfig() {
-            try {
-                const response = await fetch('/api/config');
-                
-                if (!response.ok) {
-                    throw new Error(`Config API returned ${response.status}: ${response.statusText}`);
-                }
-                
-                const config = await response.json();
-                
-                if (config.error) {
-                    throw new Error(config.error);
-                }
-
-                if (!config.supabaseUrl || !config.supabaseAnonKey) {
-                    throw new Error('Invalid configuration received from API');
-                }
-
-                return config;
-
-            } catch (error) {
-                throw new Error(`Failed to load configuration: ${error.message}`);
-            }
+async function fetchConfig() {
+    try {
+        const response = await fetch('/api/config');
+        
+        if (!response.ok) {
+            throw new Error(`Config API returned ${response.status}: ${response.statusText}`);
         }
+        
+        const config = await response.json();
+        
+        // ADD THESE DEBUG LINES
+        console.log('🔍 Config received:', config);
+        console.log('🔍 Worker URL being used:', config.workerUrl);
+        
+        if (config.error) {
+            throw new Error(config.error);
+        }
+
+        if (!config.supabaseUrl || !config.supabaseAnonKey || !config.workerUrl) {
+            throw new Error('Invalid configuration received from API');
+        }
+
+        return config;
+
+    } catch (error) {
+        throw new Error(`Failed to load configuration: ${error.message}`);
+    }
+}
 
         // Check authentication
         async function checkAuth() {
@@ -2065,15 +2076,23 @@
                     platform: 'instagram'
                 };
                 
-                const response = await fetch(config.workerUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${currentSession.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
+const config = await fetchConfig();
 
+// ADD THIS VALIDATION
+if (!config.workerUrl) {
+    throw new Error('Worker URL not configured');
+}
+
+console.log('🚀 Making request to:', config.workerUrl + '/analyze');
+
+const response = await fetch(config.workerUrl + '/analyze', { // ← Add /analyze endpoint
+    method: 'POST',
+    headers: {
+        'Authorization': `Bearer ${currentSession.access_token}`,
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestBody)
+});
                 const result = await response.json();
                 
                 if (!response.ok) {
