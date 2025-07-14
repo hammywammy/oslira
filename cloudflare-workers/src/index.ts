@@ -1529,6 +1529,18 @@ app.get('/', (c) => {
   });
 });
 
+app.get('/debug-env', (c) => {
+  return c.json({
+    supabaseUrl: c.env.SUPABASE_URL ? 'SET' : 'MISSING',
+    supabaseServiceRole: c.env.SUPABASE_SERVICE_ROLE ? 'SET' : 'MISSING', 
+    openaiKey: c.env.OPENAI_KEY ? 'SET' : 'MISSING',
+    claudeKey: c.env.CLAUDE_KEY ? 'SET' : 'MISSING',
+    apifyToken: c.env.APIFY_API_TOKEN ? 'SET' : 'MISSING',
+    stripeKey: c.env.STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
+    envKeyCount: Object.keys(c.env).length
+  });
+});
+
 // Error handlers
 app.onError((err, c) => {
   console.error('🚨 Unhandled error:', err);
