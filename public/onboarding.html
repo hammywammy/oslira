@@ -273,7 +273,7 @@
     <div id="authCheck" class="onboarding-container">
         <div class="onboarding-card auth-check">
             <div class="spinner"></div>
-            <p>Loading...</p>
+            <p>Verifying authentication...</p>
         </div>
     </div>
     
@@ -497,14 +497,184 @@
         </div>
     </div>
 
+    <!-- Error State -->
+    <div id="errorState" class="onboarding-container" style="display: none;">
+        <div class="onboarding-card error-state">
+            <h2>Setup Issue</h2>
+            <p class="error-message" id="errorMessage">Unable to verify your session.</p>
+            <button class="btn-primary" onclick="window.location.href='auth.html'">Back to Login</button>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="onboarding-container" style="display: none;">
+        <div class="onboarding-card loading-state">
+            <div class="spinner"></div>
+            <p>Setting up your AI profile...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
     <script>
         let currentStep = 1;
+        let currentUser = null;
+        let supabase = null;
 
-        // Show the form immediately
-        setTimeout(() => {
-            document.getElementById('authCheck').style.display = 'none';
+        // Initialize app immediately when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Oslira onboarding loaded');
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            try {
+                // Try to initialize Supabase first
+                await initializeSupabase();
+                
+                // Check authentication
+                await checkAuth();
+                
+            } catch (error) {
+                console.error('💥 App initialization failed:', error);
+                showError(`Initialization failed: ${error.message}`);
+            }
+        }
+
+        async function initializeSupabase() {
+            try {
+                console.log('🔍 Initializing Supabase...');
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch('/api/config', {
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`Config API failed: ${response.status}`);
+                }
+                
+                const config = await response.json();
+                
+                if (!config.supabaseUrl || !config.supabaseAnonKey) {
+                    throw new Error('Invalid config received');
+                }
+                
+                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+                    auth: {
+                        autoRefreshToken: true,
+                        persistSession: true
+                    }
+                });
+                
+                console.log('✅ Supabase initialized');
+                
+            } catch (error) {
+                console.error('❌ Supabase init failed:', error.message);
+                throw new Error('Failed to load configuration. Please check your API endpoint.');
+            }
+        }
+
+        async function checkAuth() {
+            try {
+                console.log('🔍 Checking authentication...');
+                
+                if (!supabase) {
+                    throw new Error('Supabase not initialized');
+                }
+                
+                // Handle magic link tokens
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                const accessToken = hashParams.get('access_token');
+                
+                if (accessToken) {
+                    console.log('🎟️ Magic link tokens found, processing...');
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState(null, '', window.location.pathname);
+                    }
+                }
+                
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    throw new Error('Session error: ' + error.message);
+                }
+                
+                if (!session) {
+                    throw new Error('No active session found. Please log in first.');
+                }
+                
+                console.log('✅ Session found for user:', session.user.email);
+                currentUser = session.user;
+                
+                // Check if onboarding already completed
+                await checkOnboardingStatus();
+                
+            } catch (err) {
+                console.error('💥 Auth check error:', err);
+                showError(err.message);
+            }
+        }
+
+        async function checkOnboardingStatus() {
+            try {
+                console.log('🔍 Checking onboarding status...');
+                
+                const { data: userData, error } = await supabase
+                    .from('users')
+                    .select('onboarding_completed')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') {
+                    console.error('❌ Error checking onboarding status:', error);
+                    // Continue anyway if there's an error
+                }
+                
+                if (userData?.onboarding_completed) {
+                    console.log('✅ User already completed onboarding - redirecting to dashboard');
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+                
+                console.log('🔍 User needs to complete onboarding');
+                showOnboardingForm();
+                
+            } catch (err) {
+                console.error('💥 Onboarding status check error:', err);
+                // If error, show onboarding anyway
+                showOnboardingForm();
+            }
+        }
+
+        function showOnboardingForm() {
+            hideAllStates();
             document.getElementById('onboardingMain').style.display = 'block';
-        }, 500);
+        }
+
+        function showError(message) {
+            hideAllStates();
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function showLoading() {
+            hideAllStates();
+            document.getElementById('loadingState').style.display = 'block';
+        }
+
+        function hideAllStates() {
+            document.getElementById('authCheck').style.display = 'none';
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('onboardingMain').style.display = 'none';
+        }
 
         function nextStep() {
             if (validateCurrentStep()) {
@@ -553,28 +723,121 @@
             return isValid;
         }
 
+        async function submitForm() {
+            try {
+                if (!validateCurrentStep()) return;
+                if (!currentUser || !supabase) {
+                    throw new Error('Not properly authenticated');
+                }
+
+                showLoading();
+
+                // Collect form data
+                const profileData = {
+                    user_id: currentUser.id,
+                    business_name: document.getElementById("business-name").value.trim(),
+                    target_niche: document.getElementById("business-niche").value.trim(),
+                    customer_location: 'Global',
+                    primary_platform: 'instagram',
+                    product_service: document.getElementById("target-audience").value.trim(),
+                    value_prop: document.getElementById("value-proposition").value.trim(),
+                    communication_style: document.getElementById("communication-style").value,
+                    message_example: document.getElementById("message-example").value.trim(),
+                    success_outcome: document.getElementById("success-outcome").value,
+                    call_to_action: document.getElementById("call-to-action").value.trim(),
+                    target_problems: document.getElementById("target-problems").value.trim(),
+                    is_active: true,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                };
+
+                console.log('💾 Saving user data...');
+                
+                // Update user with credits and onboarding flag
+                const { error: userError } = await supabase
+                    .from("users")
+                    .upsert({
+                        id: currentUser.id,
+                        email: currentUser.email,
+                        credits: 5,
+                        subscription_plan: 'free',
+                        monthly_credits_limit: 5,
+                        onboarding_completed: true,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    }, { 
+                        onConflict: 'id',
+                        ignoreDuplicates: false 
+                    });
+
+                if (userError) {
+                    console.error('❌ User upsert error:', userError);
+                    throw new Error(`User update failed: ${userError.message}`);
+                }
+
+                console.log('✅ User updated successfully');
+
+                // Save business profile
+                const { data: profileResult, error: profileError } = await supabase
+                    .from("business_profiles")
+                    .insert(profileData)
+                    .select()
+                    .single();
+
+                if (profileError) {
+                    console.error('❌ Profile error:', profileError);
+                    throw new Error(`Profile creation failed: ${profileError.message}`);
+                }
+
+                console.log('✅ Business profile saved:', profileResult);
+
+                // Show success
+                hideAllStates();
+                document.getElementById('onboarding-form').style.display = 'none';
+                document.getElementById('success').style.display = 'block';
+
+                // Redirect after 3 seconds
+                setTimeout(() => {
+                    console.log('🎯 Redirecting to dashboard...');
+                    window.location.href = 'dashboard.html';
+                }, 3000);
+
+            } catch (err) {
+                console.error('💥 Form submission error:', err);
+                showError(`Setup failed: ${err.message}`);
+            }
+        }
+
+        // Form submission handler
         document.getElementById('onboarding-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            if (!validateCurrentStep()) return;
-
-            // Show success
-            document.getElementById('onboarding-form').style.display = 'none';
-            document.getElementById('success').style.display = 'block';
-
-            // Redirect after 3 seconds
-            setTimeout(() => {
-                window.location.href = 'dashboard.html';
-            }, 3000);
+            submitForm();
         });
 
         // Handle enter key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
                 e.preventDefault();
-                nextStep();
+                if (currentStep < 5) {
+                    nextStep();
+                } else {
+                    submitForm();
+                }
             }
         });
+
+        // Auth state listener
+        if (window.supabase) {
+            window.addEventListener('load', () => {
+                if (supabase) {
+                    supabase.auth.onAuthStateChange((event, session) => {
+                        if (event === 'SIGNED_OUT') {
+                            window.location.href = 'auth.html';
+                        }
+                    });
+                }
+            });
+        }
     </script>
 </body>
 </html>
