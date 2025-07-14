@@ -319,6 +319,22 @@
         let supabase = null;
         let isLoading = false;
 
+        // Clear all authentication data
+        async function clearAllAuthData() {
+            try {
+                if (supabase) {
+                    await supabase.auth.signOut();
+                }
+                localStorage.clear();
+                sessionStorage.clear();
+                document.cookie.split(";").forEach(function(c) { 
+                    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+                });
+            } catch (error) {
+                console.error('Error clearing auth data:', error);
+            }
+        }
+
         // Initialize authentication system
         async function initializeAuth() {
             try {
@@ -379,7 +395,7 @@
         // Handle existing authentication
         async function handleExistingAuth() {
             try {
-                // Check URL for magic link parameters
+                // Check URL for magic link parameters first
                 const urlParams = new URLSearchParams(window.location.search);
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
                 
@@ -389,6 +405,7 @@
 
                 if (error) {
                     cleanUrl();
+                    await clearAllAuthData();
                     showError('Authentication failed. Please try again.');
                     return;
                 }
@@ -399,15 +416,34 @@
                 }
 
                 // Check for existing session
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                    await redirectToDashboard();
+                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                
+                if (sessionError) {
+                    console.error('Session error:', sessionError);
+                    await clearAllAuthData();
                     return;
+                }
+                
+                if (session) {
+                    // Verify the session is actually valid by making a test API call
+                    try {
+                        const { data: user, error: userError } = await supabase.auth.getUser();
+                        if (userError || !user) {
+                            console.log('Invalid session detected, clearing...');
+                            await clearAllAuthData();
+                            return;
+                        }
+                        await redirectToDashboard();
+                    } catch (verifyError) {
+                        console.log('Session verification failed, clearing...');
+                        await clearAllAuthData();
+                        return;
+                    }
                 }
 
             } catch (error) {
-                // Continue to show login form
                 console.error('Auth check failed:', error);
+                await clearAllAuthData();
             }
         }
 
@@ -426,6 +462,7 @@
 
             } catch (error) {
                 cleanUrl();
+                await clearAllAuthData();
                 showError('There was a problem with your login link. Please try signing in again.');
             }
         }
@@ -485,28 +522,51 @@
                 return;
             }
 
+            // Check for recent submission attempts (prevent spam)
+            const lastAttempt = localStorage.getItem('last_auth_attempt');
+            const now = Date.now();
+            
+            if (lastAttempt && (now - parseInt(lastAttempt)) < 60000) {
+                showError('Please wait a moment before trying again.');
+                return;
+            }
+
             // Show loading state
             isLoading = true;
             button.disabled = true;
             button.classList.add('loading');
 
             try {
+                // Store attempt time
+                localStorage.setItem('last_auth_attempt', now.toString());
+                
                 const { error } = await supabase.auth.signInWithOtp({
                     email: email,
                     options: {
                         emailRedirectTo: window.location.origin + '/auth.html',
-                        shouldCreateUser: true
+                        shouldCreateUser: true,
+                        data: {
+                            timestamp: now
+                        }
                     }
                 });
 
-                if (error) throw error;
+                if (error) {
+                    localStorage.removeItem('last_auth_attempt');
+                    throw error;
+                }
 
                 showSuccess(email);
 
             } catch (error) {
+                console.error('Auth error:', error);
+                
                 let errorMessage = 'Unable to send login link. Please try again.';
-                if (error.message.includes('rate limit')) {
-                    errorMessage = 'Too many requests. Please wait a moment before trying again.';
+                
+                if (error.message.includes('rate limit') || error.message.includes('too many')) {
+                    errorMessage = 'Too many requests. Please wait 2-3 minutes before trying again.';
+                } else if (error.message.includes('invalid') || error.message.includes('malformed')) {
+                    errorMessage = 'Please check your email address and try again.';
                 }
                 
                 showError(errorMessage);
