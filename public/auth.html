@@ -356,6 +356,17 @@
             }
         }
 
+        // Clear rate limiting data (useful for testing)
+        function clearRateLimiting() {
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.startsWith('last_auth_attempt')) {
+                    localStorage.removeItem(key);
+                    console.log('🧹 AUTH: Cleared rate limit for:', key);
+                }
+            });
+        }
+
         // Initialize authentication system
         async function initializeAuth() {
             try {
@@ -553,13 +564,15 @@
                 return;
             }
 
-            // Check for recent submission attempts (prevent spam)
-            const lastAttempt = localStorage.getItem('last_auth_attempt');
+            // Check for recent submission attempts - but only for the SAME email
+            const lastAttemptKey = `last_auth_attempt_${email}`;
+            const lastAttempt = localStorage.getItem(lastAttemptKey);
             const now = Date.now();
             
-            if (lastAttempt && (now - parseInt(lastAttempt)) < 60000) {
-                console.log('🔍 AUTH: Rate limiting - too soon since last attempt');
-                showError('Please wait a moment before trying again.');
+            if (lastAttempt && (now - parseInt(lastAttempt)) < 30000) { // Reduced to 30 seconds and email-specific
+                const waitTime = Math.ceil((30000 - (now - parseInt(lastAttempt))) / 1000);
+                console.log('🔍 AUTH: Rate limiting - too soon since last attempt for this email, wait:', waitTime, 'seconds');
+                showError(`Please wait ${waitTime} seconds before trying again for this email.`);
                 return;
             }
 
@@ -570,8 +583,8 @@
             console.log('🔍 AUTH: Sending magic link...');
 
             try {
-                // Store attempt time
-                localStorage.setItem('last_auth_attempt', now.toString());
+                // Store attempt time for this specific email
+                localStorage.setItem(lastAttemptKey, now.toString());
                 
                 const { error } = await supabase.auth.signInWithOtp({
                     email: email,
@@ -585,7 +598,8 @@
                 });
 
                 if (error) {
-                    localStorage.removeItem('last_auth_attempt');
+                    // Remove the attempt timestamp on error so user can retry immediately
+                    localStorage.removeItem(lastAttemptKey);
                     console.log('🔍 AUTH: Supabase error:', error.message);
                     throw error;
                 }
@@ -599,7 +613,8 @@
                 let errorMessage = 'Unable to send login link. Please try again.';
                 
                 if (error.message.includes('rate limit') || error.message.includes('too many')) {
-                    errorMessage = 'Too many requests. Please wait 2-3 minutes before trying again.';
+                    // This is a real Supabase rate limit, not our artificial one
+                    errorMessage = 'Supabase rate limit reached. Please wait 2-3 minutes before trying again.';
                 } else if (error.message.includes('invalid') || error.message.includes('malformed')) {
                     errorMessage = 'Please check your email address and try again.';
                 }
