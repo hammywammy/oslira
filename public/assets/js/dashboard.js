@@ -1,8 +1,8 @@
 // Global configuration and state
 window.CONFIG = {
-    supabaseUrl: 'https://your-project.supabase.co',
-    supabaseAnonKey: 'your-anon-key',
-    workerUrl: 'https://your-worker.workers.dev'
+      supabaseUrl:   process.env.SUPABASE_URL,
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+      workerUrl:     process.env.WORKER_URL
 };
 
 // Global state
