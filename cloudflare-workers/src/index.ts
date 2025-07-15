@@ -80,7 +80,7 @@ async function verifySupabaseJWT(token: string): Promise<string | null> {
     return decodedPayload.sub;
   } catch (error) {
     return null;
-  }
+  }you di
 }
 
 // OpenAI API with retry logic
