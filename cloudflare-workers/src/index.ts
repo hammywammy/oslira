@@ -1,27 +1,9 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
-// pull in our runtime config
-interface RuntimeEnv {
-  SUPABASE_URL: string;
-  SUPABASE_SERVICE_ROLE: string;
-  SUPABASE_ANON_KEY: string;
-  OPENAI_KEY: string;
-  CLAUDE_KEY?: string;
-  APIFY_API_TOKEN: string;
-  STRIPE_SECRET_KEY: string;
-  STRIPE_WEBHOOK_SECRET?: string;
-  FRONTEND_URL?: string;
-}
-
-// sanity‐check (optional):
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE || !SUPABASE_ANON_KEY || !OPENAI_KEY || !APIFY_API_TOKEN || !STRIPE_SECRET_KEY) {
-  throw new Error('Missing required ENV vars');
-}
-
-
-const app = new Hono();
-
+// ------------------------------------
+// Type Definitions
+// ------------------------------------
 interface ProfileData {
   username: string;
   fullName?: string;
@@ -84,7 +66,17 @@ interface AnalysisRequest {
   platform?: string;
 }
 
-
+interface Env {
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_ROLE: string;
+  SUPABASE_ANON_KEY: string;  
+  OPENAI_KEY: string;
+  CLAUDE_KEY?: string;
+  APIFY_API_TOKEN: string;
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  FRONTEND_URL?: string;
+}
 
 // ------------------------------------
 // Core Utility Functions
@@ -337,16 +329,17 @@ function validateMessageResult(raw: any): string {
 // Service Functions
 // ------------------------------------
 
-async function fetchUserAndCredits(userId: string): Promise<{ user: User; credits: number }> {
+async function fetchUserAndCredits(userId: string, env: Env): Promise<{ user: User; credits: number }> {
   const headers = {
-    apikey: SUPABASE_SERVICE_ROLE!,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE!}`,
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
     'Content-Type': 'application/json'
   };
 
   const [usersResponse, creditsResponse] = await Promise.all([
-    fetchJson<User[]>(`${SUPABASE_URL!}/rest/v1/users?id=eq.${userId}&select=*`, { headers }),
-    fetchJson<{ balance: number }[]>(`${SUPABASE_URL!}/rest/v1/credit_balances?user_id=eq.${userId}&select=balance`, { headers }).catch(() => [])
+    fetchJson<User[]>(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`, { headers }),
+    fetchJson<{ balance: number }[]>(`${env.SUPABASE_URL}/rest/v1/credit_balances?user_id=eq.${userId}&select=balance`, { headers })
+      .catch(() => [])
   ]);
 
   if (!usersResponse.length) {
@@ -359,15 +352,15 @@ async function fetchUserAndCredits(userId: string): Promise<{ user: User; credit
   return { user, credits };
 }
 
-async function fetchBusinessProfile(businessId: string, userId: string): Promise<BusinessProfile> {
+async function fetchBusinessProfile(businessId: string, userId: string, env: Env): Promise<BusinessProfile> {
   const headers = {
-    apikey: SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
     'Content-Type': 'application/json'
   };
 
   const businesses = await fetchJson<BusinessProfile[]>(
-    `${SUPABASE_URL}/rest/v1/business_profiles?id=eq.${businessId}&user_id=eq.${userId}&select=*`,
+    `${env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${businessId}&user_id=eq.${userId}&select=*`,
     { headers }
   );
 
@@ -378,8 +371,8 @@ async function fetchBusinessProfile(businessId: string, userId: string): Promise
   return businesses[0];
 }
 
-async function scrapeInstagramProfile(username: string, analysisType: AnalysisType): Promise<ProfileData> {
-  if (!APIFY_API_TOKEN) {
+async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
+  if (!env.APIFY_API_TOKEN) {
     throw new Error('Profile scraping service not configured');
   }
 
@@ -404,7 +397,7 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
 
   try {
     const scrapeResponse = await callWithRetry(
-      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${APIFY_API_TOKEN}`,
+      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -444,8 +437,9 @@ async function performAIAnalysis(
   profile: ProfileData, 
   business: BusinessProfile, 
   analysisType: AnalysisType, 
+  env: Env
 ): Promise<AnalysisResult> {
-  if (!OPENAI_KEY) {
+  if (!env.OPENAI_KEY) {
     throw new Error('AI analysis service not configured');
   }
 
@@ -461,7 +455,7 @@ async function performAIAnalysis(
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${OPENAI_KEY}`,
+          Authorization: `Bearer ${env.OPENAI_KEY}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -500,11 +494,12 @@ async function generateOutreachMessage(
   profile: ProfileData,
   business: BusinessProfile,
   analysis: AnalysisResult,
+  env: Env
 ): Promise<string> {
   let outreachMessage = '';
 
   try {
-    if (CLAUDE_KEY) {
+    if (env.CLAUDE_KEY) {
       console.log('Generating message with Claude');
       const messagePrompt = makeMessagePrompt(profile, business, analysis);
       
@@ -513,7 +508,7 @@ async function generateOutreachMessage(
         {
           method: 'POST',
           headers: {
-            'x-api-key': CLAUDE_KEY,
+            'x-api-key': env.CLAUDE_KEY,
             'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json'
           },
@@ -548,7 +543,7 @@ async function generateOutreachMessage(
       }
     }
     
-    if (!outreachMessage && OPENAI_KEY) {
+    if (!outreachMessage && env.OPENAI_KEY) {
       console.log('Using OpenAI for message generation');
       const messagePrompt = makeMessagePrompt(profile, business, analysis);
       
@@ -557,7 +552,7 @@ async function generateOutreachMessage(
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${OPENAI_KEY}`,
+            Authorization: `Bearer ${env.OPENAI_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
@@ -594,16 +589,17 @@ async function saveLeadAndAnalysis(
   leadData: any,
   analysisData: any | null,
   analysisType: AnalysisType,
+  env: Env
 ): Promise<string> {
   const headers = {
-    apikey: SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
     'Content-Type': 'application/json'
   };
 
   try {
     const leadResponse = await fetchJson<any[]>(
-      `${SUPABASE_URL}/rest/v1/leads`,
+      `${env.SUPABASE_URL}/rest/v1/leads`,
       {
         method: 'POST',
         headers: { ...headers, Prefer: 'return=representation' },
@@ -624,7 +620,7 @@ async function saveLeadAndAnalysis(
     if (analysisType === 'deep' && analysisData) {
       try {
         await fetchJson(
-          `${SUPABASE_URL}/rest/v1/lead_analyses`,
+          `${env.SUPABASE_URL}/rest/v1/lead_analyses`,
           {
             method: 'POST',
             headers,
@@ -641,7 +637,7 @@ async function saveLeadAndAnalysis(
         
         try {
           await fetchJson(
-            `${SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`,
+            `${env.SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`,
             { 
               method: 'DELETE', 
               headers,
@@ -670,16 +666,17 @@ async function updateCreditsAndTransaction(
   newBalance: number,
   description: string,
   leadId: string,
+  env: Env
 ): Promise<void> {
   const headers = {
-    apikey: SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
     'Content-Type': 'application/json'
   };
 
   await Promise.all([
     fetchJson(
-      `${SUPABASE_URL}/rest/v1/credit_balances`,
+      `${env.SUPABASE_URL}/rest/v1/credit_balances`,
       {
         method: 'POST',
         headers: { ...headers, Prefer: 'resolution=merge-duplicates' },
@@ -690,7 +687,7 @@ async function updateCreditsAndTransaction(
       }
     ),
     fetchJson(
-      `${SUPABASE_URL}/rest/v1/credit_transactions`,
+      `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
       {
         method: 'POST',
         headers,
@@ -816,8 +813,10 @@ function verifyStripeWebhook(body: string, signature: string, secret: string): a
   }
 }
 
-
+// ------------------------------------
 // Hono App
+// ------------------------------------
+const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({ 
   origin: '*', 
@@ -842,23 +841,24 @@ app.get('/health', c => c.json({
 app.get('/config', c => {
   const full = c.req.url.replace(/\/config$/, '');
   return c.json({
-    supabaseUrl: SUPABASE_URL,
-    supabaseAnonKey: SUPABASE_ANON_KEY,
+    supabaseUrl: c.env.SUPABASE_URL,
+    supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
     workerUrl: full
   });
 });
 
 app.get('/debug-env', c => {
+  const env = c.env;
   return c.json({
-    supabase: SUPABASE_URL ? 'SET' : 'MISSING',
-    serviceRole: SUPABASE_SERVICE_ROLE ? 'SET' : 'MISSING',
-    anonKey: SUPABASE_ANON_KEY ? 'SET' : 'MISSING',
-    openai: OPENAI_KEY ? 'SET' : 'MISSING',
-    claude: CLAUDE_KEY ? 'SET' : 'MISSING',
-    apify: APIFY_API_TOKEN ? 'SET' : 'MISSING',
-    stripe: STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
-    webhookSecret: STRIPE_WEBHOOK_SECRET ? 'SET' : 'MISSING',
-    frontend: FRONTEND_URL ? 'SET' : 'MISSING'
+    supabase: env.SUPABASE_URL ? 'SET' : 'MISSING',
+    serviceRole: env.SUPABASE_SERVICE_ROLE ? 'SET' : 'MISSING',
+    anonKey: env.SUPABASE_ANON_KEY ? 'SET' : 'MISSING',
+    openai: env.OPENAI_KEY ? 'SET' : 'MISSING',
+    claude: env.CLAUDE_KEY ? 'SET' : 'MISSING',
+    apify: env.APIFY_API_TOKEN ? 'SET' : 'MISSING',
+    stripe: env.STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
+    webhookSecret: env.STRIPE_WEBHOOK_SECRET ? 'SET' : 'MISSING',
+    frontend: env.FRONTEND_URL ? 'SET' : 'MISSING'
   });
 });
 
@@ -892,10 +892,10 @@ app.post('/analyze', async c => {
   console.log(`Processing analysis for username: ${username}, type: ${data.analysis_type}`);
 
   try {
-  const { user, credits } = await fetchUserAndCredits(userId);
+    const { user, credits: currentCredits } = await fetchUserAndCredits(userId, c.env);
     const cost = data.analysis_type === 'deep' ? 2 : 1;
 
-    if (credits < cost) {
+    if (currentCredits < cost) {
       return c.json({
         error: 'Insufficient credits',
         available: currentCredits,
@@ -907,13 +907,13 @@ app.post('/analyze', async c => {
       return c.json({ error: 'Business profile is required for analysis' }, 400);
     }
 
-    const business = await fetchBusinessProfile(data.business_id, userId);
-    const profileData = await scrapeInstagramProfile(username, data.analysis_type!);
-    const analysisResult = await performAIAnalysis(profileData, business, data.analysis_type!);
+    const business = await fetchBusinessProfile(data.business_id, userId, c.env);
+    const profileData = await scrapeInstagramProfile(username, data.analysis_type!, c.env);
+    const analysisResult = await performAIAnalysis(profileData, business, data.analysis_type!, c.env);
 
     let outreachMessage = '';
     if (data.analysis_type === 'deep') {
-      outreachMessage = await generateOutreachMessage(profileData, business, analysisResult);
+      outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
     }
 
     const leadData = {
@@ -941,7 +941,7 @@ app.post('/analyze', async c => {
       };
     }
 
-    const leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!);
+    const leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
 
     const newBalance = currentCredits - cost;
     await updateCreditsAndTransaction(
@@ -949,7 +949,8 @@ app.post('/analyze', async c => {
       cost,
       newBalance,
       `${data.analysis_type} analysis for @${profileData.username}`,
-      leadId
+      leadId,
+      c.env
     );
 
     console.log('Analysis completed successfully');
@@ -1016,7 +1017,7 @@ app.post('/billing/create-checkout-session', async c => {
     return c.json({ error: 'Invalid price_id' }, 400);
   }
 
-  const stripeKey = STRIPE_SECRET_KEY!;
+  const stripeKey = c.env.STRIPE_SECRET_KEY;
   if (!stripeKey) return c.json({ error: 'Stripe not configured' }, 500);
 
   try {
@@ -1050,8 +1051,8 @@ app.post('/billing/create-checkout-session', async c => {
       'line_items[0][price]': price_id,
       'line_items[0][quantity]': '1',
       mode: 'subscription',
-      success_url: success_url || `${FRONTEND_URL}/subscription.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancel_url || `${FRONTEND_URL}/subscription.html?canceled=true`,
+      success_url: success_url || `${c.env.FRONTEND_URL}/subscription.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancel_url || `${c.env.FRONTEND_URL}/subscription.html?canceled=true`,
       customer: customerId,
       'subscription_data[trial_period_days]': '7',
       'subscription_data[metadata][user_id]': userId,
@@ -1102,7 +1103,7 @@ app.post('/billing/create-portal-session', async c => {
   const { return_url, customer_email } = await c.req.json();
   if (!customer_email) return c.json({ error: 'customer_email required' }, 400);
 
-  const stripeKey = STRIPE_SECRET_KEY;
+  const stripeKey = c.env.STRIPE_SECRET_KEY;
   
   try {
     const searchParams = new URLSearchParams({ query: `email:'${customer_email}'` });
@@ -1119,7 +1120,7 @@ app.post('/billing/create-portal-session', async c => {
 
     const portalParams = new URLSearchParams({
       customer: customerId,
-      return_url: return_url || `${FRONTEND_URL}/subscription.html`
+      return_url: return_url || `${c.env.FRONTEND_URL}/subscription.html`
     });
     
     const portal = await fetchJson<any>(
@@ -1151,13 +1152,13 @@ app.post('/stripe-webhook', async c => {
   const body = await c.req.text();
   const sig = c.req.header('stripe-signature');
   
-  if (!sig || !STRIPE_WEBHOOK_SECRET) {
+  if (!sig || !c.env.STRIPE_WEBHOOK_SECRET) {
     console.error('Webhook validation failed: missing signature or secret');
     return c.text('Missing signature or secret', 400);
   }
 
   try {
-    const event = verifyStripeWebhook(body, sig, STRIPE_WEBHOOK_SECRET);
+    const event = verifyStripeWebhook(body, sig, c.env.STRIPE_WEBHOOK_SECRET);
     
     console.log(`Webhook received: ${event.type} at ${new Date().toISOString()}`);
 
@@ -1168,19 +1169,19 @@ app.post('/stripe-webhook', async c => {
     const handlerPromise = (async () => {
       switch (event.type) {
         case 'customer.subscription.created':
-          await handleSubscriptionCreated(event.data.object);
+          await handleSubscriptionCreated(event.data.object, c.env);
           break;
         case 'customer.subscription.updated':
-          await handleSubscriptionUpdated(event.data.object);
+          await handleSubscriptionUpdated(event.data.object, c.env);
           break;
         case 'customer.subscription.deleted':
-          await handleSubscriptionCanceled(event.data.object);
+          await handleSubscriptionCanceled(event.data.object, c.env);
           break;
         case 'invoice.payment_succeeded':
-          await handlePaymentSucceeded(event.data.object);
+          await handlePaymentSucceeded(event.data.object, c.env);
           break;
         case 'invoice.payment_failed':
-          await handlePaymentFailed(event.data.object);
+          await handlePaymentFailed(event.data.object, c.env);
           break;
         default:
           console.log(`Unhandled event type: ${event.type}`);
