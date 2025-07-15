@@ -2105,116 +2105,33 @@
         }
 
         // Submit analysis
-        async function submitAnalysis(event) {
-            event.preventDefault();
-            
-            const form = document.getElementById('analysisForm');
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            
-            try {
-                const analysisType = document.getElementById('analysis-type').value;
-                const profileInput = document.getElementById('profile-input').value.trim();
-                const businessId = document.getElementById('business-id').value;
-                
-                if (!profileInput || profileInput === 'username') {
-                    alert('Please enter a valid username');
-                    return;
-                }
-                
-                if (!analysisType || !profileInput || !businessId) {
-                    alert('Please fill in all required fields');
-                    return;
-                }
-                
-                let username = profileInput.replace('@', '').trim();
-                
-                if (!validateUsername(username)) {
-                    alert('Invalid username. Please check the username and try again.');
-                    return;
-                }
-                
-                const { data: userData } = await supabase
-                    .from('users')
-                    .select('credits, subscription_plan')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                const creditsRequired = analysisType === 'deep' ? 2 : 1;
-                const plan = userData?.subscription_plan || 'free';
-                
-                // Check if user has subscription or sufficient credits
-                if (plan === 'free' && (!userData || userData.credits < creditsRequired)) {
-                    alert(`Insufficient credits. You need ${creditsRequired} credits for ${analysisType} analysis. Please upgrade your subscription or purchase credits.`);
-                    return;
-                }
-                
-                submitBtn.textContent = '🔄 Analyzing...';
-                submitBtn.disabled = true;
-                form.classList.add('loading');
-                
-                const profileUrl = `https://instagram.com/${username}`;
-const requestBody = {
-  profile_url: profileUrl,   // or username: username (but pick one!)
-  analysis_type: analysisType,  // "deep" or "light"
-  business_id: businessId,
-  user_id: currentUser.id,      // keep explicitly for traceability
-  platform: 'instagram'         // explicit platform declaration
-};
+async function submitAnalysis(profileUrl, analysisType, businessId) {
+    const requestBody = {
+        profile_url: profileUrl, 
+        analysis_type: analysisType, 
+        business_id: businessId,
+        user_id: currentUser.id,
+        platform: 'instagram'
+    };
 
-                
-                console.log('🚀 Making request to: /api/analyze');
+    const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${userToken}`
+        },
+        body: JSON.stringify(requestBody)
+    });
 
-                const response = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${currentSession.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    let errorMessage = result.error || `Analysis failed: ${response.status}`;
-                    
-                    if (result.error && (
-                        result.error.toLowerCase().includes('user not found') ||
-                        result.error.toLowerCase().includes('profile not found') ||
-                        result.error.toLowerCase().includes('invalid username') ||
-                        result.error.toLowerCase().includes('does not exist')
-                    )) {
-                        errorMessage = `Invalid username "${username}". Please check the username and try again.`;
-                    }
-                    
-                    throw new Error(errorMessage);
-                }
-                
-                const leadId = result.lead_id || result.id || 'Unknown';
-                const leadScore = result.analysis?.lead_score || result.score || 'Unknown';
-                const creditsUsed = result.credits?.used || creditsRequired;
-                const creditsRemaining = result.credits?.remaining || 'Unknown';
-                
-                showMessage(`🎉 Analysis completed successfully!\n\nUsername: @${username}\nLead ID: ${leadId}\nScore: ${leadScore}/100\nCredits used: ${creditsUsed}\nRemaining: ${creditsRemaining}`, 'success');
-                
-                closeModal('analysisModal');
-                await loadDashboardData();
-                
-                const finalLeadId = result.lead_id || result.id;
-                if (finalLeadId) {
-                    setTimeout(() => viewLead(finalLeadId), 500);
-                }
+    const data = await response.json();
 
-            } catch (err) {
-                console.error('Analysis error:', err);
-                showMessage('Analysis failed: ' + err.message, 'error');
-            } finally {
-                submitBtn.textContent = originalText;
-                submitBtn.disabled = false;
-                form.classList.remove('loading');
-            }
-        }
+    if (!response.ok) {
+        console.error("Analysis failed:", data);
+        return;
+    }
+
+    console.log("Analysis success:", data);
+}
 
         // View lead with clean modal layout
         async function viewLead(leadId) {
