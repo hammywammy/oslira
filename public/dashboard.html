@@ -1450,17 +1450,19 @@
                     return;
                 }
 
-                const { data: balance, error: balanceError } = await supabaseClient
+                const { data: balanceData, error: balanceError } = await supabaseClient
                     .from('credit_balances')
                     .select('balance')
                     .eq('user_id', currentUser.id)
-                    .single();
+                    .maybeSingle();
 
-                if (!balanceError && balance) {
-                    this.userCredits = balance.balance;
+                let userCredits = user.credits || 0;
+                if (!balanceError && balanceData) {
+                    userCredits = balanceData.balance;
                 }
 
-                updateSubscriptionUI(user.subscription_plan, user.subscription_status, user.credits);
+                this.userCredits = userCredits;
+                updateSubscriptionUI(user.subscription_plan, user.subscription_status, userCredits);
             } catch (error) {
                 console.error('Error loading user data:', error);
                 updateSubscriptionUI('free', 'active', 0);
@@ -1803,6 +1805,12 @@
 
         // Load credit usage
         async function loadCreditUsage() {
+            if (!supabaseClient || !currentUser) {
+                document.getElementById('credits-used').textContent = '0';
+                document.getElementById('credits-trend').textContent = 'Last 30 days';
+                return;
+            }
+            
             try {
                 const { data: transactions, error } = await supabaseClient
                     .from('credit_transactions')
@@ -1810,9 +1818,11 @@
                     .eq('user_id', currentUser.id)
                     .eq('type', 'use')
                     .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+                    .order('created_at', { ascending: false })
                     .limit(100);
                 
                 if (error) {
+                    console.warn('Error loading credit usage:', error);
                     document.getElementById('credits-used').textContent = '0';
                     document.getElementById('credits-trend').textContent = 'Last 30 days';
                     return;
@@ -1882,6 +1892,7 @@
                 document.getElementById('input-field-container').style.display = 'none';
             }
         }
+
 
 // Update input field based on analysis type
         function updateInputField() {
