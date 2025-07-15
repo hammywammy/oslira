@@ -1731,6 +1731,62 @@ app.get('/test-scrape/:username', async c => {
     }, 500);
   }
 });
+// Update your debug endpoint with this version
+app.get('/debug-scrape/:username', async c => {
+  const username = c.req.param('username');
+  const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
+  
+  if (!c.env.APIFY_API_TOKEN) {
+    return c.json({ error: 'APIFY_API_TOKEN not configured' }, 500);
+  }
+
+  const scrapeActorId = analysisType === 'light' 
+    ? 'dSCLg0C3YEZ83HzYX'
+    : 'shu8hvrXbJbY3Eb9W';
+
+  const scrapeInput = analysisType === 'light'
+    ? { 
+        usernames: [username],
+        resultsType: "details",
+        resultsLimit: 1
+      }
+    : { 
+        directUrls: [`https://instagram.com/${username}/`], 
+        resultsLimit: 1,
+        addParentData: false,
+        enhanceUserSearchWithFacebookPage: false
+      };
+
+  try {
+    const response = await fetch(
+      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scrapeInput)
+      }
+    );
+
+    const responseData = await response.json();
+    
+    return c.json({
+      success: response.ok,
+      status: response.status,
+      actorId: scrapeActorId,
+      analysisType,
+      input: scrapeInput,
+      dataCount: Array.isArray(responseData) ? responseData.length : 'not array',
+      // Show the exact structure returned
+      rawFirstItem: Array.isArray(responseData) && responseData[0] ? responseData[0] : null,
+      // Show all available fields in the first item
+      availableFields: Array.isArray(responseData) && responseData[0] ? Object.keys(responseData[0]) : [],
+      fullResponse: responseData
+    });
+
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
 // Debug endpoints
 app.get('/test-supabase', async c => {
   try {
