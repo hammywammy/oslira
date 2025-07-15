@@ -1,605 +1,559 @@
+// Global configuration and state
+window.CONFIG = {
+    supabaseUrl: 'https://your-project.supabase.co',
+    supabaseAnonKey: 'your-anon-key',
+    workerUrl: 'https://your-worker.workers.dev'
+};
 
-    <script>
-        // Configuration - load from environment or use defaults
-        window.CONFIG = {
-            supabaseUrl: 'https://your-project.supabase.co',
-            supabaseAnonKey: 'your-anon-key',
-            workerUrl: 'https://your-worker.workers.dev'
-        };
+// Global state
+let supabaseClient;
+let currentUser = null;
+let currentSession = null;
+let currentBusiness = null;
+let businessProfiles = [];
+let allLeads = [];
 
-        // Try to load config from Netlify function if available
-        async function loadConfig() {
-            try {
-                const response = await fetch('/api/config');
-                if (response.ok) {
-                    const config = await response.json();
-                    window.CONFIG = {
-                        supabaseUrl: config.supabaseUrl || window.CONFIG.supabaseUrl,
-                        supabaseAnonKey: config.supabaseAnonKey || window.CONFIG.supabaseAnonKey,
-                        workerUrl: config.workerUrl || window.CONFIG.workerUrl
-                    };
-                }
-            } catch (error) {
-                console.warn('Could not load config from API, using defaults');
-            }
-        }
+// Initialize page when DOM is ready
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        await loadConfig();
+        supabaseClient = window.supabase.createClient(
+            window.CONFIG.supabaseUrl,
+            window.CONFIG.supabaseAnonKey
+        );
+        await initializePage();
+    } catch (error) {
+        console.error('Dashboard initialization failed:', error);
+        showMessage('Dashboard initialization failed', 'error');
+        showFallbackUI();
+    }
+});
 
-        // Initialize Supabase client
-        let supabaseClient;
-
-        // Global state
-        let currentUser = null;
-        let currentSession = null;
-        let currentBusiness = null;
-        let businessProfiles = [];
-        let allLeads = [];
-
-        // Initialize page when DOM is ready
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                // Load configuration first
-                await loadConfig();
-                
-                // Initialize Supabase client after config is loaded
-                supabaseClient = window.supabase.createClient(
-                    window.CONFIG.supabaseUrl,
-                    window.CONFIG.supabaseAnonKey
-                );
-                
-                await initializePage();
-            } catch (error) {
-                console.error('Dashboard initialization failed:', error);
-                showMessage('Dashboard initialization failed', 'error');
-                showFallbackUI();
-            }
-        });
-
-        // Show fallback UI when configuration isn't available
-        function showFallbackUI() {
-            document.getElementById('user-email').textContent = 'Demo Mode';
-            document.getElementById('sidebar-plan').textContent = 'Demo Plan';
-            document.getElementById('sidebar-billing').textContent = 'Demo Active';
-            
-            // Show demo message
-            const demoMessage = document.createElement('div');
-            demoMessage.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: linear-gradient(135deg, var(--warning), #F59E0B);
-                color: white;
-                padding: 12px;
-                text-align: center;
-                font-weight: 600;
-                z-index: 10000;
-            `;
-            demoMessage.textContent = '⚠️ Demo Mode - Please configure environment variables to enable full functionality';
-            document.body.insertBefore(demoMessage, document.body.firstChild);
-            
-            // Still set up event listeners for demo
-            setupEventListeners();
-        }
-
-        // Initialize page
-        async function initializePage() {
-            if (!supabaseClient) {
-                console.warn('Supabase client not initialized, running in demo mode');
-                showFallbackUI();
-                return;
-            }
-            
-            await checkAuth();
-            await loadUserData();
-            setupEventListeners();
-            await loadInitialData();
-            
-            // Generate initial insights after a short delay
-            setTimeout(() => {
-                generateInsights();
-            }, 1000);
-        }
-
-        // Check authentication
-        async function checkAuth() {
-            if (!supabaseClient) {
-                console.warn('No Supabase client available');
-                return;
-            }
-            
-            try {
-                const { data: { session }, error } = await supabaseClient.auth.getSession();
-                
-                if (error || !session) {
-                    console.warn('No valid session, would redirect to auth in production');
-                    // In demo mode, don't redirect
-                    if (window.CONFIG.supabaseUrl.includes('your-project')) {
-                        return;
-                    }
-                    window.location.href = '/login.html';
-                    return;
-                }
-                
-                currentSession = session;
-                currentUser = session.user;
-                
-                document.getElementById('user-email').textContent = currentUser.email;
-                
-            } catch (err) {
-                console.warn('Auth check failed:', err);
-                // In demo mode, continue without auth
-                if (window.CONFIG.supabaseUrl.includes('your-project')) {
-                    return;
-                }
-                window.location.href = '/login.html';
-            }
-        }
-
-        // Load user data
-        async function loadUserData() {
-            if (!supabaseClient || !currentUser) {
-                updateSubscriptionUI('free', 'active', 0);
-                return;
-            }
-            
-            try {
-                const { data: user, error } = await supabaseClient
-                    .from('users')
-                    .select('email, subscription_plan, subscription_status, credits')
-                    .eq('id', currentUser.id)
-                    .single();
-
-                if (error) {
-                    console.warn('Error loading user data:', error);
-                    updateSubscriptionUI('free', 'active', 0);
-                    return;
-                }
-
-                const { data: balanceData, error: balanceError } = await supabaseClient
-                    .from('credit_balances')
-                    .select('balance')
-                    .eq('user_id', currentUser.id)
-                    .maybeSingle();
-
-                let userCredits = user.credits || 0;
-                if (!balanceError && balanceData) {
-                    userCredits = balanceData.balance;
-                }
-
-                this.userCredits = userCredits;
-                updateSubscriptionUI(user.subscription_plan, user.subscription_status, userCredits);
-            } catch (error) {
-                console.error('Error loading user data:', error);
-                updateSubscriptionUI('free', 'active', 0);
-            }
-        }
-
-        // Update subscription UI
-        function updateSubscriptionUI(plan, status, credits) {
-            const planNames = {
-                free: 'Free Plan',
-                starter: 'Starter Plan',
-                growth: 'Growth Plan',
-                professional: 'Professional Plan',
-                enterprise: 'Enterprise Plan'
+// Load configuration from API
+async function loadConfig() {
+    try {
+        const response = await fetch('/api/config');
+        if (response.ok) {
+            const config = await response.json();
+            window.CONFIG = {
+                supabaseUrl: config.supabaseUrl || window.CONFIG.supabaseUrl,
+                supabaseAnonKey: config.supabaseAnonKey || window.CONFIG.supabaseAnonKey,
+                workerUrl: config.workerUrl || window.CONFIG.workerUrl
             };
-
-            const planName = planNames[plan] || 'Free Plan';
-            document.getElementById('sidebar-plan').textContent = planName;
-            document.getElementById('sidebar-billing').textContent = plan === 'free' ? 'No active subscription' : 'Active subscription';
         }
+    } catch (error) {
+        console.warn('Could not load config from API, using defaults');
+    }
+}
 
-        // Set up all event listeners
-        function setupEventListeners() {
-            // Business selector
-            document.getElementById('business-select')?.addEventListener('change', switchBusiness);
-            
-            // Header buttons
-            document.getElementById('bulk-upload-btn')?.addEventListener('click', showBulkUpload);
-            document.getElementById('research-lead-btn')?.addEventListener('click', showAnalysisModal);
-            
-            // Action cards
-            document.getElementById('research-action-card')?.addEventListener('click', showAnalysisModal);
-            document.getElementById('campaigns-action-card')?.addEventListener('click', () => location.href='campaigns.html');
-            document.getElementById('subscription-action-card')?.addEventListener('click', () => location.href='subscription.html');
-            document.getElementById('export-action-card')?.addEventListener('click', exportLeads);
-            
-            // Filter controls
-            document.getElementById('timeframe-filter')?.addEventListener('change', filterByTimeframe);
-            document.getElementById('activity-filter')?.addEventListener('change', filterActivity);
-            document.getElementById('refresh-activity-btn')?.addEventListener('click', refreshActivity);
-            
-            // Insights
-            document.getElementById('generate-insights-btn')?.addEventListener('click', generateInsights);
-            document.getElementById('welcome-cta-btn')?.addEventListener('click', showAnalysisModal);
-            
-            // Support
-            document.getElementById('support-btn')?.addEventListener('click', showSupportModal);
-            document.getElementById('general-support-btn')?.addEventListener('click', () => contactSupport('support'));
-            document.getElementById('billing-support-btn')?.addEventListener('click', () => contactSupport('billing'));
-            document.getElementById('security-support-btn')?.addEventListener('click', () => contactSupport('security'));
-            
-            // Modal close buttons
-            document.getElementById('support-modal-close')?.addEventListener('click', () => closeModal('supportModal'));
-            document.getElementById('lead-modal-close')?.addEventListener('click', () => closeModal('leadModal'));
-            document.getElementById('analysis-modal-close')?.addEventListener('click', () => closeModal('analysisModal'));
-            document.getElementById('bulk-modal-close')?.addEventListener('click', () => closeModal('bulkModal'));
-            
-            // Form handlers
-            document.getElementById('analysisForm')?.addEventListener('submit', submitAnalysis);
-            document.getElementById('analysis-type')?.addEventListener('change', updateInputField);
-            
-            // Logout
-            document.getElementById('logout-link')?.addEventListener('click', logout);
-            
-            // Close modals on outside click
-            window.addEventListener('click', handleModalClick);
-            
-            // Keyboard shortcuts
-            document.addEventListener('keydown', handleKeyboardShortcuts);
-        }
+// Show fallback UI for demo mode
+function showFallbackUI() {
+    document.getElementById('user-email').textContent = 'Demo Mode';
+    document.getElementById('sidebar-plan').textContent = 'Demo Plan';
+    document.getElementById('sidebar-billing').textContent = 'Demo Active';
+    
+    const demoMessage = document.createElement('div');
+    demoMessage.style.cssText = `
+        position: fixed; top: 0; left: 0; right: 0;
+        background: linear-gradient(135deg, var(--warning), #F59E0B);
+        color: white; padding: 12px; text-align: center;
+        font-weight: 600; z-index: 10000;
+    `;
+    demoMessage.textContent = '⚠️ Demo Mode - Please configure environment variables to enable full functionality';
+    document.body.insertBefore(demoMessage, document.body.firstChild);
+    
+    setupEventListeners();
+}
 
-        // Load all initial data
-        async function loadInitialData() {
-            await Promise.all([
-                loadBusinessProfiles(),
-                loadDashboardData()
-            ]);
-        }
+// Initialize the entire page
+async function initializePage() {
+    if (!supabaseClient) {
+        console.warn('Supabase client not initialized, running in demo mode');
+        showFallbackUI();
+        return;
+    }
+    
+    await checkAuth();
+    await loadUserData();
+    setupEventListeners();
+    await loadInitialData();
+    
+    setTimeout(() => {
+        generateInsights();
+    }, 1000);
+}
 
-        // Load business profiles
-        async function loadBusinessProfiles() {
-            if (!supabaseClient || !currentUser) {
-                console.warn('No Supabase client or user available');
+// Check user authentication
+async function checkAuth() {
+    if (!supabaseClient) return;
+    
+    try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        
+        if (error || !session) {
+            if (!window.CONFIG.supabaseUrl.includes('your-project')) {
+                window.location.href = '/login.html';
                 return;
             }
+            return;
+        }
+        
+        currentSession = session;
+        currentUser = session.user;
+        document.getElementById('user-email').textContent = currentUser.email;
+        
+    } catch (err) {
+        console.warn('Auth check failed:', err);
+        if (!window.CONFIG.supabaseUrl.includes('your-project')) {
+            window.location.href = '/login.html';
+        }
+    }
+}
+
+// Load user subscription and credit data
+async function loadUserData() {
+    if (!supabaseClient || !currentUser) {
+        updateSubscriptionUI('free', 'active', 0);
+        return;
+    }
+    
+    try {
+        const { data: user, error } = await supabaseClient
+            .from('users')
+            .select('email, subscription_plan, subscription_status, credits')
+            .eq('id', currentUser.id)
+            .single();
+
+        if (error) {
+            console.warn('Error loading user data:', error);
+            updateSubscriptionUI('free', 'active', 0);
+            return;
+        }
+
+        const { data: balanceData, error: balanceError } = await supabaseClient
+            .from('credit_balances')
+            .select('balance')
+            .eq('user_id', currentUser.id)
+            .maybeSingle();
+
+        let userCredits = user.credits || 0;
+        if (!balanceError && balanceData) {
+            userCredits = balanceData.balance;
+        }
+
+        updateSubscriptionUI(user.subscription_plan, user.subscription_status, userCredits);
+    } catch (error) {
+        console.error('Error loading user data:', error);
+        updateSubscriptionUI('free', 'active', 0);
+    }
+}
+
+// Update subscription UI elements
+function updateSubscriptionUI(plan, status, credits) {
+    const planNames = {
+        free: 'Free Plan',
+        starter: 'Starter Plan',
+        growth: 'Growth Plan',
+        professional: 'Professional Plan',
+        enterprise: 'Enterprise Plan'
+    };
+
+    const planName = planNames[plan] || 'Free Plan';
+    document.getElementById('sidebar-plan').textContent = planName;
+    document.getElementById('sidebar-billing').textContent = 
+        plan === 'free' ? 'No active subscription' : 'Active subscription';
+}
+
+// Set up all event listeners
+function setupEventListeners() {
+    // Business selector
+    document.getElementById('business-select')?.addEventListener('change', switchBusiness);
+    
+    // Header buttons
+    document.getElementById('bulk-upload-btn')?.addEventListener('click', showBulkUpload);
+    document.getElementById('research-lead-btn')?.addEventListener('click', showAnalysisModal);
+    
+    // Action cards
+    document.getElementById('research-action-card')?.addEventListener('click', showAnalysisModal);
+    document.getElementById('campaigns-action-card')?.addEventListener('click', () => location.href='campaigns.html');
+    document.getElementById('subscription-action-card')?.addEventListener('click', () => location.href='subscription.html');
+    document.getElementById('export-action-card')?.addEventListener('click', exportLeads);
+    
+    // Filter controls
+    document.getElementById('timeframe-filter')?.addEventListener('change', filterByTimeframe);
+    document.getElementById('activity-filter')?.addEventListener('change', filterActivity);
+    document.getElementById('refresh-activity-btn')?.addEventListener('click', refreshActivity);
+    
+    // Insights
+    document.getElementById('generate-insights-btn')?.addEventListener('click', generateInsights);
+    document.getElementById('welcome-cta-btn')?.addEventListener('click', showAnalysisModal);
+    
+    // Support
+    document.getElementById('support-btn')?.addEventListener('click', showSupportModal);
+    document.getElementById('general-support-btn')?.addEventListener('click', () => contactSupport('support'));
+    document.getElementById('billing-support-btn')?.addEventListener('click', () => contactSupport('billing'));
+    document.getElementById('security-support-btn')?.addEventListener('click', () => contactSupport('security'));
+    
+    // Modal close buttons
+    document.getElementById('support-modal-close')?.addEventListener('click', () => closeModal('supportModal'));
+    document.getElementById('lead-modal-close')?.addEventListener('click', () => closeModal('leadModal'));
+    document.getElementById('analysis-modal-close')?.addEventListener('click', () => closeModal('analysisModal'));
+    document.getElementById('bulk-modal-close')?.addEventListener('click', () => closeModal('bulkModal'));
+    
+    // Form handlers
+    document.getElementById('analysisForm')?.addEventListener('submit', submitAnalysis);
+    document.getElementById('analysis-type')?.addEventListener('change', updateInputField);
+    
+    // Logout
+    document.getElementById('logout-link')?.addEventListener('click', logout);
+    
+    // Close modals on outside click
+    window.addEventListener('click', handleModalClick);
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', handleKeyboardShortcuts);
+}
+
+// Load all initial data
+async function loadInitialData() {
+    await Promise.all([
+        loadBusinessProfiles(),
+        loadDashboardData()
+    ]);
+}
+
+// Load business profiles from database
+async function loadBusinessProfiles() {
+    if (!supabaseClient || !currentUser) return;
+    
+    try {
+        const { data: businesses, error } = await supabaseClient
+            .from('business_profiles')
+            .select('*')
+            .eq('user_id', currentUser.id);
+        
+        if (error) {
+            console.warn('Error loading business profiles:', error);
+            return;
+        }
+        
+        businessProfiles = businesses || [];
+        const businessSelect = document.getElementById('business-select');
+        const modalBusinessSelect = document.getElementById('business-id');
+        
+        if (businessSelect) {
+            businessSelect.innerHTML = '<option value="">Select Business...</option>';
+            businessProfiles.forEach(business => {
+                const option = new Option(business.business_name, business.id);
+                businessSelect.add(option);
+            });
             
-            try {
-                const { data: businesses, error } = await supabaseClient
-                    .from('business_profiles')
-                    .select('*')
-                    .eq('user_id', currentUser.id);
-                
-                if (error) {
-                    console.warn('Error loading business profiles:', error);
-                    return;
-                }
-                
-                businessProfiles = businesses || [];
-                const businessSelect = document.getElementById('business-select');
-                const modalBusinessSelect = document.getElementById('business-id');
-                
-                if (businessSelect) {
-                    businessSelect.innerHTML = '<option value="">Select Business...</option>';
-                    businessProfiles.forEach(business => {
-                        const option = new Option(business.business_name, business.id);
-                        businessSelect.add(option);
-                    });
-                    
-                    if (businessProfiles.length > 0) {
-                        currentBusiness = businessProfiles[0];
-                        businessSelect.value = currentBusiness.id;
-                    }
-                }
-                
-                if (modalBusinessSelect) {
-                    modalBusinessSelect.innerHTML = '<option value="">Select business profile...</option>';
-                    businessProfiles.forEach(business => {
-                        const option = new Option(business.business_name, business.id);
-                        modalBusinessSelect.add(option);
-                    });
-                    
-                    if (currentBusiness) {
-                        modalBusinessSelect.value = currentBusiness.id;
-                    }
-                }
-                
-            } catch (err) {
-                console.error('Error loading business profiles:', err);
+            if (businessProfiles.length > 0) {
+                currentBusiness = businessProfiles[0];
+                businessSelect.value = currentBusiness.id;
             }
         }
-
-        // Switch business context
-        async function switchBusiness() {
-            const businessSelect = document.getElementById('business-select');
-            const selectedBusinessId = businessSelect.value;
-            
-            if (selectedBusinessId) {
-                currentBusiness = businessProfiles.find(b => b.id === selectedBusinessId);
-                await loadDashboardData();
-                document.getElementById('business-id').value = selectedBusinessId;
-            }
-        }
-
-        // Load dashboard data
-        async function loadDashboardData() {
-            await Promise.all([
-                loadRecentActivity(),
-                loadStats(),
-                loadCreditUsage()
-            ]);
-        }
-
-        // Load recent activity with filtering support
-        async function loadRecentActivity() {
-            try {
-                let query = supabaseClient
-                    .from('leads')
-                    .select(`
-                        *,
-                        lead_analyses (
-                            engagement_score,
-                            score_niche_fit,
-                            score_total,
-                            ai_version_id,
-                            outreach_message
-                        )
-                    `)
-                    .eq('user_id', currentUser.id);
-
-                // Apply timeframe filter
-                const timeframe = document.getElementById('timeframe-filter')?.value || 'month';
-                if (timeframe !== 'all') {
-                    const now = new Date();
-                    let startDate;
-                    
-                    switch (timeframe) {
-                        case 'today':
-                            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                            break;
-                        case 'week':
-                            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                            break;
-                        case 'month':
-                            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                            break;
-                    }
-                    
-                    if (startDate) {
-                        query = query.gte('created_at', startDate.toISOString());
-                    }
-                }
-
-                const { data: leads, error } = await query
-                    .order('created_at', { ascending: false })
-                    .limit(50);
-                
-                if (error) throw error;
-                
-                allLeads = leads || [];
-                applyActivityFilter();
-                
-            } catch (err) {
-                console.error('Error loading activity:', err);
-                document.getElementById('activity-table').innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 40px; color: var(--warning);">
-                            Error loading activity data
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        // Apply activity filter with sorting options
-        function applyActivityFilter() {
-            const filter = document.getElementById('activity-filter')?.value || 'all';
-            let filteredLeads = [...allLeads];
-
-            // Apply type filters
-            switch (filter) {
-                case 'light':
-                    filteredLeads = filteredLeads.filter(lead => 
-                        lead.type === 'light' || (!lead.type && (!lead.lead_analyses || lead.lead_analyses.length === 0))
-                    );
-                    break;
-                case 'deep':
-                    filteredLeads = filteredLeads.filter(lead => 
-                        lead.type === 'deep' || (!lead.type && lead.lead_analyses && lead.lead_analyses.length > 0)
-                    );
-                    break;
-                case 'score_high':
-                    filteredLeads = filteredLeads.filter(lead => (lead.score || 0) >= 80);
-                    filteredLeads.sort((a, b) => (b.score || 0) - (a.score || 0));
-                    break;
-                case 'score_low':
-                    filteredLeads = filteredLeads.filter(lead => (lead.score || 0) <= 50);
-                    filteredLeads.sort((a, b) => (a.score || 0) - (b.score || 0));
-                    break;
-                case 'recent':
-                    filteredLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                    break;
-                case 'oldest':
-                    filteredLeads.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-                    break;
-            }
-
-            displayLeads(filteredLeads);
-        }
-
-        // Display leads in table
-        function displayLeads(leads) {
-            const tableBody = document.getElementById('activity-table');
-            
-            if (leads && leads.length > 0) {
-                tableBody.innerHTML = leads.map(lead => {
-                    const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
-                    const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
-                    
-                    return `
-                        <tr class="lead-row">
-                            <td>
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div>
-                                        <div style="font-weight: 600; color: var(--text-primary);">@${lead.username}</div>
-                                        <div style="font-size: 12px; color: var(--border-light);">
-                                            ${lead.platform || 'Instagram'}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>📷 ${lead.platform || 'Instagram'}</td>
-                            <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
-                            <td><span class="status ${analysisType}">${analysisType}</span></td>
-                            <td><span class="status light">analyzed</span></td>
-                            <td>${new Date(lead.created_at).toLocaleString()}</td>
-                            <td>
-                                <button class="btn-small" onclick="viewLead('${lead.id}')">📝 View</button>
-                                <button class="delete-btn" onclick="deleteLead('${lead.id}')" title="Delete lead">🗑️</button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            } else {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                            No leads found for the selected filters.
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        // Load stats
-        async function loadStats() {
-            try {
-                const { count: totalLeads } = await supabaseClient
-                    .from('leads')
-                    .select('*', { count: 'exact' })
-                    .eq('user_id', currentUser.id);
-                
-                const { data: leadsWithScores } = await supabaseClient
-                    .from('leads')
-                    .select('score')
-                    .eq('user_id', currentUser.id)
-                    .not('score', 'is', null);
-                
-                const avgScore = leadsWithScores?.length > 0 
-                    ? Math.round(leadsWithScores.reduce((sum, lead) => sum + (lead.score || 0), 0) / leadsWithScores.length)
-                    : 0;
-                
-                const { count: highValueLeads } = await supabaseClient
-                    .from('leads')
-                    .select('*', { count: 'exact' })
-                    .eq('user_id', currentUser.id)
-                    .gte('score', 80);
-                
-                document.getElementById('total-leads').textContent = totalLeads || 0;
-                document.getElementById('avg-score').textContent = avgScore;
-                document.getElementById('high-value-leads').textContent = highValueLeads || 0;
-                
-                if (totalLeads > 0) {
-                    document.getElementById('leads-trend').textContent = `${totalLeads} total researched`;
-                    document.getElementById('leads-trend').className = 'trend up';
-                }
-                
-                if (avgScore > 0) {
-                    document.getElementById('score-trend').textContent = `${avgScore}% average quality`;
-                    document.getElementById('score-trend').className = avgScore >= 70 ? 'trend up' : 'trend';
-                }
-                
-                if (highValueLeads > 0) {
-                    document.getElementById('high-value-trend').textContent = `${Math.round((highValueLeads / totalLeads) * 100)}% high-value rate`;
-                }
-                
-            } catch (err) {
-                console.error('Error loading stats:', err);
-            }
-        }
-
-        // Load credit usage
-        async function loadCreditUsage() {
-            if (!supabaseClient || !currentUser) {
-                document.getElementById('credits-used').textContent = '0';
-                document.getElementById('credits-trend').textContent = 'Last 30 days';
-                return;
-            }
-            
-            try {
-                const { data: transactions, error } = await supabaseClient
-                    .from('credit_transactions')
-                    .select('amount, created_at')
-                    .eq('user_id', currentUser.id)
-                    .eq('type', 'use')
-                    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-                    .order('created_at', { ascending: false })
-                    .limit(100);
-                
-                if (error) {
-                    console.warn('Error loading credit usage:', error);
-                    document.getElementById('credits-used').textContent = '0';
-                    document.getElementById('credits-trend').textContent = 'Last 30 days';
-                    return;
-                }
-                
-                const creditsUsed = transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
-                document.getElementById('credits-used').textContent = creditsUsed;
-                document.getElementById('credits-trend').textContent = 'Last 30 days';
-                
-            } catch (err) {
-                console.error('Error loading credit usage:', err);
-                document.getElementById('credits-used').textContent = '0';
-                document.getElementById('credits-trend').textContent = 'Last 30 days';
-            }
-        }
-
-        // Show analysis modal
-        function showAnalysisModal() {
-            console.log('Opening analysis modal');
-            const modal = document.getElementById('analysisModal');
-            if (!modal) {
-                console.error('Analysis modal not found');
-                return;
-            }
-            
-            const form = document.getElementById('analysisForm');
-            if (form) {
-                form.reset();
-            }
-            
-            const analysisType = document.getElementById('analysis-type');
-            const profileInput = document.getElementById('profile-input');
-            const inputContainer = document.getElementById('input-field-container');
-            
-            if (analysisType) analysisType.value = '';
-            if (profileInput) profileInput.value = '';
-            if (inputContainer) inputContainer.style.display = 'none';
+        
+        if (modalBusinessSelect) {
+            modalBusinessSelect.innerHTML = '<option value="">Select business profile...</option>';
+            businessProfiles.forEach(business => {
+                const option = new Option(business.business_name, business.id);
+                modalBusinessSelect.add(option);
+            });
             
             if (currentBusiness) {
-                const businessSelect = document.getElementById('business-id');
-                if (businessSelect) {
-                    businessSelect.value = currentBusiness.id;
-                }
+                modalBusinessSelect.value = currentBusiness.id;
+            }
+        }
+        
+    } catch (err) {
+        console.error('Error loading business profiles:', err);
+    }
+}
+
+// Switch business context
+async function switchBusiness() {
+    const businessSelect = document.getElementById('business-select');
+    const selectedBusinessId = businessSelect.value;
+    
+    if (selectedBusinessId) {
+        currentBusiness = businessProfiles.find(b => b.id === selectedBusinessId);
+        await loadDashboardData();
+        document.getElementById('business-id').value = selectedBusinessId;
+    }
+}
+
+// Load all dashboard data
+async function loadDashboardData() {
+    if (!supabaseClient || !currentUser) return;
+    
+    await Promise.all([
+        loadRecentActivity(),
+        loadStats(),
+        loadCreditUsage()
+    ]);
+}
+
+// Load recent activity with filtering
+async function loadRecentActivity() {
+    if (!supabaseClient || !currentUser) return;
+    
+    try {
+        let query = supabaseClient
+            .from('leads')
+            .select(`
+                *,
+                lead_analyses (
+                    engagement_score,
+                    score_niche_fit,
+                    score_total,
+                    ai_version_id,
+                    outreach_message
+                )
+            `)
+            .eq('user_id', currentUser.id);
+
+        // Apply timeframe filter
+        const timeframe = document.getElementById('timeframe-filter')?.value || 'month';
+        if (timeframe !== 'all') {
+            const now = new Date();
+            let startDate;
+            
+            switch (timeframe) {
+                case 'today':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                case 'week':
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
             }
             
-            modal.style.display = 'flex';
-        }
-
-        // Show bulk upload modal
-        function showBulkUpload() {
-            console.log('Opening bulk upload modal');
-            const modal = document.getElementById('bulkModal');
-            if (modal) {
-                modal.style.display = 'flex';
+            if (startDate) {
+                query = query.gte('created_at', startDate.toISOString());
             }
         }
 
-        // Close modal
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
+        const { data: leads, error } = await query
+            .order('created_at', { ascending: false })
+            .limit(50);
+        
+        if (error) throw error;
+        
+        allLeads = leads || [];
+        applyActivityFilter();
+        
+    } catch (err) {
+        console.error('Error loading activity:', err);
+        document.getElementById('activity-table').innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 40px; color: var(--warning);">
+                    Error loading activity data
+                </td>
+            </tr>
+        `;
+    }
+}
+
+// Apply activity filters and sorting
+function applyActivityFilter() {
+    const filter = document.getElementById('activity-filter')?.value || 'all';
+    let filteredLeads = [...allLeads];
+
+    switch (filter) {
+        case 'light':
+            filteredLeads = filteredLeads.filter(lead => 
+                lead.type === 'light' || (!lead.type && (!lead.lead_analyses || lead.lead_analyses.length === 0))
+            );
+            break;
+        case 'deep':
+            filteredLeads = filteredLeads.filter(lead => 
+                lead.type === 'deep' || (!lead.type && lead.lead_analyses && lead.lead_analyses.length > 0)
+            );
+            break;
+        case 'score_high':
+            filteredLeads = filteredLeads.filter(lead => (lead.score || 0) >= 80);
+            filteredLeads.sort((a, b) => (b.score || 0) - (a.score || 0));
+            break;
+        case 'score_low':
+            filteredLeads = filteredLeads.filter(lead => (lead.score || 0) <= 50);
+            filteredLeads.sort((a, b) => (a.score || 0) - (b.score || 0));
+            break;
+        case 'recent':
+            filteredLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            break;
+        case 'oldest':
+            filteredLeads.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            break;
+    }
+
+    displayLeads(filteredLeads);
+}
+
+// Display leads in activity table
+function displayLeads(leads) {
+    const tableBody = document.getElementById('activity-table');
+    
+    if (leads && leads.length > 0) {
+        tableBody.innerHTML = leads.map(lead => {
+            const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
+            const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
             
-            if (modalId === 'analysisModal') {
-                const form = document.getElementById('analysisForm');
-                form.reset();
-                document.getElementById('analysis-type').value = '';
-                document.getElementById('profile-input').value = '';
-                document.getElementById('input-field-container').style.display = 'none';
-            }
-        }
+            return `
+                <tr class="lead-row">
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-primary);">@${lead.username}</div>
+                                <div style="font-size: 12px; color: var(--border-light);">
+                                    ${lead.platform || 'Instagram'}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>📷 ${lead.platform || 'Instagram'}</td>
+                    <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
+                    <td><span class="status ${analysisType}">${analysisType}</span></td>
+                    <td><span class="status light">analyzed</span></td>
+                    <td>${new Date(lead.created_at).toLocaleString()}</td>
+                    <td>
+                        <button class="btn-small" onclick="viewLead('${lead.id}')">📝 View</button>
+                        <button class="delete-btn" onclick="deleteLead('${lead.id}')" title="Delete lead">🗑️</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    No leads found for the selected filters.
+                </td>
+            </tr>
+        `;
+    }
+}
 
-        // Update input field based on analysis type
-      function updateInputField() {
+// Load statistics from database
+async function loadStats() {
+    if (!supabaseClient || !currentUser) return;
+    
+    try {
+        // Get total leads count
+        const { count: totalLeads } = await supabaseClient
+            .from('leads')
+            .select('*', { count: 'exact' })
+            .eq('user_id', currentUser.id);
+        
+        // Get leads with scores for average calculation
+        const { data: leadsWithScores } = await supabaseClient
+            .from('leads')
+            .select('score')
+            .eq('user_id', currentUser.id)
+            .not('score', 'is', null);
+        
+        // Calculate average score
+        const avgScore = leadsWithScores?.length > 0 
+            ? Math.round(leadsWithScores.reduce((sum, lead) => sum + (lead.score || 0), 0) / leadsWithScores.length)
+            : 0;
+        
+        // Get high value leads count
+        const { count: highValueLeads } = await supabaseClient
+            .from('leads')
+            .select('*', { count: 'exact' })
+            .eq('user_id', currentUser.id)
+            .gte('score', 80);
+        
+        // Update UI
+        document.getElementById('total-leads').textContent = totalLeads || 0;
+        document.getElementById('avg-score').textContent = avgScore;
+        document.getElementById('high-value-leads').textContent = highValueLeads || 0;
+        
+        // Update trend indicators
+        if (totalLeads > 0) {
+            document.getElementById('leads-trend').textContent = `${totalLeads} total researched`;
+            document.getElementById('leads-trend').className = 'trend up';
+        }
+        
+        if (avgScore > 0) {
+            document.getElementById('score-trend').textContent = `${avgScore}% average quality`;
+            document.getElementById('score-trend').className = avgScore >= 70 ? 'trend up' : 'trend';
+        }
+        
+        if (highValueLeads > 0 && totalLeads > 0) {
+            document.getElementById('high-value-trend').textContent = `${Math.round((highValueLeads / totalLeads) * 100)}% high-value rate`;
+        }
+        
+    } catch (err) {
+        console.error('Error loading stats:', err);
+    }
+}
+
+// Load credit usage from transactions
+async function loadCreditUsage() {
+    if (!supabaseClient || !currentUser) {
+        document.getElementById('credits-used').textContent = '0';
+        document.getElementById('credits-trend').textContent = 'Last 30 days';
+        return;
+    }
+    
+    try {
+        const { data: transactions, error } = await supabaseClient
+            .from('credit_transactions')
+            .select('amount')
+            .eq('user_id', currentUser.id)
+            .eq('type', 'use')
+            .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+        
+        if (error) {
+            console.warn('Error loading credit usage:', error);
+            document.getElementById('credits-used').textContent = '0';
+            document.getElementById('credits-trend').textContent = 'Last 30 days';
+            return;
+        }
+        
+        const creditsUsed = transactions?.reduce((sum, t) => sum + Math.abs(t.amount), 0) || 0;
+        document.getElementById('credits-used').textContent = creditsUsed;
+        document.getElementById('credits-trend').textContent = 'Last 30 days';
+        
+    } catch (err) {
+        console.error('Error loading credit usage:', err);
+        document.getElementById('credits-used').textContent = '0';
+        document.getElementById('credits-trend').textContent = 'Last 30 days';
+    }
+}
+
+// Show analysis modal
+function showAnalysisModal() {
+    const modal = document.getElementById('analysisModal');
+    if (!modal) {
+        console.error('Analysis modal not found');
+        return;
+    }
+    
+    const form = document.getElementById('analysisForm');
+    if (form) form.reset();
+    
+    const analysisType = document.getElementById('analysis-type');
+    const profileInput = document.getElementById('profile-input');
+    const inputContainer = document.getElementById('input-field-container');
+    
+    if (analysisType) analysisType.value = '';
+    if (profileInput) profileInput.value = '';
+    if (inputContainer) inputContainer.style.display = 'none';
+    
+    if (currentBusiness) {
+        const businessSelect = document.getElementById('business-id');
+        if (businessSelect) businessSelect.value = currentBusiness.id;
+    }
+    
+    modal.style.display = 'flex';
+}
+
+// Update input field based on analysis type
+function updateInputField() {
     const analysisType = document.getElementById('analysis-type').value;
     const inputContainer = document.getElementById('input-field-container');
     const inputField = document.getElementById('profile-input');
@@ -624,15 +578,13 @@
             inputHelp.style.color = 'var(--accent-teal)';
         }
         
-        setTimeout(() => {
-            inputField.focus();
-        }, 50);
+        setTimeout(() => inputField.focus(), 50);
     } else {
         inputContainer.style.display = 'none';
     }
 }
 
-// Submit analysis
+// Submit analysis to worker
 async function submitAnalysis(event) {
     event.preventDefault();
     
@@ -645,10 +597,8 @@ async function submitAnalysis(event) {
         return;
     }
     
-    // Clean username
     const username = profileInput.replace('@', '');
     
-    // Validate username
     if (!validateUsername(username)) {
         showMessage('Please enter a valid Instagram username', 'error');
         return;
@@ -656,33 +606,22 @@ async function submitAnalysis(event) {
     
     const profileUrl = `https://instagram.com/${username}`;
     
-    // Show immediate loading feedback
     const submitBtn = event.target.querySelector('button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.innerHTML = '🔄 Analyzing... <small style="display: block; font-size: 10px; margin-top: 4px;">This may take 30-60 seconds</small>';
     submitBtn.disabled = true;
     
-    // Show loading message
     showMessage('Starting analysis... This may take up to 60 seconds', 'info');
     
     try {
-        // Check if we have a valid session first
         if (!supabaseClient) {
             throw new Error('Not connected to database. Please refresh the page.');
         }
         
-        // Get current session token
         const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
         if (sessionError || !session) {
             throw new Error('Please log in again to continue');
         }
-        
-        console.log('Submitting analysis request:', {
-            username,
-            analysisType,
-            businessId,
-            workerUrl: window.CONFIG.workerUrl
-        });
         
         const requestBody = {
             profile_url: profileUrl,
@@ -691,8 +630,6 @@ async function submitAnalysis(event) {
             user_id: currentUser.id,
             platform: 'instagram'
         };
-        
-        console.log('Request payload:', requestBody);
         
         const response = await fetch(window.CONFIG.workerUrl + '/analyze', {
             method: 'POST',
@@ -703,15 +640,11 @@ async function submitAnalysis(event) {
             body: JSON.stringify(requestBody)
         });
         
-        console.log('Response status:', response.status);
-        
         const result = await response.json();
-        console.log('Response body:', result);
         
         if (!response.ok) {
             let errorMessage = result.error || `HTTP ${response.status}`;
             
-            // Provide more helpful error messages
             if (response.status === 400) {
                 if (result.error && result.error.includes('profile data')) {
                     errorMessage = 'Could not find this Instagram profile. Please check the username and make sure the profile is public.';
@@ -730,7 +663,7 @@ async function submitAnalysis(event) {
         showMessage('Analysis completed successfully!', 'success');
         closeModal('analysisModal');
         
-        // Refresh data
+        // Refresh all data after successful analysis
         await Promise.all([
             loadRecentActivity(),
             loadStats(),
@@ -741,13 +674,12 @@ async function submitAnalysis(event) {
         console.error('Analysis error:', error);
         showMessage(`Analysis failed: ${error.message}`, 'error');
     } finally {
-        // Reset button state
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
 }
 
-// Validate username
+// Validate Instagram username
 function validateUsername(username) {
     const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
     const hasConsecutivePeriods = /\.{2,}/.test(username);
@@ -758,6 +690,8 @@ function validateUsername(username) {
 
 // View lead details
 async function viewLead(leadId) {
+    if (!supabaseClient || !currentUser) return;
+    
     try {
         const { data: lead, error: leadError } = await supabaseClient
             .from('leads')
@@ -870,18 +804,22 @@ async function copyText(text, button) {
     }
 }
 
-// Delete lead
+// Delete lead from database
 async function deleteLead(leadId) {
     if (!confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
         return;
     }
 
+    if (!supabaseClient || !currentUser) return;
+
     try {
+        // Delete related analyses first
         const { error: analysisError } = await supabaseClient
             .from('lead_analyses')
             .delete()
             .eq('lead_id', leadId);
 
+        // Delete the lead
         const { error: leadError } = await supabaseClient
             .from('leads')
             .delete()
@@ -890,8 +828,12 @@ async function deleteLead(leadId) {
 
         if (leadError) throw leadError;
 
-        await loadRecentActivity();
-        await loadStats();
+        // Refresh data
+        await Promise.all([
+            loadRecentActivity(),
+            loadStats()
+        ]);
+        
         showMessage('Lead deleted successfully', 'success');
 
     } catch (err) {
@@ -900,29 +842,40 @@ async function deleteLead(leadId) {
     }
 }
 
-// Generate AI insights
+// Generate AI insights based on user data
 async function generateInsights() {
     const container = document.getElementById('insights-container');
     const loading = document.getElementById('loading-insights');
     
-    // Show loading
+    if (!container || !loading) return;
+    
     container.style.display = 'none';
     loading.style.display = 'block';
     
     try {
-        // Load user's data
+        if (!supabaseClient || !currentUser) {
+            // Show welcome insight for demo mode
+            setTimeout(() => {
+                renderWelcomeInsights();
+                loading.style.display = 'none';
+                container.style.display = 'grid';
+            }, 1500);
+            return;
+        }
+        
+        // Load user's leads data
         const { data: leads } = await supabaseClient
             .from('leads')
             .select('*')
             .eq('user_id', currentUser.id);
         
+        // Load user subscription data
         const { data: userData } = await supabaseClient
             .from('users')
             .select('credits, subscription_plan')
             .eq('id', currentUser.id)
             .single();
         
-        // Generate insights based on data
         let insights = [];
         
         if (!leads || leads.length === 0) {
@@ -935,21 +888,27 @@ async function generateInsights() {
                 action: 'showAnalysisModal()'
             });
         } else {
-            const avgScore = leads.reduce((sum, lead) => sum + (lead.score || 0), 0) / leads.length;
+            // Calculate metrics from database data
+            const totalLeads = leads.length;
+            const leadsWithScores = leads.filter(lead => lead.score !== null && lead.score !== undefined);
+            const avgScore = leadsWithScores.length > 0 
+                ? leadsWithScores.reduce((sum, lead) => sum + lead.score, 0) / leadsWithScores.length 
+                : 0;
             const highValueLeads = leads.filter(lead => (lead.score || 0) >= 80).length;
             const recentLeads = leads.filter(lead => 
                 new Date(lead.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
             ).length;
             
+            // Generate insights based on performance
             if (avgScore >= 70) {
                 insights.push({
                     type: 'performance',
                     icon: '🎯',
                     title: 'Excellent Lead Quality!',
-                    content: `Your average lead score of ${Math.round(avgScore)} shows you're targeting high-quality prospects. ${highValueLeads} out of ${leads.length} leads are premium quality (80+ score).`,
+                    content: `Your average lead score of ${Math.round(avgScore)} shows you're targeting high-quality prospects. ${highValueLeads} out of ${totalLeads} leads are premium quality (80+ score).`,
                     metrics: [
                         { label: 'Average Score', value: `${Math.round(avgScore)}/100` },
-                        { label: 'High-Value Rate', value: `${Math.round((highValueLeads/leads.length)*100)}%` }
+                        { label: 'High-Value Rate', value: `${Math.round((highValueLeads/totalLeads)*100)}%` }
                     ]
                 });
             } else if (avgScore >= 50) {
@@ -961,7 +920,7 @@ async function generateInsights() {
                     cta: 'Analyze New Leads',
                     action: 'showAnalysisModal()'
                 });
-            } else {
+            } else if (avgScore > 0) {
                 insights.push({
                     type: 'warning',
                     icon: '⚠️',
@@ -972,6 +931,7 @@ async function generateInsights() {
                 });
             }
             
+            // Activity insights
             if (recentLeads > 0) {
                 insights.push({
                     type: 'performance',
@@ -980,11 +940,12 @@ async function generateInsights() {
                     content: `You've researched ${recentLeads} leads this week. Consistent activity leads to better results!`,
                     metrics: [
                         { label: 'This Week', value: recentLeads },
-                        { label: 'Total Leads', value: leads.length }
+                        { label: 'Total Leads', value: totalLeads }
                     ]
                 });
             }
             
+            // Subscription recommendations
             const plan = userData?.subscription_plan || 'free';
             if (plan === 'free') {
                 insights.push({
@@ -1016,19 +977,38 @@ async function generateInsights() {
         
     } catch (err) {
         console.error('Error generating insights:', err);
-        loading.style.display = 'none';
-        container.style.display = 'grid';
-        container.innerHTML = `
-            <div class="insight-card warning">
-                <div class="insight-icon">❌</div>
-                <h3>Error Loading Insights</h3>
-                <p>Unable to generate insights at this time. Please try again later.</p>
-                <button class="insight-cta" onclick="generateInsights()">Retry</button>
-            </div>
-        `;
+        setTimeout(() => {
+            loading.style.display = 'none';
+            container.style.display = 'grid';
+            container.innerHTML = `
+                <div class="insight-card warning">
+                    <div class="insight-icon">❌</div>
+                    <h3>Error Loading Insights</h3>
+                    <p>Unable to generate insights at this time. Please try again later.</p>
+                    <button class="insight-cta" onclick="generateInsights()">Retry</button>
+                </div>
+            `;
+        }, 1500);
     }
 }
 
+// Render welcome insights for demo mode
+function renderWelcomeInsights() {
+    const container = document.getElementById('insights-container');
+    const insights = [
+        {
+            type: 'welcome',
+            icon: '🚀',
+            title: 'Welcome to Oslira!',
+            content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+            cta: 'Research Your First Lead',
+            action: 'showAnalysisModal()'
+        }
+    ];
+    renderInsights(insights);
+}
+
+// Render insights cards
 function renderInsights(insights) {
     const container = document.getElementById('insights-container');
     
@@ -1056,6 +1036,11 @@ function renderInsights(insights) {
 
 // Export leads to CSV
 async function exportLeads() {
+    if (!supabaseClient || !currentUser) {
+        showMessage('Export not available in demo mode', 'error');
+        return;
+    }
+    
     try {
         const { data: leads, error } = await supabaseClient
             .from('leads')
@@ -1119,7 +1104,7 @@ function filterByTimeframe() {
     loadRecentActivity();
 }
 
-// Refresh activity
+// Refresh activity data
 async function refreshActivity() {
     const btn = event.target;
     const originalText = btn.textContent;
@@ -1131,6 +1116,35 @@ async function refreshActivity() {
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
+    }
+}
+
+// Show bulk upload modal
+function showBulkUpload() {
+    const modal = document.getElementById('bulkModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+// Close modal
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    if (modalId === 'analysisModal') {
+        const form = document.getElementById('analysisForm');
+        if (form) form.reset();
+        
+        const analysisType = document.getElementById('analysis-type');
+        const profileInput = document.getElementById('profile-input');
+        const inputContainer = document.getElementById('input-field-container');
+        
+        if (analysisType) analysisType.value = '';
+        if (profileInput) profileInput.value = '';
+        if (inputContainer) inputContainer.style.display = 'none';
     }
 }
 
@@ -1148,13 +1162,15 @@ function contactSupport(type = 'support') {
 }
 
 function showSupportModal() {
-    document.getElementById('supportModal').style.display = 'flex';
+    const modal = document.getElementById('supportModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
 }
 
-// Logout
+// Logout function
 function logout(e) {
     e.preventDefault();
-    console.log('Logging out');
     
     if (supabaseClient) {
         supabaseClient.auth.signOut().then(() => {
@@ -1168,7 +1184,7 @@ function logout(e) {
     }
 }
 
-// Close modals on outside click
+// Modal click handler
 function handleModalClick(event) {
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
@@ -1230,7 +1246,7 @@ function showMessage(text, type = 'success') {
         message.style.transform = 'translateX(0)';
     }, 100);
 
-    const duration = type === 'info' ? 8000 : 5000; // Info messages stay longer
+    const duration = type === 'info' ? 8000 : 5000;
     setTimeout(() => {
         message.style.opacity = '0';
         message.style.transform = 'translateX(100%)';
@@ -1238,14 +1254,7 @@ function showMessage(text, type = 'success') {
     }, duration);
 }
 
-// Make functions globally available
-window.viewLead = viewLead;
-window.deleteLead = deleteLead;
-window.copyText = copyText;
-window.showAnalysisModal = showAnalysisModal;
-window.generateInsights = generateInsights;
-
-// Auth state listener
+// Set up auth state listener
 function setupAuthListener() {
     if (supabaseClient) {
         supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -1259,6 +1268,12 @@ function setupAuthListener() {
     }
 }
 
-// Call auth listener setup after initialization
+// Make functions globally available
+window.viewLead = viewLead;
+window.deleteLead = deleteLead;
+window.copyText = copyText;
+window.showAnalysisModal = showAnalysisModal;
+window.generateInsights = generateInsights;
+
+// Initialize auth listener after page load
 setTimeout(setupAuthListener, 2000);
-    </script>
