@@ -396,12 +396,12 @@ app.post('/analyze', async c => {
       }, 500);
     }
     
-    // Use your specific Apify task IDs
-    const scrapeTaskId = data.analysis_type === 'light' 
-      ? 'WYaBAx4D8LrNG7wkO'  // hamzaw/instagram-scraper-task (light)
-      : 'gxCOuEGPRiP20kBzQ'; // hamzaw/instagram-profile-scraper-task (deep)
+    // Use direct Apify actors instead of tasks
+    const scrapeActorId = data.analysis_type === 'light' 
+      ? 'dSCLg0C3YEZ83HzYX'  // apify/instagram-profile-scraper (light)
+      : 'shu8hvrXbJbY3Eb9W'; // apify/instagram-scraper (deep)
 
-    // Prepare input payload based on task type
+    // Prepare input payload based on actor type
     const scrapeInput = data.analysis_type === 'light'
       ? { 
           usernames: [username],
@@ -417,10 +417,10 @@ app.post('/analyze', async c => {
     let profileData: ProfileData;
     
     try {
-      console.log(`Using Apify task: ${scrapeTaskId} with input:`, scrapeInput);
+      console.log(`Using Apify actor: ${scrapeActorId} with input:`, scrapeInput);
       
       const scrapeResponse = await callWithRetry(
-        `https://api.apify.com/v2/actor-tasks/${scrapeTaskId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+        `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
