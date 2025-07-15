@@ -659,6 +659,7 @@ async function saveLeadAndAnalysis(
   }
 }
 
+// REPLACE your updateCreditsAndTransaction function with this:
 async function updateCreditsAndTransaction(
   userId: string,
   cost: number,
@@ -673,38 +674,245 @@ async function updateCreditsAndTransaction(
     'Content-Type': 'application/json'
   };
 
-await Promise.all([
-  fetchJson(
-    `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-    {
-      method: 'PATCH',
-      headers: supabaseHeaders,
-      body: JSON.stringify({
-        subscription_plan: planInfo.name,
-        subscription_status: subscription.status,
-        stripe_customer_id: subscription.customer,
-        credits: planInfo.credits  // Only update users table
-      }),
-    },
-    10000
-  ),
-  // Remove credit_balances update
-  fetchJson(
-    `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-    {
-      method: 'POST',
-      headers: supabaseHeaders,
-      body: JSON.stringify({
-        user_id,
-        amount: planInfo.credits,
-        type: 'add',
-        description: `Subscription created: ${planInfo.name} plan`,
-        lead_id: null
-      }),
-    },
-    10000
-  )
-]);
+  await Promise.all([
+    // Only update the users table
+    fetchJson(
+      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
+      {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          credits: newBalance
+        })
+      }
+    ),
+    // Keep transaction logging
+    fetchJson(
+      `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          user_id: userId,
+          amount: -cost,
+          type: 'use',
+          description,
+          lead_id: leadId
+        })
+      }
+    )
+  ]);
+}
+
+// REPLACE your handleSubscriptionCreated function:
+async function handleSubscriptionCreated(subscription: any, env: Env) {
+  try {
+    const { user_id } = subscription.metadata;
+    if (!user_id) {
+      console.log('No user_id in subscription metadata');
+      return;
+    }
+
+    console.log(`Processing subscription created for user: ${user_id}`);
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
+      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
+    };
+
+    const priceId = subscription.items.data[0]?.price?.id;
+    const planInfo = priceIdToPlan[priceId];
+    
+    if (!planInfo) {
+      console.log(`Unknown price ID: ${priceId}`);
+      return;
+    }
+
+    await Promise.all([
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+        {
+          method: 'PATCH',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            subscription_plan: planInfo.name,
+            subscription_status: subscription.status,
+            stripe_customer_id: subscription.customer,
+            credits: planInfo.credits
+          }),
+        },
+        10000
+      ),
+      // REMOVED credit_balances update
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+        {
+          method: 'POST',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            user_id,
+            amount: planInfo.credits,
+            type: 'add',
+            description: `Subscription created: ${planInfo.name} plan`,
+            lead_id: null
+          }),
+        },
+        10000
+      )
+    ]);
+
+    console.log(`Subscription created successfully for user ${user_id}`);
+
+  } catch (err: any) {
+    console.error('handleSubscriptionCreated error:', err.message);
+    throw new Error(`Failed to process subscription creation: ${err.message}`);
+  }
+}
+
+// REPLACE your handleSubscriptionCanceled function:
+async function handleSubscriptionCanceled(subscription: any, env: Env) {
+  try {
+    const { user_id } = subscription.metadata;
+    if (!user_id) {
+      console.log('No user_id in subscription metadata for cancellation');
+      return;
+    }
+
+    console.log(`Processing subscription canceled for user: ${user_id}`);
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    await Promise.all([
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+        {
+          method: 'PATCH',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            subscription_plan: 'free',
+            subscription_status: 'canceled',
+            credits: 0
+          }),
+        },
+        10000
+      ),
+      // REMOVED credit_balances update
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+        {
+          method: 'POST',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            user_id,
+            amount: 0,
+            type: 'use',
+            description: 'Subscription canceled - credits reset',
+            lead_id: null
+          }),
+        },
+        10000
+      )
+    ]);
+
+    console.log(`Subscription canceled for user ${user_id}`);
+
+  } catch (err: any) {
+    console.error('handleSubscriptionCanceled error:', err.message);
+    throw new Error(`Failed to process subscription cancellation: ${err.message}`);
+  }
+}
+
+// REPLACE your handlePaymentSucceeded function:
+async function handlePaymentSucceeded(invoice: any, env: Env) {
+  try {
+    const subscription_id = invoice.subscription;
+    if (!subscription_id) {
+      console.log('No subscription_id in payment succeeded event');
+      return;
+    }
+
+    console.log(`Processing payment succeeded for subscription: ${subscription_id}`);
+
+    const subscription = await fetchJson<any>(
+      `https://api.stripe.com/v1/subscriptions/${subscription_id}`, 
+      {
+        headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` }
+      },
+      10000
+    );
+    
+    const user_id = subscription.metadata?.user_id;
+    if (!user_id) {
+      console.log('No user_id in subscription metadata for payment');
+      return;
+    }
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    const priceId = subscription.items.data[0]?.price?.id;
+    const planMap: Record<string, number> = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': 50,
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': 150,
+      'price_1RkCLtJzvcRSqGG30FfJSpau': 500,
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': 999999,
+    };
+    
+    const credits = planMap[priceId] || 0;
+
+    await Promise.all([
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+        {
+          method: 'PATCH',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            credits,
+            subscription_status: 'active'
+          }),
+        },
+        10000
+      ),
+      // REMOVED credit_balances update
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+        {
+          method: 'POST',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            user_id,
+            amount: credits,
+            type: 'add',
+            description: 'Monthly credit renewal',
+            lead_id: null
+          }),
+        },
+        10000
+      )
+    ]);
+
+    console.log(`Payment succeeded processed for user ${user_id}`);
+
+  } catch (err: any) {
+    console.error('handlePaymentSucceeded error:', err.message);
+    throw new Error(`Failed to process payment success: ${err.message}`);
+  }
+}
 // ------------------------------------
 // Prompt Generators
 // ------------------------------------
@@ -1371,7 +1579,6 @@ app.post('/stripe-webhook', async c => {
   }
 });
 
-// Stripe event handlers
 async function handleSubscriptionCreated(subscription: any, env: Env) {
   try {
     const { user_id } = subscription.metadata;
@@ -1418,18 +1625,7 @@ async function handleSubscriptionCreated(subscription: any, env: Env) {
         },
         10000
       ),
-      fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/credit_balances`,
-        {
-          method: 'POST',
-          headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates' },
-          body: JSON.stringify({
-            user_id,
-            balance: planInfo.credits
-          }),
-        },
-        10000
-      ),
+      // REMOVED credit_balances update
       fetchJson(
         `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
         {
@@ -1455,42 +1651,7 @@ async function handleSubscriptionCreated(subscription: any, env: Env) {
   }
 }
 
-async function handleSubscriptionUpdated(subscription: any, env: Env) {
-  try {
-    const { user_id } = subscription.metadata;
-    if (!user_id) {
-      console.log('No user_id in subscription metadata for update');
-      return;
-    }
-
-    console.log(`Processing subscription updated for user: ${user_id}`);
-
-    const supabaseHeaders = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json',
-    };
-
-    await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-      {
-        method: 'PATCH',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          subscription_status: subscription.status
-        }),
-      },
-      10000
-    );
-
-    console.log(`Subscription updated for user ${user_id}`);
-
-  } catch (err: any) {
-    console.error('handleSubscriptionUpdated error:', err.message);
-    throw new Error(`Failed to process subscription update: ${err.message}`);
-  }
-}
-
+// REPLACE your handleSubscriptionCanceled function:
 async function handleSubscriptionCanceled(subscription: any, env: Env) {
   try {
     const { user_id } = subscription.metadata;
@@ -1521,18 +1682,7 @@ async function handleSubscriptionCanceled(subscription: any, env: Env) {
         },
         10000
       ),
-      fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/credit_balances`,
-        {
-          method: 'POST',
-          headers: { ...supabaseHeaders, Prefer: 'resolution=merge-duplicates' },
-          body: JSON.stringify({
-            user_id,
-            balance: 0
-          }),
-        },
-        10000
-      ),
+      // REMOVED credit_balances update
       fetchJson(
         `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
         {
@@ -1555,6 +1705,86 @@ async function handleSubscriptionCanceled(subscription: any, env: Env) {
   } catch (err: any) {
     console.error('handleSubscriptionCanceled error:', err.message);
     throw new Error(`Failed to process subscription cancellation: ${err.message}`);
+  }
+}
+
+// REPLACE your handlePaymentSucceeded function:
+async function handlePaymentSucceeded(invoice: any, env: Env) {
+  try {
+    const subscription_id = invoice.subscription;
+    if (!subscription_id) {
+      console.log('No subscription_id in payment succeeded event');
+      return;
+    }
+
+    console.log(`Processing payment succeeded for subscription: ${subscription_id}`);
+
+    const subscription = await fetchJson<any>(
+      `https://api.stripe.com/v1/subscriptions/${subscription_id}`, 
+      {
+        headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` }
+      },
+      10000
+    );
+    
+    const user_id = subscription.metadata?.user_id;
+    if (!user_id) {
+      console.log('No user_id in subscription metadata for payment');
+      return;
+    }
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    const priceId = subscription.items.data[0]?.price?.id;
+    const planMap: Record<string, number> = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': 50,
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': 150,
+      'price_1RkCLtJzvcRSqGG30FfJSpau': 500,
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': 999999,
+    };
+    
+    const credits = planMap[priceId] || 0;
+
+    await Promise.all([
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+        {
+          method: 'PATCH',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            credits,
+            subscription_status: 'active'
+          }),
+        },
+        10000
+      ),
+      // REMOVED credit_balances update
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+        {
+          method: 'POST',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            user_id,
+            amount: credits,
+            type: 'add',
+            description: 'Monthly credit renewal',
+            lead_id: null
+          }),
+        },
+        10000
+      )
+    ]);
+
+    console.log(`Payment succeeded processed for user ${user_id}`);
+
+  } catch (err: any) {
+    console.error('handlePaymentSucceeded error:', err.message);
+    throw new Error(`Failed to process payment success: ${err.message}`);
   }
 }
 
