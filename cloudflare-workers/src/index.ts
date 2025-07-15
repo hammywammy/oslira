@@ -328,7 +328,6 @@ function validateMessageResult(raw: any): string {
 // ------------------------------------
 // Service Functions
 // ------------------------------------
-
 async function fetchUserAndCredits(userId: string, env: Env): Promise<{ user: User; credits: number }> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
@@ -336,18 +335,18 @@ async function fetchUserAndCredits(userId: string, env: Env): Promise<{ user: Us
     'Content-Type': 'application/json'
   };
 
-  const [usersResponse, creditsResponse] = await Promise.all([
-    fetchJson<User[]>(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`, { headers }),
-    fetchJson<{ balance: number }[]>(`${env.SUPABASE_URL}/rest/v1/credit_balances?user_id=eq.${userId}&select=balance`, { headers })
-      .catch(() => [])
-  ]);
+  const usersResponse = await fetchJson<User[]>(
+    `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`, 
+    { headers }
+  );
 
   if (!usersResponse.length) {
     throw new Error('User not found');
   }
 
   const user = usersResponse[0];
-  const credits = creditsResponse.length > 0 ? creditsResponse[0].balance : (user.credits || 0);
+  // Use credits directly from users table
+  const credits = user.credits || 0;
 
   return { user, credits };
 }
@@ -674,35 +673,38 @@ async function updateCreditsAndTransaction(
     'Content-Type': 'application/json'
   };
 
-  await Promise.all([
-    fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/credit_balances`,
-      {
-        method: 'POST',
-        headers: { ...headers, Prefer: 'resolution=merge-duplicates' },
-        body: JSON.stringify({
-          user_id: userId,
-          balance: newBalance
-        })
-      }
-    ),
-    fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          user_id: userId,
-          amount: -cost,
-          type: 'use',
-          description,
-          lead_id: leadId
-        })
-      }
-    )
-  ]);
-}
-
+await Promise.all([
+  fetchJson(
+    `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+    {
+      method: 'PATCH',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        subscription_plan: planInfo.name,
+        subscription_status: subscription.status,
+        stripe_customer_id: subscription.customer,
+        credits: planInfo.credits  // Only update users table
+      }),
+    },
+    10000
+  ),
+  // Remove credit_balances update
+  fetchJson(
+    `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+    {
+      method: 'POST',
+      headers: supabaseHeaders,
+      body: JSON.stringify({
+        user_id,
+        amount: planInfo.credits,
+        type: 'add',
+        description: `Subscription created: ${planInfo.name} plan`,
+        lead_id: null
+      }),
+    },
+    10000
+  )
+]);
 // ------------------------------------
 // Prompt Generators
 // ------------------------------------
