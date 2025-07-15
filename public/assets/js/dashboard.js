@@ -1,9 +1,16 @@
 // Global configuration and state
-window.CONFIG = {
-      supabaseUrl:   process.env.SUPABASE_URL,
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-      workerUrl:     process.env.WORKER_URL
-};
+window.CONFIG = {};
+
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/.netlify/functions/config');
+    if (!res.ok) throw new Error(res.statusText);
+    Object.assign(window.CONFIG, await res.json());
+  } catch (err) {
+    console.warn('⚠️ could not load config –', err);
+  }
+}
 
 // Global state
 let supabaseClient;
