@@ -1736,6 +1736,74 @@ async function handlePaymentFailed(invoice: any, env: Env) {
   }
 }
 
+// Add these debug endpoints BEFORE the error handling section
+
+// Test Supabase connection
+app.get('/test-supabase', async c => {
+  try {
+    const headers = {
+      apikey: c.env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json'
+    };
+    
+    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?limit=1`, { headers });
+    const data = await response.text();
+    
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      data: data.substring(0, 200),
+      hasUrl: !!c.env.SUPABASE_URL,
+      hasServiceRole: !!c.env.SUPABASE_SERVICE_ROLE
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Test Apify connection
+app.get('/test-apify', async c => {
+  try {
+    const response = await fetch(`https://api.apify.com/v2/key-value-stores?token=${c.env.APIFY_API_TOKEN}&limit=1`);
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      hasToken: !!c.env.APIFY_API_TOKEN
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Test OpenAI connection
+app.get('/test-openai', async c => {
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${c.env.OPENAI_KEY}` }
+    });
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      hasKey: !!c.env.OPENAI_KEY
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Test simple POST
+app.post('/test-post', async c => {
+  try {
+    const body = await c.req.json();
+    return c.json({ received: body, timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Error handling (your existing code continues here)
+app.onError((err, c) => {
 // Error handling
 app.onError((err, c) => {
   console.error('Worker Error:', err);
