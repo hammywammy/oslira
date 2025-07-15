@@ -1894,568 +1894,668 @@
         }
 
         // Update input field based on analysis type
-        function updateInputField() {
-            const analysisType = document.getElementById('analysis-type').value;
-            const inputContainer = document.getElementById('input-field-container');
-            const inputField = document.getElementById('profile-input');
-            const inputLabel = document.getElementById('input-label');
-            const inputHelp = document.getElementById('input-help');
-            
-            inputField.value = '';
-            inputField.placeholder = '';
-            
-            if (analysisType) {
-                inputContainer.style.display = 'block';
-                
-                if (analysisType === 'light') {
-                    inputLabel.textContent = 'Instagram Username *';
-                    inputField.placeholder = 'username';
-                    inputHelp.textContent = 'Enter just the username (without @)';
-                    inputHelp.style.color = 'var(--primary-blue)';
-                } else if (analysisType === 'deep') {
-                    inputLabel.textContent = 'Instagram Username *';
-                    inputField.placeholder = 'username';
-                    inputHelp.textContent = 'Enter just the username (without @) - we\'ll do the FULL DEEP analysis';
-                    inputHelp.style.color = 'var(--accent-teal)';
-                }
-                
-                setTimeout(() => {
-                    inputField.focus();
-                }, 50);
-            } else {
-                inputContainer.style.display = 'none';
-            }
+      function updateInputField() {
+    const analysisType = document.getElementById('analysis-type').value;
+    const inputContainer = document.getElementById('input-field-container');
+    const inputField = document.getElementById('profile-input');
+    const inputLabel = document.getElementById('input-label');
+    const inputHelp = document.getElementById('input-help');
+    
+    inputField.value = '';
+    inputField.placeholder = '';
+    
+    if (analysisType) {
+        inputContainer.style.display = 'block';
+        
+        if (analysisType === 'light') {
+            inputLabel.textContent = 'Instagram Username *';
+            inputField.placeholder = 'username';
+            inputHelp.textContent = 'Enter just the username (without @)';
+            inputHelp.style.color = 'var(--primary-blue)';
+        } else if (analysisType === 'deep') {
+            inputLabel.textContent = 'Instagram Username *';
+            inputField.placeholder = 'username';
+            inputHelp.textContent = 'Enter just the username (without @) - we\'ll do the FULL DEEP analysis';
+            inputHelp.style.color = 'var(--accent-teal)';
         }
+        
+        setTimeout(() => {
+            inputField.focus();
+        }, 50);
+    } else {
+        inputContainer.style.display = 'none';
+    }
+}
 
-        // Submit analysis
-        async function submitAnalysis(event) {
-            event.preventDefault();
+// Submit analysis
+async function submitAnalysis(event) {
+    event.preventDefault();
+    
+    const analysisType = document.getElementById('analysis-type').value;
+    const profileInput = document.getElementById('profile-input').value.trim();
+    const businessId = document.getElementById('business-id').value;
+    
+    if (!analysisType || !profileInput) {
+        showMessage('Please fill in all required fields', 'error');
+        return;
+    }
+    
+    // Clean username
+    const username = profileInput.replace('@', '');
+    
+    // Validate username
+    if (!validateUsername(username)) {
+        showMessage('Please enter a valid Instagram username', 'error');
+        return;
+    }
+    
+    const profileUrl = `https://instagram.com/${username}`;
+    
+    // Show immediate loading feedback
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.innerHTML = '🔄 Analyzing... <small style="display: block; font-size: 10px; margin-top: 4px;">This may take 30-60 seconds</small>';
+    submitBtn.disabled = true;
+    
+    // Show loading message
+    showMessage('Starting analysis... This may take up to 60 seconds', 'info');
+    
+    try {
+        // Check if we have a valid session first
+        if (!supabaseClient) {
+            throw new Error('Not connected to database. Please refresh the page.');
+        }
+        
+        // Get current session token
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError || !session) {
+            throw new Error('Please log in again to continue');
+        }
+        
+        console.log('Submitting analysis request:', {
+            username,
+            analysisType,
+            businessId,
+            workerUrl: window.CONFIG.workerUrl
+        });
+        
+        const requestBody = {
+            profile_url: profileUrl,
+            analysis_type: analysisType,
+            business_id: businessId || null,
+            user_id: currentUser.id,
+            platform: 'instagram'
+        };
+        
+        console.log('Request payload:', requestBody);
+        
+        const response = await fetch(window.CONFIG.workerUrl + '/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        console.log('Response status:', response.status);
+        
+        const result = await response.json();
+        console.log('Response body:', result);
+        
+        if (!response.ok) {
+            let errorMessage = result.error || `HTTP ${response.status}`;
             
-            const analysisType = document.getElementById('analysis-type').value;
-            const profileInput = document.getElementById('profile-input').value.trim();
-            const businessId = document.getElementById('business-id').value;
-            
-            if (!analysisType || !profileInput) {
-                showMessage('Please fill in all required fields', 'error');
-                return;
+            // Provide more helpful error messages
+            if (response.status === 400) {
+                if (result.error && result.error.includes('profile data')) {
+                    errorMessage = 'Could not find this Instagram profile. Please check the username and make sure the profile is public.';
+                } else if (result.error && result.error.includes('business')) {
+                    errorMessage = 'Please select a business profile before analyzing.';
+                }
+            } else if (response.status === 402) {
+                errorMessage = `Insufficient credits. You need ${result.required} credits but only have ${result.available}. Please upgrade your plan.`;
+            } else if (response.status === 500) {
+                errorMessage = 'Our analysis service is temporarily unavailable. Please try again in a few minutes.';
             }
             
-            // Clean username
-            const username = profileInput.replace('@', '');
+            throw new Error(errorMessage);
+        }
+        
+        showMessage('Analysis completed successfully!', 'success');
+        closeModal('analysisModal');
+        
+        // Refresh data
+        await Promise.all([
+            loadRecentActivity(),
+            loadStats(),
+            loadCreditUsage()
+        ]);
+        
+    } catch (error) {
+        console.error('Analysis error:', error);
+        showMessage(`Analysis failed: ${error.message}`, 'error');
+    } finally {
+        // Reset button state
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Validate username
+function validateUsername(username) {
+    const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
+    const hasConsecutivePeriods = /\.{2,}/.test(username);
+    const startsOrEndsWithPeriod = /^\./.test(username) || /\.$/.test(username);
+    
+    return usernameRegex.test(username) && !hasConsecutivePeriods && !startsOrEndsWithPeriod;
+}
+
+// View lead details
+async function viewLead(leadId) {
+    try {
+        const { data: lead, error: leadError } = await supabaseClient
+            .from('leads')
+            .select(`
+                *,
+                lead_analyses (*)
+            `)
+            .eq('id', leadId)
+            .single();
+        
+        if (leadError) throw leadError;
+        
+        const analysis = lead.lead_analyses?.[0];
+        const analysisType = lead.type || (analysis ? 'deep' : 'light');
+        
+        let detailsHtml = `
+            <div class="profile-header">
+                <div class="profile-info">
+                    <h4>@${lead.username}</h4>
+                    <a href="${lead.profile_url}" target="_blank">View on Instagram 🔗</a>
+                    <p style="margin-top: 8px; color: var(--text-secondary);">${lead.platform || 'Instagram'}</p>
+                </div>
+                <div style="margin-left: auto;">
+                    <span class="score-badge ${lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low'}">
+                        ${lead.score || 0}/100
+                    </span>
+                    <div style="margin-top: 8px;">
+                        <span class="status ${analysisType}">
+                            ${analysisType === 'deep' ? '🔍 Deep Analysis' : '⚡ Light Analysis'}
+                        </span>
+                    </div>
+                </div>
+            </div>
             
-            // Validate username
-            if (!validateUsername(username)) {
-                showMessage('Please enter a valid Instagram username', 'error');
-                return;
-            }
+            <div class="detail-grid">
+                <div class="detail-section">
+                    <h4>📋 Profile Info</h4>
+                    <div class="detail-row">
+                        <div class="detail-label">Platform:</div>
+                        <div class="detail-value">${lead.platform || 'Instagram'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Score:</div>
+                        <div class="detail-value">${lead.score || 0}/100</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Type:</div>
+                        <div class="detail-value">${lead.type || 'N/A'}</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Created:</div>
+                        <div class="detail-value">${new Date(lead.created_at).toLocaleDateString()}</div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h4>🎯 Analysis Results</h4>
+                    <div class="detail-row">
+                        <div class="detail-label">Status:</div>
+                        <div class="detail-value">Analyzed</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label">Business:</div>
+                        <div class="detail-value">${lead.business_id || 'No business profile'}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (analysis?.outreach_message) {
+            detailsHtml += `
+                <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-blue); margin-top: 20px;">
+                    <h4 style="color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        💬 Personalized Outreach Message
+                        <button onclick="copyText('${analysis.outreach_message.replace(/'/g, "\\'")}', this)" style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                            📋 Copy
+                        </button>
+                    </h4>
+                    <div style="color: var(--text-primary); line-height: 1.6; font-style: italic; background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 6px;">"${analysis.outreach_message}"</div>
+                </div>
+            `;
+        }
+        
+        document.getElementById('leadDetails').innerHTML = detailsHtml;
+        document.getElementById('leadModal').style.display = 'flex';
+        
+    } catch (err) {
+        console.error('Error loading lead details:', err);
+        document.getElementById('leadDetails').innerHTML = `
+            <p style="color: var(--error);">Failed to load lead details: ${err.message}</p>
+        `;
+        document.getElementById('leadModal').style.display = 'flex';
+    }
+}
+
+// Copy text to clipboard
+async function copyText(text, button) {
+    try {
+        await navigator.clipboard.writeText(text);
+        const originalText = button.textContent;
+        button.textContent = '✅ Copied!';
+        button.style.background = 'var(--accent-teal)';
+        
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.style.background = 'var(--primary-blue)';
+        }, 2000);
+    } catch (err) {
+        console.error('Failed to copy text:', err);
+    }
+}
+
+// Delete lead
+async function deleteLead(leadId) {
+    if (!confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const { error: analysisError } = await supabaseClient
+            .from('lead_analyses')
+            .delete()
+            .eq('lead_id', leadId);
+
+        const { error: leadError } = await supabaseClient
+            .from('leads')
+            .delete()
+            .eq('id', leadId)
+            .eq('user_id', currentUser.id);
+
+        if (leadError) throw leadError;
+
+        await loadRecentActivity();
+        await loadStats();
+        showMessage('Lead deleted successfully', 'success');
+
+    } catch (err) {
+        console.error('Error deleting lead:', err);
+        showMessage('Failed to delete lead: ' + err.message, 'error');
+    }
+}
+
+// Generate AI insights
+async function generateInsights() {
+    const container = document.getElementById('insights-container');
+    const loading = document.getElementById('loading-insights');
+    
+    // Show loading
+    container.style.display = 'none';
+    loading.style.display = 'block';
+    
+    try {
+        // Load user's data
+        const { data: leads } = await supabaseClient
+            .from('leads')
+            .select('*')
+            .eq('user_id', currentUser.id);
+        
+        const { data: userData } = await supabaseClient
+            .from('users')
+            .select('credits, subscription_plan')
+            .eq('id', currentUser.id)
+            .single();
+        
+        // Generate insights based on data
+        let insights = [];
+        
+        if (!leads || leads.length === 0) {
+            insights.push({
+                type: 'welcome',
+                icon: '🚀',
+                title: 'Welcome to Oslira!',
+                content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+                cta: 'Research Your First Lead',
+                action: 'showAnalysisModal()'
+            });
+        } else {
+            const avgScore = leads.reduce((sum, lead) => sum + (lead.score || 0), 0) / leads.length;
+            const highValueLeads = leads.filter(lead => (lead.score || 0) >= 80).length;
+            const recentLeads = leads.filter(lead => 
+                new Date(lead.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            ).length;
             
-            const profileUrl = `https://instagram.com/${username}`;
-            
-            try {
-                const response = await fetch(window.CONFIG.workerUrl + '/analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentSession.access_token}`
-                    },
-                    body: JSON.stringify({
-                        profile_url: profileUrl,
-                        analysis_type: analysisType,
-                        business_id: businessId || null,
-                        user_id: currentUser.id,
-                        platform: 'instagram'
-                    })
+            if (avgScore >= 70) {
+                insights.push({
+                    type: 'performance',
+                    icon: '🎯',
+                    title: 'Excellent Lead Quality!',
+                    content: `Your average lead score of ${Math.round(avgScore)} shows you're targeting high-quality prospects. ${highValueLeads} out of ${leads.length} leads are premium quality (80+ score).`,
+                    metrics: [
+                        { label: 'Average Score', value: `${Math.round(avgScore)}/100` },
+                        { label: 'High-Value Rate', value: `${Math.round((highValueLeads/leads.length)*100)}%` }
+                    ]
                 });
-                
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Analysis failed');
-                }
-                
-                showMessage('Analysis completed successfully!', 'success');
-                closeModal('analysisModal');
-                
-                // Refresh data
-                await loadRecentActivity();
-                await loadStats();
-                await loadCreditUsage();
-                
-            } catch (error) {
-                console.error('Analysis error:', error);
-                showMessage(`Analysis failed: ${error.message}`, 'error');
+            } else if (avgScore >= 50) {
+                insights.push({
+                    type: 'recommendation',
+                    icon: '📈',
+                    title: 'Room for Improvement',
+                    content: `Your average lead score is ${Math.round(avgScore)}. Try refining your target criteria to find higher-quality prospects.`,
+                    cta: 'Analyze New Leads',
+                    action: 'showAnalysisModal()'
+                });
+            } else {
+                insights.push({
+                    type: 'warning',
+                    icon: '⚠️',
+                    title: 'Lead Quality Alert',
+                    content: `Your average lead score of ${Math.round(avgScore)} suggests you may need to adjust your targeting strategy.`,
+                    cta: 'Research Better Leads',
+                    action: 'showAnalysisModal()'
+                });
             }
-        }
-
-        // Validate username
-        function validateUsername(username) {
-            const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
-            const hasConsecutivePeriods = /\.{2,}/.test(username);
-            const startsOrEndsWithPeriod = /^\./.test(username) || /\.$/.test(username);
             
-            return usernameRegex.test(username) && !hasConsecutivePeriods && !startsOrEndsWithPeriod;
+            if (recentLeads > 0) {
+                insights.push({
+                    type: 'performance',
+                    icon: '🔥',
+                    title: 'Active Research',
+                    content: `You've researched ${recentLeads} leads this week. Consistent activity leads to better results!`,
+                    metrics: [
+                        { label: 'This Week', value: recentLeads },
+                        { label: 'Total Leads', value: leads.length }
+                    ]
+                });
+            }
+            
+            const plan = userData?.subscription_plan || 'free';
+            if (plan === 'free') {
+                insights.push({
+                    type: 'recommendation',
+                    icon: '⬆️',
+                    title: 'Upgrade Recommended',
+                    content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
+                    cta: 'View Plans',
+                    action: 'location.href="subscription.html"'
+                });
+            }
+            
+            // Campaign insight
+            insights.push({
+                type: 'recommendation',
+                icon: '🚀',
+                title: 'Scale with Campaigns',
+                content: 'Create automated outreach sequences to scale your lead generation and convert more prospects.',
+                cta: 'Create Campaign',
+                action: 'location.href="campaigns.html"'
+            });
         }
+        
+        setTimeout(() => {
+            renderInsights(insights);
+            loading.style.display = 'none';
+            container.style.display = 'grid';
+        }, 1500);
+        
+    } catch (err) {
+        console.error('Error generating insights:', err);
+        loading.style.display = 'none';
+        container.style.display = 'grid';
+        container.innerHTML = `
+            <div class="insight-card warning">
+                <div class="insight-icon">❌</div>
+                <h3>Error Loading Insights</h3>
+                <p>Unable to generate insights at this time. Please try again later.</p>
+                <button class="insight-cta" onclick="generateInsights()">Retry</button>
+            </div>
+        `;
+    }
+}
 
-        // View lead details
-        async function viewLead(leadId) {
-            try {
-                const { data: lead, error: leadError } = await supabaseClient
-                    .from('leads')
-                    .select(`
-                        *,
-                        lead_analyses (*)
-                    `)
-                    .eq('id', leadId)
-                    .single();
-                
-                if (leadError) throw leadError;
-                
+function renderInsights(insights) {
+    const container = document.getElementById('insights-container');
+    
+    container.innerHTML = insights.map(insight => `
+        <div class="insight-card ${insight.type}">
+            <div class="insight-icon">${insight.icon}</div>
+            <h3>${insight.title}</h3>
+            <p>${insight.content}</p>
+            
+            ${insight.metrics ? insight.metrics.map(metric => `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 8px 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px;">
+                    <span style="font-weight: 600; color: var(--text-primary); font-size: 14px;">${metric.label}:</span>
+                    <span style="font-weight: 700; color: var(--primary-blue); font-size: 16px;">${metric.value}</span>
+                </div>
+            `).join('') : ''}
+            
+            ${insight.cta ? `
+                <button class="insight-cta" onclick="${insight.action}">
+                    ${insight.cta}
+                </button>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+// Export leads to CSV
+async function exportLeads() {
+    try {
+        const { data: leads, error } = await supabaseClient
+            .from('leads')
+            .select(`
+                *,
+                lead_analyses (*)
+            `)
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (!leads || leads.length === 0) {
+            showMessage('No leads to export', 'error');
+            return;
+        }
+        
+        const headers = ['Username', 'Profile URL', 'Score', 'Type', 'Platform', 'Outreach Message', 'Created Date'];
+        const csvContent = [
+            headers.join(','),
+            ...leads.map(lead => {
                 const analysis = lead.lead_analyses?.[0];
                 const analysisType = lead.type || (analysis ? 'deep' : 'light');
-                
-                let detailsHtml = `
-                    <div class="profile-header">
-                        <div class="profile-info">
-                            <h4>@${lead.username}</h4>
-                            <a href="${lead.profile_url}" target="_blank">View on Instagram 🔗</a>
-                            <p style="margin-top: 8px; color: var(--text-secondary);">${lead.platform || 'Instagram'}</p>
-                        </div>
-                        <div style="margin-left: auto;">
-                            <span class="score-badge ${lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low'}">
-                                ${lead.score || 0}/100
-                            </span>
-                            <div style="margin-top: 8px;">
-                                <span class="status ${analysisType}">
-                                    ${analysisType === 'deep' ? '🔍 Deep Analysis' : '⚡ Light Analysis'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="detail-grid">
-                        <div class="detail-section">
-                            <h4>📋 Profile Info</h4>
-                            <div class="detail-row">
-                                <div class="detail-label">Platform:</div>
-                                <div class="detail-value">${lead.platform || 'Instagram'}</div>
-                            </div>
-                            <div class="detail-row">
-                                <div class="detail-label">Score:</div>
-                                <div class="detail-value">${lead.score || 0}/100</div>
-                            </div>
-                            <div class="detail-row">
-                                <div class="detail-label">Type:</div>
-                                <div class="detail-value">${lead.type || 'N/A'}</div>
-                            </div>
-                            <div class="detail-row">
-                                <div class="detail-label">Created:</div>
-                                <div class="detail-value">${new Date(lead.created_at).toLocaleDateString()}</div>
-                            </div>
-                        </div>
-                        
-                        <div class="detail-section">
-                            <h4>🎯 Analysis Results</h4>
-                            <div class="detail-row">
-                                <div class="detail-label">Status:</div>
-                                <div class="detail-value">Analyzed</div>
-                            </div>
-                            <div class="detail-row">
-                                <div class="detail-label">Business:</div>
-                                <div class="detail-value">${lead.business_id || 'No business profile'}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                if (analysis?.outreach_message) {
-                    detailsHtml += `
-                        <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-blue); margin-top: 20px;">
-                            <h4 style="color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                                💬 Personalized Outreach Message
-                                <button onclick="copyText('${analysis.outreach_message.replace(/'/g, "\\'")}', this)" style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                                    📋 Copy
-                                </button>
-                            </h4>
-                            <div style="color: var(--text-primary); line-height: 1.6; font-style: italic; background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 6px;">"${analysis.outreach_message}"</div>
-                        </div>
-                    `;
-                }
-                
-                document.getElementById('leadDetails').innerHTML = detailsHtml;
-                document.getElementById('leadModal').style.display = 'flex';
-                
-            } catch (err) {
-                console.error('Error loading lead details:', err);
-                document.getElementById('leadDetails').innerHTML = `
-                    <p style="color: var(--error);">Failed to load lead details: ${err.message}</p>
-                `;
-                document.getElementById('leadModal').style.display = 'flex';
-            }
+                return [
+                    lead.username,
+                    lead.profile_url,
+                    lead.score || 0,
+                    analysisType,
+                    lead.platform || 'Instagram',
+                    `"${(analysis?.outreach_message || '').replace(/"/g, '""')}"`,
+                    new Date(lead.created_at).toLocaleDateString()
+                ].join(',');
+            })
+        ].join('\n');
+        
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `oslira-leads-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        showMessage('Leads exported successfully', 'success');
+        
+    } catch (err) {
+        console.error('Export error:', err);
+        showMessage('Failed to export leads: ' + err.message, 'error');
+    }
+}
+
+// Filter functions
+function filterActivity() {
+    applyActivityFilter();
+}
+
+function filterByTimeframe() {
+    loadRecentActivity();
+}
+
+// Refresh activity
+async function refreshActivity() {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '🔄 Loading...';
+    btn.disabled = true;
+    
+    try {
+        await loadRecentActivity();
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+// Support functions
+const CONTACT_EMAILS = {
+    support: 'support@oslira.com',
+    billing: 'billing@oslira.com',
+    security: 'security@oslira.com'
+};
+
+function contactSupport(type = 'support') {
+    const email = CONTACT_EMAILS[type];
+    const subject = encodeURIComponent(`Oslira ${type.charAt(0).toUpperCase() + type.slice(1)} Request`);
+    window.location.href = `mailto:${email}?subject=${subject}`;
+}
+
+function showSupportModal() {
+    document.getElementById('supportModal').style.display = 'flex';
+}
+
+// Logout
+function logout(e) {
+    e.preventDefault();
+    console.log('Logging out');
+    
+    if (supabaseClient) {
+        supabaseClient.auth.signOut().then(() => {
+            window.location.href = '/login.html';
+        }).catch(err => {
+            console.error('Logout error:', err);
+            window.location.href = '/login.html';
+        });
+    } else {
+        window.location.href = '/login.html';
+    }
+}
+
+// Close modals on outside click
+function handleModalClick(event) {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
         }
+    });
+}
 
-        // Copy text to clipboard
-        async function copyText(text, button) {
-            try {
-                await navigator.clipboard.writeText(text);
-                const originalText = button.textContent;
-                button.textContent = '✅ Copied!';
-                button.style.background = 'var(--accent-teal)';
-                
-                setTimeout(() => {
-                    button.textContent = originalText;
-                    button.style.background = 'var(--primary-blue)';
-                }, 2000);
-            } catch (err) {
-                console.error('Failed to copy text:', err);
-            }
+// Keyboard shortcuts
+function handleKeyboardShortcuts(event) {
+    if (event.key === 'Escape') {
+        const openModal = document.querySelector('.modal[style*="flex"]');
+        if (openModal) {
+            openModal.style.display = 'none';
         }
+    }
+    
+    if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault();
+        showAnalysisModal();
+    }
+}
 
-        // Delete lead
-        async function deleteLead(leadId) {
-            if (!confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
-                return;
-            }
+// Show message function
+function showMessage(text, type = 'success') {
+    console.log(`${type.toUpperCase()}: ${text}`);
+    
+    // Remove any existing messages
+    const existingMessages = document.querySelectorAll('.message');
+    existingMessages.forEach(msg => msg.remove());
+    
+    const message = document.createElement('div');
+    message.className = `message ${type}`;
+    message.textContent = text;
+    message.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 600;
+        z-index: 10000;
+        opacity: 0;
+        transform: translateX(100%);
+        transition: all 0.3s ease;
+        max-width: 400px;
+        word-wrap: break-word;
+        background: ${type === 'success' ? 'linear-gradient(135deg, var(--success), #34D399)' : 
+                     type === 'error' ? 'linear-gradient(135deg, var(--error), #F87171)' : 
+                     type === 'info' ? 'linear-gradient(135deg, var(--primary-blue), var(--secondary-purple))' :
+                     'linear-gradient(135deg, var(--primary-blue), var(--secondary-purple))'};
+    `;
+    document.body.appendChild(message);
 
-            try {
-                const { error: analysisError } = await supabaseClient
-                    .from('lead_analyses')
-                    .delete()
-                    .eq('lead_id', leadId);
+    setTimeout(() => {
+        message.style.opacity = '1';
+        message.style.transform = 'translateX(0)';
+    }, 100);
 
-                const { error: leadError } = await supabaseClient
-                    .from('leads')
-                    .delete()
-                    .eq('id', leadId)
-                    .eq('user_id', currentUser.id);
+    const duration = type === 'info' ? 8000 : 5000; // Info messages stay longer
+    setTimeout(() => {
+        message.style.opacity = '0';
+        message.style.transform = 'translateX(100%)';
+        setTimeout(() => message.remove(), 300);
+    }, duration);
+}
 
-                if (leadError) throw leadError;
+// Make functions globally available
+window.viewLead = viewLead;
+window.deleteLead = deleteLead;
+window.copyText = copyText;
+window.showAnalysisModal = showAnalysisModal;
+window.generateInsights = generateInsights;
 
-                await loadRecentActivity();
-                await loadStats();
-                showMessage('Lead deleted successfully', 'success');
-
-            } catch (err) {
-                console.error('Error deleting lead:', err);
-                showMessage('Failed to delete lead: ' + err.message, 'error');
-            }
-        }
-
-        // Generate AI insights
-        async function generateInsights() {
-            const container = document.getElementById('insights-container');
-            const loading = document.getElementById('loading-insights');
-            
-            // Show loading
-            container.style.display = 'none';
-            loading.style.display = 'block';
-            
-            try {
-                // Load user's data
-                const { data: leads } = await supabaseClient
-                    .from('leads')
-                    .select('*')
-                    .eq('user_id', currentUser.id);
-                
-                const { data: userData } = await supabaseClient
-                    .from('users')
-                    .select('credits, subscription_plan')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                // Generate insights based on data
-                let insights = [];
-                
-                if (!leads || leads.length === 0) {
-                    insights.push({
-                        type: 'welcome',
-                        icon: '🚀',
-                        title: 'Welcome to Oslira!',
-                        content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
-                        cta: 'Research Your First Lead',
-                        action: 'showAnalysisModal()'
-                    });
-                } else {
-                    const avgScore = leads.reduce((sum, lead) => sum + (lead.score || 0), 0) / leads.length;
-                    const highValueLeads = leads.filter(lead => (lead.score || 0) >= 80).length;
-                    const recentLeads = leads.filter(lead => 
-                        new Date(lead.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-                    ).length;
-                    
-                    if (avgScore >= 70) {
-                        insights.push({
-                            type: 'performance',
-                            icon: '🎯',
-                            title: 'Excellent Lead Quality!',
-                            content: `Your average lead score of ${Math.round(avgScore)} shows you're targeting high-quality prospects. ${highValueLeads} out of ${leads.length} leads are premium quality (80+ score).`,
-                            metrics: [
-                                { label: 'Average Score', value: `${Math.round(avgScore)}/100` },
-                                { label: 'High-Value Rate', value: `${Math.round((highValueLeads/leads.length)*100)}%` }
-                            ]
-                        });
-                    } else if (avgScore >= 50) {
-                        insights.push({
-                            type: 'recommendation',
-                            icon: '📈',
-                            title: 'Room for Improvement',
-                            content: `Your average lead score is ${Math.round(avgScore)}. Try refining your target criteria to find higher-quality prospects.`,
-                            cta: 'Analyze New Leads',
-                            action: 'showAnalysisModal()'
-                        });
-                    } else {
-                        insights.push({
-                            type: 'warning',
-                            icon: '⚠️',
-                            title: 'Lead Quality Alert',
-                            content: `Your average lead score of ${Math.round(avgScore)} suggests you may need to adjust your targeting strategy.`,
-                            cta: 'Research Better Leads',
-                            action: 'showAnalysisModal()'
-                        });
-                    }
-                    
-                    if (recentLeads > 0) {
-                        insights.push({
-                            type: 'performance',
-                            icon: '🔥',
-                            title: 'Active Research',
-                            content: `You've researched ${recentLeads} leads this week. Consistent activity leads to better results!`,
-                            metrics: [
-                                { label: 'This Week', value: recentLeads },
-                                { label: 'Total Leads', value: leads.length }
-                            ]
-                        });
-                    }
-                    
-                    const plan = userData?.subscription_plan || 'free';
-                    if (plan === 'free') {
-                        insights.push({
-                            type: 'recommendation',
-                            icon: '⬆️',
-                            title: 'Upgrade Recommended',
-                            content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
-                            cta: 'View Plans',
-                            action: 'location.href="subscription.html"'
-                        });
-                    }
-                    
-                    // Campaign insight
-                    insights.push({
-                        type: 'recommendation',
-                        icon: '🚀',
-                        title: 'Scale with Campaigns',
-                        content: 'Create automated outreach sequences to scale your lead generation and convert more prospects.',
-                        cta: 'Create Campaign',
-                        action: 'location.href="campaigns.html"'
-                    });
-                }
-                
-                setTimeout(() => {
-                    renderInsights(insights);
-                    loading.style.display = 'none';
-                    container.style.display = 'grid';
-                }, 1500);
-                
-            } catch (err) {
-                console.error('Error generating insights:', err);
-                loading.style.display = 'none';
-                container.style.display = 'grid';
-                container.innerHTML = `
-                    <div class="insight-card warning">
-                        <div class="insight-icon">❌</div>
-                        <h3>Error Loading Insights</h3>
-                        <p>Unable to generate insights at this time. Please try again later.</p>
-                        <button class="insight-cta" onclick="generateInsights()">Retry</button>
-                    </div>
-                `;
-            }
-        }
-
-        function renderInsights(insights) {
-            const container = document.getElementById('insights-container');
-            
-            container.innerHTML = insights.map(insight => `
-                <div class="insight-card ${insight.type}">
-                    <div class="insight-icon">${insight.icon}</div>
-                    <h3>${insight.title}</h3>
-                    <p>${insight.content}</p>
-                    
-                    ${insight.metrics ? insight.metrics.map(metric => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 8px 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px;">
-                            <span style="font-weight: 600; color: var(--text-primary); font-size: 14px;">${metric.label}:</span>
-                            <span style="font-weight: 700; color: var(--primary-blue); font-size: 16px;">${metric.value}</span>
-                        </div>
-                    `).join('') : ''}
-                    
-                    ${insight.cta ? `
-                        <button class="insight-cta" onclick="${insight.action}">
-                            ${insight.cta}
-                        </button>
-                    ` : ''}
-                </div>
-            `).join('');
-        }
-
-        // Export leads to CSV
-        async function exportLeads() {
-            try {
-                const { data: leads, error } = await supabaseClient
-                    .from('leads')
-                    .select(`
-                        *,
-                        lead_analyses (*)
-                    `)
-                    .eq('user_id', currentUser.id)
-                    .order('created_at', { ascending: false });
-                
-                if (error) throw error;
-                
-                if (!leads || leads.length === 0) {
-                    showMessage('No leads to export', 'error');
-                    return;
-                }
-                
-                const headers = ['Username', 'Profile URL', 'Score', 'Type', 'Platform', 'Outreach Message', 'Created Date'];
-                const csvContent = [
-                    headers.join(','),
-                    ...leads.map(lead => {
-                        const analysis = lead.lead_analyses?.[0];
-                        const analysisType = lead.type || (analysis ? 'deep' : 'light');
-                        return [
-                            lead.username,
-                            lead.profile_url,
-                            lead.score || 0,
-                            analysisType,
-                            lead.platform || 'Instagram',
-                            `"${(analysis?.outreach_message || '').replace(/"/g, '""')}"`,
-                            new Date(lead.created_at).toLocaleDateString()
-                        ].join(',');
-                    })
-                ].join('\n');
-                
-                const blob = new Blob([csvContent], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `oslira-leads-${new Date().toISOString().split('T')[0]}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                showMessage('Leads exported successfully', 'success');
-                
-            } catch (err) {
-                console.error('Export error:', err);
-                showMessage('Failed to export leads: ' + err.message, 'error');
-            }
-        }
-
-        // Filter functions
-        function filterActivity() {
-            applyActivityFilter();
-        }
-
-        function filterByTimeframe() {
-            loadRecentActivity();
-        }
-
-        // Refresh activity
-        async function refreshActivity() {
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = '🔄 Loading...';
-            btn.disabled = true;
-            
-            try {
-                await loadRecentActivity();
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        }
-
-        // Support functions
-        const CONTACT_EMAILS = {
-            support: 'support@oslira.com',
-            billing: 'billing@oslira.com',
-            security: 'security@oslira.com'
-        };
-
-        function contactSupport(type = 'support') {
-            const email = CONTACT_EMAILS[type];
-            const subject = encodeURIComponent(`Oslira ${type.charAt(0).toUpperCase() + type.slice(1)} Request`);
-            window.location.href = `mailto:${email}?subject=${subject}`;
-        }
-
-        function showSupportModal() {
-            document.getElementById('supportModal').style.display = 'flex';
-        }
-
-        // Logout
-        function logout(e) {
-            e.preventDefault();
-            supabaseClient.auth.signOut().then(() => {
-                window.location.href = '/login.html';
-            });
-        }
-
-        // Close modals on outside click
-        function handleModalClick(event) {
-            const modals = document.querySelectorAll('.modal');
-            modals.forEach(modal => {
-                if (event.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
-        }
-
-        // Keyboard shortcuts
-        function handleKeyboardShortcuts(event) {
-            if (event.key === 'Escape') {
-                const openModal = document.querySelector('.modal[style*="flex"]');
-                if (openModal) {
-                    openModal.style.display = 'none';
-                }
-            }
-            
-            if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-                event.preventDefault();
-                showAnalysisModal();
-            }
-        }
-
-        // Show message function
-        function showMessage(text, type = 'success') {
-            const message = document.createElement('div');
-            message.className = `message ${type}`;
-            message.textContent = text;
-            document.body.appendChild(message);
-
-            setTimeout(() => {
-                message.style.opacity = '1';
-                message.style.transform = 'translateX(0)';
-            }, 100);
-
-            setTimeout(() => {
-                message.style.opacity = '0';
-                message.style.transform = 'translateX(100%)';
-                setTimeout(() => message.remove(), 300);
-            }, 5000);
-        }
-
-        // Make functions globally available
-        window.viewLead = viewLead;
-        window.deleteLead = deleteLead;
-        window.copyText = copyText;
-        window.showAnalysisModal = showAnalysisModal;
-        window.generateInsights = generateInsights;
-
-        // Auth state listener
+// Auth state listener
+function setupAuthListener() {
+    if (supabaseClient) {
         supabaseClient.auth.onAuthStateChange((event, session) => {
+            console.log('Auth state changed:', event);
             if (event === 'SIGNED_OUT' || !session) {
-                window.location.href = '/login.html';
+                if (!window.CONFIG.supabaseUrl.includes('your-project')) {
+                    window.location.href = '/login.html';
+                }
             }
         });
+    }
+}
+
+// Call auth listener setup after initialization
+setTimeout(setupAuthListener, 2000);
     </script>
 </body>
 </html>
