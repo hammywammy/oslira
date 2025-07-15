@@ -336,12 +336,21 @@ app.post('/analyze', async c => {
     const cost = data.analysis_type === 'deep' ? 2 : 1;
 
     // Check credit balance
-    const { data: creditBalance } = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/credit_balances?user_id=eq.${userId}&select=balance`,
-      { headers: sbHeaders }
-    ).then(res => res.json());
+    let currentCredits = user.credits || 0;
+    
+    try {
+      const { data: creditBalance } = await fetch(
+        `${c.env.SUPABASE_URL}/rest/v1/credit_balances?user_id=eq.${userId}&select=balance`,
+        { headers: sbHeaders }
+      ).then(res => res.json());
 
-    const currentCredits = creditBalance?.[0]?.balance || user.credits || 0;
+      if (creditBalance && creditBalance.length > 0) {
+        currentCredits = creditBalance[0].balance;
+      }
+    } catch (balanceError) {
+      console.log('Could not fetch credit balance, using user credits:', balanceError);
+      // Fall back to user.credits
+    }
 
     if (currentCredits < cost) {
       console.log(`Insufficient credits: ${currentCredits} < ${cost}`);
@@ -395,9 +404,9 @@ app.post('/analyze', async c => {
       }
     ))[0];
 
-    if (!profileData) {
+    if (!profileData || !profileData.username) {
       console.log('No profile data returned from scraper');
-      return c.json({ error: 'Could not retrieve profile data' }, 400);
+      return c.json({ error: 'Could not retrieve profile data. Please check the username and try again.' }, 400);
     }
 
     console.log(`Profile scraped successfully: @${profileData.username}`);
@@ -454,12 +463,30 @@ app.post('/analyze', async c => {
           }
         );
 
-        const messageResult = JSON.parse(claudeResponse.content[0].text);
-        outreachMessage = messageResult.message || '';
+        // Handle both old and new Claude API response formats
+        let messageText = '';
+        if (claudeResponse.completion) {
+          // Old format
+          messageText = claudeResponse.completion;
+        } else if (claudeResponse.content && claudeResponse.content[0] && claudeResponse.content[0].text) {
+          // New format
+          messageText = claudeResponse.content[0].text;
+        }
+
+        if (messageText) {
+          try {
+            const messageResult = JSON.parse(messageText);
+            outreachMessage = messageResult.message || '';
+          } catch (parseError) {
+            // If JSON parsing fails, use the raw text
+            outreachMessage = messageText;
+          }
+        }
+        
         console.log('Personalized message generated');
       } catch (error) {
         console.log('Failed to generate message with Claude:', error);
-        // Continue without message
+        // Continue without message - don't fail the entire analysis
       }
     }
 
