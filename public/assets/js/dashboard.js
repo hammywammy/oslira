@@ -36,22 +36,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
-// Load configuration from API
-async function loadConfig() {
-    try {
-        const response = await fetch('/api/config');
-        if (response.ok) {
-            const config = await response.json();
-            window.CONFIG = {
-                supabaseUrl: config.supabaseUrl || window.CONFIG.supabaseUrl,
-                supabaseAnonKey: config.supabaseAnonKey || window.CONFIG.supabaseAnonKey,
-                workerUrl: config.workerUrl || window.CONFIG.workerUrl
-            };
-        }
-    } catch (error) {
-        console.warn('Could not load config from API, using defaults');
-    }
-}
 
 // Show fallback UI for demo mode
 function showFallbackUI() {
