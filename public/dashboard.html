@@ -1301,12 +1301,9 @@
 
                 // Initialize Supabase client
                 supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
-                    auth: {
-                        autoRefreshToken: true,
-                        persistSession: true,
-                        detectSessionInUrl: true
-                    }
-                });
+    auth: { persistSession: true }
+});
+
                 
                 // Check authentication
                 await checkAuth();
@@ -1648,16 +1645,11 @@
             try {
                 let query = supabase
                     .from('leads')
-                    .select(`
-                        *,
-                        lead_analyses (
-                            analysis_data,
-                            main_outreach_message,
-                            engagement_rate,
-                            selling_points,
-                            custom_notes
-                        )
-                    `)
+.select(`
+  *,
+  lead_analyses (raw_result, outreach_message, engagement_score, selling_points, custom_notes)
+`)
+
                     .eq('user_id', currentUser.id);
 
                 // Apply timeframe filter
@@ -2253,9 +2245,9 @@
                     <div class="profile-header">
                         ${lead.avatar_url ? `
                             <div class="profile-avatar">
-                                <img src="${lead.avatar_url.includes('instagram') 
-                                    ? `https://images.weserv.nl/?url=${encodeURIComponent(lead.avatar_url)}&w=80&h=80&fit=cover&mask=circle`
-                                    : lead.avatar_url}" alt="@${lead.username}">
+                                <img src="${lead.avatar_url && lead.avatar_url.includes('instagram')
+  ? `https://images.weserv.nl/?url=${encodeURIComponent(lead.avatar_url)}&w=80&h=80&fit=cover&mask=circle`
+  : (lead.avatar_url || 'default-avatar.png')}">
                             </div>
                         ` : ''}
                         <div class="profile-info">
@@ -2483,14 +2475,11 @@
             try {
                 const { data: leads, error } = await supabase
                     .from('leads')
-                    .select(`
-                        *,
-                        lead_analyses (
-                            analysis_data,
-                            main_outreach_message,
-                            engagement_rate
-                        )
-                    `)
+.select(`
+  *,
+  lead_analyses (raw_result, outreach_message, engagement_score, selling_points, custom_notes)
+`)
+
                     .eq('user_id', currentUser.id)
                     .order('created_at', { ascending: false });
                 
