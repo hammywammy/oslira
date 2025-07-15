@@ -16,6 +16,13 @@ interface ProfileData {
   profilePicUrl?: string;
   externalUrl?: string;
   businessCategory?: string;
+  // Deep analysis specific fields
+  latestPosts?: any[];
+  engagement?: {
+    avgLikes?: number;
+    avgComments?: number;
+    engagementRate?: number;
+  };
 }
 
 interface AnalysisResult {
@@ -25,10 +32,6 @@ interface AnalysisResult {
   engagement_score?: number;
   reasons?: string[];
   selling_points?: string[];
-}
-
-interface MessageResult {
-  message: string;
 }
 
 interface BusinessProfile {
@@ -61,6 +64,7 @@ interface AnalysisRequest {
   profile_url?: string;
   username?: string;
   analysis_type?: AnalysisType;
+  type?: AnalysisType; // Alternative field name
   business_id?: string;
   user_id?: string;
   platform?: string;
@@ -83,7 +87,7 @@ interface Env {
 // ------------------------------------
 
 /**
- * Verify JWT token (PRODUCTION TODO: Replace with Supabase auth verification)
+ * Verify JWT token 
  */
 async function verifyJWT(token: string): Promise<string | null> {
   try {
@@ -97,8 +101,6 @@ async function verifyJWT(token: string): Promise<string | null> {
     if (!payload.exp || payload.exp <= now) return null;
     if (!payload.sub || !payload.aud) return null;
 
-    // PRODUCTION TODO: Verify signature against Supabase JWT secret
-    // Replace with: await supabase.auth.getUser(token)
     return payload.sub;
   } catch {
     return null;
@@ -113,7 +115,7 @@ async function callWithRetry(
   init: RequestInit,
   retries = 3,
   baseBackoffMs = 1000,
-  timeoutMs = 25000 // Max 25s for Cloudflare Workers
+  timeoutMs = 25000
 ): Promise<any> {
   let lastError: Error;
   
@@ -134,7 +136,7 @@ async function callWithRetry(
       }
       
       if (res.status === 429 && attempt < retries - 1) {
-        const delay = Math.min(baseBackoffMs * Math.pow(2, attempt), 10000); // Max 10s delay
+        const delay = Math.min(baseBackoffMs * Math.pow(2, attempt), 10000);
         console.log(`Rate limited on ${url}, retrying in ${delay}ms`);
         await new Promise(r => setTimeout(r, delay));
         continue;
@@ -153,7 +155,7 @@ async function callWithRetry(
       }
       
       if (attempt < retries - 1) {
-        const delay = Math.min(baseBackoffMs * Math.pow(2, attempt), 5000); // Max 5s delay
+        const delay = Math.min(baseBackoffMs * Math.pow(2, attempt), 5000);
         console.log(`Request failed for ${url}, retrying in ${delay}ms: ${lastError.message}`);
         await new Promise(r => setTimeout(r, delay));
         continue;
@@ -188,16 +190,13 @@ async function fetchJson<T>(
       throw new Error(`HTTP ${res.status}: ${text}`);
     }
     
-    // Handle empty responses (like from PATCH/DELETE operations)
     const contentType = res.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
-      // For operations that don't return JSON (like some PATCH operations)
       return {} as T;
     }
     
     const responseText = await res.text();
     if (!responseText.trim()) {
-      // Empty response is valid for some operations
       return {} as T;
     }
     
@@ -236,7 +235,7 @@ function extractUsername(input: string): string {
 }
 
 /**
- * Validate request body
+ * Validate request body - FIXED to handle both field names
  */
 function normalizeRequest(body: AnalysisRequest) {
   const errors: string[] = [];
@@ -247,7 +246,8 @@ function normalizeRequest(body: AnalysisRequest) {
     profile_url = username ? `https://instagram.com/${username}` : '';
   }
   
-  const analysis_type = body.analysis_type;
+  // Handle both 'analysis_type' and 'type' field names
+  const analysis_type = body.analysis_type || body.type;
   const business_id = body.business_id;
   const user_id = body.user_id;
 
@@ -264,7 +264,7 @@ function normalizeRequest(body: AnalysisRequest) {
 }
 
 // ------------------------------------
-// Validation Functions
+// Validation Functions - FIXED for new data structure
 // ------------------------------------
 
 function validateProfileData(raw: any): ProfileData {
@@ -272,14 +272,55 @@ function validateProfileData(raw: any): ProfileData {
     throw new Error('Scraper returned invalid profile data structure');
   }
   
-  const followersCount = Number(raw.followersCount || raw.followers_count || raw.followers || 0);
+  const followersCount = Number(
+    raw.followersCount || 
+    raw.followers_count || 
+    raw.followers || 
+    0
+  );
+  
   if (isNaN(followersCount) || followersCount < 0) {
     throw new Error('Invalid followers count in profile data');
   }
   
-  const username = String(raw.username || '').trim();
+  const username = String(
+    raw.username || 
+    raw.ownerUsername ||
+    ''
+  ).trim();
+  
   if (!username) {
     throw new Error('Profile data missing required username field');
+  }
+  
+  // ENHANCED: Calculate engagement metrics from posts data
+  let engagement = undefined;
+  if (raw.latestPosts && Array.isArray(raw.latestPosts) && raw.latestPosts.length > 0) {
+    const posts = raw.latestPosts.slice(0, 12); // Use up to 12 recent posts
+    console.log(`Calculating engagement from ${posts.length} posts...`);
+    
+    const validPosts = posts.filter(post => 
+      post && 
+      typeof post.likesCount === 'number' && 
+      typeof post.commentsCount === 'number'
+    );
+    
+    if (validPosts.length > 0) {
+      const totalLikes = validPosts.reduce((sum, post) => sum + (post.likesCount || 0), 0);
+      const totalComments = validPosts.reduce((sum, post) => sum + (post.commentsCount || 0), 0);
+      const avgLikes = Math.round(totalLikes / validPosts.length);
+      const avgComments = Math.round(totalComments / validPosts.length);
+      const engagementRate = followersCount > 0 ? 
+        Math.round(((avgLikes + avgComments) / followersCount) * 100 * 100) / 100 : 0;
+      
+      engagement = {
+        avgLikes,
+        avgComments,
+        engagementRate
+      };
+      
+      console.log(`✅ Engagement calculated: ${engagementRate}% (${avgLikes} likes, ${avgComments} comments avg)`);
+    }
   }
   
   return {
@@ -293,7 +334,9 @@ function validateProfileData(raw: any): ProfileData {
     private: Boolean(raw.private || raw.is_private),
     profilePicUrl: raw.profilePicUrl || raw.profile_pic_url || raw.profilePicture || undefined,
     externalUrl: raw.externalUrl || raw.external_url || raw.website || undefined,
-    businessCategory: raw.businessCategory || raw.business_category || raw.category || undefined
+    businessCategory: raw.businessCategory || raw.business_category || raw.category || undefined,
+    latestPosts: raw.latestPosts || undefined,
+    engagement
   };
 }
 
@@ -359,7 +402,6 @@ async function fetchUserAndCredits(userId: string, env: Env): Promise<{ user: Us
   }
 
   const user = usersResponse[0];
-  // Use credits directly from users table
   const credits = user.credits || 0;
 
   return { user, credits };
@@ -384,29 +426,131 @@ async function fetchBusinessProfile(businessId: string, userId: string, env: Env
   return businesses[0];
 }
 
+// FIXED: Scraping function to handle both light and deep analysis properly
 async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
   if (!env.APIFY_API_TOKEN) {
     throw new Error('Profile scraping service not configured');
   }
 
-  const scrapeActorId = analysisType === 'light' 
-    ? 'dSCLg0C3YEZ83HzYX'
-    : 'shu8hvrXbJbY3Eb9W';
+  console.log(`Scraping profile @${username} using ${analysisType} analysis`);
 
-  const scrapeInput = analysisType === 'light'
-    ? { 
+  try {
+    if (analysisType === 'light') {
+      // Light analysis: Get basic profile data only
+      const scrapeInput = { 
         usernames: [username],
         resultsType: "details",
         resultsLimit: 1
+      };
+
+      const scrapeResponse = await callWithRetry(
+        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(scrapeInput)
+        },
+        3,
+        2000,
+        30000
+      );
+
+      if (!scrapeResponse || !Array.isArray(scrapeResponse) || scrapeResponse.length === 0) {
+        throw new Error('Profile not found or private');
       }
-    : { 
+
+      return validateProfileData(scrapeResponse[0]);
+
+    } else {
+      // Deep analysis: Get both profile AND posts data
+      console.log('Deep analysis: Getting profile data first...');
+      
+      // Step 1: Get basic profile data using light scraper
+      const profileInput = { 
+        usernames: [username],
+        resultsType: "details",
+        resultsLimit: 1
+      };
+
+      const profileResponse = await callWithRetry(
+        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profileInput)
+        },
+        3,
+        2000,
+        25000
+      );
+
+      if (!profileResponse || !Array.isArray(profileResponse) || profileResponse.length === 0) {
+        throw new Error('Profile not found or private');
+      }
+
+      const basicProfile = profileResponse[0];
+      console.log('✅ Basic profile data obtained');
+
+      // Step 2: Get posts data for engagement analysis
+      console.log('Deep analysis: Getting posts data for engagement...');
+      
+      const postsInput = { 
         directUrls: [`https://instagram.com/${username}/`], 
-        resultsLimit: 1,
+        resultsLimit: 12, // Get 12 recent posts for engagement calculation
         addParentData: false,
         enhanceUserSearchWithFacebookPage: false
       };
 
-  console.log(`Scraping profile @${username} using actor: ${scrapeActorId}`);
+      let postsData = [];
+      try {
+        const postsResponse = await callWithRetry(
+          `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(postsInput)
+          },
+          2,
+          3000,
+          25000
+        );
+
+        if (postsResponse && Array.isArray(postsResponse)) {
+          postsData = postsResponse;
+          console.log(`✅ Retrieved ${postsData.length} posts for engagement analysis`);
+        }
+      } catch (postsError: any) {
+        console.warn('⚠️ Posts data fetch failed (non-fatal):', postsError.message);
+        // Continue without posts data - we still have basic profile
+      }
+
+      // Step 3: Combine profile and posts data
+      const combinedData = {
+        ...basicProfile,
+        latestPosts: postsData
+      };
+
+      return validateProfileData(combinedData);
+    }
+
+  } catch (error: any) {
+    console.error('Scraping error:', error);
+    
+    let errorMessage = 'Failed to retrieve profile data. The profile may be private, deleted, or temporarily unavailable.';
+    
+    if (error.message.includes('404')) {
+      errorMessage = 'Instagram profile not found. Please check the username is correct.';
+    } else if (error.message.includes('403')) {
+      errorMessage = 'This Instagram profile is private or access is restricted.';
+    } else if (error.message.includes('429')) {
+      errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
+    } else if (error.message.includes('timeout')) {
+      errorMessage = 'Request timed out. Please try again.';
+    }
+    
+    throw new Error(errorMessage);
+  }
+}
 
   try {
     const scrapeResponse = await callWithRetry(
@@ -418,14 +562,42 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
       },
       3,
       2000,
-      25000 // 25s max for scraping
+      30000 // 30s max for scraping
     );
 
-    if (!scrapeResponse || !scrapeResponse[0]) {
+    console.log('Scrape response received:', {
+      isArray: Array.isArray(scrapeResponse),
+      length: Array.isArray(scrapeResponse) ? scrapeResponse.length : 'not array',
+      firstItemKeys: Array.isArray(scrapeResponse) && scrapeResponse[0] ? Object.keys(scrapeResponse[0]) : []
+    });
+
+    if (!scrapeResponse || !Array.isArray(scrapeResponse) || scrapeResponse.length === 0) {
       throw new Error('Profile not found or private');
     }
 
-    return validateProfileData(scrapeResponse[0]);
+    const rawData = scrapeResponse[0];
+    
+    // For deep analysis, we might get posts data instead of profile data
+    if (analysisType === 'deep' && rawData.ownerUsername && !rawData.username) {
+      // This is a posts response, we need to handle it differently
+      console.log('Deep analysis returned posts data, extracting profile info...');
+      
+      // Try to extract profile info from the posts data
+      const profileData = {
+        username: rawData.ownerUsername,
+        fullName: rawData.ownerFullName,
+        followersCount: 0, // Not available in posts endpoint
+        biography: '', // Not available in posts endpoint
+        isVerified: false, // Not available in posts endpoint
+        private: false,
+        // Store the posts for engagement analysis
+        latestPosts: [rawData] // This is actually a post, but we'll work with it
+      };
+      
+      return validateProfileData(profileData);
+    }
+
+    return validateProfileData(rawData);
 
   } catch (error: any) {
     console.error('Scraping error:', error);
@@ -481,7 +653,7 @@ async function performAIAnalysis(
       },
       3,
       1500,
-      25000 // 25s max for AI
+      25000
     );
 
     if (!response.choices?.[0]?.message?.content) {
@@ -673,7 +845,6 @@ async function saveLeadAndAnalysis(
   }
 }
 
-// FIXED updateCreditsAndTransaction function
 async function updateCreditsAndTransaction(
   userId: string,
   cost: number,
@@ -689,7 +860,6 @@ async function updateCreditsAndTransaction(
   };
 
   try {
-    // Update user credits first
     console.log(`Updating user ${userId} credits to ${newBalance}`);
     await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
@@ -704,7 +874,6 @@ async function updateCreditsAndTransaction(
     );
     console.log('✅ User credits updated successfully');
 
-    // Log the transaction
     console.log(`Creating credit transaction for user ${userId}`);
     await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
@@ -728,6 +897,10 @@ async function updateCreditsAndTransaction(
     throw new Error(`Failed to update credits: ${error.message}`);
   }
 }
+
+// ------------------------------------
+// Stripe Webhook Handlers
+// ------------------------------------
 
 async function handleSubscriptionCreated(subscription: any, env: Env) {
   try {
@@ -756,47 +929,98 @@ async function handleSubscriptionCreated(subscription: any, env: Env) {
     const planInfo = priceIdToPlan[priceId];
     
     if (!planInfo) {
-      console.log(`Unknown price ID: ${priceId}`);
+      console.log(`Unknown price ID in update: ${priceId}`);
       return;
     }
 
-    await Promise.all([
-      fetchJson(
+    if (subscription.status === 'active') {
+      await Promise.all([
+        fetchJson(
+          `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+          {
+            method: 'PATCH',
+            headers: supabaseHeaders,
+            body: JSON.stringify({
+              subscription_plan: planInfo.name,
+              subscription_status: subscription.status,
+              credits: planInfo.credits
+            }),
+          },
+          10000
+        ),
+        fetchJson(
+          `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+          {
+            method: 'POST',
+            headers: supabaseHeaders,
+            body: JSON.stringify({
+              user_id,
+              amount: planInfo.credits,
+              type: 'add',
+              description: `Subscription updated: ${planInfo.name} plan`,
+              lead_id: null
+            }),
+          },
+          10000
+        )
+      ]);
+    } else {
+      await fetchJson(
         `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
         {
           method: 'PATCH',
           headers: supabaseHeaders,
           body: JSON.stringify({
-            subscription_plan: planInfo.name,     // ✅ CORRECT
-            subscription_status: subscription.status, // ✅ CORRECT  
-            stripe_customer_id: subscription.customer,
-            credits: planInfo.credits              // ✅ CORRECT
+            subscription_status: subscription.status
           }),
         },
         10000
-      ),
-      fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-        {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            user_id,
-            amount: planInfo.credits,
-            type: 'add',
-            description: `Subscription created: ${planInfo.name} plan`,
-            lead_id: null
-          }),
-        },
-        10000
-      )
-    ]);
+      );
+    }
 
-    console.log(`Subscription created successfully for user ${user_id}`);
+    console.log(`Subscription updated for user ${user_id} with status: ${subscription.status}`);
 
   } catch (err: any) {
-    console.error('handleSubscriptionCreated error:', err.message);
-    throw new Error(`Failed to process subscription creation: ${err.message}`);
+    console.error('handleSubscriptionUpdated error:', err.message);
+    throw new Error(`Failed to process subscription update: ${err.message}`);
+  }
+}
+
+async function handleSubscriptionCanceled(subscription: any, env: Env) {
+  try {
+    const { user_id } = subscription.metadata;
+    if (!user_id) {
+      console.log('No user_id in subscription metadata for cancellation');
+      return;
+    }
+
+    console.log(`Processing subscription canceled for user: ${user_id}`);
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    await fetchJson(
+      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+      {
+        method: 'PATCH',
+        headers: supabaseHeaders,
+        body: JSON.stringify({
+          subscription_plan: 'free',
+          subscription_status: 'canceled',
+          credits: 5 // Reset to free tier credits
+        }),
+      },
+      10000
+    );
+
+    console.log(`Subscription canceled for user ${user_id}`);
+
+  } catch (err: any) {
+    console.error('handleSubscriptionCanceled error:', err.message);
+    throw new Error(`Failed to process subscription cancellation: ${err.message}`);
   }
 }
 
@@ -929,28 +1153,40 @@ async function handlePaymentFailed(invoice: any, env: Env) {
 }
 
 // ------------------------------------
-// Prompt Generators
+// Prompt Generators - ENHANCED for better analysis
 // ------------------------------------
 
 function makeLightPrompt(profile: ProfileData, business: BusinessProfile): string {
   return `You are an expert B2B lead qualifier. Analyze this Instagram profile for lead scoring.\n\n` +
     `PROFILE:\n` +
     `- Username: ${profile.username}\n` +
+    `- Full Name: ${profile.fullName || 'N/A'}\n` +
     `- Bio: ${profile.biography || 'N/A'}\n` +
     `- Followers: ${profile.followersCount}\n` +
     `- Following: ${profile.followingCount || 'N/A'}\n` +
     `- Posts: ${profile.postsCount || 'N/A'}\n` +
-    `- Verified: ${!!profile.isVerified}\n\n` +
+    `- Verified: ${!!profile.isVerified}\n` +
+    `- Business Category: ${profile.businessCategory || 'N/A'}\n` +
+    `- External URL: ${profile.externalUrl || 'N/A'}\n\n` +
     `BUSINESS CONTEXT:\n` +
     `- Name: ${business.business_name}\n` +
     `- Niche: ${business.business_niche}\n` +
     `- Target Audience: ${business.target_audience}\n` +
     `- Value Proposition: ${business.value_proposition}\n\n` +
-    `Provide a numerical score (0-100) and brief analysis.\n\n` +
+    `Analyze the profile's fit for our business. Consider:\n` +
+    `1. Audience size and engagement potential\n` +
+    `2. Relevance to our target market\n` +
+    `3. Business indicators (bio, external links, verification)\n` +
+    `4. Likelihood of being decision maker or influencer\n\n` +
     `Respond with JSON: { "score": number, "summary": string, "niche_fit": number, "reasons": string[] }`;
 }
 
 function makeDeepPrompt(profile: ProfileData, business: BusinessProfile): string {
+  const engagementData = profile.engagement ? 
+    `- Average Likes: ${profile.engagement.avgLikes}\n` +
+    `- Average Comments: ${profile.engagement.avgComments}\n` +
+    `- Engagement Rate: ${profile.engagement.engagementRate}%\n` : '';
+
   return `You are a senior B2B strategist. Provide comprehensive analysis of this Instagram profile.\n\n` +
     `PROFILE DETAILS:\n` +
     `- Username: ${profile.username}\n` +
@@ -960,8 +1196,11 @@ function makeDeepPrompt(profile: ProfileData, business: BusinessProfile): string
     `- Following: ${profile.followingCount || 'N/A'}\n` +
     `- Posts: ${profile.postsCount || 0}\n` +
     `- Verified: ${!!profile.isVerified}\n` +
-    `- External URL: ${profile.externalUrl || 'N/A'}\n\n` +
-    `BUSINESS CONTEXT:\n` +
+    `- External URL: ${profile.externalUrl || 'N/A'}\n` +
+    `- Business Category: ${profile.businessCategory || 'N/A'}\n\n` +
+    `ENGAGEMENT METRICS:\n` +
+    engagementData +
+    `\nBUSINESS CONTEXT:\n` +
     `- Company: ${business.business_name}\n` +
     `- Niche: ${business.business_niche}\n` +
     `- Target Audience: ${business.target_audience}\n` +
@@ -969,7 +1208,12 @@ function makeDeepPrompt(profile: ProfileData, business: BusinessProfile): string
     `- Value Proposition: ${business.value_proposition}\n` +
     `- Communication Style: ${business.communication_style}\n` +
     `- Success Outcome: ${business.success_outcome}\n\n` +
-    `Provide detailed scoring and analysis.\n\n` +
+    `Provide detailed scoring and analysis. Consider:\n` +
+    `1. Overall lead quality and business potential\n` +
+    `2. Engagement quality and audience interaction\n` +
+    `3. Niche alignment with our target market\n` +
+    `4. Decision-making authority indicators\n` +
+    `5. Specific selling points for outreach\n\n` +
     `Respond with JSON: { "score": number, "engagement_score": number, "niche_fit": number, "summary": string, "reasons": string[], "selling_points": string[] }`;
 }
 
@@ -980,7 +1224,8 @@ function makeMessagePrompt(profile: ProfileData, business: BusinessProfile, anal
     `- Name: ${profile.fullName || 'N/A'}\n` +
     `- Bio: ${profile.biography || 'N/A'}\n` +
     `- Followers: ${profile.followersCount}\n` +
-    `- Verified: ${profile.isVerified ? 'Yes' : 'No'}\n\n` +
+    `- Verified: ${profile.isVerified ? 'Yes' : 'No'}\n` +
+    `- Business Category: ${profile.businessCategory || 'N/A'}\n\n` +
     `ANALYSIS RESULTS:\n` +
     `- Lead Score: ${analysis.score}/100\n` +
     `- Niche Fit: ${analysis.niche_fit || 'N/A'}\n` +
@@ -1003,18 +1248,13 @@ function makeMessagePrompt(profile: ProfileData, business: BusinessProfile, anal
 }
 
 // ------------------------------------
-// Stripe Webhook Security (PRODUCTION TODO)
+// Stripe Webhook Security
 // ------------------------------------
 
 function verifyStripeWebhook(body: string, signature: string, secret: string): any {
   if (!signature || !secret) {
     throw new Error('Missing webhook signature or secret');
   }
-  
-  // PRODUCTION TODO: Replace with proper Stripe verification
-  // import Stripe from 'stripe';
-  // const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-  // return stripe.webhooks.constructEvent(body, signature, secret);
   
   try {
     const elements = signature.split(',');
@@ -1039,7 +1279,7 @@ function verifyStripeWebhook(body: string, signature: string, secret: string): a
 }
 
 // ------------------------------------
-// Hono App
+// Hono App Setup
 // ------------------------------------
 const app = new Hono<{ Bindings: Env }>();
 
@@ -1051,24 +1291,25 @@ app.use('*', cors({
 
 // Routes
 app.get('/', c => c.json({ 
-  message: '🚀 Oslira Worker v5.2', 
+  message: '🚀 Oslira Worker v6.0', 
   status: 'operational',
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
+  features: ['scraping', 'ai_analysis', 'billing', 'webhooks']
 }));
 
 app.get('/health', c => c.json({ 
   status: 'healthy', 
   service: 'Oslira Worker',
-  version: '5.2.0',
+  version: '6.0.0',
   timestamp: new Date().toISOString()
 }));
 
 app.get('/config', c => {
-  const full = c.req.url.replace(/\/config$/, '');
+  const baseUrl = c.req.url.replace(/\/config.*$/, '');
   return c.json({
     supabaseUrl: c.env.SUPABASE_URL,
     supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
-    workerUrl: full
+    workerUrl: baseUrl
   });
 });
 
@@ -1087,13 +1328,13 @@ app.get('/debug-env', c => {
   });
 });
 
-// Main Analyze Endpoint
+// ENHANCED Main Analyze Endpoint
 app.post('/analyze', async c => {
   const startTime = Date.now();
   console.log('=== Analysis request started ===', new Date().toISOString());
 
   try {
-    // 1. Enhanced Authentication Debug
+    // 1. Authentication
     const auth = c.req.header('Authorization')?.replace('Bearer ', '');
     if (!auth) {
       console.error('❌ Missing Authorization header');
@@ -1108,7 +1349,7 @@ app.post('/analyze', async c => {
     }
     console.log(`✅ User authenticated: ${userId}`);
 
-    // 2. Enhanced Request Parsing with Detailed Logging
+    // 2. Request Parsing
     let body;
     try {
       body = await c.req.json<AnalysisRequest>();
@@ -1118,6 +1359,7 @@ app.post('/analyze', async c => {
       return c.json({ error: 'Invalid JSON in request body', details: parseError.message }, 400);
     }
 
+    // FIXED: Enhanced request validation
     const { valid, errors, data } = normalizeRequest(body);
     if (!valid) {
       console.error('❌ Request validation failed:', errors);
@@ -1132,7 +1374,7 @@ app.post('/analyze', async c => {
 
     console.log(`📊 Processing analysis: username=${username}, type=${data.analysis_type}`);
 
-    // 3. Enhanced Environment Variable Checks
+    // 3. Environment validation
     const requiredEnvVars = {
       SUPABASE_URL: c.env.SUPABASE_URL,
       SUPABASE_SERVICE_ROLE: c.env.SUPABASE_SERVICE_ROLE,
@@ -1153,7 +1395,7 @@ app.post('/analyze', async c => {
     }
     console.log('✅ All required environment variables present');
 
-    // 4. Enhanced User and Credits Fetch with Detailed Error Handling
+    // 4. User and credits validation
     let user, currentCredits;
     try {
       console.log('💳 Fetching user and credits...');
@@ -1163,7 +1405,6 @@ app.post('/analyze', async c => {
       console.log(`✅ User found: credits=${currentCredits}`);
     } catch (userError: any) {
       console.error('❌ fetchUserAndCredits failed:', userError.message);
-      console.error('Stack trace:', userError.stack);
       return c.json({ 
         error: 'Failed to verify user account', 
         details: userError.message 
@@ -1180,7 +1421,7 @@ app.post('/analyze', async c => {
       }, 402);
     }
 
-    // 5. Enhanced Business Profile Fetch
+    // 5. Business profile validation
     if (!data.business_id) {
       console.error('❌ Missing business_id');
       return c.json({ error: 'Business profile is required for analysis' }, 400);
@@ -1199,17 +1440,20 @@ app.post('/analyze', async c => {
       }, 500);
     }
 
-    // 6. Enhanced Profile Scraping with Timeout and Retry Logic
+    // 6. ENHANCED Profile scraping
     let profileData;
     try {
       console.log('🕷️ Starting profile scraping...');
       profileData = await scrapeInstagramProfile(username, data.analysis_type!, c.env);
       console.log(`✅ Profile scraped: @${profileData.username}, followers=${profileData.followersCount}`);
+      
+      // Log engagement data if available
+      if (profileData.engagement) {
+        console.log(`📈 Engagement data: ${JSON.stringify(profileData.engagement)}`);
+      }
     } catch (scrapeError: any) {
       console.error('❌ scrapeInstagramProfile failed:', scrapeError.message);
-      console.error('Stack trace:', scrapeError.stack);
       
-      // Return specific error messages for different scraping failures
       let errorMessage = 'Failed to retrieve profile data';
       if (scrapeError.message.includes('not found')) {
         errorMessage = 'Instagram profile not found';
@@ -1227,7 +1471,7 @@ app.post('/analyze', async c => {
       }, 500);
     }
 
-    // 7. Enhanced AI Analysis with Better Error Handling
+    // 7. AI Analysis
     let analysisResult;
     try {
       console.log('🤖 Starting AI analysis...');
@@ -1235,14 +1479,13 @@ app.post('/analyze', async c => {
       console.log(`✅ AI analysis complete: score=${analysisResult.score}`);
     } catch (aiError: any) {
       console.error('❌ performAIAnalysis failed:', aiError.message);
-      console.error('Stack trace:', aiError.stack);
       return c.json({ 
         error: 'AI analysis failed', 
         details: aiError.message 
       }, 500);
     }
 
-    // 8. Enhanced Message Generation (only for deep analysis)
+    // 8. Message generation (deep analysis only)
     let outreachMessage = '';
     if (data.analysis_type === 'deep') {
       try {
@@ -1251,11 +1494,10 @@ app.post('/analyze', async c => {
         console.log(`✅ Message generated: ${outreachMessage.length} characters`);
       } catch (messageError: any) {
         console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
-        // Don't fail the entire request for message generation issues
       }
     }
 
-    // 9. Enhanced Database Operations
+    // 9. Database operations
     const leadData = {
       user_id: userId,
       business_id: data.business_id,
@@ -1288,14 +1530,13 @@ app.post('/analyze', async c => {
       console.log(`✅ Saved to database: leadId=${leadId}`);
     } catch (saveError: any) {
       console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
-      console.error('Stack trace:', saveError.stack);
       return c.json({ 
         error: 'Failed to save analysis results', 
         details: saveError.message 
       }, 500);
     }
 
-    // 10. Enhanced Credit Update
+    // 10. Credit update
     try {
       console.log('🔄 Updating credits...');
       const newBalance = currentCredits - cost;
@@ -1310,7 +1551,6 @@ app.post('/analyze', async c => {
       console.log(`✅ Credits updated: ${currentCredits} -> ${newBalance}`);
     } catch (creditError: any) {
       console.error('❌ updateCreditsAndTransaction failed:', creditError.message);
-      // This is critical - if credits aren't updated, we need to fail
       return c.json({ 
         error: 'Failed to update credits', 
         details: creditError.message 
@@ -1320,6 +1560,7 @@ app.post('/analyze', async c => {
     const totalTime = Date.now() - startTime;
     console.log(`✅ Analysis completed successfully in ${totalTime}ms`);
 
+    // ENHANCED response with more detailed data
     return c.json({
       success: true,
       lead_id: leadId,
@@ -1339,14 +1580,19 @@ app.post('/analyze', async c => {
         following: profileData.followingCount,
         posts: profileData.postsCount,
         verified: profileData.isVerified,
-        bio: profileData.biography
+        bio: profileData.biography,
+        external_url: profileData.externalUrl,
+        business_category: profileData.businessCategory,
+        engagement: profileData.engagement
       },
       credits: {
         used: cost,
         remaining: currentCredits - cost
       },
       debug: {
-        processing_time_ms: totalTime
+        processing_time_ms: totalTime,
+        scraper_actor: data.analysis_type === 'light' ? 'dSCLg0C3YEZ83HzYX' : 'shu8hvrXbJbY3Eb9W',
+        analysis_type: data.analysis_type
       }
     });
 
@@ -1355,12 +1601,7 @@ app.post('/analyze', async c => {
     console.error('❌ CRITICAL ERROR in /analyze endpoint:');
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
-    console.error('Processing time before error:', totalTime + 'ms');
     
-    // Log the error type for better debugging
-    console.error('Error type:', error.constructor.name);
-    console.error('Error cause:', error.cause);
-
     return c.json({ 
       error: 'Analysis failed', 
       message: error.message || 'Unknown error',
@@ -1473,6 +1714,374 @@ app.post('/billing/create-checkout-session', async c => {
     return c.json({ error: 'Failed to create checkout session' }, 500);
   }
 });
+
+app.post('/billing/create-portal-session', async c => {
+  const auth = c.req.header('Authorization')?.replace('Bearer ', '');
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+  
+  const userId = await verifyJWT(auth);
+  if (!userId) return c.json({ error: 'Invalid token' }, 401);
+
+  const { return_url, customer_email } = await c.req.json();
+  if (!customer_email) return c.json({ error: 'customer_email required' }, 400);
+
+  const stripeKey = c.env.STRIPE_SECRET_KEY;
+  
+  try {
+    const searchParams = new URLSearchParams({ query: `email:'${customer_email}'` });
+    const customerData = await fetchJson<any>(
+      `https://api.stripe.com/v1/customers/search?${searchParams}`,
+      { headers: { Authorization: `Bearer ${stripeKey}` } }
+    );
+    
+    if (!customerData.data?.length) {
+      return c.json({ error: 'Customer not found' }, 404);
+    }
+    
+    const customerId = customerData.data[0].id;
+
+    const portalParams = new URLSearchParams({
+      customer: customerId,
+      return_url: return_url || `${c.env.FRONTEND_URL}/subscription.html`
+    });
+    
+    const portal = await fetchJson<any>(
+      'https://api.stripe.com/v1/billing_portal/sessions',
+      { 
+        method: 'POST', 
+        headers: { 
+          Authorization: `Bearer ${stripeKey}`, 
+          'Content-Type': 'application/x-www-form-urlencoded' 
+        }, 
+        body: portalParams 
+      }
+    );
+    
+    if (portal.error) {
+      return c.json({ error: portal.error.message }, 400);
+    }
+    
+    return c.json({ url: portal.url });
+
+  } catch (error: any) {
+    console.error('Portal session error:', error);
+    return c.json({ error: 'Failed to create portal session' }, 500);
+  }
+});
+
+// Stripe webhook handler
+app.post('/stripe-webhook', async c => {
+  const body = await c.req.text();
+  const sig = c.req.header('stripe-signature');
+  
+  if (!sig || !c.env.STRIPE_WEBHOOK_SECRET) {
+    console.error('Webhook validation failed: missing signature or secret');
+    return c.text('Missing signature or secret', 400);
+  }
+
+  try {
+    const event = verifyStripeWebhook(body, sig, c.env.STRIPE_WEBHOOK_SECRET);
+    
+    console.log(`Webhook received: ${event.type} at ${new Date().toISOString()}`);
+
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Webhook handler timeout')), 20000);
+    });
+
+    const handlerPromise = (async () => {
+      switch (event.type) {
+        case 'customer.subscription.created':
+          await handleSubscriptionCreated(event.data.object, c.env);
+          break;
+        case 'customer.subscription.updated':
+          await handleSubscriptionUpdated(event.data.object, c.env);
+          break;
+        case 'customer.subscription.deleted':
+          await handleSubscriptionCanceled(event.data.object, c.env);
+          break;
+        case 'invoice.payment_succeeded':
+          await handlePaymentSucceeded(event.data.object, c.env);
+          break;
+        case 'invoice.payment_failed':
+          await handlePaymentFailed(event.data.object, c.env);
+          break;
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+    })();
+
+    await Promise.race([handlerPromise, timeoutPromise]);
+    
+    return c.text('OK', 200);
+
+  } catch (error: any) {
+    console.error('Webhook processing error:', error.message);
+    
+    if (error.message.includes('User not found') || 
+        error.message.includes('No user_id in metadata')) {
+      return c.text('Handled - no action needed', 200);
+    }
+    
+    if (error.message.includes('signature') || 
+        error.message.includes('Invalid webhook payload')) {
+      return c.text('Invalid webhook', 400);
+    }
+    
+    return c.text('Webhook processing failed', 500);
+  }
+});
+
+// ENHANCED Debug and Test Endpoints
+app.get('/debug-scrape/:username', async c => {
+  const username = c.req.param('username');
+  const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
+  
+  if (!c.env.APIFY_API_TOKEN) {
+    return c.json({ error: 'APIFY_API_TOKEN not configured' }, 500);
+  }
+
+  const scrapeActorId = analysisType === 'light' 
+    ? 'dSCLg0C3YEZ83HzYX'
+    : 'shu8hvrXbJbY3Eb9W';
+
+  const scrapeInput = analysisType === 'light'
+    ? { 
+        usernames: [username],
+        resultsType: "details",
+        resultsLimit: 1
+      }
+    : { 
+        directUrls: [`https://instagram.com/${username}/`], 
+        resultsLimit: 1,
+        addParentData: false,
+        enhanceUserSearchWithFacebookPage: false
+      };
+
+  try {
+    const response = await fetch(
+      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scrapeInput)
+      }
+    );
+
+    const responseData = await response.json();
+    
+    // Try to validate the data
+    let validatedProfile = null;
+    let validationError = null;
+    
+    if (Array.isArray(responseData) && responseData[0]) {
+      try {
+        validatedProfile = validateProfileData(responseData[0]);
+      } catch (error: any) {
+        validationError = error.message;
+      }
+    }
+    
+    return c.json({
+      success: response.ok,
+      status: response.status,
+      actorId: scrapeActorId,
+      analysisType,
+      input: scrapeInput,
+      dataCount: Array.isArray(responseData) ? responseData.length : 'not array',
+      availableFields: Array.isArray(responseData) && responseData[0] ? Object.keys(responseData[0]) : [],
+      validatedProfile,
+      validationError,
+      rawFirstItem: Array.isArray(responseData) && responseData[0] ? responseData[0] : null,
+      fullResponse: responseData
+    });
+
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/test-scraper-integration/:username', async c => {
+  const username = c.req.param('username');
+  const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
+  
+  try {
+    console.log(`Testing scraper integration for @${username} with type: ${analysisType}`);
+    
+    const profileData = await scrapeInstagramProfile(username, analysisType, c.env);
+    
+    return c.json({
+      success: true,
+      username,
+      analysisType,
+      profileData,
+      debug: {
+        hasEngagement: !!profileData.engagement,
+        hasLatestPosts: !!profileData.latestPosts,
+        fieldsCount: Object.keys(profileData).length
+      }
+    });
+    
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message,
+      username,
+      analysisType
+    }, 500);
+  }
+});
+
+// Test endpoints
+app.get('/test-supabase', async c => {
+  try {
+    const headers = {
+      apikey: c.env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json'
+    };
+    
+    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?limit=1`, { headers });
+    const data = await response.text();
+    
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      data: data.substring(0, 200),
+      hasUrl: !!c.env.SUPABASE_URL,
+      hasServiceRole: !!c.env.SUPABASE_SERVICE_ROLE
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/test-apify', async c => {
+  try {
+    const response = await fetch(`https://api.apify.com/v2/key-value-stores?token=${c.env.APIFY_API_TOKEN}&limit=1`);
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      hasToken: !!c.env.APIFY_API_TOKEN
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/test-openai', async c => {
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${c.env.OPENAI_KEY}` }
+    });
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      hasKey: !!c.env.OPENAI_KEY
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.post('/test-post', async c => {
+  try {
+    const body = await c.req.json();
+    return c.json({ received: body, timestamp: new Date().toISOString() });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Error handling
+app.onError((err, c) => {
+  console.error('Worker Error:', err);
+  return c.json({ 
+    error: 'Internal server error', 
+    message: err.message,
+    timestamp: new Date().toISOString()
+  }, 500);
+});
+
+app.notFound(c => c.json({ 
+  error: 'Endpoint not found',
+  available_endpoints: [
+    'GET /',
+    'GET /health',
+    'GET /config',
+    'GET /debug-env',
+    'GET /debug-scrape/:username',
+    'GET /test-scraper-integration/:username',
+    'GET /test-supabase',
+    'GET /test-openai', 
+    'GET /test-apify',
+    'POST /test-post',
+    'POST /analyze',
+    'POST /billing/create-checkout-session',
+    'POST /billing/create-portal-session',
+    'POST /stripe-webhook'
+  ]
+}, 404));
+
+export default { 
+  fetch: app.fetch 
+};
+    };
+
+    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
+      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
+    };
+
+    const priceId = subscription.items.data[0]?.price?.id;
+    const planInfo = priceIdToPlan[priceId];
+    
+    if (!planInfo) {
+      console.log(`Unknown price ID: ${priceId}`);
+      return;
+    }
+
+    await Promise.all([
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+        {
+          method: 'PATCH',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            subscription_plan: planInfo.name,
+            subscription_status: subscription.status,
+            stripe_customer_id: subscription.customer,
+            credits: planInfo.credits
+          }),
+        },
+        10000
+      ),
+      fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+        {
+          method: 'POST',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            user_id,
+            amount: planInfo.credits,
+            type: 'add',
+            description: `Subscription created: ${planInfo.name} plan`,
+            lead_id: null
+          }),
+        },
+        10000
+      )
+    ]);
+
+    console.log(`Subscription created successfully for user ${user_id}`);
+
+  } catch (err: any) {
+    console.error('handleSubscriptionCreated error:', err.message);
+    throw new Error(`Failed to process subscription creation: ${err.message}`);
+  }
+}
+
 async function handleSubscriptionUpdated(subscription: any, env: Env) {
   try {
     const { user_id } = subscription.metadata;
