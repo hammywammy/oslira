@@ -1805,6 +1805,9 @@ app.post('/test-post', async c => {
 // Error handling (your existing code continues here)
 app.onError((err, c) => {
 // Error handling
+// ... all your code above ...
+
+// Error handling
 app.onError((err, c) => {
   console.error('Worker Error:', err);
   return c.json({ 
@@ -1821,6 +1824,10 @@ app.notFound(c => c.json({
     'GET /health',
     'GET /config',
     'GET /debug-env',
+    'GET /test-supabase',
+    'GET /test-openai', 
+    'GET /test-apify',
+    'POST /test-post',
     'POST /analyze',
     'POST /billing/create-checkout-session',
     'POST /billing/create-portal-session',
