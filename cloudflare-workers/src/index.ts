@@ -1536,7 +1536,6 @@ app.post('/analyze', async c => {
         engagement_score: analysisResult.engagement_score || null,
         score_niche_fit: analysisResult.niche_fit || null,
         score_total: analysisResult.score || 0,
-        ai_version_id: 'gpt-4o-2024',
         outreach_message: outreachMessage || null,
         selling_points: analysisResult.selling_points || null
       };
