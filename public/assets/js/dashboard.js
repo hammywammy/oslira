@@ -678,155 +678,481 @@ function validateUsername(username) {
     
     return usernameRegex.test(username) && !hasConsecutivePeriods && !startsOrEndsWithPeriod;
 }
-
-// View lead details
-// Replace your existing viewLead with this:
 async function viewLead(leadId) {
-  if (!supabaseClient || !currentUser) return;
-
-  try {
-    const { data: lead, error: leadError } = await supabaseClient
-      .from('leads')
-      .select(`
-        *,
-        lead_analyses (*)
-      `)
-      .eq('id', leadId)
-      .single();
-    if (leadError) throw leadError;
-
-    const analysis = lead.lead_analyses?.[0] || {};
-    const analysisType = lead.type || (analysis ? 'deep' : 'light');
-    const scoreClass = lead.score >= 80 ? 'score-high'
-                     : lead.score >= 60 ? 'score-medium'
-                     : 'score-low';
-
-    let detailsHtml = `
-      <div class="profile-header">
-        <div class="profile-info">
-          <h4>@${lead.username}</h4>
-          <a href="${lead.profile_url}" target="_blank">View on Instagram 🔗</a>
-          <p style="margin-top:8px;color:var(--text-secondary);">${lead.platform || 'Instagram'}</p>
-        </div>
-        <div style="margin-left:auto;">
-          <span class="score-badge ${scoreClass}">
-            ${lead.score || 0}/100
-          </span>
-          <div style="margin-top:8px;">
-            <span class="status ${analysisType}">
-              ${analysisType === 'deep' ? '🔍 Deep Analysis' : '⚡ Light Analysis'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div class="detail-grid">
-        <div class="detail-section">
-          <h4>📋 Profile Info</h4>
-          <div class="detail-row">
-            <div class="detail-label">Platform:</div>
-            <div class="detail-value">${lead.platform || 'Instagram'}</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-label">Score:</div>
-            <div class="detail-value">${lead.score || 0}/100</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-label">Type:</div>
-            <div class="detail-value">${lead.type || 'N/A'}</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-label">Created:</div>
-            <div class="detail-value">${new Date(lead.created_at).toLocaleDateString()}</div>
-          </div>
-        </div>
-
-        <div class="detail-section">
-          <h4>🎯 Analysis Results</h4>
-          <div class="detail-row">
-            <div class="detail-label">Status:</div>
-            <div class="detail-value">Analyzed</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-label">Business:</div>
-            <div class="detail-value">${lead.business_id || '—'}</div>
-          </div>
-        </div>
-
-        <div class="detail-section">
-          <h4>📊 Engagement & Fit</h4>
-          <div class="detail-row">
-            <div class="detail-label">Engagement Score:</div>
-            <div class="detail-value">${analysis.engagement_score ?? 'N/A'}</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-label">Niche‑Fit Score:</div>
-            <div class="detail-value">${analysis.score_niche_fit ?? 'N/A'}</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-label">Total AI Score:</div>
-            <div class="detail-value">${analysis.score_total ?? 'N/A'}</div>
-          </div>
-          <div class="detail-row">
-            <div class="detail-label">AI Version:</div>
-            <div class="detail-value">${analysis.ai_version_id ?? '—'}</div>
-          </div>
-        </div>
-
-        <div class="detail-section">
-          <h4>💡 Selling Points</h4>
-          <div class="detail-value">
-            ${(analysis.selling_points || []).length
-              ? analysis.selling_points.join(', ')
-              : 'None found'}
-          </div>
-        </div>
-      </div>
-    `;
-
-    if (analysis.outreach_message) {
-      detailsHtml += `
-        <div style="background:linear-gradient(135deg,var(--bg-light),#E8F3FF); padding:20px; border-radius:12px; border-left:4px solid var(--primary-blue); margin-top:20px;">
-          <h4 style="display:flex;justify-content:space-between;align-items:center; color:var(--text-primary); margin-bottom:12px;">
-            💬 Personalized Outreach
-            <button onclick="copyText('${analysis.outreach_message.replace(/'/g, "\\'")}', this)"
-                    style="background:var(--primary-blue);color:white;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
-              📋 Copy
-            </button>
-          </h4>
-          <div style="font-style:italic; line-height:1.6;">
-            "${analysis.outreach_message}"
-          </div>
-        </div>
-      `;
+    // Validation and early returns
+    if (!leadId) {
+        console.error('viewLead: leadId is required');
+        return;
     }
-
-    document.getElementById('leadDetails').innerHTML = detailsHtml;
-    document.getElementById('leadModal').style.display = 'flex';
-  }
-  catch (err) {
-    console.error('Error loading lead details:', err);
-    document.getElementById('leadDetails').innerHTML = `<p style="color:var(--error);">Failed to load lead details: ${err.message}</p>`;
-    document.getElementById('leadModal').style.display = 'flex';
-  }
+    
+    if (!supabaseClient || !currentUser) {
+        console.warn('viewLead: Supabase client or user not available');
+        showMessage('Unable to load lead details. Please refresh and try again.', 'error');
+        return;
+    }
+    
+    // Show loading state
+    const modal = document.getElementById('leadModal');
+    const detailsContainer = document.getElementById('leadDetails');
+    
+    if (!modal || !detailsContainer) {
+        console.error('viewLead: Required DOM elements not found');
+        return;
+    }
+    
+    detailsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 24px; margin-bottom: 12px;">🔄</div>
+            <p>Loading lead details...</p>
+        </div>
+    `;
+    modal.style.display = 'flex';
+    
+    try {
+        // Fetch lead data with comprehensive analysis information
+        const { data: lead, error: leadError } = await supabaseClient
+            .from('leads')
+            .select(`
+                id,
+                username,
+                profile_url,
+                platform,
+                score,
+                type,
+                business_id,
+                created_at,
+                lead_analyses (
+                    engagement_score,
+                    score_niche_fit,
+                    score_total,
+                    ai_version_id,
+                    outreach_message,
+                    selling_points,
+                    analysis_type
+                )
+            `)
+            .eq('id', leadId)
+            .eq('user_id', currentUser.id)  // Security: ensure user owns this lead
+            .single();
+        
+        if (leadError) {
+            throw new Error(`Database error: ${leadError.message}`);
+        }
+        
+        if (!lead) {
+            throw new Error('Lead not found or access denied');
+        }
+        
+        // Extract analysis data and determine type
+        const analysis = lead.lead_analyses?.[0] || {};
+        const hasAnalysisData = analysis && Object.keys(analysis).length > 0;
+        const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
+        
+        // Determine score styling
+        const score = lead.score || 0;
+        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+        
+        // Build the HTML content
+        const detailsHtml = buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass);
+        
+        // Inject content and show modal
+        detailsContainer.innerHTML = detailsHtml;
+        
+        // Log analytics event
+        console.log(`Lead viewed: ${leadId} (${analysisType} analysis)`);
+        
+    } catch (error) {
+        console.error('Error loading lead details:', error);
+        
+        detailsContainer.innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <div style="font-size: 24px; margin-bottom: 12px; color: var(--error);">❌</div>
+                <h3 style="color: var(--error); margin-bottom: 8px;">Unable to Load Lead</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    ${error.message || 'An unexpected error occurred'}
+                </p>
+                <button onclick="closeModal('leadModal')" 
+                        style="background: var(--primary-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                    Close
+                </button>
+            </div>
+        `;
+        
+        // Track error for monitoring
+        if (window.analytics) {
+            window.analytics.track('Lead View Error', {
+                leadId,
+                error: error.message,
+                userId: currentUser.id
+            });
+        }
+    }
 }
 
-// Copy text to clipboard
-async function copyText(text, button) {
+/**
+ * Builds the complete HTML content for lead details
+ * @param {Object} lead - Lead data from database
+ * @param {Object} analysis - Analysis data from database
+ * @param {string} analysisType - 'light' or 'deep'
+ * @param {string} scoreClass - CSS class for score styling
+ * @returns {string} Complete HTML string
+ */
+function buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass) {
+    const isDeepAnalysis = analysisType === 'deep';
+    const platform = lead.platform || 'Instagram';
+    const score = lead.score || 0;
+    
+    // Build basic profile header (always shown)
+    let html = buildProfileHeader(lead, analysisType, scoreClass, platform);
+    
+    // Build basic information sections (always shown)
+    html += `<div class="detail-grid">`;
+    html += buildBasicInfoSection(lead, analysisType, platform, score);
+    html += buildAnalysisStatusSection(lead, analysisType);
+    
+    // Add premium sections for deep analysis only
+    if (isDeepAnalysis && analysis && Object.keys(analysis).length > 0) {
+        html += buildAdvancedMetricsSection(analysis);
+        html += buildSellingPointsSection(analysis);
+    }
+    
+    html += `</div>`; // Close detail-grid
+    
+    // Add premium outreach message section for deep analysis
+    if (isDeepAnalysis && analysis.outreach_message) {
+        html += buildOutreachMessageSection(analysis.outreach_message);
+    }
+    
+    // Add upgrade prompt for light analysis
+    if (analysisType === 'light') {
+        html += buildUpgradePromptSection();
+    }
+    
+    return html;
+}
+
+/**
+ * Builds the profile header section
+ */
+function buildProfileHeader(lead, analysisType, scoreClass, platform) {
+    const isDeepAnalysis = analysisType === 'deep';
+    
+    return `
+        <div class="profile-header">
+            <div class="profile-info">
+                <h4>@${escapeHtml(lead.username)}</h4>
+                <a href="${escapeHtml(lead.profile_url)}" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   style="color: var(--primary-blue); text-decoration: none; font-weight: 500;">
+                    View on ${platform} 🔗
+                </a>
+                <div style="margin-top: 8px; color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span>${platform}</span>
+                    <span>•</span>
+                    <span style="color: ${isDeepAnalysis ? 'var(--accent-teal)' : 'var(--primary-blue)'}; font-weight: 600;">
+                        ${isDeepAnalysis ? '🔍 Premium Analysis' : '⚡ Basic Analysis'}
+                    </span>
+                </div>
+            </div>
+            <div style="margin-left: auto; text-align: right;">
+                <span class="score-badge ${scoreClass}" style="font-size: 18px; font-weight: 700;">
+                    ${lead.score || 0}/100
+                </span>
+                <div style="margin-top: 8px;">
+                    <span class="status ${analysisType}" style="font-size: 13px; padding: 4px 8px;">
+                        ${isDeepAnalysis ? 'Deep Analysis' : 'Light Analysis'}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Builds the basic information section
+ */
+function buildBasicInfoSection(lead, analysisType, platform, score) {
+    return `
+        <div class="detail-section">
+            <h4>📋 Profile Information</h4>
+            <div class="detail-row">
+                <div class="detail-label">Platform:</div>
+                <div class="detail-value">${platform}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Overall Score:</div>
+                <div class="detail-value">
+                    <strong style="color: ${score >= 80 ? 'var(--success)' : score >= 60 ? 'var(--warning)' : 'var(--error)'};">
+                        ${score}/100
+                    </strong>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Analysis Type:</div>
+                <div class="detail-value">
+                    <span style="color: ${analysisType === 'deep' ? 'var(--accent-teal)' : 'var(--primary-blue)'}; font-weight: 600;">
+                        ${analysisType === 'deep' ? 'Deep Analysis' : 'Light Analysis'}
+                    </span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Date Created:</div>
+                <div class="detail-value">${formatDate(lead.created_at)}</div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Builds the analysis status section
+ */
+function buildAnalysisStatusSection(lead, analysisType) {
+    return `
+        <div class="detail-section">
+            <h4>🎯 Analysis Status</h4>
+            <div class="detail-row">
+                <div class="detail-label">Status:</div>
+                <div class="detail-value">
+                    <span style="color: var(--success); font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 12px;">✓</span> Analyzed
+                    </span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Business Profile:</div>
+                <div class="detail-value">${lead.business_id || '—'}</div>
+            </div>
+            ${analysisType === 'light' ? `
+                <div class="detail-row">
+                    <div class="detail-label">Coverage:</div>
+                    <div class="detail-value" style="font-style: italic; color: var(--text-secondary);">
+                        Basic metrics and core scoring only
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+/**
+ * Builds the advanced metrics section (deep analysis only)
+ */
+function buildAdvancedMetricsSection(analysis) {
+    return `
+        <div class="detail-section">
+            <h4>📊 Advanced Metrics</h4>
+            <div class="detail-row">
+                <div class="detail-label">Engagement Score:</div>
+                <div class="detail-value">
+                    <strong style="color: var(--accent-teal);">
+                        ${formatScore(analysis.engagement_score)}
+                    </strong>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Niche‑Fit Score:</div>
+                <div class="detail-value">
+                    <strong style="color: var(--accent-teal);">
+                        ${formatScore(analysis.score_niche_fit)}
+                    </strong>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">AI Total Score:</div>
+                <div class="detail-value">
+                    <strong style="color: var(--primary-blue);">
+                        ${formatScore(analysis.score_total)}
+                    </strong>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">AI Model Version:</div>
+                <div class="detail-value" style="font-family: monospace; font-size: 12px;">
+                    ${analysis.ai_version_id || '—'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Builds the selling points section (deep analysis only)
+ */
+function buildSellingPointsSection(analysis) {
+    if (!analysis.selling_points || analysis.selling_points.length === 0) {
+        return '';
+    }
+    
+    const sellingPointsHtml = Array.isArray(analysis.selling_points) 
+        ? analysis.selling_points.map(point => `
+            <div style="margin: 8px 0; padding: 8px 12px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border-left: 3px solid var(--primary-blue);">
+                💡 ${escapeHtml(point)}
+            </div>
+          `).join('')
+        : `<div style="padding: 8px 12px; background: rgba(59, 130, 246, 0.1); border-radius: 6px;">
+             💡 ${escapeHtml(analysis.selling_points)}
+           </div>`;
+    
+    return `
+        <div class="detail-section">
+            <h4>💡 Key Selling Points</h4>
+            <div class="detail-value" style="line-height: 1.6;">
+                ${sellingPointsHtml}
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Builds the outreach message section (deep analysis only)
+ */
+function buildOutreachMessageSection(outreachMessage) {
+    const escapedMessage = escapeHtml(outreachMessage);
+    const copyData = JSON.stringify(outreachMessage).slice(1, -1); // Remove quotes and escape
+    
+    return `
+        <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 24px; border-radius: 12px; border-left: 4px solid var(--primary-blue); margin-top: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 16px;">
+                💬 Personalized Outreach Message
+                <button onclick="copyOutreachMessage('${copyData}', this)" 
+                        style="background: var(--primary-blue); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                    📋 Copy Message
+                </button>
+            </h4>
+            <div style="background: rgba(255, 255, 255, 0.9); padding: 18px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2); box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="color: var(--text-primary); line-height: 1.7; font-size: 15px;">
+                    "${escapedMessage}"
+                </div>
+            </div>
+            <div style="margin-top: 16px; padding: 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px; border: 1px dashed rgba(59, 130, 246, 0.3);">
+                <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.4;">
+                    <strong>💡 AI-Generated:</strong> This message was crafted based on the lead's profile content and your business requirements
+                </p>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Builds the upgrade prompt section (light analysis only)
+ */
+function buildUpgradePromptSection() {
+    return `
+        <div style="background: linear-gradient(135deg, #FFF7ED, #FED7AA); padding: 24px; border-radius: 12px; border-left: 4px solid var(--warning); margin-top: 24px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div style="font-size: 32px; margin-bottom: 12px;">🚀</div>
+            <h4 style="color: var(--text-primary); margin-bottom: 12px; font-size: 18px;">
+                Unlock Premium Insights
+            </h4>
+            <p style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; max-width: 400px; margin-left: auto; margin-right: auto;">
+                Deep analysis provides detailed engagement metrics, niche-fit scoring, personalized outreach messages, and actionable selling points to maximize your conversion potential.
+            </p>
+            <div style="margin-bottom: 20px;">
+                <div style="display: inline-flex; gap: 16px; font-size: 14px; color: var(--text-secondary);">
+                    <span>✓ Engagement Analysis</span>
+                    <span>✓ Niche Scoring</span>
+                    <span>✓ Custom Messages</span>
+                </div>
+            </div>
+            <button onclick="showAnalysisModal()" 
+                    style="background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);"
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)'">
+                🔍 Run Deep Analysis
+            </button>
+        </div>
+    `;
+}
+
+/**
+ * Utility function to safely copy outreach message to clipboard
+ * @param {string} message - The message to copy
+ * @param {HTMLElement} button - The button element that was clicked
+ */
+async function copyOutreachMessage(message, button) {
     try {
-        await navigator.clipboard.writeText(text);
-        const originalText = button.textContent;
-        button.textContent = '✅ Copied!';
-        button.style.background = 'var(--accent-teal)';
+        await navigator.clipboard.writeText(message);
+        
+        const originalText = button.innerHTML;
+        const originalStyle = button.style.background;
+        
+        button.innerHTML = '✅ Copied!';
+        button.style.background = 'var(--success)';
+        button.disabled = true;
         
         setTimeout(() => {
-            button.textContent = originalText;
-            button.style.background = 'var(--primary-blue)';
+            button.innerHTML = originalText;
+            button.style.background = originalStyle;
+            button.disabled = false;
         }, 2000);
-    } catch (err) {
-        console.error('Failed to copy text:', err);
+        
+        // Show success message
+        showMessage('Outreach message copied to clipboard', 'success');
+        
+        // Track analytics
+        if (window.analytics) {
+            window.analytics.track('Outreach Message Copied', {
+                userId: currentUser?.id,
+                messageLength: message.length
+            });
+        }
+        
+    } catch (error) {
+        console.error('Failed to copy message:', error);
+        showMessage('Failed to copy message. Please try selecting and copying manually.', 'error');
+        
+        // Fallback: select the text
+        try {
+            const messageElement = button.parentElement.nextElementSibling.firstElementChild;
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(messageElement);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } catch (fallbackError) {
+            console.error('Fallback selection also failed:', fallbackError);
+        }
     }
 }
+
+/**
+ * Utility functions for formatting and escaping
+ */
+function formatScore(score) {
+    if (score === null || score === undefined || score === '') {
+        return 'N/A';
+    }
+    return `${score}/100`;
+}
+
+function formatDate(dateString) {
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (error) {
+        console.error('Date formatting error:', error);
+        return 'Invalid date';
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Make the copy function globally available
+window.copyOutreachMessage = copyOutreachMessage;
+
 
 // Delete lead from database
 async function deleteLead(leadId) {
