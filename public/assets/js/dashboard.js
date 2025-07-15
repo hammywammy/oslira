@@ -9,7 +9,7 @@ async function copyText(text) {
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
         textArea.value = text;
-        document.body.appendChild(textArea);
+        document.body.appendChild(textArea); 
         textArea.focus();
         textArea.select();
         try {
