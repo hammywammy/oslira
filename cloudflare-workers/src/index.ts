@@ -387,56 +387,154 @@ app.post('/analyze', async c => {
 
     // 3. Scrape Instagram profile via Apify
     console.log('Starting Instagram scraping via Apify');
-    const scrapeActorId = data.analysis_type === 'light' 
-      ? 'dSCLg0C3YEZ83HzYX'  // Light scraper
-      : 'shu8hvrXbJbY3Eb9W'; // Deep scraper
-
-    const scrapePayload = data.analysis_type === 'light'
-      ? { usernames: [username] }
-      : { directUrls: [`https://instagram.com/${username}/`], resultsLimit: 1 };
-
-    const profileData: ProfileData = (await callWithRetry(
-      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scrapePayload)
-      }
-    ))[0];
-
-    if (!profileData || !profileData.username) {
-      console.log('No profile data returned from scraper');
-      return c.json({ error: 'Could not retrieve profile data. Please check the username and try again.' }, 400);
+    
+    if (!c.env.APIFY_API_TOKEN) {
+      console.log('APIFY_API_TOKEN not configured');
+      return c.json({ 
+        error: 'Profile scraping service not configured. Please contact support.',
+        details: 'APIFY_API_TOKEN missing'
+      }, 500);
     }
+    
+    // Use your specific Apify task IDs
+    const scrapeTaskId = data.analysis_type === 'light' 
+      ? 'WYaBAx4D8LrNG7wkO'  // hamzaw/instagram-scraper-task (light)
+      : 'gxCOuEGPRiP20kBzQ'; // hamzaw/instagram-profile-scraper-task (deep)
 
-    console.log(`Profile scraped successfully: @${profileData.username}`);
+    // Prepare input payload based on task type
+    const scrapeInput = data.analysis_type === 'light'
+      ? { 
+          usernames: [username],
+          resultsType: "details",
+          resultsLimit: 1
+        }
+      : { 
+          directUrls: [`https://instagram.com/${username}/`], 
+          resultsLimit: 1,
+          addParentData: false
+        };
+
+    let profileData: ProfileData;
+    
+    try {
+      console.log(`Using Apify task: ${scrapeTaskId} with input:`, scrapeInput);
+      
+      const scrapeResponse = await callWithRetry(
+        `https://api.apify.com/v2/actor-tasks/${scrapeTaskId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(scrapeInput)
+        }
+      );
+
+      console.log('Apify response received:', scrapeResponse?.length, 'items');
+
+      profileData = scrapeResponse[0];
+      
+      if (!profileData) {
+        console.log('No profile data returned from scraper');
+        return c.json({ 
+          error: 'Could not find this Instagram profile. Please check the username and make sure the profile exists and is public.',
+          details: 'Profile not found or private'
+        }, 400);
+      }
+
+      // Normalize the profile data structure from different scrapers
+      const normalizedProfile: ProfileData = {
+        username: profileData.username || username,
+        fullName: profileData.fullName || profileData.full_name || profileData.name,
+        biography: profileData.biography || profileData.bio || profileData.description,
+        followersCount: profileData.followersCount || profileData.followers_count || profileData.followers || 0,
+        followingCount: profileData.followingCount || profileData.following_count || profileData.following || 0,
+        postsCount: profileData.postsCount || profileData.posts_count || profileData.posts || 0,
+        isVerified: profileData.isVerified || profileData.is_verified || profileData.verified || false,
+        private: profileData.private || profileData.is_private || false,
+        profilePicUrl: profileData.profilePicUrl || profileData.profile_pic_url || profileData.profilePicture,
+        externalUrl: profileData.externalUrl || profileData.external_url || profileData.website,
+        businessCategory: profileData.businessCategory || profileData.business_category || profileData.category
+      };
+
+      profileData = normalizedProfile;
+
+      if (!profileData.username) {
+        console.log('Invalid profile data structure:', profileData);
+        return c.json({ 
+          error: 'Retrieved profile data is incomplete. The profile may be private or temporarily unavailable.',
+          details: 'Invalid profile data structure'
+        }, 400);
+      }
+
+      console.log(`Profile scraped successfully: @${profileData.username} (${profileData.followersCount} followers)`);
+      
+    } catch (scrapeError) {
+      console.error('Scraping error:', scrapeError);
+      
+      // Provide more specific error messages based on the error
+      let errorMessage = 'Failed to retrieve profile data. The profile may be private, deleted, or temporarily unavailable.';
+      
+      if (scrapeError.message.includes('404')) {
+        errorMessage = 'Instagram profile not found. Please check the username is correct.';
+      } else if (scrapeError.message.includes('403')) {
+        errorMessage = 'This Instagram profile is private or access is restricted.';
+      } else if (scrapeError.message.includes('429')) {
+        errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
+      } else if (scrapeError.message.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      }
+      
+      return c.json({ 
+        error: errorMessage,
+        details: scrapeError.message
+      }, 400);
+    }
 
     // 4. AI Analysis with OpenAI
     console.log('Starting AI analysis with OpenAI');
+    
+    if (!c.env.OPENAI_KEY) {
+      console.log('OPENAI_KEY not configured');
+      return c.json({ 
+        error: 'AI analysis service not configured. Please contact support.',
+        details: 'OPENAI_KEY missing'
+      }, 500);
+    }
+    
     const prompt = data.analysis_type === 'light'
       ? makeLightPrompt(profileData, business)
       : makeDeepPrompt(profileData, business);
 
-    const openaiResponse = await callWithRetry(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${c.env.OPENAI_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.3,
-          max_tokens: 1500,
-          response_format: { type: 'json_object' }
-        })
-      }
-    );
+    let analysisResult;
+    
+    try {
+      const openaiResponse = await callWithRetry(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${c.env.OPENAI_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.3,
+            max_tokens: 1500,
+            response_format: { type: 'json_object' }
+          })
+        }
+      );
 
-    const analysisResult = JSON.parse(openaiResponse.choices[0].message.content);
-    console.log('OpenAI analysis completed');
+      analysisResult = JSON.parse(openaiResponse.choices[0].message.content);
+      console.log('OpenAI analysis completed');
+      
+    } catch (aiError) {
+      console.error('AI analysis error:', aiError);
+      return c.json({ 
+        error: 'AI analysis failed. Please try again.',
+        details: aiError.message
+      }, 500);
+    }
 
     // 5. Generate personalized message for deep analysis
     let outreachMessage = '';
