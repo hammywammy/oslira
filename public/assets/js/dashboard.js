@@ -189,6 +189,8 @@ async function checkAuth() {
     }
 }
 // Load user subscription and credit data
+// Load user subscription and credit data
+// Load user subscription and credit data
 async function loadUserData() {
     if (!supabaseClient || !currentUser) {
         updateSubscriptionUI('free', 'active', 0);
@@ -208,18 +210,10 @@ async function loadUserData() {
             return;
         }
 
-        const { data: balanceData, error: balanceError } = await supabaseClient
-            .from('credit_balances')
-            .select('balance')
-            .eq('user_id', currentUser.id)
-            .maybeSingle();
-
-        let userCredits = user.credits || 0;
-        if (!balanceError && balanceData) {
-            userCredits = balanceData.balance;
-        }
-
+        // Use credits directly from users table
+        const userCredits = user.credits || 0;
         updateSubscriptionUI(user.subscription_plan, user.subscription_status, userCredits);
+        
     } catch (error) {
         console.error('Error loading user data:', error);
         updateSubscriptionUI('free', 'active', 0);
