@@ -9,7 +9,6 @@ export default async (request, context) => {
     supabaseUrl: Netlify.env.get('SUPABASE_URL'),
     supabaseAnonKey: Netlify.env.get('SUPABASE_ANON_KEY'),
     workerUrl: Netlify.env.get('WORKER_URL')
-    // DO NOT expose: openAiKey, claudeKey, apifyToken, stripeSecretKey, stripeWebhookSecret
   };
 
   return new Response(JSON.stringify(config), {
