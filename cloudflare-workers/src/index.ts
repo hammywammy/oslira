@@ -252,6 +252,16 @@ function validateRequest(body: AnalysisRequest): { isValid: boolean; errors: str
     }
   };
 }
+const validation = validateRequest(body);
+
+if (!validation.isValid) {
+  console.error('Validation errors:', validation.errors);
+  return c.json({
+    error: 'Invalid request parameters',
+    details: validation.errors
+  }, 400);
+}
+
 
 // Light analysis prompt - Updated to use correct business fields
 function generateLightPrompt(profile: ProfileData, business: BusinessProfile): string {
