@@ -631,12 +631,12 @@ async function generateOutreachMessage(
             'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            model: 'claude-3-sonnet-20240229',
-            messages: [{ role: 'user', content: messagePrompt }],
-            temperature: 0.7,
-            max_tokens: 1000
-          })
+body: JSON.stringify({
+  model: 'claude-3-5-sonnet-20241022',  // <-- NEW MODEL NAME
+  messages: [{ role: 'user', content: messagePrompt }],
+  temperature: 0.7,
+  max_tokens: 1000
+})
         },
         3,
         1500,
