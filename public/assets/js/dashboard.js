@@ -1,6 +1,7 @@
 // Global configuration and state
 window.CONFIG = {};
 // Replace your existing copyText function with this:
+// Add this near the top of your dashboard.js file, after the global variables
 async function copyText(text) {
     try {
         await navigator.clipboard.writeText(text);
@@ -21,10 +22,14 @@ async function copyText(text) {
         document.body.removeChild(textArea);
     }
 }
+
+// Make it globally available
+window.copyText = copyText;
 async function loadConfig() {
   try {
     console.log('🔧 Loading configuration...');
     
+    // Use /config for edge functions, not /.netlify/functions/config
     const res = await fetch('/config');
     if (!res.ok) {
       throw new Error(`Config failed: ${res.status}`);
@@ -62,6 +67,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Load config first - this will throw if it fails
         await loadConfig();
         
+        // Validate config before proceeding
+        if (!window.CONFIG.supabaseUrl || !window.CONFIG.supabaseAnonKey) {
+            throw new Error('Configuration validation failed');
+        }
+        
         // Initialize Supabase with loaded config
         supabaseClient = window.supabase.createClient(
             window.CONFIG.supabaseUrl,
@@ -73,15 +83,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     } catch (error) {
         console.error('Dashboard initialization failed:', error);
         
+        // Show detailed error for debugging
+        console.error('Config state:', window.CONFIG);
+        
         // Show error UI
         document.body.innerHTML = `
             <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #f8f9fa;">
                 <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px;">
                     <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
                     <h2 style="color: #dc2626; margin-bottom: 16px;">Configuration Error</h2>
-                    <p style="color: #6b7280; margin-bottom: 24px;">
-                        Unable to load application configuration. Please contact support.
+                    <p style="color: #6b7280; margin-bottom: 16px;">
+                        ${error.message}
                     </p>
+                    <details style="text-align: left; margin: 16px 0; padding: 12px; background: #f3f4f6; border-radius: 6px;">
+                        <summary>Debug Info</summary>
+                        <pre style="font-size: 12px; margin: 8px 0;">${JSON.stringify(window.CONFIG, null, 2)}</pre>
+                    </details>
                     <button onclick="window.location.reload()" 
                             style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
                         Retry
@@ -91,7 +108,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         `;
     }
 });
-
 
 // Show fallback UI for demo mode
 function showFallbackUI() {
