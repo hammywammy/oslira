@@ -2154,15 +2154,14 @@
                 form.classList.add('loading');
                 
                 const profileUrl = `https://instagram.com/${username}`;
-                const requestBody = {
-                    profile_url: profileUrl,
-                    username: username,
-                    analysis_type: analysisType,
-                    type: analysisType,
-                    business_id: businessId,
-                    user_id: currentUser.id,
-                    platform: 'instagram'
-                };
+const requestBody = {
+  profile_url: profileUrl,   // or username: username (but pick one!)
+  analysis_type: analysisType,  // "deep" or "light"
+  business_id: businessId,
+  user_id: currentUser.id,      // keep explicitly for traceability
+  platform: 'instagram'         // explicit platform declaration
+};
+
                 
                 console.log('🚀 Making request to: /api/analyze');
 
