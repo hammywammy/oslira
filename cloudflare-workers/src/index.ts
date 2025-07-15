@@ -863,39 +863,93 @@ app.get('/debug-env', c => {
 });
 
 // Main Analyze Endpoint
+// Add this enhanced error handling and debugging to your /analyze endpoint
+
 app.post('/analyze', async c => {
-  console.log('Analysis request received');
-
-  const auth = c.req.header('Authorization')?.replace('Bearer ', '');
-  if (!auth) {
-    return c.json({ error: 'Missing Authorization header' }, 401);
-  }
-
-  const userId = await verifyJWT(auth);
-  if (!userId) {
-    return c.json({ error: 'Invalid or expired token' }, 401);
-  }
-
-  console.log(`Authenticated user: ${userId}`);
-
-  const body = await c.req.json<AnalysisRequest>();
-  const { valid, errors, data } = normalizeRequest(body);
-  if (!valid) {
-    return c.json({ error: 'Invalid request', details: errors }, 400);
-  }
-
-  const username = extractUsername(data.profile_url!);
-  if (!username) {
-    return c.json({ error: 'Invalid username format' }, 400);
-  }
-
-  console.log(`Processing analysis for username: ${username}, type: ${data.analysis_type}`);
+  const startTime = Date.now();
+  console.log('=== Analysis request started ===', new Date().toISOString());
 
   try {
-    const { user, credits: currentCredits } = await fetchUserAndCredits(userId, c.env);
-    const cost = data.analysis_type === 'deep' ? 2 : 1;
+    // 1. Enhanced Authentication Debug
+    const auth = c.req.header('Authorization')?.replace('Bearer ', '');
+    if (!auth) {
+      console.error('❌ Missing Authorization header');
+      return c.json({ error: 'Missing Authorization header' }, 401);
+    }
 
+    console.log('🔐 Auth token present, verifying...');
+    const userId = await verifyJWT(auth);
+    if (!userId) {
+      console.error('❌ JWT verification failed');
+      return c.json({ error: 'Invalid or expired token' }, 401);
+    }
+    console.log(`✅ User authenticated: ${userId}`);
+
+    // 2. Enhanced Request Parsing with Detailed Logging
+    let body;
+    try {
+      body = await c.req.json<AnalysisRequest>();
+      console.log('📝 Request body parsed:', JSON.stringify(body, null, 2));
+    } catch (parseError: any) {
+      console.error('❌ JSON parsing failed:', parseError.message);
+      return c.json({ error: 'Invalid JSON in request body', details: parseError.message }, 400);
+    }
+
+    const { valid, errors, data } = normalizeRequest(body);
+    if (!valid) {
+      console.error('❌ Request validation failed:', errors);
+      return c.json({ error: 'Invalid request', details: errors }, 400);
+    }
+
+    const username = extractUsername(data.profile_url!);
+    if (!username) {
+      console.error('❌ Invalid username extracted from:', data.profile_url);
+      return c.json({ error: 'Invalid username format' }, 400);
+    }
+
+    console.log(`📊 Processing analysis: username=${username}, type=${data.analysis_type}`);
+
+    // 3. Enhanced Environment Variable Checks
+    const requiredEnvVars = {
+      SUPABASE_URL: c.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE: c.env.SUPABASE_SERVICE_ROLE,
+      OPENAI_KEY: c.env.OPENAI_KEY,
+      APIFY_API_TOKEN: c.env.APIFY_API_TOKEN
+    };
+
+    const missingEnvVars = Object.entries(requiredEnvVars)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingEnvVars.length > 0) {
+      console.error('❌ Missing environment variables:', missingEnvVars);
+      return c.json({ 
+        error: 'Service configuration error', 
+        details: `Missing: ${missingEnvVars.join(', ')}` 
+      }, 500);
+    }
+    console.log('✅ All required environment variables present');
+
+    // 4. Enhanced User and Credits Fetch with Detailed Error Handling
+    let user, currentCredits;
+    try {
+      console.log('💳 Fetching user and credits...');
+      const result = await fetchUserAndCredits(userId, c.env);
+      user = result.user;
+      currentCredits = result.credits;
+      console.log(`✅ User found: credits=${currentCredits}`);
+    } catch (userError: any) {
+      console.error('❌ fetchUserAndCredits failed:', userError.message);
+      console.error('Stack trace:', userError.stack);
+      return c.json({ 
+        error: 'Failed to verify user account', 
+        details: userError.message 
+      }, 500);
+    }
+
+    const cost = data.analysis_type === 'deep' ? 2 : 1;
     if (currentCredits < cost) {
+      console.log(`❌ Insufficient credits: ${currentCredits} < ${cost}`);
       return c.json({
         error: 'Insufficient credits',
         available: currentCredits,
@@ -903,19 +957,82 @@ app.post('/analyze', async c => {
       }, 402);
     }
 
+    // 5. Enhanced Business Profile Fetch
     if (!data.business_id) {
+      console.error('❌ Missing business_id');
       return c.json({ error: 'Business profile is required for analysis' }, 400);
     }
 
-    const business = await fetchBusinessProfile(data.business_id, userId, c.env);
-    const profileData = await scrapeInstagramProfile(username, data.analysis_type!, c.env);
-    const analysisResult = await performAIAnalysis(profileData, business, data.analysis_type!, c.env);
-
-    let outreachMessage = '';
-    if (data.analysis_type === 'deep') {
-      outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
+    let business;
+    try {
+      console.log('🏢 Fetching business profile...');
+      business = await fetchBusinessProfile(data.business_id, userId, c.env);
+      console.log(`✅ Business profile found: ${business.business_name}`);
+    } catch (businessError: any) {
+      console.error('❌ fetchBusinessProfile failed:', businessError.message);
+      return c.json({ 
+        error: 'Failed to load business profile', 
+        details: businessError.message 
+      }, 500);
     }
 
+    // 6. Enhanced Profile Scraping with Timeout and Retry Logic
+    let profileData;
+    try {
+      console.log('🕷️ Starting profile scraping...');
+      profileData = await scrapeInstagramProfile(username, data.analysis_type!, c.env);
+      console.log(`✅ Profile scraped: @${profileData.username}, followers=${profileData.followersCount}`);
+    } catch (scrapeError: any) {
+      console.error('❌ scrapeInstagramProfile failed:', scrapeError.message);
+      console.error('Stack trace:', scrapeError.stack);
+      
+      // Return specific error messages for different scraping failures
+      let errorMessage = 'Failed to retrieve profile data';
+      if (scrapeError.message.includes('not found')) {
+        errorMessage = 'Instagram profile not found';
+      } else if (scrapeError.message.includes('private')) {
+        errorMessage = 'This Instagram profile is private';
+      } else if (scrapeError.message.includes('rate limit') || scrapeError.message.includes('429')) {
+        errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
+      } else if (scrapeError.message.includes('timeout')) {
+        errorMessage = 'Profile scraping timed out. Please try again.';
+      }
+      
+      return c.json({ 
+        error: errorMessage, 
+        details: scrapeError.message 
+      }, 500);
+    }
+
+    // 7. Enhanced AI Analysis with Better Error Handling
+    let analysisResult;
+    try {
+      console.log('🤖 Starting AI analysis...');
+      analysisResult = await performAIAnalysis(profileData, business, data.analysis_type!, c.env);
+      console.log(`✅ AI analysis complete: score=${analysisResult.score}`);
+    } catch (aiError: any) {
+      console.error('❌ performAIAnalysis failed:', aiError.message);
+      console.error('Stack trace:', aiError.stack);
+      return c.json({ 
+        error: 'AI analysis failed', 
+        details: aiError.message 
+      }, 500);
+    }
+
+    // 8. Enhanced Message Generation (only for deep analysis)
+    let outreachMessage = '';
+    if (data.analysis_type === 'deep') {
+      try {
+        console.log('💬 Generating outreach message...');
+        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
+        console.log(`✅ Message generated: ${outreachMessage.length} characters`);
+      } catch (messageError: any) {
+        console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
+        // Don't fail the entire request for message generation issues
+      }
+    }
+
+    // 9. Enhanced Database Operations
     const leadData = {
       user_id: userId,
       business_id: data.business_id,
@@ -941,19 +1058,44 @@ app.post('/analyze', async c => {
       };
     }
 
-    const leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
+    let leadId;
+    try {
+      console.log('💾 Saving to database...');
+      leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
+      console.log(`✅ Saved to database: leadId=${leadId}`);
+    } catch (saveError: any) {
+      console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
+      console.error('Stack trace:', saveError.stack);
+      return c.json({ 
+        error: 'Failed to save analysis results', 
+        details: saveError.message 
+      }, 500);
+    }
 
-    const newBalance = currentCredits - cost;
-    await updateCreditsAndTransaction(
-      userId,
-      cost,
-      newBalance,
-      `${data.analysis_type} analysis for @${profileData.username}`,
-      leadId,
-      c.env
-    );
+    // 10. Enhanced Credit Update
+    try {
+      console.log('🔄 Updating credits...');
+      const newBalance = currentCredits - cost;
+      await updateCreditsAndTransaction(
+        userId,
+        cost,
+        newBalance,
+        `${data.analysis_type} analysis for @${profileData.username}`,
+        leadId,
+        c.env
+      );
+      console.log(`✅ Credits updated: ${currentCredits} -> ${newBalance}`);
+    } catch (creditError: any) {
+      console.error('❌ updateCreditsAndTransaction failed:', creditError.message);
+      // This is critical - if credits aren't updated, we need to fail
+      return c.json({ 
+        error: 'Failed to update credits', 
+        details: creditError.message 
+      }, 500);
+    }
 
-    console.log('Analysis completed successfully');
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ Analysis completed successfully in ${totalTime}ms`);
 
     return c.json({
       success: true,
@@ -978,19 +1120,77 @@ app.post('/analyze', async c => {
       },
       credits: {
         used: cost,
-        remaining: newBalance
+        remaining: currentCredits - cost
+      },
+      debug: {
+        processing_time_ms: totalTime
       }
     });
 
   } catch (error: any) {
-    console.error('Analysis error:', error);
+    const totalTime = Date.now() - startTime;
+    console.error('❌ CRITICAL ERROR in /analyze endpoint:');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Processing time before error:', totalTime + 'ms');
+    
+    // Log the error type for better debugging
+    console.error('Error type:', error.constructor.name);
+    console.error('Error cause:', error.cause);
+
     return c.json({ 
       error: 'Analysis failed', 
-      message: error.message || 'Unknown error' 
+      message: error.message || 'Unknown error',
+      debug: {
+        error_type: error.constructor.name,
+        processing_time_ms: totalTime
+      }
     }, 500);
   }
 });
 
+// Enhanced utility function with better error handling
+async function fetchJson<T>(
+  url: string, 
+  init: RequestInit, 
+  timeoutMs: number = 15000
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    console.log(`🌐 Fetching: ${url}`);
+    const res = await fetch(url, { 
+      ...init, 
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`❌ HTTP ${res.status} from ${url}: ${text}`);
+      throw new Error(`HTTP ${res.status}: ${text}`);
+    }
+    
+    const data = await res.json();
+    console.log(`✅ Successful response from ${url}`);
+    return data;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    console.error(`❌ Fetch error for ${url}:`, error.message);
+    
+    if (error.name === 'AbortError') {
+      throw new Error(`Request timeout after ${timeoutMs}ms: ${url}`);
+    }
+    
+    if (error instanceof SyntaxError) {
+      throw new Error(`Invalid JSON response from ${url}: ${error.message}`);
+    }
+    
+    throw new Error(`Fetch failed for ${url}: ${error.message}`);
+  }
+}
 // Billing endpoints
 app.post('/billing/create-checkout-session', async c => {
   const auth = c.req.header('Authorization')?.replace('Bearer ', '');
