@@ -1,12 +1,17 @@
 [build]
-  publish = "public"
-  command = ""
+  publish        = "public"
+  command        = ""
   edge_functions = "netlify/edge-functions"
 
 [functions]
   directory = "netlify/edge-functions"
 
+# Your existing auth edge function for all /api/* routes
+[[edge_functions]]
+  function = "auth"
+  path     = "/api/*"
+
+# New config edge function for /api/config
 [[edge_functions]]
   function = "config"
   path     = "/api/config"
-
