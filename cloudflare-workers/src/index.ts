@@ -398,8 +398,8 @@ app.post('/analyze', async c => {
     
     // Use direct Apify actors instead of tasks
     const scrapeActorId = data.analysis_type === 'light' 
-      ? 'dSCLg0C3YEZ83HzYX'  // apify/instagram-profile-scraper (light)
-      : 'shu8hvrXbJbY3Eb9W'; // apify/instagram-scraper (deep)
+      ? 'dSCLg0C3YEZ83HzYX'  // apify/instagram-profile-scraper (light - usernames)
+      : 'shu8hvrXbJbY3Eb9W'; // apify/instagram-scraper (deep - URLs)
 
     // Prepare input payload based on actor type
     const scrapeInput = data.analysis_type === 'light'
@@ -411,7 +411,8 @@ app.post('/analyze', async c => {
       : { 
           directUrls: [`https://instagram.com/${username}/`], 
           resultsLimit: 1,
-          addParentData: false
+          addParentData: false,
+          enhanceUserSearchWithFacebookPage: false
         };
 
     let profileData: ProfileData;
@@ -538,53 +539,84 @@ app.post('/analyze', async c => {
 
     // 5. Generate personalized message for deep analysis
     let outreachMessage = '';
-    if (data.analysis_type === 'deep' && c.env.CLAUDE_KEY) {
-      console.log('Generating personalized message with Claude');
+    if (data.analysis_type === 'deep') {
+      console.log('Generating personalized message with OpenAI (fallback if Claude unavailable)');
+      
       try {
-        const messagePrompt = makeMessagePrompt(profileData, business, analysisResult);
-        
-        const claudeResponse = await callWithRetry(
-          'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'x-api-key': c.env.CLAUDE_KEY,
-              'anthropic-version': '2023-06-01',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: 'claude-3-sonnet-20240229',
-              messages: [{ role: 'user', content: messagePrompt }],
-              temperature: 0.7,
-              max_tokens: 1000
-            })
-          }
-        );
+        // Try Claude first if available
+        if (c.env.CLAUDE_KEY) {
+          console.log('Attempting message generation with Claude');
+          const messagePrompt = makeMessagePrompt(profileData, business, analysisResult);
+          
+          const claudeResponse = await callWithRetry(
+            'https://api.anthropic.com/v1/messages',
+            {
+              method: 'POST',
+              headers: {
+                'x-api-key': c.env.CLAUDE_KEY,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'claude-3-sonnet-20240229',
+                messages: [{ role: 'user', content: messagePrompt }],
+                temperature: 0.7,
+                max_tokens: 1000
+              })
+            }
+          );
 
-        // Handle both old and new Claude API response formats
-        let messageText = '';
-        if (claudeResponse.completion) {
-          // Old format
-          messageText = claudeResponse.completion;
-        } else if (claudeResponse.content && claudeResponse.content[0] && claudeResponse.content[0].text) {
-          // New format
-          messageText = claudeResponse.content[0].text;
-        }
-
-        if (messageText) {
-          try {
-            const messageResult = JSON.parse(messageText);
-            outreachMessage = messageResult.message || '';
-          } catch (parseError) {
-            // If JSON parsing fails, use the raw text
-            outreachMessage = messageText;
+          // Handle both old and new Claude API response formats
+          let messageText = '';
+          if (claudeResponse.completion) {
+            messageText = claudeResponse.completion;
+          } else if (claudeResponse.content && claudeResponse.content[0] && claudeResponse.content[0].text) {
+            messageText = claudeResponse.content[0].text;
           }
+
+          if (messageText) {
+            try {
+              const messageResult = JSON.parse(messageText);
+              outreachMessage = messageResult.message || '';
+            } catch (parseError) {
+              outreachMessage = messageText;
+            }
+          }
+          
+          console.log('Claude message generated successfully');
         }
         
-        console.log('Personalized message generated');
+        // Fallback to OpenAI if Claude fails or unavailable
+        if (!outreachMessage && c.env.OPENAI_KEY) {
+          console.log('Using OpenAI for message generation');
+          const messagePrompt = makeMessagePrompt(profileData, business, analysisResult);
+          
+          const openaiMessageResponse = await callWithRetry(
+            'https://api.openai.com/v1/chat/completions',
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${c.env.OPENAI_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [{ role: 'user', content: messagePrompt }],
+                temperature: 0.7,
+                max_tokens: 800,
+                response_format: { type: 'json_object' }
+              })
+            }
+          );
+
+          const messageResult = JSON.parse(openaiMessageResponse.choices[0].message.content);
+          outreachMessage = messageResult.message || '';
+          console.log('OpenAI message generated successfully');
+        }
+        
       } catch (error) {
-        console.log('Failed to generate message with Claude:', error);
-        // Continue without message - don't fail the entire analysis
+        console.log('Failed to generate message:', error);
+        // Don't fail the entire analysis - continue without message
       }
     }
 
@@ -686,18 +718,22 @@ app.post('/analyze', async c => {
       success: true,
       lead_id: leadId,
       analysis: {
-        score: analysisResult.score,
-        summary: analysisResult.summary,
-        niche_fit: analysisResult.niche_fit,
-        engagement_score: analysisResult.engagement_score,
-        selling_points: analysisResult.selling_points,
-        reasons: analysisResult.reasons
+        score: analysisResult.score || 0,
+        summary: analysisResult.summary || '',
+        niche_fit: analysisResult.niche_fit || analysisResult.score_niche_fit || 0,
+        engagement_score: analysisResult.engagement_score || 0,
+        selling_points: analysisResult.selling_points || [],
+        reasons: analysisResult.reasons || []
       },
       outreach_message: outreachMessage,
       profile: {
         username: profileData.username,
+        full_name: profileData.fullName,
         followers: profileData.followersCount,
-        verified: profileData.isVerified
+        following: profileData.followingCount,
+        posts: profileData.postsCount,
+        verified: profileData.isVerified,
+        bio: profileData.biography
       },
       credits: {
         used: cost,
