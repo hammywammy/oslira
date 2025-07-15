@@ -694,7 +694,8 @@ async function submitAnalysis(event) {
         if (sessionError || !session) {
             throw new Error('Please log in again to continue');
         }
-        
+
+        // Debug the request
         const requestBody = {
             profile_url: profileUrl,
             analysis_type: analysisType,
@@ -702,6 +703,9 @@ async function submitAnalysis(event) {
             user_id: currentUser.id,
             platform: 'instagram'
         };
+        
+        console.log('📤 Sending request:', requestBody);
+        console.log('🔑 Auth token length:', session.access_token?.length);
         
         const response = await fetch(window.CONFIG.workerUrl + '/analyze', {
             method: 'POST',
@@ -712,21 +716,38 @@ async function submitAnalysis(event) {
             body: JSON.stringify(requestBody)
         });
         
-        const result = await response.json();
+        console.log('📥 Response status:', response.status);
+        
+        let result;
+        try {
+            result = await response.json();
+        } catch (parseError) {
+            console.error('Failed to parse response as JSON:', parseError);
+            const responseText = await response.text();
+            console.error('Raw response:', responseText);
+            throw new Error('Invalid response from server');
+        }
+        
+        console.log('📥 Response data:', result);
         
         if (!response.ok) {
-            let errorMessage = result.error || `HTTP ${response.status}`;
+            let errorMessage = result.error || result.message || `HTTP ${response.status}`;
             
+            // Handle specific error cases
             if (response.status === 400) {
                 if (result.error && result.error.includes('profile data')) {
                     errorMessage = 'Could not find this Instagram profile. Please check the username and make sure the profile is public.';
                 } else if (result.error && result.error.includes('business')) {
                     errorMessage = 'Please select a business profile before analyzing.';
+                } else if (result.error && result.error.includes('username')) {
+                    errorMessage = 'Invalid username format. Please enter a valid Instagram username.';
                 }
+            } else if (response.status === 401) {
+                errorMessage = 'Authentication failed. Please refresh the page and try again.';
             } else if (response.status === 402) {
-                errorMessage = `Insufficient credits. You need ${result.required} credits but only have ${result.available}. Please upgrade your plan.`;
+                errorMessage = `Insufficient credits. You need ${result.required || 'more'} credits but only have ${result.available || 0}. Please upgrade your plan.`;
             } else if (response.status === 500) {
-                errorMessage = 'Our analysis service is temporarily unavailable. Please try again in a few minutes.';
+                errorMessage = `Server error: ${result.error || result.message || 'Our analysis service is temporarily unavailable. Please try again in a few minutes.'}`;
             }
             
             throw new Error(errorMessage);
@@ -750,9 +771,8 @@ async function submitAnalysis(event) {
         submitBtn.disabled = false;
     }
 }
-
 // Validate Instagram username
-function validateUsername(username) {
+async function validateUsername(username) {
     const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
     const hasConsecutivePeriods = /\.{2,}/.test(username);
     const startsOrEndsWithPeriod = /^\./.test(username) || /\.$/.test(username);
