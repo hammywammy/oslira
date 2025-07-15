@@ -56,6 +56,7 @@ interface AnalysisRequest {
 interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE: string;
+  SUPABASE_ANON_KEY: string;  
   OPENAI_KEY: string;
   CLAUDE_KEY?: string;
   APIFY_API_TOKEN: string;
@@ -248,14 +249,16 @@ app.get('/health', c => c.json({
   timestamp: new Date().toISOString()
 }));
 
-// Configuration endpoint for frontend
 app.get('/config', c => {
+  // c.req.url might be e.g. "https://your-worker.workers.dev/config"
+  const full = c.req.url.replace(/\/config$/, '');
   return c.json({
-    supabaseUrl: c.env.SUPABASE_URL,
-    supabaseAnonKey: 'your-anon-key', // This should be the anon key, not service role
-    workerUrl: c.req.url.split('/config')[0]
+    supabaseUrl:     c.env.SUPABASE_URL,
+    supabaseAnonKey: c.env.SUPABASE_ANON_KEY,  // ← comma added
+    workerUrl:       full
   });
 });
+
 
 // Debug Environment
 app.get('/debug-env', c => {
@@ -317,71 +320,74 @@ app.post('/analyze', async c => {
   try {
     // 1. Fetch user and check credits
     console.log('Fetching user data and checking credits');
-    const usersResponse = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`,
-      { headers: sbHeaders }
-    );
+// 1. Fetch user and check credits (raw-array pattern)
+const users: User[] = await fetch(
+  `${c.env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`,
+  { headers: sbHeaders }
+).then(async res => {
+  if (!res.ok) throw new Error(`Failed to fetch user: ${res.status}`);
+  return res.json();
+});
+if (!users.length) {
+  console.log('User not found');
+  return c.json({ error: 'User not found' }, 404);
+}
+const user = users[0];
 
-    if (!usersResponse.ok) {
-      throw new Error(`Failed to fetch user: ${usersResponse.status}`);
-    }
-
-    const users: User[] = await usersResponse.json();
-    if (!users.length) {
-      console.log('User not found');
-      return c.json({ error: 'User not found' }, 404);
-    }
-
-    const user = users[0];
     const cost = data.analysis_type === 'deep' ? 2 : 1;
 
     // Check credit balance
-    let currentCredits = user.credits || 0;
-    
-    try {
-      const { data: creditBalance } = await fetch(
-        `${c.env.SUPABASE_URL}/rest/v1/credit_balances?user_id=eq.${userId}&select=balance`,
-        { headers: sbHeaders }
-      ).then(res => res.json());
-
-      if (creditBalance && creditBalance.length > 0) {
-        currentCredits = creditBalance[0].balance;
-      }
-    } catch (balanceError) {
-      console.log('Could not fetch credit balance, using user credits:', balanceError);
-      // Fall back to user.credits
+// Check credit balance
+let currentCredits = user.credits || 0;
+try {
+  // ✅ NEW: treat the response as a raw array
+  const creditRows: { balance: number }[] = await fetch(
+    `${c.env.SUPABASE_URL}/rest/v1/credit_balances?user_id=eq.${userId}&select=balance`,
+    { headers: sbHeaders }
+  ).then(async res => {
+    if (!res.ok) {
+      throw new Error(`Failed to load credit balance: ${res.status}`);
     }
+    return res.json();
+  });
 
-    if (currentCredits < cost) {
-      console.log(`Insufficient credits: ${currentCredits} < ${cost}`);
-      return c.json({ 
-        error: 'Insufficient credits', 
-        available: currentCredits, 
-        required: cost 
-      }, 402);
-    }
+  if (creditRows.length > 0) {
+    currentCredits = creditRows[0].balance;
+  }
+} catch (balanceError) {
+  console.log('Could not fetch credit balance, using user credits:', balanceError);
+  // fall back to user.credits
+}
 
-    console.log(`Credits check passed: ${currentCredits} >= ${cost}`);
+if (currentCredits < cost) {
+  console.log(`Insufficient credits: ${currentCredits} < ${cost}`);
+  return c.json({
+    error: 'Insufficient credits',
+    available: currentCredits,
+    required: cost
+  }, 402);
+}
+
+console.log(`Credits check passed: ${currentCredits} >= ${cost}`);
+
+
 
     // 2. Fetch business profile if provided
-    let business: BusinessProfile | null = null;
-    if (data.business_id) {
-      console.log(`Fetching business profile: ${data.business_id}`);
-      const businessResponse = await fetch(
-        `${c.env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${data.business_id}&user_id=eq.${userId}&select=*`,
-        { headers: sbHeaders }
-      );
-
-      if (businessResponse.ok) {
-        const businesses: BusinessProfile[] = await businessResponse.json();
-        business = businesses[0] || null;
-      }
-    }
-
-    if (!business) {
-      console.log('Business profile not found or not provided');
-      return c.json({ error: 'Business profile is required for analysis' }, 400);
-    }
+let business: BusinessProfile | null = null;
+if (data.business_id) {
+  const businesses: BusinessProfile[] = await fetch(
+    `${c.env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${data.business_id}&user_id=eq.${userId}&select=*`,
+    { headers: sbHeaders }
+  ).then(async res => {
+    if (!res.ok) throw new Error(`Failed to fetch business: ${res.status}`);
+    return res.json();
+  });
+  business = businesses[0] || null;
+}
+if (!business) {
+  console.log('Business profile not found or not provided');
+  return c.json({ error: 'Business profile is required for analysis' }, 400);
+}
 
     console.log(`Using business profile: ${business.business_name}`);
 
@@ -633,56 +639,69 @@ app.post('/analyze', async c => {
       created_at: new Date().toISOString()
     };
 
-    const leadResponse = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/leads`,
+// 6. Insert lead (with return=representation)
+const leadResp = await fetch(
+  `${c.env.SUPABASE_URL}/rest/v1/leads`,
+  {
+    method: 'POST',
+    headers: { ...sbHeaders, Prefer: 'return=representation' },
+    body: JSON.stringify(leadInsertData),
+  }
+);
+if (!leadResp.ok) {
+  throw new Error(`Failed to insert lead: ${leadResp.status}`);
+}
+const [inserted] = await leadResp.json();
+const leadId = inserted.id;
+
+// 7. Insert analysis (deep only), rolling back on error
+// 7. Insert lead analysis for deep analysis (with rollback)
+if (data.analysis_type === 'deep' && leadId) {
+  // 7a. Build the payload before using it
+  const analysisData = {
+    lead_id: leadId,
+    user_id: userId,
+    analysis_type: 'deep',
+    engagement_score: analysisResult.engagement_score || null,
+    score_niche_fit:   analysisResult.niche_fit        || analysisResult.score_niche_fit || null,
+    score_total:       analysisResult.score             || 0,
+    ai_version_id:     'gpt-4o-2024',
+    outreach_message:  outreachMessage
+  };
+
+  // 7b. Attempt the insert…
+  try {
+    const analysisResp = await fetch(
+      `${c.env.SUPABASE_URL}/rest/v1/lead_analyses`,
       {
         method: 'POST',
-        headers: { ...sbHeaders, Prefer: 'return=representation' },
-        body: JSON.stringify(leadInsertData)
+        headers: sbHeaders,
+        body: JSON.stringify(analysisData),
       }
     );
-
-    if (!leadResponse.ok) {
-      throw new Error(`Failed to insert lead: ${leadResponse.status}`);
+    if (!analysisResp.ok) {
+      const txt = await analysisResp.text();
+      throw new Error(`Lead analysis insert failed: ${analysisResp.status} – ${txt}`);
     }
+  } catch (err) {
+    // 7c. Roll back the lead we just created
+    await fetch(
+      `${c.env.SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`,
+      { method: 'DELETE', headers: sbHeaders }
+    );
+    throw err;
+  }
 
-    const insertedLead = await leadResponse.json();
-    const leadId = insertedLead[0]?.id;
+  console.log('Lead analysis inserted');
+}
 
-    console.log(`Lead inserted with ID: ${leadId}`);
-
-    // 7. Insert lead analysis for deep analysis
-    if (data.analysis_type === 'deep' && leadId) {
-      console.log('Inserting lead analysis');
-      const analysisData = {
-        lead_id: leadId,
-        user_id: userId,
-        analysis_type: 'deep',
-        engagement_score: analysisResult.engagement_score || null,
-        score_niche_fit: analysisResult.niche_fit || null,
-        score_total: analysisResult.score || 0,
-        ai_version_id: 'gpt-4o-2024',
-        outreach_message: outreachMessage
-      };
-
-      await fetch(
-        `${c.env.SUPABASE_URL}/rest/v1/lead_analyses`,
-        {
-          method: 'POST',
-          headers: sbHeaders,
-          body: JSON.stringify(analysisData)
-        }
-      );
-
-      console.log('Lead analysis inserted');
-    }
 
     // 8. Update credit balance
     console.log('Updating credit balance');
     const newBalance = currentCredits - cost;
 
     // Update credit_balances table
-    await fetch(
+   const resp = await fetch(
       `${c.env.SUPABASE_URL}/rest/v1/credit_balances`,
       {
         method: 'POST',
@@ -692,11 +711,15 @@ app.post('/analyze', async c => {
           balance: newBalance
         })
       }
-    );
+    ); if (!resp.ok) {
+  const text = await resp.text();
+  console.error('credit_balances insert failed:', resp.status, text);
+  throw new Error('Could not write credit balances');
+}
 
     // 9. Record credit transaction
     console.log('Recording credit transaction');
-    await fetch(
+    const resp = await fetch(
       `${c.env.SUPABASE_URL}/rest/v1/credit_transactions`,
       {
         method: 'POST',
@@ -710,6 +733,11 @@ app.post('/analyze', async c => {
         })
       }
     );
+    if (!resp.ok) {
+  const text = await resp.text();
+  console.error('credit_transactions insert failed:', resp.status, text);
+  throw new Error('Could not write credit transactions');
+}
 
     console.log('Analysis completed successfully');
 
