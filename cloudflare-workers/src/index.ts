@@ -745,6 +745,21 @@ async function handleSubscriptionCreated(subscription: any, env: Env) {
       'Content-Type': 'application/json',
     };
 
+    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
+      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
+    };
+
+    const priceId = subscription.items.data[0]?.price?.id;
+    const planInfo = priceIdToPlan[priceId];
+    
+    if (!planInfo) {
+      console.log(`Unknown price ID: ${priceId}`);
+      return;
+    }
+
     await Promise.all([
       fetchJson(
         `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
@@ -752,9 +767,10 @@ async function handleSubscriptionCreated(subscription: any, env: Env) {
           method: 'PATCH',
           headers: supabaseHeaders,
           body: JSON.stringify({
-            subscription_plan: 'free',
-            subscription_status: 'canceled',
-            credits: 0
+            subscription_plan: planInfo.name,     // ✅ CORRECT
+            subscription_status: subscription.status, // ✅ CORRECT  
+            stripe_customer_id: subscription.customer,
+            credits: planInfo.credits              // ✅ CORRECT
           }),
         },
         10000
@@ -766,9 +782,9 @@ async function handleSubscriptionCreated(subscription: any, env: Env) {
           headers: supabaseHeaders,
           body: JSON.stringify({
             user_id,
-            amount: 0,
-            type: 'use',
-            description: 'Subscription canceled - credits reset',
+            amount: planInfo.credits,
+            type: 'add',
+            description: `Subscription created: ${planInfo.name} plan`,
             lead_id: null
           }),
         },
@@ -776,11 +792,11 @@ async function handleSubscriptionCreated(subscription: any, env: Env) {
       )
     ]);
 
-    console.log(`Subscription canceled for user ${user_id}`);
+    console.log(`Subscription created successfully for user ${user_id}`);
 
   } catch (err: any) {
-    console.error('handleSubscriptionCanceled error:', err.message);
-    throw new Error(`Failed to process subscription cancellation: ${err.message}`);
+    console.error('handleSubscriptionCreated error:', err.message);
+    throw new Error(`Failed to process subscription creation: ${err.message}`);
   }
 }
 
@@ -1457,6 +1473,91 @@ app.post('/billing/create-checkout-session', async c => {
     return c.json({ error: 'Failed to create checkout session' }, 500);
   }
 });
+async function handleSubscriptionUpdated(subscription: any, env: Env) {
+  try {
+    const { user_id } = subscription.metadata;
+    if (!user_id) {
+      console.log('No user_id in subscription metadata for update');
+      return;
+    }
+
+    console.log(`Processing subscription updated for user: ${user_id}`);
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
+      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
+    };
+
+    const priceId = subscription.items.data[0]?.price?.id;
+    const planInfo = priceIdToPlan[priceId];
+    
+    if (!planInfo) {
+      console.log(`Unknown price ID in update: ${priceId}`);
+      return;
+    }
+
+    // Only update if subscription is still active
+    if (subscription.status === 'active') {
+      await Promise.all([
+        fetchJson(
+          `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+          {
+            method: 'PATCH',
+            headers: supabaseHeaders,
+            body: JSON.stringify({
+              subscription_plan: planInfo.name,
+              subscription_status: subscription.status,
+              credits: planInfo.credits
+            }),
+          },
+          10000
+        ),
+        fetchJson(
+          `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+          {
+            method: 'POST',
+            headers: supabaseHeaders,
+            body: JSON.stringify({
+              user_id,
+              amount: planInfo.credits,
+              type: 'add',
+              description: `Subscription updated: ${planInfo.name} plan`,
+              lead_id: null
+            }),
+          },
+          10000
+        )
+      ]);
+    } else {
+      // Handle inactive subscription
+      await fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+        {
+          method: 'PATCH',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            subscription_status: subscription.status
+          }),
+        },
+        10000
+      );
+    }
+
+    console.log(`Subscription updated for user ${user_id} with status: ${subscription.status}`);
+
+  } catch (err: any) {
+    console.error('handleSubscriptionUpdated error:', err.message);
+    throw new Error(`Failed to process subscription update: ${err.message}`);
+  }
+}
 
 app.post('/billing/create-portal-session', async c => {
   const auth = c.req.header('Authorization')?.replace('Bearer ', '');
@@ -1573,7 +1674,63 @@ app.post('/stripe-webhook', async c => {
     return c.text('Webhook processing failed', 500);
   }
 });
+// Add this debug endpoint to your worker
+app.get('/test-scrape/:username', async c => {
+  const username = c.req.param('username');
+  const analysisType = c.req.query('type') || 'light';
+  
+  if (!c.env.APIFY_API_TOKEN) {
+    return c.json({ error: 'APIFY_API_TOKEN not configured' }, 500);
+  }
 
+  const scrapeActorId = analysisType === 'light' 
+    ? 'dSCLg0C3YEZ83HzYX'
+    : 'shu8hvrXbJbY3Eb9W';
+
+  const scrapeInput = analysisType === 'light'
+    ? { 
+        usernames: [username],
+        resultsType: "details",
+        resultsLimit: 1
+      }
+    : { 
+        directUrls: [`https://instagram.com/${username}/`], 
+        resultsLimit: 1,
+        addParentData: false,
+        enhanceUserSearchWithFacebookPage: false
+      };
+
+  try {
+    console.log(`Testing scrape for @${username} with actor: ${scrapeActorId}`);
+    console.log('Scrape input:', JSON.stringify(scrapeInput, null, 2));
+    
+    const scrapeResponse = await fetch(
+      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(scrapeInput)
+      }
+    );
+
+    const responseText = await scrapeResponse.text();
+    
+    return c.json({
+      status: scrapeResponse.status,
+      ok: scrapeResponse.ok,
+      response: responseText.substring(0, 1000), // First 1000 chars
+      actorId: scrapeActorId,
+      input: scrapeInput
+    });
+
+  } catch (error: any) {
+    return c.json({ 
+      error: error.message,
+      actorId: scrapeActorId,
+      input: scrapeInput
+    }, 500);
+  }
+});
 // Debug endpoints
 app.get('/test-supabase', async c => {
   try {
