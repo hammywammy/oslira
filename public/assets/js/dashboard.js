@@ -25,25 +25,24 @@ async function loadConfig() {
   try {
     console.log('🔧 Loading configuration...');
     
-    // Load from Netlify function
-    const res = await fetch('/.netlify/functions/config');
+    const res = await fetch('/config');
     if (!res.ok) {
-      throw new Error(`Config function failed: ${res.status} ${res.statusText}`);
+      throw new Error(`Config failed: ${res.status}`);
     }
     
     const config = await res.json();
     
-    // Validate required fields
+    // Validate only the safe config fields
     if (!config.supabaseUrl || !config.supabaseAnonKey || !config.workerUrl) {
-      throw new Error('Config validation failed: missing required fields');
+      throw new Error('Missing required configuration');
     }
     
     Object.assign(window.CONFIG, config);
-    console.log('✅ Configuration loaded successfully');
+    console.log('✅ Configuration loaded safely');
     
   } catch (err) {
     console.error('❌ Configuration loading failed:', err);
-    throw new Error('Unable to load application configuration. Please check your deployment.');
+    throw new Error('Unable to load application configuration');
   }
 }
 
