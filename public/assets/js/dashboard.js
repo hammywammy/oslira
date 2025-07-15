@@ -1,14 +1,49 @@
 // Global configuration and state
 window.CONFIG = {};
-
-
+// Replace your existing copyText function with this:
+async function copyText(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+        showMessage('Copied to clipboard!', 'success');
+    } catch (err) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showMessage('Copied to clipboard!', 'success');
+        } catch (err) {
+            showMessage('Failed to copy text', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
+}
 async function loadConfig() {
   try {
+    console.log('🔧 Loading configuration...');
+    
+    // Load from Netlify function
     const res = await fetch('/.netlify/functions/config');
-    if (!res.ok) throw new Error(res.statusText);
-    Object.assign(window.CONFIG, await res.json());
+    if (!res.ok) {
+      throw new Error(`Config function failed: ${res.status} ${res.statusText}`);
+    }
+    
+    const config = await res.json();
+    
+    // Validate required fields
+    if (!config.supabaseUrl || !config.supabaseAnonKey || !config.workerUrl) {
+      throw new Error('Config validation failed: missing required fields');
+    }
+    
+    Object.assign(window.CONFIG, config);
+    console.log('✅ Configuration loaded successfully');
+    
   } catch (err) {
-    console.warn('⚠️ could not load config –', err);
+    console.error('❌ Configuration loading failed:', err);
+    throw new Error('Unable to load application configuration. Please check your deployment.');
   }
 }
 
@@ -23,16 +58,38 @@ let allLeads = [];
 // Initialize page when DOM is ready
 document.addEventListener('DOMContentLoaded', async function() {
     try {
+        console.log('🚀 Initializing dashboard...');
+        
+        // Load config first - this will throw if it fails
         await loadConfig();
+        
+        // Initialize Supabase with loaded config
         supabaseClient = window.supabase.createClient(
             window.CONFIG.supabaseUrl,
             window.CONFIG.supabaseAnonKey
         );
+        
         await initializePage();
+        
     } catch (error) {
         console.error('Dashboard initialization failed:', error);
-        showMessage('Dashboard initialization failed', 'error');
-        showFallbackUI();
+        
+        // Show error UI
+        document.body.innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #f8f9fa;">
+                <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
+                    <h2 style="color: #dc2626; margin-bottom: 16px;">Configuration Error</h2>
+                    <p style="color: #6b7280; margin-bottom: 24px;">
+                        Unable to load application configuration. Please contact support.
+                    </p>
+                    <button onclick="window.location.reload()" 
+                            style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        Retry
+                    </button>
+                </div>
+            </div>
+        `;
     }
 });
 
@@ -75,14 +132,28 @@ async function initializePage() {
 }
 
 // Check user authentication
+// Replace your existing checkAuth function with this:
 async function checkAuth() {
-    if (!supabaseClient) return;
+    if (!supabaseClient) {
+        console.warn('Supabase client not available for auth check');
+        return;
+    }
     
     try {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
         
-        if (error || !session) {
-            if (!window.CONFIG.supabaseUrl.includes('your-project')) {
+        if (error) {
+            console.error('Auth session error:', error);
+            if (!window.CONFIG.supabaseUrl?.includes('your-project')) {
+                window.location.href = '/login.html';
+                return;
+            }
+            return;
+        }
+        
+        if (!session) {
+            console.log('No active session found');
+            if (!window.CONFIG.supabaseUrl?.includes('your-project')) {
                 window.location.href = '/login.html';
                 return;
             }
@@ -93,14 +164,15 @@ async function checkAuth() {
         currentUser = session.user;
         document.getElementById('user-email').textContent = currentUser.email;
         
+        console.log('✅ User authenticated:', currentUser.email);
+        
     } catch (err) {
-        console.warn('Auth check failed:', err);
-        if (!window.CONFIG.supabaseUrl.includes('your-project')) {
+        console.error('Auth check failed:', err);
+        if (!window.CONFIG.supabaseUrl?.includes('your-project')) {
             window.location.href = '/login.html';
         }
     }
 }
-
 // Load user subscription and credit data
 async function loadUserData() {
     if (!supabaseClient || !currentUser) {
