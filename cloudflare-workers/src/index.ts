@@ -920,6 +920,91 @@ async function handleSubscriptionCreated(subscription: any, env: Env) {
   }
 }
 
+async function handleSubscriptionUpdated(subscription: any, env: Env) {
+  try {
+    const { user_id } = subscription.metadata;
+    if (!user_id) {
+      console.log('No user_id in subscription metadata for update');
+      return;
+    }
+
+    console.log(`Processing subscription updated for user: ${user_id}`);
+
+    const supabaseHeaders = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json',
+    };
+
+    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
+      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
+      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
+      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
+      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
+    };
+
+    const priceId = subscription.items.data[0]?.price?.id;
+    const planInfo = priceIdToPlan[priceId];
+    
+    if (!planInfo) {
+      console.log(`Unknown price ID in update: ${priceId}`);
+      return;
+    }
+
+    if (subscription.status === 'active') {
+      await Promise.all([
+        fetchJson(
+          `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+          {
+            method: 'PATCH',
+            headers: supabaseHeaders,
+            body: JSON.stringify({
+              subscription_plan: planInfo.name,
+              subscription_status: subscription.status,
+              credits: planInfo.credits
+            }),
+          },
+          10000
+        ),
+        fetchJson(
+          `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+          {
+            method: 'POST',
+            headers: supabaseHeaders,
+            body: JSON.stringify({
+              user_id,
+              amount: planInfo.credits,
+              type: 'add',
+              description: `Subscription updated: ${planInfo.name} plan`,
+              lead_id: null
+            }),
+          },
+          10000
+        )
+      ]);
+    } else {
+      await fetchJson(
+        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+        {
+          method: 'PATCH',
+          headers: supabaseHeaders,
+          body: JSON.stringify({
+            subscription_status: subscription.status
+          }),
+        },
+        10000
+      );
+    }
+
+    console.log(`Subscription updated for user ${user_id} with status: ${subscription.status}`);
+
+  } catch (err: any) {
+    console.error('handleSubscriptionUpdated error:', err.message);
+    throw new Error(`Failed to process subscription update: ${err.message}`);
+  }
+}
+
+
 async function handleSubscriptionCanceled(subscription: any, env: Env) {
   try {
     const { user_id } = subscription.metadata;
@@ -1959,466 +2044,4 @@ app.notFound(c => c.json({
 export default { 
   fetch: app.fetch 
 };
-    };
-
-    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
-      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
-      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
-      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
-      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
-    };
-
-    const priceId = subscription.items.data[0]?.price?.id;
-    const planInfo = priceIdToPlan[priceId];
-    
-    if (!planInfo) {
-      console.log(`Unknown price ID: ${priceId}`);
-      return;
-    }
-
-    await Promise.all([
-      fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-        {
-          method: 'PATCH',
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            subscription_plan: planInfo.name,
-            subscription_status: subscription.status,
-            stripe_customer_id: subscription.customer,
-            credits: planInfo.credits
-          }),
-        },
-        10000
-      ),
-      fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-        {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            user_id,
-            amount: planInfo.credits,
-            type: 'add',
-            description: `Subscription created: ${planInfo.name} plan`,
-            lead_id: null
-          }),
-        },
-        10000
-      )
-    ]);
-
-    console.log(`Subscription created successfully for user ${user_id}`);
-
-  } catch (err: any) {
-    console.error('handleSubscriptionCreated error:', err.message);
-    throw new Error(`Failed to process subscription creation: ${err.message}`);
-  }
-}
-
-async function handleSubscriptionUpdated(subscription: any, env: Env) {
-  try {
-    const { user_id } = subscription.metadata;
-    if (!user_id) {
-      console.log('No user_id in subscription metadata for update');
-      return;
-    }
-
-    console.log(`Processing subscription updated for user: ${user_id}`);
-
-    const supabaseHeaders = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json',
-    };
-
-    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
-      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
-      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
-      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
-      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
-    };
-
-    const priceId = subscription.items.data[0]?.price?.id;
-    const planInfo = priceIdToPlan[priceId];
-    
-    if (!planInfo) {
-      console.log(`Unknown price ID in update: ${priceId}`);
-      return;
-    }
-
-    if (subscription.status === 'active') {
-      await Promise.all([
-        fetchJson(
-          `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-          {
-            method: 'PATCH',
-            headers: supabaseHeaders,
-            body: JSON.stringify({
-              subscription_plan: planInfo.name,
-              subscription_status: subscription.status,
-              credits: planInfo.credits
-            }),
-          },
-          10000
-        ),
-        fetchJson(
-          `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-          {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify({
-              user_id,
-              amount: planInfo.credits,
-              type: 'add',
-              description: `Subscription updated: ${planInfo.name} plan`,
-              lead_id: null
-            }),
-          },
-          10000
-        )
-      ]);
-    } else {
-      await fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-        {
-          method: 'PATCH',
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            subscription_status: subscription.status
-          }),
-        },
-        10000
-      );
-    }
-
-    console.log(`Subscription updated for user ${user_id} with status: ${subscription.status}`);
-
-  } catch (err: any) {
-    console.error('handleSubscriptionUpdated error:', err.message);
-    throw new Error(`Failed to process subscription update: ${err.message}`);
-  }
-}
-app.post('/billing/create-portal-session', async c => {
-  const auth = c.req.header('Authorization')?.replace('Bearer ', '');
-  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
-  
-  const userId = await verifyJWT(auth);
-  if (!userId) return c.json({ error: 'Invalid token' }, 401);
-
-  const { return_url, customer_email } = await c.req.json();
-  if (!customer_email) return c.json({ error: 'customer_email required' }, 400);
-
-  const stripeKey = c.env.STRIPE_SECRET_KEY;
-  
-  try {
-    const searchParams = new URLSearchParams({ query: `email:'${customer_email}'` });
-    const customerData = await fetchJson<any>(
-      `https://api.stripe.com/v1/customers/search?${searchParams}`,
-      { headers: { Authorization: `Bearer ${stripeKey}` } }
-    );
-    
-    if (!customerData.data?.length) {
-      return c.json({ error: 'Customer not found' }, 404);
-    }
-    
-    const customerId = customerData.data[0].id;
-
-    const portalParams = new URLSearchParams({
-      customer: customerId,
-      return_url: return_url || `${c.env.FRONTEND_URL}/subscription.html`
-    });
-    
-    const portal = await fetchJson<any>(
-      'https://api.stripe.com/v1/billing_portal/sessions',
-      { 
-        method: 'POST', 
-        headers: { 
-          Authorization: `Bearer ${stripeKey}`, 
-          'Content-Type': 'application/x-www-form-urlencoded' 
-        }, 
-        body: portalParams 
-      }
-    );
-    
-    if (portal.error) {
-      return c.json({ error: portal.error.message }, 400);
-    }
-    
-    return c.json({ url: portal.url });
-
-  } catch (error: any) {
-    console.error('Portal session error:', error);
-    return c.json({ error: 'Failed to create portal session' }, 500);
-  }
-});
-
-// Stripe webhook handler
-app.post('/stripe-webhook', async c => {
-  const body = await c.req.text();
-  const sig = c.req.header('stripe-signature');
-  
-  if (!sig || !c.env.STRIPE_WEBHOOK_SECRET) {
-    console.error('Webhook validation failed: missing signature or secret');
-    return c.text('Missing signature or secret', 400);
-  }
-
-  try {
-    const event = verifyStripeWebhook(body, sig, c.env.STRIPE_WEBHOOK_SECRET);
-    
-    console.log(`Webhook received: ${event.type} at ${new Date().toISOString()}`);
-
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Webhook handler timeout')), 20000);
-    });
-
-    const handlerPromise = (async () => {
-      switch (event.type) {
-        case 'customer.subscription.created':
-          await handleSubscriptionCreated(event.data.object, c.env);
-          break;
-        case 'customer.subscription.updated':
-          await handleSubscriptionUpdated(event.data.object, c.env);
-          break;
-        case 'customer.subscription.deleted':
-          await handleSubscriptionCanceled(event.data.object, c.env);
-          break;
-        case 'invoice.payment_succeeded':
-          await handlePaymentSucceeded(event.data.object, c.env);
-          break;
-        case 'invoice.payment_failed':
-          await handlePaymentFailed(event.data.object, c.env);
-          break;
-        default:
-          console.log(`Unhandled event type: ${event.type}`);
-      }
-    })();
-
-    await Promise.race([handlerPromise, timeoutPromise]);
-    
-    return c.text('OK', 200);
-
-  } catch (error: any) {
-    console.error('Webhook processing error:', error.message);
-    
-    if (error.message.includes('User not found') || 
-        error.message.includes('No user_id in metadata')) {
-      return c.text('Handled - no action needed', 200);
-    }
-    
-    if (error.message.includes('signature') || 
-        error.message.includes('Invalid webhook payload')) {
-      return c.text('Invalid webhook', 400);
-    }
-    
-    return c.text('Webhook processing failed', 500);
-  }
-});
-// Add this debug endpoint to your worker
-app.get('/test-scrape/:username', async c => {
-  const username = c.req.param('username');
-  const analysisType = c.req.query('type') || 'light';
-  
-  if (!c.env.APIFY_API_TOKEN) {
-    return c.json({ error: 'APIFY_API_TOKEN not configured' }, 500);
-  }
-
-  const scrapeActorId = analysisType === 'light' 
-    ? 'dSCLg0C3YEZ83HzYX'
-    : 'shu8hvrXbJbY3Eb9W';
-
-  const scrapeInput = analysisType === 'light'
-    ? { 
-        usernames: [username],
-        resultsType: "details",
-        resultsLimit: 1
-      }
-    : { 
-        directUrls: [`https://instagram.com/${username}/`], 
-        resultsLimit: 1,
-        addParentData: false,
-        enhanceUserSearchWithFacebookPage: false
-      };
-
-  try {
-    console.log(`Testing scrape for @${username} with actor: ${scrapeActorId}`);
-    console.log('Scrape input:', JSON.stringify(scrapeInput, null, 2));
-    
-    const scrapeResponse = await fetch(
-      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scrapeInput)
-      }
-    );
-
-    const responseText = await scrapeResponse.text();
-    
-    return c.json({
-      status: scrapeResponse.status,
-      ok: scrapeResponse.ok,
-      response: responseText.substring(0, 1000), // First 1000 chars
-      actorId: scrapeActorId,
-      input: scrapeInput
-    });
-
-  } catch (error: any) {
-    return c.json({ 
-      error: error.message,
-      actorId: scrapeActorId,
-      input: scrapeInput
-    }, 500);
-  }
-});
-// Update your debug endpoint with this version
-app.get('/debug-scrape/:username', async c => {
-  const username = c.req.param('username');
-  const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
-  
-  if (!c.env.APIFY_API_TOKEN) {
-    return c.json({ error: 'APIFY_API_TOKEN not configured' }, 500);
-  }
-
-  const scrapeActorId = analysisType === 'light' 
-    ? 'dSCLg0C3YEZ83HzYX'
-    : 'shu8hvrXbJbY3Eb9W';
-
-  const scrapeInput = analysisType === 'light'
-    ? { 
-        usernames: [username],
-        resultsType: "details",
-        resultsLimit: 1
-      }
-    : { 
-        directUrls: [`https://instagram.com/${username}/`], 
-        resultsLimit: 1,
-        addParentData: false,
-        enhanceUserSearchWithFacebookPage: false
-      };
-
-  try {
-    const response = await fetch(
-      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scrapeInput)
-      }
-    );
-
-    const responseData = await response.json();
-    
-    return c.json({
-      success: response.ok,
-      status: response.status,
-      actorId: scrapeActorId,
-      analysisType,
-      input: scrapeInput,
-      dataCount: Array.isArray(responseData) ? responseData.length : 'not array',
-      // Show the exact structure returned
-      rawFirstItem: Array.isArray(responseData) && responseData[0] ? responseData[0] : null,
-      // Show all available fields in the first item
-      availableFields: Array.isArray(responseData) && responseData[0] ? Object.keys(responseData[0]) : [],
-      fullResponse: responseData
-    });
-
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
-  }
-});
-// Debug endpoints
-app.get('/test-supabase', async c => {
-  try {
-    const headers = {
-      apikey: c.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
-    };
-    
-    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?limit=1`, { headers });
-    const data = await response.text();
-    
-    return c.json({
-      status: response.status,
-      ok: response.ok,
-      data: data.substring(0, 200),
-      hasUrl: !!c.env.SUPABASE_URL,
-      hasServiceRole: !!c.env.SUPABASE_SERVICE_ROLE
-    });
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
-  }
-});
-
-// Test Apify connection
-app.get('/test-apify', async c => {
-  try {
-    const response = await fetch(`https://api.apify.com/v2/key-value-stores?token=${c.env.APIFY_API_TOKEN}&limit=1`);
-    return c.json({
-      status: response.status,
-      ok: response.ok,
-      hasToken: !!c.env.APIFY_API_TOKEN
-    });
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
-  }
-});
-
-// Test OpenAI connection
-app.get('/test-openai', async c => {
-  try {
-    const response = await fetch('https://api.openai.com/v1/models', {
-      headers: { Authorization: `Bearer ${c.env.OPENAI_KEY}` }
-    });
-    return c.json({
-      status: response.status,
-      ok: response.ok,
-      hasKey: !!c.env.OPENAI_KEY
-    });
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
-  }
-});
-
-// Test simple POST
-app.post('/test-post', async c => {
-  try {
-    const body = await c.req.json();
-    return c.json({ received: body, timestamp: new Date().toISOString() });
-  } catch (error: any) {
-    return c.json({ error: error.message }, 500);
-  }
-});
-
-app.onError((err, c) => {
-  console.error('Worker Error:', err);
-  return c.json({ 
-    error: 'Internal server error', 
-    message: err.message,
-    timestamp: new Date().toISOString()
-  }, 500);
-});
-
-app.notFound(c => c.json({ 
-  error: 'Endpoint not found',
-  available_endpoints: [
-    'GET /',
-    'GET /health',
-    'GET /config',
-    'GET /debug-env',
-    'GET /test-supabase',
-    'GET /test-openai', 
-    'GET /test-apify',
-    'POST /test-post',
-    'POST /analyze',
-    'POST /billing/create-checkout-session',
-    'POST /billing/create-portal-session',
-    'POST /stripe-webhook'
-  ]
-}, 404));
-
-export default { 
-  fetch: app.fetch 
-};
-    
+ 
