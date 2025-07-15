@@ -552,72 +552,6 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
   }
 }
 
-  try {
-    const scrapeResponse = await callWithRetry(
-      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scrapeInput)
-      },
-      3,
-      2000,
-      30000 // 30s max for scraping
-    );
-
-    console.log('Scrape response received:', {
-      isArray: Array.isArray(scrapeResponse),
-      length: Array.isArray(scrapeResponse) ? scrapeResponse.length : 'not array',
-      firstItemKeys: Array.isArray(scrapeResponse) && scrapeResponse[0] ? Object.keys(scrapeResponse[0]) : []
-    });
-
-    if (!scrapeResponse || !Array.isArray(scrapeResponse) || scrapeResponse.length === 0) {
-      throw new Error('Profile not found or private');
-    }
-
-    const rawData = scrapeResponse[0];
-    
-    // For deep analysis, we might get posts data instead of profile data
-    if (analysisType === 'deep' && rawData.ownerUsername && !rawData.username) {
-      // This is a posts response, we need to handle it differently
-      console.log('Deep analysis returned posts data, extracting profile info...');
-      
-      // Try to extract profile info from the posts data
-      const profileData = {
-        username: rawData.ownerUsername,
-        fullName: rawData.ownerFullName,
-        followersCount: 0, // Not available in posts endpoint
-        biography: '', // Not available in posts endpoint
-        isVerified: false, // Not available in posts endpoint
-        private: false,
-        // Store the posts for engagement analysis
-        latestPosts: [rawData] // This is actually a post, but we'll work with it
-      };
-      
-      return validateProfileData(profileData);
-    }
-
-    return validateProfileData(rawData);
-
-  } catch (error: any) {
-    console.error('Scraping error:', error);
-    
-    let errorMessage = 'Failed to retrieve profile data. The profile may be private, deleted, or temporarily unavailable.';
-    
-    if (error.message.includes('404')) {
-      errorMessage = 'Instagram profile not found. Please check the username is correct.';
-    } else if (error.message.includes('403')) {
-      errorMessage = 'This Instagram profile is private or access is restricted.';
-    } else if (error.message.includes('429')) {
-      errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
-    } else if (error.message.includes('timeout')) {
-      errorMessage = 'Request timed out. Please try again.';
-    }
-    
-    throw new Error(errorMessage);
-  }
-}
-
 async function performAIAnalysis(
   profile: ProfileData, 
   business: BusinessProfile, 
@@ -2113,7 +2047,6 @@ async function handleSubscriptionUpdated(subscription: any, env: Env) {
       return;
     }
 
-    // Only update if subscription is still active
     if (subscription.status === 'active') {
       await Promise.all([
         fetchJson(
@@ -2146,7 +2079,6 @@ async function handleSubscriptionUpdated(subscription: any, env: Env) {
         )
       ]);
     } else {
-      // Handle inactive subscription
       await fetchJson(
         `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
         {
@@ -2167,7 +2099,6 @@ async function handleSubscriptionUpdated(subscription: any, env: Env) {
     throw new Error(`Failed to process subscription update: ${err.message}`);
   }
 }
-
 app.post('/billing/create-portal-session', async c => {
   const auth = c.req.header('Authorization')?.replace('Bearer ', '');
   if (!auth) return c.json({ error: 'Unauthorized' }, 401);
