@@ -1150,47 +1150,7 @@ app.post('/analyze', async c => {
 });
 
 // Enhanced utility function with better error handling
-async function fetchJson<T>(
-  url: string, 
-  init: RequestInit, 
-  timeoutMs: number = 15000
-): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  
-  try {
-    console.log(`🌐 Fetching: ${url}`);
-    const res = await fetch(url, { 
-      ...init, 
-      signal: controller.signal 
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (!res.ok) {
-      const text = await res.text();
-      console.error(`❌ HTTP ${res.status} from ${url}: ${text}`);
-      throw new Error(`HTTP ${res.status}: ${text}`);
-    }
-    
-    const data = await res.json();
-    console.log(`✅ Successful response from ${url}`);
-    return data;
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-    console.error(`❌ Fetch error for ${url}:`, error.message);
-    
-    if (error.name === 'AbortError') {
-      throw new Error(`Request timeout after ${timeoutMs}ms: ${url}`);
-    }
-    
-    if (error instanceof SyntaxError) {
-      throw new Error(`Invalid JSON response from ${url}: ${error.message}`);
-    }
-    
-    throw new Error(`Fetch failed for ${url}: ${error.message}`);
-  }
-}
+
 // Billing endpoints
 app.post('/billing/create-checkout-session', async c => {
   const auth = c.req.header('Authorization')?.replace('Bearer ', '');
