@@ -696,102 +696,135 @@ function validateUsername(username) {
 }
 
 // View lead details
+// Replace your existing viewLead with this:
 async function viewLead(leadId) {
-    if (!supabaseClient || !currentUser) return;
-    
-    try {
-        const { data: lead, error: leadError } = await supabaseClient
-            .from('leads')
-            .select(`
-                *,
-                lead_analyses (*)
-            `)
-            .eq('id', leadId)
-            .single();
-        
-        if (leadError) throw leadError;
-        
-        const analysis = lead.lead_analyses?.[0];
-        const analysisType = lead.type || (analysis ? 'deep' : 'light');
-        
-        let detailsHtml = `
-            <div class="profile-header">
-                <div class="profile-info">
-                    <h4>@${lead.username}</h4>
-                    <a href="${lead.profile_url}" target="_blank">View on Instagram 🔗</a>
-                    <p style="margin-top: 8px; color: var(--text-secondary);">${lead.platform || 'Instagram'}</p>
-                </div>
-                <div style="margin-left: auto;">
-                    <span class="score-badge ${lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low'}">
-                        ${lead.score || 0}/100
-                    </span>
-                    <div style="margin-top: 8px;">
-                        <span class="status ${analysisType}">
-                            ${analysisType === 'deep' ? '🔍 Deep Analysis' : '⚡ Light Analysis'}
-                        </span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="detail-grid">
-                <div class="detail-section">
-                    <h4>📋 Profile Info</h4>
-                    <div class="detail-row">
-                        <div class="detail-label">Platform:</div>
-                        <div class="detail-value">${lead.platform || 'Instagram'}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Score:</div>
-                        <div class="detail-value">${lead.score || 0}/100</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Type:</div>
-                        <div class="detail-value">${lead.type || 'N/A'}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Created:</div>
-                        <div class="detail-value">${new Date(lead.created_at).toLocaleDateString()}</div>
-                    </div>
-                </div>
-                
-                <div class="detail-section">
-                    <h4>🎯 Analysis Results</h4>
-                    <div class="detail-row">
-                        <div class="detail-label">Status:</div>
-                        <div class="detail-value">Analyzed</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Business:</div>
-                        <div class="detail-value">${lead.business_id || 'No business profile'}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        if (analysis?.outreach_message) {
-            detailsHtml += `
-                <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-blue); margin-top: 20px;">
-                    <h4 style="color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                        💬 Personalized Outreach Message
-                        <button onclick="copyText('${analysis.outreach_message.replace(/'/g, "\\'")}', this)" style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                            📋 Copy
-                        </button>
-                    </h4>
-                    <div style="color: var(--text-primary); line-height: 1.6; font-style: italic; background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 6px;">"${analysis.outreach_message}"</div>
-                </div>
-            `;
-        }
-        
-        document.getElementById('leadDetails').innerHTML = detailsHtml;
-        document.getElementById('leadModal').style.display = 'flex';
-        
-    } catch (err) {
-        console.error('Error loading lead details:', err);
-        document.getElementById('leadDetails').innerHTML = `
-            <p style="color: var(--error);">Failed to load lead details: ${err.message}</p>
-        `;
-        document.getElementById('leadModal').style.display = 'flex';
+  if (!supabaseClient || !currentUser) return;
+
+  try {
+    const { data: lead, error: leadError } = await supabaseClient
+      .from('leads')
+      .select(`
+        *,
+        lead_analyses (*)
+      `)
+      .eq('id', leadId)
+      .single();
+    if (leadError) throw leadError;
+
+    const analysis = lead.lead_analyses?.[0] || {};
+    const analysisType = lead.type || (analysis ? 'deep' : 'light');
+    const scoreClass = lead.score >= 80 ? 'score-high'
+                     : lead.score >= 60 ? 'score-medium'
+                     : 'score-low';
+
+    let detailsHtml = `
+      <div class="profile-header">
+        <div class="profile-info">
+          <h4>@${lead.username}</h4>
+          <a href="${lead.profile_url}" target="_blank">View on Instagram 🔗</a>
+          <p style="margin-top:8px;color:var(--text-secondary);">${lead.platform || 'Instagram'}</p>
+        </div>
+        <div style="margin-left:auto;">
+          <span class="score-badge ${scoreClass}">
+            ${lead.score || 0}/100
+          </span>
+          <div style="margin-top:8px;">
+            <span class="status ${analysisType}">
+              ${analysisType === 'deep' ? '🔍 Deep Analysis' : '⚡ Light Analysis'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-section">
+          <h4>📋 Profile Info</h4>
+          <div class="detail-row">
+            <div class="detail-label">Platform:</div>
+            <div class="detail-value">${lead.platform || 'Instagram'}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Score:</div>
+            <div class="detail-value">${lead.score || 0}/100</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Type:</div>
+            <div class="detail-value">${lead.type || 'N/A'}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Created:</div>
+            <div class="detail-value">${new Date(lead.created_at).toLocaleDateString()}</div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>🎯 Analysis Results</h4>
+          <div class="detail-row">
+            <div class="detail-label">Status:</div>
+            <div class="detail-value">Analyzed</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Business:</div>
+            <div class="detail-value">${lead.business_id || '—'}</div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>📊 Engagement & Fit</h4>
+          <div class="detail-row">
+            <div class="detail-label">Engagement Score:</div>
+            <div class="detail-value">${analysis.engagement_score ?? 'N/A'}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Niche‑Fit Score:</div>
+            <div class="detail-value">${analysis.score_niche_fit ?? 'N/A'}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Total AI Score:</div>
+            <div class="detail-value">${analysis.score_total ?? 'N/A'}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">AI Version:</div>
+            <div class="detail-value">${analysis.ai_version_id ?? '—'}</div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>💡 Selling Points</h4>
+          <div class="detail-value">
+            ${(analysis.selling_points || []).length
+              ? analysis.selling_points.join(', ')
+              : 'None found'}
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (analysis.outreach_message) {
+      detailsHtml += `
+        <div style="background:linear-gradient(135deg,var(--bg-light),#E8F3FF); padding:20px; border-radius:12px; border-left:4px solid var(--primary-blue); margin-top:20px;">
+          <h4 style="display:flex;justify-content:space-between;align-items:center; color:var(--text-primary); margin-bottom:12px;">
+            💬 Personalized Outreach
+            <button onclick="copyText('${analysis.outreach_message.replace(/'/g, "\\'")}', this)"
+                    style="background:var(--primary-blue);color:white;border:none;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">
+              📋 Copy
+            </button>
+          </h4>
+          <div style="font-style:italic; line-height:1.6;">
+            "${analysis.outreach_message}"
+          </div>
+        </div>
+      `;
     }
+
+    document.getElementById('leadDetails').innerHTML = detailsHtml;
+    document.getElementById('leadModal').style.display = 'flex';
+  }
+  catch (err) {
+    console.error('Error loading lead details:', err);
+    document.getElementById('leadDetails').innerHTML = `<p style="color:var(--error);">Failed to load lead details: ${err.message}</p>`;
+    document.getElementById('leadModal').style.display = 'flex';
+  }
 }
 
 // Copy text to clipboard
