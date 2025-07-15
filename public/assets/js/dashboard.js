@@ -29,25 +29,25 @@ async function loadConfig() {
   try {
     console.log('🔧 Loading configuration...');
     
-    // Use /config for edge functions, not /.netlify/functions/config
+    // Load from edge function at /config
     const res = await fetch('/config');
     if (!res.ok) {
-      throw new Error(`Config failed: ${res.status}`);
+      throw new Error(`Config edge function failed: ${res.status} ${res.statusText}`);
     }
     
     const config = await res.json();
     
-    // Validate only the safe config fields
+    // Validate required fields
     if (!config.supabaseUrl || !config.supabaseAnonKey || !config.workerUrl) {
-      throw new Error('Missing required configuration');
+      throw new Error('Config validation failed: missing required fields');
     }
     
     Object.assign(window.CONFIG, config);
-    console.log('✅ Configuration loaded safely');
+    console.log('✅ Configuration loaded successfully from edge function');
     
   } catch (err) {
     console.error('❌ Configuration loading failed:', err);
-    throw new Error('Unable to load application configuration');
+    throw new Error(`Unable to load application configuration: ${err.message}`);
   }
 }
 
@@ -1705,12 +1705,13 @@ function setupAuthListener() {
     }
 }
 
-// Make functions globally available
+// Make functions globally available (add this at the very end of dashboard.js)
 window.viewLead = viewLead;
 window.deleteLead = deleteLead;
 window.copyText = copyText;
 window.showAnalysisModal = showAnalysisModal;
 window.generateInsights = generateInsights;
+window.copyOutreachMessage = copyOutreachMessage;
 
 // Initialize auth listener after page load
 setTimeout(setupAuthListener, 2000);
