@@ -1802,12 +1802,6 @@ app.post('/test-post', async c => {
   }
 });
 
-// Error handling (your existing code continues here)
-app.onError((err, c) => {
-// Error handling
-// ... all your code above ...
-
-// Error handling
 app.onError((err, c) => {
   console.error('Worker Error:', err);
   return c.json({ 
