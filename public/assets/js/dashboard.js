@@ -836,8 +836,7 @@ async function refreshCreditsDisplay() {
     } catch (error) {
         console.error('Error refreshing credits:', error);
     }
-
-
+}
 function toggleLeadSelection(leadId) {
     if (selectedLeads.has(leadId)) {
         selectedLeads.delete(leadId);
