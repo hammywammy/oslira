@@ -1539,16 +1539,17 @@ app.post('/analyze', async c => {
     }
 
     // 9. Database operations
-    const leadData = {
-      user_id: userId,
-      business_id: data.business_id,
-      username: profileData.username,
-      platform: data.platform || 'instagram',
-      profile_url: data.profile_url,
-      score: analysisResult.score || 0,
-      type: data.analysis_type,
-      created_at: new Date().toISOString()
-    };
+const leadData = {
+  user_id: userId,
+  business_id: data.business_id,
+  username: profileData.username,
+  platform: data.platform || 'instagram',
+  profile_url: data.profile_url,
+  profile_pic_url: profileData.profilePicUrl || null, // ADD THIS LINE
+  score: analysisResult.score || 0,
+  type: data.analysis_type,
+  created_at: new Date().toISOString()
+};
 
     let analysisData = null;
     if (data.analysis_type === 'deep') {
