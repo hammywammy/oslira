@@ -129,151 +129,7 @@ function showFallbackUI() {
     setupEventListeners();
 }
 
-// REPLACE your existing processBulkAnalysis function with this:
 
-async function processBulkAnalysis() {
-    if (!csvData || csvData.length === 0) {
-        showMessage('No CSV data to process', 'error');
-        return;
-    }
-    
-    const analysisType = document.getElementById('bulk-analysis-type').value;
-    const businessId = document.getElementById('bulk-business-id').value;
-    
-    if (!businessId) {
-        showMessage('Please select a business profile', 'error');
-        return;
-    }
-    
-    if (!supabaseClient || !currentUser) {
-        showMessage('Not connected to database', 'error');
-        return;
-    }
-    
-    // Show progress section
-    const progressSection = document.getElementById('bulk-progress');
-    const progressBar = document.getElementById('progress-bar');
-    const progressText = document.getElementById('progress-text');
-    const progressDetails = document.getElementById('progress-details');
-    const processBtn = document.getElementById('process-csv-btn');
-    
-    progressSection.style.display = 'block';
-    processBtn.disabled = true;
-    processBtn.innerHTML = '🔄 Processing...';
-    
-    let completed = 0;
-    let failed = 0;
-    const total = csvData.length;
-    
-    try {
-        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
-        if (sessionError || !session) {
-            throw new Error('Please log in again to continue');
-        }
-        
-        progressText.textContent = `Starting bulk analysis of ${total} profiles...`;
-        
-        // Process in larger batches using Apify's bulk capability
-        const batchSize = 10; // Apify can handle multiple profiles per request
-        const batches = [];
-        
-        for (let i = 0; i < csvData.length; i += batchSize) {
-            batches.push(csvData.slice(i, i + batchSize));
-        }
-        
-        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-            const batch = batches[batchIndex];
-            
-            progressText.textContent = `Processing batch ${batchIndex + 1} of ${batches.length} (${batch.length} profiles)...`;
-            
-            try {
-                // Send bulk request to worker
-                const bulkRequestBody = {
-                    profiles: batch.map(profile => ({
-                        username: profile.username,
-                        name: profile.name,
-                        notes: profile.notes
-                    })),
-                    analysis_type: analysisType,
-                    business_id: businessId,
-                    user_id: currentUser.id,
-                    platform: 'instagram'
-                };
-                
-                console.log(`📤 Sending bulk batch ${batchIndex + 1}:`, bulkRequestBody);
-                
-                const response = await fetch(window.CONFIG.workerUrl + '/bulk-analyze', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`
-                    },
-                    body: JSON.stringify(bulkRequestBody)
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
-                    completed += result.successful || 0;
-                    failed += result.failed || 0;
-                    
-                    console.log(`✅ Batch ${batchIndex + 1} completed:`, {
-                        successful: result.successful,
-                        failed: result.failed,
-                        details: result.results
-                    });
-                } else {
-                    failed += batch.length;
-                    console.error(`❌ Batch ${batchIndex + 1} failed:`, result.error);
-                }
-                
-            } catch (error) {
-                failed += batch.length;
-                console.error(`❌ Batch ${batchIndex + 1} error:`, error.message);
-            }
-            
-            // Update progress
-            const progressPercent = Math.round(((completed + failed) / total) * 100);
-            progressBar.style.width = `${progressPercent}%`;
-            progressDetails.innerHTML = `
-                ✅ Completed: ${completed} | ❌ Failed: ${failed} | 📊 Total: ${total}
-            `;
-            
-            // Wait between batches to avoid overwhelming
-            if (batchIndex < batches.length - 1) {
-                progressText.textContent = `Waiting before next batch...`;
-                await new Promise(resolve => setTimeout(resolve, 3000));
-            }
-        }
-        
-        // Final results
-        progressText.textContent = `Bulk analysis complete! ${completed} successful, ${failed} failed.`;
-        
-        if (completed > 0) {
-            showMessage(`Successfully analyzed ${completed} profiles!`, 'success');
-            
-            // Refresh the dashboard data
-            await Promise.all([
-                loadRecentActivity(),
-                loadStats(),
-                loadCreditUsage(),
-                refreshCreditsDisplay()
-            ]);
-        }
-        
-        if (failed > 0) {
-            showMessage(`${failed} profiles failed to analyze. Check console for details.`, 'warning');
-        }
-        
-    } catch (error) {
-        console.error('Bulk analysis error:', error);
-        showMessage(`Bulk analysis failed: ${error.message}`, 'error');
-        progressText.textContent = 'Bulk analysis failed.';
-    } finally {
-        processBtn.disabled = false;
-        processBtn.innerHTML = '🚀 Start Bulk Analysis';
-    }
-}
 // Initialize the entire page
 async function initializePage() {
     if (!supabaseClient) {
@@ -2283,14 +2139,7 @@ async function refreshActivity() {
         // If called without button context
         await forceRefreshFromDatabase();
     }
-}
 
-// Show bulk upload modal
-function showBulkUpload() {
-    const modal = document.getElementById('bulkModal');
-    if (modal) {
-        modal.style.display = 'flex';
-    }
 }
 
 // Close modal
@@ -2434,6 +2283,338 @@ function setupAuthListener() {
     }
 }
 
+let csvData = [];
+
+function showBulkUpload() {
+    const modal = document.getElementById('bulkModal');
+    if (!modal) return;
+    
+    // Update modal content for simple CSV import
+    const modalContent = modal.querySelector('.modal-content');
+    modalContent.innerHTML = `
+        <button class="modal-close" id="bulk-modal-close">×</button>
+        <h3>📤 Import CSV for Bulk Analysis</h3>
+        <p style="margin-bottom: 20px; color: var(--text-secondary);">Upload a CSV file with Instagram usernames for batch analysis</p>
+        
+        <div class="csv-import-sections">
+            <!-- CSV Format Instructions -->
+            <div class="form-group">
+                <label>📋 Simple CSV Format:</label>
+                <div style="background: var(--bg-light); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 16px; border: 1px dashed var(--border-light);">
+                    nasa<br>
+                    elonmusk<br>
+                    instagram<br>
+                    cultleaderhamza<br>
+                    hamzawilx
+                </div>
+                <p style="font-size: 12px; color: var(--text-secondary);">
+                    • Just list one Instagram username per line<br>
+                    • No headers needed<br>
+                    • Don't include @ symbols<br>
+                    • One username per row
+                </p>
+            </div>
+            
+            <!-- File Upload Section -->
+            <div class="form-group">
+                <label for="csv-file">Choose CSV File:</label>
+                <input type="file" id="csv-file" accept=".csv" style="margin-bottom: 12px; width: 100%; padding: 8px; border: 2px dashed var(--border-light); border-radius: 8px;">
+                <div id="csv-preview" style="display: none; margin-top: 12px;"></div>
+            </div>
+            
+            <!-- Analysis Options -->
+            <div class="form-group">
+                <label for="bulk-analysis-type">Analysis Type:</label>
+                <select id="bulk-analysis-type" style="width: 100%; padding: 8px; margin-bottom: 12px;">
+                    <option value="light">⚡ Light Analysis (1 credit each) - Basic profile info</option>
+                    <option value="deep">🔍 Deep Analysis (2 credits each) - Full insights + messages</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="bulk-business-id">Business Profile:</label>
+                <select id="bulk-business-id" style="width: 100%; padding: 8px; margin-bottom: 16px;">
+                    <option value="">Select business profile...</option>
+                </select>
+            </div>
+            
+            <!-- Process Button -->
+            <button id="process-csv-btn" class="primary-btn" style="width: 100%; margin-top: 16px;" disabled>
+                🚀 Start Bulk Analysis
+            </button>
+            
+            <!-- Progress Section -->
+            <div id="bulk-progress" style="display: none; margin-top: 20px;">
+                <div style="background: var(--bg-light); padding: 16px; border-radius: 8px; border: 1px solid var(--border-light);">
+                    <h4>📊 Bulk Analysis Progress</h4>
+                    <div style="margin: 12px 0;">
+                        <div style="background: #e5e7eb; border-radius: 4px; height: 8px;">
+                            <div id="progress-bar" style="background: var(--primary-blue); height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <p id="progress-text" style="margin: 8px 0 0 0; font-size: 14px; color: var(--text-secondary);">Ready to start...</p>
+                    </div>
+                    <div id="progress-details" style="font-size: 12px; color: var(--text-secondary);"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Re-populate business profiles
+    populateBulkBusinessProfiles();
+    
+    // Re-attach event listeners
+    document.getElementById('bulk-modal-close')?.addEventListener('click', () => closeModal('bulkModal'));
+    document.getElementById('csv-file')?.addEventListener('change', handleCSVUpload);
+    document.getElementById('process-csv-btn')?.addEventListener('click', processBulkAnalysis);
+    
+    modal.style.display = 'flex';
+}
+
+async function handleCSVUpload(event) {
+    const file = event.target.files[0];
+    const processBtn = document.getElementById('process-csv-btn');
+    const previewDiv = document.getElementById('csv-preview');
+    
+    if (!file) {
+        processBtn.disabled = true;
+        previewDiv.style.display = 'none';
+        return;
+    }
+    
+    if (!file.name.endsWith('.csv')) {
+        showMessage('Please upload a CSV file', 'error');
+        processBtn.disabled = true;
+        return;
+    }
+    
+    try {
+        const text = await file.text();
+        const lines = text.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+        
+        if (lines.length === 0) {
+            showMessage('CSV file is empty', 'error');
+            processBtn.disabled = true;
+            return;
+        }
+        
+        // Parse as simple username list (no headers)
+        csvData = lines.map(line => {
+            // Extract username (first part if comma-separated, otherwise whole line)
+            const username = line.split(',')[0].trim().replace(/"/g, '').replace('@', '');
+            return { 
+                username: username,
+                name: '',
+                notes: ''
+            };
+        }).filter(row => row.username && row.username.length > 0);
+        
+        if (csvData.length === 0) {
+            showMessage('No valid usernames found in CSV', 'error');
+            processBtn.disabled = true;
+            return;
+        }
+        
+        // Show preview
+        previewDiv.innerHTML = `
+            <h4>📋 CSV Preview (${csvData.length} usernames found)</h4>
+            <div style="max-height: 200px; overflow-y: auto; background: white; border: 1px solid var(--border-light); border-radius: 4px;">
+                <div style="padding: 16px;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px;">
+                        ${csvData.slice(0, 20).map(row => `
+                            <div style="padding: 4px 8px; background: var(--bg-light); border-radius: 4px; font-size: 12px; text-align: center;">
+                                @${row.username}
+                            </div>
+                        `).join('')}
+                        ${csvData.length > 20 ? `
+                            <div style="padding: 4px 8px; background: var(--primary-blue); color: white; border-radius: 4px; font-size: 12px; text-align: center;">
+                                +${csvData.length - 20} more
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        previewDiv.style.display = 'block';
+        processBtn.disabled = false;
+        
+        // Update button text with count
+        const analysisType = document.getElementById('bulk-analysis-type').value;
+        const creditsPerLead = analysisType === 'deep' ? 2 : 1;
+        const totalCredits = csvData.length * creditsPerLead;
+        
+        processBtn.innerHTML = `🚀 Analyze ${csvData.length} Profiles (${totalCredits} credits)`;
+        
+    } catch (error) {
+        console.error('CSV parsing error:', error);
+        showMessage('Error reading CSV file', 'error');
+        processBtn.disabled = true;
+    }
+}
+
+async function processBulkAnalysis() {
+    if (!csvData || csvData.length === 0) {
+        showMessage('No CSV data to process', 'error');
+        return;
+    }
+    
+    const analysisType = document.getElementById('bulk-analysis-type').value;
+    const businessId = document.getElementById('bulk-business-id').value;
+    
+    if (!businessId) {
+        showMessage('Please select a business profile', 'error');
+        return;
+    }
+    
+    if (!supabaseClient || !currentUser) {
+        showMessage('Not connected to database', 'error');
+        return;
+    }
+    
+    // Show progress section
+    const progressSection = document.getElementById('bulk-progress');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressDetails = document.getElementById('progress-details');
+    const processBtn = document.getElementById('process-csv-btn');
+    
+    progressSection.style.display = 'block';
+    processBtn.disabled = true;
+    processBtn.innerHTML = '🔄 Processing...';
+    
+    let completed = 0;
+    let failed = 0;
+    const total = csvData.length;
+    
+    try {
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError || !session) {
+            throw new Error('Please log in again to continue');
+        }
+        
+        progressText.textContent = `Starting bulk analysis of ${total} profiles...`;
+        
+        // Process in larger batches using Apify's bulk capability
+        const batchSize = 10; // Apify can handle multiple profiles per request
+        const batches = [];
+        
+        for (let i = 0; i < csvData.length; i += batchSize) {
+            batches.push(csvData.slice(i, i + batchSize));
+        }
+        
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+            const batch = batches[batchIndex];
+            
+            progressText.textContent = `Processing batch ${batchIndex + 1} of ${batches.length} (${batch.length} profiles)...`;
+            
+            try {
+                // Send bulk request to worker
+                const bulkRequestBody = {
+                    profiles: batch.map(profile => ({
+                        username: profile.username,
+                        name: profile.name,
+                        notes: profile.notes
+                    })),
+                    analysis_type: analysisType,
+                    business_id: businessId,
+                    user_id: currentUser.id,
+                    platform: 'instagram'
+                };
+                
+                console.log(`📤 Sending bulk batch ${batchIndex + 1}:`, bulkRequestBody);
+                
+                const response = await fetch(window.CONFIG.workerUrl + '/bulk-analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify(bulkRequestBody)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    completed += result.successful || 0;
+                    failed += result.failed || 0;
+                    
+                    console.log(`✅ Batch ${batchIndex + 1} completed:`, {
+                        successful: result.successful,
+                        failed: result.failed,
+                        details: result.results
+                    });
+                } else {
+                    failed += batch.length;
+                    console.error(`❌ Batch ${batchIndex + 1} failed:`, result.error);
+                }
+                
+            } catch (error) {
+                failed += batch.length;
+                console.error(`❌ Batch ${batchIndex + 1} error:`, error.message);
+            }
+            
+            // Update progress
+            const progressPercent = Math.round(((completed + failed) / total) * 100);
+            progressBar.style.width = `${progressPercent}%`;
+            progressDetails.innerHTML = `
+                ✅ Completed: ${completed} | ❌ Failed: ${failed} | 📊 Total: ${total}
+            `;
+            
+            // Wait between batches to avoid overwhelming
+            if (batchIndex < batches.length - 1) {
+                progressText.textContent = `Waiting before next batch...`;
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+        }
+        
+        // Final results
+        progressText.textContent = `Bulk analysis complete! ${completed} successful, ${failed} failed.`;
+        
+        if (completed > 0) {
+            showMessage(`Successfully analyzed ${completed} profiles!`, 'success');
+            
+            // Refresh the dashboard data
+            await Promise.all([
+                loadRecentActivity(),
+                loadStats(),
+                loadCreditUsage(),
+                refreshCreditsDisplay()
+            ]);
+        }
+        
+        if (failed > 0) {
+            showMessage(`${failed} profiles failed to analyze. Check console for details.`, 'warning');
+        }
+        
+    } catch (error) {
+        console.error('Bulk analysis error:', error);
+        showMessage(`Bulk analysis failed: ${error.message}`, 'error');
+        progressText.textContent = 'Bulk analysis failed.';
+    } finally {
+        processBtn.disabled = false;
+        processBtn.innerHTML = '🚀 Start Bulk Analysis';
+    }
+}
+
+function populateBulkBusinessProfiles() {
+    const select = document.getElementById('bulk-business-id');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">Select business profile...</option>';
+    businessProfiles.forEach(business => {
+        const option = document.createElement('option');
+        option.value = business.id;
+        option.textContent = business.business_name;
+        select.appendChild(option);
+    });
+    
+    if (currentBusiness) {
+        select.value = currentBusiness.id;
+    }
+}
+
 // Make functions globally available (add this at the very end of dashboard.js)
 window.viewLead = viewLead;
 window.deleteLead = deleteLead;
@@ -2446,6 +2627,10 @@ window.selectAllLeads = selectAllLeads;
 window.clearSelection = clearSelection;
 window.bulkDeleteLeads = bulkDeleteLeads;
 window.forceRefreshFromDatabase = forceRefreshFromDatabase;
+window.handleCSVUpload = handleCSVUpload;
+window.processBulkAnalysis = processBulkAnalysis;
+window.showBulkUpload = showBulkUpload;
+window.populateBulkBusinessProfiles = populateBulkBusinessProfiles;
 
 // Initialize auth listener after page load
 setTimeout(setupAuthListener, 2000);
