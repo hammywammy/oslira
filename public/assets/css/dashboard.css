@@ -1103,6 +1103,30 @@
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
+.table-container table {
+    width: 100%;
+    table-layout: fixed; /* Ensures consistent column widths */
+}
+
+.table-container th,
+.table-container td {
+    text-align: center; /* Center align all content */
+    vertical-align: middle;
+    padding: 12px 8px;
+}
+
+/* Keep Lead column left-aligned since it has complex content */
+.table-container th:first-child,
+.table-container td:first-child {
+    text-align: left;
+}
+
+/* Keep Actions column centered */
+.table-container th:last-child,
+.table-container td:last-child {
+    text-align: center;
+}
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
