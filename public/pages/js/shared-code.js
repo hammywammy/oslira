@@ -344,13 +344,21 @@ function formatDateInUserTimezone(dateString, options = {}) {
         const date = new Date(dateString);
         const timezone = getUserTimezone();
         
+        // Debug logging
+        console.log('🕐 Formatting date:', {
+            original: dateString,
+            timezone: timezone,
+            localTime: date.toLocaleString('en-US', { timeZone: timezone })
+        });
+        
         const defaultOptions = {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
-            timeZone: timezone
+            timeZone: timezone,
+            hour12: true  // Add this to ensure 12-hour format
         };
         
         return date.toLocaleString('en-US', { ...defaultOptions, ...options });
@@ -360,7 +368,6 @@ function formatDateInUserTimezone(dateString, options = {}) {
         return new Date(dateString).toLocaleString();
     }
 }
-
 // =============================================================================
 // 7. API HELPERS
 // =============================================================================
