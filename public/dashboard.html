@@ -161,51 +161,63 @@
                 </div>
             </div>
             
-            <section class="recent-activity">
-                <div class="section-header">
-                    <h2>Recent Lead Activity</h2>
-                    <div class="time-filter">
-                        <select id="timeframe-filter" aria-label="Filter by timeframe">
-                            <option value="today">Today</option>
-                            <option value="week">This Week</option>
-                            <option value="month" selected>This Month</option>
-                            <option value="all">All Time</option>
-                        </select>
-                        <select id="activity-filter" aria-label="Filter by activity type">
-                            <option value="all">All Types</option>
-                            <option value="light">Light Analysis</option>
-                            <option value="deep">Deep Analysis</option>
-                            <option value="score_high">High Score (80+)</option>
-                            <option value="score_low">Low Score (0-50)</option>
-                            <option value="recent">Most Recent</option>
-                            <option value="oldest">Oldest First</option>
-                        </select>
-                        <button class="btn-small" id="refresh-activity-btn">🔄 Refresh</button>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Lead</th>
-                                <th>Platform</th>
-                                <th>Score</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Time</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="activity-table">
-                            <tr>
-                                <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                                    No recent activity. Start by researching your first lead!
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+<!-- Replace your existing recent-activity section header with this: -->
+<section class="recent-activity">
+    <div class="section-header">
+        <h2>Recent Lead Activity</h2>
+        <div class="bulk-actions" id="bulk-actions" style="display: none;">
+            <button class="btn-small bulk-delete-btn" id="bulk-delete-btn">
+                🗑️ Delete Selected (<span id="selected-count">0</span>)
+            </button>
+            <button class="btn-small" id="clear-selection-btn">
+                ✖️ Clear Selection
+            </button>
+        </div>
+        <div class="time-filter">
+            <button class="btn-small" id="select-all-btn">
+                ☑️ Select All
+            </button>
+            <select id="timeframe-filter" aria-label="Filter by timeframe">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="all">All Time</option>
+            </select>
+            <select id="activity-filter" aria-label="Filter by activity type">
+                <option value="all">All Types</option>
+                <option value="light">Light Analysis</option>
+                <option value="deep">Deep Analysis</option>
+                <option value="score_high">High Score (80+)</option>
+                <option value="score_low">Low Score (0-50)</option>
+                <option value="recent">Most Recent</option>
+                <option value="oldest">Oldest First</option>
+            </select>
+            <button class="btn-small" id="refresh-activity-btn">🔄 Refresh</button>
+        </div>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Lead</th>
+                    <th>Platform</th>
+                    <th>Score</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="activity-table">
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        No recent activity. Start by researching your first lead!
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
 
             <section class="insights">
                 <div class="section-header">
