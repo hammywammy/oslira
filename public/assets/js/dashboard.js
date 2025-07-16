@@ -431,9 +431,40 @@ async function loadDashboardData() {
     ]);
 }
 
+async function forceRefreshFromDatabase() {
+    console.log('🔄 Force refreshing all data from Supabase...');
+    
+    // Clear local cache
+    allLeads = [];
+    selectedLeads.clear();
+    
+    // Force reload from database
+    await Promise.all([
+        loadRecentActivity(),
+        loadStats(),
+        loadCreditUsage()
+    ]);
+    
+    // Clear any UI state
+    const bulkActions = document.getElementById('bulk-actions');
+    if (bulkActions) {
+        bulkActions.style.display = 'none';
+    }
+    
+    const selectAllBtn = document.getElementById('select-all-btn');
+    if (selectAllBtn) {
+        selectAllBtn.innerHTML = '☑️ Select All';
+    }
+    
+    console.log('✅ Force refresh complete');
+}
+
 // Load recent activity with filtering
+
 async function loadRecentActivity() {
     if (!supabaseClient || !currentUser) return;
+    
+    console.log('📊 Loading fresh activity data from Supabase...');
     
     try {
         let query = supabaseClient
@@ -476,13 +507,21 @@ async function loadRecentActivity() {
             }
         }
 
-  const { data: leads, error } = await query
+        const { data: leads, error } = await query
             .order('created_at', { ascending: false })
             .limit(50);
         
         if (error) throw error;
         
+        console.log(`📊 Loaded ${leads?.length || 0} leads from database`);
+        
+        // FIXED: Always update local cache with fresh data
         allLeads = leads || [];
+        
+        // Clear any stale selection state
+        selectedLeads.clear();
+        
+        // Re-render with fresh data
         applyActivityFilter();
         
     } catch (err) {
@@ -490,10 +529,35 @@ async function loadRecentActivity() {
         document.getElementById('activity-table').innerHTML = `
             <tr>
                 <td colspan="7" style="text-align: center; padding: 40px; color: var(--warning);">
-                    Error loading activity data
+                    Error loading activity data - ${err.message}
                 </td>
             </tr>
         `;
+    }
+}
+
+// Add a refresh button handler:
+
+async function refreshActivity() {
+    const btn = document.getElementById('refresh-activity-btn');
+    if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '🔄 Loading...';
+        btn.disabled = true;
+        
+        try {
+            await forceRefreshFromDatabase();
+            showMessage('Data refreshed successfully', 'success');
+        } catch (error) {
+            console.error('Refresh failed:', error);
+            showMessage('Failed to refresh data', 'error');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    } else {
+        // If called without button context
+        await forceRefreshFromDatabase();
     }
 }
 
@@ -668,6 +732,8 @@ async function loadStats() {
         console.error('Error loading stats:', err);
     }
 }
+// Replace your bulkDeleteLeads function with this fixed version:
+
 async function bulkDeleteLeads() {
     const selectedCount = selectedLeads.size;
     
@@ -731,6 +797,12 @@ async function bulkDeleteLeads() {
                     
                     // Remove from local array immediately
                     allLeads = allLeads.filter(lead => !batch.includes(lead.id));
+                    
+                    // FIXED: Remove from selection immediately for each successful batch
+                    batch.forEach(id => {
+                        selectedLeads.delete(id);
+                        console.log(`Removed ${id} from selection`);
+                    });
                 }
                 
             } catch (batchError) {
@@ -739,14 +811,36 @@ async function bulkDeleteLeads() {
             }
         }
         
-        // FIXED: Clear all selections after deletion
-        console.log('🧹 Clearing selection state...');
+        // FIXED: Force clear all selections regardless of what's left
+        console.log('🧹 Force clearing all selections...');
         selectedLeads.clear();
         
-        // FIXED: Update UI immediately to reflect cleared selection
-        applyActivityFilter(); // This will re-render the table without selected states
-        updateBulkActionsVisibility(); // This will hide the bulk actions bar
-        updateSelectAllButton(); // This will reset the select all button
+        // FIXED: Force update UI with explicit state reset
+        console.log('🔄 Force updating UI state...');
+        
+        // Clear all checkboxes manually
+        document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+            const row = checkbox.closest('tr');
+            if (row) {
+                row.classList.remove('selected');
+            }
+        });
+        
+        // Force hide bulk actions
+        const bulkActions = document.getElementById('bulk-actions');
+        if (bulkActions) {
+            bulkActions.style.display = 'none';
+        }
+        
+        // Force reset select all button
+        const selectAllBtn = document.getElementById('select-all-btn');
+        if (selectAllBtn) {
+            selectAllBtn.innerHTML = '☑️ Select All';
+        }
+        
+        // Re-render the table
+        applyActivityFilter();
         
         // Refresh stats
         await loadStats();
@@ -761,21 +855,38 @@ async function bulkDeleteLeads() {
         }
         
         console.log(`✅ Bulk deletion completed: ${deletedCount} deleted, ${errorCount} failed`);
+        console.log(`Final selection state: ${selectedLeads.size} items selected`);
         
     } catch (error) {
         console.error('❌ Bulk deletion failed:', error);
         showMessage(`Bulk deletion failed: ${error.message}`, 'error');
         
-        // Clear selection even on error and refresh data
+        // FIXED: Force clear selection even on error
         selectedLeads.clear();
-        updateBulkActionsVisibility();
-        updateSelectAllButton();
+        
+        // Force hide bulk actions on error too
+        const bulkActions = document.getElementById('bulk-actions');
+        if (bulkActions) {
+            bulkActions.style.display = 'none';
+        }
+        
         await loadRecentActivity();
         
     } finally {
         // Reset button state
         bulkDeleteBtn.innerHTML = originalText;
         bulkDeleteBtn.disabled = false;
+        
+        // FINAL FORCE CHECK: Make sure everything is cleared
+        setTimeout(() => {
+            if (selectedLeads.size === 0) {
+                const bulkActions = document.getElementById('bulk-actions');
+                if (bulkActions && bulkActions.style.display !== 'none') {
+                    console.log('🔧 Final force hide of bulk actions');
+                    bulkActions.style.display = 'none';
+                }
+            }
+        }, 100);
         
         console.log('🔄 Final UI state reset complete');
     }
@@ -2206,6 +2317,7 @@ window.toggleLeadSelection = toggleLeadSelection;
 window.selectAllLeads = selectAllLeads;
 window.clearSelection = clearSelection;
 window.bulkDeleteLeads = bulkDeleteLeads;
+window.forceRefreshFromDatabase = forceRefreshFromDatabase;
 
 // Initialize auth listener after page load
 setTimeout(setupAuthListener, 2000);
