@@ -10,7 +10,7 @@ interface ProfileData {
   biography?: string;
   followersCount: number;
   followingCount?: number; 
-  postsCount?: number;
+  postsCount?: number; 
   isVerified?: boolean;
   private?: boolean;
   profilePicUrl?: string;
