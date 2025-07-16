@@ -932,6 +932,181 @@
             background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple));
         }
 
+/* Bulk Actions Bar */
+.bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #FEF3C7, #F59E0B);
+    border-radius: 8px;
+    border: 1px solid #F59E0B;
+    animation: slideIn 0.3s ease;
+}
+
+.bulk-delete-btn {
+    background: linear-gradient(135deg, #DC2626, #EF4444) !important;
+    color: white !important;
+    border: none !important;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.bulk-delete-btn:hover {
+    background: linear-gradient(135deg, #B91C1C, #DC2626) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.bulk-delete-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Custom Checkbox Styling */
+.checkbox-container {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    user-select: none;
+    padding: 2px;
+}
+
+.checkbox-container input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkmark {
+    position: relative;
+    display: inline-block;
+    height: 18px;
+    width: 18px;
+    background: white;
+    border: 2px solid var(--border-light);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.checkbox-container:hover .checkmark {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.checkbox-container input:checked ~ .checkmark {
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple));
+    border-color: var(--primary-blue);
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+    left: 5px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+    display: block;
+}
+
+/* Selected Row Styling */
+.lead-row.selected {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.05)) !important;
+    border-left: 4px solid var(--primary-blue);
+    transform: translateX(2px);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.lead-row.selected td {
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Table hover effects */
+.lead-row {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.lead-row:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.lead-row:hover .checkbox-container .checkmark {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Section header layout updates */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.time-filter {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Animation for bulk actions */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .bulk-actions {
+        justify-content: center;
+    }
+    
+    .time-filter {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+}
+
+/* Enhanced button styling for select all */
+#select-all-btn {
+    background: linear-gradient(135deg, var(--success), #34D399);
+    color: white;
+    border: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+#select-all-btn:hover {
+    background: linear-gradient(135deg, #059669, var(--success));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
         /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
