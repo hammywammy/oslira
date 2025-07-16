@@ -604,40 +604,39 @@ function displayLeads(leads) {
             
             const isSelected = selectedLeads.has(lead.id);
             
-            return `
-                <tr class="lead-row ${isSelected ? 'selected' : ''}" data-lead-id="${lead.id}">
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <label class="checkbox-container" style="margin: 0;">
-                                <input type="checkbox" 
-                                       class="lead-checkbox" 
-                                       data-lead-id="${lead.id}" 
-                                       ${isSelected ? 'checked' : ''}
-                                       onchange="toggleLeadSelection('${lead.id}')">
-                                <span class="checkmark"></span>
-                            </label>
-                            <div style="position: relative; flex-shrink: 0;">
-                                ${profilePicHtml}
-                                ${fallbackAvatar}
-                            </div>
-                            <div>
-                                <div style="font-weight: 600; color: var(--text-primary);">@${lead.username}</div>
-                                <div style="font-size: 12px; color: var(--border-light);">
-                                    ${lead.platform || 'Instagram'}
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                    <td>📷 ${lead.platform || 'Instagram'}</td>
-                    <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
-                    <td><span class="status ${analysisType}">${analysisType}</span></td>
-                    <td><span class="status light">analyzed</span></td>
-                    <td>${new Date(lead.created_at).toLocaleString()}</td>
-                    <td>
-                        <button class="btn-small" onclick="viewLead('${lead.id}')">📝 View</button>
-                        <button class="delete-btn" onclick="deleteLead('${lead.id}')" title="Delete lead">🗑️</button>
-                    </td>
-                </tr>
+return `
+    <tr class="lead-row ${isSelected ? 'selected' : ''}" data-lead-id="${lead.id}">
+        <td>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <label class="checkbox-container" style="margin: 0;">
+                    <input type="checkbox" 
+                           class="lead-checkbox" 
+                           data-lead-id="${lead.id}" 
+                           ${isSelected ? 'checked' : ''}
+                           onchange="toggleLeadSelection('${lead.id}')">
+                    <span class="checkmark"></span>
+                </label>
+                <div style="position: relative; flex-shrink: 0;">
+                    ${profilePicHtml}
+                    ${fallbackAvatar}
+                </div>
+                <div>
+                    <div style="font-weight: 600; color: var(--text-primary);">@${lead.username}</div>
+                    <div style="font-size: 12px; color: var(--border-light);">
+                        ${lead.platform || 'Instagram'}
+                    </div>
+                </div>
+            </div>
+        </td>
+        <td>📷 ${lead.platform || 'Instagram'}</td>
+        <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
+        <td><span class="status ${analysisType}">${analysisType}</span></td>
+        <td><span class="status light">analyzed</span></td>
+        <td>${new Date(lead.created_at).toLocaleString()}</td>
+        <td>
+            <button class="btn-small" onclick="viewLead('${lead.id}')">📝 View</button>
+        </td>
+    </tr>
             `;
         }).join('');
     } else {
@@ -1744,71 +1743,6 @@ function escapeHtml(text) {
 // Make the copy function globally available
 window.copyOutreachMessage = copyOutreachMessage;
 
-
-// Fixed deleteLead function - replace your existing one around line 725
-
-async function deleteLead(leadId) {
-    if (!confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
-        return;
-    }
-
-    if (!supabaseClient || !currentUser) {
-        showMessage('Database not available', 'error');
-        return;
-    }
-
-    console.log(`🗑️ Deleting lead: ${leadId}`);
-
-    try {
-        // Delete related analyses first (FIXED: proper filtering)
-        console.log('Deleting related analyses...');
-        const { error: analysisError } = await supabaseClient
-            .from('lead_analyses')
-            .delete()
-            .eq('lead_id', leadId)  // This was missing the leadId filter!
-            .eq('user_id', currentUser.id);  // Security: only delete user's own analyses
-
-        if (analysisError) {
-            console.error('Analysis deletion error:', analysisError);
-            throw new Error(`Failed to delete analysis data: ${analysisError.message}`);
-        }
-        console.log('✅ Analyses deleted');
-
-        // Delete the lead
-        console.log('Deleting lead...');
-        const { error: leadError } = await supabaseClient
-            .from('leads')
-            .delete()
-            .eq('id', leadId)
-            .eq('user_id', currentUser.id);  // Security: only delete user's own leads
-
-        if (leadError) {
-            console.error('Lead deletion error:', leadError);
-            throw new Error(`Failed to delete lead: ${leadError.message}`);
-        }
-        console.log('✅ Lead deleted');
-
-        // Remove from local array immediately for instant UI update
-        allLeads = allLeads.filter(lead => lead.id !== leadId);
-        
-        // Refresh the display
-        applyActivityFilter();
-        
-        // Refresh stats to reflect the deletion
-        await loadStats();
-        
-        showMessage('Lead deleted successfully', 'success');
-        console.log(`✅ Lead ${leadId} deleted successfully`);
-
-    } catch (err) {
-        console.error('❌ Error deleting lead:', err);
-        showMessage(`Failed to delete lead: ${err.message}`, 'error');
-        
-        // Refresh data in case of partial deletion
-        await loadRecentActivity();
-    }
-}
-
 // Generate AI insights based on user data
 // Fix the generateInsights function around line 795 - update the insight objects:
 
@@ -2617,7 +2551,6 @@ function populateBulkBusinessProfiles() {
 
 // Make functions globally available (add this at the very end of dashboard.js)
 window.viewLead = viewLead;
-window.deleteLead = deleteLead;
 window.copyText = copyText;
 window.showAnalysisModal = showAnalysisModal;
 window.generateInsights = generateInsights;
