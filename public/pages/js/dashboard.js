@@ -7,7 +7,7 @@ class OsliraDashboard {
     constructor() {
         this.selectedLeads = new Set();
         this.allLeads = [];
-        this.csvData = [];
+        this.csvData = []; 
         this.userProfile = null;
     }
 
