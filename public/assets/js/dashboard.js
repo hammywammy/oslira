@@ -1770,7 +1770,6 @@ async function generateInsights() {
         }, 1500);
     }
 }
-// Also update the renderWelcomeInsights function:
 function renderWelcomeInsights() {
     const container = document.getElementById('insights-container');
     const insights = [
@@ -1786,24 +1785,6 @@ function renderWelcomeInsights() {
     ];
     renderInsights(insights);
 }
-
-function renderWelcomeInsights() {
-    const container = document.getElementById('insights-container');
-    const insights = [
-        {
-            type: 'welcome',
-            icon: '🚀',
-            title: 'Welcome to Oslira!',
-            content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
-            cta: 'Research Your First Lead',
-            actionType: 'function',
-            actionValue: 'showAnalysisModal'
-        }
-    ];
-    renderInsights(insights);
-}
-
-// COMPLETELY REWRITE renderInsights function:
 function renderInsights(insights) {
     const container = document.getElementById('insights-container');
     
