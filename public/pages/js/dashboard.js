@@ -1674,96 +1674,457 @@ renderWelcomeInsights() {
     // =============================================================================
 
     showBulkUpload() {
-        const modal = document.getElementById('bulkModal');
-        if (!modal) return;
+    const modal = document.getElementById('bulkModal');
+    if (!modal) return;
+    
+    // Update modal content with enhanced UI
+    const modalContent = modal.querySelector('.modal-content');
+    modalContent.innerHTML = `
+        <button class="modal-close" onclick="dashboard.closeModal('bulkModal')">×</button>
+        <h3>📤 Import CSV for Bulk Analysis</h3>
+        <p style="margin-bottom: 20px; color: var(--text-secondary);">Upload a CSV file with Instagram usernames for batch analysis</p>
         
-        // Update modal content
-        const modalContent = modal.querySelector('.modal-content');
-        modalContent.innerHTML = `
-            <button class="modal-close" onclick="dashboard.closeModal('bulkModal')">×</button>
-            <h3>📤 Import CSV for Bulk Analysis</h3>
-            <p style="margin-bottom: 20px; color: var(--text-secondary);">Upload a CSV file with Instagram usernames for batch analysis</p>
-            
+        <div class="csv-import-sections">
+            <!-- CSV Format Instructions -->
             <div class="form-group">
                 <label>📋 Simple CSV Format:</label>
-                <div style="background: var(--bg-light); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 16px;">
-                    nasa<br>
-                    instagram<br>
-                    spacex
+                <div style="background: var(--bg-light); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 16px; border: 1px dashed var(--border-light);">
+                    techstartup<br>
+                    digitalagency<br>
+                    marketingpro<br>
+                    brandstudio<br>
+                    creativehub
                 </div>
+                <p style="font-size: 12px; color: var(--text-secondary);">
+                    • Just list one Instagram username per line<br>
+                    • No headers needed<br>
+                    • Don't include @ symbols<br>
+                    • One username per row
+                </p>
             </div>
             
+            <!-- File Upload Section -->
             <div class="form-group">
                 <label for="csv-file">Choose CSV File:</label>
-                <input type="file" id="csv-file" accept=".csv" onchange="dashboard.handleCSVUpload(event)">
+                <input type="file" id="csv-file" accept=".csv" style="margin-bottom: 12px; width: 100%; padding: 8px; border: 2px dashed var(--border-light); border-radius: 8px;">
                 <div id="csv-preview" style="display: none; margin-top: 12px;"></div>
             </div>
             
+            <!-- Analysis Options -->
             <div class="form-group">
                 <label for="bulk-analysis-type">Analysis Type:</label>
-                <select id="bulk-analysis-type" onchange="dashboard.updateCreditCostDisplay()">
-                    <option value="light">⚡ Light Analysis (1 credit each)</option>
-                    <option value="deep">🔍 Deep Analysis (2 credits each)</option>
+                <select id="bulk-analysis-type" style="width: 100%; padding: 8px; margin-bottom: 12px;" onchange="dashboard.updateCreditCostDisplay()">
+                    <option value="light">⚡ Light Analysis (1 credit each) - Basic profile info</option>
+                    <option value="deep">🔍 Deep Analysis (2 credits each) - Full insights + messages</option>
                 </select>
             </div>
             
             <div class="form-group">
                 <label for="bulk-business-id">Business Profile:</label>
-                <select id="bulk-business-id">
+                <select id="bulk-business-id" style="width: 100%; padding: 8px; margin-bottom: 16px;">
                     <option value="">Select business profile...</option>
                 </select>
             </div>
             
-            <button id="process-csv-btn" class="primary-btn" onclick="dashboard.processBulkAnalysis()" disabled>
+            <!-- Process Button -->
+            <button id="process-csv-btn" class="primary-btn" onclick="dashboard.processBulkAnalysis()" style="width: 100%; margin-top: 16px;" disabled>
                 🚀 Start Bulk Analysis
             </button>
-        `;
+            
+            <!-- Enhanced Progress Section -->
+            <div id="bulk-progress" style="display: none; margin-top: 20px;">
+                <div style="background: var(--bg-light); padding: 20px; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin: 0 0 16px 0; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                        📊 Bulk Analysis Progress
+                        <span id="progress-status" style="font-size: 12px; padding: 4px 8px; border-radius: 12px; background: var(--primary-blue); color: white;">
+                            Initializing...
+                        </span>
+                    </h4>
+                    
+                    <!-- Main Progress Bar -->
+                    <div style="margin: 16px 0;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span id="progress-text" style="font-size: 14px; color: var(--text-primary); font-weight: 600;">
+                                Ready to start...
+                            </span>
+                            <span id="progress-percentage" style="font-size: 14px; color: var(--primary-blue); font-weight: 700;">
+                                0%
+                            </span>
+                        </div>
+                        <div style="background: #e5e7eb; border-radius: 6px; height: 12px; overflow: hidden;">
+                            <div id="progress-bar" style="background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); height: 100%; border-radius: 6px; width: 0%; transition: width 0.3s ease; position: relative;">
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); animation: shimmer 2s infinite;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Stats -->
+                    <div id="progress-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; margin: 16px 0;">
+                        <div style="text-align: center; padding: 12px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; border: 1px solid rgba(34, 197, 94, 0.2);">
+                            <div id="completed-count" style="font-size: 20px; font-weight: 700; color: var(--success);">0</div>
+                            <div style="font-size: 11px; color: var(--success); font-weight: 600; text-transform: uppercase;">Completed</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                            <div id="failed-count" style="font-size: 20px; font-weight: 700; color: var(--error);">0</div>
+                            <div style="font-size: 11px; color: var(--error); font-weight: 600; text-transform: uppercase;">Failed</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                            <div id="total-count" style="font-size: 20px; font-weight: 700; color: var(--primary-blue);">0</div>
+                            <div style="font-size: 11px; color: var(--primary-blue); font-weight: 600; text-transform: uppercase;">Total</div>
+                        </div>
+                        <div style="text-align: center; padding: 12px; background: rgba(168, 85, 247, 0.1); border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                            <div id="batch-info" style="font-size: 20px; font-weight: 700; color: var(--secondary-purple);">-</div>
+                            <div style="font-size: 11px; color: var(--secondary-purple); font-weight: 600; text-transform: uppercase;">Batch</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Activity -->
+                    <div id="current-activity" style="background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 6px; border: 1px solid var(--border-light); margin-top: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <div id="activity-spinner" style="width: 16px; height: 16px; border: 2px solid var(--border-light); border-top: 2px solid var(--primary-blue); border-radius: 50%; animation: spin 1s linear infinite; display: none;"></div>
+                            <span id="activity-text" style="font-size: 13px; color: var(--text-secondary);">
+                                Waiting to start...
+                            </span>
+                        </div>
+                        <div id="eta-info" style="font-size: 12px; color: var(--text-secondary); font-style: italic;">
+                            Estimated time remaining: Calculating...
+                        </div>
+                    </div>
+                    
+                    <!-- Error Log -->
+                    <div id="error-log" style="display: none; background: rgba(220, 38, 38, 0.1); padding: 12px; border-radius: 6px; border-left: 4px solid var(--error); margin-top: 16px;">
+                        <h5 style="margin: 0 0 8px 0; color: var(--error); font-size: 14px;">⚠️ Errors Encountered</h5>
+                        <div id="error-list" style="max-height: 120px; overflow-y: auto; font-size: 12px; color: var(--error);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        // Populate business profiles
-        this.populateBulkBusinessProfiles();
-        modal.style.display = 'flex';
+        <style>
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        </style>
+    `;
+    
+    // Populate business profiles
+    this.populateBulkBusinessProfiles();
+    
+    // Set up event listeners for the new elements
+    const csvFileInput = document.getElementById('csv-file');
+    if (csvFileInput) {
+        csvFileInput.addEventListener('change', (event) => this.handleCSVUpload(event));
     }
+    
+    modal.style.display = 'flex';
+}
 
-    handleCSVUpload(event) {
-        const file = event.target.files[0];
-        const processBtn = document.getElementById('process-csv-btn');
-        const previewDiv = document.getElementById('csv-preview');
+   async handleCSVUpload(event) {
+    const file = event.target.files[0];
+    const processBtn = document.getElementById('process-csv-btn');
+    const previewDiv = document.getElementById('csv-preview');
+    
+    if (!file) {
+        processBtn.disabled = true;
+        previewDiv.style.display = 'none';
+        this.csvData = [];
+        return;
+    }
+    
+    if (!file.name.endsWith('.csv')) {
+        window.OsliraApp.showMessage('Please upload a CSV file', 'error');
+        processBtn.disabled = true;
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        window.OsliraApp.showMessage('File too large. Please upload a file smaller than 5MB.', 'error');
+        processBtn.disabled = true;
+        return;
+    }
+    
+    try {
+        const text = await file.text();
+        const lines = text.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
         
-        if (!file) {
+        if (lines.length === 0) {
+            window.OsliraApp.showMessage('CSV file is empty', 'error');
             processBtn.disabled = true;
-            previewDiv.style.display = 'none';
             return;
         }
         
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const text = e.target.result;
-            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-            
-            this.csvData = lines.map(line => ({
-                username: line.split(',')[0].trim().replace(/"/g, '').replace('@', '')
-            })).filter(row => row.username && row.username.length > 0);
-            
-            if (this.csvData.length > 0) {
-                previewDiv.innerHTML = `<p>Found ${this.csvData.length} usernames</p>`;
-                previewDiv.style.display = 'block';
-                processBtn.disabled = false;
-                this.updateCreditCostDisplay();
-            }
-        };
-        reader.readAsText(file);
-    }
-
-    updateCreditCostDisplay() {
-        const analysisType = document.getElementById('bulk-analysis-type').value;
-        const creditsPerLead = analysisType === 'deep' ? 2 : 1;
-        const totalCredits = this.csvData.length * creditsPerLead;
+        if (lines.length > 1000) {
+            window.OsliraApp.showMessage('File too large. Maximum 1000 profiles per upload.', 'error');
+            processBtn.disabled = true;
+            return;
+        }
         
-        const processBtn = document.getElementById('process-csv-btn');
-        if (processBtn && this.csvData.length > 0) {
-            processBtn.innerHTML = `🚀 Analyze ${this.csvData.length} Profiles (${totalCredits} credits)`;
+        // Parse as simple username list (no headers)
+        this.csvData = lines.map((line, index) => {
+            const username = line.split(',')[0].trim().replace(/"/g, '').replace('@', '');
+            return { 
+                username: username,
+                name: '',
+                notes: '',
+                lineNumber: index + 1
+            };
+        }).filter(row => row.username && row.username.length > 0);
+        
+        if (this.csvData.length === 0) {
+            window.OsliraApp.showMessage('No valid usernames found in CSV', 'error');
+            processBtn.disabled = true;
+            return;
+        }
+        
+        // Show enhanced preview
+        this.renderCSVPreview(previewDiv);
+        
+        // Update credit cost display
+        await this.updateCreditCostDisplay();
+        
+        previewDiv.style.display = 'block';
+        processBtn.disabled = false;
+        
+        window.OsliraApp.showMessage(`Found ${this.csvData.length} usernames in CSV file`, 'success');
+        
+    } catch (error) {
+        console.error('CSV parsing error:', error);
+        window.OsliraApp.showMessage('Error reading CSV file: ' + error.message, 'error');
+        processBtn.disabled = true;
+        this.csvData = [];
+    }
+}
+
+    renderCSVPreview(previewDiv) {
+    const validUsernames = this.csvData.filter(row => this.validateUsername(row.username));
+    const invalidUsernames = this.csvData.filter(row => !this.validateUsername(row.username));
+    const itemsPerPage = 24;
+    const totalPages = Math.ceil(validUsernames.length / itemsPerPage);
+
+    previewDiv.innerHTML = `
+        <div style="background: white; border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden;">
+            <!-- Header -->
+            <div style="background: var(--bg-light); padding: 16px; border-bottom: 1px solid var(--border-light);">
+                <h4 style="margin: 0; color: var(--text-primary); display: flex; align-items: center; justify-content: space-between;">
+                    📋 CSV Preview
+                    <div style="display: flex; align-items: center; gap: 12px; font-size: 14px;">
+                        <span style="background: var(--success); color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px;">
+                            ✅ ${validUsernames.length} Valid
+                        </span>
+                        ${invalidUsernames.length > 0 ? `
+                            <span style="background: var(--error); color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px;">
+                                ❌ ${invalidUsernames.length} Invalid
+                            </span>
+                        ` : ''}
+                    </div>
+                </h4>
+            </div>
+            
+            <!-- Preview Grid -->
+            <div style="padding: 16px;">
+                <div id="username-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; min-height: 200px;">
+                    ${validUsernames.slice(0, itemsPerPage).map((row, index) => `
+                        <div style="padding: 8px 12px; background: var(--bg-light); border-radius: 6px; font-size: 13px; text-align: center; border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center; min-height: 40px;">
+                            <span style="color: var(--text-primary); font-weight: 500;">@${row.username}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <!-- Pagination -->
+                ${totalPages > 1 ? `
+                    <div style="display: flex; justify-content: center; align-items: center; margin-top: 16px; gap: 8px;">
+                        <button id="prev-page" style="padding: 6px 12px; background: var(--bg-light); border: 1px solid var(--border-light); border-radius: 4px; cursor: pointer;" disabled>
+                            ← Previous
+                        </button>
+                        <span id="page-info" style="font-size: 14px; color: var(--text-secondary);">
+                            Page 1 of ${totalPages}
+                        </span>
+                        <button id="next-page" style="padding: 6px 12px; background: var(--bg-light); border: 1px solid var(--border-light); border-radius: 4px; cursor: pointer;">
+                            Next →
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <!-- Invalid Usernames Warning -->
+            ${invalidUsernames.length > 0 ? `
+                <div style="background: rgba(220, 38, 38, 0.1); padding: 16px; border-top: 1px solid var(--border-light);">
+                    <h5 style="margin: 0 0 8px 0; color: var(--error);">⚠️ Invalid Usernames Found</h5>
+                    <p style="margin: 0 0 8px 0; font-size: 12px; color: var(--error);">
+                        The following usernames will be skipped (invalid format):
+                    </p>
+                    <div style="max-height: 80px; overflow-y: auto; font-family: monospace; font-size: 11px; color: var(--error);">
+                        ${invalidUsernames.map(row => `@${row.username} (line ${row.lineNumber})`).join(', ')}
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+        
+        <!-- Credit Cost Display -->
+        <div id="credit-cost-display" style="margin-top: 16px; padding: 16px; background: linear-gradient(135deg, #EBF8FF, #DBEAFE); border-radius: 8px; border: 1px solid var(--primary-blue);">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <h4 style="margin: 0; color: var(--primary-blue); font-size: 16px;">💰 Credit Cost</h4>
+                    <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">
+                        Based on current analysis type selection
+                    </p>
+                </div>
+                <div style="text-align: right;">
+                    <div id="total-cost" style="font-size: 24px; font-weight: 700; color: var(--primary-blue);">
+                        Calculating...
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                        credits total
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Add pagination functionality
+    if (totalPages > 1) {
+        this.setupPreviewPagination(validUsernames, itemsPerPage, totalPages);
+    }
+    
+    // Update only valid usernames for processing
+    this.csvData = validUsernames;
+}
+
+    setupPreviewPagination(validUsernames, itemsPerPage, totalPages) {
+    let currentPage = 1;
+    
+    const updateGrid = (page) => {
+        const startIndex = (page - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageData = validUsernames.slice(startIndex, endIndex);
+        
+        const grid = document.getElementById('username-grid');
+        const pageInfo = document.getElementById('page-info');
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        
+        if (grid) {
+            grid.innerHTML = pageData.map(row => `
+                <div style="padding: 8px 12px; background: var(--bg-light); border-radius: 6px; font-size: 13px; text-align: center; border: 1px solid var(--border-light); display: flex; align-items: center; justify-content: center; min-height: 40px;">
+                    <span style="color: var(--text-primary); font-weight: 500;">@${row.username}</span>
+                </div>
+            `).join('');
+        }
+        
+        if (pageInfo) pageInfo.textContent = `Page ${page} of ${totalPages}`;
+        if (prevBtn) prevBtn.disabled = page === 1;
+        if (nextBtn) nextBtn.disabled = page === totalPages;
+    };
+    
+    document.getElementById('prev-page')?.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            updateGrid(currentPage);
+        }
+    });
+    
+    document.getElementById('next-page')?.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            updateGrid(currentPage);
+        }
+    });
+}
+
+    async updateCreditCostDisplay() {
+    if (!this.csvData || this.csvData.length === 0) {
+        // Hide cost display if no data
+        const costDisplay = document.getElementById('credit-cost-display');
+        if (costDisplay) costDisplay.style.display = 'none';
+        return;
+    }
+    
+    const analysisType = document.getElementById('bulk-analysis-type')?.value || 'light';
+    const creditsPerLead = analysisType === 'deep' ? 2 : 1;
+    const totalCredits = this.csvData.length * creditsPerLead;
+    
+    // Get user's current credits
+    let currentCredits = 0;
+    let hasEnoughCredits = true;
+    
+    if (this.userProfile) {
+        currentCredits = this.userProfile.credits || 0;
+        hasEnoughCredits = currentCredits >= totalCredits;
+    }
+    
+    // Update the cost display
+    const totalCostElement = document.getElementById('total-cost');
+    if (totalCostElement) {
+        totalCostElement.innerHTML = `
+            <span style="color: ${hasEnoughCredits ? 'var(--primary-blue)' : 'var(--error)'};">
+                ${totalCredits}
+            </span>
+        `;
+    }
+    
+    // Update cost breakdown
+    const costDisplay = document.getElementById('credit-cost-display');
+    if (costDisplay) {
+        costDisplay.style.display = 'block';
+        
+        // Update the content with current credits info
+        const costBreakdown = costDisplay.querySelector('.cost-breakdown') || document.createElement('div');
+        costBreakdown.className = 'cost-breakdown';
+        costBreakdown.innerHTML = `
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px;">
+                <span>Profiles to analyze:</span>
+                <span><strong>${this.csvData.length}</strong></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px;">
+                <span>Credits per profile (${analysisType}):</span>
+                <span><strong>${creditsPerLead}</strong></span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; padding-top: 8px; border-top: 1px solid var(--border-light);">
+                <span>Your current credits:</span>
+                <span><strong style="color: ${currentCredits >= totalCredits ? 'var(--success)' : 'var(--warning)'};">${currentCredits}</strong></span>
+            </div>
+            ${!hasEnoughCredits ? `
+                <div style="background: rgba(220, 38, 38, 0.1); padding: 12px; border-radius: 6px; margin: 12px 0; border-left: 4px solid var(--error);">
+                    <p style="margin: 0; color: var(--error); font-weight: 600; font-size: 14px;">
+                        ⚠️ Insufficient Credits
+                    </p>
+                    <p style="margin: 4px 0 0 0; color: var(--error); font-size: 12px;">
+                        You need ${totalCredits - currentCredits} more credits to process this upload.
+                    </p>
+                    <a href="/subscription.html" style="color: var(--error); font-weight: 600; text-decoration: none; font-size: 12px;">
+                        🚀 Upgrade Now →
+                    </a>
+                </div>
+            ` : ''}
+        `;
+        
+        if (!costDisplay.querySelector('.cost-breakdown')) {
+            costDisplay.appendChild(costBreakdown);
         }
     }
+    
+    // Update the process button
+    const processBtn = document.getElementById('process-csv-btn');
+    if (processBtn) {
+        if (hasEnoughCredits) {
+            processBtn.innerHTML = `🚀 Analyze ${this.csvData.length} Profiles (${totalCredits} credits)`;
+            processBtn.disabled = false;
+            processBtn.style.opacity = '1';
+        } else {
+            processBtn.innerHTML = `❌ Insufficient Credits (Need ${totalCredits}, Have ${currentCredits})`;
+            processBtn.disabled = true;
+            processBtn.style.opacity = '0.6';
+        }
+    }
+}
 
     async processBulkAnalysis() {
         if (!this.csvData || this.csvData.length === 0) {
