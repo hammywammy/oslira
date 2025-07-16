@@ -1339,41 +1339,67 @@ function escapeHtml(text) {
 window.copyOutreachMessage = copyOutreachMessage;
 
 
-// Delete lead from database
+// Fixed deleteLead function - replace your existing one around line 725
+
 async function deleteLead(leadId) {
     if (!confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
         return;
     }
 
-    if (!supabaseClient || !currentUser) return;
+    if (!supabaseClient || !currentUser) {
+        showMessage('Database not available', 'error');
+        return;
+    }
+
+    console.log(`🗑️ Deleting lead: ${leadId}`);
 
     try {
-        // Delete related analyses first
+        // Delete related analyses first (FIXED: proper filtering)
+        console.log('Deleting related analyses...');
         const { error: analysisError } = await supabaseClient
             .from('lead_analyses')
             .delete()
-            .eq('lead_id', leadId);
+            .eq('lead_id', leadId)  // This was missing the leadId filter!
+            .eq('user_id', currentUser.id);  // Security: only delete user's own analyses
+
+        if (analysisError) {
+            console.error('Analysis deletion error:', analysisError);
+            throw new Error(`Failed to delete analysis data: ${analysisError.message}`);
+        }
+        console.log('✅ Analyses deleted');
 
         // Delete the lead
+        console.log('Deleting lead...');
         const { error: leadError } = await supabaseClient
             .from('leads')
             .delete()
             .eq('id', leadId)
-            .eq('user_id', currentUser.id);
+            .eq('user_id', currentUser.id);  // Security: only delete user's own leads
 
-        if (leadError) throw leadError;
+        if (leadError) {
+            console.error('Lead deletion error:', leadError);
+            throw new Error(`Failed to delete lead: ${leadError.message}`);
+        }
+        console.log('✅ Lead deleted');
 
-        // Refresh data
-        await Promise.all([
-            loadRecentActivity(),
-            loadStats()
-        ]);
+        // Remove from local array immediately for instant UI update
+        allLeads = allLeads.filter(lead => lead.id !== leadId);
+        
+        // Refresh the display
+        applyActivityFilter();
+        
+        // Refresh stats to reflect the deletion
+        await loadStats();
         
         showMessage('Lead deleted successfully', 'success');
+        console.log(`✅ Lead ${leadId} deleted successfully`);
 
     } catch (err) {
-        console.error('Error deleting lead:', err);
-        showMessage('Failed to delete lead: ' + err.message, 'error');
+        console.error('❌ Error deleting lead:', err);
+        showMessage(`Failed to delete lead: ${err.message}`, 'error');
+        
+        // Refresh data in case of partial deletion
+        await loadRecentActivity();
     }
 }
 
