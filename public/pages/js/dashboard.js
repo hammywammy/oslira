@@ -511,45 +511,57 @@ class OsliraDashboard {
     // =============================================================================
 
     setupEventListeners() {
-        // Analysis modal
-        document.getElementById('research-lead-btn')?.addEventListener('click', () => this.showAnalysisModal());
-        document.getElementById('research-action-card')?.addEventListener('click', () => this.showAnalysisModal());
-        document.getElementById('welcome-cta-btn')?.addEventListener('click', () => this.showAnalysisModal());
-        
-        // Bulk upload
-        document.getElementById('bulk-upload-btn')?.addEventListener('click', () => this.showBulkUpload());
-        document.getElementById('csv-import-action-card')?.addEventListener('click', () => this.showBulkUpload());
-        
-        // Filters
-        document.getElementById('timeframe-filter')?.addEventListener('change', () => this.loadRecentActivity());
-        document.getElementById('activity-filter')?.addEventListener('change', () => this.applyActivityFilter());
-        document.getElementById('refresh-activity-btn')?.addEventListener('click', () => this.refreshActivity());
-        
-        // Bulk actions
-        document.getElementById('select-all-btn')?.addEventListener('click', () => this.selectAllLeads());
-        document.getElementById('bulk-delete-btn')?.addEventListener('click', () => this.bulkDeleteLeads());
-        document.getElementById('clear-selection-btn')?.addEventListener('click', () => this.clearSelection());
-        
-        // Business selector
-        document.getElementById('business-select')?.addEventListener('change', () => this.switchBusiness());
-        
-        // Forms
-        document.getElementById('analysisForm')?.addEventListener('submit', (e) => this.submitAnalysis(e));
-        document.getElementById('analysis-type')?.addEventListener('change', () => this.updateInputField());
-        
-        // Modal controls
-        document.getElementById('analysis-modal-close')?.addEventListener('click', () => this.closeModal('analysisModal'));
-        document.getElementById('lead-modal-close')?.addEventListener('click', () => this.closeModal('leadModal'));
-        document.getElementById('bulk-modal-close')?.addEventListener('click', () => this.closeModal('bulkModal'));
-        
-        // Other actions
-        document.getElementById('export-action-card')?.addEventListener('click', () => this.exportLeads());
-        document.getElementById('generate-insights-btn')?.addEventListener('click', () => this.generateInsights());
-        
-        // Global modal handling
-        window.addEventListener('click', (e) => this.handleModalClick(e));
-        document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
-    }
+    // Analysis modal
+    document.getElementById('research-lead-btn')?.addEventListener('click', () => this.showAnalysisModal());
+    document.getElementById('research-action-card')?.addEventListener('click', () => this.showAnalysisModal());
+    document.getElementById('welcome-cta-btn')?.addEventListener('click', () => this.showAnalysisModal());
+    
+    // Bulk upload
+    document.getElementById('bulk-upload-btn')?.addEventListener('click', () => this.showBulkUpload());
+    document.getElementById('csv-import-action-card')?.addEventListener('click', () => this.showBulkUpload());
+    
+    // FIX: Add missing campaigns handler
+    document.getElementById('campaigns-action-card')?.addEventListener('click', () => {
+        window.location.href = '/campaigns.html';
+    });
+    
+    // Filters
+    document.getElementById('timeframe-filter')?.addEventListener('change', () => this.loadRecentActivity());
+    document.getElementById('activity-filter')?.addEventListener('change', () => this.applyActivityFilter());
+    document.getElementById('refresh-activity-btn')?.addEventListener('click', () => this.refreshActivity());
+    
+    // Bulk actions
+    document.getElementById('select-all-btn')?.addEventListener('click', () => this.selectAllLeads());
+    document.getElementById('bulk-delete-btn')?.addEventListener('click', () => this.bulkDeleteLeads());
+    document.getElementById('clear-selection-btn')?.addEventListener('click', () => this.clearSelection());
+    
+    // Business selector
+    document.getElementById('business-select')?.addEventListener('change', () => this.switchBusiness());
+    
+    // Forms
+    document.getElementById('analysisForm')?.addEventListener('submit', (e) => this.submitAnalysis(e));
+    document.getElementById('analysis-type')?.addEventListener('change', () => this.updateInputField());
+    
+    // Modal controls
+    document.getElementById('analysis-modal-close')?.addEventListener('click', () => this.closeModal('analysisModal'));
+    document.getElementById('lead-modal-close')?.addEventListener('click', () => this.closeModal('leadModal'));
+    document.getElementById('bulk-modal-close')?.addEventListener('click', () => this.closeModal('bulkModal'));
+    
+    // FIX: Add missing support modal handlers
+    document.getElementById('support-btn')?.addEventListener('click', () => this.showSupportModal());
+    document.getElementById('general-support-btn')?.addEventListener('click', () => this.contactSupport('support'));
+    document.getElementById('billing-support-btn')?.addEventListener('click', () => this.contactSupport('billing'));
+    document.getElementById('security-support-btn')?.addEventListener('click', () => this.contactSupport('security'));
+    document.getElementById('support-modal-close')?.addEventListener('click', () => this.closeModal('supportModal'));
+    
+    // Other actions
+    document.getElementById('export-action-card')?.addEventListener('click', () => this.exportLeads());
+    document.getElementById('generate-insights-btn')?.addEventListener('click', () => this.generateInsights());
+    
+    // Global modal handling
+    window.addEventListener('click', (e) => this.handleModalClick(e));
+    document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+}
 
     // =============================================================================
     // ANALYSIS FUNCTIONALITY
@@ -910,12 +922,384 @@ class OsliraDashboard {
         }
     }
 
+    buildProfileHeader(lead, analysisType, scoreClass, platform) {
+    const isDeepAnalysis = analysisType === 'deep';
+    
+    // Get profile picture URL - check multiple possible fields
+    const profilePicUrl = lead.profile_pic_url || 
+                         lead.profile_picture_url || 
+                         lead.avatar_url ||
+                         (lead.profile_data && JSON.parse(lead.profile_data || '{}').profile_pic_url) ||
+                         null;
+    
+    // Create profile picture HTML
+    const profilePicHtml = profilePicUrl 
+        ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=80&h=80&fit=cover&a=attention" 
+                alt="@${lead.username}" 
+                style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-light); box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+        : '';
+    
+    // Fallback avatar with first letter of username
+    const fallbackAvatar = `<div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 700; font-size: 32px; border: 3px solid var(--border-light); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        ${(lead.username || 'U').charAt(0).toUpperCase()}
+    </div>`;
+    
+    return `
+        <div class="profile-header" style="display: flex; align-items: center; gap: 20px; padding: 24px; background: linear-gradient(135deg, var(--bg-light), #E8F3FF); border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border-light);">
+            <div style="position: relative; flex-shrink: 0;">
+                ${profilePicHtml}
+                ${fallbackAvatar}
+            </div>
+            <div class="profile-info" style="flex: 1;">
+                <h4 style="margin: 0 0 8px 0; font-size: 24px; color: var(--text-primary);">@${this.escapeHtml(lead.username)}</h4>
+                <a href="${this.escapeHtml(lead.profile_url)}" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   style="color: var(--primary-blue); text-decoration: none; font-weight: 500; font-size: 16px;">
+                    View on ${platform} 🔗
+                </a>
+                <div style="margin-top: 12px; color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span>${platform}</span>
+                    <span>•</span>
+                    <span style="color: ${isDeepAnalysis ? 'var(--accent-teal)' : 'var(--primary-blue)'}; font-weight: 600;">
+                        ${isDeepAnalysis ? '🔍 Premium Analysis' : '⚡ Basic Analysis'}
+                    </span>
+                </div>
+            </div>
+            <div style="text-align: right; flex-shrink: 0;">
+                <span class="score-badge ${scoreClass}" style="font-size: 24px; font-weight: 700; padding: 12px 16px;">
+                    ${lead.score || 0}/100
+                </span>
+                <div style="margin-top: 12px;">
+                    <span class="status ${analysisType}" style="font-size: 13px; padding: 6px 12px;">
+                        ${isDeepAnalysis ? 'Deep Analysis' : 'Light Analysis'}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 4. FIX: Add buildBasicInfoSection method
+buildBasicInfoSection(lead, analysisType, platform, score) {
+    return `
+        <div class="detail-section">
+            <h4>📋 Profile Information</h4>
+            <div class="detail-row">
+                <div class="detail-label">Platform:</div>
+                <div class="detail-value">${platform}</div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Overall Score:</div>
+                <div class="detail-value">
+                    <strong style="color: ${score >= 80 ? 'var(--success)' : score >= 60 ? 'var(--warning)' : 'var(--error)'};">
+                        ${score}/100
+                    </strong>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Analysis Type:</div>
+                <div class="detail-value">
+                    <span style="color: ${analysisType === 'deep' ? 'var(--accent-teal)' : 'var(--primary-blue)'}; font-weight: 600;">
+                        ${analysisType === 'deep' ? 'Deep Analysis' : 'Light Analysis'}
+                    </span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Date Created:</div>
+                <div class="detail-value">${window.OsliraApp.formatDate(lead.created_at)}</div>
+            </div>
+        </div>
+    `;
+}
+
+// 5. FIX: Add buildAnalysisStatusSection method
+buildAnalysisStatusSection(lead, analysisType) {
+    return `
+        <div class="detail-section">
+            <h4>🎯 Analysis Status</h4>
+            <div class="detail-row">
+                <div class="detail-label">Status:</div>
+                <div class="detail-value">
+                    <span style="color: var(--success); font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                        <span style="font-size: 12px;">✓</span> Analyzed
+                    </span>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Business Profile:</div>
+                <div class="detail-value">${lead.business_id || '—'}</div>
+            </div>
+            ${analysisType === 'light' ? `
+                <div class="detail-row">
+                    <div class="detail-label">Coverage:</div>
+                    <div class="detail-value" style="font-style: italic; color: var(--text-secondary);">
+                        Basic metrics and core scoring only
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// 6. FIX: Add buildAdvancedMetricsSection method
+buildAdvancedMetricsSection(analysis) {
+    return `
+        <div class="detail-section">
+            <h4>📊 Advanced Metrics</h4>
+            <div class="detail-row">
+                <div class="detail-label">Engagement Score:</div>
+                <div class="detail-value">
+                    <strong style="color: var(--accent-teal);">
+                        ${this.formatScore(analysis.engagement_score)}
+                    </strong>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">Niche‑Fit Score:</div>
+                <div class="detail-value">
+                    <strong style="color: var(--accent-teal);">
+                        ${this.formatScore(analysis.score_niche_fit)}
+                    </strong>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">AI Total Score:</div>
+                <div class="detail-value">
+                    <strong style="color: var(--primary-blue);">
+                        ${this.formatScore(analysis.score_total)}
+                    </strong>
+                </div>
+            </div>
+            <div class="detail-row">
+                <div class="detail-label">AI Model Version:</div>
+                <div class="detail-value" style="font-family: monospace; font-size: 12px;">
+                    ${analysis.ai_version_id || '—'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 7. FIX: Add buildSellingPointsSection method
+buildSellingPointsSection(analysis) {
+    if (!analysis.selling_points) {
+        return '';
+    }
+    
+    let sellingPoints = analysis.selling_points;
+    
+    // Parse if it's a JSON string
+    if (typeof sellingPoints === 'string') {
+        try {
+            sellingPoints = JSON.parse(sellingPoints);
+        } catch (e) {
+            console.error('Error parsing selling points:', e);
+            sellingPoints = [sellingPoints];
+        }
+    }
+    
+    // Convert to array if it's not already
+    if (!Array.isArray(sellingPoints)) {
+        sellingPoints = [sellingPoints];
+    }
+    
+    // Filter out empty/null values
+    sellingPoints = sellingPoints.filter(point => point && point.trim());
+    
+    if (sellingPoints.length === 0) {
+        return '';
+    }
+    
+    // Create HTML for selling points
+    const sellingPointsHtml = sellingPoints.map(point => `
+        <div style="margin: 8px 0; padding: 12px 16px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid var(--primary-blue); display: flex; align-items: flex-start; gap: 8px;">
+            <span style="color: var(--primary-blue); font-size: 16px; margin-top: 2px;">💡</span>
+            <span style="color: var(--text-primary); line-height: 1.5; font-size: 14px;">${this.escapeHtml(point.trim())}</span>
+        </div>
+    `).join('');
+    
+    return `
+        <div class="detail-section" style="grid-column: 1 / -1;">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                💡 Key Selling Points
+                <span style="background: var(--primary-blue); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                    ${sellingPoints.length} insights
+                </span>
+            </h4>
+            <div class="selling-points-container" style="display: flex; flex-direction: column; gap: 4px;">
+                ${sellingPointsHtml}
+            </div>
+        </div>
+    `;
+}
+
+// 8. FIX: Add buildOutreachMessageSection method
+buildOutreachMessageSection(outreachMessage) {
+    const escapedMessage = this.escapeHtml(outreachMessage);
+    const copyData = JSON.stringify(outreachMessage).slice(1, -1); // Remove quotes and escape
+    
+    return `
+        <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 24px; border-radius: 12px; border-left: 4px solid var(--primary-blue); margin-top: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 16px;">
+                💬 Personalized Outreach Message
+                <button onclick="dashboard.copyOutreachMessage('${copyData}', this)" 
+                        style="background: var(--primary-blue); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
+                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                    📋 Copy Message
+                </button>
+            </h4>
+            <div style="background: rgba(255, 255, 255, 0.9); padding: 18px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2); box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="color: var(--text-primary); line-height: 1.7; font-size: 15px;">
+                    "${escapedMessage}"
+                </div>
+            </div>
+            <div style="margin-top: 16px; padding: 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px; border: 1px dashed rgba(59, 130, 246, 0.3);">
+                <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.4;">
+                    <strong>💡 AI-Generated:</strong> This message was crafted based on the lead's profile content and your business requirements
+                </p>
+            </div>
+        </div>
+    `;
+}
+
+// 9. FIX: Add buildUpgradePromptSection method
+buildUpgradePromptSection() {
+    return `
+        <div style="background: linear-gradient(135deg, #FFF7ED, #FED7AA); padding: 24px; border-radius: 12px; border-left: 4px solid var(--warning); margin-top: 24px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <div style="font-size: 32px; margin-bottom: 12px;">🚀</div>
+            <h4 style="color: var(--text-primary); margin-bottom: 12px; font-size: 18px;">
+                Unlock Premium Insights
+            </h4>
+            <p style="color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; max-width: 400px; margin-left: auto; margin-right: auto;">
+                Deep analysis provides detailed engagement metrics, niche-fit scoring, personalized outreach messages, and actionable selling points to maximize your conversion potential.
+            </p>
+            <div style="margin-bottom: 20px;">
+                <div style="display: inline-flex; gap: 16px; font-size: 14px; color: var(--text-secondary);">
+                    <span>✓ Engagement Analysis</span>
+                    <span>✓ Niche Scoring</span>
+                    <span>✓ Custom Messages</span>
+                </div>
+            </div>
+            <button onclick="dashboard.showAnalysisModal()" 
+                    style="background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);"
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.4)'"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.3)'">
+                🔍 Run Deep Analysis
+            </button>
+        </div>
+    `;
+}
+
+// 10. FIX: Add utility methods
+formatScore(score) {
+    if (score === null || score === undefined || score === '') {
+        return 'N/A';
+    }
+    return `${score}/100`;
+}
+
+escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 11. FIX: Add copyOutreachMessage method
+async copyOutreachMessage(message, button) {
+    try {
+        await navigator.clipboard.writeText(message);
+        
+        const originalText = button.innerHTML;
+        const originalStyle = button.style.background;
+        
+        button.innerHTML = '✅ Copied!';
+        button.style.background = 'var(--success)';
+        button.disabled = true;
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.style.background = originalStyle;
+            button.disabled = false;
+        }, 2000);
+        
+        window.OsliraApp.showMessage('Outreach message copied to clipboard', 'success');
+        
+    } catch (error) {
+        console.error('Failed to copy message:', error);
+        window.OsliraApp.showMessage('Failed to copy message. Please try selecting and copying manually.', 'error');
+        
+        // Fallback: select the text
+        try {
+            const messageElement = button.parentElement.nextElementSibling.firstElementChild;
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(messageElement);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        } catch (fallbackError) {
+            console.error('Fallback selection also failed:', fallbackError);
+        }
+    }
+}
+
+// 12. FIX: Add support functions
+showSupportModal() {
+    const modal = document.getElementById('supportModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+contactSupport(type = 'support') {
+    const emails = {
+        support: 'support@oslira.com',
+        billing: 'billing@oslira.com',
+        security: 'security@oslira.com'
+    };
+    
+    const email = emails[type];
+    const subject = encodeURIComponent(`Oslira ${type.charAt(0).toUpperCase() + type.slice(1)} Request`);
+    window.location.href = `mailto:${email}?subject=${subject}`;
+}
+
     buildLeadDetailsHTML(lead) {
-        const analysis = lead.lead_analyses?.[0] || {};
-        const hasAnalysisData = analysis && Object.keys(analysis).length > 0;
-        const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
-        const score = lead.score || 0;
-        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+    const analysis = lead.lead_analyses?.[0] || {};
+    const hasAnalysisData = analysis && Object.keys(analysis).length > 0;
+    const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
+    const score = lead.score || 0;
+    const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+    const isDeepAnalysis = analysisType === 'deep';
+    const platform = lead.platform || 'Instagram';
+    
+    // Build profile header with profile picture
+    let html = this.buildProfileHeader(lead, analysisType, scoreClass, platform);
+    
+    // Build information sections
+    html += `<div class="detail-grid">`;
+    html += this.buildBasicInfoSection(lead, analysisType, platform, score);
+    html += this.buildAnalysisStatusSection(lead, analysisType);
+    
+    // Add advanced sections for deep analysis
+    if (isDeepAnalysis && analysis && Object.keys(analysis).length > 0) {
+        html += this.buildAdvancedMetricsSection(analysis);
+        html += this.buildSellingPointsSection(analysis);
+    }
+    
+    html += `</div>`; // Close detail-grid
+    
+    // Add outreach message section for deep analysis
+    if (isDeepAnalysis && analysis.outreach_message) {
+        html += this.buildOutreachMessageSection(analysis.outreach_message);
+    }
+    
+    // Add upgrade prompt for light analysis
+    if (analysisType === 'light') {
+        html += this.buildUpgradePromptSection();
+    }
         
         return `
             <div class="profile-header" style="display: flex; align-items: center; gap: 20px; padding: 24px; background: linear-gradient(135deg, var(--bg-light), #E8F3FF); border-radius: 12px; margin-bottom: 24px;">
@@ -992,109 +1376,192 @@ class OsliraDashboard {
     // =============================================================================
 
     async generateInsights() {
-        const container = document.getElementById('insights-container');
-        const loading = document.getElementById('loading-insights');
+    const container = document.getElementById('insights-container');
+    const loading = document.getElementById('loading-insights');
+    
+    if (!container || !loading) return;
+    
+    container.style.display = 'none';
+    loading.style.display = 'block';
+    
+    try {
+        const supabase = window.OsliraApp.supabase;
+        const user = window.OsliraApp.user;
         
-        if (!container || !loading) return;
+        if (!supabase || !user) {
+            // Show welcome insight for demo mode
+            setTimeout(() => {
+                this.renderWelcomeInsights();
+                loading.style.display = 'none';
+                container.style.display = 'grid';
+            }, 1500);
+            return;
+        }
         
-        container.style.display = 'none';
-        loading.style.display = 'block';
+        // Load user's leads data
+        const { data: leads } = await supabase
+            .from('leads')
+            .select('*')
+            .eq('user_id', user.id);
         
-        try {
-            const supabase = window.OsliraApp.supabase;
-            const user = window.OsliraApp.user;
+        // Load user subscription data
+        const { data: userData } = await supabase
+            .from('users')
+            .select('credits, subscription_plan')
+            .eq('id', user.id)
+            .single();
+        
+        let insights = [];
+        
+        if (!leads || leads.length === 0) {
+            insights.push({
+                type: 'welcome',
+                icon: '🚀',
+                title: 'Welcome to Oslira!',
+                content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+                cta: 'Research Your First Lead',
+                actionType: 'function',
+                actionValue: 'showAnalysisModal'
+            });
+        } else {
+            // Calculate metrics from database data
+            const totalLeads = leads.length;
+            const leadsWithScores = leads.filter(lead => lead.score !== null && lead.score !== undefined);
+            const avgScore = leadsWithScores.length > 0 
+                ? leadsWithScores.reduce((sum, lead) => sum + lead.score, 0) / leadsWithScores.length 
+                : 0;
+            const highValueLeads = leads.filter(lead => (lead.score || 0) >= 80).length;
+            const recentLeads = leads.filter(lead => 
+                new Date(lead.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+            ).length;
             
-            if (!supabase || !user) {
-                setTimeout(() => {
-                    this.renderWelcomeInsights();
-                    loading.style.display = 'none';
-                    container.style.display = 'grid';
-                }, 1500);
-                return;
-            }
-            
-            // Load user's data
-            const { data: leads } = await supabase
-                .from('leads')
-                .select('*')
-                .eq('user_id', user.id);
-            
-            const { data: userData } = await supabase
-                .from('users')
-                .select('credits, subscription_plan')
-                .eq('id', user.id)
-                .single();
-            
-            let insights = [];
-            
-            if (!leads || leads.length === 0) {
+            // Generate insights based on performance
+            if (avgScore >= 70) {
                 insights.push({
-                    type: 'welcome',
-                    icon: '🚀',
-                    title: 'Welcome to Oslira!',
-                    content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
-                    cta: 'Research Your First Lead',
+                    type: 'performance',
+                    icon: '🎯',
+                    title: 'Excellent Lead Quality!',
+                    content: `Your average lead score of ${Math.round(avgScore)} shows you're targeting high-quality prospects. ${highValueLeads} out of ${totalLeads} leads are premium quality (80+ score).`,
+                    metrics: [
+                        { label: 'Average Score', value: `${Math.round(avgScore)}/100` },
+                        { label: 'High-Value Rate', value: `${Math.round((highValueLeads/totalLeads)*100)}%` }
+                    ]
+                });
+            } else if (avgScore >= 50) {
+                insights.push({
+                    type: 'recommendation',
+                    icon: '📈',
+                    title: 'Room for Improvement',
+                    content: `Your average lead score is ${Math.round(avgScore)}. Try refining your target criteria to find higher-quality prospects.`,
+                    cta: 'Analyze New Leads',
                     actionType: 'function',
                     actionValue: 'showAnalysisModal'
                 });
-            } else {
-                // Calculate metrics
-                const totalLeads = leads.length;
-                const leadsWithScores = leads.filter(lead => lead.score !== null && lead.score !== undefined);
-                const avgScore = leadsWithScores.length > 0 
-                    ? leadsWithScores.reduce((sum, lead) => sum + lead.score, 0) / leadsWithScores.length 
-                    : 0;
-                const highValueLeads = leads.filter(lead => (lead.score || 0) >= 80).length;
+            } else if (avgScore > 0) {
+                insights.push({
+                    type: 'warning',
+                    icon: '⚠️',
+                    title: 'Lead Quality Alert',
+                    content: `Your average lead score of ${Math.round(avgScore)} suggests you may need to adjust your targeting strategy.`,
+                    cta: 'Research Better Leads',
+                    actionType: 'function',
+                    actionValue: 'showAnalysisModal'
+                });
+            }
+            
+            // Activity insights
+            if (recentLeads > 0) {
+                insights.push({
+                    type: 'performance',
+                    icon: '🔥',
+                    title: 'Active Research',
+                    content: `You've researched ${recentLeads} leads this week. Consistent activity leads to better results!`,
+                    metrics: [
+                        { label: 'This Week', value: recentLeads },
+                        { label: 'Total Leads', value: totalLeads }
+                    ]
+                });
+            }
+            
+            // Subscription recommendations
+            const plan = userData?.subscription_plan || 'free';
+            if (plan === 'free') {
+                insights.push({
+                    type: 'recommendation',
+                    icon: '⬆️',
+                    title: 'Upgrade Recommended',
+                    content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
+                    cta: 'View Plans',
+                    actionType: 'url',
+                    actionValue: '/subscription.html'
+                });
+            }
+            
+            // Campaign insight
+            insights.push({
+                type: 'recommendation',
+                icon: '🚀',
+                title: 'Scale with Campaigns',
+                content: 'Create automated outreach sequences to scale your lead generation and convert more prospects.',
+                cta: 'Create Campaign',
+                actionType: 'url',
+                actionValue: '/campaigns.html'
+            });
+            
+            // Additional insights based on data patterns
+            if (totalLeads >= 10) {
+                const lightAnalysis = leads.filter(lead => lead.type === 'light').length;
+                const deepAnalysis = leads.filter(lead => lead.type === 'deep').length;
                 
-                // Generate insights based on performance
-                if (avgScore >= 70) {
-                    insights.push({
-                        type: 'performance',
-                        icon: '🎯',
-                        title: 'Excellent Lead Quality!',
-                        content: `Your average lead score of ${Math.round(avgScore)} shows you're targeting high-quality prospects.`,
-                        metrics: [
-                            { label: 'Average Score', value: `${Math.round(avgScore)}/100` },
-                            { label: 'High-Value Rate', value: `${Math.round((highValueLeads/totalLeads)*100)}%` }
-                        ]
-                    });
-                }
-                
-                const plan = userData?.subscription_plan || 'free';
-                if (plan === 'free') {
+                if (lightAnalysis > deepAnalysis * 2) {
                     insights.push({
                         type: 'recommendation',
-                        icon: '⬆️',
-                        title: 'Upgrade Recommended',
-                        content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
-                        cta: 'View Plans',
-                        actionType: 'url',
-                        actionValue: '/subscription.html'
+                        icon: '🔍',
+                        title: 'Try Deep Analysis',
+                        content: `You've done ${lightAnalysis} light analyses vs ${deepAnalysis} deep. Deep analysis provides personalized outreach messages and better insights.`,
+                        cta: 'Run Deep Analysis',
+                        actionType: 'function',
+                        actionValue: 'showAnalysisModal'
                     });
                 }
             }
             
-            setTimeout(() => {
-                this.renderInsights(insights);
-                loading.style.display = 'none';
-                container.style.display = 'grid';
-            }, 1500);
-            
-        } catch (error) {
-            console.error('Error generating insights:', error);
-            setTimeout(() => {
-                loading.style.display = 'none';
-                container.style.display = 'grid';
-                container.innerHTML = `
-                    <div class="insight-card warning">
-                        <div class="insight-icon">❌</div>
-                        <h3>Error Loading Insights</h3>
-                        <p>Unable to generate insights at this time. Please try again later.</p>
-                    </div>
-                `;
-            }, 1500);
+            // Credit usage insights
+            if (userData?.credits && userData.credits <= 5 && plan === 'free') {
+                insights.push({
+                    type: 'warning',
+                    icon: '⚠️',
+                    title: 'Low Credits Warning',
+                    content: `You have ${userData.credits} credits remaining. Consider upgrading to continue analyzing leads without interruption.`,
+                    cta: 'Upgrade Now',
+                    actionType: 'url',
+                    actionValue: '/subscription.html'
+                });
+            }
         }
+        
+        setTimeout(() => {
+            this.renderInsights(insights);
+            loading.style.display = 'none';
+            container.style.display = 'grid';
+        }, 1500);
+        
+    } catch (err) {
+        console.error('Error generating insights:', err);
+        setTimeout(() => {
+            loading.style.display = 'none';
+            container.style.display = 'grid';
+            container.innerHTML = `
+                <div class="insight-card warning">
+                    <div class="insight-icon">❌</div>
+                    <h3>Error Loading Insights</h3>
+                    <p>Unable to generate insights at this time. Please try again later.</p>
+                    <button class="insight-cta" onclick="dashboard.generateInsights()">Retry</button>
+                </div>
+            `;
+        }, 1500);
     }
+}
 
     renderWelcomeInsights() {
         const insights = [
@@ -1112,46 +1579,95 @@ class OsliraDashboard {
     }
 
     renderInsights(insights) {
-        const container = document.getElementById('insights-container');
-        
-        container.innerHTML = insights.map((insight, index) => `
-            <div class="insight-card ${insight.type}">
-                <div class="insight-icon">${insight.icon}</div>
-                <h3>${insight.title}</h3>
-                <p>${insight.content}</p>
-                
-                ${insight.metrics ? insight.metrics.map(metric => `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 8px 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px;">
-                        <span style="font-weight: 600; color: var(--text-primary);">${metric.label}:</span>
-                        <span style="font-weight: 700; color: var(--primary-blue);">${metric.value}</span>
-                    </div>
-                `).join('') : ''}
-                
-                ${insight.cta ? `
-                    <button class="insight-cta" 
-                            data-action-type="${insight.actionType}"
-                            data-action-value="${insight.actionValue}"
-                            style="margin-top: 16px; background: var(--primary-blue); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        ${insight.cta}
-                    </button>
-                ` : ''}
-            </div>
-        `).join('');
-        
-        // Add event listeners
-        container.querySelectorAll('.insight-cta').forEach((button) => {
-            button.addEventListener('click', () => {
-                const actionType = button.getAttribute('data-action-type');
-                const actionValue = button.getAttribute('data-action-value');
-                
-                if (actionType === 'function' && actionValue === 'showAnalysisModal') {
-                    this.showAnalysisModal();
+    const container = document.getElementById('insights-container');
+    
+    console.log('🔍 Rendering insights:', insights);
+    
+    container.innerHTML = insights.map((insight, index) => `
+        <div class="insight-card ${insight.type}">
+            <div class="insight-icon">${insight.icon}</div>
+            <h3>${insight.title}</h3>
+            <p>${insight.content}</p>
+            
+            ${insight.metrics ? insight.metrics.map(metric => `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 8px 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px;">
+                    <span style="font-weight: 600; color: var(--text-primary); font-size: 14px;">${metric.label}:</span>
+                    <span style="font-weight: 700; color: var(--primary-blue); font-size: 16px;">${metric.value}</span>
+                </div>
+            `).join('') : ''}
+            
+            ${insight.cta ? `
+                <button class="insight-cta" 
+                        data-action-type="${insight.actionType}"
+                        data-action-value="${insight.actionValue}"
+                        data-insight-index="${index}"
+                        style="margin-top: 16px; background: var(--primary-blue); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+                    ${insight.cta}
+                </button>
+            ` : ''}
+        </div>
+    `).join('');
+    
+    // Add event listeners with proper action handling
+    container.querySelectorAll('.insight-cta').forEach((button) => {
+        button.addEventListener('click', () => {
+            const actionType = button.getAttribute('data-action-type');
+            const actionValue = button.getAttribute('data-action-value');
+            
+            console.log('🎯 Insight button clicked!', { actionType, actionValue });
+            
+            try {
+                if (actionType === 'function') {
+                    // Call a function by name
+                    if (actionValue === 'showAnalysisModal') {
+                        console.log('🔍 Opening analysis modal...');
+                        this.showAnalysisModal();
+                    } else if (actionValue === 'generateInsights') {
+                        console.log('🔄 Regenerating insights...');
+                        this.generateInsights();
+                    } else {
+                        console.error('❌ Unknown function:', actionValue);
+                    }
                 } else if (actionType === 'url') {
-                    window.location.href = actionValue;
+                    // Navigate to URL
+                    console.log('🌐 Navigating to URL:', actionValue);
+                    if (actionValue.startsWith('http')) {
+                        window.open(actionValue, '_blank');
+                    } else {
+                        window.location.href = actionValue;
+                    }
+                } else {
+                    console.error('❌ Unknown action type:', actionType);
                 }
-            });
+            } catch (error) {
+                console.error('❌ Error executing insight action:', error);
+                window.OsliraApp.showMessage('Action failed to execute', 'error');
+            }
         });
-    }
+    });
+    
+    console.log('✅ Event listeners added to', container.querySelectorAll('.insight-cta').length, 'buttons');
+}
+
+// =============================================================================
+// ADD THIS renderWelcomeInsights() METHOD
+// =============================================================================
+
+renderWelcomeInsights() {
+    const container = document.getElementById('insights-container');
+    const insights = [
+        {
+            type: 'welcome',
+            icon: '🚀',
+            title: 'Welcome to Oslira!',
+            content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+            cta: 'Research Your First Lead',
+            actionType: 'function',
+            actionValue: 'showAnalysisModal'
+        }
+    ];
+    this.renderInsights(insights);
+}
 
     // =============================================================================
     // BULK UPLOAD
