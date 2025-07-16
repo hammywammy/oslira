@@ -68,6 +68,9 @@ interface AnalysisRequest {
   business_id?: string;
   user_id?: string;
   platform?: string;
+  timezone?: string;
+  user_local_time?: string;
+  request_timestamp?: string;
 }
 
 interface Env {
@@ -104,6 +107,24 @@ async function verifyJWT(token: string): Promise<string | null> {
     return payload.sub;
   } catch {
     return null;
+  }
+}
+
+function formatTimestampInTimezone(timestamp: string, timezone: string): string {
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  } catch (error) {
+    console.warn('Timezone formatting failed, using UTC:', error);
+    return new Date(timestamp).toISOString();
   }
 }
 
@@ -1667,10 +1688,12 @@ const leadData = {
   username: profileData.username,
   platform: data.platform || 'instagram',
   profile_url: data.profile_url,
-  profile_pic_url: profileData.profilePicUrl || null, // Keep this line as is
+  profile_pic_url: profileData.profilePicUrl || null,
   score: analysisResult.score || 0,
   type: data.analysis_type,
-  created_at: new Date().toISOString()
+  user_timezone: body.timezone || 'UTC',
+  user_local_time: body.user_local_time || new Date().toISOString(),
+  created_at: body.request_timestamp || new Date().toISOString()
 };
 
 // DEBUG: Log what we're about to save
@@ -1994,17 +2017,19 @@ app.post('/bulk-analyze', async c => {
         }
 
         // Save to database
-        const leadData = {
-          user_id: userId,
-          business_id: business_id,
-          username: validatedProfile.username,
-          platform: platform || 'instagram',
-          profile_url: `https://instagram.com/${username}`,
-          profile_pic_url: validatedProfile.profilePicUrl || null,
-          score: analysisResult.score || 0,
-          type: analysis_type,
-          created_at: new Date().toISOString()
-        };
+const leadData = {
+  user_id: userId,
+  business_id: business_id,
+  username: validatedProfile.username,
+  platform: platform || 'instagram',
+  profile_url: `https://instagram.com/${username}`,
+  profile_pic_url: validatedProfile.profilePicUrl || null,
+  score: analysisResult.score || 0,
+  type: analysis_type,
+  user_timezone: body.timezone || 'UTC',
+  user_local_time: body.user_local_time || new Date().toISOString(),
+  created_at: new Date(new Date(body.request_timestamp || new Date().toISOString()).getTime() + (i * 1000)).toISOString()
+};
 
         let analysisData = null;
         if (analysis_type === 'deep') {
