@@ -1078,27 +1078,55 @@ function buildAdvancedMetricsSection(analysis) {
 }
 
 /**
- * Builds the selling points section (deep analysis only)
+ * Builds the selling points section (deep analysis only) - FIXED VERSION
  */
 function buildSellingPointsSection(analysis) {
-    if (!analysis.selling_points || analysis.selling_points.length === 0) {
+    if (!analysis.selling_points) {
         return '';
     }
     
-    const sellingPointsHtml = Array.isArray(analysis.selling_points) 
-        ? analysis.selling_points.map(point => `
-            <div style="margin: 8px 0; padding: 8px 12px; background: rgba(59, 130, 246, 0.1); border-radius: 6px; border-left: 3px solid var(--primary-blue);">
-                💡 ${escapeHtml(point)}
-            </div>
-          `).join('')
-        : `<div style="padding: 8px 12px; background: rgba(59, 130, 246, 0.1); border-radius: 6px;">
-             💡 ${escapeHtml(analysis.selling_points)}
-           </div>`;
+    let sellingPoints = analysis.selling_points;
+    
+    // Parse if it's a JSON string
+    if (typeof sellingPoints === 'string') {
+        try {
+            sellingPoints = JSON.parse(sellingPoints);
+        } catch (e) {
+            console.error('Error parsing selling points:', e);
+            // Treat as single string if JSON parsing fails
+            sellingPoints = [sellingPoints];
+        }
+    }
+    
+    // Convert to array if it's not already
+    if (!Array.isArray(sellingPoints)) {
+        sellingPoints = [sellingPoints];
+    }
+    
+    // Filter out empty/null values
+    sellingPoints = sellingPoints.filter(point => point && point.trim());
+    
+    if (sellingPoints.length === 0) {
+        return '';
+    }
+    
+    // Create HTML for selling points
+    const sellingPointsHtml = sellingPoints.map(point => `
+        <div style="margin: 8px 0; padding: 12px 16px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid var(--primary-blue); display: flex; align-items: flex-start; gap: 8px;">
+            <span style="color: var(--primary-blue); font-size: 16px; margin-top: 2px;">💡</span>
+            <span style="color: var(--text-primary); line-height: 1.5; font-size: 14px;">${escapeHtml(point.trim())}</span>
+        </div>
+    `).join('');
     
     return `
-        <div class="detail-section">
-            <h4>💡 Key Selling Points</h4>
-            <div class="detail-value" style="line-height: 1.6;">
+        <div class="detail-section" style="grid-column: 1 / -1;">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                💡 Key Selling Points
+                <span style="background: var(--primary-blue); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                    ${sellingPoints.length} insights
+                </span>
+            </h4>
+            <div class="selling-points-container" style="display: flex; flex-direction: column; gap: 4px;">
                 ${sellingPointsHtml}
             </div>
         </div>
