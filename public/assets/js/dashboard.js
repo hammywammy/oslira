@@ -375,12 +375,15 @@ async function loadRecentActivity() {
             .from('leads')
             .select(`
                 *,
+                profile_pic_url,
                 lead_analyses (
                     engagement_score,
                     score_niche_fit,
                     score_total,
                     ai_version_id,
-                    outreach_message
+                    outreach_message,
+                    selling_points,
+                    analysis_type
                 )
             `)
             .eq('user_id', currentUser.id);
@@ -408,7 +411,7 @@ async function loadRecentActivity() {
             }
         }
 
-        const { data: leads, error } = await query
+  const { data: leads, error } = await query
             .order('created_at', { ascending: false })
             .limit(50);
         
@@ -474,7 +477,7 @@ function displayLeads(leads) {
             const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
             const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
             
-            // Get profile picture URL - check multiple possible fields
+            // UPDATED: Prioritize database field first, then fall back to other possible fields
             const profilePicUrl = lead.profile_pic_url || 
                                  lead.profile_picture_url || 
                                  lead.avatar_url ||
@@ -842,6 +845,7 @@ async function viewLead(leadId) {
                 id,
                 username,
                 profile_url,
+                profile_pic_url,
                 platform,
                 score,
                 type,
