@@ -238,30 +238,59 @@ function updateSubscriptionUI(plan, status, credits) {
     const planName = planNames[plan] || 'Free Plan';
     document.getElementById('sidebar-plan').textContent = planName;
     
-    // UPDATED: Show credits prominently
+    // Enhanced credits display with visual indicators
     const billingElement = document.getElementById('sidebar-billing');
+    const creditsCount = credits || 0;
+    
+    // Determine warning level for free users
+    let warningClass = '';
+    let warningText = '';
+    
     if (plan === 'free') {
+        if (creditsCount === 0) {
+            warningClass = 'credits-empty';
+            warningText = '⚠️ No credits left';
+        } else if (creditsCount <= 2) {
+            warningClass = 'credits-low';
+            warningText = '⚠️ Low credits';
+        } else {
+            warningClass = 'credits-good';
+            warningText = '';
+        }
+        
         billingElement.innerHTML = `
-            <div style="text-align: center; margin-top: 8px;">
-                <div style="font-size: 24px; font-weight: 700; color: var(--primary-blue); line-height: 1;">
-                    ${credits || 0}
+            <div style="text-align: center; margin-top: 8px;" class="${warningClass}">
+                <div style="font-size: 28px; font-weight: 800; color: ${creditsCount === 0 ? 'var(--error)' : creditsCount <= 2 ? 'var(--warning)' : 'var(--primary-blue)'}; line-height: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                    ${creditsCount}
                 </div>
-                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                     Credits Remaining
                 </div>
+                ${warningText ? `
+                    <div style="font-size: 10px; color: ${creditsCount === 0 ? 'var(--error)' : 'var(--warning)'}; margin-top: 4px; font-weight: 600;">
+                        ${warningText}
+                    </div>
+                ` : ''}
+                ${creditsCount === 0 ? `
+                    <div style="margin-top: 8px;">
+                        <a href="subscription.html" style="font-size: 10px; color: var(--error); text-decoration: none; font-weight: 600; padding: 4px 8px; background: rgba(220, 38, 38, 0.1); border-radius: 4px; display: inline-block;">
+                            🚀 Upgrade Now
+                        </a>
+                    </div>
+                ` : ''}
             </div>
         `;
     } else {
         billingElement.innerHTML = `
             <div style="text-align: center; margin-top: 8px;">
-                <div style="font-size: 20px; font-weight: 700; color: var(--success); line-height: 1;">
-                    ${credits || 0}
+                <div style="font-size: 24px; font-weight: 700; color: var(--success); line-height: 1; text-shadow: 0 1px 2px rgba(16, 185, 129, 0.2);">
+                    ${creditsCount}
                 </div>
-                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
                     Credits Available
                 </div>
-                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-                    Active subscription
+                <div style="font-size: 10px; color: var(--success); margin-top: 4px; font-weight: 600;">
+                    ✅ Active subscription
                 </div>
             </div>
         `;
