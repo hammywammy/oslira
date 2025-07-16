@@ -631,18 +631,18 @@ return `
         <td>📷 ${lead.platform || 'Instagram'}</td>
         <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
         <td><span class="status ${analysisType}">${analysisType}</span></td>
-        <td><span class="status light">analyzed</span></td>
+        <!-- <td><span class="status light">analyzed</span></td>  REMOVE THIS LINE -->
         <td>${new Date(lead.created_at).toLocaleString()}</td>
         <td>
             <button class="btn-small" onclick="viewLead('${lead.id}')">📝 View</button>
         </td>
     </tr>
-            `;
+`;
         }).join('');
     } else {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
                     No leads found for the selected filters.
                 </td>
             </tr>
