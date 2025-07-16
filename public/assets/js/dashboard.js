@@ -536,31 +536,6 @@ async function loadRecentActivity() {
     }
 }
 
-// Add a refresh button handler:
-
-async function refreshActivity() {
-    const btn = document.getElementById('refresh-activity-btn');
-    if (btn) {
-        const originalText = btn.textContent;
-        btn.textContent = '🔄 Loading...';
-        btn.disabled = true;
-        
-        try {
-            await forceRefreshFromDatabase();
-            showMessage('Data refreshed successfully', 'success');
-        } catch (error) {
-            console.error('Refresh failed:', error);
-            showMessage('Failed to refresh data', 'error');
-        } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    } else {
-        // If called without button context
-        await forceRefreshFromDatabase();
-    }
-}
-
 // Apply activity filters and sorting
 function applyActivityFilter() {
     const filter = document.getElementById('activity-filter')?.value || 'all';
@@ -2142,18 +2117,26 @@ function filterByTimeframe() {
     loadRecentActivity();
 }
 
-// Refresh activity data
 async function refreshActivity() {
-    const btn = event.target;
-    const originalText = btn.textContent;
-    btn.textContent = '🔄 Loading...';
-    btn.disabled = true;
-    
-    try {
-        await loadRecentActivity();
-    } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
+    const btn = document.getElementById('refresh-activity-btn');
+    if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '🔄 Loading...';
+        btn.disabled = true;
+        
+        try {
+            await forceRefreshFromDatabase();
+            showMessage('Data refreshed successfully', 'success');
+        } catch (error) {
+            console.error('Refresh failed:', error);
+            showMessage('Failed to refresh data', 'error');
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    } else {
+        // If called without button context
+        await forceRefreshFromDatabase();
     }
 }
 
