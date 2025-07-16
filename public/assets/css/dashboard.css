@@ -151,38 +151,66 @@
             color: white;
         }
 
-        .subscription-status {
-            background: linear-gradient(135deg, var(--accent-teal) 0%, var(--secondary-purple) 100%);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            color: white;
-        }
+       .subscription-status {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    margin-bottom: 20px;
+}
 
-        .subscription-status h4 {
-            margin-bottom: 8px;
-            font-size: 14px;
-            opacity: 0.9;
-        }
+.subscription-status h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 
-        .plan-name {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 4px;
-        }
+.plan-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+    font-size: 16px;
+}
 
-        .next-billing {
-            font-size: 12px;
-            opacity: 0.8;
-        }
+.credits-display {
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
 
-        .subscription-status a {
-            color: white;
-            text-decoration: none;
-            font-size: 14px;
-            opacity: 0.9;
-            border-bottom: 1px solid rgba(255,255,255,0.3);
-        }
+.subscription-status a {
+    color: var(--primary-blue);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 12px;
+    background: rgba(59, 130, 246, 0.1);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: inline-block;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.subscription-status a:hover {
+    background: rgba(59, 130, 246, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Make credits number more prominent for free users */
+.credits-display .credits-free {
+    color: var(--primary-blue);
+    text-shadow: 0 1px 2px rgba(59, 130, 246, 0.2);
+}
+
+.credits-display .credits-paid {
+    color: var(--success);
+    text-shadow: 0 1px 2px rgba(16, 185, 129, 0.2);
+}
 
         .user-info {
             padding-top: 20px;
