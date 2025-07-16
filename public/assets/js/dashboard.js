@@ -2300,6 +2300,7 @@ function showBulkUpload() {
     document.getElementById('bulk-modal-close')?.addEventListener('click', () => closeModal('bulkModal'));
     document.getElementById('csv-file')?.addEventListener('change', handleCSVUpload);
     document.getElementById('process-csv-btn')?.addEventListener('click', processBulkAnalysis);
+    document.getElementById('bulk-analysis-type')?.addEventListener('change', updateCreditCostDisplay);
     
     modal.style.display = 'flex';
 }
@@ -2335,7 +2336,6 @@ async function handleCSVUpload(event) {
         
         // Parse as simple username list (no headers)
         csvData = lines.map(line => {
-            // Extract username (first part if comma-separated, otherwise whole line)
             const username = line.split(',')[0].trim().replace(/"/g, '').replace('@', '');
             return { 
                 username: username,
@@ -2350,7 +2350,10 @@ async function handleCSVUpload(event) {
             return;
         }
         
-        // Show preview
+        // NEW: Calculate credit cost based on current analysis type
+        updateCreditCostDisplay();
+        
+        // Show preview with credit cost
         previewDiv.innerHTML = `
             <h4>📋 CSV Preview (${csvData.length} usernames found)</h4>
             <div style="max-height: 200px; overflow-y: auto; background: white; border: 1px solid var(--border-light); border-radius: 4px;">
@@ -2369,17 +2372,30 @@ async function handleCSVUpload(event) {
                     </div>
                 </div>
             </div>
+            
+            <!-- NEW: Credit Cost Display -->
+            <div id="credit-cost-display" style="margin-top: 16px; padding: 16px; background: linear-gradient(135deg, #EBF8FF, #DBEAFE); border-radius: 8px; border: 1px solid var(--primary-blue);">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <h4 style="margin: 0; color: var(--primary-blue); font-size: 16px;">💰 Credit Cost</h4>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">
+                            Based on current analysis type selection
+                        </p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div id="total-cost" style="font-size: 24px; font-weight: 700; color: var(--primary-blue);">
+                            Loading...
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">
+                            credits total
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
         
         previewDiv.style.display = 'block';
         processBtn.disabled = false;
-        
-        // Update button text with count
-        const analysisType = document.getElementById('bulk-analysis-type').value;
-        const creditsPerLead = analysisType === 'deep' ? 2 : 1;
-        const totalCredits = csvData.length * creditsPerLead;
-        
-        processBtn.innerHTML = `🚀 Analyze ${csvData.length} Profiles (${totalCredits} credits)`;
         
     } catch (error) {
         console.error('CSV parsing error:', error);
