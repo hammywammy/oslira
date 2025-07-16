@@ -1,5 +1,5 @@
 [build]
-  publish        = "public"
+  publish        = "public/html"
   command        = ""
   edge_functions = "netlify/edge-functions"
 
