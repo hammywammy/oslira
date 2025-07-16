@@ -8,7 +8,7 @@ async function copyText(text) {
         showMessage('Copied to clipboard!', 'success');
     } catch (err) {
         // Fallback for older browsers
-        const textArea = document.createElement('textarea');
+        const textArea = document.createElement('textarea'); 
         textArea.value = text;
         document.body.appendChild(textArea); 
         textArea.focus();
