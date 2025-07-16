@@ -633,9 +633,9 @@ return `
         <td><span class="status ${analysisType}">${analysisType}</span></td>
         <!-- <td><span class="status light">analyzed</span></td>  REMOVE THIS LINE -->
         <td>${new Date(lead.created_at).toLocaleString()}</td>
-        <td>
-            <button class="btn-small" onclick="viewLead('${lead.id}')">📝 View</button>
-        </td>
+<td style="text-align: center;">
+    <button class="btn-small" onclick="viewLead('${lead.id}')">📝 View</button>
+</td>
     </tr>
 `;
         }).join('');
