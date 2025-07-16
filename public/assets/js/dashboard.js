@@ -668,7 +668,6 @@ async function loadStats() {
         console.error('Error loading stats:', err);
     }
 }
-
 async function bulkDeleteLeads() {
     const selectedCount = selectedLeads.size;
     
@@ -732,9 +731,6 @@ async function bulkDeleteLeads() {
                     
                     // Remove from local array immediately
                     allLeads = allLeads.filter(lead => !batch.includes(lead.id));
-                    
-                    // Remove from selection
-                    batch.forEach(id => selectedLeads.delete(id));
                 }
                 
             } catch (batchError) {
@@ -743,11 +739,19 @@ async function bulkDeleteLeads() {
             }
         }
         
-        // Update UI
-        applyActivityFilter();
-        await loadStats();
-        updateBulkActionsVisibility();
+        // FIXED: Clear all selections after deletion
+        console.log('🧹 Clearing selection state...');
+        selectedLeads.clear();
         
+        // FIXED: Update UI immediately to reflect cleared selection
+        applyActivityFilter(); // This will re-render the table without selected states
+        updateBulkActionsVisibility(); // This will hide the bulk actions bar
+        updateSelectAllButton(); // This will reset the select all button
+        
+        // Refresh stats
+        await loadStats();
+        
+        // Show results
         if (deletedCount > 0) {
             showMessage(`Successfully deleted ${deletedCount} lead${deletedCount > 1 ? 's' : ''}`, 'success');
         }
@@ -756,15 +760,24 @@ async function bulkDeleteLeads() {
             showMessage(`Failed to delete ${errorCount} lead${errorCount > 1 ? 's' : ''}`, 'error');
         }
         
+        console.log(`✅ Bulk deletion completed: ${deletedCount} deleted, ${errorCount} failed`);
+        
     } catch (error) {
         console.error('❌ Bulk deletion failed:', error);
         showMessage(`Bulk deletion failed: ${error.message}`, 'error');
         
-        // Refresh data in case of partial deletion
+        // Clear selection even on error and refresh data
+        selectedLeads.clear();
+        updateBulkActionsVisibility();
+        updateSelectAllButton();
         await loadRecentActivity();
+        
     } finally {
+        // Reset button state
         bulkDeleteBtn.innerHTML = originalText;
         bulkDeleteBtn.disabled = false;
+        
+        console.log('🔄 Final UI state reset complete');
     }
 }
 
@@ -874,9 +887,11 @@ function selectAllLeads() {
 }
 
 function clearSelection() {
+    console.log('🧹 Clearing all selections...');
+    
     selectedLeads.clear();
     
-    // Update all checkboxes
+    // Update all checkboxes and remove selected styling
     document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
         checkbox.checked = false;
         const row = checkbox.closest('tr');
@@ -885,24 +900,33 @@ function clearSelection() {
         }
     });
     
+    // Update UI elements
     updateBulkActionsVisibility();
     updateSelectAllButton();
+    
+    console.log('✅ Selection cleared, UI updated');
 }
 
+// Enhanced updateBulkActionsVisibility function with better logging:
 function updateBulkActionsVisibility() {
     const bulkActions = document.getElementById('bulk-actions');
     const selectedCount = document.getElementById('selected-count');
+    
+    console.log('🔄 Updating bulk actions visibility, selected count:', selectedLeads.size);
     
     if (bulkActions && selectedCount) {
         if (selectedLeads.size > 0) {
             bulkActions.style.display = 'flex';
             selectedCount.textContent = selectedLeads.size;
+            console.log('✅ Bulk actions shown');
         } else {
             bulkActions.style.display = 'none';
+            console.log('✅ Bulk actions hidden');
         }
     }
 }
 
+// Enhanced updateSelectAllButton function:
 function updateSelectAllButton() {
     const selectAllBtn = document.getElementById('select-all-btn');
     if (!selectAllBtn) return;
@@ -910,9 +934,11 @@ function updateSelectAllButton() {
     const visibleLeads = document.querySelectorAll('.lead-checkbox').length;
     const selectedCount = selectedLeads.size;
     
+    console.log('🔄 Updating select all button:', { visibleLeads, selectedCount });
+    
     if (selectedCount === 0) {
         selectAllBtn.innerHTML = '☑️ Select All';
-    } else if (selectedCount === visibleLeads) {
+    } else if (selectedCount === visibleLeads && visibleLeads > 0) {
         selectAllBtn.innerHTML = '☐ Deselect All';
     } else {
         selectAllBtn.innerHTML = `☑️ Select All (${selectedCount}/${visibleLeads})`;
