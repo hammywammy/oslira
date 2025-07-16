@@ -272,6 +272,16 @@ function validateProfileData(raw: any): ProfileData {
     throw new Error('Scraper returned invalid profile data structure');
   }
   
+  // DEBUG: Log the raw profile data to see what fields are available
+  console.log('🔍 Raw profile data fields:', Object.keys(raw));
+  console.log('🖼️ Profile picture fields check:');
+  console.log('- profilePicUrl:', raw.profilePicUrl);
+  console.log('- profile_pic_url:', raw.profile_pic_url);
+  console.log('- profilePicture:', raw.profilePicture);
+  console.log('- profilePictureUrl:', raw.profilePictureUrl);
+  console.log('- avatar:', raw.avatar);
+  console.log('- avatarUrl:', raw.avatarUrl);
+  
   const followersCount = Number(
     raw.followersCount || 
     raw.followers_count || 
@@ -292,6 +302,17 @@ function validateProfileData(raw: any): ProfileData {
   if (!username) {
     throw new Error('Profile data missing required username field');
   }
+  
+  // ENHANCED: Better profile picture URL detection
+  const profilePicUrl = raw.profilePicUrl || 
+                       raw.profile_pic_url || 
+                       raw.profilePicture || 
+                       raw.profilePictureUrl ||
+                       raw.avatar ||
+                       raw.avatarUrl ||
+                       undefined;
+                       
+  console.log('✅ Selected profile picture URL:', profilePicUrl);
   
   // ENHANCED: Calculate engagement metrics from posts data
   let engagement = undefined;
@@ -332,7 +353,7 @@ function validateProfileData(raw: any): ProfileData {
     postsCount: Number(raw.postsCount || raw.posts_count || raw.posts || 0) || undefined,
     isVerified: Boolean(raw.isVerified || raw.is_verified || raw.verified),
     private: Boolean(raw.private || raw.is_private),
-    profilePicUrl: raw.profilePicUrl || raw.profile_pic_url || raw.profilePicture || undefined,
+    profilePicUrl, // This should now capture the correct URL
     externalUrl: raw.externalUrl || raw.external_url || raw.website || undefined,
     businessCategory: raw.businessCategory || raw.business_category || raw.category || undefined,
     latestPosts: raw.latestPosts || undefined,
@@ -1545,11 +1566,15 @@ const leadData = {
   username: profileData.username,
   platform: data.platform || 'instagram',
   profile_url: data.profile_url,
-  profile_pic_url: profileData.profilePicUrl || null, // ADD THIS LINE
+  profile_pic_url: profileData.profilePicUrl || null, // Keep this line as is
   score: analysisResult.score || 0,
   type: data.analysis_type,
   created_at: new Date().toISOString()
 };
+
+// DEBUG: Log what we're about to save
+console.log('💾 About to save leadData:', JSON.stringify(leadData, null, 2));
+console.log('🖼️ Profile pic URL being saved:', leadData.profile_pic_url);
 
     let analysisData = null;
     if (data.analysis_type === 'deep') {
