@@ -1780,21 +1780,6 @@ function renderWelcomeInsights() {
     ];
     renderInsights(insights);
 }
-// Render welcome insights for demo mode
-function renderWelcomeInsights() {
-    const container = document.getElementById('insights-container');
-    const insights = [
-        {
-            type: 'welcome',
-            icon: '🚀',
-            title: 'Welcome to Oslira!',
-            content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
-            cta: 'Research Your First Lead',
-            action: 'showAnalysisModal()'
-        }
-    ];
-    renderInsights(insights);
-}
 
 // Render insights cards
 function renderInsights(insights) {
