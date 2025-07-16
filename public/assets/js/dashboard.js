@@ -1653,13 +1653,14 @@ async function generateInsights() {
         
         if (!leads || leads.length === 0) {
             insights.push({
-                type: 'welcome',
-                icon: '🚀',
-                title: 'Welcome to Oslira!',
-                content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
-                cta: 'Research Your First Lead',
-                action: 'showAnalysisModal()'
-            });
+insights.push({
+    type: 'welcome',
+    icon: '🚀',
+    title: 'Welcome to Oslira!',
+    content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+    cta: 'Research Your First Lead',
+    action: 'showAnalysisModal()'
+});
         } else {
             // Calculate metrics from database data
             const totalLeads = leads.length;
@@ -1719,27 +1720,27 @@ async function generateInsights() {
             }
             
             // FIXED: Subscription recommendations with correct URLs
-            const plan = userData?.subscription_plan || 'free';
-            if (plan === 'free') {
-                insights.push({
-                    type: 'recommendation',
-                    icon: '⬆️',
-                    title: 'Upgrade Recommended',
-                    content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
-                    cta: 'View Plans',
-                    action: 'window.open("https://oslira.com/subscription", "_blank")'  // FIXED
-                });
-            }
-            
-            // FIXED: Campaign insight with correct URL
-            insights.push({
-                type: 'recommendation',
-                icon: '🚀',
-                title: 'Scale with Campaigns',
-                content: 'Create automated outreach sequences to scale your lead generation and convert more prospects.',
-                cta: 'Create Campaign',
-                action: 'window.open("https://oslira.com/campaigns", "_blank")'  // FIXED
-            });
+const plan = userData?.subscription_plan || 'free';
+if (plan === 'free') {
+    insights.push({
+        type: 'recommendation',
+        icon: '⬆️',
+        title: 'Upgrade Recommended',
+        content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
+        cta: 'View Plans',
+        action: 'window.open("https://oslira.com/subscription", "_blank")'
+    });
+}
+
+// FIXED: Campaign insight with correct action string
+insights.push({
+    type: 'recommendation',
+    icon: '🚀',
+    title: 'Scale with Campaigns',
+    content: 'Create automated outreach sequences to scale your lead generation and convert more prospects.',
+    cta: 'Create Campaign',
+    action: 'window.open("https://oslira.com/campaigns", "_blank")'
+});
         }
         
         setTimeout(() => {
@@ -1782,6 +1783,8 @@ function renderWelcomeInsights() {
 }
 
 // Render insights cards
+// Replace your renderInsights function around line 882 with this fixed version:
+
 function renderInsights(insights) {
     const container = document.getElementById('insights-container');
     
@@ -1799,12 +1802,47 @@ function renderInsights(insights) {
             `).join('') : ''}
             
             ${insight.cta ? `
-                <button class="insight-cta" onclick="${insight.action}">
+                <button class="insight-cta" data-action="${insight.action}">
                     ${insight.cta}
                 </button>
             ` : ''}
         </div>
     `).join('');
+    
+    // FIXED: Add event listeners to the CTA buttons after rendering
+    container.querySelectorAll('.insight-cta').forEach(button => {
+        button.addEventListener('click', function() {
+            const action = this.getAttribute('data-action');
+            console.log('Executing insight action:', action);
+            
+            try {
+                // Handle different types of actions
+                if (action === 'showAnalysisModal()') {
+                    showAnalysisModal();
+                } else if (action.includes('window.open')) {
+                    // Extract the URL from the action string
+                    const urlMatch = action.match(/window\.open\("([^"]+)"/);
+                    if (urlMatch && urlMatch[1]) {
+                        const url = urlMatch[1];
+                        console.log('Opening URL:', url);
+                        window.open(url, '_blank');
+                    }
+                } else if (action.includes('location.href')) {
+                    // Handle location.href actions
+                    const urlMatch = action.match(/location\.href\s*=\s*["']([^"']+)["']/);
+                    if (urlMatch && urlMatch[1]) {
+                        window.location.href = urlMatch[1];
+                    }
+                } else {
+                    // Try to evaluate the action as JavaScript
+                    eval(action);
+                }
+            } catch (error) {
+                console.error('Error executing insight action:', error);
+                showMessage('Action failed to execute', 'error');
+            }
+        });
+    });
 }
 
 // Export leads to CSV
