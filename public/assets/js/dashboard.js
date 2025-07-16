@@ -2404,6 +2404,27 @@ async function handleCSVUpload(event) {
     }
 }
 
+// NEW: Function to update credit cost display
+function updateCreditCostDisplay() {
+    if (!csvData || csvData.length === 0) return;
+    
+    const analysisType = document.getElementById('bulk-analysis-type').value;
+    const creditsPerLead = analysisType === 'deep' ? 2 : 1;
+    const totalCredits = csvData.length * creditsPerLead;
+    
+    // Update the cost display
+    const totalCostElement = document.getElementById('total-cost');
+    if (totalCostElement) {
+        totalCostElement.textContent = totalCredits;
+    }
+    
+    // Update the process button
+    const processBtn = document.getElementById('process-csv-btn');
+    if (processBtn && !processBtn.disabled) {
+        processBtn.innerHTML = `🚀 Analyze ${csvData.length} Profiles (${totalCredits} credits)`;
+    }
+}
+
 async function processBulkAnalysis() {
     if (!csvData || csvData.length === 0) {
         showMessage('No CSV data to process', 'error');
