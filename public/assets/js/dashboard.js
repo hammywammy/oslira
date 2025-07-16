@@ -129,6 +129,151 @@ function showFallbackUI() {
     setupEventListeners();
 }
 
+// REPLACE your existing processBulkAnalysis function with this:
+
+async function processBulkAnalysis() {
+    if (!csvData || csvData.length === 0) {
+        showMessage('No CSV data to process', 'error');
+        return;
+    }
+    
+    const analysisType = document.getElementById('bulk-analysis-type').value;
+    const businessId = document.getElementById('bulk-business-id').value;
+    
+    if (!businessId) {
+        showMessage('Please select a business profile', 'error');
+        return;
+    }
+    
+    if (!supabaseClient || !currentUser) {
+        showMessage('Not connected to database', 'error');
+        return;
+    }
+    
+    // Show progress section
+    const progressSection = document.getElementById('bulk-progress');
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressDetails = document.getElementById('progress-details');
+    const processBtn = document.getElementById('process-csv-btn');
+    
+    progressSection.style.display = 'block';
+    processBtn.disabled = true;
+    processBtn.innerHTML = '🔄 Processing...';
+    
+    let completed = 0;
+    let failed = 0;
+    const total = csvData.length;
+    
+    try {
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError || !session) {
+            throw new Error('Please log in again to continue');
+        }
+        
+        progressText.textContent = `Starting bulk analysis of ${total} profiles...`;
+        
+        // Process in larger batches using Apify's bulk capability
+        const batchSize = 10; // Apify can handle multiple profiles per request
+        const batches = [];
+        
+        for (let i = 0; i < csvData.length; i += batchSize) {
+            batches.push(csvData.slice(i, i + batchSize));
+        }
+        
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+            const batch = batches[batchIndex];
+            
+            progressText.textContent = `Processing batch ${batchIndex + 1} of ${batches.length} (${batch.length} profiles)...`;
+            
+            try {
+                // Send bulk request to worker
+                const bulkRequestBody = {
+                    profiles: batch.map(profile => ({
+                        username: profile.username,
+                        name: profile.name,
+                        notes: profile.notes
+                    })),
+                    analysis_type: analysisType,
+                    business_id: businessId,
+                    user_id: currentUser.id,
+                    platform: 'instagram'
+                };
+                
+                console.log(`📤 Sending bulk batch ${batchIndex + 1}:`, bulkRequestBody);
+                
+                const response = await fetch(window.CONFIG.workerUrl + '/bulk-analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify(bulkRequestBody)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    completed += result.successful || 0;
+                    failed += result.failed || 0;
+                    
+                    console.log(`✅ Batch ${batchIndex + 1} completed:`, {
+                        successful: result.successful,
+                        failed: result.failed,
+                        details: result.results
+                    });
+                } else {
+                    failed += batch.length;
+                    console.error(`❌ Batch ${batchIndex + 1} failed:`, result.error);
+                }
+                
+            } catch (error) {
+                failed += batch.length;
+                console.error(`❌ Batch ${batchIndex + 1} error:`, error.message);
+            }
+            
+            // Update progress
+            const progressPercent = Math.round(((completed + failed) / total) * 100);
+            progressBar.style.width = `${progressPercent}%`;
+            progressDetails.innerHTML = `
+                ✅ Completed: ${completed} | ❌ Failed: ${failed} | 📊 Total: ${total}
+            `;
+            
+            // Wait between batches to avoid overwhelming
+            if (batchIndex < batches.length - 1) {
+                progressText.textContent = `Waiting before next batch...`;
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+        }
+        
+        // Final results
+        progressText.textContent = `Bulk analysis complete! ${completed} successful, ${failed} failed.`;
+        
+        if (completed > 0) {
+            showMessage(`Successfully analyzed ${completed} profiles!`, 'success');
+            
+            // Refresh the dashboard data
+            await Promise.all([
+                loadRecentActivity(),
+                loadStats(),
+                loadCreditUsage(),
+                refreshCreditsDisplay()
+            ]);
+        }
+        
+        if (failed > 0) {
+            showMessage(`${failed} profiles failed to analyze. Check console for details.`, 'warning');
+        }
+        
+    } catch (error) {
+        console.error('Bulk analysis error:', error);
+        showMessage(`Bulk analysis failed: ${error.message}`, 'error');
+        progressText.textContent = 'Bulk analysis failed.';
+    } finally {
+        processBtn.disabled = false;
+        processBtn.innerHTML = '🚀 Start Bulk Analysis';
+    }
+}
 // Initialize the entire page
 async function initializePage() {
     if (!supabaseClient) {
