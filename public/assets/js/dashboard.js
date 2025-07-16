@@ -13,7 +13,7 @@ async function copyText(text) {
         document.body.appendChild(textArea); 
         textArea.focus();
         textArea.select();
-        try {
+        try { 
             document.execCommand('copy');
             showMessage('Copied to clipboard!', 'success');
         } catch (err) {
