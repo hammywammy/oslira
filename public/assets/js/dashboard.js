@@ -465,6 +465,7 @@ function applyActivityFilter() {
 }
 
 // Display leads in activity table
+// Display leads in activity table - FIXED VERSION with profile pictures
 function displayLeads(leads) {
     const tableBody = document.getElementById('activity-table');
     
@@ -473,10 +474,34 @@ function displayLeads(leads) {
             const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
             const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
             
+            // Get profile picture URL - check multiple possible fields
+            const profilePicUrl = lead.profile_pic_url || 
+                                 lead.profile_picture_url || 
+                                 lead.avatar_url ||
+                                 (lead.profile_data && JSON.parse(lead.profile_data || '{}').profile_pic_url) ||
+                                 null;
+            
+            // Create profile picture HTML
+            const profilePicHtml = profilePicUrl 
+                ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=40&h=40&fit=cover&a=attention" 
+                        alt="@${lead.username}" 
+                        style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-light);"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                : '';
+            
+            // Fallback avatar with first letter of username
+            const fallbackAvatar = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; border: 2px solid var(--border-light);">
+                ${(lead.username || 'U').charAt(0).toUpperCase()}
+            </div>`;
+            
             return `
                 <tr class="lead-row">
                     <td>
                         <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="position: relative; flex-shrink: 0;">
+                                ${profilePicHtml}
+                                ${fallbackAvatar}
+                            </div>
                             <div>
                                 <div style="font-weight: 600; color: var(--text-primary);">@${lead.username}</div>
                                 <div style="font-size: 12px; color: var(--border-light);">
@@ -935,20 +960,47 @@ function buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass) {
 /**
  * Builds the profile header section
  */
+/**
+ * Builds the profile header section - FIXED VERSION with profile picture
+ */
 function buildProfileHeader(lead, analysisType, scoreClass, platform) {
     const isDeepAnalysis = analysisType === 'deep';
     
+    // Get profile picture URL - check multiple possible fields
+    const profilePicUrl = lead.profile_pic_url || 
+                         lead.profile_picture_url || 
+                         lead.avatar_url ||
+                         (lead.profile_data && JSON.parse(lead.profile_data || '{}').profile_pic_url) ||
+                         null;
+    
+    // Create profile picture HTML
+    const profilePicHtml = profilePicUrl 
+        ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=80&h=80&fit=cover&a=attention" 
+                alt="@${lead.username}" 
+                style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-light); box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+        : '';
+    
+    // Fallback avatar with first letter of username
+    const fallbackAvatar = `<div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 700; font-size: 32px; border: 3px solid var(--border-light); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+        ${(lead.username || 'U').charAt(0).toUpperCase()}
+    </div>`;
+    
     return `
-        <div class="profile-header">
-            <div class="profile-info">
-                <h4>@${escapeHtml(lead.username)}</h4>
+        <div class="profile-header" style="display: flex; align-items: center; gap: 20px; padding: 24px; background: linear-gradient(135deg, var(--bg-light), #E8F3FF); border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border-light);">
+            <div style="position: relative; flex-shrink: 0;">
+                ${profilePicHtml}
+                ${fallbackAvatar}
+            </div>
+            <div class="profile-info" style="flex: 1;">
+                <h4 style="margin: 0 0 8px 0; font-size: 24px; color: var(--text-primary);">@${escapeHtml(lead.username)}</h4>
                 <a href="${escapeHtml(lead.profile_url)}" 
                    target="_blank" 
                    rel="noopener noreferrer"
-                   style="color: var(--primary-blue); text-decoration: none; font-weight: 500;">
+                   style="color: var(--primary-blue); text-decoration: none; font-weight: 500; font-size: 16px;">
                     View on ${platform} 🔗
                 </a>
-                <div style="margin-top: 8px; color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                <div style="margin-top: 12px; color: var(--text-secondary); font-size: 14px; display: flex; align-items: center; gap: 8px;">
                     <span>${platform}</span>
                     <span>•</span>
                     <span style="color: ${isDeepAnalysis ? 'var(--accent-teal)' : 'var(--primary-blue)'}; font-weight: 600;">
@@ -956,12 +1008,12 @@ function buildProfileHeader(lead, analysisType, scoreClass, platform) {
                     </span>
                 </div>
             </div>
-            <div style="margin-left: auto; text-align: right;">
-                <span class="score-badge ${scoreClass}" style="font-size: 18px; font-weight: 700;">
+            <div style="text-align: right; flex-shrink: 0;">
+                <span class="score-badge ${scoreClass}" style="font-size: 24px; font-weight: 700; padding: 12px 16px;">
                     ${lead.score || 0}/100
                 </span>
-                <div style="margin-top: 8px;">
-                    <span class="status ${analysisType}" style="font-size: 13px; padding: 4px 8px;">
+                <div style="margin-top: 12px;">
+                    <span class="status ${analysisType}" style="font-size: 13px; padding: 6px 12px;">
                         ${isDeepAnalysis ? 'Deep Analysis' : 'Light Analysis'}
                     </span>
                 </div>
