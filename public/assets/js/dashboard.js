@@ -211,16 +211,20 @@ async function loadUserData() {
             return;
         }
 
-        // Use credits directly from users table
+        // UPDATED: Pass credits to the UI update function
         const userCredits = user.credits || 0;
         updateSubscriptionUI(user.subscription_plan, user.subscription_status, userCredits);
+        
+        console.log('✅ User data loaded:', { 
+            plan: user.subscription_plan, 
+            credits: userCredits 
+        });
         
     } catch (error) {
         console.error('Error loading user data:', error);
         updateSubscriptionUI('free', 'active', 0);
     }
 }
-
 // Update subscription UI elements
 function updateSubscriptionUI(plan, status, credits) {
     const planNames = {
@@ -233,8 +237,35 @@ function updateSubscriptionUI(plan, status, credits) {
 
     const planName = planNames[plan] || 'Free Plan';
     document.getElementById('sidebar-plan').textContent = planName;
-    document.getElementById('sidebar-billing').textContent = 
-        plan === 'free' ? 'No active subscription' : 'Active subscription';
+    
+    // UPDATED: Show credits prominently
+    const billingElement = document.getElementById('sidebar-billing');
+    if (plan === 'free') {
+        billingElement.innerHTML = `
+            <div style="text-align: center; margin-top: 8px;">
+                <div style="font-size: 24px; font-weight: 700; color: var(--primary-blue); line-height: 1;">
+                    ${credits || 0}
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    Credits Remaining
+                </div>
+            </div>
+        `;
+    } else {
+        billingElement.innerHTML = `
+            <div style="text-align: center; margin-top: 8px;">
+                <div style="font-size: 20px; font-weight: 700; color: var(--success); line-height: 1;">
+                    ${credits || 0}
+                </div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                    Credits Available
+                </div>
+                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+                    Active subscription
+                </div>
+            </div>
+        `;
+    }
 }
 
 // Set up all event listeners
@@ -742,6 +773,29 @@ async function loadCreditUsage() {
     }
 }
 
+async function refreshCreditsDisplay() {
+    if (!supabaseClient || !currentUser) return;
+    
+    try {
+        const { data: user, error } = await supabaseClient
+            .from('users')
+            .select('subscription_plan, subscription_status, credits')
+            .eq('id', currentUser.id)
+            .single();
+
+        if (error) {
+            console.warn('Error refreshing credits:', error);
+            return;
+        }
+
+        // Update just the credits in the sidebar
+        updateSubscriptionUI(user.subscription_plan, user.subscription_status, user.credits);
+        
+    } catch (error) {
+        console.error('Error refreshing credits:', error);
+    }
+
+
 function toggleLeadSelection(leadId) {
     if (selectedLeads.has(leadId)) {
         selectedLeads.delete(leadId);
@@ -998,7 +1052,8 @@ async function submitAnalysis(event) {
         await Promise.all([
             loadRecentActivity(),
             loadStats(),
-            loadCreditUsage()
+            loadCreditUsage(),
+            refreshCreditsDisplay()
         ]);
         
     } catch (error) {
