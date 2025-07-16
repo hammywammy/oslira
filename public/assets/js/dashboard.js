@@ -52,6 +52,7 @@ async function loadConfig() {
 }
 
 // Global state
+let selectedLeads = new Set();
 let supabaseClient;
 let currentUser = null;
 let currentSession = null;
@@ -278,6 +279,10 @@ function setupEventListeners() {
     
     // Logout
     document.getElementById('logout-link')?.addEventListener('click', logout);
+
+    document.getElementById('select-all-btn')?.addEventListener('click', selectAllLeads);
+    document.getElementById('bulk-delete-btn')?.addEventListener('click', bulkDeleteLeads);
+    document.getElementById('clear-selection-btn')?.addEventListener('click', clearSelection);
     
     // Close modals on outside click
     window.addEventListener('click', handleModalClick);
@@ -477,7 +482,7 @@ function displayLeads(leads) {
             const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
             const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
             
-            // UPDATED: Prioritize database field first, then fall back to other possible fields
+            // Get profile picture URL
             const profilePicUrl = lead.profile_pic_url || 
                                  lead.profile_picture_url || 
                                  lead.avatar_url ||
@@ -497,10 +502,20 @@ function displayLeads(leads) {
                 ${(lead.username || 'U').charAt(0).toUpperCase()}
             </div>`;
             
+            const isSelected = selectedLeads.has(lead.id);
+            
             return `
-                <tr class="lead-row">
+                <tr class="lead-row ${isSelected ? 'selected' : ''}" data-lead-id="${lead.id}">
                     <td>
                         <div style="display: flex; align-items: center; gap: 12px;">
+                            <label class="checkbox-container" style="margin: 0;">
+                                <input type="checkbox" 
+                                       class="lead-checkbox" 
+                                       data-lead-id="${lead.id}" 
+                                       ${isSelected ? 'checked' : ''}
+                                       onchange="toggleLeadSelection('${lead.id}')">
+                                <span class="checkmark"></span>
+                            </label>
                             <div style="position: relative; flex-shrink: 0;">
                                 ${profilePicHtml}
                                 ${fallbackAvatar}
@@ -534,6 +549,9 @@ function displayLeads(leads) {
             </tr>
         `;
     }
+    
+    // Update bulk actions visibility
+    updateBulkActionsVisibility();
 }
 
 // Load statistics from database
@@ -591,6 +609,105 @@ async function loadStats() {
     }
 }
 
+async function bulkDeleteLeads() {
+    const selectedCount = selectedLeads.size;
+    
+    if (selectedCount === 0) {
+        showMessage('No leads selected for deletion', 'error');
+        return;
+    }
+    
+    const confirmMessage = `Are you sure you want to delete ${selectedCount} lead${selectedCount > 1 ? 's' : ''}? This action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    if (!supabaseClient || !currentUser) {
+        showMessage('Database not available', 'error');
+        return;
+    }
+    
+    const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    const originalText = bulkDeleteBtn.innerHTML;
+    bulkDeleteBtn.innerHTML = '🔄 Deleting...';
+    bulkDeleteBtn.disabled = true;
+    
+    let deletedCount = 0;
+    let errorCount = 0;
+    const leadIds = Array.from(selectedLeads);
+    
+    try {
+        console.log(`🗑️ Starting bulk deletion of ${selectedCount} leads`);
+        
+        // Delete in batches for better performance
+        const batchSize = 10;
+        for (let i = 0; i < leadIds.length; i += batchSize) {
+            const batch = leadIds.slice(i, i + batchSize);
+            
+            try {
+                // Delete analyses first
+                const { error: analysisError } = await supabaseClient
+                    .from('lead_analyses')
+                    .delete()
+                    .in('lead_id', batch)
+                    .eq('user_id', currentUser.id);
+                
+                if (analysisError) {
+                    console.warn('Some analyses could not be deleted:', analysisError);
+                }
+                
+                // Delete leads
+                const { error: leadError } = await supabaseClient
+                    .from('leads')
+                    .delete()
+                    .in('id', batch)
+                    .eq('user_id', currentUser.id);
+                
+                if (leadError) {
+                    console.error('Batch deletion error:', leadError);
+                    errorCount += batch.length;
+                } else {
+                    deletedCount += batch.length;
+                    
+                    // Remove from local array immediately
+                    allLeads = allLeads.filter(lead => !batch.includes(lead.id));
+                    
+                    // Remove from selection
+                    batch.forEach(id => selectedLeads.delete(id));
+                }
+                
+            } catch (batchError) {
+                console.error('Batch processing error:', batchError);
+                errorCount += batch.length;
+            }
+        }
+        
+        // Update UI
+        applyActivityFilter();
+        await loadStats();
+        updateBulkActionsVisibility();
+        
+        if (deletedCount > 0) {
+            showMessage(`Successfully deleted ${deletedCount} lead${deletedCount > 1 ? 's' : ''}`, 'success');
+        }
+        
+        if (errorCount > 0) {
+            showMessage(`Failed to delete ${errorCount} lead${errorCount > 1 ? 's' : ''}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('❌ Bulk deletion failed:', error);
+        showMessage(`Bulk deletion failed: ${error.message}`, 'error');
+        
+        // Refresh data in case of partial deletion
+        await loadRecentActivity();
+    } finally {
+        bulkDeleteBtn.innerHTML = originalText;
+        bulkDeleteBtn.disabled = false;
+    }
+}
+
 // Load credit usage from transactions
 async function loadCreditUsage() {
     if (!supabaseClient || !currentUser) {
@@ -625,6 +742,99 @@ async function loadCreditUsage() {
     }
 }
 
+function toggleLeadSelection(leadId) {
+    if (selectedLeads.has(leadId)) {
+        selectedLeads.delete(leadId);
+    } else {
+        selectedLeads.add(leadId);
+    }
+    
+    // Update UI
+    updateBulkActionsVisibility();
+    updateSelectAllButton();
+    
+    // Update row styling
+    const row = document.querySelector(`tr[data-lead-id="${leadId}"]`);
+    if (row) {
+        row.classList.toggle('selected', selectedLeads.has(leadId));
+    }
+}
+
+function selectAllLeads() {
+    const visibleLeads = allLeads.filter(lead => {
+        const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
+        return row && row.style.display !== 'none';
+    });
+    
+    if (selectedLeads.size === visibleLeads.length) {
+        // Deselect all
+        selectedLeads.clear();
+    } else {
+        // Select all visible leads
+        selectedLeads.clear();
+        visibleLeads.forEach(lead => selectedLeads.add(lead.id));
+    }
+    
+    // Update all checkboxes
+    document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
+        const leadId = checkbox.dataset.leadId;
+        checkbox.checked = selectedLeads.has(leadId);
+        
+        const row = checkbox.closest('tr');
+        if (row) {
+            row.classList.toggle('selected', selectedLeads.has(leadId));
+        }
+    });
+    
+    updateBulkActionsVisibility();
+    updateSelectAllButton();
+}
+
+function clearSelection() {
+    selectedLeads.clear();
+    
+    // Update all checkboxes
+    document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+        const row = checkbox.closest('tr');
+        if (row) {
+            row.classList.remove('selected');
+        }
+    });
+    
+    updateBulkActionsVisibility();
+    updateSelectAllButton();
+}
+
+function updateBulkActionsVisibility() {
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+    
+    if (bulkActions && selectedCount) {
+        if (selectedLeads.size > 0) {
+            bulkActions.style.display = 'flex';
+            selectedCount.textContent = selectedLeads.size;
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+}
+
+function updateSelectAllButton() {
+    const selectAllBtn = document.getElementById('select-all-btn');
+    if (!selectAllBtn) return;
+    
+    const visibleLeads = document.querySelectorAll('.lead-checkbox').length;
+    const selectedCount = selectedLeads.size;
+    
+    if (selectedCount === 0) {
+        selectAllBtn.innerHTML = '☑️ Select All';
+    } else if (selectedCount === visibleLeads) {
+        selectAllBtn.innerHTML = '☐ Deselect All';
+    } else {
+        selectAllBtn.innerHTML = `☑️ Select All (${selectedCount}/${visibleLeads})`;
+    }
+}
 // Show analysis modal
 function showAnalysisModal() {
     const modal = document.getElementById('analysisModal');
@@ -1404,6 +1614,8 @@ async function deleteLead(leadId) {
 }
 
 // Generate AI insights based on user data
+// Fix the generateInsights function around line 795 - update the insight objects:
+
 async function generateInsights() {
     const container = document.getElementById('insights-container');
     const loading = document.getElementById('loading-insights');
@@ -1506,7 +1718,7 @@ async function generateInsights() {
                 });
             }
             
-            // Subscription recommendations
+            // FIXED: Subscription recommendations with correct URLs
             const plan = userData?.subscription_plan || 'free';
             if (plan === 'free') {
                 insights.push({
@@ -1515,18 +1727,18 @@ async function generateInsights() {
                     title: 'Upgrade Recommended',
                     content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
                     cta: 'View Plans',
-                    action: 'location.href="subscription.html"'
+                    action: 'window.open("https://oslira.com/subscription", "_blank")'  // FIXED
                 });
             }
             
-            // Campaign insight
+            // FIXED: Campaign insight with correct URL
             insights.push({
                 type: 'recommendation',
                 icon: '🚀',
                 title: 'Scale with Campaigns',
                 content: 'Create automated outreach sequences to scale your lead generation and convert more prospects.',
                 cta: 'Create Campaign',
-                action: 'location.href="campaigns.html"'
+                action: 'window.open("https://oslira.com/campaigns", "_blank")'  // FIXED
             });
         }
         
@@ -1553,6 +1765,21 @@ async function generateInsights() {
     }
 }
 
+// Also update the renderWelcomeInsights function:
+function renderWelcomeInsights() {
+    const container = document.getElementById('insights-container');
+    const insights = [
+        {
+            type: 'welcome',
+            icon: '🚀',
+            title: 'Welcome to Oslira!',
+            content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+            cta: 'Research Your First Lead',
+            action: 'showAnalysisModal()'
+        }
+    ];
+    renderInsights(insights);
+}
 // Render welcome insights for demo mode
 function renderWelcomeInsights() {
     const container = document.getElementById('insights-container');
@@ -1836,6 +2063,10 @@ window.copyText = copyText;
 window.showAnalysisModal = showAnalysisModal;
 window.generateInsights = generateInsights;
 window.copyOutreachMessage = copyOutreachMessage;
+window.toggleLeadSelection = toggleLeadSelection;
+window.selectAllLeads = selectAllLeads;
+window.clearSelection = clearSelection;
+window.bulkDeleteLeads = bulkDeleteLeads;
 
 // Initialize auth listener after page load
 setTimeout(setupAuthListener, 2000);
