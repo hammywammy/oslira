@@ -1652,7 +1652,6 @@ async function generateInsights() {
         let insights = [];
         
         if (!leads || leads.length === 0) {
-            insights.push({
 insights.push({
     type: 'welcome',
     icon: '🚀',
