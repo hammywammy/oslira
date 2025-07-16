@@ -7,7 +7,7 @@
   directory = "netlify/edge-functions"
 
 # Your existing auth edge function for all /api/* routes
-[[edge_functions]]
+[[edge_functions]] 
   function = "auth"
   path     = "/api/*"
 
