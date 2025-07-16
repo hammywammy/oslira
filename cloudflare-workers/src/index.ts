@@ -1779,6 +1779,318 @@ console.log('🖼️ Profile pic URL being saved:', leadData.profile_pic_url);
     }, 500);
   }
 });
+// Add this new endpoint to your worker after your existing /analyze endpoint:
+
+app.post('/bulk-analyze', async c => {
+  const startTime = Date.now();
+  console.log('=== BULK Analysis request started ===', new Date().toISOString());
+
+  try {
+    // 1. Authentication
+    const auth = c.req.header('Authorization')?.replace('Bearer ', '');
+    if (!auth) {
+      return c.json({ error: 'Missing Authorization header' }, 401);
+    }
+
+    const userId = await verifyJWT(auth);
+    if (!userId) {
+      return c.json({ error: 'Invalid or expired token' }, 401);
+    }
+    console.log(`✅ User authenticated: ${userId}`);
+
+    // 2. Request Parsing
+    let body;
+    try {
+      body = await c.req.json();
+      console.log('📝 Bulk request body:', JSON.stringify(body, null, 2));
+    } catch (parseError) {
+      return c.json({ error: 'Invalid JSON in request body' }, 400);
+    }
+
+    const { profiles, analysis_type, business_id, user_id, platform } = body;
+
+    if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
+      return c.json({ error: 'profiles array is required and must not be empty' }, 400);
+    }
+
+    if (!analysis_type || !['light', 'deep'].includes(analysis_type)) {
+      return c.json({ error: 'analysis_type must be "light" or "deep"' }, 400);
+    }
+
+    if (!business_id) {
+      return c.json({ error: 'business_id is required' }, 400);
+    }
+
+    console.log(`📊 Processing ${profiles.length} profiles with ${analysis_type} analysis`);
+
+    // 3. Environment validation
+    const requiredEnvVars = {
+      SUPABASE_URL: c.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE: c.env.SUPABASE_SERVICE_ROLE,
+      OPENAI_KEY: c.env.OPENAI_KEY,
+      APIFY_API_TOKEN: c.env.APIFY_API_TOKEN
+    };
+
+    const missingEnvVars = Object.entries(requiredEnvVars)
+      .filter(([key, value]) => !value)
+      .map(([key]) => key);
+
+    if (missingEnvVars.length > 0) {
+      return c.json({ 
+        error: 'Service configuration error', 
+        details: `Missing: ${missingEnvVars.join(', ')}` 
+      }, 500);
+    }
+
+    // 4. User validation and credit check
+    let user, currentCredits;
+    try {
+      const result = await fetchUserAndCredits(userId, c.env);
+      user = result.user;
+      currentCredits = result.credits;
+    } catch (userError) {
+      return c.json({ 
+        error: 'Failed to verify user account', 
+        details: userError.message 
+      }, 500);
+    }
+
+    const costPerProfile = analysis_type === 'deep' ? 2 : 1;
+    const totalCost = profiles.length * costPerProfile;
+    
+    if (currentCredits < totalCost) {
+      return c.json({
+        error: 'Insufficient credits',
+        available: currentCredits,
+        required: totalCost,
+        profiles: profiles.length
+      }, 402);
+    }
+
+    // 5. Business profile validation
+    let business;
+    try {
+      business = await fetchBusinessProfile(business_id, userId, c.env);
+    } catch (businessError) {
+      return c.json({ 
+        error: 'Failed to load business profile', 
+        details: businessError.message 
+      }, 500);
+    }
+
+    // 6. BULK Profile scraping using Apify
+    let bulkProfileData;
+    try {
+      console.log('🕷️ Starting BULK profile scraping...');
+      
+      const usernames = profiles.map(p => p.username);
+      
+      if (analysis_type === 'light') {
+        // Use bulk light scraper
+        const scrapeInput = { 
+          usernames: usernames,
+          resultsType: "details",
+          resultsLimit: profiles.length
+        };
+
+        const scrapeResponse = await callWithRetry(
+          `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(scrapeInput)
+          },
+          3,
+          2000,
+          45000 // Longer timeout for bulk
+        );
+
+        bulkProfileData = scrapeResponse || [];
+        
+      } else {
+        // Use bulk deep scraper  
+        const directUrls = usernames.map(username => `https://instagram.com/${username}/`);
+        
+        const scrapeInput = { 
+          addParentData: false,
+          directUrls: directUrls,
+          enhanceUserSearchWithFacebookPage: false,
+          isUserReelFeedURL: false,
+          isUserTaggedFeedURL: false,
+          onlyPostsNewerThan: "2025-01-01",
+          resultsLimit: profiles.length,
+          resultsType: "details"
+        };
+
+        const scrapeResponse = await callWithRetry(
+          `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(scrapeInput)
+          },
+          3,
+          3000,
+          60000 // Even longer timeout for deep analysis
+        );
+
+        bulkProfileData = scrapeResponse || [];
+      }
+      
+      console.log(`✅ Bulk scraping complete: ${bulkProfileData.length} profiles retrieved`);
+      
+    } catch (scrapeError) {
+      console.error('❌ Bulk scraping failed:', scrapeError.message);
+      return c.json({ 
+        error: 'Bulk profile scraping failed', 
+        details: scrapeError.message 
+      }, 500);
+    }
+
+    // 7. Process each profile
+    const results = [];
+    let successful = 0;
+    let failed = 0;
+    let creditsUsed = 0;
+
+    for (let i = 0; i < profiles.length; i++) {
+      const profile = profiles[i];
+      const username = profile.username;
+      
+      try {
+        console.log(`Processing profile ${i + 1}/${profiles.length}: @${username}`);
+        
+        // Find matching scraped data
+        const scrapedProfile = bulkProfileData.find(scraped => 
+          scraped.username === username || 
+          scraped.ownerUsername === username
+        );
+        
+        if (!scrapedProfile) {
+          console.warn(`⚠️ No scraped data found for @${username}`);
+          results.push({
+            username,
+            success: false,
+            error: 'Profile not found or private'
+          });
+          failed++;
+          continue;
+        }
+
+        // Validate and process profile data
+        const validatedProfile = validateProfileData(scrapedProfile);
+        
+        // AI Analysis
+        const analysisResult = await performAIAnalysis(validatedProfile, business, analysis_type, c.env);
+        
+        // Generate outreach message for deep analysis
+        let outreachMessage = '';
+        if (analysis_type === 'deep') {
+          try {
+            outreachMessage = await generateOutreachMessage(validatedProfile, business, analysisResult, c.env);
+          } catch (messageError) {
+            console.warn(`⚠️ Message generation failed for @${username}:`, messageError.message);
+          }
+        }
+
+        // Save to database
+        const leadData = {
+          user_id: userId,
+          business_id: business_id,
+          username: validatedProfile.username,
+          platform: platform || 'instagram',
+          profile_url: `https://instagram.com/${username}`,
+          profile_pic_url: validatedProfile.profilePicUrl || null,
+          score: analysisResult.score || 0,
+          type: analysis_type,
+          created_at: new Date().toISOString()
+        };
+
+        let analysisData = null;
+        if (analysis_type === 'deep') {
+          analysisData = {
+            user_id: userId,
+            analysis_type: 'deep',
+            engagement_score: analysisResult.engagement_score || null,
+            score_niche_fit: analysisResult.niche_fit || null,
+            score_total: analysisResult.score || 0,
+            outreach_message: outreachMessage || null,
+            selling_points: analysisResult.selling_points || null
+          };
+        }
+
+        const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+        
+        creditsUsed += costPerProfile;
+        successful++;
+        
+        results.push({
+          username,
+          success: true,
+          lead_id: leadId,
+          score: analysisResult.score,
+          message_generated: !!outreachMessage
+        });
+        
+        console.log(`✅ Completed @${username}: score=${analysisResult.score}`);
+        
+      } catch (profileError) {
+        console.error(`❌ Failed to process @${username}:`, profileError.message);
+        results.push({
+          username,
+          success: false,
+          error: profileError.message
+        });
+        failed++;
+      }
+    }
+
+    // 8. Update credits
+    if (creditsUsed > 0) {
+      try {
+        const newBalance = currentCredits - creditsUsed;
+        await updateCreditsAndTransaction(
+          userId,
+          creditsUsed,
+          newBalance,
+          `Bulk ${analysis_type} analysis (${successful} profiles)`,
+          'bulk',
+          c.env
+        );
+        console.log(`✅ Credits updated: ${currentCredits} -> ${newBalance} (used ${creditsUsed})`);
+      } catch (creditError) {
+        console.error('❌ Credit update failed:', creditError.message);
+        // Don't fail the entire bulk operation for credit update errors
+      }
+    }
+
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ Bulk analysis completed in ${totalTime}ms: ${successful} successful, ${failed} failed`);
+
+    return c.json({
+      success: true,
+      successful,
+      failed,
+      total: profiles.length,
+      credits_used: creditsUsed,
+      credits_remaining: currentCredits - creditsUsed,
+      results,
+      processing_time_ms: totalTime
+    });
+
+  } catch (error) {
+    const totalTime = Date.now() - startTime;
+    console.error('❌ CRITICAL ERROR in /bulk-analyze endpoint:');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    return c.json({ 
+      error: 'Bulk analysis failed', 
+      message: error.message || 'Unknown error',
+      processing_time_ms: totalTime
+    }, 500);
+  }
+});
 
 // Billing endpoints
 app.post('/billing/create-checkout-session', async c => {
