@@ -554,11 +554,11 @@ function applyActivityFilter() {
             );
             break;
         case 'score_high':
-            filteredLeads = filteredLeads.filter(lead => (lead.score || 0) >= 80);
+            // UPDATED: Sort by highest score first (no filtering by 80+)
             filteredLeads.sort((a, b) => (b.score || 0) - (a.score || 0));
             break;
         case 'score_low':
-            filteredLeads = filteredLeads.filter(lead => (lead.score || 0) <= 50);
+            // UPDATED: Sort by lowest score first (no filtering by 0-50)
             filteredLeads.sort((a, b) => (a.score || 0) - (b.score || 0));
             break;
         case 'recent':
