@@ -1784,8 +1784,12 @@ function renderWelcomeInsights() {
 // Render insights cards
 // Replace your renderInsights function around line 882 with this fixed version:
 
+// Replace your renderInsights function with this fixed version:
+
 function renderInsights(insights) {
     const container = document.getElementById('insights-container');
+    
+    console.log('🔍 Rendering insights:', insights); // Debug log
     
     container.innerHTML = insights.map(insight => `
         <div class="insight-card ${insight.type}">
@@ -1801,7 +1805,9 @@ function renderInsights(insights) {
             `).join('') : ''}
             
             ${insight.cta ? `
-                <button class="insight-cta" data-action="${insight.action}">
+                <button class="insight-cta" 
+                        data-action="${insight.action}" 
+                        style="margin-top: 16px; background: var(--primary-blue); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
                     ${insight.cta}
                 </button>
             ` : ''}
@@ -1809,39 +1815,67 @@ function renderInsights(insights) {
     `).join('');
     
     // FIXED: Add event listeners to the CTA buttons after rendering
-    container.querySelectorAll('.insight-cta').forEach(button => {
+    container.querySelectorAll('.insight-cta').forEach((button, index) => {
         button.addEventListener('click', function() {
             const action = this.getAttribute('data-action');
-            console.log('Executing insight action:', action);
+            console.log('🎯 Button clicked! Action:', action);
             
             try {
                 // Handle different types of actions
                 if (action === 'showAnalysisModal()') {
+                    console.log('🔍 Opening analysis modal...');
                     showAnalysisModal();
                 } else if (action.includes('window.open')) {
-                    // Extract the URL from the action string
-                    const urlMatch = action.match(/window\.open\("([^"]+)"/);
-                    if (urlMatch && urlMatch[1]) {
-                        const url = urlMatch[1];
-                        console.log('Opening URL:', url);
+                    // FIXED: Better URL extraction for window.open
+                    console.log('🌐 Processing window.open action...');
+                    
+                    // Extract URL from different possible formats
+                    let url = null;
+                    
+                    // Try different regex patterns
+                    const patterns = [
+                        /window\.open\("([^"]+)"/,
+                        /window\.open\('([^']+)'/,
+                        /window\.open\(["']([^"']+)["']/
+                    ];
+                    
+                    for (const pattern of patterns) {
+                        const match = action.match(pattern);
+                        if (match && match[1]) {
+                            url = match[1];
+                            break;
+                        }
+                    }
+                    
+                    if (url) {
+                        console.log('✅ Opening URL:', url);
                         window.open(url, '_blank');
+                    } else {
+                        console.error('❌ Could not extract URL from action:', action);
+                        // Fallback: try to execute the action directly
+                        eval(action);
                     }
                 } else if (action.includes('location.href')) {
                     // Handle location.href actions
+                    console.log('📍 Processing location.href action...');
                     const urlMatch = action.match(/location\.href\s*=\s*["']([^"']+)["']/);
                     if (urlMatch && urlMatch[1]) {
                         window.location.href = urlMatch[1];
                     }
                 } else {
                     // Try to evaluate the action as JavaScript
+                    console.log('⚙️ Evaluating action as JavaScript...');
                     eval(action);
                 }
             } catch (error) {
-                console.error('Error executing insight action:', error);
+                console.error('❌ Error executing insight action:', error);
+                console.error('Action was:', action);
                 showMessage('Action failed to execute', 'error');
             }
         });
     });
+    
+    console.log('✅ Event listeners added to', container.querySelectorAll('.insight-cta').length, 'buttons');
 }
 
 // Export leads to CSV
