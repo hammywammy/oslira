@@ -1206,7 +1206,7 @@ function makeDeepPrompt(profile: ProfileData, business: BusinessProfile): string
     `- Average Comments: ${profile.engagement.avgComments}\n` +
     `- Engagement Rate: ${profile.engagement.engagementRate}%\n` : '';
 
-  return `You are a senior B2B strategist. Provide comprehensive analysis of this Instagram profile.\n\n` +
+  return `You are a senior B2B strategist and sales expert. Provide comprehensive analysis of this Instagram profile for lead qualification and outreach strategy.\n\n` +
     `PROFILE DETAILS:\n` +
     `- Username: ${profile.username}\n` +
     `- Full Name: ${profile.fullName || 'N/A'}\n` +
@@ -1223,17 +1223,39 @@ function makeDeepPrompt(profile: ProfileData, business: BusinessProfile): string
     `- Company: ${business.business_name}\n` +
     `- Niche: ${business.business_niche}\n` +
     `- Target Audience: ${business.target_audience}\n` +
-    `- Problems Solved: ${business.target_problems}\n` +
+    `- Problems We Solve: ${business.target_problems}\n` +
     `- Value Proposition: ${business.value_proposition}\n` +
     `- Communication Style: ${business.communication_style}\n` +
     `- Success Outcome: ${business.success_outcome}\n\n` +
-    `Provide detailed scoring and analysis. Consider:\n` +
-    `1. Overall lead quality and business potential\n` +
-    `2. Engagement quality and audience interaction\n` +
-    `3. Niche alignment with our target market\n` +
-    `4. Decision-making authority indicators\n` +
-    `5. Specific selling points for outreach\n\n` +
-    `Respond with JSON: { "score": number, "engagement_score": number, "niche_fit": number, "summary": string, "reasons": string[], "selling_points": string[] }`;
+    `ANALYSIS REQUIREMENTS:\n` +
+    `1. Overall lead quality and business potential (consider follower count, engagement, business indicators)\n` +
+    `2. Engagement quality and audience interaction patterns\n` +
+    `3. Niche alignment with our target market and services\n` +
+    `4. Decision-making authority and business influence indicators\n` +
+    `5. Pain points this profile likely experiences that we can solve\n` +
+    `6. Specific hooks and value propositions that would resonate\n\n` +
+    `SELLING POINTS INSTRUCTIONS:\n` +
+    `Generate 3-4 highly specific, actionable selling points that explain:\n` +
+    `- WHAT specific pain point or opportunity to highlight\n` +
+    `- WHY it matters to this particular profile\n` +
+    `- HOW our solution addresses their specific situation\n` +
+    `- WHAT outcome they can expect\n\n` +
+    `Each selling point should be:\n` +
+    `- Tailored to their follower size, industry, and profile characteristics\n` +
+    `- Specific about the business value (time saved, revenue increased, efficiency gained)\n` +
+    `- Actionable and conversation-starting\n` +
+    `- 15-25 words maximum each\n\n` +
+    `EXAMPLE FORMAT:\n` +
+    `"With ${profile.followersCount.toLocaleString()} followers, highlight how AI-powered lead scoring could help them identify their highest-value prospects 3x faster"\n` +
+    `"Their ${profile.businessCategory || 'business'} category suggests they need efficient outreach - emphasize our automated message personalization for higher response rates"\n\n` +
+    `Respond with JSON: {\n` +
+    `  "score": number (0-100),\n` +
+    `  "engagement_score": number (0-100),\n` +
+    `  "niche_fit": number (0-100),\n` +
+    `  "summary": "2-3 sentence analysis of lead quality and fit",\n` +
+    `  "reasons": ["reason 1", "reason 2", "reason 3"],\n` +
+    `  "selling_points": ["specific selling point 1", "specific selling point 2", "specific selling point 3"]\n` +
+    `}`;
 }
 
 function makeMessagePrompt(profile: ProfileData, business: BusinessProfile, analysis: AnalysisResult): string {
