@@ -1390,6 +1390,107 @@ app.get('/debug-env', c => {
   });
 });
 
+app.get('/debug-profile-pic/:username', async c => {
+  const username = c.req.param('username');
+  
+  if (!c.env.APIFY_API_TOKEN) {
+    return c.json({ error: 'APIFY_API_TOKEN not configured' }, 500);
+  }
+
+  try {
+    // Test the light scraper (basic profile data)
+    const lightInput = { 
+      usernames: [username],
+      resultsType: "details",
+      resultsLimit: 1
+    };
+
+    const lightResponse = await fetch(
+      `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lightInput)
+      }
+    );
+
+    const lightData = await lightResponse.json();
+    
+    let profilePicAnalysis = {};
+    if (Array.isArray(lightData) && lightData[0]) {
+      const raw = lightData[0];
+      profilePicAnalysis = {
+        allFields: Object.keys(raw),
+        profilePicFields: {
+          profilePicUrl: raw.profilePicUrl,
+          profile_pic_url: raw.profile_pic_url,
+          profilePicture: raw.profilePicture,
+          profilePictureUrl: raw.profilePictureUrl,
+          avatar: raw.avatar,
+          avatarUrl: raw.avatarUrl,
+          image: raw.image,
+          imageUrl: raw.imageUrl,
+          picture: raw.picture,
+          pic: raw.pic
+        },
+        selectedUrl: raw.profilePicUrl || 
+                    raw.profile_pic_url || 
+                    raw.profilePicture || 
+                    raw.profilePictureUrl ||
+                    raw.avatar ||
+                    raw.avatarUrl ||
+                    raw.image ||
+                    raw.imageUrl ||
+                    raw.picture ||
+                    raw.pic ||
+                    null
+      };
+    }
+    
+    return c.json({
+      username,
+      lightScraper: {
+        status: lightResponse.status,
+        ok: lightResponse.ok,
+        dataCount: Array.isArray(lightData) ? lightData.length : 'not array',
+        profilePicAnalysis,
+        firstItem: Array.isArray(lightData) && lightData[0] ? lightData[0] : null
+      }
+    });
+
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/debug-db-schema', async c => {
+  try {
+    const headers = {
+      apikey: c.env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json'
+    };
+    
+    // Check if profile_pic_url column exists by querying the table structure
+    const response = await fetch(
+      `${c.env.SUPABASE_URL}/rest/v1/leads?limit=1&select=id,username,profile_pic_url`, 
+      { headers }
+    );
+    
+    const data = await response.text();
+    
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      columnExists: !response.headers.get('content-type')?.includes('error'),
+      error: response.ok ? null : data,
+      sample: response.ok ? data.substring(0, 200) : null
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
 // ENHANCED Main Analyze Endpoint
 app.post('/analyze', async c => {
   const startTime = Date.now();
