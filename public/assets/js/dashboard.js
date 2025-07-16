@@ -1616,6 +1616,7 @@ async function deleteLead(leadId) {
 // Generate AI insights based on user data
 // Fix the generateInsights function around line 795 - update the insight objects:
 
+
 async function generateInsights() {
     const container = document.getElementById('insights-container');
     const loading = document.getElementById('loading-insights');
@@ -1652,14 +1653,15 @@ async function generateInsights() {
         let insights = [];
         
         if (!leads || leads.length === 0) {
-insights.push({
-    type: 'welcome',
-    icon: '🚀',
-    title: 'Welcome to Oslira!',
-    content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
-    cta: 'Research Your First Lead',
-    action: 'showAnalysisModal()'
-});
+            insights.push({
+                type: 'welcome',
+                icon: '🚀',
+                title: 'Welcome to Oslira!',
+                content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+                cta: 'Research Your First Lead',
+                actionType: 'function',
+                actionValue: 'showAnalysisModal'
+            });
         } else {
             // Calculate metrics from database data
             const totalLeads = leads.length;
@@ -1691,7 +1693,8 @@ insights.push({
                     title: 'Room for Improvement',
                     content: `Your average lead score is ${Math.round(avgScore)}. Try refining your target criteria to find higher-quality prospects.`,
                     cta: 'Analyze New Leads',
-                    action: 'showAnalysisModal()'
+                    actionType: 'function',
+                    actionValue: 'showAnalysisModal'
                 });
             } else if (avgScore > 0) {
                 insights.push({
@@ -1700,7 +1703,8 @@ insights.push({
                     title: 'Lead Quality Alert',
                     content: `Your average lead score of ${Math.round(avgScore)} suggests you may need to adjust your targeting strategy.`,
                     cta: 'Research Better Leads',
-                    action: 'showAnalysisModal()'
+                    actionType: 'function',
+                    actionValue: 'showAnalysisModal'
                 });
             }
             
@@ -1718,28 +1722,30 @@ insights.push({
                 });
             }
             
-            // FIXED: Subscription recommendations with correct URLs
-const plan = userData?.subscription_plan || 'free';
-if (plan === 'free') {
-    insights.push({
-        type: 'recommendation',
-        icon: '⬆️',
-        title: 'Upgrade Recommended',
-        content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
-        cta: 'View Plans',
-        action: 'window.open("https://oslira.com/subscription", "_blank")'
-    });
-}
-
-// FIXED: Campaign insight with correct action string
-insights.push({
-    type: 'recommendation',
-    icon: '🚀',
-    title: 'Scale with Campaigns',
-    content: 'Create automated outreach sequences to scale your lead generation and convert more prospects.',
-    cta: 'Create Campaign',
-    action: 'window.open("https://oslira.com/campaigns", "_blank")'
-});
+            // FIXED: Subscription recommendations with direct URL storage
+            const plan = userData?.subscription_plan || 'free';
+            if (plan === 'free') {
+                insights.push({
+                    type: 'recommendation',
+                    icon: '⬆️',
+                    title: 'Upgrade Recommended',
+                    content: 'Unlock unlimited monthly credits and advanced features with a paid subscription plan.',
+                    cta: 'View Plans',
+                    actionType: 'url',
+                    actionValue: 'https://oslira.com/subscription'
+                });
+            }
+            
+            // FIXED: Campaign insight with direct URL storage
+            insights.push({
+                type: 'recommendation',
+                icon: '🚀',
+                title: 'Scale with Campaigns',
+                content: 'Create automated outreach sequences to scale your lead generation and convert more prospects.',
+                cta: 'Create Campaign',
+                actionType: 'url',
+                actionValue: 'https://oslira.com/campaigns'
+            });
         }
         
         setTimeout(() => {
@@ -1758,13 +1764,12 @@ insights.push({
                     <div class="insight-icon">❌</div>
                     <h3>Error Loading Insights</h3>
                     <p>Unable to generate insights at this time. Please try again later.</p>
-                    <button class="insight-cta" onclick="generateInsights()">Retry</button>
+                    <button class="insight-cta" data-action-type="function" data-action-value="generateInsights">Retry</button>
                 </div>
             `;
         }, 1500);
     }
 }
-
 // Also update the renderWelcomeInsights function:
 function renderWelcomeInsights() {
     const container = document.getElementById('insights-container');
@@ -1775,23 +1780,36 @@ function renderWelcomeInsights() {
             title: 'Welcome to Oslira!',
             content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
             cta: 'Research Your First Lead',
-            action: 'showAnalysisModal()'
+            actionType: 'function',
+            actionValue: 'showAnalysisModal'
         }
     ];
     renderInsights(insights);
 }
 
-// Render insights cards
-// Replace your renderInsights function around line 882 with this fixed version:
+function renderWelcomeInsights() {
+    const container = document.getElementById('insights-container');
+    const insights = [
+        {
+            type: 'welcome',
+            icon: '🚀',
+            title: 'Welcome to Oslira!',
+            content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+            cta: 'Research Your First Lead',
+            actionType: 'function',
+            actionValue: 'showAnalysisModal'
+        }
+    ];
+    renderInsights(insights);
+}
 
-// Replace your renderInsights function with this fixed version:
-
+// COMPLETELY REWRITE renderInsights function:
 function renderInsights(insights) {
     const container = document.getElementById('insights-container');
     
-    console.log('🔍 Rendering insights:', insights); // Debug log
+    console.log('🔍 Rendering insights:', insights);
     
-    container.innerHTML = insights.map(insight => `
+    container.innerHTML = insights.map((insight, index) => `
         <div class="insight-card ${insight.type}">
             <div class="insight-icon">${insight.icon}</div>
             <h3>${insight.title}</h3>
@@ -1806,7 +1824,9 @@ function renderInsights(insights) {
             
             ${insight.cta ? `
                 <button class="insight-cta" 
-                        data-action="${insight.action}" 
+                        data-action-type="${insight.actionType}"
+                        data-action-value="${insight.actionValue}"
+                        data-insight-index="${index}"
                         style="margin-top: 16px; background: var(--primary-blue); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
                     ${insight.cta}
                 </button>
@@ -1814,62 +1834,35 @@ function renderInsights(insights) {
         </div>
     `).join('');
     
-    // FIXED: Add event listeners to the CTA buttons after rendering
-    container.querySelectorAll('.insight-cta').forEach((button, index) => {
+    // FIXED: Add event listeners with proper action handling
+    container.querySelectorAll('.insight-cta').forEach((button) => {
         button.addEventListener('click', function() {
-            const action = this.getAttribute('data-action');
-            console.log('🎯 Button clicked! Action:', action);
+            const actionType = this.getAttribute('data-action-type');
+            const actionValue = this.getAttribute('data-action-value');
+            
+            console.log('🎯 Button clicked!', { actionType, actionValue });
             
             try {
-                // Handle different types of actions
-                if (action === 'showAnalysisModal()') {
-                    console.log('🔍 Opening analysis modal...');
-                    showAnalysisModal();
-                } else if (action.includes('window.open')) {
-                    // FIXED: Better URL extraction for window.open
-                    console.log('🌐 Processing window.open action...');
-                    
-                    // Extract URL from different possible formats
-                    let url = null;
-                    
-                    // Try different regex patterns
-                    const patterns = [
-                        /window\.open\("([^"]+)"/,
-                        /window\.open\('([^']+)'/,
-                        /window\.open\(["']([^"']+)["']/
-                    ];
-                    
-                    for (const pattern of patterns) {
-                        const match = action.match(pattern);
-                        if (match && match[1]) {
-                            url = match[1];
-                            break;
-                        }
-                    }
-                    
-                    if (url) {
-                        console.log('✅ Opening URL:', url);
-                        window.open(url, '_blank');
+                if (actionType === 'function') {
+                    // Call a function by name
+                    if (actionValue === 'showAnalysisModal') {
+                        console.log('🔍 Opening analysis modal...');
+                        showAnalysisModal();
+                    } else if (actionValue === 'generateInsights') {
+                        console.log('🔄 Regenerating insights...');
+                        generateInsights();
                     } else {
-                        console.error('❌ Could not extract URL from action:', action);
-                        // Fallback: try to execute the action directly
-                        eval(action);
+                        console.error('❌ Unknown function:', actionValue);
                     }
-                } else if (action.includes('location.href')) {
-                    // Handle location.href actions
-                    console.log('📍 Processing location.href action...');
-                    const urlMatch = action.match(/location\.href\s*=\s*["']([^"']+)["']/);
-                    if (urlMatch && urlMatch[1]) {
-                        window.location.href = urlMatch[1];
-                    }
+                } else if (actionType === 'url') {
+                    // Open URL in new tab
+                    console.log('🌐 Opening URL:', actionValue);
+                    window.open(actionValue, '_blank');
                 } else {
-                    // Try to evaluate the action as JavaScript
-                    console.log('⚙️ Evaluating action as JavaScript...');
-                    eval(action);
+                    console.error('❌ Unknown action type:', actionType);
                 }
             } catch (error) {
                 console.error('❌ Error executing insight action:', error);
-                console.error('Action was:', action);
                 showMessage('Action failed to execute', 'error');
             }
         });
