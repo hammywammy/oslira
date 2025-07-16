@@ -454,7 +454,7 @@ function setupEventListeners() {
     // Action cards
     document.getElementById('research-action-card')?.addEventListener('click', showAnalysisModal);
     document.getElementById('campaigns-action-card')?.addEventListener('click', () => location.href='campaigns.html');
-    document.getElementById('subscription-action-card')?.addEventListener('click', () => location.href='subscription.html');
+    document.getElementById('csv-import-action-card')?.addEventListener('click', showBulkUpload);
     document.getElementById('export-action-card')?.addEventListener('click', exportLeads);
     
     // Filter controls
