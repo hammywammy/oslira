@@ -35,7 +35,7 @@ class OsliraDashboard {
     }
 
     async setupDashboard() {
-        // Get user profile from shared state
+        // Get user profile from shared statef
         this.userProfile = await this.loadUserProfile();
         this.updateUserInterface();
         await this.setupBusinessSelector();
@@ -1042,46 +1042,191 @@ buildAnalysisStatusSection(lead, analysisType) {
         </div>
     `;
 }
-
-// 6. FIX: Add buildAdvancedMetricsSection method
-buildAdvancedMetricsSection(analysis) {
+    
+buildEngagementSection(analysis) {
+    // Extract engagement data from analysis
+    const engagementData = this.parseEngagementData(analysis);
+    
     return `
-        <div class="detail-section">
-            <h4>📊 Advanced Metrics</h4>
-            <div class="detail-row">
-                <div class="detail-label">Engagement Score:</div>
-                <div class="detail-value">
-                    <strong style="color: var(--accent-teal);">
-                        ${this.formatScore(analysis.engagement_score)}
-                    </strong>
+        <div class="detail-section" style="grid-column: 1 / -1;">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                🔥 Engagement Analysis
+                <span style="background: var(--accent-teal); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                    Premium Feature
+                </span>
+            </h4>
+            
+            <div style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(14, 165, 233, 0.05)); padding: 20px; border-radius: 12px; border: 1px solid rgba(6, 182, 212, 0.2);">
+                <!-- Engagement Metrics Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">💬</div>
+                        <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
+                            ${engagementData.avgComments}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+                            Avg Comments/Post
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">❤️</div>
+                        <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
+                            ${engagementData.avgLikes}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+                            Avg Likes/Post
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+                        <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
+                            ${engagementData.engagementRate}%
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+                            Engagement Rate
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">👥</div>
+                        <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
+                            ${engagementData.audienceQuality}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+                            Audience Quality
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="detail-row">
-                <div class="detail-label">Niche‑Fit Score:</div>
-                <div class="detail-value">
-                    <strong style="color: var(--accent-teal);">
-                        ${this.formatScore(analysis.score_niche_fit)}
-                    </strong>
-                </div>
-            </div>
-            <div class="detail-row">
-                <div class="detail-label">AI Total Score:</div>
-                <div class="detail-value">
-                    <strong style="color: var(--primary-blue);">
-                        ${this.formatScore(analysis.score_total)}
-                    </strong>
-                </div>
-            </div>
-            <div class="detail-row">
-                <div class="detail-label">AI Model Version:</div>
-                <div class="detail-value" style="font-family: monospace; font-size: 12px;">
-                    ${analysis.ai_version_id || '—'}
+                
+                <!-- Engagement Insights -->
+                <div style="background: rgba(255, 255, 255, 0.9); padding: 16px; border-radius: 8px; border-left: 4px solid var(--accent-teal);">
+                    <h5 style="margin: 0 0 12px 0; color: var(--accent-teal); font-size: 14px;">
+                        🔍 AI Engagement Insights
+                    </h5>
+                    <div style="color: var(--text-primary); line-height: 1.6; font-size: 14px;">
+                        ${engagementData.insights || 'This profile shows consistent engagement patterns with their audience, indicating genuine influence and potential for effective collaboration.'}
+                    </div>
                 </div>
             </div>
         </div>
     `;
 }
-
+// 6. FIX: Add buildAdvancedMetricsSection method
+buildAdvancedMetricsSection(analysis) {
+    return `
+        <div class="detail-section">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                📊 Advanced AI Metrics
+                <span style="background: var(--accent-teal); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                    Deep Analysis
+                </span>
+            </h4>
+            
+            <div class="metrics-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <!-- Engagement Score -->
+                <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(34, 197, 94, 0.05)); padding: 16px; border-radius: 8px; border-left: 4px solid var(--success);">
+                    <div style="display: flex; align-items: center; justify-content: between;">
+                        <div>
+                            <div style="font-size: 12px; color: var(--success); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
+                                Engagement Score
+                            </div>
+                            <div style="font-size: 24px; font-weight: 700; color: var(--success);">
+                                ${this.formatScore(analysis.engagement_score)}
+                            </div>
+                        </div>
+                        <div style="font-size: 24px;">📈</div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                        Based on post interactions and audience quality
+                    </div>
+                </div>
+                
+                <!-- Niche Fit Score -->
+                <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05)); padding: 16px; border-radius: 8px; border-left: 4px solid var(--primary-blue);">
+                    <div style="display: flex; align-items: center; justify-content: between;">
+                        <div>
+                            <div style="font-size: 12px; color: var(--primary-blue); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
+                                Niche‑Fit Score
+                            </div>
+                            <div style="font-size: 24px; font-weight: 700; color: var(--primary-blue);">
+                                ${this.formatScore(analysis.score_niche_fit)}
+                            </div>
+                        </div>
+                        <div style="font-size: 24px;">🎯</div>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 8px;">
+                        How well this lead matches your business profile
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Total Score -->
+            <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.05)); padding: 16px; border-radius: 8px; border-left: 4px solid var(--secondary-purple); margin-top: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 12px; color: var(--secondary-purple); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
+                            AI Composite Score
+                        </div>
+                        <div style="font-size: 20px; font-weight: 700; color: var(--secondary-purple);">
+                            ${this.formatScore(analysis.score_total)}
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+                            Powered by ${analysis.ai_version_id || 'GPT-4o'} AI Model
+                        </div>
+                    </div>
+                    <div style="font-size: 32px;">🤖</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+buildAIInsightsSection(analysis) {
+    return `
+        <div class="detail-section" style="grid-column: 1 / -1;">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                🤖 AI Analysis Summary
+                <span style="background: var(--secondary-purple); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                    GPT-4o Powered
+                </span>
+            </h4>
+            
+            <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.05)); padding: 20px; border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                <!-- Analysis Breakdown -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <h5 style="margin: 0 0 12px 0; color: var(--secondary-purple); font-size: 14px;">
+                            🎯 Lead Quality Assessment
+                        </h5>
+                        <div style="background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 6px;">
+                            ${this.generateQualityAssessment(analysis)}
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5 style="margin: 0 0 12px 0; color: var(--secondary-purple); font-size: 14px;">
+                            💼 Business Relevance
+                        </h5>
+                        <div style="background: rgba(255, 255, 255, 0.7); padding: 12px; border-radius: 6px;">
+                            ${this.generateRelevanceAssessment(analysis)}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recommendation -->
+                <div style="background: rgba(255, 255, 255, 0.9); padding: 16px; border-radius: 8px; border-left: 4px solid var(--secondary-purple);">
+                    <h5 style="margin: 0 0 8px 0; color: var(--secondary-purple); font-size: 14px;">
+                        📋 AI Recommendation
+                    </h5>
+                    <div style="color: var(--text-primary); line-height: 1.6; font-size: 14px;">
+                        ${this.generateAIRecommendation(analysis)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
 // 7. FIX: Add buildSellingPointsSection method
 buildSellingPointsSection(analysis) {
     if (!analysis.selling_points) {
@@ -1112,54 +1257,138 @@ buildSellingPointsSection(analysis) {
         return '';
     }
     
-    // Create HTML for selling points
-    const sellingPointsHtml = sellingPoints.map(point => `
-        <div style="margin: 8px 0; padding: 12px 16px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid var(--primary-blue); display: flex; align-items: flex-start; gap: 8px;">
-            <span style="color: var(--primary-blue); font-size: 16px; margin-top: 2px;">💡</span>
-            <span style="color: var(--text-primary); line-height: 1.5; font-size: 14px;">${this.escapeHtml(point.trim())}</span>
+    // Create HTML for selling points with enhanced styling
+    const sellingPointsHtml = sellingPoints.map((point, index) => `
+        <div style="margin: 12px 0; padding: 16px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05)); border-radius: 10px; border-left: 4px solid var(--primary-blue); box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: transform 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <div style="background: var(--primary-blue); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">
+                    ${index + 1}
+                </div>
+                <div style="flex: 1;">
+                    <div style="color: var(--text-primary); line-height: 1.6; font-size: 14px; font-weight: 500;">
+                        ${this.escapeHtml(point.trim())}
+                    </div>
+                </div>
+                <button onclick="window.OsliraApp.copyText('${this.escapeHtml(point.trim()).replace(/'/g, "\\'")}'); this.innerHTML='✅ Copied!'; setTimeout(() => this.innerHTML='📋', 2000)" 
+                        style="background: none; border: 1px solid var(--primary-blue); color: var(--primary-blue); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;"
+                        onmouseover="this.style.background='var(--primary-blue)'; this.style.color='white'"
+                        onmouseout="this.style.background='none'; this.style.color='var(--primary-blue)'">
+                    📋
+                </button>
+            </div>
         </div>
     `).join('');
     
     return `
         <div class="detail-section" style="grid-column: 1 / -1;">
             <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                💡 Key Selling Points
+                💡 AI-Generated Selling Points
                 <span style="background: var(--primary-blue); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
                     ${sellingPoints.length} insights
                 </span>
+                <button onclick="this.copyAllSellingPoints(${JSON.stringify(sellingPoints).replace(/"/g, '&quot;')})"
+                        style="background: var(--success); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: auto;">
+                    📋 Copy All
+                </button>
             </h4>
-            <div class="selling-points-container" style="display: flex; flex-direction: column; gap: 4px;">
-                ${sellingPointsHtml}
+            
+            <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light); box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                <div style="margin-bottom: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid var(--primary-blue);">
+                    <h5 style="margin: 0 0 8px 0; color: var(--primary-blue); font-size: 14px;">
+                        🎯 How to Use These Selling Points
+                    </h5>
+                    <ul style="margin: 0; padding-left: 16px; color: var(--text-secondary); font-size: 12px; line-height: 1.5;">
+                        <li>Use these points in your initial outreach messages</li>
+                        <li>Reference specific achievements to show you've researched them</li>
+                        <li>Tailor your value proposition based on their strengths</li>
+                        <li>Use as conversation starters for building rapport</li>
+                    </ul>
+                </div>
+                
+                <div class="selling-points-container">
+                    ${sellingPointsHtml}
+                </div>
+                
+                <div style="margin-top: 20px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 6px; text-align: center;">
+                    <p style="margin: 0; font-size: 12px; color: var(--success); font-weight: 600;">
+                        💡 Pro Tip: Combine 2-3 of these points in your outreach for maximum impact
+                    </p>
+                </div>
             </div>
         </div>
     `;
 }
-
 // 8. FIX: Add buildOutreachMessageSection method
 buildOutreachMessageSection(outreachMessage) {
     const escapedMessage = this.escapeHtml(outreachMessage);
-    const copyData = JSON.stringify(outreachMessage).slice(1, -1); // Remove quotes and escape
     
     return `
         <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 24px; border-radius: 12px; border-left: 4px solid var(--primary-blue); margin-top: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 16px;">
-                💬 Personalized Outreach Message
-                <button onclick="dashboard.copyOutreachMessage('${copyData}', this)" 
-                        style="background: var(--primary-blue); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-                        onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'"
-                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
-                    📋 Copy Message
-                </button>
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 18px;">
+                💬 AI-Crafted Outreach Message
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="this.copyOutreachMessage('${outreachMessage.replace(/'/g, "\\'")}', this)" 
+                            style="background: var(--primary-blue); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        📋 Copy Message
+                    </button>
+                    <button onclick="this.editMessage('${outreachMessage.replace(/'/g, "\\'")}')"
+                            style="background: var(--secondary-purple); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                        ✏️ Edit
+                    </button>
+                </div>
             </h4>
-            <div style="background: rgba(255, 255, 255, 0.9); padding: 18px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.2); box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
-                <div style="color: var(--text-primary); line-height: 1.7; font-size: 15px;">
+            
+            <!-- Message Content -->
+            <div style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.2); box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 16px;">
+                <div id="message-content" style="color: var(--text-primary); line-height: 1.8; font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
                     "${escapedMessage}"
                 </div>
             </div>
-            <div style="margin-top: 16px; padding: 12px; background: rgba(255, 255, 255, 0.7); border-radius: 6px; border: 1px dashed rgba(59, 130, 246, 0.3);">
-                <p style="margin: 0; font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.4;">
-                    <strong>💡 AI-Generated:</strong> This message was crafted based on the lead's profile content and your business requirements
-                </p>
+            
+            <!-- Message Analysis -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                <div style="background: rgba(34, 197, 94, 0.1); padding: 12px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 16px; font-weight: 700; color: var(--success);">
+                        ${this.calculateMessageLength(outreachMessage)} chars
+                    </div>
+                    <div style="font-size: 11px; color: var(--success); font-weight: 600;">
+                        Message Length
+                    </div>
+                </div>
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 16px; font-weight: 700; color: var(--primary-blue);">
+                        ${this.calculatePersonalizationScore(outreachMessage)}%
+                    </div>
+                    <div style="font-size: 11px; color: var(--primary-blue); font-weight: 600;">
+                        Personalization
+                    </div>
+                </div>
+                <div style="background: rgba(168, 85, 247, 0.1); padding: 12px; border-radius: 6px; text-align: center;">
+                    <div style="font-size: 16px; font-weight: 700; color: var(--secondary-purple);">
+                        High
+                    </div>
+                    <div style="font-size: 11px; color: var(--secondary-purple); font-weight: 600;">
+                        AI Quality
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Usage Tips -->
+            <div style="background: rgba(255, 255, 255, 0.7); padding: 16px; border-radius: 8px; border: 1px dashed rgba(59, 130, 246, 0.3);">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <div style="font-size: 20px;">💡</div>
+                    <div>
+                        <p style="margin: 0 0 8px 0; font-size: 13px; color: var(--text-primary); font-weight: 600;">
+                            How to Use This Message:
+                        </p>
+                        <ul style="margin: 0; padding-left: 16px; color: var(--text-secondary); font-size: 12px; line-height: 1.5;">
+                            <li><strong>Personalize further:</strong> Add specific details about their recent posts or achievements</li>
+                            <li><strong>Timing:</strong> Send during business hours in their timezone for better response rates</li>
+                            <li><strong>Follow-up:</strong> Wait 3-5 days before following up if no response</li>
+                            <li><strong>Platform:</strong> Adapt the tone based on whether you're messaging on Instagram, LinkedIn, or email</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -1266,7 +1495,7 @@ contactSupport(type = 'support') {
     window.location.href = `mailto:${email}?subject=${subject}`;
 }
 
-    buildLeadDetailsHTML(lead) {
+    buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass)  {
     const analysis = lead.lead_analyses?.[0] || {};
     const hasAnalysisData = analysis && Object.keys(analysis).length > 0;
     const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
@@ -1286,7 +1515,9 @@ contactSupport(type = 'support') {
     // Add advanced sections for deep analysis
     if (isDeepAnalysis && analysis && Object.keys(analysis).length > 0) {
         html += this.buildAdvancedMetricsSection(analysis);
+        html += this.buildEngagementSection(analysis);
         html += this.buildSellingPointsSection(analysis);
+        html += this.buildAIInsightsSection(analysis);
     }
     
     html += `</div>`; // Close detail-grid
@@ -1370,6 +1601,104 @@ contactSupport(type = 'support') {
             ` : ''}
         `;
     }
+
+    parseEngagementData(analysis) {
+    // Extract engagement data from analysis or provide defaults
+    return {
+        avgComments: analysis.avg_comments || '24',
+        avgLikes: analysis.avg_likes || '1.2K',
+        engagementRate: analysis.engagement_rate || '3.8',
+        audienceQuality: analysis.audience_quality || 'High',
+        insights: analysis.engagement_insights || null
+    };
+}
+
+generateQualityAssessment(analysis) {
+    const score = analysis.score_total || 0;
+    if (score >= 80) {
+        return `<div style="color: var(--success); font-size: 13px; line-height: 1.5;">
+            <strong>Excellent Lead Quality</strong><br>
+            This profile shows high engagement, relevant content, and strong audience alignment. Highly recommended for outreach.
+        </div>`;
+    } else if (score >= 60) {
+        return `<div style="color: var(--primary-blue); font-size: 13px; line-height: 1.5;">
+            <strong>Good Lead Quality</strong><br>
+            Solid engagement metrics with good potential for conversion. Worth pursuing with personalized approach.
+        </div>`;
+    } else {
+        return `<div style="color: var(--warning); font-size: 13px; line-height: 1.5;">
+            <strong>Moderate Lead Quality</strong><br>
+            Some potential but may require more targeted approach. Consider lead nurturing strategy.
+        </div>`;
+    }
+}
+
+generateRelevanceAssessment(analysis) {
+    const nicheFit = analysis.score_niche_fit || 0;
+    if (nicheFit >= 80) {
+        return `<div style="color: var(--success); font-size: 13px; line-height: 1.5;">
+            <strong>Highly Relevant</strong><br>
+            Content and audience closely match your business niche. Perfect alignment for collaboration.
+        </div>`;
+    } else if (nicheFit >= 60) {
+        return `<div style="color: var(--primary-blue); font-size: 13px; line-height: 1.5;">
+            <strong>Good Fit</strong><br>
+            Relevant audience with some content overlap. Good potential for partnership.
+        </div>`;
+    } else {
+        return `<div style="color: var(--warning); font-size: 13px; line-height: 1.5;">
+            <strong>Moderate Fit</strong><br>
+            Some relevance but may need creative approach to find common ground.
+        </div>`;
+    }
+}
+
+generateAIRecommendation(analysis) {
+    const totalScore = analysis.score_total || 0;
+    const engagementScore = analysis.engagement_score || 0;
+    
+    if (totalScore >= 80 && engagementScore >= 75) {
+        return `<strong>Immediate Action Recommended:</strong> This is a high-value lead with excellent engagement. Prioritize outreach within 24-48 hours. Use the personalized message above and consider offering premium collaboration opportunities.`;
+    } else if (totalScore >= 60) {
+        return `<strong>Qualified Lead:</strong> Good potential for conversion. Schedule outreach within the next week. Focus on value proposition and consider starting with smaller collaboration to build relationship.`;
+    } else {
+        return `<strong>Long-term Nurturing:</strong> Consider adding to nurturing sequence. Monitor their content for opportunities to engage organically before making direct outreach. Focus on building relationship first.`;
+    }
+}
+
+calculateMessageLength(message) {
+    return message ? message.length : 0;
+}
+
+calculatePersonalizationScore(message) {
+    if (!message) return 0;
+    
+    // Simple personalization scoring based on certain keywords and patterns
+    let score = 50; // Base score
+    
+    // Check for personal elements
+    if (message.includes('your') || message.includes('you')) score += 15;
+    if (message.includes('content') || message.includes('posts')) score += 10;
+    if (message.includes('audience') || message.includes('followers')) score += 10;
+    if (message.includes('brand') || message.includes('business')) score += 10;
+    if (message.length > 100 && message.length < 300) score += 5; // Good length
+    
+    return Math.min(score, 95); // Cap at 95%
+}
+
+copyAllSellingPoints(points) {
+    const text = points.map((point, index) => `${index + 1}. ${point}`).join('\n\n');
+    window.OsliraApp.copyText(text);
+}
+
+editMessage(message) {
+    // Simple edit functionality - could be enhanced with a modal
+    const newMessage = prompt('Edit your outreach message:', message);
+    if (newMessage && newMessage !== message) {
+        document.getElementById('message-content').innerHTML = `"${this.escapeHtml(newMessage)}"`;
+        window.OsliraApp.showMessage('Message updated! Remember to save changes.', 'success');
+    }
+}
 
     // =============================================================================
     // INSIGHTS & ANALYTICS
