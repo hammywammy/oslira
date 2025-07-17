@@ -43,35 +43,39 @@ window.OsliraApp = {
 };
 
 // =============================================================================
-// 2. CONFIGURATION LOADER
+// 2. CONFIGURATION LOADER - SIMPLIFIED
 // =============================================================================
 
 async function loadAppConfig() {
     try {
-        console.log('🔧 Loading Oslira configuration...');
+        console.log('🔧 Loading configuration...');
         
-        // Always use demo config for now since config endpoint isn't set up
-        console.warn('🚧 Using demo configuration');
-        return setupDemoConfig();
+        // Primary: Use window.CONFIG from env-config.js
+        if (window.CONFIG) {
+            Object.assign(window.OsliraApp.config, window.CONFIG);
+            console.log('✅ Configuration loaded from window.CONFIG');
+            return window.CONFIG;
+        }
+        
+        // Fallback: Use API endpoint
+        const response = await fetch('/api/config');
+        if (!response.ok) {
+            throw new Error(`Config API returned ${response.status}`);
+        }
+        
+        const config = await response.json();
+        if (config.error) {
+            throw new Error(config.error);
+        }
+        
+        Object.assign(window.OsliraApp.config, config);
+        console.log('✅ Configuration loaded from API');
+        return config;
         
     } catch (error) {
         console.error('❌ Configuration failed:', error);
-        console.warn('🚧 Falling back to demo configuration');
-        return setupDemoConfig();
+        throw error;
     }
-}
-
-function setupDemoConfig() {
-    const demoConfig = {
-        supabaseUrl: 'https://your-project.supabase.co',
-        supabaseAnonKey: 'your-anon-key',
-        workerUrl: 'https://your-worker.workers.dev',
-        stripePublishableKey: 'pk_test_demo',
-        demoMode: true
-    };
-    
-    Object.assign(window.OsliraApp.config, demoConfig);
-    return demoConfig;
 }
 
 // =============================================================================
