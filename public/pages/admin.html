@@ -5,11 +5,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Oslira Internal</title>
+    
+    <!-- Load configuration first -->
     <script src="/env-config.js"></script>
+    
+    <!-- Load Supabase -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Load shared foundation FIRST -->
+    <script src="/js/shared-code.js"></script>
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
     <div class="admin-container">
+        <!-- Sidebar Navigation -->
         <aside class="admin-sidebar">
             <div class="admin-logo">
                 <span style="font-size: 28px;">🔧</span>
@@ -77,6 +88,18 @@
                     </div>
                 </div>
             </nav>
+            
+            <!-- User Info -->
+            <div class="admin-user-info">
+                <div class="user-avatar">🔧</div>
+                <div class="user-details">
+                    <div class="user-name" id="admin-user-name">Admin User</div>
+                    <div class="user-role">System Administrator</div>
+                </div>
+                <button class="logout-btn" data-action="logout" title="Sign Out">
+                    <span>🚪</span>
+                </button>
+            </div>
         </aside>
         
         <main class="admin-main">
@@ -85,23 +108,37 @@
                 <div class="admin-header">
                     <div class="header-top">
                         <h1 class="header-title">Platform Overview</h1>
-                        <div class="live-indicator">
-                            <div class="live-dot"></div>
-                            LIVE MONITORING
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" data-action="refresh" title="Refresh Data">
+                                <span class="icon">🔄</span>
+                                Refresh
+                            </button>
+                            <button class="btn btn-secondary" data-action="export" title="Export Data">
+                                <span class="icon">📤</span>
+                                Export
+                            </button>
+                            <div class="live-indicator">
+                                <div class="live-dot"></div>
+                                LIVE MONITORING
+                            </div>
                         </div>
                     </div>
                     <div style="color: #718096; font-size: 16px;">
                         Real-time insights into your Oslira platform performance and user activity
                     </div>
+                    <div class="last-updated">
+                        <span id="last-updated">Last updated: --:--:--</span>
+                    </div>
                 </div>
                 
+                <!-- KPI Grid -->
                 <div class="kpi-grid">
                     <div class="kpi-card">
                         <div class="kpi-header">
                             <div class="kpi-title">Active Users</div>
                             <div class="kpi-icon">👥</div>
                         </div>
-                        <div class="kpi-value" id="active-users">2,847</div>
+                        <div class="kpi-value" id="active-users">Loading...</div>
                         <div class="kpi-change positive">
                             ↗ +23% vs last week
                         </div>
@@ -109,23 +146,23 @@
                     
                     <div class="kpi-card">
                         <div class="kpi-header">
-                            <div class="kpi-title">Campaigns Running</div>
-                            <div class="kpi-icon">🚀</div>
+                            <div class="kpi-title">Active Campaigns</div>
+                            <div class="kpi-icon">🎯</div>
                         </div>
-                        <div class="kpi-value" id="active-campaigns">1,234</div>
+                        <div class="kpi-value" id="active-campaigns">Loading...</div>
                         <div class="kpi-change positive">
-                            ↗ +12% vs yesterday
+                            ↗ +12% vs last week
                         </div>
                     </div>
                     
                     <div class="kpi-card">
                         <div class="kpi-header">
-                            <div class="kpi-title">Messages Sent Today</div>
-                            <div class="kpi-icon">💬</div>
+                            <div class="kpi-title">Messages Sent</div>
+                            <div class="kpi-icon">📤</div>
                         </div>
-                        <div class="kpi-value" id="messages-sent">45,678</div>
+                        <div class="kpi-value" id="messages-sent">Loading...</div>
                         <div class="kpi-change positive">
-                            ↗ +34% vs avg
+                            ↗ +34% vs last week
                         </div>
                     </div>
                     
@@ -134,7 +171,7 @@
                             <div class="kpi-title">Monthly Revenue</div>
                             <div class="kpi-icon">💰</div>
                         </div>
-                        <div class="kpi-value" id="monthly-revenue">$127k</div>
+                        <div class="kpi-value" id="monthly-revenue">Loading...</div>
                         <div class="kpi-change positive">
                             ↗ +18% vs last month
                         </div>
@@ -145,9 +182,9 @@
                             <div class="kpi-title">AI Response Time</div>
                             <div class="kpi-icon">🧠</div>
                         </div>
-                        <div class="kpi-value" id="ai-response-time">1.2s</div>
-                        <div class="kpi-change positive">
-                            ↗ 15% faster
+                        <div class="kpi-value" id="ai-response-time">Loading...</div>
+                        <div class="kpi-change negative">
+                            ↘ +0.1s vs last week
                         </div>
                     </div>
                     
@@ -156,545 +193,274 @@
                             <div class="kpi-title">System Uptime</div>
                             <div class="kpi-icon">⚡</div>
                         </div>
-                        <div class="kpi-value" id="system-uptime">99.98%</div>
+                        <div class="kpi-value" id="system-uptime">Loading...</div>
                         <div class="kpi-change positive">
-                            ↗ Target: 99.9%
+                            ↗ 99.9% this month
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Dashboard Content Grid -->
                 <div class="dashboard-content">
-                    <div class="chart-container">
-                        <div class="chart-header">
-                            <h3 class="chart-title">Platform Usage Trends</h3>
-                            <div class="filter-tabs">
-                                <button class="filter-tab active">24H</button>
-                                <button class="filter-tab">7D</button>
-                                <button class="filter-tab">30D</button>
+                    <!-- Activity Feed -->
+                    <div class="activity-feed">
+                        <h3>📊 Recent Activity</h3>
+                        <div class="feed-container" id="activity-feed">
+                            <div class="feed-item">
+                                <div class="feed-icon user">👤</div>
+                                <div class="feed-content">
+                                    <div class="feed-title">New user registration</div>
+                                    <div class="feed-description">user@example.com signed up</div>
+                                    <div class="feed-time">2 minutes ago</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="chart-placeholder">
-                            <h3 style="color: #4a5568; margin-bottom: 8px;">📈 Real-time Analytics Chart</h3>
-                            <p style="color: #718096; text-align: center; line-height: 1.5;">
-                                Interactive chart showing:<br>
-                                • User activity patterns<br>
-                                • Campaign creation rates<br>
-                                • Message volume trends<br>
-                                • Revenue growth trajectory
-                            </p>
+                            
+                            <div class="feed-item">
+                                <div class="feed-icon campaign">🎯</div>
+                                <div class="feed-content">
+                                    <div class="feed-title">Campaign launched</div>
+                                    <div class="feed-description">SaaS Outreach Q1 started</div>
+                                    <div class="feed-time">15 minutes ago</div>
+                                </div>
+                            </div>
+                            
+                            <div class="feed-item">
+                                <div class="feed-icon system">🔧</div>
+                                <div class="feed-content">
+                                    <div class="feed-title">System maintenance</div>
+                                    <div class="feed-description">Database optimization completed</div>
+                                    <div class="feed-time">1 hour ago</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="activity-feed">
-                        <h3 class="chart-title" style="margin-bottom: 20px;">Live Activity Feed</h3>
-                        
-                        <div class="feed-item">
-                            <div class="feed-icon user">👤</div>
-                            <div class="feed-content">
-                                <div class="feed-title">New Pro Subscription</div>
-                                <div class="feed-description">user@company.com upgraded to Pro plan</div>
-                                <div class="feed-time">2 minutes ago</div>
-                            </div>
-                        </div>
-                        
-                        <div class="feed-item">
-                            <div class="feed-icon campaign">🚀</div>
-                            <div class="feed-content">
-                                <div class="feed-title">High-Performing Campaign</div>
-                                <div class="feed-description">SaaS Outreach Q1 achieved 45% response rate</div>
-                                <div class="feed-time">8 minutes ago</div>
-                            </div>
-                        </div>
-                        
-                        <div class="feed-item">
-                            <div class="feed-icon system">⚙️</div>
-                            <div class="feed-content">
-                                <div class="feed-title">System Update</div>
-                                <div class="feed-description">Claude integration optimized for 23% faster responses</div>
-                                <div class="feed-time">15 minutes ago</div>
-                            </div>
-                        </div>
-                        
-                        <div class="feed-item">
-                            <div class="feed-icon error">🚨</div>
-                            <div class="feed-content">
-                                <div class="feed-title">Rate Limit Warning</div>
-                                <div class="feed-description">User approaching API limit (95% of quota)</div>
-                                <div class="feed-time">23 minutes ago</div>
-                            </div>
-                        </div>
-                        
-                        <div class="feed-item">
-                            <div class="feed-icon campaign">📊</div>
-                            <div class="feed-content">
-                                <div class="feed-title">A/B Test Complete</div>
-                                <div class="feed-description">Variant B outperformed by 34% - automatically scaled</div>
-                                <div class="feed-time">31 minutes ago</div>
+
+                    <!-- Google Sheets Integration -->
+                    <div class="google-sheets-panel">
+                        <h3>📊 External Data Sources</h3>
+                        <div id="google-sheets-data" class="sheets-data-container">
+                            <div class="placeholder-state">
+                                <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                                <h4>Google Sheets Integration</h4>
+                                <p>Connect your Google Sheets for real-time data updates</p>
+                                <button class="btn btn-primary" onclick="window.adminDashboard.loadGoogleSheetsData()">
+                                    Connect Sheets
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Detailed Tables -->
                 <div class="detailed-tables">
                     <div class="table-container">
                         <div class="table-header">
                             <h3 class="table-title">Top Performing Users</h3>
-                            <button class="btn btn-secondary">View All</button>
                         </div>
                         <table class="table">
                             <thead>
                                 <tr>
                                     <th>User</th>
                                     <th>Plan</th>
-                                    <th>Campaigns</th>
-                                    <th>Response Rate</th>
+                                    <th>Messages Sent</th>
+                                    <th>Success Rate</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>sarah@techstartup.com</td>
-                                    <td><span class="status-badge status-active">Pro</span></td>
-                                    <td>12</td>
-                                    <td>47.3%</td>
+                                    <td>john@example.com</td>
+                                    <td>Pro</td>
+                                    <td>1,247</td>
+                                    <td>23%</td>
+                                    <td><span class="status-badge status-active">Active</span></td>
                                 </tr>
                                 <tr>
-                                    <td>mike@saascompany.com</td>
-                                    <td><span class="status-badge status-active">Enterprise</span></td>
-                                    <td>28</td>
-                                    <td>44.1%</td>
+                                    <td>sarah@company.com</td>
+                                    <td>Enterprise</td>
+                                    <td>2,891</td>
+                                    <td>31%</td>
+                                    <td><span class="status-badge status-active">Active</span></td>
                                 </tr>
                                 <tr>
-                                    <td>alex@marketing.agency</td>
-                                    <td><span class="status-badge status-active">Pro</span></td>
-                                    <td>19</td>
-                                    <td>42.8%</td>
-                                </tr>
-                                <tr>
-                                    <td>team@growth.co</td>
-                                    <td><span class="status-badge status-active">Team</span></td>
-                                    <td>34</td>
-                                    <td>41.9%</td>
+                                    <td>mike@startup.co</td>
+                                    <td>Pro</td>
+                                    <td>956</td>
+                                    <td>18%</td>
+                                    <td><span class="status-badge status-pending">Trial</span></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    
+
                     <div class="table-container">
                         <div class="table-header">
-                            <h3 class="table-title">Recent Issues</h3>
-                            <button class="btn btn-secondary">Manage</button>
+                            <h3 class="table-title">Recent Transactions</h3>
                         </div>
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th>Issue</th>
+                                    <th>Date</th>
+                                    <th>User</th>
+                                    <th>Plan</th>
+                                    <th>Amount</th>
                                     <th>Status</th>
-                                    <th>Impact</th>
-                                    <th>Time</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td>API Latency Spike</td>
-                                    <td><span class="status-badge status-pending">Investigating</span></td>
-                                    <td>Low</td>
-                                    <td>5m ago</td>
+                                    <td>Jan 15, 2025</td>
+                                    <td>alex@business.com</td>
+                                    <td>Pro Monthly</td>
+                                    <td>$49</td>
+                                    <td><span class="status-badge status-active">Paid</span></td>
                                 </tr>
                                 <tr>
-                                    <td>Claude Rate Limit</td>
-                                    <td><span class="status-badge status-active">Resolved</span></td>
-                                    <td>Medium</td>
-                                    <td>23m ago</td>
+                                    <td>Jan 15, 2025</td>
+                                    <td>lisa@agency.net</td>
+                                    <td>Enterprise</td>
+                                    <td>$199</td>
+                                    <td><span class="status-badge status-active">Paid</span></td>
                                 </tr>
                                 <tr>
-                                    <td>Email Delivery Delay</td>
-                                    <td><span class="status-badge status-active">Resolved</span></td>
-                                    <td>Low</td>
-                                    <td>1h ago</td>
+                                    <td>Jan 14, 2025</td>
+                                    <td>tom@freelance.io</td>
+                                    <td>Pro Monthly</td>
+                                    <td>$49</td>
+                                    <td><span class="status-badge status-pending">Pending</span></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
-            
-            <!-- User Management View -->
+
+            <!-- Real-time Monitor View -->
+            <div id="realtime-view" class="admin-view">
+                <div class="admin-header">
+                    <div class="header-top">
+                        <h1 class="header-title">Real-time Monitor</h1>
+                        <div class="live-indicator">
+                            <div class="live-dot"></div>
+                            LIVE DATA
+                        </div>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        Live system monitoring and performance metrics
+                    </div>
+                </div>
+                
+                <div class="coming-soon">
+                    <div style="font-size: 64px; margin-bottom: 24px;">⚡</div>
+                    <h2>Real-time Monitoring</h2>
+                    <p>Advanced real-time system monitoring coming soon</p>
+                </div>
+            </div>
+
+            <!-- Users View -->
             <div id="users-view" class="admin-view">
                 <div class="admin-header">
                     <div class="header-top">
                         <h1 class="header-title">User Management</h1>
-                        <div class="live-indicator">
-                            <div class="live-dot"></div>
-                            2,847 ACTIVE USERS
-                        </div>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        Manage user accounts, subscriptions, and permissions
                     </div>
                 </div>
                 
-                <div class="alert alert-warning">
-                    ⚠️ 23 users are approaching their monthly message limits. Consider sending upgrade prompts.
-                </div>
-                
-                <input type="text" class="search-box" placeholder="Search users by email, company, or plan...">
-                
-                <div class="filter-tabs">
-                    <button class="filter-tab active">All Users</button>
-                    <button class="filter-tab">Pro Plans</button>
-                    <button class="filter-tab">Enterprise</button>
-                    <button class="filter-tab">At Risk</button>
-                    <button class="filter-tab">New Signups</button>
-                </div>
-                
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Plan</th>
-                                <th>Status</th>
-                                <th>Usage</th>
-                                <th>Last Active</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <div>
-                                        <strong>sarah@techstartup.com</strong><br>
-                                        <small style="color: #718096;">TechStartup Inc.</small>
-                                    </div>
-                                </td>
-                                <td><span class="status-badge status-active">Pro</span></td>
-                                <td><span class="status-badge status-active">Active</span></td>
-                                <td>2,340 / 5,000 msgs</td>
-                                <td>2 minutes ago</td>
-                                <td>
-                                    <button class="btn btn-primary">Manage</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div>
-                                        <strong>mike@saascompany.com</strong><br>
-                                        <small style="color: #718096;">SaaS Company Ltd</small>
-                                    </div>
-                                </td>
-                                <td><span class="status-badge status-active">Enterprise</span></td>
-                                <td><span class="status-badge status-active">Active</span></td>
-                                <td>12,456 / 50,000 msgs</td>
-                                <td>1 hour ago</td>
-                                <td>
-                                    <button class="btn btn-primary">Manage</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div>
-                                        <strong>alex@marketing.agency</strong><br>
-                                        <small style="color: #718096;">Digital Marketing Pro</small>
-                                    </div>
-                                </td>
-                                <td><span class="status-badge status-pending">Trial</span></td>
-                                <td><span class="status-badge status-pending">Trial Ending</span></td>
-                                <td>487 / 500 msgs</td>
-                                <td>3 hours ago</td>
-                                <td>
-                                    <button class="btn btn-primary">Convert</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="coming-soon">
+                    <div style="font-size: 64px; margin-bottom: 24px;">👥</div>
+                    <h2>User Management</h2>
+                    <p>Advanced user management tools coming soon</p>
                 </div>
             </div>
-            
-            <!-- Performance Monitoring View -->
+
+            <!-- Subscriptions View -->
+            <div id="subscriptions-view" class="admin-view">
+                <div class="admin-header">
+                    <div class="header-top">
+                        <h1 class="header-title">Subscription Management</h1>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        Monitor and manage user subscriptions and billing
+                    </div>
+                </div>
+                
+                <div class="coming-soon">
+                    <div style="font-size: 64px; margin-bottom: 24px;">💳</div>
+                    <h2>Subscription Management</h2>
+                    <p>Advanced subscription management tools coming soon</p>
+                </div>
+            </div>
+
+            <!-- Performance View -->
             <div id="performance-view" class="admin-view">
                 <div class="admin-header">
                     <div class="header-top">
-                        <h1 class="header-title">Performance Monitoring</h1>
-                        <div class="live-indicator">
-                            <div class="live-dot"></div>
-                            SYSTEM HEALTHY
-                        </div>
+                        <h1 class="header-title">Performance Analytics</h1>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        System performance metrics and optimization insights
                     </div>
                 </div>
                 
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Response Time</div>
-                            <div class="kpi-icon">⚡</div>
-                        </div>
-                        <div class="kpi-value">124ms</div>
-                        <div class="kpi-change positive">↗ 12% faster</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Database Load</div>
-                            <div class="kpi-icon">🗃️</div>
-                        </div>
-                        <div class="kpi-value">23%</div>
-                        <div class="kpi-change positive">↗ Optimal</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Error Rate</div>
-                            <div class="kpi-icon">🚨</div>
-                        </div>
-                        <div class="kpi-value">0.02%</div>
-                        <div class="kpi-change positive">↗ Below target</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Throughput</div>
-                            <div class="kpi-icon">🚀</div>
-                        </div>
-                        <div class="kpi-value">847/sec</div>
-                        <div class="kpi-change positive">↗ Peak performance</div>
-                    </div>
-                </div>
-                
-                <div class="chart-container">
-                    <div class="chart-header">
-                        <h3 class="chart-title">System Performance Metrics</h3>
-                    </div>
-                    <div class="chart-placeholder">
-                        <h3 style="color: #4a5568; margin-bottom: 8px;">📊 Real-time Performance Dashboard</h3>
-                        <p style="color: #718096; text-align: center; line-height: 1.5;">
-                            Live monitoring of:<br>
-                            • API response times<br>
-                            • Database performance<br>
-                            • Memory usage<br>
-                            • Network latency<br>
-                            • Claude API integration health
-                        </p>
-                    </div>
+                <div class="coming-soon">
+                    <div style="font-size: 64px; margin-bottom: 24px;">🚀</div>
+                    <h2>Performance Analytics</h2>
+                    <p>Detailed performance monitoring and analytics coming soon</p>
                 </div>
             </div>
-            
-            <!-- Revenue Analytics View -->
+
+            <!-- Revenue View -->
             <div id="revenue-view" class="admin-view">
                 <div class="admin-header">
                     <div class="header-top">
                         <h1 class="header-title">Revenue Analytics</h1>
-                        <div class="live-indicator">
-                            <div class="live-dot"></div>
-                            $127K THIS MONTH
-                        </div>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        Financial metrics, revenue tracking, and business intelligence
                     </div>
                 </div>
                 
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Monthly Recurring Revenue</div>
-                            <div class="kpi-icon">💰</div>
-                        </div>
-                        <div class="kpi-value">$127k</div>
-                        <div class="kpi-change positive">↗ +18% MoM</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Average Revenue Per User</div>
-                            <div class="kpi-icon">👤</div>
-                        </div>
-                        <div class="kpi-value">$89</div>
-                        <div class="kpi-change positive">↗ +7% vs last month</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Churn Rate</div>
-                            <div class="kpi-icon">📉</div>
-                        </div>
-                        <div class="kpi-value">2.3%</div>
-                        <div class="kpi-change positive">↗ -0.8% improvement</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Customer Lifetime Value</div>
-                            <div class="kpi-icon">⭐</div>
-                        </div>
-                        <div class="kpi-value">$2,847</div>
-                        <div class="kpi-change positive">↗ +23% vs target</div>
-                    </div>
-                </div>
-                
-                <div class="dashboard-content">
-                    <div class="chart-container">
-                        <div class="chart-header">
-                            <h3 class="chart-title">Revenue Growth Trends</h3>
-                        </div>
-                        <div class="chart-placeholder">
-                            <h3 style="color: #4a5568; margin-bottom: 8px;">📈 Revenue Analytics Dashboard</h3>
-                            <p style="color: #718096; text-align: center; line-height: 1.5;">
-                                Comprehensive revenue tracking:<br>
-                                • Monthly recurring revenue trends<br>
-                                • Subscription plan distribution<br>
-                                • Upgrade/downgrade patterns<br>
-                                • Cohort analysis<br>
-                                • Forecasting models
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <div class="table-container">
-                        <div class="table-header">
-                            <h3 class="table-title">Subscription Breakdown</h3>
-                        </div>
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Plan</th>
-                                    <th>Users</th>
-                                    <th>Revenue</th>
-                                    <th>Growth</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>Enterprise</strong></td>
-                                    <td>89</td>
-                                    <td>$67,150</td>
-                                    <td><span style="color: #38a169;">+34%</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Pro</strong></td>
-                                    <td>1,247</td>
-                                    <td>$49,880</td>
-                                    <td><span style="color: #38a169;">+18%</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Team</strong></td>
-                                    <td>523</td>
-                                    <td>$10,460</td>
-                                    <td><span style="color: #38a169;">+12%</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Trial</strong></td>
-                                    <td>988</td>
-                                    <td>$0</td>
-                                    <td><span style="color: #e53e3e;">-5%</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="coming-soon">
+                    <div style="font-size: 64px; margin-bottom: 24px;">💰</div>
+                    <h2>Revenue Analytics</h2>
+                    <p>Comprehensive revenue tracking and financial analytics coming soon</p>
                 </div>
             </div>
-            
-            <!-- AI Performance View -->
+
+            <!-- AI Insights View -->
             <div id="ai-insights-view" class="admin-view">
                 <div class="admin-header">
                     <div class="header-top">
-                        <h1 class="header-title">AI Performance Intelligence</h1>
-                        <div class="live-indicator">
-                            <div class="live-dot"></div>
-                            CLAUDE OPTIMAL
-                        </div>
+                        <h1 class="header-title">AI Performance</h1>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        AI model performance, accuracy metrics, and optimization insights
                     </div>
                 </div>
                 
-                <div class="alert alert-success">
-                    ✅ Claude integration performing 23% above baseline. All AI features operating optimally.
-                </div>
-                
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Claude Response Time</div>
-                            <div class="kpi-icon">🧠</div>
-                        </div>
-                        <div class="kpi-value">1.2s</div>
-                        <div class="kpi-change positive">↗ 15% faster</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">AI Success Rate</div>
-                            <div class="kpi-icon">✅</div>
-                        </div>
-                        <div class="kpi-value">97.8%</div>
-                        <div class="kpi-change positive">↗ Above target</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">Message Quality Score</div>
-                            <div class="kpi-icon">⭐</div>
-                        </div>
-                        <div class="kpi-value">8.7/10</div>
-                        <div class="kpi-change positive">↗ +0.3 improvement</div>
-                    </div>
-                    
-                    <div class="kpi-card">
-                        <div class="kpi-header">
-                            <div class="kpi-title">API Quota Usage</div>
-                            <div class="kpi-icon">📊</div>
-                        </div>
-                        <div class="kpi-value">67%</div>
-                        <div class="kpi-change positive">↗ Within limits</div>
-                    </div>
-                </div>
-                
-                <div class="dashboard-content">
-                    <div class="chart-container">
-                        <div class="chart-header">
-                            <h3 class="chart-title">AI Performance Metrics</h3>
-                        </div>
-                        <div class="chart-placeholder">
-                            <h3 style="color: #4a5568; margin-bottom: 8px;">🤖 AI Intelligence Dashboard</h3>
-                            <p style="color: #718096; text-align: center; line-height: 1.5;">
-                                Advanced AI monitoring:<br>
-                                • Claude API response times<br>
-                                • Message generation quality<br>
-                                • Campaign optimization accuracy<br>
-                                • Sentiment analysis performance<br>
-                                • User satisfaction with AI features
-                            </p>
-                        </div>
-                    </div>
-                    
-                    <div class="activity-feed">
-                        <h3 class="chart-title" style="margin-bottom: 20px;">AI Activity Feed</h3>
-                        
-                        <div class="feed-item">
-                            <div class="feed-icon system">🧠</div>
-                            <div class="feed-content">
-                                <div class="feed-title">High-Impact Optimization</div>
-                                <div class="feed-description">Claude suggested variant improved response rate by 34%</div>
-                                <div class="feed-time">5 minutes ago</div>
-                            </div>
-                        </div>
-                        
-                        <div class="feed-item">
-                            <div class="feed-icon campaign">🎯</div>
-                            <div class="feed-content">
-                                <div class="feed-title">Smart Segmentation</div>
-                                <div class="feed-description">AI identified new high-value prospect segment</div>
-                                <div class="feed-time">12 minutes ago</div>
-                            </div>
-                        </div>
-                        
-                        <div class="feed-item">
-                            <div class="feed-icon system">⚡</div>
-                            <div class="feed-content">
-                                <div class="feed-title">Performance Boost</div>
-                                <div class="feed-description">API optimizations reduced latency by 23%</div>
-                                <div class="feed-time">18 minutes ago</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="coming-soon">
+                    <div style="font-size: 64px; margin-bottom: 24px;">🧠</div>
+                    <h2>AI Performance Insights</h2>
+                    <p>Advanced AI performance monitoring and insights coming soon</p>
                 </div>
             </div>
         </main>
     </div>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="/js/shared-code.js"></script>
-<script src="/js/admin.js" defer></script>
+
+    <!-- Loading Overlay (inherited from shared-code.js) -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <div class="loading-text">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Toast Messages (inherited from shared-code.js) -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Load admin-specific JavaScript LAST -->
+    <script src="/js/admin.js"></script>
 </body>
 </html>
