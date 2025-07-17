@@ -339,33 +339,53 @@ function getUserTimezone() {
     return localStorage.getItem('userTimezone') || 'UTC';
 }
 
-function formatDateInUserTimezone(dateString, options = {}) {
+formatDateInUserTimezone(dateString, options = {}) {
+    // Add caching to prevent excessive calls
+    if (!this.dateFormatCache) {
+        this.dateFormatCache = new Map();
+    }
+    
+    const cacheKey = `${dateString}_${JSON.stringify(options)}`;
+    if (this.dateFormatCache.has(cacheKey)) {
+        return this.dateFormatCache.get(cacheKey);
+    }
+    
+    if (!dateString) {
+        return 'Invalid date';
+    }
+    
     try {
         const date = new Date(dateString);
-        const timezone = getUserTimezone();
-        
-        // Debug logging
-        console.log('🕐 Formatting date:', {
-            original: dateString,
-            timezone: timezone,
-            localTime: date.toLocaleString('en-US', { timeZone: timezone })
-        });
+        const timezone = this.getUserTimezone();
         
         const defaultOptions = {
             year: 'numeric',
-            month: 'short',
+            month: 'short', 
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
             timeZone: timezone,
-            hour12: true  // Add this to ensure 12-hour format
+            ...options
         };
         
-        return date.toLocaleString('en-US', { ...defaultOptions, ...options });
+        const formatted = date.toLocaleString('en-US', defaultOptions);
+        
+        // Cache the result
+        this.dateFormatCache.set(cacheKey, formatted);
+        
+        // Limit cache size to prevent memory issues
+        if (this.dateFormatCache.size > 100) {
+            const firstKey = this.dateFormatCache.keys().next().value;
+            this.dateFormatCache.delete(firstKey);
+        }
+        
+        return formatted;
         
     } catch (error) {
         console.error('Date formatting error:', error);
-        return new Date(dateString).toLocaleString();
+        const errorResult = 'Invalid date';
+        this.dateFormatCache.set(cacheKey, errorResult);
+        return errorResult;
     }
 }
 // =============================================================================
