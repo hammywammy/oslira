@@ -6,6 +6,11 @@
 [functions]
   directory = "netlify/edge-functions"
 
+  [[redirects]]
+  from = "/config"
+  to = "/.netlify/functions/config"
+  status = 200
+
 # Your existing auth edge function for all /api/* routes
 [[edge_functions]] 
   function = "auth"
