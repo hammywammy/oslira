@@ -1,4 +1,12 @@
-     if (typeof Sentry !== 'undefined') {
+    <script>
+        window.CONFIG = {
+            supabaseUrl: 'your-supabase-url',
+            supabaseKey: 'your-supabase-key',
+            workerUrl: 'your-worker-url'
+        };
+    </script>
+
+if (typeof Sentry !== 'undefined') {
             Sentry.init({
                 environment: 'production',
                 beforeSend(event) {
