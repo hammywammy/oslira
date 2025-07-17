@@ -53,7 +53,7 @@
                 }
 
                 // Get configuration from API
-                const config = await fetchConfig();
+                const config = window.CONFIG || await loadConfigFromAPI();
                 
                 // Initialize Supabase client
                 supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
