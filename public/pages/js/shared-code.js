@@ -680,6 +680,8 @@ window.OsliraApp.apiRequest = apiRequest;
 window.OsliraApp.formatDate = formatDateInUserTimezone;
 window.OsliraApp.getUserTimezone = getUserTimezone;
 window.OsliraApp.logout = logout;
+window.OsliraApp.formatDateInUserTimezone = formatDateInUserTimezone;
+
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
