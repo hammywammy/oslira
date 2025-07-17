@@ -78,33 +78,22 @@ class OsliraAdminDashboard {
         }
     }
 
-    async verifyAdminAccess() {
-        try {
-            const { data: userProfile, error } = await window.OsliraApp.supabase
-                .from('users')
-                .select('*')
-                .eq('id', window.OsliraApp.user?.id)
-                .single();
+async verifyAdminAccess() {
+  const user = window.OsliraApp.user;
+  if (!user?.id) {
+    throw new Error('Not authenticated');
+  }
+  const { data, error } = await window.OsliraApp.supabase
+    .from('users')
+    .select('is_admin')
+    .eq('id', user.id)
+    .single();
+  if (error) throw error;
+  if (!data.is_admin) {
+    throw new Error('Access denied. Admin privileges required.');
+  }
+}
 
-            if (error) throw error;
-
-            // Check if user has admin role
-            if (!userProfile.is_admin && userProfile.email !== 'admin@oslira.com') {
-                throw new Error('Access denied. Admin privileges required.');
-            }
-
-            this.userProfile = userProfile;
-            console.log('✅ Admin access verified');
-            
-        } catch (error) {
-            console.error('❌ Admin access verification failed:', error);
-            window.OsliraApp.showMessage('Access denied. Admin privileges required.', 'error');
-            setTimeout(() => {
-                window.location.href = '/dashboard.html';
-            }, 2000);
-            throw error;
-        }
-    }
 
     handleInitializationError(error) {
         const errorMessage = error.message || 'Failed to initialize admin dashboard';
