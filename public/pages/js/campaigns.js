@@ -21,7 +21,27 @@ class OsliraCampaigns {
     // =============================================================================
     // EXPORT AND UTILITIES
     // =============================================================================
-
+        async initialize() {
+        try {
+            console.log('🚀 Initializing campaigns...');
+            
+            // Wait for shared core initialization
+            await window.OsliraApp.initialize();
+            
+            // Campaigns-specific setup
+            await this.setupCampaigns();
+            this.setupEventListeners();
+            await this.loadCampaignsData();
+            this.startRealTimeUpdates();
+            this.initializeSearch();
+            
+            console.log('✅ Campaigns ready');
+            
+        } catch (error) {
+            console.error('❌ Campaigns initialization failed:', error);
+            window.OsliraApp.showMessage('Campaigns failed to load: ' + error.message, 'error');
+        }
+    }
     async exportCampaigns() {
         try {
             const campaigns = this.campaigns;
@@ -446,27 +466,6 @@ window.addEventListener('beforeunload', () => {
 
 console.log('📊 Campaigns module loaded - uses shared-core.js');
 
-    async initialize() {
-        try {
-            console.log('🚀 Initializing campaigns...');
-            
-            // Wait for shared core initialization
-            await window.OsliraApp.initialize();
-            
-            // Campaigns-specific setup
-            await this.setupCampaigns();
-            this.setupEventListeners();
-            await this.loadCampaignsData();
-            this.startRealTimeUpdates();
-            this.initializeSearch();
-            
-            console.log('✅ Campaigns ready');
-            
-        } catch (error) {
-            console.error('❌ Campaigns initialization failed:', error);
-            window.OsliraApp.showMessage('Campaigns failed to load: ' + error.message, 'error');
-        }
-    }
 
     function setupDemoConfig() {
     const demoConfig = {
