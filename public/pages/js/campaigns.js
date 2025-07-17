@@ -62,19 +62,6 @@ class OsliraCampaigns {
         }
     }
 
-    setupDemoConfig() {
-        const demoConfig = {
-            supabaseUrl: 'https://demo.supabase.co',
-            supabaseAnonKey: 'demo-key',
-            workerUrl: 'https://demo-worker.workers.dev',
-            stripePublishableKey: 'pk_test_demo',
-            demoMode: true
-        };
-        
-        Object.assign(window.OsliraApp.config, demoConfig);
-        console.log('🚧 Demo configuration loaded');
-        return demoConfig;
-    }
 
     // =============================================================================
     // SETUP AND INITIALIZATION
