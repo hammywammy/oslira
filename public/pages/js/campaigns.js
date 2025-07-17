@@ -442,30 +442,6 @@ class OsliraCampaigns {
         
         console.log('🧹 Campaigns instance cleaned up');
     }
-}
-
-// =============================================================================
-// INITIALIZE CAMPAIGNS
-// =============================================================================
-
-// Create global campaigns instance
-const campaigns = new OsliraCampaigns();
-
-// Make campaigns available globally for onclick handlers
-window.campaigns = campaigns;
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    campaigns.initialize();
-});
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    campaigns.destroy();
-});
-
-console.log('📊 Campaigns module loaded - uses shared-core.js');
-
 
     function setupDemoConfig() {
     const demoConfig = {
