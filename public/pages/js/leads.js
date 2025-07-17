@@ -1,12 +1,6 @@
 
 src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js" crossorigin="anonymous">
-    
-        window.CONFIG = {
-            supabaseUrl: 'your-supabase-url',
-            supabaseKey: 'your-supabase-key',
-            workerUrl: 'your-worker-url'
-        };
 
 if (typeof Sentry !== 'undefined') {
             Sentry.init({
@@ -37,16 +31,74 @@ if (typeof Sentry !== 'undefined') {
         });
 
         // Initialize Supabase
-        function initializeSupabase() {
-            if (window.CONFIG && window.supabase) {
-                supabase = window.supabase.createClient(
-                    window.CONFIG.supabaseUrl, 
-                    window.CONFIG.supabaseKey
-                );
-            } else {
-                console.error('❌ Configuration or Supabase not available');
-            }
-        }
+        // Updated initialization for leads.js
+
+// Initialize Supabase - Updated to use environment config
+function initializeSupabase() {
+    // Check if config is loaded
+    if (!window.CONFIG) {
+        console.error('❌ Configuration not loaded. Make sure env-config.js is loaded first.');
+        showConfigError();
+        return;
+    }
+    
+    // Validate required config
+    const required = ['SUPABASE_URL', 'SUPABASE_ANON_KEY'];
+    const missing = required.filter(key => !window.CONFIG[key]);
+    
+    if (missing.length > 0) {
+        console.error('❌ Missing configuration:', missing);
+        showConfigError();
+        return;
+    }
+    
+    try {
+        supabase = window.supabase.createClient(
+            window.CONFIG.SUPABASE_URL, 
+            window.CONFIG.SUPABASE_ANON_KEY
+        );
+        console.log('✅ Supabase initialized with environment config');
+    } catch (error) {
+        console.error('❌ Supabase initialization failed:', error);
+        showConfigError();
+    }
+}
+
+// Show configuration error to user
+function showConfigError() {
+    const errorHTML = `
+        <div style="background: #fee; border: 1px solid #fcc; padding: 20px; margin: 20px; border-radius: 8px;">
+            <h3>⚠️ Configuration Error</h3>
+            <p>The application configuration could not be loaded. Please contact support.</p>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('afterbegin', errorHTML);
+}
+
+// Updated API call function to use environment config
+async function callWorkerAPI(endpoint, data) {
+    if (!window.CONFIG?.WORKER_URL) {
+        throw new Error('Worker URL not configured');
+    }
+    
+    const url = `${window.CONFIG.WORKER_URL}${endpoint}`;
+    console.log(`🔗 Calling API: ${url}`);
+    
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${currentSession?.access_token}`
+        },
+        body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+        throw new Error(`API call failed: ${response.statusText}`);
+    }
+    
+    return response.json();
+}
 
         // Set up all event listeners
         function setupEventListeners() {
