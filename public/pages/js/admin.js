@@ -1,4 +1,4 @@
-Chart.register(...registerables);
+Chart.register(...Chart.registerables);
 
 window.addEventListener('error', (event) => {
     if (event.message && event.message.includes('Could not establish connection')) {
