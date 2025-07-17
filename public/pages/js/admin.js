@@ -1921,6 +1921,7 @@ class OsliraAdminDashboard {
       plugins: { legend: { position: 'top' } }
     }
   });
+    }
    startRealTimeUpdates() {
         console.log('🔄 Starting real-time updates...');
         
