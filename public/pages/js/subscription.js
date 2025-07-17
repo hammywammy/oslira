@@ -56,7 +56,7 @@
                 }
 
                 // Get configuration from API
-                config = window.CONFIG || await loadConfigFromAPI();
+                config = window.OsliraApp.config;
                 
                 // Initialize Supabase client
                 supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
