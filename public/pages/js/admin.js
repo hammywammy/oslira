@@ -1,4 +1,6 @@
-import { Chart, registerables } from 'chart.js';
+import { Chart, registerables }
+  from 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.esm.min.js';
+
 Chart.register(...registerables);
 
 window.addEventListener('error', (event) => {
