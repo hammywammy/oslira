@@ -104,12 +104,6 @@ async function initializeSupabase() {
         
     } catch (error) {
         console.error('❌ Supabase initialization failed:', error);
-        
-        if (window.OsliraApp.config.demoMode) {
-            console.warn('🚧 Running without Supabase in demo mode');
-            return null;
-        }
-        
         throw error;
     }
 }
@@ -122,8 +116,8 @@ async function checkAuthentication() {
     const supabase = window.OsliraApp.supabase;
     
     if (!supabase) {
-        console.warn('🚧 Auth check skipped - demo mode');
-        return setupDemoUser();
+        console.warn('🚧 Supabase not available - using fallback');
+        return setupDemoUser();  // Clear fallback behavior
     }
     
     try {
@@ -147,9 +141,7 @@ async function checkAuthentication() {
         
         console.log('✅ User authenticated:', session.user.email);
         
-        // Set up auth listener
         setupAuthListener();
-        
         return session.user;
         
     } catch (error) {
@@ -201,8 +193,8 @@ function redirectToLogin() {
     const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings'];
     const currentPage = getCurrentPageName();
     
-    if (protectedPages.includes(currentPage) && !window.OsliraApp.config.demoMode) {
-        window.location.href = '/login.html';
+    if (protectedPages.includes(currentPage)) {
+        window.location.href = '/auth.html';  // Also fix the URL
     }
 }
 
