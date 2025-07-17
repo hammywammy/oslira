@@ -7,7 +7,7 @@ updateMessageTemplates() {
         const templates = {
             'Instagram DM': `Hi {name}! 👋
 
-I came across your profile and love your content about {niche_topic}. Your recent post about {recent_post} really caught my attention!
+I came across your profile and love your content about {niche_topic}. Your recent post about {recent_post} really caught my attention! 
 
 I help {target_audience} achieve {specific_benefit} through {solution_type}. Just helped {similar_profile} increase their {metric} by {percentage}.
 
