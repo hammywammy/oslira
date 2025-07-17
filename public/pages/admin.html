@@ -335,6 +335,109 @@
                 </div>
             </div>
 
+            <!-- Users View -->
+            <div id="users-view" class="admin-view">
+                <div class="admin-header">
+                    <div class="header-top">
+                        <h1 class="header-title">User Management</h1>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="window.adminDashboard.loadUserData()">
+                                🔄 Refresh
+                            </button>
+                            <button class="btn btn-primary" onclick="window.adminDashboard.exportUsers()">
+                                📤 Export Users
+                            </button>
+                        </div>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        Manage user accounts, subscriptions, and permissions
+                    </div>
+                </div>
+                
+                <!-- Users table container will be populated by JavaScript -->
+                <div id="users-table-container" class="view-container"></div>
+            </div>
+
+            <!-- Subscriptions View -->
+            <div id="subscriptions-view" class="admin-view">
+                <div class="admin-header">
+                    <div class="header-top">
+                        <h1 class="header-title">Subscription Management</h1>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="window.adminDashboard.loadSubscriptionData()">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        Monitor and manage user subscriptions and billing
+                    </div>
+                </div>
+                
+                <!-- Subscriptions dashboard container -->
+                <div id="subscriptions-dashboard-container" class="view-container"></div>
+            </div>
+
+            <!-- Performance View -->
+            <div id="performance-view" class="admin-view">
+                <div class="admin-header">
+                    <div class="header-top">
+                        <h1 class="header-title">Performance Analytics</h1>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="window.adminDashboard.loadPerformanceData()">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        System performance metrics and optimization insights
+                    </div>
+                </div>
+                
+                <!-- Performance dashboard container -->
+                <div id="performance-dashboard-container" class="view-container"></div>
+            </div>
+
+            <!-- Revenue View -->
+            <div id="revenue-view" class="admin-view">
+                <div class="admin-header">
+                    <div class="header-top">
+                        <h1 class="header-title">Revenue Analytics</h1>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="window.adminDashboard.loadRevenueData()">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        Financial metrics, revenue tracking, and business intelligence
+                    </div>
+                </div>
+                
+                <!-- Revenue dashboard container -->
+                <div id="revenue-dashboard-container" class="view-container"></div>
+            </div>
+
+            <!-- AI Insights View -->
+            <div id="ai-insights-view" class="admin-view">
+                <div class="admin-header">
+                    <div class="header-top">
+                        <h1 class="header-title">AI Performance</h1>
+                        <div class="header-actions">
+                            <button class="btn btn-secondary" onclick="window.adminDashboard.loadAIData()">
+                                🔄 Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div style="color: #718096; font-size: 16px;">
+                        AI model performance, accuracy metrics, and optimization insights
+                    </div>
+                </div>
+                
+                <!-- AI dashboard container -->
+                <div id="ai-dashboard-container" class="view-container"></div>
+            </div>
+
             <!-- Real-time Monitor View -->
             <div id="realtime-view" class="admin-view">
                 <div class="admin-header">
@@ -350,100 +453,76 @@
                     </div>
                 </div>
                 
-                <div class="coming-soon">
-                    <div style="font-size: 64px; margin-bottom: 24px;">⚡</div>
-                    <h2>Real-time Monitoring</h2>
-                    <p>Advanced real-time system monitoring coming soon</p>
-                </div>
+                <!-- Real-time dashboard container -->
+                <div id="realtime-dashboard-container" class="view-container"></div>
             </div>
 
-            <!-- Users View -->
-            <div id="users-view" class="admin-view">
+            <!-- Additional views for other nav items -->
+            <div id="usage-view" class="admin-view">
                 <div class="admin-header">
                     <div class="header-top">
-                        <h1 class="header-title">User Management</h1>
+                        <h1 class="header-title">Usage Analytics</h1>
                     </div>
                     <div style="color: #718096; font-size: 16px;">
-                        Manage user accounts, subscriptions, and permissions
+                        User activity patterns and feature usage analytics
                     </div>
                 </div>
                 
                 <div class="coming-soon">
-                    <div style="font-size: 64px; margin-bottom: 24px;">👥</div>
-                    <h2>User Management</h2>
-                    <p>Advanced user management tools coming soon</p>
+                    <div style="font-size: 64px; margin-bottom: 24px;">📈</div>
+                    <h2>Usage Analytics</h2>
+                    <p>Detailed usage analytics and user behavior insights coming soon</p>
                 </div>
             </div>
 
-            <!-- Subscriptions View -->
-            <div id="subscriptions-view" class="admin-view">
+            <div id="errors-view" class="admin-view">
                 <div class="admin-header">
                     <div class="header-top">
-                        <h1 class="header-title">Subscription Management</h1>
+                        <h1 class="header-title">Error Tracking</h1>
                     </div>
                     <div style="color: #718096; font-size: 16px;">
-                        Monitor and manage user subscriptions and billing
+                        System errors, exceptions, and debugging information
                     </div>
                 </div>
                 
                 <div class="coming-soon">
-                    <div style="font-size: 64px; margin-bottom: 24px;">💳</div>
-                    <h2>Subscription Management</h2>
-                    <p>Advanced subscription management tools coming soon</p>
+                    <div style="font-size: 64px; margin-bottom: 24px;">🚨</div>
+                    <h2>Error Tracking</h2>
+                    <p>Advanced error monitoring and debugging tools coming soon</p>
                 </div>
             </div>
 
-            <!-- Performance View -->
-            <div id="performance-view" class="admin-view">
+            <div id="infrastructure-view" class="admin-view">
                 <div class="admin-header">
                     <div class="header-top">
-                        <h1 class="header-title">Performance Analytics</h1>
+                        <h1 class="header-title">Infrastructure</h1>
                     </div>
                     <div style="color: #718096; font-size: 16px;">
-                        System performance metrics and optimization insights
+                        Server infrastructure, deployments, and system health
                     </div>
                 </div>
                 
                 <div class="coming-soon">
-                    <div style="font-size: 64px; margin-bottom: 24px;">🚀</div>
-                    <h2>Performance Analytics</h2>
-                    <p>Detailed performance monitoring and analytics coming soon</p>
+                    <div style="font-size: 64px; margin-bottom: 24px;">🏗️</div>
+                    <h2>Infrastructure Management</h2>
+                    <p>Infrastructure monitoring and deployment management coming soon</p>
                 </div>
             </div>
 
-            <!-- Revenue View -->
-            <div id="revenue-view" class="admin-view">
+            <div id="campaigns-view" class="admin-view">
                 <div class="admin-header">
                     <div class="header-top">
-                        <h1 class="header-title">Revenue Analytics</h1>
+                        <h1 class="header-title">Campaign Intelligence</h1>
                     </div>
                     <div style="color: #718096; font-size: 16px;">
-                        Financial metrics, revenue tracking, and business intelligence
+                        Campaign performance analytics and optimization insights
                     </div>
                 </div>
                 
                 <div class="coming-soon">
-                    <div style="font-size: 64px; margin-bottom: 24px;">💰</div>
-                    <h2>Revenue Analytics</h2>
-                    <p>Comprehensive revenue tracking and financial analytics coming soon</p>
-                </div>
-            </div>
-
-            <!-- AI Insights View -->
-            <div id="ai-insights-view" class="admin-view">
-                <div class="admin-header">
-                    <div class="header-top">
-                        <h1 class="header-title">AI Performance</h1>
-                    </div>
-                    <div style="color: #718096; font-size: 16px;">
-                        AI model performance, accuracy metrics, and optimization insights
-                    </div>
-                </div>
-                
-                <div class="coming-soon">
-                    <div style="font-size: 64px; margin-bottom: 24px;">🧠</div>
-                    <h2>AI Performance Insights</h2>
-                    <p>Advanced AI performance monitoring and insights coming soon</p>
+                    <div style="font-size: 64px; margin-bottom: 24px;">🎯</div>
+                    <h2>Campaign Intelligence</h2>
+                    <p>Advanced campaign analytics and optimization tools coming soon</p>
                 </div>
             </div>
         </main>
