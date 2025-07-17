@@ -1,10 +1,12 @@
-    <script>
+
+src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js" crossorigin="anonymous">
+    
         window.CONFIG = {
             supabaseUrl: 'your-supabase-url',
             supabaseKey: 'your-supabase-key',
             workerUrl: 'your-worker-url'
         };
-    </script>
 
 if (typeof Sentry !== 'undefined') {
             Sentry.init({
