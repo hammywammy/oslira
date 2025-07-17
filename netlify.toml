@@ -16,7 +16,3 @@
   function = "auth"
   path     = "/api/*"
 
-# New config edge function for /api/config
-[[edge_functions]]
-  function = "config"
-  path     = "/api/config"
