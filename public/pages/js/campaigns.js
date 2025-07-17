@@ -445,8 +445,6 @@ window.addEventListener('beforeunload', () => {
 });
 
 console.log('📊 Campaigns module loaded - uses shared-core.js');
-        this.userCapabilities = {};
-    }
 
     async initialize() {
         try {
@@ -469,6 +467,20 @@ console.log('📊 Campaigns module loaded - uses shared-core.js');
             window.OsliraApp.showMessage('Campaigns failed to load: ' + error.message, 'error');
         }
     }
+
+    function setupDemoConfig() {
+    const demoConfig = {
+        supabaseUrl: 'https://demo.supabase.co',
+        supabaseAnonKey: 'demo-key',
+        workerUrl: 'https://demo-worker.workers.dev',
+        stripePublishableKey: 'pk_test_demo',
+        demoMode: true
+    };
+    
+    Object.assign(window.OsliraApp.config, demoConfig);
+    console.log('🚧 Demo configuration loaded');
+    return demoConfig;
+}
 
     // =============================================================================
     // SETUP AND INITIALIZATION
@@ -2028,30 +2040,30 @@ console.log('📊 Campaigns module loaded - uses shared-core.js');
         }
     }
 
-    showInsufficientCreditsModal(required) {
-        const modal = this.createConfirmationModal({
-            title: 'Insufficient Credits',
-            message: `
-                <div style="margin-bottom: 16px;">
-                    <p>You need ${required} credits to launch this campaign.</p>
-                    <p>Current balance: ${this.userProfile.credits} credits</p>
-                    <p>Required: ${required} credits</p>
-                    <p><strong>Shortfall: ${required - this.userProfile.credits} credits</strong></p>
-                </div>
-                <p>Would you like to upgrade your plan or reduce the campaign size?</p>
-            `,
-            confirmText: '🚀 Upgrade Plan',
-            cancelText: 'Reduce Campaign Size',
-            onConfirm: () => {
-                modal.remove();
-                window.location.href = '/subscription.html';
-            },
-            onCancel: () => {
-                modal.remove();
-                this.suggestCampaignReduction(required);
-            }
-        });
-    }
+   showInsufficientCreditsModal(required) {
+    const modal = this.createConfirmationModal({
+        title: 'Insufficient Credits',
+        message: `
+            <div style="margin-bottom: 16px;">
+                <p>You need ${required} credits to launch this campaign.</p>
+                <p>Current balance: ${this.userProfile.credits} credits</p>
+                <p>Required: ${required} credits</p>
+                <p><strong>Shortfall: ${required - this.userProfile.credits} credits</strong></p>
+            </div>
+            <p>Would you like to upgrade your plan or reduce the campaign size?</p>
+        `,
+        confirmText: '🚀 Upgrade Plan',
+        cancelText: 'Reduce Campaign Size',
+        onConfirm: () => {
+            modal.remove();
+            window.location.href = '/subscription.html';
+        },
+        onCancel: () => {
+            modal.remove();
+            this.suggestCampaignReduction(required);
+        }
+    });
+}
 
     suggestCampaignReduction(required) {
         const available = this.userProfile.credits;
