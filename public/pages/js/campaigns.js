@@ -2440,8 +2440,6 @@ creativehub`;
         
         const blob = new Blob([template], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
-        const blob = new Blob([template], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = 'leads_template.csv';
