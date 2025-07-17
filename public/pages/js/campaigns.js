@@ -16,12 +16,16 @@ class OsliraCampaigns {
         this.itemsPerPage = 12;
         this.searchTerm = '';
         this.activeFilters = new Set(['all']);
+        this.csvData = [];
+        this.mappedData = [];
+        this.userCapabilities = {};
     }
 
     // =============================================================================
-    // EXPORT AND UTILITIES
+    // INITIALIZATION
     // =============================================================================
-        async initialize() {
+
+    async initialize() {
         try {
             console.log('🚀 Initializing campaigns...');
             
@@ -42,420 +46,20 @@ class OsliraCampaigns {
             window.OsliraApp.showMessage('Campaigns failed to load: ' + error.message, 'error');
         }
     }
-    async exportCampaigns() {
-        try {
-            const campaigns = this.campaigns;
-            if (campaigns.length === 0) {
-                window.OsliraApp.showMessage('No campaigns to export', 'error');
-                return;
-            }
-            
-            const csvContent = this.generateCampaignsCSV(campaigns);
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `campaigns_export_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            window.OsliraApp.showMessage(`Exported ${campaigns.length} campaigns successfully`, 'success');
-            
-        } catch (error) {
-            console.error('Export error:', error);
-            window.OsliraApp.showMessage('Export failed: ' + error.message, 'error');
-        }
-    }
 
-    generateCampaignsCSV(campaigns) {
-        const headers = [
-            'Name', 'Status', 'Objective', 'Outreach Mode', 'Target Count',
-            'Messages Sent', 'Responses', 'Conversions', 'Response Rate',
-            'Created Date', 'Updated Date'
-        ];
-        
-        const rows = campaigns.map(campaign => [
-            campaign.name,
-            campaign.status,
-            campaign.objective,
-            campaign.outreach_mode,
-            campaign.target_lead_count || 0,
-            campaign.messages_sent || 0,
-            campaign.responses_received || 0,
-            campaign.conversions || 0,
-            this.calculateResponseRate(campaign).toFixed(1) + '%',
-            new Date(campaign.created_at).toLocaleDateString(),
-            new Date(campaign.updated_at).toLocaleDateString()
-        ]);
-        
-        return [headers, ...rows].map(row => 
-            row.map(cell => `"${cell}"`).join(',')
-        ).join('\n');
-    }
-
-    selectCampaign(campaignId) {
-        document.querySelectorAll('.campaign-card').forEach(card => {
-            card.classList.remove('active');
-        });
-        
-        const selectedCard = document.querySelector(`[data-campaign-id="${campaignId}"]`);
-        if (selectedCard) {
-            selectedCard.classList.add('active');
-            this.selectedCampaign = campaignId;
-            this.loadCampaignDetails(campaignId);
-        }
-    }
-
-    async loadCampaignDetails(campaignId) {
-        const campaign = this.campaigns.find(c => c.id === campaignId);
-        if (!campaign) return;
-        
-        const detailsPanel = document.getElementById('campaign-details-panel');
-        if (detailsPanel) {
-            detailsPanel.innerHTML = this.renderCampaignDetails(campaign);
-        }
-    }
-
-    renderCampaignDetails(campaign) {
-        const responseRate = this.calculateResponseRate(campaign);
-        
-        return `
-            <div class="campaign-details-content">
-                <div class="campaign-details-header">
-                    <h3>${campaign.name}</h3>
-                    <div class="campaign-actions">
-                        <button class="action-btn" onclick="campaigns.${campaign.status === 'live' ? 'pauseCampaign' : 'resumeCampaign'}('${campaign.id}')">
-                            ${campaign.status === 'live' ? '⏸️ Pause' : '▶️ Resume'}
-                        </button>
-                        <button class="action-btn" onclick="campaigns.cloneCampaign('${campaign.id}')">
-                            📋 Clone
-                        </button>
-                        <button class="action-btn danger" onclick="campaigns.stopCampaign('${campaign.id}')">
-                            🛑 Stop
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="campaign-metrics-grid">
-                    <div class="metric-card">
-                        <div class="metric-value">${campaign.messages_sent || 0}</div>
-                        <div class="metric-label">Messages Sent</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">${campaign.responses_received || 0}</div>
-                        <div class="metric-label">Responses</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">${responseRate.toFixed(1)}%</div>
-                        <div class="metric-label">Response Rate</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value">${campaign.conversions || 0}</div>
-                        <div class="metric-label">Conversions</div>
-                    </div>
-                </div>
-                
-                <div class="campaign-info">
-                    <div class="info-row">
-                        <span class="info-label">Objective:</span>
-                        <span class="info-value">${campaign.objective}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Platform:</span>
-                        <span class="info-value">${campaign.outreach_mode}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Target Leads:</span>
-                        <span class="info-value">${campaign.target_lead_count || 0}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Created:</span>
-                        <span class="info-value">${window.OsliraApp.formatDateInUserTimezone(campaign.created_at)}</span>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    showUpgradeModal(reason, data) {
-        const modal = document.createElement('div');
-        modal.className = 'modal upgrade-modal';
-        
-        let content = '';
-        
-        switch (reason) {
-            case 'campaign_limit':
-                content = `
-                    <h3>🚀 Upgrade Required</h3>
-                    <p>You've reached your campaign limit (${data.current}/${data.limit})</p>
-                    <p>Upgrade to create more campaigns and unlock advanced features:</p>
-                    <ul>
-                        <li>✅ More active campaigns</li>
-                        <li>✅ Advanced A/B testing</li>
-                        <li>✅ Priority support</li>
-                        <li>✅ Advanced analytics</li>
-                    </ul>
-                `;
-                break;
-            default:
-                content = `
-                    <h3>🚀 Upgrade Your Plan</h3>
-                    <p>Unlock more features and capabilities with a premium plan.</p>
-                `;
-        }
-        
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    ${content}
-                    <button class="modal-close" onclick="this.closest('.modal').remove()">×</button>
-                </div>
-                <div class="modal-actions">
-                    <button class="secondary-btn" onclick="this.closest('.modal').remove()">
-                        Maybe Later
-                    </button>
-                    <button class="primary-btn" onclick="window.location.href='/subscription.html'">
-                        🚀 Upgrade Now
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-    }
-
-    showCampaignMenu(campaignId, event) {
-        event.stopPropagation();
-        
-        const campaign = this.campaigns.find(c => c.id === campaignId);
-        if (!campaign) return;
-        
-        const menu = document.createElement('div');
-        menu.className = 'campaign-context-menu';
-        menu.innerHTML = `
-            <div class="menu-item" onclick="campaigns.selectCampaign('${campaignId}')">
-                👁️ View Details
-            </div>
-            <div class="menu-item" onclick="campaigns.${campaign.status === 'live' ? 'pauseCampaign' : 'resumeCampaign'}('${campaignId}')">
-                ${campaign.status === 'live' ? '⏸️ Pause' : '▶️ Resume'}
-            </div>
-            <div class="menu-item" onclick="campaigns.cloneCampaign('${campaignId}')">
-                📋 Clone
-            </div>
-            <div class="menu-separator"></div>
-            <div class="menu-item danger" onclick="campaigns.stopCampaign('${campaignId}')">
-                🛑 Stop Campaign
-            </div>
-        `;
-        
-        // Position menu
-        const rect = event.target.getBoundingClientRect();
-        menu.style.position = 'fixed';
-        menu.style.top = `${rect.bottom + 5}px`;
-        menu.style.left = `${rect.left - 150}px`;
-        menu.style.zIndex = '10000';
-        
-        document.body.appendChild(menu);
-        
-        // Close menu when clicking outside
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target)) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
-            }
+    setupDemoConfig() {
+        const demoConfig = {
+            supabaseUrl: 'https://demo.supabase.co',
+            supabaseAnonKey: 'demo-key',
+            workerUrl: 'https://demo-worker.workers.dev',
+            stripePublishableKey: 'pk_test_demo',
+            demoMode: true
         };
         
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu);
-        }, 100);
+        Object.assign(window.OsliraApp.config, demoConfig);
+        console.log('🚧 Demo configuration loaded');
+        return demoConfig;
     }
-
-    // =============================================================================
-    // REAL-TIME UPDATES
-    // =============================================================================
-
-    startRealTimeUpdates() {
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
-        
-        if (!supabase || !user || !this.userCapabilities.hasRealTimeUpdates) {
-            console.log('Real-time updates skipped');
-            return;
-        }
-        
-        this.realTimeSubscription = supabase
-            .channel('campaigns_realtime')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'campaigns',
-                filter: `user_id=eq.${user.id}`
-            }, (payload) => {
-                this.handleRealTimeUpdate(payload);
-            })
-            .subscribe();
-
-        this.liveMetricsInterval = setInterval(() => {
-            if (this.selectedCampaign) {
-                this.updateLiveMetrics();
-            }
-        }, 30000);
-        
-        console.log('✅ Real-time updates started');
-    }
-
-    handleRealTimeUpdate(payload) {
-        console.log('📡 Real-time campaign update:', payload);
-        
-        if (payload.eventType === 'INSERT') {
-            this.loadCampaigns();
-            window.OsliraApp.showMessage('New campaign detected', 'info');
-        } else if (payload.eventType === 'UPDATE') {
-            this.updateCampaignInList(payload.new);
-            if (payload.new.id === this.selectedCampaign) {
-                this.loadCampaignDetails(this.selectedCampaign);
-            }
-        } else if (payload.eventType === 'DELETE') {
-            this.removeCampaignFromList(payload.old.id);
-            if (payload.old.id === this.selectedCampaign) {
-                this.selectedCampaign = null;
-            }
-        }
-    }
-
-    updateCampaignInList(updatedCampaign) {
-        const index = this.campaigns.findIndex(c => c.id === updatedCampaign.id);
-        if (index !== -1) {
-            this.campaigns[index] = { ...this.campaigns[index], ...updatedCampaign };
-            this.applyFiltersAndSearch();
-        }
-    }
-
-    removeCampaignFromList(campaignId) {
-        this.campaigns = this.campaigns.filter(c => c.id !== campaignId);
-        this.applyFiltersAndSearch();
-    }
-
-    updateLiveMetrics() {
-        if (!this.selectedCampaign) return;
-        
-        const campaign = this.campaigns.find(c => c.id === this.selectedCampaign);
-        if (!campaign) return;
-        
-        const metricsElements = {
-            'live-messages-sent': campaign.messages_sent || 0,
-            'live-responses': campaign.responses_received || 0,
-            'live-response-rate': this.calculateResponseRate(campaign).toFixed(1) + '%',
-            'live-conversions': campaign.conversions || 0
-        };
-        
-        Object.entries(metricsElements).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) element.textContent = value;
-        });
-    }
-
-    stopRealTimeUpdates() {
-        if (this.realTimeSubscription) {
-            this.realTimeSubscription.unsubscribe();
-            this.realTimeSubscription = null;
-        }
-        
-        if (this.liveMetricsInterval) {
-            clearInterval(this.liveMetricsInterval);
-            this.liveMetricsInterval = null;
-        }
-    }
-
-    // =============================================================================
-    // KEYBOARD SHORTCUTS AND EVENT HANDLERS
-    // =============================================================================
-
-    handleKeyboardShortcuts(e) {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-            e.preventDefault();
-            this.showWizard();
-        }
-        
-        if ((e.ctrlKey || e.metaKey) && e.key === 's' && this.isWizardActive()) {
-            e.preventDefault();
-            this.saveDraft();
-        }
-        
-        if (e.key === 'Escape') {
-            this.handleEscapeKey();
-        }
-        
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && this.isWizardActive()) {
-            e.preventDefault();
-            if (this.currentStep === 4) {
-                this.launchCampaign();
-            } else {
-                this.nextStep();
-            }
-        }
-    }
-
-    handleEscapeKey() {
-        if (this.isWizardActive()) {
-            this.cancelWizard();
-        } else {
-            const openModal = document.querySelector('.modal[style*="flex"], .modal[style*="block"]');
-            if (openModal) {
-                openModal.style.display = 'none';
-            }
-        }
-    }
-
-    handleModalClick(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.style.display = 'none';
-        }
-    }
-
-    isWizardActive() {
-        return document.getElementById('wizard-view')?.classList.contains('active') || false;
-    }
-
-    // =============================================================================
-    // CLEANUP AND FINALIZATION
-    // =============================================================================
-
-    refreshData() {
-        window.OsliraApp.showLoadingOverlay('Refreshing data...');
-        this.loadCampaignsData().finally(() => {
-            window.OsliraApp.removeLoadingOverlay();
-            window.OsliraApp.showMessage('Data refreshed successfully', 'success');
-        });
-    }
-
-    destroy() {
-        this.stopRealTimeUpdates();
-        
-        if (this.liveMetricsInterval) {
-            clearInterval(this.liveMetricsInterval);
-        }
-        
-        document.removeEventListener('keydown', this.handleKeyboardShortcuts);
-        
-        localStorage.removeItem('campaign_draft');
-        
-        console.log('🧹 Campaigns instance cleaned up');
-    }
-
-    function setupDemoConfig() {
-    const demoConfig = {
-        supabaseUrl: 'https://demo.supabase.co',
-        supabaseAnonKey: 'demo-key',
-        workerUrl: 'https://demo-worker.workers.dev',
-        stripePublishableKey: 'pk_test_demo',
-        demoMode: true
-    };
-    
-    Object.assign(window.OsliraApp.config, demoConfig);
-    console.log('🚧 Demo configuration loaded');
-    return demoConfig;
-}
 
     // =============================================================================
     // SETUP AND INITIALIZATION
@@ -881,6 +485,21 @@ class OsliraCampaigns {
         });
     }
 
+    clearAllFilters() {
+        this.activeFilters.clear();
+        this.activeFilters.add('all');
+        this.searchTerm = '';
+        this.currentPage = 1;
+        
+        const searchInput = document.getElementById('campaign-search');
+        if (searchInput) searchInput.value = '';
+        
+        const clearBtn = document.getElementById('clear-search-btn');
+        if (clearBtn) clearBtn.style.display = 'none';
+        
+        this.applyFiltersAndSearch();
+    }
+
     // =============================================================================
     // CAMPAIGN RENDERING
     // =============================================================================
@@ -1174,14 +793,6 @@ class OsliraCampaigns {
                 indicator?.classList.add('completed');
                 indicator?.classList.remove('active');
                 if (divider && divider.classList.contains('step-divider')) {
-                    divider.classList.add('completed');
-                }
-            } else if (i === this.currentStep) {
-                indicator?.classList.add('active');
-                indicator?.classList.remove('completed');
-            } else {
-                indicator?.classList.remove('active', 'completed');
-                if (divider && divider.classList.contains('step-divider')) {
                     divider.classList.remove('completed');
                 }
             }
@@ -1444,6 +1055,10 @@ class OsliraCampaigns {
                 if (element) element.textContent = value;
             });
         }
+    }
+
+    updateCampaignSummary() {
+        this.updateSummary();
     }
 
     calculateCreditRequirement() {
@@ -2015,30 +1630,30 @@ class OsliraCampaigns {
         }
     }
 
-   showInsufficientCreditsModal(required) {
-    const modal = this.createConfirmationModal({
-        title: 'Insufficient Credits',
-        message: `
-            <div style="margin-bottom: 16px;">
-                <p>You need ${required} credits to launch this campaign.</p>
-                <p>Current balance: ${this.userProfile.credits} credits</p>
-                <p>Required: ${required} credits</p>
-                <p><strong>Shortfall: ${required - this.userProfile.credits} credits</strong></p>
-            </div>
-            <p>Would you like to upgrade your plan or reduce the campaign size?</p>
-        `,
-        confirmText: '🚀 Upgrade Plan',
-        cancelText: 'Reduce Campaign Size',
-        onConfirm: () => {
-            modal.remove();
-            window.location.href = '/subscription.html';
-        },
-        onCancel: () => {
-            modal.remove();
-            this.suggestCampaignReduction(required);
-        }
-    });
-}
+    showInsufficientCreditsModal(required) {
+        const modal = this.createConfirmationModal({
+            title: 'Insufficient Credits',
+            message: `
+                <div style="margin-bottom: 16px;">
+                    <p>You need ${required} credits to launch this campaign.</p>
+                    <p>Current balance: ${this.userProfile.credits} credits</p>
+                    <p>Required: ${required} credits</p>
+                    <p><strong>Shortfall: ${required - this.userProfile.credits} credits</strong></p>
+                </div>
+                <p>Would you like to upgrade your plan or reduce the campaign size?</p>
+            `,
+            confirmText: '🚀 Upgrade Plan',
+            cancelText: 'Reduce Campaign Size',
+            onConfirm: () => {
+                modal.remove();
+                window.location.href = '/subscription.html';
+            },
+            onCancel: () => {
+                modal.remove();
+                this.suggestCampaignReduction(required);
+            }
+        });
+    }
 
     suggestCampaignReduction(required) {
         const available = this.userProfile.credits;
@@ -2586,21 +2201,6 @@ class OsliraCampaigns {
         this.applyFiltersAndSearch();
     }
 
-    clearAllFilters() {
-        this.activeFilters.clear();
-        this.activeFilters.add('all');
-        this.searchTerm = '';
-        this.currentPage = 1;
-        
-        const searchInput = document.getElementById('campaign-search');
-        if (searchInput) searchInput.value = '';
-        
-        const clearBtn = document.getElementById('clear-search-btn');
-        if (clearBtn) clearBtn.style.display = 'none';
-        
-        this.applyFiltersAndSearch();
-    }
-
     // =============================================================================
     // CSV BULK IMPORT
     // =============================================================================
@@ -2840,6 +2440,8 @@ creativehub`;
         
         const blob = new Blob([template], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
+        const blob = new Blob([template], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         a.download = 'leads_template.csv';
@@ -2847,7 +2449,7 @@ creativehub`;
         URL.revokeObjectURL(url);
     }
 
-closeBulkImportModal() {
+    closeBulkImportModal() {
         const modal = document.getElementById('bulk-import-modal');
         if (modal) modal.remove();
         
@@ -3259,10 +2861,318 @@ closeBulkImportModal() {
         
         console.log('🧹 Campaigns instance cleaned up');
     }
+
+    // =============================================================================
+    // ADDITIONAL HELPER METHODS
+    // =============================================================================
+
+    formatCurrency(amount) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(amount);
+    }
+
+    formatNumber(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        }
+        if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
+    }
+
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    generateUniqueId() {
+        return 'campaign_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    sanitizeInput(input) {
+        const div = document.createElement('div');
+        div.textContent = input;
+        return div.innerHTML;
+    }
+
+    validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
+    copyToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        } else {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'absolute';
+            textArea.style.left = '-999999px';
+            document.body.prepend(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+            } catch (error) {
+                console.error('Failed to copy text: ', error);
+            } finally {
+                textArea.remove();
+            }
+        }
+    }
+
+    async shareContent(data) {
+        if (navigator.share) {
+            try {
+                await navigator.share(data);
+            } catch (error) {
+                console.log('Error sharing:', error);
+                this.copyToClipboard(data.url || data.text || '');
+                window.OsliraApp.showMessage('Link copied to clipboard', 'success');
+            }
+        } else {
+            this.copyToClipboard(data.url || data.text || '');
+            window.OsliraApp.showMessage('Link copied to clipboard', 'success');
+        }
+    }
+
+    // =============================================================================
+    // ERROR HANDLING AND LOGGING
+    // =============================================================================
+
+    handleError(error, context = 'Unknown') {
+        console.error(`[Campaigns] Error in ${context}:`, error);
+        
+        const errorMessage = error.message || 'An unexpected error occurred';
+        window.OsliraApp.showMessage(`Error: ${errorMessage}`, 'error');
+        
+        // Send error to monitoring service if available
+        if (window.OsliraApp.logError) {
+            window.OsliraApp.logError('campaigns', context, error);
+        }
+    }
+
+    logAction(action, data = {}) {
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            module: 'campaigns',
+            action: action,
+            data: data,
+            user: window.OsliraApp.user?.id || 'anonymous'
+        };
+        
+        console.log('[Campaigns] Action:', logEntry);
+        
+        // Send to analytics if available
+        if (window.OsliraApp.trackEvent) {
+            window.OsliraApp.trackEvent(`campaigns_${action}`, data);
+        }
+    }
+
+    // =============================================================================
+    // PERFORMANCE MONITORING
+    // =============================================================================
+
+    measurePerformance(name, fn) {
+        const start = performance.now();
+        const result = fn();
+        const end = performance.now();
+        
+        console.log(`[Campaigns] ${name} took ${end - start} milliseconds`);
+        
+        return result;
+    }
+
+    async measureAsyncPerformance(name, fn) {
+        const start = performance.now();
+        const result = await fn();
+        const end = performance.now();
+        
+        console.log(`[Campaigns] ${name} took ${end - start} milliseconds`);
+        
+        return result;
+    }
+
+    // =============================================================================
+    // ACCESSIBILITY HELPERS
+    // =============================================================================
+
+    announceToScreenReader(message) {
+        const announcement = document.createElement('div');
+        announcement.setAttribute('aria-live', 'polite');
+        announcement.setAttribute('aria-atomic', 'true');
+        announcement.className = 'sr-only';
+        announcement.textContent = message;
+        
+        document.body.appendChild(announcement);
+        
+        setTimeout(() => {
+            document.body.removeChild(announcement);
+        }, 1000);
+    }
+
+    focusElement(elementId, delay = 0) {
+        setTimeout(() => {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.focus();
+                if (element.select && typeof element.select === 'function') {
+                    element.select();
+                }
+            }
+        }, delay);
+    }
+
+    // =============================================================================
+    // MOBILE RESPONSIVENESS HELPERS
+    // =============================================================================
+
+    isMobile() {
+        return window.innerWidth <= 768;
+    }
+
+    isTablet() {
+        return window.innerWidth > 768 && window.innerWidth <= 1024;
+    }
+
+    isDesktop() {
+        return window.innerWidth > 1024;
+    }
+
+    handleResize() {
+        if (this.isMobile()) {
+            this.itemsPerPage = 6;
+        } else if (this.isTablet()) {
+            this.itemsPerPage = 9;
+        } else {
+            this.itemsPerPage = 12;
+        }
+        
+        this.applyFiltersAndSearch();
+    }
+
+    // =============================================================================
+    // OFFLINE SUPPORT
+    // =============================================================================
+
+    isOnline() {
+        return navigator.onLine;
+    }
+
+    handleOffline() {
+        window.OsliraApp.showMessage('You are currently offline. Some features may be limited.', 'warning');
+        console.log('[Campaigns] Offline mode activated');
+    }
+
+    handleOnline() {
+        window.OsliraApp.showMessage('Connection restored', 'success');
+        console.log('[Campaigns] Online mode restored');
+        
+        // Sync any pending changes
+        this.syncPendingChanges();
+    }
+
+    syncPendingChanges() {
+        // Implementation for syncing offline changes when back online
+        console.log('[Campaigns] Syncing pending changes...');
+    }
+
+    // =============================================================================
+    // THEME AND CUSTOMIZATION
+    // =============================================================================
+
+    applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('campaigns_theme', theme);
+    }
+
+    getTheme() {
+        return localStorage.getItem('campaigns_theme') || 'light';
+    }
+
+    toggleTheme() {
+        const currentTheme = this.getTheme();
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        this.applyTheme(newTheme);
+    }
+
+    // =============================================================================
+    // BACKUP AND RESTORE
+    // =============================================================================
+
+    async backupData() {
+        try {
+            const backup = {
+                campaigns: this.campaigns,
+                userProfile: this.userProfile,
+                settings: {
+                    activeFilters: Array.from(this.activeFilters),
+                    searchTerm: this.searchTerm,
+                    itemsPerPage: this.itemsPerPage,
+                    currentPage: this.currentPage
+                },
+                timestamp: new Date().toISOString(),
+                version: '1.0.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `campaigns_backup_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            window.OsliraApp.showMessage('Data backup created successfully', 'success');
+            
+        } catch (error) {
+            this.handleError(error, 'backupData');
+        }
+    }
+
+    async restoreData(file) {
+        try {
+            const text = await file.text();
+            const backup = JSON.parse(text);
+            
+            if (!backup.campaigns || !backup.timestamp) {
+                throw new Error('Invalid backup file format');
+            }
+            
+            // Restore data
+            this.campaigns = backup.campaigns;
+            if (backup.userProfile) {
+                this.userProfile = backup.userProfile;
+            }
+            if (backup.settings) {
+                this.activeFilters = new Set(backup.settings.activeFilters || ['all']);
+                this.searchTerm = backup.settings.searchTerm || '';
+                this.itemsPerPage = backup.settings.itemsPerPage || 12;
+                this.currentPage = backup.settings.currentPage || 1;
+            }
+            
+            this.applyFiltersAndSearch();
+            this.updateUserInterface();
+            
+            window.OsliraApp.showMessage('Data restored successfully', 'success');
+            
+        } catch (error) {
+            this.handleError(error, 'restoreData');
+        }
+    }
 }
 
 // =============================================================================
-// INITIALIZE CAMPAIGNS
+// INITIALIZE CAMPAIGNS (SINGLE INITIALIZATION OUTSIDE CLASS)
 // =============================================================================
 
 // Create global campaigns instance
@@ -3276,9 +3186,67 @@ document.addEventListener('DOMContentLoaded', () => {
     campaigns.initialize();
 });
 
+// Setup responsive handling
+window.addEventListener('resize', campaigns.debounce(() => {
+    campaigns.handleResize();
+}, 250));
+
+// Setup offline/online handling
+window.addEventListener('offline', () => {
+    campaigns.handleOffline();
+});
+
+window.addEventListener('online', () => {
+    campaigns.handleOnline();
+});
+
+// Setup keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    campaigns.handleKeyboardShortcuts(e);
+});
+
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
     campaigns.destroy();
 });
 
-console.log('📊 Campaigns module loaded - uses shared-core.js');
+// Initialize theme
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = campaigns.getTheme();
+    campaigns.applyTheme(savedTheme);
+});
+
+// Export for module systems if needed
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { OsliraCampaigns, campaigns };
+}
+
+// AMD support
+if (typeof define === 'function' && define.amd) {
+    define('campaigns', [], () => ({ OsliraCampaigns, campaigns }));
+}
+
+console.log('📊 Campaigns module loaded completely - uses shared-core.js');
+console.log('✅ All campaigns functionality ready');
+
+// Development helpers (remove in production)
+if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    window.debugCampaigns = {
+        instance: campaigns,
+        showState: () => console.log('Campaigns State:', {
+            campaigns: campaigns.campaigns,
+            selectedCampaign: campaigns.selectedCampaign,
+            currentStep: campaigns.currentStep,
+            userProfile: campaigns.userProfile,
+            activeFilters: campaigns.activeFilters
+        }),
+        resetData: () => {
+            campaigns.campaigns = [];
+            campaigns.selectedCampaign = null;
+            campaigns.currentStep = 1;
+            campaigns.applyFiltersAndSearch();
+        }
+    };
+    console.log('🛠️ Debug tools available: window.debugCampaigns');
+}
+
