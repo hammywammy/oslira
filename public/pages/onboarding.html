@@ -4,35 +4,50 @@
     <link rel="icon" type="image/png" href="./assets/oslira-logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Your AI Outreach Profile - Oslira</title>
+    <title>Setup Your AI Profile - Oslira</title>
     <script src="/env-config.js"></script>
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' 'unsafe-inline' https://js.sentry-cdn.com https://cdn.jsdelivr.net;
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                   font-src 'self' https://fonts.gstatic.com;
+                   img-src 'self' data: https:;
+                   connect-src 'self' https:;">
     <link rel="stylesheet" href="/css/onboarding.css">
 </head>
 <body>
+    <a href="#main-content" class="skip-nav">Skip to main content</a>
+    
     <!-- Auth Check State -->
-    <div id="authCheck" class="onboarding-container">
+    <div id="auth-check" class="onboarding-container">
         <div class="onboarding-card auth-check">
-            <div class="spinner"></div>
-            <p>Verifying authentication...</p>
+            <div class="loading-spinner"></div>
+            <p>Verifying your account...</p>
         </div>
     </div>
     
-    <!-- Main Onboarding Form -->
-    <div id="onboardingMain" class="onboarding-container" style="display: none;">
-        <div class="onboarding-card">
-            <div class="logo">
-                <h1>Welcome to Oslira</h1>
-                <p>Let's set up your AI-powered outreach profile</p>
+    <!-- Main Onboarding Flow -->
+    <div id="onboarding-main" class="onboarding-container" style="display: none;">
+        <div class="onboarding-card" id="main-content">
+            <!-- Header -->
+            <div class="onboarding-header">
+                <div class="logo">
+                    <img src="./assets/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+                    <h1>Welcome to Oslira</h1>
+                </div>
+                <p class="welcome-subtitle">Let's set up your AI-powered outreach profile in 5 quick steps</p>
             </div>
             
+            <!-- Progress Bar -->
             <div class="progress-section">
                 <div class="progress-bar">
-                    <div class="progress-fill" id="progress"></div>
+                    <div class="progress-fill" id="progress-fill"></div>
                 </div>
                 <div class="progress-text" id="progress-text">Step 1 of 5</div>
             </div>
 
-            <form id="onboarding-form">
+            <!-- Onboarding Form -->
+            <form id="onboarding-form" novalidate>
                 <!-- Step 1: Business Identity -->
                 <div class="step active" id="step-1">
                     <div class="step-header">
@@ -44,13 +59,14 @@
                     <div class="form-group">
                         <label for="business-name">
                             Business Name
-                            <div class="label-help">Your company or personal brand name</div>
+                            <span class="label-help">Your company or personal brand name</span>
                         </label>
                         <input 
                             type="text" 
                             id="business-name" 
                             required 
                             placeholder="e.g., TechFlow Solutions"
+                            autocomplete="organization"
                         />
                         <div class="input-example">This will appear in your outreach messages</div>
                     </div>
@@ -58,60 +74,68 @@
                     <div class="form-group">
                         <label for="business-niche">
                             Your Industry/Niche
-                            <div class="label-help">What sector do you operate in?</div>
+                            <span class="label-help">What sector do you operate in?</span>
                         </label>
-                        <input 
-                            type="text" 
-                            id="business-niche" 
-                            required 
-                            placeholder="e.g., SaaS, E-commerce, Consulting"
-                        />
+                        <select id="business-niche" required>
+                            <option value="">Select your industry...</option>
+                            <option value="saas">SaaS & Software</option>
+                            <option value="ecommerce">E-commerce</option>
+                            <option value="consulting">Consulting</option>
+                            <option value="marketing">Marketing & Advertising</option>
+                            <option value="fitness">Health & Fitness</option>
+                            <option value="education">Education & Training</option>
+                            <option value="finance">Finance & Insurance</option>
+                            <option value="real-estate">Real Estate</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="other">Other</option>
+                        </select>
                         <div class="input-example">Helps AI understand your market positioning</div>
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-primary" onclick="nextStep()">Continue</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
                     </div>
                 </div>
 
-                <!-- Step 2: Target Market -->
+                <!-- Step 2: Target Audience -->
                 <div class="step" id="step-2">
                     <div class="step-header">
                         <div class="step-number">2</div>
-                        <h2>Who are you targeting?</h2>
-                        <p class="step-description">Define your ideal customer so our AI can identify and score the best prospects.</p>
+                        <h2>Who are your ideal customers?</h2>
+                        <p class="step-description">Help us identify the right prospects by describing your target audience.</p>
                     </div>
                     
                     <div class="form-group">
                         <label for="target-audience">
                             Target Audience
-                            <div class="label-help">Who is your ideal customer?</div>
+                            <span class="label-help">Describe your ideal customer profile</span>
                         </label>
-                        <input 
-                            type="text" 
+                        <textarea 
                             id="target-audience" 
                             required 
-                            placeholder="e.g., SaaS founders, E-commerce CMOs, Tech VPs"
-                        />
-                        <div class="input-example">Be specific about roles, company types, or demographics</div>
+                            placeholder="e.g., B2B SaaS founders with 10-100 employees looking to scale their customer acquisition"
+                            rows="4"
+                        ></textarea>
+                        <div class="input-example">Be specific about demographics, company size, role, etc.</div>
                     </div>
                     
                     <div class="form-group">
                         <label for="target-problems">
-                            What Problems Do They Have?
-                            <div class="label-help">What challenges or pain points do they face?</div>
+                            What Problems Do You Solve?
+                            <span class="label-help">What pain points do your customers have?</span>
                         </label>
                         <textarea 
                             id="target-problems" 
                             required 
-                            placeholder="e.g., Struggling to scale their sales team, manual lead qualification taking too much time, low response rates from cold outreach"
+                            placeholder="e.g., Struggling with low conversion rates, spending too much on ads with poor ROI"
+                            rows="3"
                         ></textarea>
-                        <div class="input-example">This helps AI craft messages that resonate with their actual needs</div>
+                        <div class="input-example">Focus on the main challenges your service addresses</div>
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
-                        <button type="button" class="btn-primary" onclick="nextStep()">Continue</button>
+                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
                     </div>
                 </div>
 
@@ -119,144 +143,164 @@
                 <div class="step" id="step-3">
                     <div class="step-header">
                         <div class="step-number">3</div>
-                        <h2>What's your unique solution?</h2>
-                        <p class="step-description">Your value proposition helps AI create compelling, differentiated outreach messages.</p>
+                        <h2>What's your unique value?</h2>
+                        <p class="step-description">Tell us what makes your solution special and different from competitors.</p>
                     </div>
                     
                     <div class="form-group">
                         <label for="value-proposition">
-                            How Do You Solve Their Problems?
-                            <div class="label-help">What specific value or outcome do you provide?</div>
+                            Your Value Proposition
+                            <span class="label-help">What unique benefit do you provide?</span>
                         </label>
                         <textarea 
                             id="value-proposition" 
                             required 
-                            placeholder="e.g., We help SaaS companies automate their lead qualification process, reducing manual work by 80% while increasing qualified leads by 3x through AI-powered prospect analysis"
+                            placeholder="e.g., We help SaaS companies increase conversion rates by 40% using AI-powered personalization without requiring technical expertise"
+                            rows="4"
                         ></textarea>
-                        <div class="input-example">Focus on specific outcomes and benefits</div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
-                        <button type="button" class="btn-primary" onclick="nextStep()">Continue</button>
-                    </div>
-                </div>
-
-                <!-- Step 4: Messaging Style -->
-                <div class="step" id="step-4">
-                    <div class="step-header">
-                        <div class="step-number">4</div>
-                        <h2>How do you communicate?</h2>
-                        <p class="step-description">This helps our AI match your personal communication style and tone.</p>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="communication-style">
-                            Your Communication Style
-                            <div class="label-help">How do you typically reach out to prospects?</div>
-                        </label>
-                        <select id="communication-style" required>
-                            <option value="">Choose your style...</option>
-                            <option value="professional-formal">Professional & Formal</option>
-                            <option value="friendly-casual">Friendly & Casual</option>
-                            <option value="direct-concise">Direct & Concise</option>
-                            <option value="consultative-helpful">Consultative & Helpful</option>
-                            <option value="data-driven-analytical">Data-Driven & Analytical</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="message-example">
-                            Sample Message (Optional)
-                            <div class="label-help">Share an example of how you typically reach out</div>
-                        </label>
-                        <textarea 
-                            id="message-example" 
-                            placeholder="e.g., Hi John, saw your recent post about scaling challenges. I help SaaS founders like you automate their sales process without adding headcount. Worth a quick chat?"
-                        ></textarea>
-                        <div class="input-example">This helps AI learn your specific voice and approach</div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
-                        <button type="button" class="btn-primary" onclick="nextStep()">Continue</button>
-                    </div>
-                </div>
-
-                <!-- Step 5: Success Metrics -->
-                <div class="step" id="step-5">
-                    <div class="step-header">
-                        <div class="step-number">5</div>
-                        <h2>What does success look like?</h2>
-                        <p class="step-description">Understanding your goals helps our AI optimize for the right outcomes.</p>
+                        <div class="input-example">Focus on specific outcomes and what makes you different</div>
                     </div>
                     
                     <div class="form-group">
                         <label for="success-outcome">
-                            Ideal Outcome from Outreach
-                            <div class="label-help">What happens when outreach works perfectly?</div>
+                            Ideal Success Outcome
+                            <span class="label-help">What does success look like for your clients?</span>
                         </label>
                         <select id="success-outcome" required>
-                            <option value="">Choose primary outcome...</option>
-                            <option value="book-demo">Book a product demo</option>
-                            <option value="schedule-call">Schedule discovery call</option>
-                            <option value="start-conversation">Start a conversation</option>
-                            <option value="download-content">Download content/resources</option>
-                            <option value="partnership-discussion">Discuss partnership opportunities</option>
-                            <option value="custom">Other (specify below)</option>
+                            <option value="">Select primary outcome...</option>
+                            <option value="increase-revenue">Increase Revenue</option>
+                            <option value="save-time">Save Time</option>
+                            <option value="reduce-costs">Reduce Costs</option>
+                            <option value="improve-efficiency">Improve Efficiency</option>
+                            <option value="scale-business">Scale Business</option>
+                            <option value="other">Other</option>
                         </select>
+                        <div class="input-example">Choose the main benefit clients get from working with you</div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Communication Style -->
+                <div class="step" id="step-4">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <h2>How do you communicate?</h2>
+                        <p class="step-description">This helps our AI match your brand voice and communication style.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="communication-style">
+                            Communication Style
+                            <span class="label-help">How do you prefer to communicate with prospects?</span>
+                        </label>
+                        <select id="communication-style" required>
+                            <option value="">Select your style...</option>
+                            <option value="professional">Professional & Formal</option>
+                            <option value="friendly">Friendly & Conversational</option>
+                            <option value="direct">Direct & To-the-Point</option>
+                            <option value="consultative">Consultative & Educational</option>
+                            <option value="casual">Casual & Relaxed</option>
+                        </select>
+                        <div class="input-example">This affects the tone of AI-generated messages</div>
                     </div>
                     
                     <div class="form-group">
                         <label for="call-to-action">
-                            Your Typical Call-to-Action
-                            <div class="label-help">How do you typically ask for the next step?</div>
+                            Preferred Call-to-Action
+                            <span class="label-help">What do you want prospects to do next?</span>
                         </label>
-                        <input 
-                            type="text" 
-                            id="call-to-action" 
+                        <select id="call-to-action" required>
+                            <option value="">Select preferred CTA...</option>
+                            <option value="book-call">Book a Discovery Call</option>
+                            <option value="schedule-demo">Schedule a Demo</option>
+                            <option value="free-consultation">Free Consultation</option>
+                            <option value="download-resource">Download Resource</option>
+                            <option value="visit-website">Visit Website</option>
+                            <option value="reply-for-info">Reply for More Info</option>
+                        </select>
+                        <div class="input-example">This will be used in outreach messages</div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                    </div>
+                </div>
+
+                <!-- Step 5: Message Example -->
+                <div class="step" id="step-5">
+                    <div class="step-header">
+                        <div class="step-number">5</div>
+                        <h2>Sample outreach message</h2>
+                        <p class="step-description">Provide an example of how you typically reach out to prospects.</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message-example">
+                            Example Outreach Message
+                            <span class="label-help">How would you typically introduce yourself?</span>
+                        </label>
+                        <textarea 
+                            id="message-example" 
                             required 
-                            placeholder="e.g., Worth a 15-min chat?, Open to a quick call?, Interested in seeing how this works?"
-                        />
+                            placeholder="e.g., Hi [Name], I noticed you're growing [Company] and might be looking for ways to improve your conversion rates. We've helped similar SaaS companies increase conversions by 40% using AI personalization. Would you be open to a quick 15-minute chat to see if this could help [Company] too?"
+                            rows="5"
+                        ></textarea>
                         <div class="input-example">Keep it conversational and low-pressure</div>
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="prevStep()">Back</button>
-                        <button type="submit" class="btn-primary">Complete Setup</button>
+                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">Complete Setup</span>
+                            <span class="btn-loading">Setting up your profile...</span>
+                        </button>
                     </div>
                 </div>
             </form>
 
-            <!-- Success -->
-            <div class="success-state" id="success" style="display: none;">
-                <h2>🚀 Your AI profile is ready!</h2>
+            <!-- Success State -->
+            <div class="success-state" id="success-state" style="display: none;">
+                <div class="success-icon">🚀</div>
+                <h2>Your AI profile is ready!</h2>
                 <p>You've been credited with <strong>5 free analysis credits</strong> to test the system.</p>
-                <p style="margin-top: 16px;">Redirecting to your dashboard...</p>
+                <p class="success-note">Redirecting to your dashboard...</p>
+                <div class="success-spinner"></div>
             </div>
         </div>
     </div>
 
     <!-- Error State -->
-    <div id="errorState" class="onboarding-container" style="display: none;">
+    <div id="error-state" class="onboarding-container" style="display: none;">
         <div class="onboarding-card error-state">
+            <div class="error-icon">⚠️</div>
             <h2>Setup Issue</h2>
-            <p class="error-message" id="errorMessage">Unable to verify your session.</p>
-            <button class="btn-primary" onclick="window.location.href='auth.html'">Back to Login</button>
+            <p class="error-message" id="error-message">Unable to verify your session.</p>
+            <div class="error-actions">
+                <button class="btn btn-primary" onclick="window.location.href='auth.html'">Back to Login</button>
+                <button class="btn btn-secondary" onclick="window.location.reload()">Try Again</button>
+            </div>
         </div>
     </div>
 
     <!-- Loading State -->
-    <div id="loadingState" class="onboarding-container" style="display: none;">
+    <div id="loading-state" class="onboarding-container" style="display: none;">
         <div class="onboarding-card loading-state">
-            <div class="spinner"></div>
-            <p>Setting up your AI profile...</p>
+            <div class="loading-spinner"></div>
+            <h3>Setting up your AI profile...</h3>
+            <p>This may take a few moments.</p>
         </div>
     </div>
 
+    <!-- External Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="/js/shared-code.js"></script>
-<script src="/js/onboarding.js" defer></script>
+    <script src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js" crossorigin="anonymous"></script>
+
+    <!-- Main Script -->
+    <script src="/js/onboarding.js"></script>
 </body>
 </html>
