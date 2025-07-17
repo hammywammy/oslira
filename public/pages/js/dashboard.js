@@ -1046,6 +1046,26 @@ buildProfileHeader(lead, analysisType, scoreClass, platform) {
     `;
 }
 
+    formatDateCached(dateString) {
+    // Create a cache key
+    const cacheKey = `date_${dateString}`;
+    
+    // Check if we already formatted this date
+    if (!this.dateCache) {
+        this.dateCache = new Map();
+    }
+    
+    if (this.dateCache.has(cacheKey)) {
+        return this.dateCache.get(cacheKey);
+    }
+    
+    // Format the date only once
+    const formatted = window.OsliraApp.formatDate(dateString);
+    this.dateCache.set(cacheKey, formatted);
+    
+    return formatted;
+}
+
 // 4. FIX: Add buildBasicInfoSection method
 buildBasicInfoSection(lead, analysisType, platform, score) {
     return `
@@ -1073,7 +1093,7 @@ buildBasicInfoSection(lead, analysisType, platform, score) {
             </div>
             <div class="detail-row">
                 <div class="detail-label">Date Created:</div>
-                <div class="detail-value">${window.OsliraApp.formatDate(lead.created_at)}</div>
+                <div class="detail-value">${this.formatDateCached(lead.created_at)}</div>
             </div>
         </div>
     `;
