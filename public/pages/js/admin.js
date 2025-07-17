@@ -1,22 +1,3 @@
-initializePerformanceCharts() {
-        // This would initialize Chart.js or similar charting library
-        // For now, we'll simulate the chart initialization
-        console.log('Initializing performance charts...');
-        
-        const canvas = document.getElementById('performance-chart');
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            
-            // Simple performance visualization
-            ctx.fillStyle = '#667eea';
-            ctx.fillRect(10, 10, 100, 50);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '12px Arial';
-            ctx.fillText('Performance Chart', 15, 35);
-            ctx.fillText('(Chart.js integration needed)', 15, 50);
-        }
-    }
-
     async loadRevenueData() {
         console.log('💰 Loading revenue analytics data...');
         
@@ -956,32 +937,30 @@ initializePerformanceCharts() {
         this.initializePerformanceCharts();
     }
         
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
+
+// inside your class:
 initializePerformanceCharts() {
   console.log('Initializing performance charts…');
   const canvas = document.getElementById('performance-chart');
   if (!canvas) return;
-
   const ctx = canvas.getContext('2d');
-  // create a simple line chart:
   new Chart(ctx, {
     type: 'line',
     data: {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      labels: ['Jan','Feb','Mar','Apr','May','Jun'],
       datasets: [{
         label: 'CPU Usage (%)',
-        data: [45, 60, 55, 70, 65, 80],
+        data: [45,60,55,70,65,80],
         tension: 0.3,
         borderWidth: 2
       }]
     },
     options: {
-      scales: {
-        y: { beginAtZero: true, max: 100 }
-      },
+      scales: { y: { beginAtZero: true, max: 100 } },
       responsive: true,
-      plugins: {
-        legend: { position: 'top' }
-      }
+      plugins: { legend: { position: 'top' } }
     }
   });
 }
