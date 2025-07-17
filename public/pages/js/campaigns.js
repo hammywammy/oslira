@@ -1,11 +1,11 @@
 updateMessageTemplates() {
-        const outreachMode = document.getElementById('outreach-mode')?.value;
-        const variantAMessage = document.getElementById('variant-a-message');
-        
-        if (!outreachMode || !variantAMessage || variantAMessage.value.trim()) return;
-        
-        const templates = {
-            'Instagram DM': `Hi {name}! 👋
+    const outreachMode = document.getElementById('outreach-mode')?.value;
+    const variantAMessage = document.getElementById('variant-a-message');
+    
+    if (!outreachMode || !variantAMessage || variantAMessage.value.trim()) return;
+    
+    const templates = {
+        'Instagram DM': `Hi {name}! 👋
 
 I came across your profile and love your content about {niche_topic}. Your recent post about {recent_post} really caught my attention! 
 
@@ -16,7 +16,7 @@ Would love to share some insights that might be valuable for your content strate
 Best,
 {your_name}`,
 
-            'Email': `Subject: Quick question about {company}'s {business_area}
+        'Email': `Subject: Quick question about {company}'s {business_area}
 
 Hi {name},
 
@@ -31,7 +31,7 @@ Looking forward to connecting.
 Best regards,
 {your_name}`,
 
-            'LinkedIn Message': `Hi {name},
+        'LinkedIn Message': `Hi {name},
 
 I noticed we both have experience in {industry}. Your background at {company} particularly caught my attention, especially your work on {relevant_project}.
 
@@ -42,7 +42,7 @@ Would love to connect and share some insights that might be valuable for your wo
 Best,
 {your_name}`,
 
-            'Twitter DM': `Hey {name}! 👋
+        'Twitter DM': `Hey {name}! 👋
 
 Loved your recent tweet about {recent_tweet_topic}. Really resonated with what I see in the {industry} space.
 
@@ -52,15 +52,14 @@ Would love to share some insights that might be valuable. Quick DM conversation?
 
 Cheers!
 {your_name}`
-        };
-        
-        if (templates[outreachMode]) {
-            variantAMessage.value = templates[outreachMode];
-            this.updateCharacterCount('variant-a-message');
-            this.updateMessageAnalysis('variant-a-message');
-        }
+    };
+    
+    if (templates[outreachMode]) {
+        variantAMessage.value = templates[outreachMode];
+        this.updateCharacterCount('variant-a-message');
+        this.updateMessageAnalysis('variant-a-message');
     }
-
+}
     updateComplianceGuidelines() {
         const outreachMode = document.getElementById('outreach-mode')?.value;
         const guidelinesEl = document.getElementById('compliance-guidelines');
