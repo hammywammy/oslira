@@ -955,18 +955,37 @@ initializePerformanceCharts() {
         // Initialize performance charts
         this.initializePerformanceCharts();
     }
-
-    initializePerformanceCharts() {
-        // This would initialize Chart.js or similar charting library
-        // For now, we'll simulate the chart initialization
-        console.log('Initializing performance charts...');
         
-        const canvas = document.getElementById('performance-chart');
-        if (canvas) {
-            const ctx = canvas.getContext('// ==========================================
-// ADMIN.JS - Admin Dashboard System
-// Depends on: shared-code.js (must be loaded first)
-// ==========================================
+initializePerformanceCharts() {
+  console.log('Initializing performance charts…');
+  const canvas = document.getElementById('performance-chart');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  // create a simple line chart:
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+      datasets: [{
+        label: 'CPU Usage (%)',
+        data: [45, 60, 55, 70, 65, 80],
+        tension: 0.3,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, max: 100 }
+      },
+      responsive: true,
+      plugins: {
+        legend: { position: 'top' }
+      }
+    }
+  });
+}
+
 
 window.addEventListener('error', (event) => {
     if (event.message && event.message.includes('Could not establish connection')) {
