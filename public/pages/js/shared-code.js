@@ -545,12 +545,12 @@ async function logout() {
         showMessage('Logged out successfully', 'success');
         
         setTimeout(() => {
-            window.location.href = '/login.html';
-        }, 1000);
+    window.location.href = '/auth.html';   // ✅ Correct URL
+}, 1000);
         
     } catch (error) {
         console.error('Logout error:', error);
-        window.location.href = '/login.html';
+        window.location.href = '/auth.html';
     }
 }
 
