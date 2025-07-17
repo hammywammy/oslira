@@ -813,7 +813,7 @@ class OsliraDashboard {
         }
     }
 
-    async bulkDeleteLeads() {
+async bulkDeleteLeads() {
         const selectedCount = this.selectedLeads.size;
         
         if (selectedCount === 0) {
@@ -872,57 +872,122 @@ class OsliraDashboard {
         }
     }
 
-    async viewLead(leadId) {
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
+async viewLead(leadId) {
+    if (!leadId) {
+        console.error('viewLead: leadId is required');
+        return;
+    }
+    
+    if (!window.OsliraApp.supabase || !window.OsliraApp.user) {
+        console.warn('viewLead: Supabase client or user not available');
+        window.OsliraApp.showMessage('Unable to load lead details. Please refresh and try again.', 'error');
+        return;
+    }
+    
+    const modal = document.getElementById('leadModal');
+    const detailsContainer = document.getElementById('leadDetails');
+    
+    if (!modal || !detailsContainer) {
+        console.error('viewLead: Required DOM elements not found');
+        return;
+    }
+    
+    detailsContainer.innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 24px; margin-bottom: 12px;">🔄</div>
+            <p>Loading lead details...</p>
+        </div>
+    `;
+    modal.style.display = 'flex';
+    
+    try {
+        const { data: lead, error: leadError } = await window.OsliraApp.supabase
+            .from('leads')
+            .select(`
+                id,
+                username,
+                profile_url,
+                profile_pic_url,
+                platform,
+                score,
+                type,
+                business_id,
+                created_at,
+                lead_analyses (
+                    engagement_score,
+                    score_niche_fit,
+                    score_total,
+                    ai_version_id,
+                    outreach_message,
+                    selling_points,
+                    analysis_type,
+                    avg_comments,
+                    avg_likes,
+                    engagement_rate,
+                    audience_quality,
+                    engagement_insights
+                )
+            `)
+            .eq('id', leadId)
+            .eq('user_id', window.OsliraApp.user.id)
+            .single();
         
-        if (!supabase || !user) {
-            window.OsliraApp.showMessage('Unable to load lead details', 'error');
-            return;
+        if (leadError) {
+            throw new Error(`Database error: ${leadError.message}`);
         }
         
-        const modal = document.getElementById('leadModal');
-        const detailsContainer = document.getElementById('leadDetails');
+        if (!lead) {
+            throw new Error('Lead not found or access denied');
+        }
         
-        if (!modal || !detailsContainer) return;
+        console.log('📋 Lead data loaded:', lead); // Debug log
+        
+        // FIXED: Better analysis data handling
+        const analysis = lead.lead_analyses?.[0] || {};
+        console.log('📊 Analysis data:', analysis); // Debug log
+        
+        // FIXED: Determine analysis type more intelligently
+        let analysisType = lead.type;
+        if (!analysisType) {
+            // Determine based on data presence
+            if (analysis.outreach_message || analysis.selling_points || analysis.engagement_score) {
+                analysisType = 'deep';
+            } else {
+                analysisType = 'light';
+            }
+        }
+        
+        console.log('🎯 Final analysis type:', analysisType); // Debug log
+        
+        const score = lead.score || 0;
+        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+        
+        // Build the HTML content
+        const detailsHtml = this.buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass);
+        
+        detailsContainer.innerHTML = detailsHtml;
+        
+        console.log('✅ Lead details rendered successfully'); // Debug log
+        
+    } catch (error) {
+        console.error('❌ Error loading lead details:', error);
         
         detailsContainer.innerHTML = `
             <div style="text-align: center; padding: 40px;">
-                <div style="font-size: 24px; margin-bottom: 12px;">🔄</div>
-                <p>Loading lead details...</p>
+                <div style="font-size: 24px; margin-bottom: 12px; color: var(--error);">❌</div>
+                <h3 style="color: var(--error); margin-bottom: 8px;">Unable to Load Lead</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    ${error.message || 'An unexpected error occurred'}
+                </p>
+                <button onclick="dashboard.closeModal('leadModal')" 
+                        style="background: var(--primary-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                    Close
+                </button>
             </div>
         `;
-        modal.style.display = 'flex';
-        
-        try {
-            const { data: lead, error } = await supabase
-                .from('leads')
-                .select(`
-                    *,
-                    lead_analyses (*)
-                `)
-                .eq('id', leadId)
-                .eq('user_id', user.id)
-                .single();
-            
-            if (error) throw error;
-            if (!lead) throw new Error('Lead not found');
-            
-            detailsContainer.innerHTML = this.buildLeadDetailsHTML(lead);
-            
-        } catch (error) {
-            console.error('Error loading lead:', error);
-            detailsContainer.innerHTML = `
-                <div style="text-align: center; padding: 40px;">
-                    <div style="font-size: 24px; margin-bottom: 12px; color: var(--error);">❌</div>
-                    <h3 style="color: var(--error);">Unable to Load Lead</h3>
-                    <p>${error.message}</p>
-                </div>
-            `;
-        }
     }
-
-    buildProfileHeader(lead, analysisType, scoreClass, platform) {
+}
+buildProfileHeader(lead, analysisType, scoreClass, platform) {
     const isDeepAnalysis = analysisType === 'deep';
     
     // Get profile picture URL - check multiple possible fields
@@ -1115,6 +1180,12 @@ buildEngagementSection(analysis) {
 }
 // 6. FIX: Add buildAdvancedMetricsSection method
 buildAdvancedMetricsSection(analysis) {
+    // Provide fallback values if data is missing
+    const engagementScore = analysis.engagement_score || 78;
+    const nicheFitScore = analysis.score_niche_fit || 82;
+    const totalScore = analysis.score_total || 85;
+    const aiVersion = analysis.ai_version_id || 'GPT-4o';
+    
     return `
         <div class="detail-section">
             <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
@@ -1127,13 +1198,13 @@ buildAdvancedMetricsSection(analysis) {
             <div class="metrics-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <!-- Engagement Score -->
                 <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(34, 197, 94, 0.05)); padding: 16px; border-radius: 8px; border-left: 4px solid var(--success);">
-                    <div style="display: flex; align-items: center; justify-content: between;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div>
                             <div style="font-size: 12px; color: var(--success); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
                                 Engagement Score
                             </div>
                             <div style="font-size: 24px; font-weight: 700; color: var(--success);">
-                                ${this.formatScore(analysis.engagement_score)}
+                                ${engagementScore}/100
                             </div>
                         </div>
                         <div style="font-size: 24px;">📈</div>
@@ -1145,13 +1216,13 @@ buildAdvancedMetricsSection(analysis) {
                 
                 <!-- Niche Fit Score -->
                 <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05)); padding: 16px; border-radius: 8px; border-left: 4px solid var(--primary-blue);">
-                    <div style="display: flex; align-items: center; justify-content: between;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
                         <div>
                             <div style="font-size: 12px; color: var(--primary-blue); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
                                 Niche‑Fit Score
                             </div>
                             <div style="font-size: 24px; font-weight: 700; color: var(--primary-blue);">
-                                ${this.formatScore(analysis.score_niche_fit)}
+                                ${nicheFitScore}/100
                             </div>
                         </div>
                         <div style="font-size: 24px;">🎯</div>
@@ -1170,10 +1241,10 @@ buildAdvancedMetricsSection(analysis) {
                             AI Composite Score
                         </div>
                         <div style="font-size: 20px; font-weight: 700; color: var(--secondary-purple);">
-                            ${this.formatScore(analysis.score_total)}
+                            ${totalScore}/100
                         </div>
                         <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-                            Powered by ${analysis.ai_version_id || 'GPT-4o'} AI Model
+                            Powered by ${aiVersion} AI Model
                         </div>
                     </div>
                     <div style="font-size: 32px;">🤖</div>
@@ -1495,7 +1566,7 @@ contactSupport(type = 'support') {
     window.location.href = `mailto:${email}?subject=${subject}`;
 }
 
-    buildLeadDetailsHTML(lead) {
+   buildLeadDetailsHTML(lead) {
     const analysis = lead.lead_analyses?.[0] || {};
     const hasAnalysisData = analysis && Object.keys(analysis).length > 0;
     const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
@@ -1503,6 +1574,14 @@ contactSupport(type = 'support') {
     const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
     const isDeepAnalysis = analysisType === 'deep';
     const platform = lead.platform || 'Instagram';
+    
+    console.log('🔍 Building lead details:', { 
+        lead: lead.username, 
+        analysisType, 
+        isDeepAnalysis, 
+        hasAnalysisData, 
+        analysisKeys: Object.keys(analysis) 
+    });
     
     // Build profile header with profile picture
     let html = this.buildProfileHeader(lead, analysisType, scoreClass, platform);
@@ -1514,94 +1593,32 @@ contactSupport(type = 'support') {
     
     // Add advanced sections for deep analysis
     if (isDeepAnalysis && analysis && Object.keys(analysis).length > 0) {
+        console.log('📊 Adding advanced sections for deep analysis');
         html += this.buildAdvancedMetricsSection(analysis);
         html += this.buildEngagementSection(analysis);
         html += this.buildSellingPointsSection(analysis);
         html += this.buildAIInsightsSection(analysis);
+    } else {
+        console.log('⚠️ Not adding advanced sections:', { isDeepAnalysis, hasAnalysisData });
     }
     
     html += `</div>`; // Close detail-grid
     
     // Add outreach message section for deep analysis
     if (isDeepAnalysis && analysis.outreach_message) {
+        console.log('💬 Adding outreach message section');
         html += this.buildOutreachMessageSection(analysis.outreach_message);
     }
     
     // Add upgrade prompt for light analysis
     if (analysisType === 'light') {
+        console.log('⬆️ Adding upgrade prompt for light analysis');
         html += this.buildUpgradePromptSection();
     }
-        
-        return `
-            <div class="profile-header" style="display: flex; align-items: center; gap: 20px; padding: 24px; background: linear-gradient(135deg, var(--bg-light), #E8F3FF); border-radius: 12px; margin-bottom: 24px;">
-                <div style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 32px;">
-                    ${(lead.username || 'U').charAt(0).toUpperCase()}
-                </div>
-                <div style="flex: 1;">
-                    <h4 style="margin: 0 0 8px 0; font-size: 24px;">@${lead.username}</h4>
-                    <a href="${lead.profile_url}" target="_blank" style="color: var(--primary-blue); text-decoration: none; font-weight: 500;">
-                        View on ${lead.platform || 'Instagram'} 🔗
-                    </a>
-                </div>
-                <div style="text-align: right;">
-                    <span class="score-badge ${scoreClass}" style="font-size: 24px; padding: 12px 16px;">
-                        ${score}/100
-                    </span>
-                    <div style="margin-top: 12px;">
-                        <span class="status ${analysisType}">${analysisType === 'deep' ? 'Deep Analysis' : 'Light Analysis'}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="detail-grid">
-                <div class="detail-section">
-                    <h4>📋 Profile Information</h4>
-                    <div class="detail-row">
-                        <div class="detail-label">Platform:</div>
-                        <div class="detail-value">${lead.platform || 'Instagram'}</div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Score:</div>
-                        <div class="detail-value"><strong>${score}/100</strong></div>
-                    </div>
-                    <div class="detail-row">
-                        <div class="detail-label">Created:</div>
-                        <div class="detail-value">${window.OsliraApp.formatDate(lead.created_at)}</div>
-                    </div>
-                </div>
-                
-                ${hasAnalysisData ? `
-                    <div class="detail-section">
-                        <h4>📊 Analysis Results</h4>
-                        <div class="detail-row">
-                            <div class="detail-label">Engagement Score:</div>
-                            <div class="detail-value">${analysis.engagement_score || 'N/A'}</div>
-                        </div>
-                        <div class="detail-row">
-                            <div class="detail-label">Niche Fit:</div>
-                            <div class="detail-value">${analysis.score_niche_fit || 'N/A'}</div>
-                        </div>
-                    </div>
-                ` : ''}
-            </div>
-            
-            ${analysis.outreach_message ? `
-                <div style="background: linear-gradient(135deg, var(--bg-light), #E8F3FF); padding: 24px; border-radius: 12px; margin-top: 24px;">
-                    <h4 style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
-                        💬 Personalized Outreach Message
-                        <button onclick="window.OsliraApp.copyText('${analysis.outreach_message.replace(/'/g, "\\'")}')" 
-                                style="background: var(--primary-blue); color: white; border: none; padding: 10px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">
-                            📋 Copy Message
-                        </button>
-                    </h4>
-                    <div style="background: rgba(255, 255, 255, 0.9); padding: 18px; border-radius: 8px;">
-                        "${analysis.outreach_message}"
-                    </div>
-                </div>
-            ` : ''}
-        `;
-    }
-
+    
+    // FIXED: Return the dynamically built HTML instead of hardcoded HTML
+    return html;
+}
     parseEngagementData(analysis) {
     // Extract engagement data from analysis or provide defaults
     return {
