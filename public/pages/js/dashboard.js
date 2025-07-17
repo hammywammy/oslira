@@ -1495,7 +1495,7 @@ contactSupport(type = 'support') {
     window.location.href = `mailto:${email}?subject=${subject}`;
 }
 
-    buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass)  {
+    buildLeadDetailsHTML(lead) {
     const analysis = lead.lead_analyses?.[0] || {};
     const hasAnalysisData = analysis && Object.keys(analysis).length > 0;
     const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
