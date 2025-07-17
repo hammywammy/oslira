@@ -69,32 +69,6 @@
             }
         }
 
-        // Fetch configuration from API
-        async function fetchConfig() {
-            try {
-                const response = await fetch('/api/config');
-                
-                if (!response.ok) {
-                    throw new Error(`Config API returned ${response.status}: ${response.statusText}`);
-                }
-                
-                const config = await response.json();
-                
-                if (config.error) {
-                    throw new Error(config.error);
-                }
-
-                if (!config.supabaseUrl || !config.supabaseAnonKey) {
-                    throw new Error('Invalid configuration received from API');
-                }
-
-                return config;
-
-            } catch (error) {
-                throw new Error(`Failed to load configuration: ${error.message}`);
-            }
-        }
-
         // Handle existing authentication
         async function handleExistingAuth() {
             try {
