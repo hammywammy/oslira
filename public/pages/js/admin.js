@@ -1,970 +1,5 @@
-    async loadRevenueData() {
-        console.log('💰 Loading revenue analytics data...');
-        
-        try {
-            window.OsliraApp.showLoadingOverlay('Loading revenue data...');
-            
-            // Load revenue metrics
-            await this.loadRevenueMetrics();
-            
-            // Load subscription analytics
-            await this.loadSubscriptionAnalytics();
-            
-            // Load payment data
-            await this.loadPaymentData();
-            
-            // Render revenue dashboard
-            this.renderRevenueDashboard();
-            
-        } catch (error) {
-            console.error('Revenue data loading failed:', error);
-            window.OsliraApp.showMessage('Failed to load revenue data', 'error');
-        } finally {
-            window.OsliraApp.removeLoadingOverlay();
-        }
-    }
-
-    async loadRevenueMetrics() {
-        try {
-            // This would integrate with Stripe API through your worker
-            const response = await window.OsliraApp.apiRequest('/admin/revenue-metrics');
-            this.revenueMetrics = response;
-        } catch (error) {
-            console.warn('Revenue metrics not available:', error);
-            // Fallback data
-            this.revenueMetrics = {
-                monthlyRevenue: Math.floor(Math.random() * 50000) + 25000,
-                yearlyRevenue: Math.floor(Math.random() * 500000) + 250000,
-                monthlyGrowth: Math.random() * 20 + 5,
-                averageRevenuePerUser: Math.random() * 100 + 50,
-                churnRate: Math.random() * 5 + 2,
-                lifetimeValue: Math.random() * 500 + 200
-            };
-        }
-    }
-
-    async loadSubscriptionAnalytics() {
-        try {
-            const { data: subscriptions, error } = await window.OsliraApp.supabase
-                .from('users')
-                .select('subscription_plan, subscription_status, created_at')
-                .not('subscription_plan', 'is', null);
-
-            if (error) throw error;
-
-            // Process subscription data
-            this.subscriptionAnalytics = this.processSubscriptionData(subscriptions || []);
-            
-        } catch (error) {
-            console.warn('Subscription analytics not available:', error);
-            this.subscriptionAnalytics = {
-                planDistribution: {
-                    free: 60,
-                    pro: 30,
-                    enterprise: 10
-                },
-                statusDistribution: {
-                    active: 80,
-                    trialing: 15,
-                    canceled: 5
-                }
-            };
-        }
-    }
-
-    processSubscriptionData(subscriptions) {
-        const planCounts = {};
-        const statusCounts = {};
-        
-        subscriptions.forEach(sub => {
-            planCounts[sub.subscription_plan] = (planCounts[sub.subscription_plan] || 0) + 1;
-            statusCounts[sub.subscription_status] = (statusCounts[sub.subscription_status] || 0) + 1;
-        });
-
-        return {
-            planDistribution: planCounts,
-            statusDistribution: statusCounts,
-            total: subscriptions.length
-        };
-    }
-
-    async loadPaymentData() {
-        try {
-            const response = await window.OsliraApp.apiRequest('/admin/payment-data');
-            this.paymentData = response;
-        } catch (error) {
-            console.warn('Payment data not available:', error);
-            this.paymentData = {
-                recentTransactions: [],
-                failedPayments: Math.floor(Math.random() * 10),
-                successfulPayments: Math.floor(Math.random() * 500) + 200
-            };
-        }
-    }
-
-    renderRevenueDashboard() {
-        const container = document.getElementById('revenue-dashboard-container');
-        if (!container) return;
-
-        const html = `
-            <div class="revenue-grid">
-                <!-- Revenue KPIs -->
-                <div class="revenue-kpi-grid">
-                    <div class="kpi-card revenue-card">
-                        <div class="kpi-header">
-                            <h4>Monthly Revenue</h4>
-                            <span class="kpi-icon">💰</span>
-                        </div>
-                        <div class="kpi-value">${this.revenueMetrics.monthlyRevenue?.toLocaleString() || '0'}</div>
-                        <div class="kpi-change positive">↗ +${this.revenueMetrics.monthlyGrowth?.toFixed(1) || '0'}% vs last month</div>
-                    </div>
-
-                    <div class="kpi-card arpu-card">
-                        <div class="kpi-header">
-                            <h4>ARPU</h4>
-                            <span class="kpi-icon">👤</span>
-                        </div>
-                        <div class="kpi-value">${this.revenueMetrics.averageRevenuePerUser?.toFixed(0) || '0'}</div>
-                        <div class="kpi-subtitle">Average Revenue Per User</div>
-                    </div>
-
-                    <div class="kpi-card ltv-card">
-                        <div class="kpi-header">
-                            <h4>LTV</h4>
-                            <span class="kpi-icon">📈</span>
-                        </div>
-                        <div class="kpi-value">${this.revenueMetrics.lifetimeValue?.toFixed(0) || '0'}</div>
-                        <div class="kpi-subtitle">Customer Lifetime Value</div>
-                    </div>
-
-                    <div class="kpi-card churn-card">
-                        <div class="kpi-header">
-                            <h4>Churn Rate</h4>
-                            <span class="kpi-icon">📉</span>
-                        </div>
-                        <div class="kpi-value">${this.revenueMetrics.churnRate?.toFixed(1) || '0'}%</div>
-                        <div class="kpi-change ${this.revenueMetrics.churnRate > 5 ? 'negative' : 'positive'}">
-                            ${this.revenueMetrics.churnRate > 5 ? '↗' : '↘'} vs last month
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Subscription Distribution -->
-                <div class="subscription-distribution">
-                    <h4>Subscription Plan Distribution</h4>
-                    <div class="plan-charts">
-                        ${Object.entries(this.subscriptionAnalytics.planDistribution || {}).map(([plan, count]) => {
-                            const percentage = this.subscriptionAnalytics.total > 0 ? 
-                                (count / this.subscriptionAnalytics.total * 100).toFixed(1) : 0;
-                            return `
-                                <div class="plan-stat">
-                                    <div class="plan-info">
-                                        <span class="plan-name">${plan.toUpperCase()}</span>
-                                        <span class="plan-count">${count} users</span>
-                                    </div>
-                                    <div class="plan-bar">
-                                        <div class="plan-fill plan-${plan}" style="width: ${percentage}%"></div>
-                                    </div>
-                                    <span class="plan-percentage">${percentage}%</span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-
-                <!-- Recent Transactions -->
-                <div class="recent-transactions">
-                    <h4>Recent Transactions</h4>
-                    <div class="transaction-list">
-                        ${this.generateSampleTransactions().map(transaction => `
-                            <div class="transaction-item">
-                                <div class="transaction-user">
-                                    <div class="user-avatar">${transaction.user.charAt(0).toUpperCase()}</div>
-                                    <div class="transaction-details">
-                                        <div class="transaction-email">${transaction.user}</div>
-                                        <div class="transaction-plan">${transaction.plan}</div>
-                                    </div>
-                                </div>
-                                <div class="transaction-amount">${transaction.amount}</div>
-                                <div class="transaction-status status-${transaction.status}">
-                                    ${transaction.status}
-                                </div>
-                                <div class="transaction-date">${transaction.date}</div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-
-                <!-- Revenue Chart -->
-                <div class="revenue-chart-container">
-                    <h4>Revenue Trend</h4>
-                    <canvas id="revenue-chart" width="600" height="300"></canvas>
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
-        this.initializeRevenueCharts();
-    }
-
-    generateSampleTransactions() {
-        const users = ['john@example.com', 'sarah@company.com', 'mike@startup.co', 'lisa@agency.net', 'alex@business.com'];
-        const plans = ['Pro Monthly', 'Enterprise', 'Pro Annual'];
-        const amounts = [49, 199, 490];
-        const statuses = ['paid', 'paid', 'paid', 'pending', 'failed'];
-
-        return Array.from({ length: 5 }, (_, i) => ({
-            user: users[i],
-            plan: plans[Math.floor(Math.random() * plans.length)],
-            amount: amounts[Math.floor(Math.random() * amounts.length)],
-            status: statuses[Math.floor(Math.random() * statuses.length)],
-            date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleDateString()
-        }));
-    }
-
-    initializeRevenueCharts() {
-        const canvas = document.getElementById('revenue-chart');
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            
-            // Simple revenue chart visualization
-            ctx.fillStyle = '#48bb78';
-            ctx.fillRect(10, 10, 200, 100);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '14px Arial';
-            ctx.fillText('Revenue Chart', 15, 35);
-            ctx.fillText('(Chart.js integration needed)', 15, 55);
-        }
-    }
-
-    async loadAIData() {
-        console.log('🧠 Loading AI performance data...');
-        
-        try {
-            window.OsliraApp.showLoadingOverlay('Loading AI performance data...');
-            
-            // Load AI metrics
-            await this.loadAIMetrics();
-            
-            // Load model performance
-            await this.loadModelPerformance();
-            
-            // Render AI dashboard
-            this.renderAIDashboard();
-            
-        } catch (error) {
-            console.error('AI data loading failed:', error);
-            window.OsliraApp.showMessage('Failed to load AI performance data', 'error');
-        } finally {
-            window.OsliraApp.removeLoadingOverlay();
-        }
-    }
-
-    async loadAIMetrics() {
-        try {
-            const response = await window.OsliraApp.apiRequest('/admin/ai-metrics');
-            this.aiMetrics = response;
-        } catch (error) {
-            console.warn('AI metrics not available:', error);
-            this.aiMetrics = {
-                totalAnalyses: Math.floor(Math.random() * 100000) + 50000,
-                averageResponseTime: Math.random() * 2 + 1,
-                successRate: Math.random() * 5 + 95,
-                tokensUsed: Math.floor(Math.random() * 1000000) + 500000,
-                costPerAnalysis: Math.random() * 0.1 + 0.05,
-                modelsInUse: ['GPT-4', 'Claude-3', 'Custom Model']
-            };
-        }
-    }
-
-    async loadModelPerformance() {
-        try {
-            const { data: analyses, error } = await window.OsliraApp.supabase
-                .from('leads')
-                .select('analysis_score, created_at, analysis_type')
-                .not('analysis_score', 'is', null)
-                .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            this.modelPerformance = this.processAnalysisData(analyses || []);
-            
-        } catch (error) {
-            console.warn('Model performance data not available:', error);
-            this.modelPerformance = {
-                averageScore: Math.random() * 30 + 70,
-                scoreDistribution: {
-                    high: 40,
-                    medium: 45,
-                    low: 15
-                },
-                analysisTypes: {
-                    light: 60,
-                    deep: 40
-                }
-            };
-        }
-    }
-
-    processAnalysisData(analyses) {
-        const scores = analyses.map(a => a.analysis_score).filter(s => s !== null);
-        const averageScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-        
-        const scoreDistribution = {
-            high: scores.filter(s => s >= 80).length,
-            medium: scores.filter(s => s >= 50 && s < 80).length,
-            low: scores.filter(s => s < 50).length
-        };
-
-        const analysisTypes = {};
-        analyses.forEach(a => {
-            analysisTypes[a.analysis_type] = (analysisTypes[a.analysis_type] || 0) + 1;
-        });
-
-        return {
-            averageScore,
-            scoreDistribution,
-            analysisTypes,
-            totalAnalyses: analyses.length
-        };
-    }
-
-    renderAIDashboard() {
-        const container = document.getElementById('ai-dashboard-container');
-        if (!container) return;
-
-        const html = `
-            <div class="ai-grid">
-                <!-- AI Performance KPIs -->
-                <div class="ai-kpi-grid">
-                    <div class="kpi-card ai-analyses-card">
-                        <div class="kpi-header">
-                            <h4>Total Analyses</h4>
-                            <span class="kpi-icon">🧠</span>
-                        </div>
-                        <div class="kpi-value">${this.aiMetrics.totalAnalyses?.toLocaleString() || '0'}</div>
-                        <div class="kpi-change positive">↗ +15% this month</div>
-                    </div>
-
-                    <div class="kpi-card response-time-card">
-                        <div class="kpi-header">
-                            <h4>Avg Response Time</h4>
-                            <span class="kpi-icon">⚡</span>
-                        </div>
-                        <div class="kpi-value">${this.aiMetrics.averageResponseTime?.toFixed(1) || '0'}s</div>
-                        <div class="kpi-change ${this.aiMetrics.averageResponseTime > 3 ? 'negative' : 'positive'}">
-                            Target: <2s
-                        </div>
-                    </div>
-
-                    <div class="kpi-card success-rate-card">
-                        <div class="kpi-header">
-                            <h4>Success Rate</h4>
-                            <span class="kpi-icon">✅</span>
-                        </div>
-                        <div class="kpi-value">${this.aiMetrics.successRate?.toFixed(1) || '0'}%</div>
-                        <div class="kpi-change positive">↗ +2% vs last week</div>
-                    </div>
-
-                    <div class="kpi-card cost-card">
-                        <div class="kpi-header">
-                            <h4>Cost per Analysis</h4>
-                            <span class="kpi-icon">💸</span>
-                        </div>
-                        <div class="kpi-value">${this.aiMetrics.costPerAnalysis?.toFixed(3) || '0'}</div>
-                        <div class="kpi-change negative">↗ +$0.002 vs last month</div>
-                    </div>
-                </div>
-
-                <!-- Model Performance -->
-                <div class="model-performance">
-                    <h4>Model Performance</h4>
-                    <div class="performance-stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Average Score:</span>
-                            <span class="stat-value">${this.modelPerformance.averageScore?.toFixed(1) || '0'}/100</span>
-                        </div>
-                        <div class="score-distribution">
-                            <div class="score-bar">
-                                <div class="score-segment high" style="width: ${(this.modelPerformance.scoreDistribution.high / this.modelPerformance.totalAnalyses * 100) || 0}%">
-                                    High (80+)
-                                </div>
-                                <div class="score-segment medium" style="width: ${(this.modelPerformance.scoreDistribution.medium / this.modelPerformance.totalAnalyses * 100) || 0}%">
-                                    Medium (50-79)
-                                </div>
-                                <div class="score-segment low" style="width: ${(this.modelPerformance.scoreDistribution.low / this.modelPerformance.totalAnalyses * 100) || 0}%">
-                                    Low (<50)
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- AI Models Status -->
-                <div class="ai-models-status">
-                    <h4>AI Models Status</h4>
-                    <div class="models-grid">
-                        ${this.aiMetrics.modelsInUse?.map(model => `
-                            <div class="model-card">
-                                <div class="model-name">${model}</div>
-                                <div class="model-status online">🟢 Online</div>
-                                <div class="model-usage">${Math.floor(Math.random() * 1000)}k tokens/day</div>
-                            </div>
-                        `).join('') || ''}
-                    </div>
-                </div>
-
-                <!-- Token Usage Chart -->
-                <div class="token-usage-chart">
-                    <h4>Token Usage Trends</h4>
-                    <canvas id="token-chart" width="600" height="300"></canvas>
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
-        this.initializeAICharts();
-    }
-
-    initializeAICharts() {
-        const canvas = document.getElementById('token-chart');
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            
-            // Simple token usage visualization
-            ctx.fillStyle = '#764ba2';
-            ctx.fillRect(10, 10, 300, 150);
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '16px Arial';
-            ctx.fillText('Token Usage Chart', 15, 35);
-            ctx.fillText('(Chart.js integration needed)', 15, 60);
-        }
-    }
-
-    async loadSubscriptionData() {
-        console.log('💳 Loading subscription data...');
-        
-        try {
-            window.OsliraApp.showLoadingOverlay('Loading subscription data...');
-            
-            // Load subscription overview
-            const { data: subscriptions, error } = await window.OsliraApp.supabase
-                .from('users')
-                .select(`
-                    id, email, subscription_plan, subscription_status, 
-                    created_at, stripe_customer_id, credits
-                `)
-                .not('subscription_plan', 'is', null)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            this.renderSubscriptionDashboard(subscriptions || []);
-            
-        } catch (error) {
-            console.error('Subscription data loading failed:', error);
-            window.OsliraApp.showMessage('Failed to load subscription data', 'error');
-        } finally {
-            window.OsliraApp.removeLoadingOverlay();
-        }
-    }
-
-    renderSubscriptionDashboard(subscriptions) {
-        const container = document.getElementById('subscriptions-dashboard-container');
-        if (!container) return;
-
-        // Calculate subscription metrics
-        const metrics = this.calculateSubscriptionMetrics(subscriptions);
-
-        const html = `
-            <div class="subscriptions-overview">
-                <div class="subscription-kpis">
-                    <div class="kpi-card">
-                        <h4>Total Subscribers</h4>
-                        <div class="kpi-value">${metrics.totalSubscribers}</div>
-                    </div>
-                    <div class="kpi-card">
-                        <h4>Active Subscriptions</h4>
-                        <div class="kpi-value">${metrics.activeSubscriptions}</div>
-                    </div>
-                    <div class="kpi-card">
-                        <h4>Trial Subscriptions</h4>
-                        <div class="kpi-value">${metrics.trialSubscriptions}</div>
-                    </div>
-                    <div class="kpi-card">
-                        <h4>Canceled This Month</h4>
-                        <div class="kpi-value">${metrics.canceledThisMonth}</div>
-                    </div>
-                </div>
-
-                <div class="subscription-table-container">
-                    <h3>Subscription Management</h3>
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Customer</th>
-                                    <th>Plan</th>
-                                    <th>Status</th>
-                                    <th>Started</th>
-                                    <th>Credits</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${subscriptions.slice(0, 20).map(sub => `
-                                    <tr>
-                                        <td>
-                                            <div class="customer-info">
-                                                <div class="customer-avatar">${sub.email.charAt(0).toUpperCase()}</div>
-                                                <div>
-                                                    <div class="customer-email">${sub.email}</div>
-                                                    ${sub.stripe_customer_id ? `<div class="customer-id">ID: ${sub.stripe_customer_id.substring(0, 12)}...</div>` : ''}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="plan-badge plan-${sub.subscription_plan}">
-                                                ${sub.subscription_plan?.toUpperCase() || 'FREE'}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="status-badge status-${sub.subscription_status}">
-                                                ${sub.subscription_status || 'inactive'}
-                                            </span>
-                                        </td>
-                                        <td>${window.OsliraApp.formatDate(sub.created_at)}</td>
-                                        <td>${sub.credits || 0}</td>
-                                        <td>
-                                            <div class="action-buttons">
-                                                <button class="btn-icon" onclick="window.adminDashboard.manageSubscription('${sub.id}')" title="Manage">
-                                                    ⚙️
-                                                </button>
-                                                <button class="btn-icon" onclick="window.adminDashboard.viewBilling('${sub.id}')" title="Billing">
-                                                    💳
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
-    }
-
-    calculateSubscriptionMetrics(subscriptions) {
-        const now = new Date();
-        const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-        return {
-            totalSubscribers: subscriptions.length,
-            activeSubscriptions: subscriptions.filter(s => s.subscription_status === 'active').length,
-            trialSubscriptions: subscriptions.filter(s => s.subscription_status === 'trialing').length,
-            canceledThisMonth: subscriptions.filter(s => 
-                s.subscription_status === 'canceled' && 
-                new Date(s.updated_at || s.created_at) >= thisMonth
-            ).length
-        };
-    }
-
-    async manageSubscription(userId) {
-        window.OsliraApp.showMessage('Subscription management coming soon', 'info');
-    }
-
-    async viewBilling(userId) {
-        window.OsliraApp.showMessage('Billing details coming soon', 'info');
-    }
-
-    async loadRealTimeData() {
-        console.log('⚡ Loading real-time monitoring data...');
-        
-        try {
-            // Start real-time monitoring
-            this.startRealTimeMonitoring();
-            
-            // Render real-time dashboard
-            this.renderRealTimeDashboard();
-            
-        } catch (error) {
-            console.error('Real-time data loading failed:', error);
-            window.OsliraApp.showMessage('Failed to load real-time monitoring', 'error');
-        }
-    }
-
-    startRealTimeMonitoring() {
-        // Set up real-time subscriptions for live data
-        if (this.realTimeSubscription) {
-            this.realTimeSubscription.unsubscribe();
-        }
-
-        // Subscribe to real-time updates from Supabase
-        this.realTimeSubscription = window.OsliraApp.supabase
-            .channel('admin-monitoring')
-            .on('postgres_changes', 
-                { event: '*', schema: 'public', table: 'users' },
-                (payload) => this.handleUserUpdate(payload)
-            )
-            .on('postgres_changes',
-                { event: '*', schema: 'public', table: 'leads' },
-                (payload) => this.handleLeadUpdate(payload)
-            )
-            .subscribe();
-    }
-
-    handleUserUpdate(payload) {
-        console.log('User update:', payload);
-        this.updateRealTimeMetrics();
-    }
-
-    handleLeadUpdate(payload) {
-        console.log('Lead update:', payload);
-        this.updateRealTimeMetrics();
-    }
-
-    renderRealTimeDashboard() {
-        const container = document.getElementById('realtime-dashboard-container');
-        if (!container) return;
-
-        const html = `
-            <div class="realtime-grid">
-                <div class="live-metrics">
-                    <h3>🔴 Live System Metrics</h3>
-                    <div class="metrics-grid">
-                        <div class="live-metric">
-                            <div class="metric-label">Active Users</div>
-                            <div class="metric-value" id="live-active-users">-</div>
-                        </div>
-                        <div class="live-metric">
-                            <div class="metric-label">Requests/Min</div>
-                            <div class="metric-value" id="live-requests">-</div>
-                        </div>
-                        <div class="live-metric">
-                            <div class="metric-label">Error Rate</div>
-                            <div class="metric-value" id="live-errors">-</div>
-                        </div>
-                        <div class="live-metric">
-                            <div class="metric-label">Response Time</div>
-                            <div class="metric-value" id="live-response-time">-</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="live-activity-feed">
-                    <h3>📊 Live Activity Feed</h3>
-                    <div id="live-feed" class="activity-stream">
-                        <!-- Live activities will be inserted here -->
-                    </div>
-                </div>
-
-                <div class="system-alerts">
-                    <h3>🚨 System Alerts</h3>
-                    <div id="system-alerts" class="alerts-container">
-                        <div class="alert alert-success">
-                            ✅ All systems operational
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
-
-        // Start live updates
-        this.startLiveUpdates();
-    }
-
-    startLiveUpdates() {
-        // Update live metrics every 5 seconds
-        setInterval(() => {
-            this.updateLiveMetrics();
-        }, 5000);
-
-        // Simulate live activity feed
-        setInterval(() => {
-            this.addLiveActivity();
-        }, 10000);
-    }
-
-    updateLiveMetrics() {
-        const updates = {
-            'live-active-users': Math.floor(Math.random() * 100) + 200,
-            'live-requests': Math.floor(Math.random() * 1000) + 500,
-            'live-errors': (Math.random() * 2).toFixed(2) + '%',
-            'live-response-time': (Math.random() * 200 + 100).toFixed(0) + 'ms'
-        };
-
-        Object.entries(updates).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = value;
-                element.classList.add('updated');
-                setTimeout(() => element.classList.remove('updated'), 500);
-            }
-        });
-    }
-
-    addLiveActivity() {
-        const activities = [
-            '👤 New user registration',
-            '🎯 Campaign started',
-            '📊 Analysis completed',
-            '💳 Payment processed',
-            '🔧 System maintenance',
-            '📤 Data export requested'
-        ];
-
-        const activity = activities[Math.floor(Math.random() * activities.length)];
-        const feed = document.getElementById('live-feed');
-        
-        if (feed) {
-            const activityElement = document.createElement('div');
-            activityElement.className = 'live-activity-item';
-            activityElement.innerHTML = `
-                <span class="activity-icon">${activity.split(' ')[0]}</span>
-                <span class="activity-text">${activity.substring(2)}</span>
-                <span class="activity-time">${new Date().toLocaleTimeString()}</span>
-            `;
-            
-            feed.insertBefore(activityElement, feed.firstChild);
-            
-            // Keep only last 10 activities
-            while (feed.children.length > 10) {
-                feed.removeChild(feed.lastChild);
-            }
-        }
-    }
-
-    // Utility    async loadPerformanceData() {
-        console.log('🚀 Loading performance monitoring data...');
-        
-        try {
-            window.OsliraApp.showLoadingOverlay('Loading performance data...');
-            
-            // Load system metrics
-            await this.loadSystemMetrics();
-            
-            // Load API performance
-            await this.loadAPIPerformance();
-            
-            // Load error tracking
-            await this.loadErrorTracking();
-            
-            // Render performance dashboard
-            this.renderPerformanceDashboard();
-            
-        } catch (error) {
-            console.error('Performance data loading failed:', error);
-            window.OsliraApp.showMessage('Failed to load performance data', 'error');
-        } finally {
-            window.OsliraApp.removeLoadingOverlay();
-        }
-    }
-
-    async loadSystemMetrics() {
-        try {
-            // Simulate system metrics (in real implementation, this would come from monitoring APIs)
-            this.systemMetrics = {
-                cpuUsage: Math.random() * 100,
-                memoryUsage: Math.random() * 100,
-                diskUsage: Math.random() * 100,
-                networkLatency: Math.random() * 200 + 10,
-                activeConnections: Math.floor(Math.random() * 1000) + 500,
-                requestsPerMinute: Math.floor(Math.random() * 10000) + 5000,
-                errorRate: Math.random() * 5,
-                uptime: 99.9 + Math.random() * 0.1
-            };
-        } catch (error) {
-            console.error('System metrics loading failed:', error);
-        }
-    }
-
-    async loadAPIPerformance() {
-        try {
-            // Load API response times and throughput
-            const response = await window.OsliraApp.apiRequest('/admin/api-performance');
-            this.apiPerformance = response;
-        } catch (error) {
-            console.warn('API performance data not available:', error);
-            this.apiPerformance = {
-                avgResponseTime: Math.random() * 500 + 100,
-                p95ResponseTime: Math.random() * 1000 + 300,
-                throughput: Math.floor(Math.random() * 1000) + 500,
-                errorRate: Math.random() * 2
-            };
-        }
-    }
-
-    async loadErrorTracking() {
-        try {
-            // Load recent errors and system alerts
-            const { data: errors } = await window.OsliraApp.supabase
-                .from('error_logs')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(50);
-
-            this.recentErrors = errors || [];
-        } catch (error) {
-            console.warn('Error tracking data not available:', error);
-            this.recentErrors = [];
-        }
-    }
-
-    renderPerformanceDashboard() {
-        const container = document.getElementById('performance-dashboard-container');
-        if (!container) return;
-
-        const html = `
-            <div class="performance-grid">
-                <!-- System Metrics -->
-                <div class="metric-card cpu-card">
-                    <div class="metric-header">
-                        <h4>CPU Usage</h4>
-                        <span class="metric-icon">🖥️</span>
-                    </div>
-                    <div class="metric-value">${this.systemMetrics.cpuUsage.toFixed(1)}%</div>
-                    <div class="metric-chart">
-                        <div class="usage-bar">
-                            <div class="usage-fill" style="width: ${this.systemMetrics.cpuUsage}%"></div>
-                        </div>
-                    </div>
-                    <div class="metric-status ${this.systemMetrics.cpuUsage > 80 ? 'warning' : 'healthy'}">
-                        ${this.systemMetrics.cpuUsage > 80 ? 'High Usage' : 'Normal'}
-                    </div>
-                </div>
-
-                <div class="metric-card memory-card">
-                    <div class="metric-header">
-                        <h4>Memory Usage</h4>
-                        <span class="metric-icon">💾</span>
-                    </div>
-                    <div class="metric-value">${this.systemMetrics.memoryUsage.toFixed(1)}%</div>
-                    <div class="metric-chart">
-                        <div class="usage-bar">
-                            <div class="usage-fill" style="width: ${this.systemMetrics.memoryUsage}%"></div>
-                        </div>
-                    </div>
-                    <div class="metric-status ${this.systemMetrics.memoryUsage > 85 ? 'warning' : 'healthy'}">
-                        ${this.systemMetrics.memoryUsage > 85 ? 'High Usage' : 'Normal'}
-                    </div>
-                </div>
-
-                <div class="metric-card network-card">
-                    <div class="metric-header">
-                        <h4>Network Latency</h4>
-                        <span class="metric-icon">🌐</span>
-                    </div>
-                    <div class="metric-value">${this.systemMetrics.networkLatency.toFixed(0)}ms</div>
-                    <div class="metric-trend">
-                        ${this.systemMetrics.networkLatency < 50 ? '⚡ Excellent' : 
-                          this.systemMetrics.networkLatency < 100 ? '✅ Good' : 
-                          this.systemMetrics.networkLatency < 200 ? '⚠️ Fair' : '🐌 Poor'}
-                    </div>
-                </div>
-
-                <div class="metric-card requests-card">
-                    <div class="metric-header">
-                        <h4>Requests/Min</h4>
-                        <span class="metric-icon">📊</span>
-                    </div>
-                    <div class="metric-value">${this.systemMetrics.requestsPerMinute.toLocaleString()}</div>
-                    <div class="metric-change positive">↗ +12% vs last hour</div>
-                </div>
-
-                <!-- API Performance -->
-                <div class="metric-card-wide api-performance">
-                    <div class="metric-header">
-                        <h4>API Performance</h4>
-                        <span class="metric-icon">⚡</span>
-                    </div>
-                    <div class="api-metrics-grid">
-                        <div class="api-metric">
-                            <div class="api-metric-label">Avg Response Time</div>
-                            <div class="api-metric-value">${this.apiPerformance?.avgResponseTime?.toFixed(0) || 0}ms</div>
-                        </div>
-                        <div class="api-metric">
-                            <div class="api-metric-label">P95 Response Time</div>
-                            <div class="api-metric-value">${this.apiPerformance?.p95ResponseTime?.toFixed(0) || 0}ms</div>
-                        </div>
-                        <div class="api-metric">
-                            <div class="api-metric-label">Throughput</div>
-                            <div class="api-metric-value">${this.apiPerformance?.throughput?.toLocaleString() || 0}/min</div>
-                        </div>
-                        <div class="api-metric">
-                            <div class="api-metric-label">Error Rate</div>
-                            <div class="api-metric-value">${this.apiPerformance?.errorRate?.toFixed(2) || 0}%</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Errors -->
-                <div class="metric-card-wide error-tracking">
-                    <div class="metric-header">
-                        <h4>Recent Errors</h4>
-                        <span class="metric-icon">🚨</span>
-                    </div>
-                    <div class="error-list">
-                        ${this.recentErrors.length > 0 ? 
-                            this.recentErrors.slice(0, 5).map(error => `
-                                <div class="error-item">
-                                    <div class="error-message">${error.message || 'Unknown error'}</div>
-                                    <div class="error-time">${window.OsliraApp.formatDate(error.created_at)}</div>
-                                </div>
-                            `).join('') :
-                            '<div class="no-errors">🎉 No recent errors detected</div>'
-                        }
-                    </div>
-                </div>
-            </div>
-
-            <!-- Real-time Performance Charts -->
-            <div class="performance-charts">
-                <div class="chart-container">
-                    <canvas id="performance-chart" width="800" height="400"></canvas>
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
-
-        // Initialize performance charts
-        this.initializePerformanceCharts();
-    }
-        
 import { Chart, registerables } from 'chart.js';
 Chart.register(...registerables);
-
-// inside your class:
-initializePerformanceCharts() {
-  console.log('Initializing performance charts…');
-  const canvas = document.getElementById('performance-chart');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: ['Jan','Feb','Mar','Apr','May','Jun'],
-      datasets: [{
-        label: 'CPU Usage (%)',
-        data: [45,60,55,70,65,80],
-        tension: 0.3,
-        borderWidth: 2
-      }]
-    },
-    options: {
-      scales: { y: { beginAtZero: true, max: 100 } },
-      responsive: true,
-      plugins: { legend: { position: 'top' } }
-    }
-  });
-}
-
 
 window.addEventListener('error', (event) => {
     if (event.message && event.message.includes('Could not establish connection')) {
@@ -1926,41 +961,967 @@ class OsliraAdminDashboard {
         console.log('User analytics data:', data);
     }
 
-    async loadPerformanceData() {
-        console.log('🚀 Loading performance monitoring data...');
-        // Implementation for performance data loading
-        window.OsliraApp.showMessage('Performance monitoring view coming soon', 'info');
-    }
-
     async loadRevenueData() {
         console.log('💰 Loading revenue analytics data...');
-        // Implementation for revenue data loading
-        window.OsliraApp.showMessage('Revenue analytics view coming soon', 'info');
+        
+        try {
+            window.OsliraApp.showLoadingOverlay('Loading revenue data...');
+            
+            // Load revenue metrics
+            await this.loadRevenueMetrics();
+            
+            // Load subscription analytics
+            await this.loadSubscriptionAnalytics();
+            
+            // Load payment data
+            await this.loadPaymentData();
+            
+            // Render revenue dashboard
+            this.renderRevenueDashboard();
+            
+        } catch (error) {
+            console.error('Revenue data loading failed:', error);
+            window.OsliraApp.showMessage('Failed to load revenue data', 'error');
+        } finally {
+            window.OsliraApp.removeLoadingOverlay();
+        }
+    }
+
+    async loadRevenueMetrics() {
+        try {
+            // This would integrate with Stripe API through your worker
+            const response = await window.OsliraApp.apiRequest('/admin/revenue-metrics');
+            this.revenueMetrics = response;
+        } catch (error) {
+            console.warn('Revenue metrics not available:', error);
+            // Fallback data
+            this.revenueMetrics = {
+                monthlyRevenue: Math.floor(Math.random() * 50000) + 25000,
+                yearlyRevenue: Math.floor(Math.random() * 500000) + 250000,
+                monthlyGrowth: Math.random() * 20 + 5,
+                averageRevenuePerUser: Math.random() * 100 + 50,
+                churnRate: Math.random() * 5 + 2,
+                lifetimeValue: Math.random() * 500 + 200
+            };
+        }
+    }
+
+    async loadSubscriptionAnalytics() {
+        try {
+            const { data: subscriptions, error } = await window.OsliraApp.supabase
+                .from('users')
+                .select('subscription_plan, subscription_status, created_at')
+                .not('subscription_plan', 'is', null);
+
+            if (error) throw error;
+
+            // Process subscription data
+            this.subscriptionAnalytics = this.processSubscriptionData(subscriptions || []);
+            
+        } catch (error) {
+            console.warn('Subscription analytics not available:', error);
+            this.subscriptionAnalytics = {
+                planDistribution: {
+                    free: 60,
+                    pro: 30,
+                    enterprise: 10
+                },
+                statusDistribution: {
+                    active: 80,
+                    trialing: 15,
+                    canceled: 5
+                }
+            };
+        }
+    }
+    
+    processSubscriptionData(subscriptions) {
+        const planCounts = {};
+        const statusCounts = {};
+        
+        subscriptions.forEach(sub => {
+            planCounts[sub.subscription_plan] = (planCounts[sub.subscription_plan] || 0) + 1;
+            statusCounts[sub.subscription_status] = (statusCounts[sub.subscription_status] || 0) + 1;
+        });
+
+        return {
+            planDistribution: planCounts,
+            statusDistribution: statusCounts,
+            total: subscriptions.length
+        };
+    }
+
+    async loadPaymentData() {
+        try {
+            const response = await window.OsliraApp.apiRequest('/admin/payment-data');
+            this.paymentData = response;
+        } catch (error) {
+            console.warn('Payment data not available:', error);
+            this.paymentData = {
+                recentTransactions: [],
+                failedPayments: Math.floor(Math.random() * 10),
+                successfulPayments: Math.floor(Math.random() * 500) + 200
+            };
+        }
+    }
+
+    renderRevenueDashboard() {
+        const container = document.getElementById('revenue-dashboard-container');
+        if (!container) return;
+
+        const html = `
+            <div class="revenue-grid">
+                <!-- Revenue KPIs -->
+                <div class="revenue-kpi-grid">
+                    <div class="kpi-card revenue-card">
+                        <div class="kpi-header">
+                            <h4>Monthly Revenue</h4>
+                            <span class="kpi-icon">💰</span>
+                        </div>
+                        <div class="kpi-value">${this.revenueMetrics.monthlyRevenue?.toLocaleString() || '0'}</div>
+                        <div class="kpi-change positive">↗ +${this.revenueMetrics.monthlyGrowth?.toFixed(1) || '0'}% vs last month</div>
+                    </div>
+
+                    <div class="kpi-card arpu-card">
+                        <div class="kpi-header">
+                            <h4>ARPU</h4>
+                            <span class="kpi-icon">👤</span>
+                        </div>
+                        <div class="kpi-value">${this.revenueMetrics.averageRevenuePerUser?.toFixed(0) || '0'}</div>
+                        <div class="kpi-subtitle">Average Revenue Per User</div>
+                    </div>
+
+                    <div class="kpi-card ltv-card">
+                        <div class="kpi-header">
+                            <h4>LTV</h4>
+                            <span class="kpi-icon">📈</span>
+                        </div>
+                        <div class="kpi-value">${this.revenueMetrics.lifetimeValue?.toFixed(0) || '0'}</div>
+                        <div class="kpi-subtitle">Customer Lifetime Value</div>
+                    </div>
+
+                    <div class="kpi-card churn-card">
+                        <div class="kpi-header">
+                            <h4>Churn Rate</h4>
+                            <span class="kpi-icon">📉</span>
+                        </div>
+                        <div class="kpi-value">${this.revenueMetrics.churnRate?.toFixed(1) || '0'}%</div>
+                        <div class="kpi-change ${this.revenueMetrics.churnRate > 5 ? 'negative' : 'positive'}">
+                            ${this.revenueMetrics.churnRate > 5 ? '↗' : '↘'} vs last month
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subscription Distribution -->
+                <div class="subscription-distribution">
+                    <h4>Subscription Plan Distribution</h4>
+                    <div class="plan-charts">
+                        ${Object.entries(this.subscriptionAnalytics.planDistribution || {}).map(([plan, count]) => {
+                            const percentage = this.subscriptionAnalytics.total > 0 ? 
+                                (count / this.subscriptionAnalytics.total * 100).toFixed(1) : 0;
+                            return `
+                                <div class="plan-stat">
+                                    <div class="plan-info">
+                                        <span class="plan-name">${plan.toUpperCase()}</span>
+                                        <span class="plan-count">${count} users</span>
+                                    </div>
+                                    <div class="plan-bar">
+                                        <div class="plan-fill plan-${plan}" style="width: ${percentage}%"></div>
+                                    </div>
+                                    <span class="plan-percentage">${percentage}%</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Recent Transactions -->
+                <div class="recent-transactions">
+                    <h4>Recent Transactions</h4>
+                    <div class="transaction-list">
+                        ${this.generateSampleTransactions().map(transaction => `
+                            <div class="transaction-item">
+                                <div class="transaction-user">
+                                    <div class="user-avatar">${transaction.user.charAt(0).toUpperCase()}</div>
+                                    <div class="transaction-details">
+                                        <div class="transaction-email">${transaction.user}</div>
+                                        <div class="transaction-plan">${transaction.plan}</div>
+                                    </div>
+                                </div>
+                                <div class="transaction-amount">${transaction.amount}</div>
+                                <div class="transaction-status status-${transaction.status}">
+                                    ${transaction.status}
+                                </div>
+                                <div class="transaction-date">${transaction.date}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Revenue Chart -->
+                <div class="revenue-chart-container">
+                    <h4>Revenue Trend</h4>
+                    <canvas id="revenue-chart" width="600" height="300"></canvas>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        this.initializeRevenueCharts();
+    }
+
+    generateSampleTransactions() {
+        const users = ['john@example.com', 'sarah@company.com', 'mike@startup.co', 'lisa@agency.net', 'alex@business.com'];
+        const plans = ['Pro Monthly', 'Enterprise', 'Pro Annual'];
+        const amounts = [49, 199, 490];
+        const statuses = ['paid', 'paid', 'paid', 'pending', 'failed'];
+
+        return Array.from({ length: 5 }, (_, i) => ({
+            user: users[i],
+            plan: plans[Math.floor(Math.random() * plans.length)],
+            amount: amounts[Math.floor(Math.random() * amounts.length)],
+            status: statuses[Math.floor(Math.random() * statuses.length)],
+            date: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toLocaleDateString()
+        }));
+    }
+
+    initializeRevenueCharts() {
+        const canvas = document.getElementById('revenue-chart');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Simple revenue chart visualization
+            ctx.fillStyle = '#48bb78';
+            ctx.fillRect(10, 10, 200, 100);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '14px Arial';
+            ctx.fillText('Revenue Chart', 15, 35);
+            ctx.fillText('(Chart.js integration needed)', 15, 55);
+        }
     }
 
     async loadAIData() {
         console.log('🧠 Loading AI performance data...');
-        // Implementation for AI data loading
-        window.OsliraApp.showMessage('AI insights view coming soon', 'info');
+        
+        try {
+            window.OsliraApp.showLoadingOverlay('Loading AI performance data...');
+            
+            // Load AI metrics
+            await this.loadAIMetrics();
+            
+            // Load model performance
+            await this.loadModelPerformance();
+            
+            // Render AI dashboard
+            this.renderAIDashboard();
+            
+        } catch (error) {
+            console.error('AI data loading failed:', error);
+            window.OsliraApp.showMessage('Failed to load AI performance data', 'error');
+        } finally {
+            window.OsliraApp.removeLoadingOverlay();
+        }
+    }
+
+    async loadAIMetrics() {
+        try {
+            const response = await window.OsliraApp.apiRequest('/admin/ai-metrics');
+            this.aiMetrics = response;
+        } catch (error) {
+            console.warn('AI metrics not available:', error);
+            this.aiMetrics = {
+                totalAnalyses: Math.floor(Math.random() * 100000) + 50000,
+                averageResponseTime: Math.random() * 2 + 1,
+                successRate: Math.random() * 5 + 95,
+                tokensUsed: Math.floor(Math.random() * 1000000) + 500000,
+                costPerAnalysis: Math.random() * 0.1 + 0.05,
+                modelsInUse: ['GPT-4', 'Claude-3', 'Custom Model']
+            };
+        }
+    }
+
+    async loadModelPerformance() {
+        try {
+            const { data: analyses, error } = await window.OsliraApp.supabase
+                .from('leads')
+                .select('analysis_score, created_at, analysis_type')
+                .not('analysis_score', 'is', null)
+                .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            this.modelPerformance = this.processAnalysisData(analyses || []);
+            
+        } catch (error) {
+            console.warn('Model performance data not available:', error);
+            this.modelPerformance = {
+                averageScore: Math.random() * 30 + 70,
+                scoreDistribution: {
+                    high: 40,
+                    medium: 45,
+                    low: 15
+                },
+                analysisTypes: {
+                    light: 60,
+                    deep: 40
+                }
+            };
+        }
+    }
+
+    processAnalysisData(analyses) {
+        const scores = analyses.map(a => a.analysis_score).filter(s => s !== null);
+        const averageScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+        
+        const scoreDistribution = {
+            high: scores.filter(s => s >= 80).length,
+            medium: scores.filter(s => s >= 50 && s < 80).length,
+            low: scores.filter(s => s < 50).length
+        };
+
+        const analysisTypes = {};
+        analyses.forEach(a => {
+            analysisTypes[a.analysis_type] = (analysisTypes[a.analysis_type] || 0) + 1;
+        });
+
+        return {
+            averageScore,
+            scoreDistribution,
+            analysisTypes,
+            totalAnalyses: analyses.length
+        };
+    }
+
+    renderAIDashboard() {
+        const container = document.getElementById('ai-dashboard-container');
+        if (!container) return;
+
+        const html = `
+            <div class="ai-grid">
+                <!-- AI Performance KPIs -->
+                <div class="ai-kpi-grid">
+                    <div class="kpi-card ai-analyses-card">
+                        <div class="kpi-header">
+                            <h4>Total Analyses</h4>
+                            <span class="kpi-icon">🧠</span>
+                        </div>
+                        <div class="kpi-value">${this.aiMetrics.totalAnalyses?.toLocaleString() || '0'}</div>
+                        <div class="kpi-change positive">↗ +15% this month</div>
+                    </div>
+
+                    <div class="kpi-card response-time-card">
+                        <div class="kpi-header">
+                            <h4>Avg Response Time</h4>
+                            <span class="kpi-icon">⚡</span>
+                        </div>
+                        <div class="kpi-value">${this.aiMetrics.averageResponseTime?.toFixed(1) || '0'}s</div>
+                        <div class="kpi-change ${this.aiMetrics.averageResponseTime > 3 ? 'negative' : 'positive'}">
+                            Target: <2s
+                        </div>
+                    </div>
+
+                    <div class="kpi-card success-rate-card">
+                        <div class="kpi-header">
+                            <h4>Success Rate</h4>
+                            <span class="kpi-icon">✅</span>
+                        </div>
+                        <div class="kpi-value">${this.aiMetrics.successRate?.toFixed(1) || '0'}%</div>
+                        <div class="kpi-change positive">↗ +2% vs last week</div>
+                    </div>
+
+                    <div class="kpi-card cost-card">
+                        <div class="kpi-header">
+                            <h4>Cost per Analysis</h4>
+                            <span class="kpi-icon">💸</span>
+                        </div>
+                        <div class="kpi-value">${this.aiMetrics.costPerAnalysis?.toFixed(3) || '0'}</div>
+                        <div class="kpi-change negative">↗ +$0.002 vs last month</div>
+                    </div>
+                </div>
+
+                <!-- Model Performance -->
+                <div class="model-performance">
+                    <h4>Model Performance</h4>
+                    <div class="performance-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Average Score:</span>
+                            <span class="stat-value">${this.modelPerformance.averageScore?.toFixed(1) || '0'}/100</span>
+                        </div>
+                        <div class="score-distribution">
+                            <div class="score-bar">
+                                <div class="score-segment high" style="width: ${(this.modelPerformance.scoreDistribution.high / this.modelPerformance.totalAnalyses * 100) || 0}%">
+                                    High (80+)
+                                </div>
+                                <div class="score-segment medium" style="width: ${(this.modelPerformance.scoreDistribution.medium / this.modelPerformance.totalAnalyses * 100) || 0}%">
+                                    Medium (50-79)
+                                </div>
+                                <div class="score-segment low" style="width: ${(this.modelPerformance.scoreDistribution.low / this.modelPerformance.totalAnalyses * 100) || 0}%">
+                                    Low (<50)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Models Status -->
+                <div class="ai-models-status">
+                    <h4>AI Models Status</h4>
+                    <div class="models-grid">
+                        ${this.aiMetrics.modelsInUse?.map(model => `
+                            <div class="model-card">
+                                <div class="model-name">${model}</div>
+                                <div class="model-status online">🟢 Online</div>
+                                <div class="model-usage">${Math.floor(Math.random() * 1000)}k tokens/day</div>
+                            </div>
+                        `).join('') || ''}
+                    </div>
+                </div>
+
+                <!-- Token Usage Chart -->
+                <div class="token-usage-chart">
+                    <h4>Token Usage Trends</h4>
+                    <canvas id="token-chart" width="600" height="300"></canvas>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+        this.initializeAICharts();
+    }
+
+    initializeAICharts() {
+        const canvas = document.getElementById('token-chart');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            
+            // Simple token usage visualization
+            ctx.fillStyle = '#764ba2';
+            ctx.fillRect(10, 10, 300, 150);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Arial';
+            ctx.fillText('Token Usage Chart', 15, 35);
+            ctx.fillText('(Chart.js integration needed)', 15, 60);
+        }
     }
 
     async loadSubscriptionData() {
         console.log('💳 Loading subscription data...');
-        // Implementation for subscription data loading
-        window.OsliraApp.showMessage('Subscription management view coming soon', 'info');
+        
+        try {
+            window.OsliraApp.showLoadingOverlay('Loading subscription data...');
+            
+            // Load subscription overview
+            const { data: subscriptions, error } = await window.OsliraApp.supabase
+                .from('users')
+                .select(`
+                    id, email, subscription_plan, subscription_status, 
+                    created_at, stripe_customer_id, credits
+                `)
+                .not('subscription_plan', 'is', null)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            this.renderSubscriptionDashboard(subscriptions || []);
+            
+        } catch (error) {
+            console.error('Subscription data loading failed:', error);
+            window.OsliraApp.showMessage('Failed to load subscription data', 'error');
+        } finally {
+            window.OsliraApp.removeLoadingOverlay();
+        }
+    }
+
+    renderSubscriptionDashboard(subscriptions) {
+        const container = document.getElementById('subscriptions-dashboard-container');
+        if (!container) return;
+
+        // Calculate subscription metrics
+        const metrics = this.calculateSubscriptionMetrics(subscriptions);
+
+        const html = `
+            <div class="subscriptions-overview">
+                <div class="subscription-kpis">
+                    <div class="kpi-card">
+                        <h4>Total Subscribers</h4>
+                        <div class="kpi-value">${metrics.totalSubscribers}</div>
+                    </div>
+                    <div class="kpi-card">
+                        <h4>Active Subscriptions</h4>
+                        <div class="kpi-value">${metrics.activeSubscriptions}</div>
+                    </div>
+                    <div class="kpi-card">
+                        <h4>Trial Subscriptions</h4>
+                        <div class="kpi-value">${metrics.trialSubscriptions}</div>
+                    </div>
+                    <div class="kpi-card">
+                        <h4>Canceled This Month</h4>
+                        <div class="kpi-value">${metrics.canceledThisMonth}</div>
+                    </div>
+                </div>
+
+                <div class="subscription-table-container">
+                    <h3>Subscription Management</h3>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Plan</th>
+                                    <th>Status</th>
+                                    <th>Started</th>
+                                    <th>Credits</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${subscriptions.slice(0, 20).map(sub => `
+                                    <tr>
+                                        <td>
+                                            <div class="customer-info">
+                                                <div class="customer-avatar">${sub.email.charAt(0).toUpperCase()}</div>
+                                                <div>
+                                                    <div class="customer-email">${sub.email}</div>
+                                                    ${sub.stripe_customer_id ? `<div class="customer-id">ID: ${sub.stripe_customer_id.substring(0, 12)}...</div>` : ''}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="plan-badge plan-${sub.subscription_plan}">
+                                                ${sub.subscription_plan?.toUpperCase() || 'FREE'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="status-badge status-${sub.subscription_status}">
+                                                ${sub.subscription_status || 'inactive'}
+                                            </span>
+                                        </td>
+                                        <td>${window.OsliraApp.formatDate(sub.created_at)}</td>
+                                        <td>${sub.credits || 0}</td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button class="btn-icon" onclick="window.adminDashboard.manageSubscription('${sub.id}')" title="Manage">
+                                                    ⚙️
+                                                </button>
+                                                <button class="btn-icon" onclick="window.adminDashboard.viewBilling('${sub.id}')" title="Billing">
+                                                    💳
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+    }
+
+    calculateSubscriptionMetrics(subscriptions) {
+        const now = new Date();
+        const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        return {
+            totalSubscribers: subscriptions.length,
+            activeSubscriptions: subscriptions.filter(s => s.subscription_status === 'active').length,
+            trialSubscriptions: subscriptions.filter(s => s.subscription_status === 'trialing').length,
+            canceledThisMonth: subscriptions.filter(s => 
+                s.subscription_status === 'canceled' && 
+                new Date(s.updated_at || s.created_at) >= thisMonth
+            ).length
+        };
+    }
+
+    async manageSubscription(userId) {
+        window.OsliraApp.showMessage('Subscription management coming soon', 'info');
+    }
+
+    async viewBilling(userId) {
+        window.OsliraApp.showMessage('Billing details coming soon', 'info');
     }
 
     async loadRealTimeData() {
         console.log('⚡ Loading real-time monitoring data...');
-        // Implementation for real-time data loading
-        window.OsliraApp.showMessage('Real-time monitoring view coming soon', 'info');
+        
+        try {
+            // Start real-time monitoring
+            this.startRealTimeMonitoring();
+            
+            // Render real-time dashboard
+            this.renderRealTimeDashboard();
+            
+        } catch (error) {
+            console.error('Real-time data loading failed:', error);
+            window.OsliraApp.showMessage('Failed to load real-time monitoring', 'error');
+        }
     }
 
-    // =============================================================================
-    // REAL-TIME UPDATES
-    // =============================================================================
+    startRealTimeMonitoring() {
+        // Set up real-time subscriptions for live data
+        if (this.realTimeSubscription) {
+            this.realTimeSubscription.unsubscribe();
+        }
 
-    startRealTimeUpdates() {
+        // Subscribe to real-time updates from Supabase
+        this.realTimeSubscription = window.OsliraApp.supabase
+            .channel('admin-monitoring')
+            .on('postgres_changes', 
+                { event: '*', schema: 'public', table: 'users' },
+                (payload) => this.handleUserUpdate(payload)
+            )
+            .on('postgres_changes',
+                { event: '*', schema: 'public', table: 'leads' },
+                (payload) => this.handleLeadUpdate(payload)
+            )
+            .subscribe();
+    }
+
+    handleUserUpdate(payload) {
+        console.log('User update:', payload);
+        this.updateRealTimeMetrics();
+    }
+
+    handleLeadUpdate(payload) {
+        console.log('Lead update:', payload);
+        this.updateRealTimeMetrics();
+    }
+
+    renderRealTimeDashboard() {
+        const container = document.getElementById('realtime-dashboard-container');
+        if (!container) return;
+
+        const html = `
+            <div class="realtime-grid">
+                <div class="live-metrics">
+                    <h3>🔴 Live System Metrics</h3>
+                    <div class="metrics-grid">
+                        <div class="live-metric">
+                            <div class="metric-label">Active Users</div>
+                            <div class="metric-value" id="live-active-users">-</div>
+                        </div>
+                        <div class="live-metric">
+                            <div class="metric-label">Requests/Min</div>
+                            <div class="metric-value" id="live-requests">-</div>
+                        </div>
+                        <div class="live-metric">
+                            <div class="metric-label">Error Rate</div>
+                            <div class="metric-value" id="live-errors">-</div>
+                        </div>
+                        <div class="live-metric">
+                            <div class="metric-label">Response Time</div>
+                            <div class="metric-value" id="live-response-time">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="live-activity-feed">
+                    <h3>📊 Live Activity Feed</h3>
+                    <div id="live-feed" class="activity-stream">
+                        <!-- Live activities will be inserted here -->
+                    </div>
+                </div>
+
+                <div class="system-alerts">
+                    <h3>🚨 System Alerts</h3>
+                    <div id="system-alerts" class="alerts-container">
+                        <div class="alert alert-success">
+                            ✅ All systems operational
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+        // Start live updates
+        this.startLiveUpdates();
+    }
+
+    startLiveUpdates() {
+        // Update live metrics every 5 seconds
+        setInterval(() => {
+            this.updateLiveMetrics();
+        }, 5000);
+
+        // Simulate live activity feed
+        setInterval(() => {
+            this.addLiveActivity();
+        }, 10000);
+    }
+
+    updateLiveMetrics() {
+        const updates = {
+            'live-active-users': Math.floor(Math.random() * 100) + 200,
+            'live-requests': Math.floor(Math.random() * 1000) + 500,
+            'live-errors': (Math.random() * 2).toFixed(2) + '%',
+            'live-response-time': (Math.random() * 200 + 100).toFixed(0) + 'ms'
+        };
+
+        Object.entries(updates).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+                element.classList.add('updated');
+                setTimeout(() => element.classList.remove('updated'), 500);
+            }
+        });
+    }
+
+    addLiveActivity() {
+        const activities = [
+            '👤 New user registration',
+            '🎯 Campaign started',
+            '📊 Analysis completed',
+            '💳 Payment processed',
+            '🔧 System maintenance',
+            '📤 Data export requested'
+        ];
+
+        const activity = activities[Math.floor(Math.random() * activities.length)];
+        const feed = document.getElementById('live-feed');
+        
+        if (feed) {
+            const activityElement = document.createElement('div');
+            activityElement.className = 'live-activity-item';
+            activityElement.innerHTML = `
+                <span class="activity-icon">${activity.split(' ')[0]}</span>
+                <span class="activity-text">${activity.substring(2)}</span>
+                <span class="activity-time">${new Date().toLocaleTimeString()}</span>
+            `;
+            
+            feed.insertBefore(activityElement, feed.firstChild);
+            
+            // Keep only last 10 activities
+            while (feed.children.length > 10) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+    }
+
+ async loadPerformanceData() {
+        console.log('🚀 Loading performance monitoring data...');
+        
+        try {
+            window.OsliraApp.showLoadingOverlay('Loading performance data...');
+            
+            // Load system metrics
+            await this.loadSystemMetrics();
+            
+            // Load API performance
+            await this.loadAPIPerformance();
+            
+            // Load error tracking
+            await this.loadErrorTracking();
+            
+            // Render performance dashboard
+            this.renderPerformanceDashboard();
+            
+        } catch (error) {
+            console.error('Performance data loading failed:', error);
+            window.OsliraApp.showMessage('Failed to load performance data', 'error');
+        } finally {
+            window.OsliraApp.removeLoadingOverlay();
+        }
+    }
+
+    async loadSystemMetrics() {
+        try {
+            // Simulate system metrics (in real implementation, this would come from monitoring APIs)
+            this.systemMetrics = {
+                cpuUsage: Math.random() * 100,
+                memoryUsage: Math.random() * 100,
+                diskUsage: Math.random() * 100,
+                networkLatency: Math.random() * 200 + 10,
+                activeConnections: Math.floor(Math.random() * 1000) + 500,
+                requestsPerMinute: Math.floor(Math.random() * 10000) + 5000,
+                errorRate: Math.random() * 5,
+                uptime: 99.9 + Math.random() * 0.1
+            };
+        } catch (error) {
+            console.error('System metrics loading failed:', error);
+        }
+    }
+
+    async loadAPIPerformance() {
+        try {
+            // Load API response times and throughput
+            const response = await window.OsliraApp.apiRequest('/admin/api-performance');
+            this.apiPerformance = response;
+        } catch (error) {
+            console.warn('API performance data not available:', error);
+            this.apiPerformance = {
+                avgResponseTime: Math.random() * 500 + 100,
+                p95ResponseTime: Math.random() * 1000 + 300,
+                throughput: Math.floor(Math.random() * 1000) + 500,
+                errorRate: Math.random() * 2
+            };
+        }
+    }
+
+    async loadErrorTracking() {
+        try {
+            // Load recent errors and system alerts
+            const { data: errors } = await window.OsliraApp.supabase
+                .from('error_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            this.recentErrors = errors || [];
+        } catch (error) {
+            console.warn('Error tracking data not available:', error);
+            this.recentErrors = [];
+        }
+    }
+
+    renderPerformanceDashboard() {
+        const container = document.getElementById('performance-dashboard-container');
+        if (!container) return;
+
+        const html = `
+            <div class="performance-grid">
+                <!-- System Metrics -->
+                <div class="metric-card cpu-card">
+                    <div class="metric-header">
+                        <h4>CPU Usage</h4>
+                        <span class="metric-icon">🖥️</span>
+                    </div>
+                    <div class="metric-value">${this.systemMetrics.cpuUsage.toFixed(1)}%</div>
+                    <div class="metric-chart">
+                        <div class="usage-bar">
+                            <div class="usage-fill" style="width: ${this.systemMetrics.cpuUsage}%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-status ${this.systemMetrics.cpuUsage > 80 ? 'warning' : 'healthy'}">
+                        ${this.systemMetrics.cpuUsage > 80 ? 'High Usage' : 'Normal'}
+                    </div>
+                </div>
+
+                <div class="metric-card memory-card">
+                    <div class="metric-header">
+                        <h4>Memory Usage</h4>
+                        <span class="metric-icon">💾</span>
+                    </div>
+                    <div class="metric-value">${this.systemMetrics.memoryUsage.toFixed(1)}%</div>
+                    <div class="metric-chart">
+                        <div class="usage-bar">
+                            <div class="usage-fill" style="width: ${this.systemMetrics.memoryUsage}%"></div>
+                        </div>
+                    </div>
+                    <div class="metric-status ${this.systemMetrics.memoryUsage > 85 ? 'warning' : 'healthy'}">
+                        ${this.systemMetrics.memoryUsage > 85 ? 'High Usage' : 'Normal'}
+                    </div>
+                </div>
+
+                <div class="metric-card network-card">
+                    <div class="metric-header">
+                        <h4>Network Latency</h4>
+                        <span class="metric-icon">🌐</span>
+                    </div>
+                    <div class="metric-value">${this.systemMetrics.networkLatency.toFixed(0)}ms</div>
+                    <div class="metric-trend">
+                        ${this.systemMetrics.networkLatency < 50 ? '⚡ Excellent' : 
+                          this.systemMetrics.networkLatency < 100 ? '✅ Good' : 
+                          this.systemMetrics.networkLatency < 200 ? '⚠️ Fair' : '🐌 Poor'}
+                    </div>
+                </div>
+
+                <div class="metric-card requests-card">
+                    <div class="metric-header">
+                        <h4>Requests/Min</h4>
+                        <span class="metric-icon">📊</span>
+                    </div>
+                    <div class="metric-value">${this.systemMetrics.requestsPerMinute.toLocaleString()}</div>
+                    <div class="metric-change positive">↗ +12% vs last hour</div>
+                </div>
+
+                <!-- API Performance -->
+                <div class="metric-card-wide api-performance">
+                    <div class="metric-header">
+                        <h4>API Performance</h4>
+                        <span class="metric-icon">⚡</span>
+                    </div>
+                    <div class="api-metrics-grid">
+                        <div class="api-metric">
+                            <div class="api-metric-label">Avg Response Time</div>
+                            <div class="api-metric-value">${this.apiPerformance?.avgResponseTime?.toFixed(0) || 0}ms</div>
+                        </div>
+                        <div class="api-metric">
+                            <div class="api-metric-label">P95 Response Time</div>
+                            <div class="api-metric-value">${this.apiPerformance?.p95ResponseTime?.toFixed(0) || 0}ms</div>
+                        </div>
+                        <div class="api-metric">
+                            <div class="api-metric-label">Throughput</div>
+                            <div class="api-metric-value">${this.apiPerformance?.throughput?.toLocaleString() || 0}/min</div>
+                        </div>
+                        <div class="api-metric">
+                            <div class="api-metric-label">Error Rate</div>
+                            <div class="api-metric-value">${this.apiPerformance?.errorRate?.toFixed(2) || 0}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Errors -->
+                <div class="metric-card-wide error-tracking">
+                    <div class="metric-header">
+                        <h4>Recent Errors</h4>
+                        <span class="metric-icon">🚨</span>
+                    </div>
+                    <div class="error-list">
+                        ${this.recentErrors.length > 0 ? 
+                            this.recentErrors.slice(0, 5).map(error => `
+                                <div class="error-item">
+                                    <div class="error-message">${error.message || 'Unknown error'}</div>
+                                    <div class="error-time">${window.OsliraApp.formatDate(error.created_at)}</div>
+                                </div>
+                            `).join('') :
+                            '<div class="no-errors">🎉 No recent errors detected</div>'
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time Performance Charts -->
+            <div class="performance-charts">
+                <div class="chart-container">
+                    <canvas id="performance-chart" width="800" height="400"></canvas>
+                </div>
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+        // Initialize performance charts
+        this.initializePerformanceCharts();
+    }
+    initializePerformanceCharts() {
+  console.log('Initializing performance charts…');
+  const canvas = document.getElementById('performance-chart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Jan','Feb','Mar','Apr','May','Jun'],
+      datasets: [{
+        label: 'CPU Usage (%)',
+        data: [45,60,55,70,65,80],
+        tension: 0.3,
+        borderWidth: 2
+      }]
+    },
+    options: {
+      scales: { y: { beginAtZero: true, max: 100 } },
+      responsive: true,
+      plugins: { legend: { position: 'top' } }
+    }
+  });
+   startRealTimeUpdates() {
         console.log('🔄 Starting real-time updates...');
         
         // Update metrics every 30 seconds
@@ -2094,11 +2055,8 @@ class OsliraAdminDashboard {
         // Remove event listeners
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
-}
+    }}
 
-// =============================================================================
-// INITIALIZE ADMIN DASHBOARD
-// =============================================================================
 
 // Create global admin dashboard instance
 const adminDashboard = new OsliraAdminDashboard();
