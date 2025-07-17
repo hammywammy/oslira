@@ -4,65 +4,108 @@
     <link rel="icon" type="image/png" href="./assets/oslira-logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" 
-          content="default-src 'self'; 
-                   script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
-                   style-src 'self' 'unsafe-inline';
-                   connect-src 'self' https://*.supabase.co https://*.workers.dev;
-                   img-src 'self' data: https:;">
     <title>Sign In - Oslira</title>
     <script src="/env-config.js"></script>
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' 'unsafe-inline' https://js.sentry-cdn.com https://cdn.jsdelivr.net;
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                   font-src 'self' https://fonts.gstatic.com;
+                   img-src 'self' data: https:;
+                   connect-src 'self' https:;">
     <link rel="stylesheet" href="/css/auth.css">
 </head>
 <body>
     <a href="#main-content" class="skip-nav">Skip to main content</a>
     
-    <main role="main" id="main-content" class="auth-container">
+    <div class="auth-container" id="main-content">
+        <!-- Main Sign In Card -->
         <div class="auth-card" id="main-card">
-            <header class="auth-header">
+            <div class="auth-header">
                 <div class="logo">
-                    <h1>Welcome to Oslira</h1>
+                    <img src="./assets/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+                    <h1>Oslira</h1>
                 </div>
-                <p class="auth-subtitle">AI-powered lead intelligence platform</p>
-                <p class="auth-description">Enter your email to access your account or create a new one</p>
-            </header>
+                <div class="auth-subtitle">Welcome back</div>
+                <div class="auth-description">
+                    Sign in to your account to continue analyzing leads and generating personalized outreach.
+                </div>
+            </div>
 
-            <form id="auth-form" aria-labelledby="auth-form-title">
-                <div class="error-message" id="error-display" role="alert" aria-live="polite"></div>
-                
+            <div class="error-message" id="error-display" role="alert" aria-live="polite">
+                <!-- Error messages will appear here -->
+            </div>
+
+            <form id="auth-form" novalidate>
                 <div class="form-group">
-                    <label class="form-label" for="email">Email Address</label>
+                    <label for="email" class="form-label">Email Address</label>
                     <input 
                         type="email" 
                         id="email" 
-                        class="form-input" 
-                        placeholder="you@company.com" 
+                        class="form-input"
+                        placeholder="Enter your email address"
                         required
-                        aria-describedby="email-error"
                         autocomplete="email"
+                        aria-describedby="email-help"
                     >
+                    <div id="email-help" class="form-help">
+                        We'll send you a secure sign-in link
+                    </div>
                 </div>
-                
-                <button type="submit" id="submit-button" class="auth-button">
-                    <span class="button-text">Continue with Email</span>
-                    <div class="loading-spinner" aria-hidden="true">
+
+                <button type="submit" class="auth-button" id="signin-button">
+                    <span class="button-text">Send Sign-In Link</span>
+                    <div class="loading-spinner">
                         <div class="spinner"></div>
                         <span>Sending...</span>
                     </div>
                 </button>
             </form>
+
+            <div class="auth-footer">
+                <p class="auth-note">
+                    New to Oslira? The sign-in link will automatically create your account.
+                </p>
+                <p class="auth-links">
+                    <a href="/">← Back to Home</a>
+                    <span class="separator">•</span>
+                    <a href="/privacy.html">Privacy Policy</a>
+                    <span class="separator">•</span>
+                    <a href="/terms.html">Terms</a>
+                </p>
+            </div>
         </div>
 
-        <div class="auth-card success-state" id="success-card">
-            <div class="success-icon" aria-hidden="true">📧</div>
+        <!-- Success State Card -->
+        <div class="auth-card success-state" id="success-card" style="display: none;">
+            <div class="success-icon">✓</div>
             <h2 class="success-title">Check Your Email</h2>
-            <p class="success-description">We sent a secure login link to:</p>
-            <p class="sent-email" id="sent-email" aria-live="polite"></p>
+            <div class="success-description">
+                We've sent a secure sign-in link to:
+            </div>
+            <div class="sent-email" id="sent-email">
+                <!-- Email will be inserted here -->
+            </div>
+            <div class="success-description" style="margin-top: 16px;">
+                Click the link in your email to sign in. The link will expire in 1 hour for security.
+            </div>
+            
+            <div class="success-actions">
+                <button type="button" class="auth-button secondary" onclick="window.location.reload()">
+                    Try Different Email
+                </button>
+                <p class="success-note">
+                    Didn't receive the email? Check your spam folder or try again in a few minutes.
+                </p>
+            </div>
         </div>
-    </main>
+    </div>
 
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="/js/shared-code.js"></script>
-<script src="/js/auth.js" defer></script>
+    <!-- External Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js" crossorigin="anonymous"></script>
+
+    <!-- Main Script -->
+    <script src="/js/auth.js"></script>
 </body>
 </html>
