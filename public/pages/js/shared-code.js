@@ -381,13 +381,18 @@ async function apiRequest(endpoint, options = {}) {
         throw error;
     }
 }
-formatDateInUserTimezone(dateString, options = {}) {
+formatDateInUserTimezone(dateString, options) {
+    // Set default options if not provided
+    if (!options) {
+        options = {};
+    }
+    
     // Add caching to prevent excessive calls
     if (!this.dateFormatCache) {
         this.dateFormatCache = new Map();
     }
     
-    const cacheKey = `${dateString}_${JSON.stringify(options)}`;
+    const cacheKey = dateString + '_' + JSON.stringify(options);
     if (this.dateFormatCache.has(cacheKey)) {
         return this.dateFormatCache.get(cacheKey);
     }
@@ -400,15 +405,22 @@ formatDateInUserTimezone(dateString, options = {}) {
         const date = new Date(dateString);
         const timezone = this.getUserTimezone();
         
+        // Build options object manually instead of using spread operator
         const defaultOptions = {
             year: 'numeric',
             month: 'short', 
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
-            timeZone: timezone,
-            ...options
+            timeZone: timezone
         };
+        
+        // Merge options manually
+        for (const key in options) {
+            if (options.hasOwnProperty(key)) {
+                defaultOptions[key] = options[key];
+            }
+        }
         
         const formatted = date.toLocaleString('en-US', defaultOptions);
         
