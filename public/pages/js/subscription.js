@@ -56,7 +56,7 @@
                 }
 
                 // Get configuration from API
-                config = await fetchConfig();
+                config = window.CONFIG || await loadConfigFromAPI();
                 
                 // Initialize Supabase client
                 supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
@@ -82,32 +82,17 @@
             }
         }
 
-        // Fetch configuration from API
-        async function fetchConfig() {
-            try {
-                const response = await fetch('/api/config');
-                
-                if (!response.ok) {
-                    throw new Error(`Config API returned ${response.status}: ${response.statusText}`);
-                }
-                
-                const configData = await response.json();
-                
-                if (configData.error) {
-                    throw new Error(configData.error);
-                }
-
-                if (!configData.supabaseUrl || !configData.supabaseAnonKey) {
-                    throw new Error('Invalid configuration received from API');
-                }
-
-                console.log('✅ Config loaded successfully');
-                return configData;
-
-            } catch (error) {
-                throw new Error(`Failed to load configuration: ${error.message}`);
-            }
-        }
+async function loadConfigFromAPI() {
+    const response = await fetch('/api/config');
+    if (!response.ok) {
+        throw new Error(`Config API returned ${response.status}`);
+    }
+    const configData = await response.json();
+    if (configData.error) {
+        throw new Error(configData.error);
+    }
+    return configData;
+}
 
         // Authentication check
         async function checkAuth() {
