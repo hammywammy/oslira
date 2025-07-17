@@ -339,6 +339,48 @@ function getUserTimezone() {
     return localStorage.getItem('userTimezone') || 'UTC';
 }
 
+
+// =============================================================================
+// 7. API HELPERS
+// =============================================================================
+
+async function apiRequest(endpoint, options = {}) {
+    const config = window.OsliraApp.config;
+    const session = window.OsliraApp.session;
+    
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            ...(session ? { 'Authorization': `Bearer ${session.access_token}` } : {})
+        }
+    };
+    
+    const finalOptions = {
+        ...defaultOptions,
+        ...options,
+        headers: { ...defaultOptions.headers, ...options.headers }
+    };
+    
+    try {
+        const response = await fetch(config.workerUrl + endpoint, finalOptions);
+        
+        if (!response.ok) {
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch {
+                errorData = { error: `HTTP ${response.status}` };
+            }
+            throw new Error(errorData.error || errorData.message || `Request failed: ${response.status}`);
+        }
+        
+        return await response.json();
+        
+    } catch (error) {
+        console.error(`API request failed [${endpoint}]:`, error);
+        throw error;
+    }
+}
 formatDateInUserTimezone(dateString, options = {}) {
     // Add caching to prevent excessive calls
     if (!this.dateFormatCache) {
@@ -388,48 +430,6 @@ formatDateInUserTimezone(dateString, options = {}) {
         return errorResult;
     }
 }
-// =============================================================================
-// 7. API HELPERS
-// =============================================================================
-
-async function apiRequest(endpoint, options = {}) {
-    const config = window.OsliraApp.config;
-    const session = window.OsliraApp.session;
-    
-    const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            ...(session ? { 'Authorization': `Bearer ${session.access_token}` } : {})
-        }
-    };
-    
-    const finalOptions = {
-        ...defaultOptions,
-        ...options,
-        headers: { ...defaultOptions.headers, ...options.headers }
-    };
-    
-    try {
-        const response = await fetch(config.workerUrl + endpoint, finalOptions);
-        
-        if (!response.ok) {
-            let errorData;
-            try {
-                errorData = await response.json();
-            } catch {
-                errorData = { error: `HTTP ${response.status}` };
-            }
-            throw new Error(errorData.error || errorData.message || `Request failed: ${response.status}`);
-        }
-        
-        return await response.json();
-        
-    } catch (error) {
-        console.error(`API request failed [${endpoint}]:`, error);
-        throw error;
-    }
-}
-
 // =============================================================================
 // 8. UI UTILITIES
 // =============================================================================
