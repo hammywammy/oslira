@@ -1,3 +1,4 @@
+class OsliraCampaigns {
 updateMessageTemplates() {
     const outreachMode = document.getElementById('outreach-mode')?.value;
     const variantAMessage = document.getElementById('variant-a-message');
@@ -3853,7 +3854,7 @@ marketingpro,Marketing Pro,marketing@business.com,Business LLC`;
 // Depends on: shared-core.js (must be loaded first)
 // ==========================================
 
-class OsliraCampaigns {
+
     constructor() {
         this.selectedCampaign = null;
         this.campaigns = [];
