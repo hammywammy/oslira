@@ -333,12 +333,7 @@ class OsliraDashboard {
                 </div>`;
                 
                 const isSelected = this.selectedLeads.has(lead.id);
-                const formattedDate = window.OsliraApp.formatDate(lead.created_at, {
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                const formattedDate = this.formatDateCached(lead.created_at);
                 
                 return `
                     <tr class="lead-row ${isSelected ? 'selected' : ''}" data-lead-id="${lead.id}">
@@ -1046,7 +1041,7 @@ buildProfileHeader(lead, analysisType, scoreClass, platform) {
     `;
 }
 
-    formatDateCached(dateString) {
+   formatDateCached(dateString) {
     // Create a cache key
     const cacheKey = `date_${dateString}`;
     
@@ -1059,13 +1054,12 @@ buildProfileHeader(lead, analysisType, scoreClass, platform) {
         return this.dateCache.get(cacheKey);
     }
     
-    // Format the date only once
-    const formatted = window.OsliraApp.formatDate(dateString);
+    // Use YOUR existing function instead
+    const formatted = window.OsliraApp.formatDateInUserTimezone(dateString);
     this.dateCache.set(cacheKey, formatted);
     
     return formatted;
 }
-
 // 4. FIX: Add buildBasicInfoSection method
 buildBasicInfoSection(lead, analysisType, platform, score) {
     return `
