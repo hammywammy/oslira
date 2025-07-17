@@ -50,7 +50,8 @@ async function loadAppConfig() {
     try {
         console.log('🔧 Loading Oslira configuration...');
         
-        const response = await fetch('/config');
+        // Try Netlify Functions first
+        const response = await fetch('/.netlify/edge-functions/config');
         if (!response.ok) {
             throw new Error(`Config endpoint failed: ${response.status}`);
         }
@@ -58,25 +59,23 @@ async function loadAppConfig() {
         const config = await response.json();
         
         // Validate required config
-        const required = ['supabaseUrl', 'supabaseAnonKey', 'workerUrl'];
+        const required = ['supabaseUrl', 'supabaseAnonKey'];
         const missing = required.filter(key => !config[key]);
         
         if (missing.length > 0) {
             throw new Error(`Missing required config: ${missing.join(', ')}`);
         }
         
-        // Store in global state
         Object.assign(window.OsliraApp.config, config);
-        
-        console.log('✅ Configuration loaded successfully');
+        console.log('✅ Configuration loaded from Netlify');
         return config;
         
     } catch (error) {
         console.error('❌ Configuration failed:', error);
         
-        // Check if we're in demo mode (development)
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            console.warn('🚧 Using demo configuration for development');
+        // Demo mode for localhost
+        if (window.location.hostname === 'localhost') {
+            console.warn('🚧 Using demo configuration');
             return setupDemoConfig();
         }
         
