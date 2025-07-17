@@ -2056,7 +2056,7 @@ class OsliraAdminDashboard {
         // Remove event listeners
         document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     }
-    }}
+    }
 
 
 // Create global admin dashboard instance
