@@ -381,7 +381,7 @@ async function apiRequest(endpoint, options = {}) {
         throw error;
     }
 }
-formatDateInUserTimezone(dateString, options) {
+function formatDateInUserTimezone(dateString, options) {
     // Set default options if not provided
     if (!options) {
         options = {};
