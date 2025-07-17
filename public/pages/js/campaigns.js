@@ -1,8 +1,23 @@
 // ==========================================
 // CAMPAIGNS.JS - Campaign Management System
-// Depends on: shared-core.js (must be loaded first)
+// Depends on: shared-code.js (must be loaded first)
 // ==========================================
+window.addEventListener('error', (event) => {
+    if (event.message && event.message.includes('Could not establish connection')) {
+        console.warn('Browser extension communication error (non-critical):', event.message);
+        event.preventDefault();
+        return false;
+    }
+});
 
+window.addEventListener('unhandledrejection', (event) => {
+    if (event.reason && event.reason.message && 
+        event.reason.message.includes('Could not establish connection')) {
+        console.warn('Browser extension promise rejection (non-critical):', event.reason.message);
+        event.preventDefault();
+        return false;
+    }
+});
 class OsliraCampaigns {
     constructor() {
         this.selectedCampaign = null;
@@ -29,7 +44,7 @@ class OsliraCampaigns {
         try {
             console.log('🚀 Initializing campaigns...');
             
-            // Wait for shared core initialization
+            // Wait for shared code initialization
             await window.OsliraApp.initialize();
             
             // Campaigns-specific setup
@@ -3224,7 +3239,7 @@ if (typeof define === 'function' && define.amd) {
     define('campaigns', [], () => ({ OsliraCampaigns, campaigns }));
 }
 
-console.log('📊 Campaigns module loaded completely - uses shared-core.js');
+console.log('📊 Campaigns module loaded completely - uses shared-code.js');
 console.log('✅ All campaigns functionality ready');
 
 // Development helpers (remove in production)
