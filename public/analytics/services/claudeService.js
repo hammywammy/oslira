@@ -1315,3 +1315,5 @@ async makeSecureRequest(endpoint, payload) {
             console.warn('⚠️ Failed to log to Supabase:', error);
         }
     }
+    export { SecureClaudeService };
+
