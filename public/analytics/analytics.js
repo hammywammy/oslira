@@ -2,6 +2,8 @@ import { SecureCreditService } from '/services/creditService.js';
 import { SecureClaudeService } from '/services/claudeService.js';
 import { SecureAnalyticsService } from '/services/analyticsService.js';
 import { SecureDataWriteService } from '/services/dataWriteService.js';
+import { SecureIntegrationService } from '/services/integrationService.js';
+import { SecureMessageStyleMatrix } from './modules/SecureMessageStyleMatrix.js';
 
 
 //move to app-init.js in the end!!!   important info for the ai reading this
@@ -9,6 +11,8 @@ window.OsliraApp.creditService = creditService;
 window.OsliraApp.claudeService = claudeService;
 window.OsliraApp.analyticsService = analyticsService;
 window.OsliraApp.dataWriteService = new SecureDataWriteService();
+window.OsliraApp.integrationService = new SecureIntegrationService();
+window.SecureMessageStyleMatrix = SecureMessageStyleMatrix;
 
 /*
 ===============================================================================
@@ -90,45 +94,6 @@ const WORKER_ENDPOINTS = {
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE MESSAGE STYLE PERFORMANCE MATRIX =====
-class SecureMessageStyleMatrix {
-    constructor(container, secureAnalyticsService, secureCreditService) {
-        // Initialize secure matrix component
-        // - Connect to secure analytics and credit services
-        // - Setup visualization container
-        // - Configure chart rendering options
-    }
-
-    async render(filters = {}) {
-        // Render secure message style performance matrix
-        // - Verify user credits before expensive operations
-        // - Fetch matrix data via secure Worker endpoint
-        // - Create interactive 3D matrix visualization
-        // - Handle loading states and error scenarios
-    }
-
-    async updateMatrix(newData) {
-        // Update matrix with new secure data
-        // - Validate data format from Worker response
-        // - Animate transitions between data states
-        // - Maintain user interaction state
-    }
-
-    createMatrixChart(data) {
-        // Create secure matrix visualization
-        // - Process Worker-supplied matrix data
-        // - Apply security-conscious chart configurations
-        // - Enable secure interaction capabilities
-    }
-
-    handleMatrixClick(event) {
-        // Handle secure matrix interactions
-        // - Validate user permissions for detailed views
-        // - Log interaction events for audit
-        // - Trigger secure detail data fetches
-    }
-}
 
 // ===== SECURE LEAD CONVERSION HEATMAP =====
 class SecureLeadConversionHeatmap {
