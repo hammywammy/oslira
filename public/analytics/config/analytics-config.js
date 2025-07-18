@@ -1,3 +1,10 @@
+import { CHART_THEMES } from '../utils/chartThemes.js';
+import { LEAD_TYPES } from '../utils/leadTypes.js';
+import { MESSAGE_STYLES } from '../utils/messageStyles.js';
+import { PERFORMANCE_THRESHOLDS } from '../utils/performanceThresholds.js';
+import { CACHE_KEYS } from '../utils/cacheKeys.js';
+import { EXPORT_CONFIG } from '../utils/exportConfig.js';
+
 const ANALYTICS_CONFIG = {
     // Supabase configuration - dynamically loaded from env
     supabase: {
@@ -181,6 +188,14 @@ const ANALYTICS_CONFIG = {
         enableFocusIndicators: true
     },
 
+    chartThemes: CHART_THEMES,
+    leadTypes: LEAD_TYPES,
+    messageStyles: MESSAGE_STYLES,
+    performanceThresholds: PERFORMANCE_THRESHOLDS,
+    cacheKeys: CACHE_KEYS,
+    exportConfig: EXPORT_CONFIG,
+
+
     versioning: {
       version: 'v1.3.0',
       buildDate: '2025-07-18',
@@ -261,3 +276,13 @@ const disableFeature = (flagName) => {
 const getFeatureFlags = () => {
     return { ...ANALYTICS_CONFIG.featureFlags };
 };
+
+export {
+  ANALYTICS_CONFIG,
+  isFeatureEnabled,
+  enableFeature,
+  disableFeature,
+  getFeatureFlags,
+  loadDynamicConfig
+};
+
