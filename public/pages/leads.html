@@ -1,94 +1,160 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/png" href="./assets/oslira-logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lead Research Intelligence - Oslira</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="./assets/oslira-logo.png">
+    
+    <!-- Environment Config -->
     <script src="/env-config.js"></script>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.sentry-cdn.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:;">
+    
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.sentry-cdn.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https: wss:; font-src 'self' data:; media-src 'self' blob: data:;">
+    
+    <!-- Styles -->
     <link rel="stylesheet" href="/css/leads.css">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/js/shared-code.js" as="script">
+    <link rel="preload" href="/js/leads.js" as="script">
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="AI-powered lead research and analysis platform for strategic prospecting and outreach optimization.">
+    <meta name="keywords" content="lead research, AI analysis, prospect intelligence, social media analysis, business development">
+    <meta name="author" content="Oslira">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Lead Research Intelligence - Oslira">
+    <meta property="og:description" content="AI-powered lead research and analysis platform">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="./assets/oslira-logo.png">
+    
+    <!-- Schema.org Markup -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Oslira Lead Research Intelligence",
+        "description": "AI-powered lead research and analysis platform",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web Browser"
+    }
+    </script>
 </head>
 <body class="dashboard">
-    <aside class="sidebar">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <img src="./assets/oslira-logo.png" alt="Oslira" class="loading-logo">
+            <div class="loading-spinner"></div>
+            <p>Initializing Lead Research Intelligence...</p>
+        </div>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
         <div class="logo">
             <img src="./assets/oslira-logo.png" alt="Oslira Logo" class="logo-image">
-            Oslira
+            <span>Oslira</span>
         </div>
         
-        <nav class="menu">
+        <nav class="menu" role="navigation" aria-label="Main navigation">
             <div class="menu-section">
                 <h4>Main</h4>
-                <a href="dashboard.html" data-page="dashboard">
-                    <span class="icon">📊</span>
-                    Dashboard
+                <a href="/dashboard.html" data-page="dashboard" aria-label="Dashboard">
+                    <span class="icon" aria-hidden="true">📊</span>
+                    <span>Dashboard</span>
                 </a>
-                <a href="leads.html" data-page="leads" class="active">
-                    <span class="icon">🔍</span>
-                    Lead Research
+                <a href="/leads.html" data-page="leads" class="active" aria-label="Lead Research" aria-current="page">
+                    <span class="icon" aria-hidden="true">🔍</span>
+                    <span>Lead Research</span>
                 </a>
-                <a href="analytics.html" data-page="analytics">
-                    <span class="icon">📈</span>
-                    Analytics
+                <a href="/analytics.html" data-page="analytics" aria-label="Analytics">
+                    <span class="icon" aria-hidden="true">📈</span>
+                    <span>Analytics</span>
                 </a>
             </div>
             
             <div class="menu-section">
                 <h4>Tools</h4>
-                <a href="bulk-upload.html" data-page="bulk-upload">
-                    <span class="icon">📤</span>
-                    Bulk Research
+                <a href="/bulk-upload.html" data-page="bulk-upload" aria-label="Bulk Research">
+                    <span class="icon" aria-hidden="true">📤</span>
+                    <span>Bulk Research</span>
                 </a>
-                <a href="messages.html" data-page="messages">
-                    <span class="icon">💬</span>
-                    Message Studio
+                <a href="/messages.html" data-page="messages" aria-label="Message Studio">
+                    <span class="icon" aria-hidden="true">💬</span>
+                    <span>Message Studio</span>
                 </a>
-                <a href="integrations.html" data-page="integrations">
-                    <span class="icon">🔗</span>
-                    Integrations
+                <a href="/campaigns.html" data-page="campaigns" aria-label="Campaigns">
+                    <span class="icon" aria-hidden="true">🚀</span>
+                    <span>Campaigns</span>
+                </a>
+                <a href="/integrations.html" data-page="integrations" aria-label="Integrations">
+                    <span class="icon" aria-hidden="true">🔗</span>
+                    <span>Integrations</span>
                 </a>
             </div>
             
             <div class="menu-section">
                 <h4>Account</h4>
-                <a href="subscription.html" data-page="subscription">
-                    <span class="icon">💳</span>
-                    Subscription
+                <a href="/subscription.html" data-page="subscription" aria-label="Subscription">
+                    <span class="icon" aria-hidden="true">💳</span>
+                    <span>Subscription</span>
                 </a>
-                <a href="settings.html" data-page="settings">
-                    <span class="icon">⚙️</span>
-                    Settings
+                <a href="/settings.html" data-page="settings" aria-label="Settings">
+                    <span class="icon" aria-hidden="true">⚙️</span>
+                    <span>Settings</span>
                 </a>
             </div>
         </nav>
         
+        <!-- Subscription Status -->
         <div class="subscription-status">
             <h4>Current Plan</h4>
-            <p class="plan-name" id="plan-name">Pro Plan</p>
-            <a href="subscription.html" data-page="subscription">Manage Subscription</a>
+            <p class="plan-name" id="plan-name">Loading...</p>
+            <p class="credits-info">
+                <span id="credits-remaining">--</span> credits remaining
+            </p>
+            <a href="/subscription.html" data-page="subscription">Manage Subscription</a>
         </div>
         
+        <!-- User Info -->
         <div class="user-info">
             <p id="user-email">Loading...</p>
-            <a href="javascript:void(0)" id="logout-btn">Sign Out</a>
+            <a href="javascript:void(0)" id="logout-btn" role="button" aria-label="Sign out">Sign Out</a>
         </div>
     </aside>
     
-    <main class="main-content">
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle navigation menu">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+    </button>
+    
+    <!-- Main Content -->
+    <main class="main-content" role="main">
+        <!-- Header -->
         <header>
-            <div>
+            <div class="header-text">
                 <h1>Lead Research Intelligence</h1>
                 <p class="header-subtitle">Independent exploration and qualification lab for strategic prospecting</p>
             </div>
             <div class="header-actions">
-                <button class="secondary-btn" id="export-research-btn">
-                    📥 Export Research
+                <button class="secondary-btn" id="export-research-btn" aria-label="Export research data">
+                    <span aria-hidden="true">📥</span>
+                    <span>Export Research</span>
                 </button>
-                <button class="secondary-btn" id="saved-leads-btn">
-                    📂 Saved Leads
+                <button class="secondary-btn" id="saved-leads-btn" aria-label="View saved leads">
+                    <span aria-hidden="true">📂</span>
+                    <span>Saved Leads</span>
                 </button>
-                <button class="primary-btn" id="new-research-btn">
-                    🔬 New Research
+                <button class="primary-btn" id="new-research-btn" aria-label="Start new research">
+                    <span aria-hidden="true">🔬</span>
+                    <span>New Research</span>
                 </button>
             </div>
         </header>
@@ -98,201 +164,367 @@
             <!-- Main Research Area -->
             <div class="research-main">
                 <!-- Search Section -->
-                <div class="search-section">
+                <section class="search-section" aria-labelledby="search-heading">
                     <div class="search-header">
-                        <h2>Lead Intelligence Search</h2>
+                        <h2 id="search-heading">Lead Intelligence Search</h2>
                         <p>Enter any Instagram username or LinkedIn profile to begin deep analysis</p>
                     </div>
                     
                     <div class="search-input-group">
+                        <label for="research-input" class="sr-only">Profile URL or Username</label>
                         <input 
                             type="text" 
                             id="research-input" 
                             class="search-field" 
-                            placeholder="Enter @username or LinkedIn URL..."
-                            aria-label="Lead research input"
+                            placeholder="Enter @username or profile URL..."
+                            aria-label="Profile URL or username for analysis"
+                            autocomplete="off"
+                            spellcheck="false"
                         >
-                        <button class="primary-btn" id="analyze-lead-btn">
-                            🔍 Analyze Lead
+                        <button class="primary-btn" id="analyze-lead-btn" type="button">
+                            <span aria-hidden="true">🔍</span>
+                            <span>Analyze Lead</span>
                         </button>
                     </div>
                     
-                    <div class="status-message" id="status-message"></div>
-                </div>
+                    <!-- Status Messages -->
+                    <div class="status-message" id="status-message" role="alert" aria-live="polite"></div>
+                    
+                    <!-- Quick Actions -->
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" id="upload-file-btn" type="button" aria-label="Upload file for bulk analysis">
+                            <span aria-hidden="true">📄</span>
+                            <span>Upload File</span>
+                        </button>
+                        <button class="quick-action-btn" id="paste-urls-btn" type="button" aria-label="Paste multiple URLs">
+                            <span aria-hidden="true">📋</span>
+                            <span>Paste URLs</span>
+                        </button>
+                        <button class="quick-action-btn" id="sample-analysis-btn" type="button" aria-label="Try sample analysis">
+                            <span aria-hidden="true">🎯</span>
+                            <span>Try Sample</span>
+                        </button>
+                    </div>
+                    
+                    <!-- File Upload (Hidden) -->
+                    <input type="file" id="file-upload" accept=".csv,.xlsx,.xls" style="display: none;" aria-label="Upload CSV or Excel file">
+                </section>
 
                 <!-- Lead Context Card -->
-                <div class="lead-context-card" id="lead-context-card">
+                <section class="lead-context-card" id="lead-context-card" aria-labelledby="lead-profile-heading">
+                    <!-- Lead Header -->
                     <div class="lead-header">
-                        <img src="https://via.placeholder.com/80" alt="Lead Profile" class="lead-avatar" id="lead-avatar">
+                        <img src="https://via.placeholder.com/80" alt="" class="lead-avatar" id="lead-avatar">
                         <div class="lead-details">
-                            <div class="lead-name" id="lead-name">John Doe</div>
-                            <div class="lead-handle" id="lead-handle">@johndoe</div>
-                            <div class="lead-bio" id="lead-bio">
-                                CEO at TechStartup | Building the future of AI | 🚀 Scaling fast-growing teams and products
-                            </div>
+                            <h3 class="lead-name" id="lead-name">--</h3>
+                            <p class="lead-handle" id="lead-handle">@--</p>
+                            <p class="lead-bio" id="lead-bio">No profile loaded</p>
+                            <div class="lead-badges" id="lead-badges"></div>
                         </div>
                     </div>
                     
-                    <div class="lead-metrics">
-                        <div class="metric-item">
-                            <div class="metric-value" id="followers-count">15.2K</div>
+                    <!-- Lead Metrics -->
+                    <div class="lead-metrics" role="region" aria-label="Profile metrics">
+                        <div class="metric-card">
+                            <div class="metric-value" id="followers-count">--</div>
                             <div class="metric-label">Followers</div>
                         </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="engagement-rate">3.2%</div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="following-count">--</div>
+                            <div class="metric-label">Following</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="posts-count">--</div>
+                            <div class="metric-label">Posts</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="engagement-rate">--%</div>
                             <div class="metric-label">Engagement</div>
                         </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="post-frequency">12</div>
-                            <div class="metric-label">Posts/Month</div>
-                        </div>
-                        <div class="metric-item">
-                            <div class="metric-value" id="growth-trend">+15%</div>
-                            <div class="metric-label">Growth (30d)</div>
-                        </div>
                     </div>
-
-                    <!-- Analysis Grid -->
-                    <div class="analysis-grid">
-                        <div class="analysis-card">
-                            <h4>🎯 Content Analysis</h4>
-                            <ul class="analysis-list" id="content-analysis">
-                                <li>📸 Primarily carousel posts (68%)</li>
-                                <li>🎥 Regular video content (24%)</li>
-                                <li>📝 Educational tone dominant</li>
-                                <li>🔗 Consistent CTA usage</li>
+                    
+                    <!-- Opportunity Meter -->
+                    <div class="opportunity-meter" role="region" aria-labelledby="opportunity-heading">
+                        <h4 id="opportunity-heading" class="meter-title">Opportunity Score</h4>
+                        <div class="meter-container">
+                            <div class="meter-visual" id="meter-visual" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                <div class="meter-score" id="opportunity-score">0</div>
+                            </div>
+                        </div>
+                        <p class="meter-subtitle">AI-powered lead qualification</p>
+                    </div>
+                    
+                    <!-- Score Factors -->
+                    <div class="score-factors" role="region" aria-labelledby="factors-heading">
+                        <h4 id="factors-heading">Score Breakdown</h4>
+                        <ul id="score-factors-list" aria-label="Score factors">
+                            <li>ICP alignment: --%</li>
+                            <li>Engagement quality: --%</li>
+                            <li>Monetization readiness: --%</li>
+                            <li>Growth trajectory: --%</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Lead Insights -->
+                    <div class="lead-insights">
+                        <div class="insight-section" role="region" aria-labelledby="reasons-heading">
+                            <h4 id="reasons-heading">
+                                <span aria-hidden="true">🎯</span>
+                                Key Reasons
+                            </h4>
+                            <ul id="analysis-reasons" aria-label="Analysis reasons">
+                                <li>No analysis completed yet</li>
                             </ul>
                         </div>
                         
-                        <div class="analysis-card">
-                            <h4>💼 Business Signals</h4>
-                            <ul class="analysis-list" id="business-signals">
-                                <li>🚀 Active link-in-bio usage</li>
-                                <li>💰 Monetization indicators present</li>
-                                <li>📊 Professional content strategy</li>
-                                <li>🤝 Collaboration mentions</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="analysis-card">
-                            <h4>👥 Audience Intelligence</h4>
-                            <ul class="analysis-list" id="audience-intel">
-                                <li>💬 High comment engagement</li>
-                                <li>🔄 Strong share/save ratio</li>
-                                <li>🎯 B2B-focused audience</li>
-                                <li>⭐ Quality over quantity followers</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="analysis-card">
-                            <h4>🔍 Opportunity Indicators</h4>
-                            <ul class="analysis-list" id="opportunity-indicators">
-                                <li>📈 Recent growth phase</li>
-                                <li>💡 Pain point discussions</li>
-                                <li>🛠️ Tool/service interest signals</li>
-                                <li>🎪 Event/collaboration openness</li>
+                        <div class="insight-section" role="region" aria-labelledby="selling-points-heading">
+                            <h4 id="selling-points-heading">
+                                <span aria-hidden="true">💡</span>
+                                Selling Points
+                            </h4>
+                            <ul id="selling-points" aria-label="Selling points">
+                                <li>No analysis completed yet</li>
                             </ul>
                         </div>
                     </div>
-
-                    <!-- Claude Insights -->
-                    <div class="claude-insights">
-                        <div class="claude-header">
-                            <span>🧠</span>
-                            <div class="claude-title">Claude's Strategic Assessment</div>
+                    
+                    <!-- AI Summary -->
+                    <div class="ai-summary" role="region" aria-labelledby="summary-heading">
+                        <h4 id="summary-heading">
+                            <span aria-hidden="true">🧠</span>
+                            AI Analysis Summary
+                        </h4>
+                        <p id="analysis-summary">Complete an analysis to see AI-generated insights about this lead's potential and engagement patterns.</p>
+                    </div>
+                    
+                    <!-- Lead Actions -->
+                    <div class="lead-actions" role="group" aria-label="Lead actions">
+                        <button class="action-btn" id="save-lead-btn" type="button" aria-label="Save lead to database">
+                            <span class="icon" aria-hidden="true">💾</span>
+                            <span>Save Lead</span>
+                        </button>
+                        <button class="action-btn" id="generate-message-btn" type="button" aria-label="Generate personalized message">
+                            <span class="icon" aria-hidden="true">✍️</span>
+                            <span>Generate Message</span>
+                        </button>
+                        <button class="action-btn" id="add-to-list-btn" type="button" aria-label="Add to prospect list">
+                            <span class="icon" aria-hidden="true">📝</span>
+                            <span>Add to List</span>
+                        </button>
+                        <button class="action-btn" id="find-similar-btn" type="button" aria-label="Find similar profiles">
+                            <span class="icon" aria-hidden="true">🔍</span>
+                            <span>Find Similar</span>
+                        </button>
+                        <button class="action-btn" id="export-profile-btn" type="button" aria-label="Export profile data">
+                            <span class="icon" aria-hidden="true">📤</span>
+                            <span>Export Profile</span>
+                        </button>
+                        <button class="action-btn" id="compare-leads-btn" type="button" aria-label="Compare with other leads">
+                            <span class="icon" aria-hidden="true">⚖️</span>
+                            <span>Compare</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Notes Section -->
+                    <div class="notes-section" role="region" aria-labelledby="notes-heading">
+                        <h4 id="notes-heading">
+                            <span aria-hidden="true">📝</span>
+                            Research Notes
+                        </h4>
+                        <label for="lead-notes" class="sr-only">Notes about this lead</label>
+                        <textarea 
+                            id="lead-notes" 
+                            class="form-textarea" 
+                            placeholder="Add your research notes, observations, and follow-up actions..."
+                            aria-label="Research notes for this lead"
+                        ></textarea>
+                        <p class="notes-help">Notes are automatically saved as you type</p>
+                    </div>
+                    
+                    <!-- Tags Section -->
+                    <div class="tags-section" role="region" aria-labelledby="tags-heading">
+                        <h4 id="tags-heading">
+                            <span aria-hidden="true">🏷️</span>
+                            Tags & Categories
+                        </h4>
+                        <div class="tag-chips" role="group" aria-label="Available tags">
+                            <button class="tag-chip" data-tag="hot-prospect" type="button">Hot Prospect</button>
+                            <button class="tag-chip" data-tag="decision-maker" type="button">Decision Maker</button>
+                            <button class="tag-chip" data-tag="high-engagement" type="button">High Engagement</button>
+                            <button class="tag-chip" data-tag="competitor" type="button">Competitor</button>
+                            <button class="tag-chip" data-tag="influencer" type="button">Influencer</button>
+                            <button class="tag-chip" data-tag="follow-up" type="button">Follow Up</button>
+                            <button class="tag-chip" data-tag="partnership" type="button">Partnership</button>
+                            <button class="tag-chip" data-tag="cold-outreach" type="button">Cold Outreach</button>
                         </div>
-                        <div class="claude-content" id="claude-assessment">
-                            This lead shows strong alignment with your ICP. They're in an active growth phase with clear monetization strategies and engaged audience. Recent content indicates openness to partnerships and tool adoption. Best approach: consultative outreach focusing on scaling challenges mentioned in posts.
-                        </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="action-buttons">
-                        <button class="btn-small" id="save-lead-btn">💾 Save Lead</button>
-                        <button class="btn-small" id="add-to-list-btn">📂 Add to List</button>
-                        <button class="btn-small" id="find-similar-btn">🔍 Find Similar</button>
-                        <button class="btn-small" id="generate-message-btn">✍️ Generate Message</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Research Sidebar -->
-            <div class="research-sidebar">
-                <!-- Opportunity Meter -->
-                <div class="opportunity-meter">
-                    <div class="meter-header">
-                        <div class="meter-title">Opportunity Score</div>
-                        <div class="meter-score" id="opportunity-score">87</div>
-                    </div>
-                    
-                    <div class="meter-visual" id="meter-visual"></div>
-                    
-                    <ul class="meter-factors" id="score-factors">
-                        <li>ICP alignment: 92%</li>
-                        <li>Engagement quality: 89%</li>
-                        <li>Monetization readiness: 85%</li>
-                        <li>Growth trajectory: 82%</li>
-                    </ul>
-                </div>
-
-                <!-- Notes & Tags Panel -->
-                <div class="notes-tags-panel">
-                    <div class="panel-title">
-                        <span>📝</span>
-                        Notes & Tags
-                    </div>
-                    
-                    <textarea 
-                        class="notes-input" 
-                        id="lead-notes" 
-                        placeholder="Add your notes about this lead..."
-                        aria-label="Lead notes"
-                    ></textarea>
-                    
-                    <div class="tags-section">
+                        <label for="tag-input" class="sr-only">Add custom tag</label>
                         <input 
                             type="text" 
-                            class="tags-input" 
-                            id="tags-input" 
-                            placeholder="Add tags..."
+                            id="tag-input" 
+                            class="tag-input" 
+                            placeholder="Add custom tag and press Enter..."
+                            aria-label="Add custom tag"
                         >
-                        <div class="tag-suggestions">
-                            <div class="tag-chip" data-tag="high-priority">High Priority</div>
-                            <div class="tag-chip" data-tag="potential-partner">Partner</div>
-                            <div class="tag-chip" data-tag="dm-first">DM First</div>
-                            <div class="tag-chip" data-tag="follow-up">Follow Up</div>
-                            <div class="tag-chip" data-tag="skip">Skip</div>
+                    </div>
+                </section>
+            </div>
+            
+            <!-- Research Sidebar -->
+            <aside class="research-sidebar" role="complementary" aria-label="Research tools and history">
+                <!-- Progress Tracking -->
+                <div class="sidebar-section" id="progress-section" style="display: none;">
+                    <h3>
+                        <span class="icon" aria-hidden="true">📊</span>
+                        Progress
+                    </h3>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p class="progress-text" id="progress-text">Ready to analyze</p>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="sidebar-section">
+                    <h3>
+                        <span class="icon" aria-hidden="true">📈</span>
+                        Today's Activity
+                    </h3>
+                    <div class="quick-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="analyses-today">0</span>
+                            <span class="stat-label">Analyses</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="leads-saved">0</span>
+                            <span class="stat-label">Saved</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="messages-generated">0</span>
+                            <span class="stat-label">Messages</span>
                         </div>
                     </div>
                 </div>
-
-                <!-- Quick Actions Panel -->
-                <div class="quick-actions-panel">
-                    <div class="panel-title">
-                        <span>⚡</span>
-                        Quick Actions
+                
+                <!-- Recent Analyses -->
+                <div class="sidebar-section">
+                    <h3>
+                        <span class="icon" aria-hidden="true">🕒</span>
+                        Recent Analyses
+                    </h3>
+                    <div class="recent-analyses" id="recent-analyses">
+                        <p class="empty-state">No recent analyses</p>
                     </div>
-                    
-                    <div class="quick-actions-grid">
-                        <button class="quick-action-btn" id="compare-leads-btn">
-                            📊 Compare Leads
+                </div>
+                
+                <!-- Research Tips -->
+                <div class="sidebar-section">
+                    <h3>
+                        <span class="icon" aria-hidden="true">💡</span>
+                        Research Tips
+                    </h3>
+                    <div class="tips-content">
+                        <div class="tip-item">
+                            <h5>🎯 Quality Over Quantity</h5>
+                            <p>Focus on profiles that align with your ICP for better conversion rates.</p>
+                        </div>
+                        <div class="tip-item">
+                            <h5>📊 Check Engagement</h5>
+                            <p>Look for consistent engagement patterns, not just follower count.</p>
+                        </div>
+                        <div class="tip-item">
+                            <h5>🔍 Profile Completeness</h5>
+                            <p>Complete profiles with bio and contact info show professionalism.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Export Options -->
+                <div class="sidebar-section">
+                    <h3>
+                        <span class="icon" aria-hidden="true">📤</span>
+                        Quick Export
+                    </h3>
+                    <div class="export-buttons">
+                        <button class="export-btn" id="export-json-btn" type="button" aria-label="Export as JSON">
+                            <span aria-hidden="true">📄</span>
+                            <span>JSON</span>
                         </button>
-                        <button class="quick-action-btn" id="export-profile-btn">
-                            📄 Export Profile
+                        <button class="export-btn" id="export-csv-btn" type="button" aria-label="Export as CSV">
+                            <span aria-hidden="true">📊</span>
+                            <span>CSV</span>
                         </button>
-                        <button class="quick-action-btn" id="schedule-review-btn">
-                            📅 Schedule Review
+                        <button class="export-btn" id="export-sheets-btn" type="button" aria-label="Export to Google Sheets">
+                            <span aria-hidden="true">📋</span>
+                            <span>Sheets</span>
                         </button>
-                        <button class="quick-action-btn" id="share-research-btn">
-                            👥 Share Research
-                        </button>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+    
+    <!-- Keyboard Shortcuts Modal -->
+    <div class="modal-overlay" id="shortcuts-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Keyboard Shortcuts</h3>
+                <button class="close-btn" type="button" aria-label="Close shortcuts modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="shortcuts-grid">
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>Enter</kbd>
+                        <span>Analyze Lead</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>S</kbd>
+                        <span>Save Lead</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Escape</kbd>
+                        <span>Clear Analysis</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>E</kbd>
+                        <span>Export Data</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>Ctrl</kbd> + <kbd>N</kbd>
+                        <span>New Research</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <kbd>?</kbd>
+                        <span>Show Shortcuts</span>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
+    
+    <!-- Help Button -->
+    <button class="help-btn" id="help-btn" type="button" aria-label="Show keyboard shortcuts">
+        <span aria-hidden="true">?</span>
+    </button>
+    
+    <!-- Scripts -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-<script src="/js/shared-code.js"></script>
-<script src="/js/leads.js" defer></script>
+    <script src="/config.js"></script>
+    <script src="/js/shared-code.js"></script>
+    <script src="/js/leads.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(console.warn);
+        }
+    </script>
+    
+    <!-- Analytics (if configured) -->
+    <script>
+        if (window.CONFIG?.ANALYTICS_ID) {
+            // Analytics initialization would go here
+            console.log('Analytics configured');
+        }
+    </script>
 </body>
 </html>
