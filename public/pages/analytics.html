@@ -1,361 +1,498 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" type="image/png" href="./assets/oslira-logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analytics Intelligence - Oslira</title>
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="./assets/oslira-logo.png"> 
-    
-    <!-- Environment Config -->
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' https://cdn.jsdelivr.net https://unpkg.com 'unsafe-inline';
+                   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+                   font-src 'self' https://fonts.gstatic.com; 
+                   connect-src 'self' https://*.supabase.co https://*.workers.dev; 
+                   img-src 'self' data: https: https://*.weserv.nl;
+                   frame-src https://js.stripe.com;">
+    <title>Analytics - Oslira</title>
     <script src="/env-config.js"></script>
-    
-    <!-- Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.sentry-cdn.com https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; connect-src 'self' https: wss:; font-src 'self' data:; media-src 'self' blob: data:;">
-    
-    <!-- Styles -->
     <link rel="stylesheet" href="/css/analytics.css">
-    
-    <!-- Preload Critical Resources -->
-    <link rel="preload" href="/js/shared-code.js" as="script">
-    <link rel="preload" href="/js/analytics.js" as="script">
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js" as="script">
-    
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Advanced analytics intelligence for AI-powered outreach campaigns and lead generation performance.">
-    <meta name="keywords" content="analytics, AI outreach, lead generation, campaign performance, business intelligence">
-    <meta name="author" content="Oslira">
-    
-    <!-- Open Graph -->
-    <meta property="og:title" content="Analytics Intelligence - Oslira">
-    <meta property="og:description" content="Strategic command center for data-driven outreach optimization and performance insights">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://app.oslira.com/analytics">
-    
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Analytics Intelligence - Oslira">
-    <meta name="twitter:description" content="Strategic command center for data-driven outreach optimization">
 </head>
 <body>
-    <div class="dashboard">
-        <!-- Sidebar -->
+    <!-- ACCESSIBILITY -->
+    <a href="#main-content" class="skip-nav">Skip to main content</a>
+    
+    <!-- MAIN LAYOUT CONTAINER -->
+    <div class="analytics-dashboard">
+        
+        <!-- SIDEBAR NAVIGATION (Inherited from Dashboard) -->
         <aside class="sidebar" role="navigation" aria-label="Main navigation">
-            <!-- Logo -->
             <div class="logo">
-                <img src="./assets/oslira-logo.png" alt="Oslira" class="logo-image">
-                <span>Oslira</span>
+                <img src="./assets/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+                Oslira
             </div>
             
-            <!-- Navigation -->
-            <nav class="nav">
-                <div class="nav-section">
-                    <h3>Tools</h3>
-                    <a href="/dashboard" class="nav-link">
-                        <span class="icon">🏠</span>
-                        <span>Dashboard</span>
-                    </a>
-                    <a href="/message-studio" class="nav-link">
-                        <span class="icon">✍️</span>
-                        <span>Message Studio</span>
-                    </a>
-                    <a href="/campaigns" class="nav-link">
-                        <span class="icon">🚀</span>
-                        <span>Campaigns</span>
-                    </a>
-                    <a href="/analytics" class="nav-link active">
+            <!-- Business Context Selector -->
+            <div class="business-selector">
+                <h4>Active Business</h4>
+                <select id="business-select" aria-label="Select active business">
+                    <option value="">Select Business...</option>
+                </select>
+            </div>
+            
+            <!-- Navigation Menu -->
+            <nav class="menu">
+                <div class="menu-section">
+                    <h4>Main</h4>
+                    <a href="dashboard.html">
                         <span class="icon">📊</span>
-                        <span>Analytics</span>
+                        Dashboard
                     </a>
-                    <a href="/integrations" class="nav-link">
-                        <span class="icon">🔗</span>
-                        <span>Integrations</span>
+                    <a href="leads.html">
+                        <span class="icon">🔍</span>
+                        Lead Research
+                    </a>
+                    <a href="analytics.html" class="active">
+                        <span class="icon">📈</span>
+                        Analytics
                     </a>
                 </div>
                 
-                <!-- User Info -->
-                <div class="user-info">
-                    <p>Signed in as:</p>
-                    <p><strong id="user-email">Loading...</strong></p>
-                    <p>Plan: <span id="user-plan">Free</span></p>
-                    <p>Credits: <span id="user-credits">0</span></p>
-                    <a href="/account" class="nav-link">Account Settings</a>
-                    <a href="#" class="nav-link" onclick="window.OsliraApp?.signOut()">Sign Out</a>
+                <div class="menu-section">
+                    <h4>Tools</h4>
+                    <a href="campaigns.html">
+                        <span class="icon">🚀</span>
+                        Campaigns
+                    </a>
+                    <a href="messages.html">
+                        <span class="icon">💬</span>
+                        Messages
+                    </a>
+                    <a href="integrations.html">
+                        <span class="icon">🔗</span>
+                        Integrations
+                    </a>
+                </div>
+                
+                <div class="menu-section">
+                    <h4>Account</h4>
+                    <a href="subscription.html">
+                        <span class="icon">💳</span>
+                        Subscription
+                    </a>
+                    <a href="settings.html">
+                        <span class="icon">⚙️</span>
+                        Settings
+                    </a>
                 </div>
             </nav>
+            
+            <!-- Subscription Status -->
+            <div class="subscription-status">
+                <h4>Current Plan</h4>
+                <p class="plan-name" id="sidebar-plan">Loading...</p>
+                <div class="credits-display" id="sidebar-billing">Loading...</div>
+                <a href="subscription.html">Manage Subscription</a>
+            </div>
+            
+            <!-- User Information -->
+            <div class="user-info">
+                <p id="user-email">Loading...</p>
+                <a href="#" id="logout-link" data-action="logout">Sign Out</a>
+            </div>
         </aside>
-
-        <!-- Main Content -->
-        <main class="main-content" role="main">
-            <!-- Header -->
+        
+        <!-- MAIN CONTENT AREA -->
+        <main role="main" id="main-content" class="main-content">
+            
+            <!-- PAGE HEADER WITH CONTROLS -->
             <header class="analytics-header">
                 <div class="header-content">
-                    <div class="header-text">
-                        <h1>Analytics Intelligence</h1>
-                        <p>Strategic command center for data-driven outreach optimization and performance insights</p>
-                        <div class="live-indicator">
-                            <span class="live-dot"></span>
-                            <span>Live Analytics</span>
-                            <span class="last-updated">Last updated: <span id="last-update-time">--</span></span>
-                        </div>
-                    </div>
-                    <div class="header-controls">
-                        <div class="time-filter">
-                            <button class="active" data-period="7d">7 Days</button>
-                            <button data-period="30d">30 Days</button>
-                            <button data-period="90d">90 Days</button>
-                            <button data-period="1y">1 Year</button>
-                        </div>
-                        <button class="refresh-btn" id="refresh-analytics">
-                            <span>🔄</span>
-                            <span>Refresh</span>
-                        </button>
-                        <button class="export-btn" id="export-analytics">
-                            <span>📊</span>
-                            <span>Export</span>
-                        </button>
-                    </div>
+                    <h1>📈 Analytics Intelligence</h1>
+                    <p class="header-subtitle">Strategic performance insights and outreach optimization</p>
                 </div>
                 
-                <!-- View Navigation -->
-                <div class="view-navigation" role="tablist" aria-label="Analytics views">
-                    <button class="view-tab active" data-view="overview" role="tab" aria-selected="true" aria-controls="analytics-content">
-                        <span class="icon">📊</span>
-                        <span>Overview</span>
-                    </button>
-                    <button class="view-tab" data-view="message-performance" role="tab" aria-selected="false" aria-controls="analytics-content">
-                        <span class="icon">💬</span>
-                        <span>Message Performance</span>
-                    </button>
-                    <button class="view-tab" data-view="lead-conversion" role="tab" aria-selected="false" aria-controls="analytics-content">
-                        <span class="icon">🎯</span>
-                        <span>Lead Conversion</span>
-                    </button>
-                    <button class="view-tab" data-view="cta-analysis" role="tab" aria-selected="false" aria-controls="analytics-content">
-                        <span class="icon">📣</span>
-                        <span>CTA Analysis</span>
-                    </button>
-                    <button class="view-tab" data-view="feedback-explorer" role="tab" aria-selected="false" aria-controls="analytics-content">
-                        <span class="icon">🧠</span>
-                        <span>Feedback Explorer</span>
-                    </button>
-                    <button class="view-tab" data-view="claude-guidance" role="tab" aria-selected="false" aria-controls="analytics-content">
-                        <span class="icon">🧭</span>
-                        <span>Claude Guidance</span>
-                    </button>
-                    <button class="view-tab" data-view="risk-assessment" role="tab" aria-selected="false" aria-controls="analytics-content">
-                        <span class="icon">🚦</span>
-                        <span>Risk Assessment</span>
-                    </button>
+                <!-- Global Controls Bar -->
+                <div class="analytics-controls">
+                    <!-- Time Range Selector -->
+                    <div class="control-group">
+                        <label for="time-range">Time Range</label>
+                        <select id="time-range" class="control-select">
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d" selected>Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="1y">Last Year</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                    
+                    <!-- CRM Filter -->
+                    <div class="control-group">
+                        <label for="crm-filter">CRM Source</label>
+                        <select id="crm-filter" class="control-select">
+                            <option value="all">All CRMs</option>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    
+                    <!-- Lead Type Filter -->
+                    <div class="control-group">
+                        <label for="lead-type-filter">Lead Type</label>
+                        <select id="lead-type-filter" class="control-select">
+                            <option value="all">All Types</option>
+                            <option value="personal_brand">Personal Brand</option>
+                            <option value="business_page">Business Page</option>
+                            <option value="creator">Creator</option>
+                            <option value="meme_page">Meme Page</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Data Refresh Controls -->
+                    <div class="control-group">
+                        <button id="refresh-data" class="control-btn primary">
+                            🔄 Refresh Data
+                        </button>
+                        <button id="export-analytics" class="control-btn secondary">
+                            📥 Export Report
+                        </button>
+                    </div>
                 </div>
             </header>
             
-            <!-- Analytics Content -->
-            <div class="analytics-content" id="analytics-content" role="tabpanel" aria-labelledby="current-view">
-                <!-- Loading State -->
-                <div class="analytics-loading" id="analytics-loading" style="display: none;">
-                    <div class="loading-spinner"></div>
-                    <p>Loading analytics intelligence...</p>
-                </div>
+            <!-- ANALYTICS MODULES GRID -->
+            <div class="analytics-grid">
                 
-                <!-- Error State -->
-                <div class="analytics-error" id="analytics-error" style="display: none;" role="alert">
-                    <!-- Error content will be populated by JavaScript -->
-                </div>
-                
-                <!-- Content will be dynamically populated by analytics.js -->
-                <div class="analytics-placeholder">
-                    <div class="placeholder-content">
-                        <div class="placeholder-icon">🚀</div>
-                        <h3>Initializing Analytics Intelligence</h3>
-                        <p>Loading strategic insights and performance data...</p>
-                        <div class="placeholder-animation">
-                            <div class="dot"></div>
-                            <div class="dot"></div>
-                            <div class="dot"></div>
+                <!-- MODULE 1: Message Style Performance Matrix -->
+                <section class="analytics-module matrix-module" id="message-style-matrix">
+                    <div class="module-header">
+                        <h2>🎯 Message Style Performance Matrix</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="matrix">⛶</button>
+                            <button class="module-settings" data-module="matrix">⚙️</button>
                         </div>
                     </div>
-                </div>
+                    <div class="module-content">
+                        <!-- 3D Matrix: Tone × Structure × Engagement -->
+                        <div class="matrix-container">
+                            <div class="matrix-axes">
+                                <div class="axis-selector tone-axis">
+                                    <label>Tone Axis</label>
+                                    <select id="tone-axis-select">
+                                        <option value="formal">Formal</option>
+                                        <option value="casual">Casual</option>
+                                        <option value="friendly">Friendly</option>
+                                        <option value="professional">Professional</option>
+                                    </select>
+                                </div>
+                                <div class="axis-selector structure-axis">
+                                    <label>Structure Axis</label>
+                                    <select id="structure-axis-select">
+                                        <option value="short">Short Form</option>
+                                        <option value="medium">Medium Form</option>
+                                        <option value="long">Long Form</option>
+                                        <option value="bullet">Bullet Points</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="matrix-visualization" id="style-matrix-chart"></div>
+                            <div class="matrix-insights" id="style-matrix-insights">
+                                <!-- AI-generated insights populate here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 2: Lead Type Conversion Heatmap -->
+                <section class="analytics-module heatmap-module" id="lead-conversion-heatmap">
+                    <div class="module-header">
+                        <h2>🔥 Lead Type Conversion Heatmap</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="heatmap">⛶</button>
+                            <button class="module-settings" data-module="heatmap">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="heatmap-container">
+                            <div class="heatmap-legend">
+                                <div class="legend-item">
+                                    <span class="legend-color high"></span>
+                                    <span>High Performance</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-color medium"></span>
+                                    <span>Medium Performance</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-color low"></span>
+                                    <span>Low Performance</span>
+                                </div>
+                            </div>
+                            <div class="heatmap-visualization" id="conversion-heatmap-chart"></div>
+                            <div class="heatmap-metrics" id="conversion-metrics">
+                                <!-- Metrics populate here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 3: CTA Effectiveness Tracker -->
+                <section class="analytics-module cta-module" id="cta-effectiveness">
+                    <div class="module-header">
+                        <h2>🎪 CTA Effectiveness Tracker</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="cta">⛶</button>
+                            <button class="module-settings" data-module="cta">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="cta-tracker-container">
+                            <div class="cta-filters">
+                                <select id="cta-sort-by">
+                                    <option value="engagement">By Engagement</option>
+                                    <option value="conversion">By Conversion</option>
+                                    <option value="reuse">By Reuse Rate</option>
+                                    <option value="feedback">By Feedback Score</option>
+                                </select>
+                            </div>
+                            <div class="cta-list" id="cta-effectiveness-list">
+                                <!-- CTA performance items populate here -->
+                            </div>
+                            <div class="cta-recommendations" id="cta-recommendations">
+                                <!-- AI recommendations populate here -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 4: Feedback Signal Explorer -->
+                <section class="analytics-module feedback-module" id="feedback-explorer">
+                    <div class="module-header">
+                        <h2>🔍 Feedback Signal Explorer</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="feedback">⛶</button>
+                            <button class="module-settings" data-module="feedback">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="feedback-explorer-container">
+                            <div class="feedback-clusters" id="feedback-clusters">
+                                <!-- Theme clusters populate here -->
+                            </div>
+                            <div class="feedback-trends" id="feedback-trends-chart">
+                                <!-- Trend visualization -->
+                            </div>
+                            <div class="feedback-insights" id="feedback-ai-insights">
+                                <!-- AI summarized insights -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 5: CRM Performance Comparator -->
+                <section class="analytics-module crm-module" id="crm-performance">
+                    <div class="module-header">
+                        <h2>🏆 CRM Performance Comparator</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="crm">⛶</button>
+                            <button class="module-settings" data-module="crm">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="crm-comparator-container">
+                            <div class="crm-ranking" id="crm-ranking-table">
+                                <!-- CRM performance table -->
+                            </div>
+                            <div class="crm-insights" id="crm-ai-insights">
+                                <!-- Claude-generated insights -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 6: Outreach Timeline Overlay -->
+                <section class="analytics-module timeline-module" id="outreach-timeline">
+                    <div class="module-header">
+                        <h2>📅 Outreach Timeline Overlay</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="timeline">⛶</button>
+                            <button class="module-settings" data-module="timeline">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="timeline-container">
+                            <div class="timeline-visualization" id="timeline-chart">
+                                <!-- Timeline with campaign overlays -->
+                            </div>
+                            <div class="timeline-events" id="timeline-events">
+                                <!-- Event markers and correlations -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 7: Message Iteration ROI Tracker -->
+                <section class="analytics-module iteration-module" id="iteration-tracker">
+                    <div class="module-header">
+                        <h2>🔄 Message Iteration ROI Tracker</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="iteration">⛶</button>
+                            <button class="module-settings" data-module="iteration">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="iteration-tracker-container">
+                            <div class="iteration-list" id="iteration-performance-list">
+                                <!-- Before/after performance tracking -->
+                            </div>
+                            <div class="iteration-insights" id="iteration-roi-insights">
+                                <!-- ROI analysis and recommendations -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 8: Team-Level Impact Dashboard -->
+                <section class="analytics-module team-module" id="team-impact">
+                    <div class="module-header">
+                        <h2>👥 Team-Level Impact Dashboard</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="team">⛶</button>
+                            <button class="module-settings" data-module="team">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="team-dashboard-container">
+                            <div class="team-performance" id="team-performance-breakdown">
+                                <!-- Individual contributor analysis -->
+                            </div>
+                            <div class="team-coaching" id="team-coaching-insights">
+                                <!-- Coaching recommendations -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 9: Claude Guidance History -->
+                <section class="analytics-module claude-module" id="claude-guidance">
+                    <div class="module-header">
+                        <h2>🤖 Claude Guidance History</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="claude">⛶</button>
+                            <button class="module-settings" data-module="claude">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="claude-history-container">
+                            <div class="guidance-timeline" id="claude-guidance-timeline">
+                                <!-- Historical advice tracking -->
+                            </div>
+                            <div class="guidance-impact" id="guidance-impact-analysis">
+                                <!-- Performance lift analysis -->
+                            </div>
+                            <div class="guidance-suggestions" id="new-experiment-suggestions">
+                                <!-- New experimentation recommendations -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- MODULE 10: Message Risk Classifier -->
+                <section class="analytics-module risk-module" id="risk-classifier">
+                    <div class="module-header">
+                        <h2>⚠️ Message Risk Classifier</h2>
+                        <div class="module-controls">
+                            <button class="module-expand" data-module="risk">⛶</button>
+                            <button class="module-settings" data-module="risk">⚙️</button>
+                        </div>
+                    </div>
+                    <div class="module-content">
+                        <div class="risk-classifier-container">
+                            <div class="risk-dashboard" id="risk-overview-dashboard">
+                                <!-- Risk score overview -->
+                            </div>
+                            <div class="risk-alerts" id="risk-alerts-panel">
+                                <!-- Active risk alerts -->
+                            </div>
+                            <div class="risk-recommendations" id="risk-mitigation-recommendations">
+                                <!-- Risk mitigation suggestions -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
             </div>
+            
         </main>
-    </div>
-
-    <!-- Quick Insights Sidebar -->
-    <aside class="insights-sidebar" id="insights-sidebar" role="complementary" aria-label="Quick insights">
-        <div class="insights-header">
-            <h3>🔥 Live Insights</h3>
-            <button class="insights-toggle" id="insights-toggle" aria-label="Toggle insights panel">
-                <span>→</span>
-            </button>
-        </div>
         
-        <div class="insights-content" id="insights-content">
-            <div class="insight-card trending">
-                <div class="insight-icon">📈</div>
-                <div class="insight-text">
-                    <h4>Trending Up</h4>
-                    <p>Response rates increased 23% this week</p>
+    </div>
+    
+    <!-- MODAL SYSTEMS -->
+    
+    <!-- Module Expansion Modal -->
+    <div class="modal" id="module-expansion-modal">
+        <div class="modal-content expanded-module-content">
+            <button class="modal-close" id="module-modal-close">×</button>
+            <div class="expanded-module-header">
+                <h2 id="expanded-module-title">Module Title</h2>
+                <div class="expanded-module-controls">
+                    <!-- Module-specific controls -->
                 </div>
             </div>
-            
-            <div class="insight-card alert">
-                <div class="insight-icon">⚠️</div>
-                <div class="insight-text">
-                    <h4>Attention Needed</h4>
-                    <p>3 campaigns need optimization</p>
-                </div>
-            </div>
-            
-            <div class="insight-card success">
-                <div class="insight-icon">✅</div>
-                <div class="insight-text">
-                    <h4>Top Performer</h4>
-                    <p>"Professional Intro" variant at 45% response rate</p>
-                </div>
+            <div class="expanded-module-body" id="expanded-module-content">
+                <!-- Expanded module content -->
             </div>
         </div>
-    </aside>
-
-    <!-- Modals -->
-    <!-- Export Modal -->
+    </div>
+    
+    <!-- Settings Configuration Modal -->
+    <div class="modal" id="module-settings-modal">
+        <div class="modal-content">
+            <button class="modal-close" id="settings-modal-close">×</button>
+            <h3 id="settings-modal-title">Module Settings</h3>
+            <div class="settings-form" id="module-settings-form">
+                <!-- Dynamic settings form -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Data Export Modal -->
     <div class="modal" id="export-modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>📊 Export Analytics</h3>
-                <button class="modal-close" onclick="analytics.closeModal('export-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="export-options">
-                    <h4>Export Format</h4>
-                    <div class="radio-group">
-                        <label class="radio-option">
-                            <input type="radio" name="export-format" value="pdf" checked>
-                            <span class="radio-custom"></span>
-                            <span>📄 PDF Report</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="export-format" value="csv">
-                            <span class="radio-custom"></span>
-                            <span>📊 CSV Data</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="export-format" value="excel">
-                            <span class="radio-custom"></span>
-                            <span>📈 Excel Workbook</span>
-                        </label>
-                    </div>
-                    
-                    <h4>Date Range</h4>
-                    <div class="date-range">
-                        <input type="date" id="export-start-date" class="form-input">
-                        <span>to</span>
-                        <input type="date" id="export-end-date" class="form-input">
-                    </div>
-                    
-                    <h4>Include Sections</h4>
-                    <div class="checkbox-group">
-                        <label class="checkbox-option">
-                            <input type="checkbox" checked>
-                            <span class="checkbox-custom"></span>
-                            <span>Performance Metrics</span>
-                        </label>
-                        <label class="checkbox-option">
-                            <input type="checkbox" checked>
-                            <span class="checkbox-custom"></span>
-                            <span>Charts & Visualizations</span>
-                        </label>
-                        <label class="checkbox-option">
-                            <input type="checkbox" checked>
-                            <span class="checkbox-custom"></span>
-                            <span>AI Insights</span>
-                        </label>
-                        <label class="checkbox-option">
-                            <input type="checkbox">
-                            <span class="checkbox-custom"></span>
-                            <span>Raw Data Tables</span>
-                        </label>
+            <button class="modal-close" id="export-modal-close">×</button>
+            <h3>📥 Export Analytics Report</h3>
+            <div class="export-options">
+                <div class="export-format">
+                    <label>Export Format</label>
+                    <select id="export-format-select">
+                        <option value="pdf">PDF Report</option>
+                        <option value="csv">CSV Data</option>
+                        <option value="json">JSON Data</option>
+                        <option value="xlsx">Excel Workbook</option>
+                    </select>
+                </div>
+                <div class="export-modules">
+                    <label>Include Modules</label>
+                    <div class="module-checkboxes" id="export-module-selection">
+                        <!-- Checkboxes for each module -->
                     </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="secondary-btn" onclick="analytics.closeModal('export-modal')">Cancel</button>
-                <button class="primary-btn" onclick="analytics.exportAnalytics()">
-                    <span>📊</span>
-                    <span>Export Analytics</span>
-                </button>
+                <button class="primary-btn" id="generate-export">Generate Export</button>
             </div>
         </div>
     </div>
-
-    <!-- Analysis Modal -->
-    <div class="modal" id="analysis-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🔍 Deep Dive Analysis</h3>
-                <button class="modal-close" onclick="analytics.closeModal('analysis-modal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="analysis-form">
-                    <h4>What would you like to analyze?</h4>
-                    <div class="form-group">
-                        <label for="analysis-type">Analysis Type</label>
-                        <select id="analysis-type" class="form-input">
-                            <option value="performance">Message Performance Trends</option>
-                            <option value="conversion">Conversion Optimization</option>
-                            <option value="audience">Audience Segmentation</option>
-                            <option value="timing">Timing Analysis</option>
-                            <option value="content">Content Effectiveness</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="analysis-timeframe">Timeframe</label>
-                        <select id="analysis-timeframe" class="form-input">
-                            <option value="7d">Last 7 days</option>
-                            <option value="30d">Last 30 days</option>
-                            <option value="90d">Last 90 days</option>
-                            <option value="1y">Last year</option>
-                            <option value="custom">Custom range</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="analysis-filters">Additional Filters</label>
-                        <div class="checkbox-group">
-                            <label class="checkbox-option">
-                                <input type="checkbox" value="high-performers">
-                                <span class="checkbox-custom"></span>
-                                <span>High-performing campaigns only</span>
-                            </label>
-                            <label class="checkbox-option">
-                                <input type="checkbox" value="specific-industry">
-                                <span class="checkbox-custom"></span>
-                                <span>Specific industry focus</span>
-                            </label>
-                            <label class="checkbox-option">
-                                <input type="checkbox" value="response-received">
-                                <span class="checkbox-custom"></span>
-                                <span>Messages with responses only</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="secondary-btn" onclick="analytics.closeModal('analysis-modal')">Cancel</button>
-                <button class="primary-btn" onclick="analytics.runDeepAnalysis()">
-                    <span>🔍</span>
-                    <span>Run Analysis</span>
-                </button>
-            </div>
+    
+    <!-- LOADING OVERLAY -->
+    <div class="loading-overlay" id="analytics-loading" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p id="loading-message">Loading analytics data...</p>
         </div>
     </div>
-
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- SCRIPTS -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/recharts@2.8.0/lib/index.js"></script>
     <script src="/js/shared-code.js"></script>
     <script src="/js/analytics.js" defer></script>
+    
 </body>
 </html>
