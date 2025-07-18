@@ -95,17 +95,21 @@
                 </a>
             </div>
             
-            <div class="menu-section">
-                <h4>Account</h4>
-                <a href="/subscription.html" data-page="subscription" aria-label="Subscription">
-                    <span class="icon" aria-hidden="true">💳</span>
-                    <span>Subscription</span>
-                </a>
-                <a href="/settings.html" data-page="settings" aria-label="Settings">
-                    <span class="icon" aria-hidden="true">⚙️</span>
-                    <span>Settings</span>
-                </a>
-            </div>
+<div class="menu-section">
+    <h4>Tools</h4>
+    <a href="./messages.html" data-page="messages" aria-label="Message Studio">
+        <span class="icon" aria-hidden="true">💬</span>
+        <span>Message Studio</span>
+    </a>
+    <a href="./campaigns.html" data-page="campaigns" aria-label="Campaigns">
+        <span class="icon" aria-hidden="true">🚀</span>
+        <span>Campaigns</span>
+    </a>
+    <a href="./integrations.html" data-page="integrations" aria-label="Integrations">
+        <span class="icon" aria-hidden="true">🔗</span>
+        <span>Integrations</span>
+    </a>
+</div>
         </nav>
         
         <!-- Subscription Status -->
@@ -442,7 +446,6 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/config.js"></script>
     <script src="/js/shared-code.js"></script>
     <script src="/js/analytics.js"></script>
     
@@ -576,13 +579,6 @@
             if (tooltip) {
                 tooltip.remove();
             }
-        }
-    </script>
-    
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(console.warn);
         }
     </script>
     
