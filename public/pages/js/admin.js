@@ -10,7 +10,7 @@ window.addEventListener('unhandledrejection', (event) => {
     if (event.reason && event.reason.message && 
         event.reason.message.includes('Could not establish connection')) {
         console.warn('Browser extension promise rejection (non-critical):', event.reason.message);
-        event.preventDefault();
+        event.preventDefault(); 
         return false;
     }
 });
