@@ -16,6 +16,18 @@ import { PERFORMANCE_THRESHOLDS } from '../utils/performanceThresholds.js';
 import { CACHE_KEYS } from '../utils/cacheKeys.js';
 import { EXPORT_CONFIG } from '../utils/exportConfig.js';
 
+// Initialize configuration when DOM is ready or OsliraApp is available
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadDynamicConfig);
+} else {
+    loadDynamicConfig();
+}
+
+// Also listen for OsliraApp initialization
+if (window.OsliraApp?.events) {
+    window.OsliraApp.events.addEventListener('appInitialized', loadDynamicConfig);
+}
+
 /*
 ===============================================================================
                         ANALYTICS DASHBOARD CORE SYSTEM
@@ -1553,6 +1565,14 @@ class RevenueAttributionEngine {
         // Create revenue attribution visualization
     }
 }
+
+window.AnalyticsConfig = {
+    isFeatureEnabled,
+    enableFeature,
+    disableFeature,
+    getFeatureFlags,
+    loadDynamicConfig
+};
 
 // ===== EVENT LISTENERS =====
 // Global event listeners for dashboard interactions
