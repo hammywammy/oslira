@@ -1,7 +1,20 @@
-import { CHART_THEMES } from './utils/chartThemes.js';
-import { LEAD_TYPES } from './utils/leadTypes.js';
-import { MESSAGE_STYLES } from './utils/messageStyles.js';
-import { ANALYTICS_CONFIG } from './utils/config.js';
+// Core Analytics Configuration & Helpers
+import {
+  ANALYTICS_CONFIG,
+  isFeatureEnabled,
+  enableFeature,
+  disableFeature,
+  getFeatureFlags,
+  loadDynamicConfig
+} from '../config/analytics-config.js';
+
+// Modular Constants
+import { CHART_THEMES } from '../utils/chartThemes.js';
+import { LEAD_TYPES } from '../utils/leadTypes.js';
+import { MESSAGE_STYLES } from '../utils/messageStyles.js';
+import { PERFORMANCE_THRESHOLDS } from '../utils/performanceThresholds.js';
+import { CACHE_KEYS } from '../utils/cacheKeys.js';
+import { EXPORT_CONFIG } from '../utils/exportConfig.js';
 
 /*
 ===============================================================================
