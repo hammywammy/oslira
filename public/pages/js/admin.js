@@ -322,31 +322,31 @@ async verifyAdminAccess() {
         }
     }
 
-   async fetchUserStats() {
+async fetchUserStats() {
     try {
-        const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-        
         const { data, error } = await window.OsliraApp.supabase
             .from('users')
-            .select('id, created_at, last_sign_in_at, subscription_status')
-            .gte('last_sign_in_at', thirtyDaysAgo);
+            .select('id, email, created_at, is_admin');
 
         if (error) {
             console.warn('User stats query error:', error);
-            // Return fallback data instead of throwing
             return { active_count: 0, total_users: 0 };
         }
 
+        const totalUsers = data?.length || 0;
+        const adminUsers = data?.filter(user => user.is_admin)?.length || 0;
+
         return {
-            active_count: data?.length || 0,
-            total_users: data?.length || 0
+            active_count: totalUsers,
+            total_users: totalUsers,
+            admin_count: adminUsers
         };
     } catch (error) {
         console.error('User stats fetch failed:', error);
-        return { active_count: 0, total_users: 0 };
+        return { active_count: 0, total_users: 0, admin_count: 0 };
     }
 }
-
+    
     async fetchCampaignStats() {
         try {
             // This would fetch from your campaigns table when implemented
@@ -548,164 +548,150 @@ async fetchSystemStats() {
     // OTHER VIEW LOADERS
     // =============================================================================
 
-    async loadUserData() {
-        console.log('👥 Loading user management data...');
+   async loadUserData() {
+    console.log('👥 Loading user management data...');
+    
+    try {
+        window.OsliraApp.showLoadingOverlay('Loading user data...');
         
-        try {
-            window.OsliraApp.showLoadingOverlay('Loading user data...');
-            
-            // Fetch users with pagination and filters
-            const { data: users, error: usersError } = await window.OsliraApp.supabase
-                .from('users')
-                .select(`
-                    id, 
-                    email, 
-                    created_at, 
-                    last_sign_in_at, 
-                    subscription_plan, 
-                    subscription_status, 
-                    credits,
-                    is_admin,
-                    onboarding_completed
-                `)
-                .order('created_at', { ascending: false })
-                .range((this.currentPage - 1) * this.itemsPerPage, this.currentPage * this.itemsPerPage - 1);
+        // Fetch users with only the columns that exist
+        const { data: users, error: usersError } = await window.OsliraApp.supabase
+            .from('users')
+            .select(`
+                id, 
+                email, 
+                created_at,
+                is_admin
+            `)
+            .order('created_at', { ascending: false })
+            .range((this.currentPage - 1) * this.itemsPerPage, this.currentPage * this.itemsPerPage - 1);
 
-            if (usersError) throw usersError;
+        if (usersError) throw usersError;
 
-            // Get total count for pagination
-            const { count, error: countError } = await window.OsliraApp.supabase
-                .from('users')
-                .select('*', { count: 'exact', head: true });
+        // Get total count for pagination
+        const { count, error: countError } = await window.OsliraApp.supabase
+            .from('users')
+            .select('*', { count: 'exact', head: true });
 
-            if (countError) throw countError;
+        if (countError) throw countError;
 
-            // Update users table
-            this.renderUsersTable(users || [], count || 0);
-            
-            // Load user analytics
-            await this.loadUserAnalytics();
-            
-        } catch (error) {
-            console.error('User data loading failed:', error);
-            window.OsliraApp.showMessage('Failed to load user data', 'error');
-        } finally {
-            window.OsliraApp.removeLoadingOverlay();
-        }
+        // Update users table
+        this.renderUsersTable(users || [], count || 0);
+        
+    } catch (error) {
+        console.error('User data loading failed:', error);
+        window.OsliraApp.showMessage('Failed to load user data', 'error');
+    } finally {
+        window.OsliraApp.removeLoadingOverlay();
     }
+}
 
     renderUsersTable(users, totalCount) {
-        const tableContainer = document.getElementById('users-table-container');
-        if (!tableContainer) return;
+    const tableContainer = document.getElementById('users-table-container');
+    if (!tableContainer) return;
 
-        const totalPages = Math.ceil(totalCount / this.itemsPerPage);
+    const totalPages = Math.ceil(totalCount / this.itemsPerPage);
 
-        const html = `
-            <div class="users-header">
-                <h3>User Management (${totalCount} users)</h3>
-                <div class="users-controls">
-                    <div class="search-filters">
-                        <input type="text" placeholder="Search users..." id="user-search" class="search-input">
-                        <select id="status-filter" class="filter-select">
-                            <option value="all">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="trialing">Trial</option>
-                            <option value="canceled">Canceled</option>
-                        </select>
-                        <select id="plan-filter" class="filter-select">
-                            <option value="all">All Plans</option>
-                            <option value="free">Free</option>
-                            <option value="pro">Pro</option>
-                            <option value="enterprise">Enterprise</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-primary" onclick="window.adminDashboard.exportUsers()">
-                        📤 Export Users
-                    </button>
+    const html = `
+        <div class="users-header">
+            <h3>User Management (${totalCount} users)</h3>
+            <div class="users-controls">
+                <div class="search-filters">
+                    <input type="text" placeholder="Search users..." id="user-search" class="search-input">
                 </div>
+                <button class="btn btn-primary" onclick="window.adminDashboard.exportUsers()">
+                    📤 Export Users
+                </button>
             </div>
-            
-            <div class="table-responsive">
-                <table class="table users-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Plan</th>
-                            <th>Status</th>
-                            <th>Credits</th>
-                            <th>Joined</th>
-                            <th>Last Active</th>
-                            <th>Actions</th>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table users-table">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Admin Status</th>
+                        <th>Joined</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${users.map(user => `
+                        <tr data-user-id="${user.id}">
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">${user.email.charAt(0).toUpperCase()}</div>
+                                    <div>
+                                        <div class="user-email">${user.email}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge ${user.is_admin ? 'status-active' : 'status-inactive'}">
+                                    ${user.is_admin ? 'Admin' : 'User'}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="date-text">${window.OsliraApp.formatDate(user.created_at)}</span>
+                            </td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn-icon" onclick="window.adminDashboard.viewUserDetails('${user.id}')" title="View Details">
+                                        👁️
+                                    </button>
+                                    <button class="btn-icon" onclick="window.adminDashboard.editUser('${user.id}')" title="Edit User">
+                                        ✏️
+                                    </button>
+                                    ${!user.is_admin ? `<button class="btn-icon danger" onclick="window.adminDashboard.toggleAdminStatus('${user.id}', true)" title="Make Admin">👑</button>` : `<button class="btn-icon warning" onclick="window.adminDashboard.toggleAdminStatus('${user.id}', false)" title="Remove Admin">👤</button>`}
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        ${users.map(user => `
-                            <tr data-user-id="${user.id}">
-                                <td>
-                                    <div class="user-info">
-                                        <div class="user-avatar">${user.email.charAt(0).toUpperCase()}</div>
-                                        <div>
-                                            <div class="user-email">${user.email}</div>
-                                            ${user.is_admin ? '<span class="admin-badge">Admin</span>' : ''}
-                                            ${!user.onboarding_completed ? '<span class="incomplete-badge">Incomplete</span>' : ''}
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="plan-badge plan-${user.subscription_plan || 'free'}">
-                                        ${(user.subscription_plan || 'free').toUpperCase()}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="status-badge status-${user.subscription_status || 'inactive'}">
-                                        ${user.subscription_status || 'inactive'}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="credits-count">${user.credits || 0}</span>
-                                </td>
-                                <td>
-                                    <span class="date-text">${window.OsliraApp.formatDate(user.created_at)}</span>
-                                </td>
-                                <td>
-                                    <span class="date-text">${user.last_sign_in_at ? window.OsliraApp.formatDate(user.last_sign_in_at) : 'Never'}</span>
-                                </td>
-                                <td>
-                                    <div class="action-buttons">
-                                        <button class="btn-icon" onclick="window.adminDashboard.viewUserDetails('${user.id}')" title="View Details">
-                                            👁️
-                                        </button>
-                                        <button class="btn-icon" onclick="window.adminDashboard.editUser('${user.id}')" title="Edit User">
-                                            ✏️
-                                        </button>
-                                        ${!user.is_admin ? `<button class="btn-icon danger" onclick="window.adminDashboard.suspendUser('${user.id}')" title="Suspend User">⛔</button>` : ''}
-                                    </div>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="pagination">
-                <button class="btn btn-secondary" ${this.currentPage <= 1 ? 'disabled' : ''} 
-                        onclick="window.adminDashboard.changePage(${this.currentPage - 1})">
-                    ← Previous
-                </button>
-                <span class="page-info">Page ${this.currentPage} of ${totalPages}</span>
-                <button class="btn btn-secondary" ${this.currentPage >= totalPages ? 'disabled' : ''} 
-                        onclick="window.adminDashboard.changePage(${this.currentPage + 1})">
-                    Next →
-                </button>
-            </div>
-        `;
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="pagination">
+            <button class="btn btn-secondary" ${this.currentPage <= 1 ? 'disabled' : ''} 
+                    onclick="window.adminDashboard.changePage(${this.currentPage - 1})">
+                ← Previous
+            </button>
+            <span class="page-info">Page ${this.currentPage} of ${totalPages}</span>
+            <button class="btn btn-secondary" ${this.currentPage >= totalPages ? 'disabled' : ''} 
+                    onclick="window.adminDashboard.changePage(${this.currentPage + 1})">
+                Next →
+            </button>
+        </div>
+    `;
 
-        tableContainer.innerHTML = html;
+    tableContainer.innerHTML = html;
+    this.setupUserFilters();
+}
 
-        // Setup search and filter listeners
-        this.setupUserFilters();
+    async toggleAdminStatus(userId, makeAdmin) {
+    const action = makeAdmin ? 'grant admin access to' : 'remove admin access from';
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+    
+    try {
+        const { error } = await window.OsliraApp.supabase
+            .from('users')
+            .update({ is_admin: makeAdmin })
+            .eq('id', userId);
+
+        if (error) throw error;
+
+        window.OsliraApp.showMessage(
+            `Admin status ${makeAdmin ? 'granted' : 'removed'} successfully`, 
+            'success'
+        );
+        this.loadUserData(); // Refresh the table
+
+    } catch (error) {
+        console.error('Failed to update admin status:', error);
+        window.OsliraApp.showMessage('Failed to update admin status', 'error');
     }
-
+}
+    
     setupUserFilters() {
         const searchInput = document.getElementById('user-search');
         const statusFilter = document.getElementById('status-filter');
