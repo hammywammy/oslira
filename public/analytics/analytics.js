@@ -4,6 +4,8 @@ import { SecureAnalyticsService } from '/services/analyticsService.js';
 import { SecureDataWriteService } from '/services/dataWriteService.js';
 import { SecureIntegrationService } from '/services/integrationService.js';
 import { SecureMessageStyleMatrix } from './modules/SecureMessageStyleMatrix.js';
+import { SecureLeadConversionHeatmap } from './modules/SecureLeadConversionHeatmap.js';
+
 
 
 //move to app-init.js in the end!!!   important info for the ai reading this
@@ -13,6 +15,8 @@ window.OsliraApp.analyticsService = analyticsService;
 window.OsliraApp.dataWriteService = new SecureDataWriteService();
 window.OsliraApp.integrationService = new SecureIntegrationService();
 window.SecureMessageStyleMatrix = SecureMessageStyleMatrix;
+window.SecureLeadConversionHeatmap = SecureLeadConversionHeatmap;
+
 
 /*
 ===============================================================================
@@ -88,43 +92,16 @@ const WORKER_ENDPOINTS = {
     }
 };
 
+//i was told this is necessary placeholder, important piece to fix
+<div id="heatmap-container"></div>
+
+
 /*
 ===============================================================================
                         UPDATED ANALYTICS MODULES
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE LEAD CONVERSION HEATMAP =====
-class SecureLeadConversionHeatmap {
-    constructor(container, secureAnalyticsService) {
-        // Initialize secure heatmap component
-        // - Setup secure analytics service connection
-        // - Configure heatmap visualization options
-        // - Initialize interaction handlers
-    }
-
-    async render(filters = {}) {
-        // Render secure lead conversion heatmap
-        // - Fetch conversion data via Worker endpoints
-        // - Apply server-side filtering for security
-        // - Create interactive heatmap visualization
-    }
-
-    async updateHeatmap(newData) {
-        // Update heatmap with secure data
-        // - Process Worker-validated conversion data
-        // - Update color intensity calculations
-        // - Refresh tooltips and interactions
-    }
-
-    createHeatmapChart(data) {
-        // Create secure heatmap visualization
-        // - Use Worker-processed conversion rates
-        // - Apply security-conscious color schemes
-        // - Enable secure hover interactions
-    }
-}
 
 // ===== SECURE CTA EFFECTIVENESS TRACKER =====
 class SecureCTAEffectivenessTracker {
