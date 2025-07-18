@@ -598,7 +598,7 @@ class OsliraPageInitializer {
             initializeTimezone();
             
             // Check authentication for protected pages
-            const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings'];
+            const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings', 'admin', 'campaigns',];
             if (protectedPages.includes(window.OsliraApp.currentPage)) {
                 await checkAuthentication();
                 
