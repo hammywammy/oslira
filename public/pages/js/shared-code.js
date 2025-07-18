@@ -190,7 +190,7 @@ function setupAuthListener() {
 }
 
 function redirectToLogin() {
-    const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings'];
+    const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings', 'admin', 'campaigns',];
     const currentPage = getCurrentPageName();
     
     if (protectedPages.includes(currentPage)) {
