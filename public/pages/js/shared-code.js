@@ -115,13 +115,20 @@ async function initializeSupabase() {
 async function checkAuthentication() {
     const supabase = window.OsliraApp.supabase;
     
+    console.log('🔐 Starting authentication check...');
+    console.log('📊 Supabase available:', !!supabase);
+    
     if (!supabase) {
         console.warn('🚧 Supabase not available - using fallback');
-        return setupDemoUser();  // Clear fallback behavior
+        return setupDemoUser();
     }
     
     try {
+        console.log('🔍 Getting session from Supabase...');
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        console.log('📋 Session data:', session);
+        console.log('❌ Session error:', error);
         
         if (error) {
             console.error('Auth error:', error);
@@ -130,7 +137,7 @@ async function checkAuthentication() {
         }
         
         if (!session) {
-            console.log('No active session');
+            console.log('❌ No active session found');
             redirectToLogin();
             return null;
         }
@@ -139,13 +146,15 @@ async function checkAuthentication() {
         window.OsliraApp.session = session;
         window.OsliraApp.user = session.user;
         
-        console.log('✅ User authenticated:', session.user.email);
+        console.log('✅ User authenticated successfully!');
+        console.log('👤 User email:', session.user.email);
+        console.log('🆔 User ID:', session.user.id);
         
         setupAuthListener();
         return session.user;
         
     } catch (error) {
-        console.error('Auth check failed:', error);
+        console.error('❌ Auth check failed:', error);
         redirectToLogin();
         return null;
     }
