@@ -46,54 +46,90 @@ class OsliraAdminDashboard {
     // =============================================================================
 
     async initialize() {
-        try {
-            console.log('🔧 Initializing admin dashboard...');
-            
-            // Ensure shared code is loaded
-            if (!window.OsliraApp) {
-                throw new Error('Shared code not loaded. Include shared-code.js first.');
-            }
-
-            // Wait for app initialization
-            await window.OsliraApp.initialize();
-            
-            // Check admin permissions
-            await this.verifyAdminAccess();
-            
-            // Setup UI
-            this.setupNavigation();
-            this.setupUIEventListeners();
-            
-            // Load initial data
-            await this.loadInitialData();
-            
-            // Start real-time updates
-            this.startRealTimeUpdates();
-            
-            console.log('✅ Admin dashboard initialized successfully');
-            
-        } catch (error) {
-            console.error('❌ Admin dashboard initialization failed:', error);
-            this.handleInitializationError(error);
+    try {
+        console.log('🔧 Initializing admin dashboard...');
+        
+        // Ensure shared code is loaded
+        if (!window.OsliraApp) {
+            throw new Error('Shared code not loaded. Include shared-code.js first.');
         }
-    }
 
-async verifyAdminAccess() {
-  const user = window.OsliraApp.user;
-  if (!user?.id) {
-    throw new Error('Not authenticated');
-  }
-  const { data, error } = await window.OsliraApp.supabase
-    .from('users')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single();
-  if (error) throw error;
-  if (!data.is_admin) {
-    throw new Error('Access denied. Admin privileges required.');
-  }
+        // Wait for app initialization to complete first
+        if (!window.OsliraApp.initializer.initialized) {
+            console.log('⏳ Waiting for app initialization...');
+            await window.OsliraApp.initialize();
+        }
+
+        // Wait for user to be properly loaded
+        let retries = 0;
+        const maxRetries = 10;
+        while (!window.OsliraApp.user && retries < maxRetries) {
+            console.log(`⏳ Waiting for user authentication... (${retries + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retries++;
+        }
+
+        // Check if we have user and supabase
+        if (!window.OsliraApp.user) {
+            throw new Error('User authentication required for admin dashboard');
+        }
+
+        if (!window.OsliraApp.supabase) {
+            throw new Error('Supabase connection required for admin dashboard');
+        }
+        
+        // Now check admin permissions
+        await this.verifyAdminAccess();
+        
+        // Rest of initialization...
+        this.setupNavigation();
+        this.setupUIEventListeners();
+        await this.loadInitialData();
+        this.startRealTimeUpdates();
+        
+        console.log('✅ Admin dashboard initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ Admin dashboard initialization failed:', error);
+        this.handleInitializationError(error);
+    }
 }
 
+async verifyAdminAccess() {
+    try {
+        const user = window.OsliraApp.user;
+        if (!user?.id) {
+            throw new Error('Not authenticated - no user found');
+        }
+
+        console.log('🔐 Verifying admin access for user:', user.email);
+
+        const { data, error } = await window.OsliraApp.supabase
+            .from('users')
+            .select('is_admin, email')
+            .eq('id', user.id)
+            .single();
+
+        if (error) {
+            console.error('Database error checking admin status:', error);
+            throw new Error(`Database error: ${error.message}`);
+        }
+
+        if (!data) {
+            throw new Error('User not found in database');
+        }
+
+        if (!data.is_admin) {
+            throw new Error(`Access denied. Admin privileges required for user: ${data.email}`);
+        }
+
+        console.log('✅ Admin access verified');
+        
+    } catch (error) {
+        console.error('❌ Admin verification failed:', error);
+        throw error;
+    }
+}
 
     handleInitializationError(error) {
         const errorMessage = error.message || 'Failed to initialize admin dashboard';
