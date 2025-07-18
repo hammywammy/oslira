@@ -2051,9 +2051,8 @@ const adminDashboard = new OsliraAdminDashboard();
 // Make admin dashboard available globally for onclick handlers
 window.adminDashboard = adminDashboard;
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    adminDashboard.initialize();
+ window.OsliraApp.events.addEventListener('appInitialized', () => {
+   adminDashboard.initialize();
 });
 
 // Cleanup on page unload
