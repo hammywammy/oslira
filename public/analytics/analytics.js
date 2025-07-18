@@ -1,842 +1,669 @@
-// Core Analytics Configuration & Helpers
-import {
-  ANALYTICS_CONFIG,
-  isFeatureEnabled,
-  enableFeature,
-  disableFeature,
-  getFeatureFlags,
-  loadDynamicConfig
-} from '../config/analytics-config.js';
-
-// Modular Constants
-import { CHART_THEMES } from '../utils/chartThemes.js';
-import { LEAD_TYPES } from '../utils/leadTypes.js';
-import { MESSAGE_STYLES } from '../utils/messageStyles.js';
-import { PERFORMANCE_THRESHOLDS } from '../utils/performanceThresholds.js';
-import { CACHE_KEYS } from '../utils/cacheKeys.js';
-import { EXPORT_CONFIG } from '../utils/exportConfig.js';
-
-// Initialize configuration when DOM is ready or OsliraApp is available
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadDynamicConfig);
-} else {
-    loadDynamicConfig();
-}
-
-// Also listen for OsliraApp initialization
-if (window.OsliraApp?.events) {
-    window.OsliraApp.events.addEventListener('appInitialized', loadDynamicConfig);
-}
+/*
+===============================================================================
+                        SECURE ANALYTICS DASHBOARD ARCHITECTURE
+===============================================================================
+🔐 All AI calls, billing operations, and secure writes routed through Cloudflare Workers
+🔐 Frontend acts as thin HTTP client with no direct Claude/OpenAI access
+🔐 Credit verification and deduction handled server-side with service role key
+*/
 
 /*
 ===============================================================================
-                        ANALYTICS DASHBOARD CORE SYSTEM
+                           CLOUDFLARE WORKER ENDPOINTS
 ===============================================================================
-Main orchestrator class that initializes and manages the entire analytics platform.
-Handles startup sequence, component coordination, and global state management.
+Modular worker architecture with named endpoints and clear responsibilities
 */
 
-// ===== ANALYTICS DASHBOARD CORE CLASS =====
-class AnalyticsDashboard {
-    constructor() {
-        // Initialize dashboard state, config, and core dependencies
-        this.initialized = false;
-        this.modules = new Map();
-        this.dataLayer = null;
-        this.claudeService = null;
-        this.filterManager = null;
-        this.chartFactory = null;
-        
-        // Fix 5: Debounced refresh to prevent performance spikes
-        this.debouncedRefresh = this.debounce(this.applyFiltersAndRefresh.bind(this), ANALYTICS_CONFIG.performance.debounceDelay);
+// ===== WORKER ENDPOINT STRUCTURE =====
+const WORKER_ENDPOINTS = {
+    // AI & Claude Services - All AI processing moved to Worker
+    ai: {
+        risk: '/ai/risk-analysis',           // Message risk classification with Claude
+        insights: '/ai/generate-insights',   // Strategic insights generation
+        feedback: '/ai/classify-feedback',   // Sentiment & theme analysis
+        optimize: '/ai/suggest-optimizations', // Performance recommendations
+        experiments: '/ai/suggest-experiments', // A/B test suggestions
+        patterns: '/ai/analyze-patterns',    // Weekly pattern analysis
+        icp_drift: '/ai/detect-icp-drift'   // ICP drift detection
+    },
+    
+    // Analytics Data Processing - Server-side data aggregation
+    analytics: {
+        matrix: '/analytics/message-matrix',      // Message style performance
+        heatmap: '/analytics/lead-conversion',    // Lead conversion heatmap
+        cta: '/analytics/cta-effectiveness',      // CTA performance tracking
+        timeline: '/analytics/timeline-overlay', // Outreach timeline
+        roi: '/analytics/iteration-roi',          // Message iteration ROI
+        team: '/analytics/team-impact',           // Team performance
+        crm: '/analytics/crm-comparison',         // CRM performance
+        guidance: '/analytics/claude-history'    // Claude guidance tracking
+    },
+    
+    // Credit & Billing Management - Server-side credit operations
+    credits: {
+        check: '/credits/check-balance',     // Verify user credits with service role
+        deduct: '/credits/deduct-usage',     // Deduct credits with audit logging
+        history: '/credits/usage-history',   // Credit usage analytics
+        predict: '/credits/predict-usage'    // Predict credit consumption
+    },
+    
+    // External Integrations - Server-side API calls
+    integrations: {
+        scrape: '/integrations/apify-scrape',    // Apify lead scraping
+        crm_sync: '/integrations/crm-sync',      // CRM data synchronization
+        bi_push: '/integrations/bi-export',      // BI platform export
+        webhooks: '/integrations/webhooks'       // Webhook handlers
+    },
+    
+    // Data Writes & Logging - Server-side writes with service role
+    data: {
+        write_analysis: '/data/write-analysis',  // Write AI analysis results
+        log_audit: '/data/audit-log',           // Audit trail logging
+        cache_performance: '/data/cache-perf',   // Performance cache updates
+        batch_write: '/data/batch-operations'   // Batch data operations
+    },
+    
+    // Export & Reporting - Server-side report generation
+    export: {
+        pdf: '/export/generate-pdf',         // PDF report generation
+        csv: '/export/generate-csv',         // CSV data export
+        excel: '/export/generate-excel',     // Excel workbook export
+        scheduled: '/export/scheduled-reports' // Automated report scheduling
     }
-
-    async init() {
-        // Main initialization sequence
-        try {
-            // Validate configuration - Fix 3 & 4: Ensure endpoints are configured
-            this.validateConfig();
-            
-            // Setup Supabase connection
-            this.dataLayer = new DataLayer();
-            await this.dataLayer.init();
-            
-            // Initialize Claude API - Fix 1: Remove unnecessary await for non-async method
-            this.claudeService = new ClaudeService();
-            // Only validate connection if needed, don't await empty initialize()
-            
-            // Setup event listeners with debounced handlers
-            this.setupEventListeners();
-            
-            // Initialize other core services - Fix 6: Remove empty initialize calls
-            this.filterManager = new FilterManager();
-            this.chartFactory = new ChartFactory();
-            
-            // Load initial data
-            await this.loadInitialData();
-            
-            // Render dashboard layout
-            this.renderDashboardLayout();
-            
-            this.initialized = true;
-            console.log('Analytics Dashboard initialized successfully');
-            
-        } catch (error) {
-            ErrorHandler.handleAPIError(error, 'Dashboard Initialization');
-            throw error;
-        }
-    }
-
-    validateConfig() {
-        // Fix 3 & 4: Ensure worker URL fallback and endpoint configuration
-        if (!ANALYTICS_CONFIG.endpoints.aiRiskAssessment) {
-            throw new Error('Claude worker endpoint not configured');
-        }
-        
-        if (!window.OsliraApp?.config?.workerUrl) {
-            console.warn('Worker URL not found, using fallback endpoint');
-        }
-    }
-
-    setupEventListeners() {
-        // Setup global event listeners for dashboard interactions
-        // Fix 5: Use debounced refresh for filter changes
-        document.addEventListener('filterChange', (event) => {
-            this.debouncedRefresh(event.detail.filters);
-        });
-        
-        document.addEventListener('dataRefresh', () => {
-            this.refreshAllModules();
-        });
-        
-        document.addEventListener('exportRequest', (event) => {
-            this.handleExportRequest(event.detail.type);
-        });
-    }
-
-    async loadInitialData() {
-        // Load initial data for dashboard
-        try {
-            const initialFilters = this.filterManager.getDefaultFilters();
-            await this.dataLayer.fetchAnalyticsData(initialFilters);
-        } catch (error) {
-            ErrorHandler.handleAPIError(error, 'Initial Data Load');
-        }
-    }
-
-    renderDashboardLayout() {
-        // Render dashboard layout and initialize modules
-        this.initializeAnalyticsModules();
-        this.renderFilterPanel();
-        this.renderExportControls();
-    }
-
-    initializeAnalyticsModules() {
-        // Initialize all analytics modules
-        const moduleConfigs = [
-            { name: 'messageStyleMatrix', class: MessageStyleMatrix, container: '#message-style-container' },
-            { name: 'leadConversionHeatmap', class: LeadConversionHeatmap, container: '#lead-conversion-container' },
-            { name: 'ctaTracker', class: CTAEffectivenessTracker, container: '#cta-tracker-container' },
-            { name: 'feedbackExplorer', class: FeedbackSignalExplorer, container: '#feedback-explorer-container' },
-            { name: 'crmComparator', class: CRMPerformanceComparator, container: '#crm-comparator-container' },
-            { name: 'timelineOverlay', class: OutreachTimelineOverlay, container: '#timeline-overlay-container' },
-            { name: 'roiTracker', class: MessageIterationROITracker, container: '#roi-tracker-container' },
-            { name: 'teamDashboard', class: TeamImpactDashboard, container: '#team-dashboard-container' },
-            { name: 'claudeHistory', class: ClaudeGuidanceHistory, container: '#claude-history-container' },
-            { name: 'riskClassifier', class: MessageRiskClassifier, container: '#risk-classifier-container' }
-        ];
-
-        moduleConfigs.forEach(config => {
-            const container = document.querySelector(config.container);
-            if (container) {
-                const module = new config.class(container, this.dataLayer, this.claudeService);
-                this.modules.set(config.name, module);
-            }
-        });
-    }
-
-    renderFilterPanel() {
-        // Render filter panel interface
-        const filterContainer = document.querySelector('#filter-panel');
-        if (filterContainer) {
-            this.filterManager.render(filterContainer);
-        }
-    }
-
-    renderExportControls() {
-        // Render export and sharing controls
-        const exportContainer = document.querySelector('#export-controls');
-        if (exportContainer) {
-            this.setupExportControls(exportContainer);
-        }
-    }
-
-    async applyFiltersAndRefresh(filters) {
-        // Apply filters and refresh all modules
-        try {
-            UIHelpers.showLoading(document.querySelector('#dashboard-container'));
-            
-            // Update data layer with new filters
-            await this.dataLayer.fetchAnalyticsData(filters);
-            
-            // Refresh all modules
-            await this.refreshAllModules();
-            
-            UIHelpers.hideLoading(document.querySelector('#dashboard-container'));
-            
-        } catch (error) {
-            ErrorHandler.handleAPIError(error, 'Filter Application');
-        }
-    }
-
-    async refreshAllModules() {
-        // Refresh all analytics modules with current data
-        const refreshPromises = Array.from(this.modules.values()).map(module => {
-            if (module.render && typeof module.render === 'function') {
-                return module.render();
-            }
-        });
-        
-        await Promise.allSettled(refreshPromises);
-    }
-
-    setupExportControls(container) {
-        // Setup export functionality
-        const exportButton = document.createElement('button');
-        exportButton.textContent = 'Export Dashboard';
-        exportButton.className = 'bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600';
-        exportButton.addEventListener('click', () => {
-            this.handleExportRequest('pdf');
-        });
-        
-        container.appendChild(exportButton);
-    }
-
-    async handleExportRequest(type) {
-        // Handle export requests
-        try {
-            const exportManager = new ExportManager();
-            await exportManager.exportToPDF('dashboard-container', { type });
-        } catch (error) {
-            ErrorHandler.handleAPIError(error, 'Export');
-        }
-    }
-
-    debounce(func, delay) {
-        // Utility method for debouncing function calls
-        let timeoutId;
-        return function (...args) {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => func.apply(this, args), delay);
-        };
-    }
-
-    destroy() {
-        // Clean up dashboard resources
-        this.modules.forEach(module => {
-            if (module.destroy && typeof module.destroy === 'function') {
-                module.destroy();
-            }
-        });
-        
-        this.modules.clear();
-        this.initialized = false;
-    }
-}
+};
 
 /*
 ===============================================================================
-                         DATA LAYER & API SERVICES
+                        FRONTEND HTTP CLIENT SERVICES
 ===============================================================================
-Core data management system handling all database interactions, API calls,
-caching, and data transformation. This is the foundation that feeds all
-analytics modules with clean, processed data.
+Thin client services that act as secure proxies to Worker endpoints
 */
 
-// ===== DATA LAYER & API SERVICES =====
-class DataLayer {
+// ===== SECURE CLAUDE SERVICE (HTTP CLIENT) =====
+class SecureClaudeService {
     constructor() {
-        // Initialize data layer with caching
+        // Initialize secure Claude HTTP client
+        // - Set Worker base URL from window.OsliraApp.config.workerUrl
+        // - Configure timeout and retry settings
+        // - Setup request queue for deduplication
     }
 
-    async fetchAnalyticsData(filters = {}) {
-        // Main data fetching orchestrator
-        // - Apply filters
-        // - Check cache first
-        // - Fetch from Supabase
-        // - Process and format data
-        // - Update cache
+    async analyzeMessageRisk(messages, options = {}) {
+        // 🔐 Send message risk analysis to Worker
+        // - Sanitize message data before transport
+        // - Include analysis options and preferences
+        // - Return structured risk assessment from Claude
     }
 
-    async getMessageStyleData(filters) {
-        // Fetch message style performance data
-        // - Group by tone, structure, engagement
-        // - Calculate performance metrics
-        // - Apply time range filters
+    async generateInsights(analyticsData, context = {}) {
+        // 🔐 Generate strategic insights via Worker
+        // - Send analytics data to Worker for Claude processing
+        // - Include context like timeframe, focus areas
+        // - Return actionable insights and recommendations
     }
 
-    async getLeadConversionData(filters) {
-        // Fetch lead type conversion data
-        // - Group by lead archetype
-        // - Calculate conversion rates
-        // - Include engagement metrics
+    async classifyFeedback(feedbackData, options = {}) {
+        // 🔐 Classify feedback sentiment and themes via Worker
+        // - Send feedback text to Worker for Claude analysis
+        // - Extract themes, sentiment, and priority issues
+        // - Return structured classification results
     }
 
-    async getCTAEffectivenessData(filters) {
-        // Fetch CTA performance data
-        // - Track CTA usage frequency
-        // - Calculate success rates
-        // - Sort by effectiveness
+    async suggestOptimizations(performanceData, constraints = {}) {
+        // 🔐 Get optimization suggestions via Worker
+        // - Send performance metrics to Worker
+        // - Include constraints like budget, timeframe, risk tolerance
+        // - Return prioritized optimization recommendations
     }
 
-    async getFeedbackSignalData(filters) {
-        // Fetch feedback and sentiment data
-        // - Process freeform comments
-        // - Aggregate tags and votes
-        // - Track trend changes
+    async suggestExperiments(data, experimentType = 'ab_test') {
+        // 🔐 Get A/B test suggestions via Worker
+        // - Send historical data to Worker for analysis
+        // - Specify experiment type and parameters
+        // - Return suggested experiments with confidence scores
     }
 
-    async getCRMPerformanceData(filters) {
-        // Fetch CRM comparison data
-        // - Win rates by CRM
-        // - Quality scores
-        // - Style consistency metrics
+    async makeSecureRequest(endpoint, payload) {
+        // Make authenticated request to Worker endpoint
+        // - Add Authorization: Bearer header with session token
+        // - Include request ID for tracking
+        // - Handle retries and error responses
+        // - Prevent duplicate requests with queue management
     }
 
-    async getTimelineData(filters) {
-        // Fetch timeline events and correlations
-        // - Campaign launches
-        // - Performance changes
-        // - Strategy adjustments
-    }
-
-    async getIterationROIData(filters) {
-        // Fetch message iteration tracking
-        // - Before/after performance
-        // - Regeneration impact
-        // - ROI calculations
-    }
-
-    async getTeamImpactData(filters) {
-        // Fetch team performance data
-        // - Individual contributor metrics
-        // - Claude feedback utilization
-        // - Performance improvements
-    }
-
-    async getClaudeGuidanceData(filters) {
-        // Fetch Claude advice history
-        // - Historical recommendations
-        // - Implementation tracking
-        // - Success correlation
-    }
-
-    async getMessageRiskData(filters) {
-        // Fetch message risk analysis
-        // - Risk score calculations
-        // - Flag frequency
-        // - Risk trend analysis
+    sanitizeForTransport(data) {
+        // Remove sensitive fields before sending to Worker
+        // - Strip PII, tokens, secrets
+        // - Maintain data integrity for analysis
+        // - Log sanitization actions for audit
     }
 }
 
-class SupabaseService {
+// ===== SECURE CREDIT SERVICE (HTTP CLIENT) =====
+class SecureCreditService {
     constructor() {
-        // Initialize Supabase client
+        // Initialize secure credit management client
+        // - Connect to Worker credit endpoints
+        // - Setup request authentication
+        // - Configure timeout settings
     }
 
-    async executeQuery(query, params = {}) {
-        // Execute Supabase queries with error handling
-        // - Query validation
-        // - Error handling
-        // - Response formatting
+    async checkBalance(userId = null) {
+        // 🔐 Check user credit balance via Worker
+        // - Verify user authentication server-side
+        // - Return current balance and usage projections
+        // - Include subscription status and limits
     }
 
-    async getMessages(filters) {
-        // Query messages table with filters
+    async deductCredits(operation, metadata = {}) {
+        // 🔐 Deduct credits with server-side verification
+        // - Validate operation cost server-side
+        // - Log usage with audit trail
+        // - Handle insufficient credit scenarios
+        // - Return updated balance and transaction ID
     }
 
-    async getFeedback(messageIds) {
-        // Query feedback table for specific messages
+    async getUsageHistory(timeframe = '30d') {
+        // 🔐 Get credit usage analytics via Worker
+        // - Fetch usage breakdown by operation type
+        // - Include trend analysis and projections
+        // - Return formatted usage reports
     }
 
-    async getLeads(filters) {
-        // Query leads table with classification
+    async predictUsage(operation) {
+        // 🔐 Predict credit consumption for planned operations
+        // - Analyze operation requirements
+        // - Return cost estimates and recommendations
+        // - Include optimization suggestions
     }
 
-    async getCRMs() {
-        // Query CRM performance data
-    }
-
-    async getPerformanceSnapshots(dateRange) {
-        // Query cached performance data
-    }
-
-    async updatePerformanceCache(data) {
-        // Update performance cache tables
+    async makeSecureRequest(endpoint, payload) {
+        // Execute authenticated credit operation
+        // - Add session authentication
+        // - Include request tracking
+        // - Handle credit-specific errors
+        // - Return formatted responses
     }
 }
 
-class ClaudeService {
+// ===== SECURE ANALYTICS SERVICE (HTTP CLIENT) =====
+class SecureAnalyticsService {
     constructor() {
-        // Initialize Claude API connection
+        // Initialize secure analytics data client
+        // - Setup Worker endpoint connections
+        // - Configure caching strategies
+        // - Initialize request management
     }
 
-    async analyzeMessageRisk(message) {
-        // Send message to Claude for risk analysis
-        // - Format message for Claude
-        // - Send API request
-        // - Parse risk assessment
-        // - Return structured response
+    async getMessageMatrix(filters = {}) {
+        // 🔐 Fetch message style performance matrix via Worker
+        // - Send filter parameters to Worker
+        // - Process data aggregation server-side
+        // - Return formatted matrix data for visualization
     }
 
-    async generateInsights(analyticsData) {
-        // Generate strategic insights from data
-        // - Format data for Claude
-        // - Request pattern analysis
-        // - Parse recommendations
-        // - Return actionable insights
+    async getLeadConversionHeatmap(filters = {}) {
+        // 🔐 Fetch lead conversion heatmap via Worker
+        // - Apply filters server-side for security
+        // - Calculate conversion rates and confidence intervals
+        // - Return heatmap data with statistical significance
     }
 
-    async classifyFeedback(feedbackText) {
-        // Classify feedback sentiment and themes
-        // - Process text through Claude
-        // - Extract themes and sentiment
-        // - Return classification
+    async getCTAEffectiveness(filters = {}) {
+        // 🔐 Fetch CTA performance tracking via Worker
+        // - Analyze CTA usage patterns server-side
+        // - Calculate effectiveness scores and rankings
+        // - Return actionable CTA insights
     }
 
-    async suggestOptimizations(performanceData) {
-        // Get Claude's optimization suggestions
-        // - Analyze performance patterns
-        // - Generate recommendations
-        // - Return structured suggestions
+    async getTimelineOverlay(filters = {}) {
+        // 🔐 Fetch outreach timeline with performance overlay
+        // - Correlate events with performance changes
+        // - Calculate impact scores for timeline events
+        // - Return timeline with correlation analysis
+    }
+
+    async getIterationROI(filters = {}) {
+        // 🔐 Fetch message iteration ROI analysis
+        // - Calculate improvement metrics server-side
+        // - Track regeneration impact and costs
+        // - Return ROI analysis with recommendations
+    }
+
+    async getTeamImpact(filters = {}) {
+        // 🔐 Fetch team performance analytics
+        // - Analyze individual contributor metrics
+        // - Track Claude utilization and improvements
+        // - Return team rankings and coaching insights
+    }
+
+    async getCRMComparison(filters = {}) {
+        // 🔐 Fetch CRM performance comparison
+        // - Compare win rates across CRM systems
+        // - Calculate quality and consistency scores
+        // - Return CRM rankings with insights
+    }
+
+    async getClaudeGuidanceHistory(filters = {}) {
+        // 🔐 Fetch Claude guidance tracking
+        // - Track advice implementation and outcomes
+        // - Calculate guidance ROI and effectiveness
+        // - Return guidance history with impact analysis
+    }
+
+    async makeAnalyticsRequest(endpoint, payload) {
+        // Execute secure analytics data request
+        // - Cache responses for performance
+        // - Handle large datasets efficiently
+        // - Return formatted analytics data
+    }
+}
+
+// ===== SECURE DATA WRITE SERVICE (HTTP CLIENT) =====
+class SecureDataWriteService {
+    constructor() {
+        // Initialize secure data write client
+        // - Setup Worker write endpoints
+        // - Configure write queue for batching
+        // - Initialize audit logging
+    }
+
+    async writeAnalysisResult(analysisData) {
+        // 🔐 Write AI analysis results via Worker
+        // - Queue analysis data for secure write
+        // - Include metadata and timestamps
+        // - Log write operations for audit
+    }
+
+    async logAuditTrail(action, metadata = {}) {
+        // 🔐 Log user actions for audit trail
+        // - Capture user actions and context
+        // - Include session and security metadata
+        // - Store audit logs securely server-side
+    }
+
+    async cachePerformanceData(data, cacheKey) {
+        // 🔐 Cache performance data via Worker
+        // - Store processed analytics server-side
+        // - Set appropriate TTL values
+        // - Enable cache invalidation strategies
+    }
+
+    async queueWrite(endpoint, payload) {
+        // Queue write operation for batch processing
+        // - Add to write queue with priority
+        // - Handle write conflicts and retries
+        // - Return promise for completion tracking
+    }
+
+    async processWriteQueue() {
+        // Process queued write operations in batches
+        // - Execute writes in optimal batch sizes
+        // - Handle errors and retries gracefully
+        // - Maintain write order when required
+    }
+}
+
+// ===== SECURE INTEGRATION SERVICE (HTTP CLIENT) =====
+class SecureIntegrationService {
+    constructor() {
+        // Initialize secure integration client
+        // - Setup Worker integration endpoints
+        // - Configure extended timeouts for external APIs
+        // - Initialize integration monitoring
+    }
+
+    async triggerApifyScrape(scrapeConfig) {
+        // 🔐 Trigger Apify lead scraping via Worker
+        // - Send scraping configuration to Worker
+        // - Handle long-running scrape operations
+        // - Return scrape job ID and status tracking
+    }
+
+    async syncWithCRM(crmConfig) {
+        // 🔐 Synchronize data with external CRM
+        // - Execute CRM API calls server-side
+        // - Handle authentication and rate limiting
+        // - Return sync status and results
+    }
+
+    async exportToBI(exportConfig) {
+        // 🔐 Export analytics to BI platforms
+        // - Format data for target BI system
+        // - Handle large dataset exports
+        // - Return export status and access links
+    }
+
+    async makeIntegrationRequest(endpoint, payload) {
+        // Execute secure integration request
+        // - Handle extended timeouts for external APIs
+        // - Include integration-specific error handling
+        // - Return formatted integration responses
     }
 }
 
 /*
 ===============================================================================
-                        PERFORMANCE & CACHING SYSTEM
+                        UPDATED ANALYTICS MODULES
 ===============================================================================
-High-performance caching layer and optimization utilities to ensure
-sub-second load times and smooth user experience with large datasets.
+Analytics modules updated to use secure Worker-based services
 */
 
-// ===== PERFORMANCE & CACHING =====
-class PerformanceOptimizer {
-    constructor() {
-        // Initialize performance monitoring
-    }
-
-    async cacheData(key, data, ttl = 3600) {
-        // Cache data with TTL
-        // - Validate data
-        // - Set expiration
-        // - Store in memory cache
-    }
-
-    async getCachedData(key) {
-        // Retrieve cached data
-        // - Check cache existence
-        // - Validate TTL
-        // - Return data or null
-    }
-
-    async invalidateCache(pattern) {
-        // Invalidate cache entries
-        // - Match pattern
-        // - Clear entries
-        // - Log invalidation
-    }
-
-    debounce(func, delay) {
-        // Debounce function for frequent calls
-    }
-
-    throttle(func, limit) {
-        // Throttle function for rate limiting
-    }
-}
-
-class RealTimeSync {
-    constructor() {
-        // Initialize real-time data sync
-    }
-
-    async startSync() {
-        // Start real-time data synchronization
-        // - Setup intervals
-        // - Monitor data changes
-        // - Update UI automatically
-    }
-
-    async stopSync() {
-        // Stop real-time synchronization
-    }
-
-    async handleDataUpdate(updateType, data) {
-        // Process incoming data updates
-        // - Validate update
-        // - Update local cache
-        // - Trigger UI refresh
-    }
-}
-
-/*
-===============================================================================
-                              ANALYTICS MODULES
-===============================================================================
-The 10 core analytics modules that transform raw outreach data into
-strategic insights. Each module focuses on a specific aspect of
-performance analysis and optimization.
-*/
-
-// ===== ANALYTICS MODULES =====
-
-// ===== MESSAGE STYLE PERFORMANCE MATRIX =====
-class MessageStyleMatrix {
-    constructor(container, dataLayer) {
-        // Initialize matrix component
+// ===== SECURE MESSAGE STYLE PERFORMANCE MATRIX =====
+class SecureMessageStyleMatrix {
+    constructor(container, secureAnalyticsService, secureCreditService) {
+        // Initialize secure matrix component
+        // - Connect to secure analytics and credit services
+        // - Setup visualization container
+        // - Configure chart rendering options
     }
 
     async render(filters = {}) {
-        // Render 3D performance matrix
-        // - Fetch style performance data
-        // - Create matrix visualization
-        // - Setup interaction handlers
-        // - Apply filters
+        // Render secure message style performance matrix
+        // - Verify user credits before expensive operations
+        // - Fetch matrix data via secure Worker endpoint
+        // - Create interactive 3D matrix visualization
+        // - Handle loading states and error scenarios
     }
 
     async updateMatrix(newData) {
-        // Update matrix with new data
-        // - Validate data format
-        // - Update chart data
-        // - Animate transitions
+        // Update matrix with new secure data
+        // - Validate data format from Worker response
+        // - Animate transitions between data states
+        // - Maintain user interaction state
     }
 
     createMatrixChart(data) {
-        // Create 3D matrix chart
-        // - Setup Chart.js 3D configuration
-        // - Format data for visualization
-        // - Add interaction capabilities
+        // Create secure matrix visualization
+        // - Process Worker-supplied matrix data
+        // - Apply security-conscious chart configurations
+        // - Enable secure interaction capabilities
     }
 
     handleMatrixClick(event) {
-        // Handle matrix cell interactions
-        // - Identify clicked cell
-        // - Show detailed metrics
-        // - Filter other components
-    }
-
-    exportMatrixData() {
-        // Export matrix data
-        // - Format for export
-        // - Generate CSV/JSON
-        // - Trigger download
+        // Handle secure matrix interactions
+        // - Validate user permissions for detailed views
+        // - Log interaction events for audit
+        // - Trigger secure detail data fetches
     }
 }
 
-// ===== LEAD CONVERSION HEATMAP =====
-class LeadConversionHeatmap {
-    constructor(container, dataLayer) {
-        // Initialize heatmap component
+// ===== SECURE LEAD CONVERSION HEATMAP =====
+class SecureLeadConversionHeatmap {
+    constructor(container, secureAnalyticsService) {
+        // Initialize secure heatmap component
+        // - Setup secure analytics service connection
+        // - Configure heatmap visualization options
+        // - Initialize interaction handlers
     }
 
     async render(filters = {}) {
-        // Render lead conversion heatmap
-        // - Fetch conversion data by lead type
-        // - Create heatmap visualization
-        // - Setup tooltips and interactions
+        // Render secure lead conversion heatmap
+        // - Fetch conversion data via Worker endpoints
+        // - Apply server-side filtering for security
+        // - Create interactive heatmap visualization
     }
 
     async updateHeatmap(newData) {
-        // Update heatmap with new data
+        // Update heatmap with secure data
+        // - Process Worker-validated conversion data
+        // - Update color intensity calculations
+        // - Refresh tooltips and interactions
     }
 
     createHeatmapChart(data) {
-        // Create heatmap chart
-        // - Setup Chart.js heatmap
-        // - Calculate color intensity
-        // - Add hover effects
-    }
-
-    calculateConversionRates(data) {
-        // Calculate conversion rates by lead type
-        // - Group by lead archetype
-        // - Calculate percentages
-        // - Apply statistical significance
-    }
-
-    handleHeatmapHover(event) {
-        // Handle heatmap hover interactions
+        // Create secure heatmap visualization
+        // - Use Worker-processed conversion rates
+        // - Apply security-conscious color schemes
+        // - Enable secure hover interactions
     }
 }
 
-// ===== CTA EFFECTIVENESS TRACKER =====
-class CTAEffectivenessTracker {
-    constructor(container, dataLayer) {
-        // Initialize CTA tracker
+// ===== SECURE CTA EFFECTIVENESS TRACKER =====
+class SecureCTAEffectivenessTracker {
+    constructor(container, secureAnalyticsService) {
+        // Initialize secure CTA tracker
+        // - Connect to secure analytics endpoints
+        // - Setup CTA performance monitoring
+        // - Configure tracking visualizations
     }
 
     async render(filters = {}) {
-        // Render CTA effectiveness chart
-        // - Fetch CTA performance data
-        // - Create bar/line chart
-        // - Show trend analysis
+        // Render secure CTA effectiveness analysis
+        // - Fetch CTA data via Worker processing
+        // - Calculate effectiveness scores server-side
+        // - Display ranked CTA performance
     }
 
     async updateCTAData(newData) {
-        // Update CTA tracking data
+        // Update CTA tracking with secure data
+        // - Process Worker-validated CTA metrics
+        // - Update ranking and trend calculations
+        // - Refresh recommendation displays
     }
 
     createCTAChart(data) {
-        // Create CTA performance chart
-        // - Setup multi-metric chart
-        // - Show usage vs effectiveness
-        // - Add trend lines
-    }
-
-    calculateCTAMetrics(data) {
-        // Calculate CTA performance metrics
-        // - Usage frequency
-        // - Success rates
-        // - Engagement impact
-    }
-
-    identifyTopCTAs(data) {
-        // Identify highest performing CTAs
+        // Create secure CTA performance visualization
+        // - Use Worker-calculated effectiveness scores
+        // - Display usage patterns and trends
+        // - Enable secure drill-down capabilities
     }
 }
 
-// ===== FEEDBACK SIGNAL EXPLORER =====
-class FeedbackSignalExplorer {
-    constructor(container, dataLayer, claudeService) {
-        // Initialize feedback explorer
+// ===== SECURE FEEDBACK SIGNAL EXPLORER =====
+class SecureFeedbackSignalExplorer {
+    constructor(container, secureAnalyticsService, secureClaudeService) {
+        // Initialize secure feedback explorer
+        // - Connect to secure analytics and Claude services
+        // - Setup sentiment analysis components
+        // - Configure theme extraction displays
     }
 
     async render(filters = {}) {
-        // Render feedback signal analysis
-        // - Fetch feedback data
-        // - Process with Claude for themes
-        // - Create sentiment visualization
-        // - Show trend analysis
-    }
-
-    async updateFeedbackData(newData) {
-        // Update feedback analysis
+        // Render secure feedback analysis
+        // - Fetch feedback data via Worker endpoints
+        // - Process sentiment analysis via secure Claude service
+        // - Display theme clusters and sentiment trends
     }
 
     async processFeedbackWithClaude(feedbackData) {
-        // Process feedback through Claude
-        // - Extract themes
-        // - Classify sentiment
-        // - Identify patterns
+        // Process feedback via secure Claude service
+        // - Send feedback to Worker for Claude analysis
+        // - Extract themes and sentiment server-side
+        // - Return structured classification results
     }
 
     createSentimentChart(data) {
-        // Create sentiment analysis chart
-    }
-
-    createThemeCloud(themes) {
-        // Create theme word cloud
-    }
-
-    trackResolutionTrends(data) {
-        // Track issue resolution over time
+        // Create secure sentiment visualization
+        // - Use Worker-processed sentiment data
+        // - Display sentiment distribution and trends
+        // - Enable secure sentiment drill-down
     }
 }
 
-// ===== CRM PERFORMANCE COMPARATOR =====
-class CRMPerformanceComparator {
-    constructor(container, dataLayer) {
-        // Initialize CRM comparator
+// ===== SECURE CRM PERFORMANCE COMPARATOR =====
+class SecureCRMPerformanceComparator {
+    constructor(container, secureAnalyticsService) {
+        // Initialize secure CRM comparator
+        // - Setup secure analytics service connection
+        // - Configure CRM comparison displays
+        // - Initialize ranking visualizations
     }
 
     async render(filters = {}) {
-        // Render CRM performance comparison
-        // - Fetch CRM performance data
-        // - Create comparison charts
-        // - Show ranking and metrics
+        // Render secure CRM performance comparison
+        // - Fetch CRM data via Worker endpoints
+        // - Calculate rankings and scores server-side
+        // - Display interactive comparison charts
     }
 
     async updateCRMData(newData) {
-        // Update CRM comparison data
+        // Update CRM comparison with secure data
+        // - Process Worker-validated CRM metrics
+        // - Update ranking calculations
+        // - Refresh comparison visualizations
     }
 
     createComparisonChart(data) {
-        // Create CRM comparison visualization
-        // - Multi-metric radar chart
-        // - Bar chart rankings
-        // - Trend comparisons
-    }
-
-    calculateCRMRankings(data) {
-        // Calculate CRM performance rankings
-    }
-
-    generateCRMInsights(data) {
-        // Generate insights about CRM performance
+        // Create secure CRM comparison visualization
+        // - Use Worker-calculated performance metrics
+        // - Display multi-metric radar charts
+        // - Enable secure CRM analysis drill-down
     }
 }
 
-// ===== OUTREACH TIMELINE OVERLAY =====
-class OutreachTimelineOverlay {
-    constructor(container, dataLayer) {
-        // Initialize timeline component
+// ===== SECURE OUTREACH TIMELINE OVERLAY =====
+class SecureOutreachTimelineOverlay {
+    constructor(container, secureAnalyticsService) {
+        // Initialize secure timeline component
+        // - Connect to secure analytics endpoints
+        // - Setup timeline visualization
+        // - Configure event correlation analysis
     }
 
     async render(filters = {}) {
-        // Render outreach timeline
-        // - Fetch timeline events
-        // - Create timeline visualization
-        // - Overlay performance data
-        // - Show correlations
+        // Render secure outreach timeline
+        // - Fetch timeline data via Worker processing
+        // - Correlate events with performance server-side
+        // - Display interactive timeline with overlays
     }
 
     async updateTimeline(newData) {
-        // Update timeline with new events
+        // Update timeline with secure event data
+        // - Process Worker-validated timeline events
+        // - Update correlation calculations
+        // - Refresh timeline visualizations
     }
 
     createTimelineChart(data) {
-        // Create timeline visualization
-        // - Timeline with events
-        // - Performance overlay
-        // - Interactive zoom/pan
-    }
-
-    correlateEventsWithPerformance(events, performance) {
-        // Analyze event-performance correlations
-    }
-
-    addTimelineEvent(event) {
-        // Add new event to timeline
+        // Create secure timeline visualization
+        // - Use Worker-processed event correlations
+        // - Display performance overlay data
+        // - Enable secure timeline interactions
     }
 }
 
-// ===== MESSAGE ITERATION ROI TRACKER =====
-class MessageIterationROITracker {
-    constructor(container, dataLayer) {
-        // Initialize ROI tracker
+// ===== SECURE MESSAGE ITERATION ROI TRACKER =====
+class SecureMessageIterationROITracker {
+    constructor(container, secureAnalyticsService) {
+        // Initialize secure ROI tracker
+        // - Setup secure analytics service connection
+        // - Configure ROI calculation displays
+        // - Initialize iteration tracking
     }
 
     async render(filters = {}) {
-        // Render iteration ROI analysis
-        // - Fetch iteration data
-        // - Calculate ROI metrics
-        // - Show before/after comparisons
+        // Render secure iteration ROI analysis
+        // - Fetch iteration data via Worker endpoints
+        // - Calculate ROI metrics server-side
+        // - Display before/after comparisons
     }
 
     async updateROIData(newData) {
-        // Update ROI tracking data
+        // Update ROI tracking with secure data
+        // - Process Worker-calculated ROI metrics
+        // - Update improvement calculations
+        // - Refresh ROI visualizations
     }
 
     calculateIterationROI(data) {
-        // Calculate ROI for message iterations
-        // - Performance improvements
-        // - Time investment
-        // - Success rate changes
-    }
-
-    createROIChart(data) {
-        // Create ROI visualization
-    }
-
-    trackRegenerationImpact(data) {
-        // Track Claude regeneration impact
+        // Calculate secure iteration ROI
+        // - Use Worker-validated performance data
+        // - Calculate improvement percentages
+        // - Include cost-benefit analysis
     }
 }
 
-// ===== TEAM IMPACT DASHBOARD =====
-class TeamImpactDashboard {
-    constructor(container, dataLayer) {
-        // Initialize team dashboard
+// ===== SECURE TEAM IMPACT DASHBOARD =====
+class SecureTeamImpactDashboard {
+    constructor(container, secureAnalyticsService) {
+        // Initialize secure team dashboard
+        // - Connect to secure team analytics endpoints
+        // - Setup team performance displays
+        // - Configure coaching insights
     }
 
     async render(filters = {}) {
-        // Render team performance analysis
-        // - Fetch team metrics
-        // - Show individual performance
-        // - Track Claude feedback usage
+        // Render secure team performance analysis
+        // - Fetch team data via Worker processing
+        // - Calculate team metrics server-side
+        // - Display individual and team performance
     }
 
     async updateTeamData(newData) {
-        // Update team performance data
+        // Update team dashboard with secure data
+        // - Process Worker-validated team metrics
+        // - Update ranking calculations
+        // - Refresh coaching recommendations
     }
 
     createTeamChart(data) {
-        // Create team performance visualization
-    }
-
-    calculateTeamMetrics(data) {
-        // Calculate team performance metrics
-    }
-
-    identifyTopPerformers(data) {
-        // Identify highest performing team members
+        // Create secure team performance visualization
+        // - Use Worker-calculated team metrics
+        // - Display performance rankings
+        // - Enable secure team member drill-down
     }
 }
 
-// ===== CLAUDE GUIDANCE HISTORY =====
-class ClaudeGuidanceHistory {
-    constructor(container, dataLayer, claudeService) {
-        // Initialize guidance history
+// ===== SECURE CLAUDE GUIDANCE HISTORY =====
+class SecureClaudeGuidanceHistory {
+    constructor(container, secureAnalyticsService, secureClaudeService) {
+        // Initialize secure guidance history
+        // - Connect to secure analytics and Claude services
+        // - Setup guidance tracking displays
+        // - Configure implementation monitoring
     }
 
     async render(filters = {}) {
-        // Render Claude guidance analysis
-        // - Fetch guidance history
-        // - Track implementation success
-        // - Show advice correlation with results
+        // Render secure Claude guidance analysis
+        // - Fetch guidance data via Worker endpoints
+        // - Track implementation success server-side
+        // - Display advice correlation with results
     }
 
     async updateGuidanceData(newData) {
-        // Update guidance tracking
+        // Update guidance tracking with secure data
+        // - Process Worker-validated guidance metrics
+        // - Update implementation tracking
+        // - Refresh advice effectiveness displays
     }
 
     trackAdviceImplementation(advice, outcomes) {
-        // Track which advice was implemented and results
-    }
-
-    calculateAdviceROI(data) {
-        // Calculate ROI of Claude's advice
-    }
-
-    suggestNewExperiments(data) {
-        // Use Claude to suggest new experiments
+        // Track secure advice implementation
+        // - Log implementation status securely
+        // - Calculate outcome correlations
+        // - Update advice effectiveness scores
     }
 }
 
-// ===== MESSAGE RISK CLASSIFIER =====
-class MessageRiskClassifier {
-    constructor(container, dataLayer, claudeService) {
-        // Initialize risk classifier
+// ===== SECURE MESSAGE RISK CLASSIFIER =====
+class SecureMessageRiskClassifier {
+    constructor(container, secureAnalyticsService, secureClaudeService) {
+        // Initialize secure risk classifier
+        // - Connect to secure Claude risk analysis service
+        // - Setup risk monitoring displays
+        // - Configure alert systems
     }
 
     async render(filters = {}) {
-        // Render risk analysis dashboard
-        // - Fetch risk data
-        // - Show risk distribution
-        // - Track risk trends
+        // Render secure risk analysis dashboard
+        // - Fetch risk data via Worker endpoints
+        // - Process risk classification via secure Claude service
+        // - Display risk distribution and alerts
     }
 
     async classifyMessage(message) {
-        // Classify individual message risk
-        // - Send to Claude for analysis
-        // - Return risk score and factors
+        // Classify message risk via secure service
+        // - Send message to Worker for Claude analysis
+        // - Return structured risk assessment
+        // - Log risk classification for audit
     }
 
     async updateRiskData(newData) {
-        // Update risk analysis data
-    }
-
-    createRiskChart(data) {
-        // Create risk distribution chart
-    }
-
-    trackRiskTrends(data) {
-        // Track risk patterns over time
-    }
-
-    generateRiskAlerts(data) {
-        // Generate alerts for high-risk messages
+        // Update risk analysis with secure data
+        // - Process Worker-validated risk metrics
+        // - Update risk trend calculations
+        // - Refresh alert configurations
     }
 }
 
@@ -844,743 +671,143 @@ class MessageRiskClassifier {
 ===============================================================================
                            CHART RENDERING SYSTEM
 ===============================================================================
-Universal chart creation and management system using Chart.js.
-Handles all visualization types with consistent theming and interactions.
+Secure chart creation and management system using Chart.js with Worker data
 */
 
-// ===== CHART RENDERING SYSTEM =====
-class ChartFactory {
+// ===== SECURE CHART FACTORY =====
+class SecureChartFactory {
     constructor() {
-        // Initialize chart factory
+        // Initialize secure chart factory
+        // - Setup Chart.js with security configurations
+        // - Configure data validation for Worker responses
+        // - Initialize chart theming and styling
     }
 
-    createChart(type, container, data, options = {}) {
-        // Universal chart creation method
-        // - Validate chart type
-        // - Setup Chart.js instance
-        // - Apply theme and styling
-        // - Return chart instance
+    createChart(type, container, secureData, options = {}) {
+        // Create secure chart with Worker-validated data
+        // - Validate data structure from Worker responses
+        // - Apply security-conscious chart configurations
+        // - Setup secure interaction handlers
+        // - Return chart instance with security context
     }
 
-    updateChart(chartInstance, newData) {
-        // Update existing chart with new data
+    updateChart(chartInstance, newSecureData) {
+        // Update chart with new secure data
+        // - Validate new data from Worker endpoints
+        // - Update chart data securely
+        // - Maintain chart state and interactions
     }
 
     destroyChart(chartInstance) {
-        // Properly destroy chart instance
-    }
-
-    createHeatmap(container, data, options) {
-        // Create heatmap visualization
-    }
-
-    createMatrix(container, data, options) {
-        // Create 3D matrix visualization
-    }
-
-    createTimeline(container, data, options) {
-        // Create timeline visualization
-    }
-
-    createComparison(container, data, options) {
-        // Create comparison chart
-    }
-
-    createTrend(container, data, options) {
-        // Create trend analysis chart
+        // Securely destroy chart instance
+        // - Clean up chart resources
+        // - Clear sensitive data from memory
+        // - Log chart destruction for audit
     }
 }
 
 /*
 ===============================================================================
-                              FILTER SYSTEM
+                        SECURE CONFIGURATION SYSTEM
 ===============================================================================
-Comprehensive filtering system allowing users to slice and dice analytics
-data by date range, CRM, lead type, campaign, and custom parameters.
+Updated configuration system for Worker-based architecture
 */
 
-// ===== FILTER SYSTEM =====
-class FilterManager {
-    constructor() {
-        // Initialize filter system
+// ===== SECURE ANALYTICS CONFIG =====
+const SECURE_ANALYTICS_CONFIG = {
+    // Worker Configuration
+    worker: {
+        baseUrl: window.OsliraApp?.config?.workerUrl,
+        timeout: 60000,
+        retryAttempts: 3,
+        retryDelay: 2000,
+        batchSize: 10
+    },
+    
+    // Security Configuration
+    security: {
+        enableRequestSigning: true,
+        enableDataSanitization: true,
+        enableAuditLogging: true,
+        maxRequestSize: 10485760, // 10MB
+        rateLimitRequests: 100
+    },
+    
+    // Credit Configuration
+    credits: {
+        checkBalanceBeforeOperation: true,
+        enableUsagePrediction: true,
+        enableCostOptimization: true,
+        logAllTransactions: true
+    },
+    
+    // AI Configuration
+    ai: {
+        enableAdvancedRiskScoring: true,
+        enableInsightGeneration: true,
+        enableFeedbackClassification: true,
+        enableExperimentSuggestions: false,
+        promptVersion: 'v2.1'
     }
-
-    initializeFilters() {
-        // Setup all filter components
-        // - Date range filters
-        // - CRM filters
-        // - Lead type filters
-        // - Message style filters
-    }
-
-    applyFilters(filters) {
-        // Apply filters across all components
-        // - Validate filter values
-        // - Update all chart components
-        // - Save filter state
-    }
-
-    resetFilters() {
-        // Reset all filters to default
-    }
-
-    saveFilterPreset(name, filters) {
-        // Save filter combination as preset
-    }
-
-    loadFilterPreset(name) {
-        // Load saved filter preset
-    }
-}
-
-class DateRangeFilter {
-    constructor(container) {
-        // Initialize date range filter
-    }
-
-    render() {
-        // Render date picker component
-    }
-
-    handleDateChange(startDate, endDate) {
-        // Handle date range changes
-    }
-
-    getDateRange() {
-        // Get current date range selection
-    }
-}
-
-class CRMFilter {
-    constructor(container) {
-        // Initialize CRM filter
-    }
-
-    render(crms) {
-        // Render CRM selection component
-    }
-
-    handleCRMSelection(selectedCRMs) {
-        // Handle CRM filter changes
-    }
-
-    getSelectedCRMs() {
-        // Get current CRM selection
-    }
-}
-
-class LeadTypeFilter {
-    constructor(container) {
-        // Initialize lead type filter
-    }
-
-    render(leadTypes) {
-        // Render lead type selection
-    }
-
-    handleLeadTypeSelection(selectedTypes) {
-        // Handle lead type filter changes
-    }
-
-    getSelectedLeadTypes() {
-        // Get current lead type selection
-    }
-}
-
-/*
-===============================================================================
-                        UTILITIES & ERROR HANDLING
-===============================================================================
-Essential utility functions for data processing, validation, error handling,
-and UI helpers that support the entire analytics platform.
-*/
-
-// ===== UTILITIES & ERROR HANDLING =====
-class DataProcessor {
-    static formatChartData(rawData, chartType) {
-        // Format raw data for specific chart types
-        // - Validate data structure
-        // - Transform for chart requirements
-        // - Handle missing data
-    }
-
-    static aggregateData(data, groupBy, aggregateFields) {
-        // Aggregate data by specified fields
-    }
-
-    static calculatePercentages(data, totalField) {
-        // Calculate percentage distributions
-    }
-
-    static sortData(data, sortField, direction = 'desc') {
-        // Sort data by specified field
-    }
-
-    static filterData(data, filters) {
-        // Apply filters to dataset
-    }
-}
-
-class ValidationService {
-    static validateFilters(filters) {
-        // Validate filter parameters
-        // - Check required fields
-        // - Validate data types
-        // - Check value ranges
-    }
-
-    static validateChartData(data, chartType) {
-        // Validate data for chart rendering
-    }
-
-    static validateAPIResponse(response, expectedStructure) {
-        // Validate API response structure
-    }
-
-    static sanitizeInput(input) {
-        // Sanitize user input
-    }
-}
-
-class ErrorHandler {
-    static handleAPIError(error, context) {
-        // Handle API errors gracefully
-        // - Log error details
-        // - Show user-friendly message
-        // - Attempt recovery if possible
-    }
-
-    static handleChartError(error, chartType) {
-        // Handle chart rendering errors
-    }
-
-    static handleDataError(error, dataSource) {
-        // Handle data processing errors
-    }
-
-    static showErrorToUser(message, type = 'error') {
-        // Display error message to user
-    }
-
-    static logError(error, context) {
-        // Log error for debugging
-    }
-}
-
-class UIHelpers {
-    static showLoading(container) {
-        // Show loading spinner
-    }
-
-    static hideLoading(container) {
-        // Hide loading spinner
-    }
-
-    static showToast(message, type = 'info') {
-        // Show toast notification
-    }
-
-    static formatNumber(number, decimals = 2) {
-        // Format numbers for display
-    }
-
-    static formatPercentage(value) {
-        // Format percentage values
-    }
-
-    static formatDate(date, format = 'YYYY-MM-DD') {
-        // Format dates for display
-    }
-
-    static createModal(content, options = {}) {
-        // Create modal dialog
-    }
-
-    static updateProgress(container, percentage) {
-        // Update progress bar
-    }
-}
-
-/*
-===============================================================================
-                            EXPORT & REPORTING
-===============================================================================
-Data export capabilities and report generation for sharing insights
-with stakeholders and creating automated reports.
-*/
-
-// ===== EXPORT & REPORTING SYSTEM =====
-class ExportManager {
-    constructor() {
-        // Initialize export system
-    }
-
-    async exportToPDF(componentId, options = {}) {
-        // Export component or dashboard to PDF
-        // - Capture component visuals
-        // - Format for PDF
-        // - Include data tables
-        // - Add branding and headers
-    }
-
-    async exportToExcel(data, sheetName = 'Analytics') {
-        // Export data to Excel format
-        // - Format data for Excel
-        // - Multiple sheets support
-        // - Chart embeddings
-        // - Data validation
-    }
-
-    async exportToCSV(data, filename) {
-        // Export data to CSV format
-    }
-
-    async generateAutomatedReport(reportConfig) {
-        // Generate automated weekly/monthly reports
-        // - Compile data from multiple modules
-        // - Generate insights summary
-        // - Create executive summary
-        // - Schedule delivery
-    }
-
-    async shareReport(reportData, recipients) {
-        // Share reports via email or links
-    }
-}
-
-/*
-===============================================================================
-                           NOTIFICATION SYSTEM
-===============================================================================
-Real-time notifications and alerts for performance changes, anomalies,
-and important insights that require immediate attention.
-*/
-
-// ===== NOTIFICATION & ALERT SYSTEM =====
-class NotificationSystem {
-    constructor() {
-        // Initialize notification system
-    }
-
-    async createAlert(alertConfig) {
-        // Create performance alerts
-        // - Threshold monitoring
-        // - Anomaly detection
-        // - Custom trigger conditions
-    }
-
-    async sendNotification(notification) {
-        // Send real-time notifications
-        // - Browser notifications
-        // - Email alerts
-        // - Slack integration
-        // - Dashboard badges
-    }
-
-    async trackAnomalies(data) {
-        // Detect and alert on data anomalies
-        // - Statistical outliers
-        // - Performance drops
-        // - Unusual patterns
-    }
-}
-
-/*
-===============================================================================
-                              SECURITY LAYER
-===============================================================================
-Security utilities for data protection, user authentication,
-and secure API communications.
-*/
-
-// ===== SECURITY & AUTHENTICATION =====
-class SecurityManager {
-    constructor() {
-        // Initialize security layer
-    }
-
-    async validateUser(credentials) {
-        // Validate user permissions
-        // - Role-based access
-        // - Feature permissions
-        // - Data access levels
-    }
-
-    encryptSensitiveData(data) {
-        // Encrypt sensitive data before storage
-    }
-
-    sanitizeData(rawData) {
-        // Sanitize data for XSS protection
-    }
-
-    async auditLog(action, userId, data) {
-        // Log user actions for audit trail
-    }
-}
-
-/*
-===============================================================================
-                        MOBILE & RESPONSIVE UTILITIES
-===============================================================================
-Utilities for ensuring optimal mobile experience and responsive
-design across all device types.
-*/
-
-// ===== MOBILE & RESPONSIVE SUPPORT =====
-class ResponsiveManager {
-    constructor() {
-        // Initialize responsive behavior
-    }
-
-    detectDevice() {
-        // Detect device type and capabilities
-    }
-
-    optimizeForMobile(componentId) {
-        // Optimize charts and UI for mobile
-        // - Simplify complex visualizations
-        // - Touch-friendly interactions
-        // - Compressed data views
-    }
-
-    createMobileDashboard(components) {
-        // Create mobile-optimized dashboard layout
-    }
-}
-
-/*
-===============================================================================
-                            INTEGRATION APIS
-===============================================================================
-APIs for integrating with external systems like CRMs, email platforms,
-and business intelligence tools.
-*/
-
-// ===== EXTERNAL INTEGRATIONS =====
-class IntegrationManager {
-    constructor() {
-        // Initialize integration system
-    }
-
-    async syncWithCRM(crmType, credentials) {
-        // Sync data with external CRMs
-        // - Salesforce integration
-        // - HubSpot integration  
-        // - Pipedrive integration
-        // - Custom CRM APIs
-    }
-
-    async pushToBI(data, biPlatform) {
-        // Push data to BI platforms
-        // - Tableau integration
-        // - PowerBI integration
-        // - Looker integration
-    }
-
-    async webhookHandler(payload, source) {
-        // Handle incoming webhooks
-        // - Validate payload
-        // - Process updates
-        // - Trigger refreshes
-    }
-}
-
-/*
-===============================================================================
-                            SYSTEM INITIALIZATION
-===============================================================================
-Main initialization sequence and global event management.
-*/
-
-// ===== INITIALIZATION =====
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize analytics dashboard when DOM is ready
-    const dashboard = new AnalyticsDashboard();
-    dashboard.init().catch(error => {
-        ErrorHandler.handleAPIError(error, 'Dashboard Initialization');
-    });
-});
-
-// ===== EXPERIMENTAL MODULES =====
-
-// ===== ICP DRIFT DETECTION =====
-class ICPDriftDetector {
-    constructor(container, dataLayer, claudeService) {
-        // Initialize ICP drift detection
-    }
-
-    async render(filters = {}) {
-        // Render ICP drift analysis
-        // - Track feedback trends vs original ICP
-        // - Identify performance pattern changes
-        // - Suggest ICP updates
-    }
-
-    async detectDrift(currentICP, feedbackTrends) {
-        // Analyze ICP drift patterns
-        // - Compare current vs historical performance
-        // - Identify new high-performing patterns
-        // - Calculate drift significance
-    }
-
-    async suggestICPUpdate(driftData) {
-        // Use Claude to suggest ICP updates
-        // - Analyze drift patterns
-        // - Generate new ICP recommendations
-        // - Provide implementation guidance
-    }
-
-    createDriftVisualization(data) {
-        // Create drift trend visualization
-    }
-}
-
-// ===== CLAUDE PATTERN ANALYST =====
-class ClaudePatternAnalyst {
-    constructor(container, dataLayer, claudeService) {
-        // Initialize pattern analyst
-    }
-
-    async render(filters = {}) {
-        // Render Claude pattern analysis
-        // - Weekly pattern analysis
-        // - Success theme identification
-        // - Drop suggestions
-        // - Experimental ideas
-    }
-
-    async generateWeeklyAnalysis(data) {
-        // Generate Claude's weekly analysis
-        // - Identify working patterns
-        // - Suggest what to drop
-        // - Propose new experiments
-    }
-
-    async trackPatternEvolution(historicalData) {
-        // Track how patterns evolve over time
-    }
-
-    createPatternChart(data) {
-        // Create pattern analysis visualization
-    }
-}
-
-// ===== MESSAGE-LEAD ARCHETYPE LINK MAP =====
-class MessageLeadLinkMap {
-    constructor(container, dataLayer) {
-        // Initialize link map component
-    }
-
-    async render(filters = {}) {
-        // Render message-lead archetype connections
-        // - Map message patterns to lead types
-        // - Show conversion rates by combination
-        // - Identify optimal pairings
-    }
-
-    createLinkVisualization(data) {
-        // Create network/connection visualization
-        // - Show message-lead relationships
-        // - Color code by performance
-        // - Interactive exploration
-    }
-
-    identifyOptimalPairings(data) {
-        // Identify best message-lead combinations
-    }
-}
-
-// ===== SMART SPLIT-TEST ENGINE =====
-class SmartSplitTestEngine {
-    constructor(container, dataLayer, claudeService) {
-        // Initialize A/B test engine
-    }
-
-    async render(filters = {}) {
-        // Render split test management
-        // - Show active tests
-        // - Display results
-        // - Suggest new tests
-    }
-
-    async suggestABTests(performanceData) {
-        // Use Claude to suggest A/B tests
-        // - Analyze performance gaps
-        // - Propose test hypotheses
-        // - Estimate required sample sizes
-    }
-
-    async monitorTestResults(testId) {
-        // Monitor ongoing test performance
-        // - Track statistical significance
-        // - Alert when results are conclusive
-        // - Generate insights
-    }
-
-    async createTest(testConfig) {
-        // Create new A/B test
-        // - Setup test parameters
-        // - Initialize tracking
-        // - Begin execution
-    }
-
-    calculateStatisticalSignificance(testData) {
-        // Calculate test significance
-    }
-}
-
-// ===== ENTERPRISE ADD-ONS =====
-
-// ===== CAMPAIGN FILTERING LAYER =====
-class CampaignFilterLayer {
-    constructor() {
-        // Initialize campaign filtering
-    }
-
-    addCampaignFilters(filterManager) {
-        // Add campaign-specific filters
-        // - Campaign launches
-        // - Outreach batches
-        // - Strategic initiatives
-    }
-
-    filterByCampaign(data, campaignId) {
-        // Filter analytics by campaign
-    }
-
-    createCampaignTimeline(campaigns) {
-        // Create campaign timeline view
-    }
-}
-
-// ===== CONVERSION UPLOAD BRIDGE =====
-class ConversionUploadBridge {
-    constructor(dataLayer) {
-        // Initialize conversion tracking
-    }
-
-    async uploadConversionData(conversionFile) {
-        // Upload external conversion data
-        // - Parse conversion file
-        // - Match to messages/CTAs/leads
-        // - Update analytics
-    }
-
-    async linkConversionsToMessages(conversions, messages) {
-        // Link external conversions to platform data
-    }
-
-    createConversionChart(data) {
-        // Create conversion analysis chart
-    }
-}
-
-// ===== CUSTOM INSIGHT BOARD =====
-class CustomInsightBoard {
-    constructor(container, dataLayer) {
-        // Initialize custom dashboard builder
-    }
-
-    async render() {
-        // Render custom insight board
-        // - Widget library
-        // - Drag-and-drop interface
-        // - Custom chart builder
-    }
-
-    createCustomWidget(widgetType, config) {
-        // Create custom dashboard widget
-    }
-
-    saveCustomDashboard(dashboardConfig) {
-        // Save custom dashboard configuration
-    }
-
-    loadCustomDashboard(dashboardId) {
-        // Load saved custom dashboard
-    }
-}
-
-// ===== ADVANCED ANALYTICS FEATURES =====
-
-// ===== PREDICTIVE ANALYTICS ENGINE =====
-class PredictiveAnalyticsEngine {
-    constructor(dataLayer, claudeService) {
-        // Initialize predictive analytics
-    }
-
-    async predictMessagePerformance(messageContent, leadProfile) {
-        // Predict message performance before sending
-        // - Use historical patterns
-        // - Claude analysis
-        // - Machine learning models
-    }
-
-    async forecastCampaignResults(campaignConfig) {
-        // Forecast campaign performance
-    }
-
-    async identifyHighValueLeads(leadData) {
-        // Identify leads most likely to convert
-    }
-}
-
-// ===== COMPETITIVE INTELLIGENCE =====
-class CompetitiveIntelligence {
-    constructor(container, dataLayer) {
-        // Initialize competitive analysis
-    }
-
-    async render(filters = {}) {
-        // Render competitive intelligence
-        // - Industry benchmarks
-        // - Performance comparisons
-        // - Market positioning
-    }
-
-    async benchmarkPerformance(internalData, industryData) {
-        // Benchmark against industry standards
-    }
-}
-
-// ===== REVENUE ATTRIBUTION ENGINE =====
-class RevenueAttributionEngine {
-    constructor(dataLayer) {
-        // Initialize revenue attribution
-    }
-
-    async calculateMessageROI(messageData, revenueData) {
-        // Calculate ROI for individual messages
-        // - Attribution modeling
-        // - Multi-touch attribution
-        // - Revenue impact analysis
-    }
-
-    async trackRevenueByChannel(data) {
-        // Track revenue attribution by channel
-    }
-
-    createAttributionChart(data) {
-        // Create revenue attribution visualization
-    }
-}
-
-window.AnalyticsConfig = {
-    isFeatureEnabled,
-    enableFeature,
-    disableFeature,
-    getFeatureFlags,
-    loadDynamicConfig
 };
 
-// ===== EVENT LISTENERS =====
-// Global event listeners for dashboard interactions
-// - Filter changes
-// - Chart interactions  
-// - Data refresh
-// - Export functions
-// - Real-time updates
-// - Experimental module toggles
-// - Custom dashboard management
-// - Split test controls
+/*
+===============================================================================
+                        SECURE INITIALIZATION SYSTEM
+===============================================================================
+Updated initialization sequence for Worker-based architecture
+*/
+
+// ===== SECURE ANALYTICS DASHBOARD =====
+class SecureAnalyticsDashboard {
+    constructor() {
+        // Initialize secure analytics dashboard
+        // - Setup Worker-based service connections
+        // - Configure security and authentication
+        // - Initialize secure caching system
+    }
+
+    async init() {
+        // Secure initialization sequence
+        // - Validate Worker endpoint availability
+        // - Initialize secure service clients
+        // - Setup authenticated connections
+        // - Load initial data via Workers
+        // - Render secure dashboard layout
+    }
+
+    async initializeSecureServices() {
+        // Initialize all secure Worker-based services
+        // - Create SecureClaudeService instance
+        // - Create SecureCreditService instance
+        // - Create SecureAnalyticsService instance
+        // - Create SecureDataWriteService instance
+        // - Create SecureIntegrationService instance
+    }
+
+    async loadInitialData() {
+        // Load initial dashboard data securely
+        // - Check user credits via Worker
+        // - Fetch analytics data via Workers
+        // - Initialize real-time data connections
+        // - Setup secure caching strategies
+    }
+
+    async renderSecureDashboard() {
+        // Render dashboard with secure components
+        // - Initialize secure analytics modules
+        // - Setup Worker-based data flows
+        // - Configure secure user interactions
+        // - Enable secure real-time updates
+    }
+}
+
+// ===== SECURE INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize secure analytics dashboard when DOM is ready
+    const secureDashboard = new SecureAnalyticsDashboard();
+    secureDashboard.init().catch(error => {
+        console.error('Secure dashboard initialization failed:', error);
+        // Handle initialization errors securely
+    });
+});
