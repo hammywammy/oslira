@@ -280,33 +280,84 @@ const { data: profile, error } = await supabase
     }
 
 async loadMessagesData() {
-    const { data, error } = await supabase
-        .from('lead_messages')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+    const supabase = window.OsliraApp?.supabase;
+    const user = window.OsliraApp?.user;
     
-    return data || this.getDemoMessagesData();
+    // Check if Supabase is properly initialized
+    if (!supabase || typeof supabase.from !== 'function') {
+        console.warn('🔧 Supabase not ready, using demo data for messages');
+        return this.getDemoMessagesData();
+    }
+    
+    if (!user) {
+        console.warn('🔧 No user found, using demo data for messages');
+        return this.getDemoMessagesData();
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('lead_messages')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            console.error('Supabase error:', error);
+            return this.getDemoMessagesData();
+        }
+        
+        return data || [];
+    } catch (error) {
+        console.error('Error loading messages:', error);
+        return this.getDemoMessagesData();
+    }
 }
 
 async loadCampaignsData() {
-    // If campaigns table exists separately
-    const { data, error } = await supabase
-        .from('campaigns')
-        .select('*')
-        .eq('user_id', user.id);
+    const supabase = window.OsliraApp?.supabase;
+    const user = window.OsliraApp?.user;
     
-    return data || this.getDemoCampaignsData();
+    if (!supabase || typeof supabase.from !== 'function' || !user) {
+        console.warn('🔧 Using demo data for campaigns');
+        return this.getDemoCampaignsData();
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('campaigns')
+            .select('*')
+            .eq('user_id', user.id);
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error loading campaigns:', error);
+        return this.getDemoCampaignsData();
+    }
 }
 
 async loadLeadsData() {
-    // If leads table exists separately  
-    const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('user_id', user.id);
+    const supabase = window.OsliraApp?.supabase;
+    const user = window.OsliraApp?.user;
     
-    return data || this.getDemoLeadsData();
+    if (!supabase || typeof supabase.from !== 'function' || !user) {
+        console.warn('🔧 Using demo data for leads');
+        return this.getDemoLeadsData();
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('leads')
+            .select('*')
+            .eq('user_id', user.id);
+
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error loading leads:', error);
+        return this.getDemoLeadsData();
+    }
 }
             
 async loadPerformanceMetrics() {
