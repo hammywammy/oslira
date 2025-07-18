@@ -208,135 +208,83 @@ class OsliraAnalytics {
         }
     }
 
-    async loadMessagesData() {
-        try {
-            const { data, error } = await this.supabase
-                .from('generated_messages')
-                .select(`
-                    *,
-                    lead_analyses!inner(
-                        lead_id,
-                        outreach_message,
-                        selling_points
-                    ),
-                    leads!inner(
-                        username,
-                        platform,
-                        score,
-                        profile_url
-                    ),
-                    message_feedback(
-                        feedback_type,
-                        feedback_value,
-                        comment,
-                        created_at
-                    )
-                `)
-                .eq('user_id', this.currentSession.user.id)
-                .gte('created_at', this.getTimeframeStart())
-                .order('created_at', { ascending: false });
+   async loadMessagesData() {
+    try {
+        // Use the existing leads table since generated_messages doesn't exist
+        const { data, error } = await this.supabase
+            .from('leads')
+            .select('*')
+            .eq('user_id', this.currentSession.user.id)
+            .gte('created_at', this.getTimeframeStart())
+            .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            
-            console.log(`✅ Loaded ${data?.length || 0} messages with feedback`);
-            return data || [];
-            
-        } catch (error) {
-            console.error('❌ Failed to load messages data:', error);
+        if (error) throw error;
+        
+        console.log(`✅ Loaded ${data?.length || 0} lead records as message data`);
+        return data || [];
+        
+    } catch (error) {
+        console.error('❌ Failed to load messages data:', error);
+        return [];
+    }
+}
+
+   async loadLeadsData() {
+    try {
+        const { data, error } = await this.supabase
+            .from('leads')
+            .select('*')
+            .eq('user_id', this.currentSession.user.id)
+            .gte('created_at', this.getTimeframeStart())
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        console.log(`✅ Loaded ${data?.length || 0} leads`);
+        return data || [];
+        
+    } catch (error) {
+        console.error('❌ Failed to load leads data:', error);
+        return [];
+    }
+}
+
+
+async loadFeedbackData() {
+    try {
+        // Return empty array since message_feedback table doesn't exist
+        console.log('ℹ️ Feedback data not available - using mock data');
+        return [];
+        
+    } catch (error) {
+        console.error('❌ Failed to load feedback data:', error);
+        return [];
+    }
+}
+
+async loadCampaignsData() {
+    try {
+        // Check if campaigns table exists, if not return empty
+        const { data, error } = await this.supabase
+            .from('campaigns')
+            .select('*')
+            .eq('user_id', this.currentSession.user.id)
+            .gte('created_at', this.getTimeframeStart())
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.log('ℹ️ Campaigns table not available - using empty data');
             return [];
         }
+        
+        console.log(`✅ Loaded ${data?.length || 0} campaigns`);
+        return data || [];
+        
+    } catch (error) {
+        console.error('❌ Failed to load campaigns data:', error);
+        return [];
     }
-
-    async loadLeadsData() {
-        try {
-            const { data, error } = await this.supabase
-                .from('leads')
-                .select(`
-                    *,
-                    lead_analyses(
-                        *
-                    ),
-                    message_feedback(
-                        feedback_type,
-                        feedback_value,
-                        comment
-                    )
-                `)
-                .eq('user_id', this.currentSession.user.id)
-                .gte('created_at', this.getTimeframeStart())
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            
-            console.log(`✅ Loaded ${data?.length || 0} leads with analyses`);
-            return data || [];
-            
-        } catch (error) {
-            console.error('❌ Failed to load leads data:', error);
-            return [];
-        }
-    }
-
-    async loadFeedbackData() {
-        try {
-            const { data, error } = await this.supabase
-                .from('message_feedback')
-                .select(`
-                    *,
-                    generated_messages!inner(
-                        message_tone,
-                        message_style,
-                        cta_type,
-                        created_at
-                    ),
-                    leads!inner(
-                        username,
-                        platform,
-                        score
-                    )
-                `)
-                .eq('user_id', this.currentSession.user.id)
-                .gte('created_at', this.getTimeframeStart())
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            
-            console.log(`✅ Loaded ${data?.length || 0} feedback entries`);
-            return data || [];
-            
-        } catch (error) {
-            console.error('❌ Failed to load feedback data:', error);
-            return [];
-        }
-    }
-
-    async loadCampaignsData() {
-        try {
-            const { data, error } = await this.supabase
-                .from('campaigns')
-                .select(`
-                    *,
-                    campaign_analytics(
-                        total_messages,
-                        avg_score,
-                        feedback_ratio,
-                        conversion_rate
-                    )
-                `)
-                .eq('user_id', this.currentSession.user.id)
-                .gte('created_at', this.getTimeframeStart())
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            
-            console.log(`✅ Loaded ${data?.length || 0} campaigns`);
-            return data || [];
-            
-        } catch (error) {
-            console.error('❌ Failed to load campaigns data:', error);
-            return [];
-        }
-    }
+}
 
     async calculatePerformanceMetrics() {
         const metrics = {
