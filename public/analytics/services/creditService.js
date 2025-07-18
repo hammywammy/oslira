@@ -1392,3 +1392,5 @@ class SecureCreditService {
         });
     }
 }
+export { SecureCreditService };
+
