@@ -62,12 +62,20 @@ class OsliraAdminDashboard {
 
         // Wait for user to be properly loaded
         let retries = 0;
-        const maxRetries = 10;
-        while (!window.OsliraApp.user && retries < maxRetries) {
-            console.log(`⏳ Waiting for user authentication... (${retries + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            retries++;
-        }
+const maxRetries = 10;
+while (!window.OsliraApp.user && retries < maxRetries) {
+    console.log(`⏳ Waiting for user authentication... (${retries + 1}/${maxRetries})`);
+    console.log('🔍 Current user state:', window.OsliraApp.user);
+    console.log('🔍 Current session state:', !!window.OsliraApp.session);
+    await new Promise(resolve => setTimeout(resolve, 500));
+    retries++;
+}
+
+// Final check with detailed logging
+console.log('🔎 Final authentication state:');
+console.log('- User:', window.OsliraApp.user);
+console.log('- Session:', window.OsliraApp.session);
+console.log('- Supabase:', !!window.OsliraApp.supabase);
 
         // Check if we have user and supabase
         if (!window.OsliraApp.user) {
