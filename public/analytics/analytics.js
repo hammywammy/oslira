@@ -89,51 +89,6 @@ const WORKER_ENDPOINTS = {
 Thin client services that act as secure proxies to Worker endpoints
 */
 
-// ===== SECURE DATA WRITE SERVICE (HTTP CLIENT) =====
-class SecureDataWriteService {
-    constructor() {
-        // Initialize secure data write client
-        // - Setup Worker write endpoints
-        // - Configure write queue for batching
-        // - Initialize audit logging
-    }
-
-    async writeAnalysisResult(analysisData) {
-        // 🔐 Write AI analysis results via Worker
-        // - Queue analysis data for secure write
-        // - Include metadata and timestamps
-        // - Log write operations for audit
-    }
-
-    async logAuditTrail(action, metadata = {}) {
-        // 🔐 Log user actions for audit trail
-        // - Capture user actions and context
-        // - Include session and security metadata
-        // - Store audit logs securely server-side
-    }
-
-    async cachePerformanceData(data, cacheKey) {
-        // 🔐 Cache performance data via Worker
-        // - Store processed analytics server-side
-        // - Set appropriate TTL values
-        // - Enable cache invalidation strategies
-    }
-
-    async queueWrite(endpoint, payload) {
-        // Queue write operation for batch processing
-        // - Add to write queue with priority
-        // - Handle write conflicts and retries
-        // - Return promise for completion tracking
-    }
-
-    async processWriteQueue() {
-        // Process queued write operations in batches
-        // - Execute writes in optimal batch sizes
-        // - Handle errors and retries gracefully
-        // - Maintain write order when required
-    }
-}
-
 // ===== SECURE INTEGRATION SERVICE (HTTP CLIENT) =====
 class SecureIntegrationService {
     constructor() {
