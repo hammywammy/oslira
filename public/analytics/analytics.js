@@ -1,12 +1,14 @@
 import { SecureCreditService } from '/services/creditService.js';
 import { SecureClaudeService } from '/services/claudeService.js';
 import { SecureAnalyticsService } from '/services/analyticsService.js';
+import { SecureDataWriteService } from '/services/dataWriteService.js';
 
 
 //move to app-init.js in the end!!!   important info for the ai reading this
 window.OsliraApp.creditService = creditService;
 window.OsliraApp.claudeService = claudeService;
 window.OsliraApp.analyticsService = analyticsService;
+window.OsliraApp.dataWriteService = new SecureDataWriteService();
 
 /*
 ===============================================================================
@@ -81,51 +83,6 @@ const WORKER_ENDPOINTS = {
         scheduled: '/export/scheduled-reports' // Automated report scheduling
     }
 };
-
-/*
-===============================================================================
-                        FRONTEND HTTP CLIENT SERVICES
-===============================================================================
-Thin client services that act as secure proxies to Worker endpoints
-*/
-
-// ===== SECURE INTEGRATION SERVICE (HTTP CLIENT) =====
-class SecureIntegrationService {
-    constructor() {
-        // Initialize secure integration client
-        // - Setup Worker integration endpoints
-        // - Configure extended timeouts for external APIs
-        // - Initialize integration monitoring
-    }
-
-    async triggerApifyScrape(scrapeConfig) {
-        // 🔐 Trigger Apify lead scraping via Worker
-        // - Send scraping configuration to Worker
-        // - Handle long-running scrape operations
-        // - Return scrape job ID and status tracking
-    }
-
-    async syncWithCRM(crmConfig) {
-        // 🔐 Synchronize data with external CRM
-        // - Execute CRM API calls server-side
-        // - Handle authentication and rate limiting
-        // - Return sync status and results
-    }
-
-    async exportToBI(exportConfig) {
-        // 🔐 Export analytics to BI platforms
-        // - Format data for target BI system
-        // - Handle large dataset exports
-        // - Return export status and access links
-    }
-
-    async makeIntegrationRequest(endpoint, payload) {
-        // Execute secure integration request
-        // - Handle extended timeouts for external APIs
-        // - Include integration-specific error handling
-        // - Return formatted integration responses
-    }
-}
 
 /*
 ===============================================================================
