@@ -1281,7 +1281,82 @@ async loadCampaignsData() {
         
         return 'Custom CTA';
     }
+    // ADD THESE FUNCTIONS BEFORE assessMessageRisk:
 
+detectToneMismatch(content, targetTone) {
+    // Simple tone detection - in production this would use NLP
+    const tones = {
+        professional: ['please', 'thank you', 'appreciate', 'regarding', 'sincerely'],
+        casual: ['hey', 'awesome', 'cool', 'thanks', 'cheers'],
+        friendly: ['hope', 'excited', 'love', 'happy', 'wonderful'],
+        direct: ['need', 'must', 'require', 'urgent', 'immediately']
+    };
+    
+    if (!targetTone || !tones[targetTone.toLowerCase()]) return false;
+    
+    const contentLower = content.toLowerCase();
+    const targetWords = tones[targetTone.toLowerCase()];
+    const matches = targetWords.filter(word => contentLower.includes(word));
+    
+    // If less than 10% of target tone words are present, it's a mismatch
+    return matches.length < (targetWords.length * 0.1);
+}
+
+detectWeakCTA(content) {
+    // Detect weak call-to-actions
+    const strongCTAs = [
+        'let\'s chat', 'worth a call', 'quick chat', 'worth discussing',
+        'interested in learning', 'would love to show', 'schedule a call'
+    ];
+    
+    const weakCTAs = [
+        'let me know', 'if interested', 'feel free', 'maybe we could',
+        'perhaps', 'might be worth', 'could be interesting'
+    ];
+    
+    const contentLower = content.toLowerCase();
+    
+    // Check for weak CTAs
+    const hasWeakCTA = weakCTAs.some(weak => contentLower.includes(weak));
+    const hasStrongCTA = strongCTAs.some(strong => contentLower.includes(strong));
+    
+    return hasWeakCTA && !hasStrongCTA;
+}
+
+detectPotentialOffensiveness(content) {
+    // Basic offensive content detection
+    const offensivePatterns = [
+        'cheap', 'discount', 'free money', 'get rich quick',
+        'guarantee', 'no risk', 'limited time', 'act now',
+        'urgent', 'exclusive deal', 'secret'
+    ];
+    
+    const contentLower = content.toLowerCase();
+    return offensivePatterns.some(pattern => contentLower.includes(pattern));
+}
+
+// NOW the existing assessMessageRisk function follows...
+assessMessageRisk(message) {
+    const risks = [];
+    const content = message.content || '';
+    
+    // Tone mismatch detection
+    if (this.detectToneMismatch(content, message.target_tone)) {
+        risks.push({ type: 'tone_mismatch', severity: 3, description: 'Message tone doesn\'t match target' });
+    }
+    
+    // Weak CTA detection
+    if (this.detectWeakCTA(content)) {
+        risks.push({ type: 'weak_cta', severity: 2, description: 'Call-to-action could be stronger' });
+    }
+    
+    // Potential offensiveness
+    if (this.detectPotentialOffensiveness(content)) {
+        risks.push({ type: 'potential_offensive', severity: 4, description: 'Content may be perceived negatively' });
+    }
+    
+    return risks;
+}
     assessMessageRisk(message) {
         const risks = [];
         const content = message.content || '';
