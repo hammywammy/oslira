@@ -71,10 +71,23 @@
 }
 
 .admin-badge, .incomplete-badge {
-    font/* ==========================================
-   ADMIN.CSS - Modern Admin Dashboard Styles
-   Follows the new design system used in dashboard.css
-   ========================================== */
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.admin-badge {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.incomplete-badge {
+    background: #fecaca;
+    color: #991b1b;
+}
 
 /* CSS Variables for consistent theming */
 :root {
