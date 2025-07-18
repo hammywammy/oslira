@@ -78,25 +78,3 @@ const MESSAGE_STYLES = {
         }
     }
 };
-
-
-// Initialize configuration when DOM is ready or OsliraApp is available
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadDynamicConfig);
-} else {
-    loadDynamicConfig();
-}
-
-// Also listen for OsliraApp initialization
-if (window.OsliraApp?.events) {
-    window.OsliraApp.events.addEventListener('appInitialized', loadDynamicConfig);
-}
-
-// Export helper functions globally
-window.AnalyticsConfig = {
-    isFeatureEnabled,
-    enableFeature,
-    disableFeature,
-    getFeatureFlags,
-    loadDynamicConfig
-};
