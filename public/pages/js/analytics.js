@@ -279,73 +279,34 @@ const { data: profile, error } = await supabase
         }
     }
 
-   async loadMessagesData() {
-    const supabase = window.OsliraApp.supabase;
-    const user = window.OsliraApp.user;
+async loadMessagesData() {
+    const { data, error } = await supabase
+        .from('lead_messages')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
     
-    if (!supabase || !user) return this.getDemoMessagesData();
-    
-    try {
-        const { data, error } = await supabase
-            .from('lead_messages')  // ← Changed from 'messages'
-            .select(`
-                *,
-                campaigns(name, status),
-                leads(company_name, industry)
-            `)
-            .eq('user_id', user.id)
-            .gte('created_at', this.getDateRange().start)
-            .lte('created_at', this.getDateRange().end)
-            .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error loading messages:', error);
-        return this.getDemoMessagesData();
-    }
+    return data || this.getDemoMessagesData();
 }
-    async loadLeadsData() {
-   const supabase = window.OsliraApp.supabase;
-   const user = window.OsliraApp.user;
-   
-   if (!supabase || !user) return this.getDemoLeadsData();
-   
-   try {
-       const { data, error } = await supabase
-           .from('leads')
-           .select('*')
-           .eq('user_id', user.id)
-           .gte('created_at', this.getDateRange().start)
-           .lte('created_at', this.getDateRange().end);
 
-       if (error) throw error;
-       return data || [];
-   } catch (error) {
-       console.error('Error loading leads:', error);
-       return this.getDemoLeadsData();
-   }
-}
 async loadCampaignsData() {
-    const supabase = window.OsliraApp.supabase;
-    const user = window.OsliraApp.user;
+    // If campaigns table exists separately
+    const { data, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('user_id', user.id);
     
-    if (!supabase || !user) return this.getDemoCampaignsData();
-    
-    try {
-        const { data, error } = await supabase
-            .from('campaigns')
-            .select('*')
-            .eq('user_id', user.id)
-            .gte('created_at', this.getDateRange().start)
-            .lte('created_at', this.getDateRange().end);
+    return data || this.getDemoCampaignsData();
+}
 
-        if (error) throw error;
-        return data || [];
-    } catch (error) {
-        console.error('Error loading campaigns:', error);
-        return this.getDemoCampaignsData();
-    }
+async loadLeadsData() {
+    // If leads table exists separately  
+    const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('user_id', user.id);
+    
+    return data || this.getDemoLeadsData();
 }
             
 async loadPerformanceMetrics() {
