@@ -1,5 +1,12 @@
 import { SecureCreditService } from '/services/creditService.js';
+import { SecureClaudeService } from '/services/claudeService.js';
+import { SecureAnalyticsService } from '/services/analyticsService.js';
+
+
+//move to app-init.js in the end!!!   important info for the ai reading this
 window.OsliraApp.creditService = creditService;
+window.OsliraApp.claudeService = claudeService;
+window.OsliraApp.analyticsService = analyticsService;
 
 /*
 ===============================================================================
@@ -81,79 +88,6 @@ const WORKER_ENDPOINTS = {
 ===============================================================================
 Thin client services that act as secure proxies to Worker endpoints
 */
-
-// ===== SECURE ANALYTICS SERVICE (HTTP CLIENT) =====
-class SecureAnalyticsService {
-    constructor() {
-        // Initialize secure analytics data client
-        // - Setup Worker endpoint connections
-        // - Configure caching strategies
-        // - Initialize request management
-    }
-
-    async getMessageMatrix(filters = {}) {
-        // 🔐 Fetch message style performance matrix via Worker
-        // - Send filter parameters to Worker
-        // - Process data aggregation server-side
-        // - Return formatted matrix data for visualization
-    }
-
-    async getLeadConversionHeatmap(filters = {}) {
-        // 🔐 Fetch lead conversion heatmap via Worker
-        // - Apply filters server-side for security
-        // - Calculate conversion rates and confidence intervals
-        // - Return heatmap data with statistical significance
-    }
-
-    async getCTAEffectiveness(filters = {}) {
-        // 🔐 Fetch CTA performance tracking via Worker
-        // - Analyze CTA usage patterns server-side
-        // - Calculate effectiveness scores and rankings
-        // - Return actionable CTA insights
-    }
-
-    async getTimelineOverlay(filters = {}) {
-        // 🔐 Fetch outreach timeline with performance overlay
-        // - Correlate events with performance changes
-        // - Calculate impact scores for timeline events
-        // - Return timeline with correlation analysis
-    }
-
-    async getIterationROI(filters = {}) {
-        // 🔐 Fetch message iteration ROI analysis
-        // - Calculate improvement metrics server-side
-        // - Track regeneration impact and costs
-        // - Return ROI analysis with recommendations
-    }
-
-    async getTeamImpact(filters = {}) {
-        // 🔐 Fetch team performance analytics
-        // - Analyze individual contributor metrics
-        // - Track Claude utilization and improvements
-        // - Return team rankings and coaching insights
-    }
-
-    async getCRMComparison(filters = {}) {
-        // 🔐 Fetch CRM performance comparison
-        // - Compare win rates across CRM systems
-        // - Calculate quality and consistency scores
-        // - Return CRM rankings with insights
-    }
-
-    async getClaudeGuidanceHistory(filters = {}) {
-        // 🔐 Fetch Claude guidance tracking
-        // - Track advice implementation and outcomes
-        // - Calculate guidance ROI and effectiveness
-        // - Return guidance history with impact analysis
-    }
-
-    async makeAnalyticsRequest(endpoint, payload) {
-        // Execute secure analytics data request
-        // - Cache responses for performance
-        // - Handle large datasets efficiently
-        // - Return formatted analytics data
-    }
-}
 
 // ===== SECURE DATA WRITE SERVICE (HTTP CLIENT) =====
 class SecureDataWriteService {
