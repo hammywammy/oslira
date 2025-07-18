@@ -70,7 +70,6 @@ class OsliraAnalytics {
             // Setup UI
             this.setupEventListeners();
             this.setupRealTimeUpdates();
-            this.setupChartLibrary();
             
             // Load initial data
             await this.loadAnalyticsData();
@@ -1910,17 +1909,17 @@ class OsliraAnalytics {
 // =============================================================================
 
 // Chart.js setup for analytics
-async function setupChartLibrary() {
-    if (typeof Chart === 'undefined') {
-        console.warn('Chart.js not loaded, loading from CDN...');
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-        document.head.appendChild(script);
-        
-        return new Promise((resolve) => {
+function setupChartLibrary() {
+    return new Promise((resolve) => {
+        if (typeof Chart !== 'undefined') {
+            resolve();
+        } else {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
             script.onload = resolve;
-        });
-    }
+            document.head.appendChild(script);
+        }
+    });
 }
 
 // =============================================================================
@@ -1947,7 +1946,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         
         // Setup Chart.js
-        await setupChartLibrary();
+        // Setup Chart.js
+if (typeof setupChartLibrary === 'function') {
+    await setupChartLibrary();
+}
         
         // Create and initialize the application
         osliraAnalytics = new OsliraAnalytics();
