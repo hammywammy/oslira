@@ -82,11 +82,11 @@ class OsliraAnalytics {
         }
         
         try {
-            const { data: profile, error } = await supabase
-                .from('users')
-                .select('email, subscription_plan, subscription_status, credits, timezone, preferences')
-                .eq('id', user.id)
-                .single();
+const { data: profile, error } = await supabase
+    .from('users')
+    .select('email, subscription_plan, subscription_status, credits, timezone')
+    .eq('id', user.id)
+    .single();
 
             if (error) {
                 console.warn('Error loading user profile:', error);
@@ -279,33 +279,32 @@ class OsliraAnalytics {
         }
     }
 
-    async loadMessagesData() {
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
-        
-        if (!supabase || !user) return this.getDemoMessagesData();
-        
-        try {
-            const { data, error } = await supabase
-                .from('messages')
-                .select(`
-                    *,
-                    campaigns(name, status),
-                    leads(company_name, industry)
-                `)
-                .eq('user_id', user.id)
-                .gte('created_at', this.getDateRange().start)
-                .lte('created_at', this.getDateRange().end)
-                .order('created_at', { ascending: false });
+   async loadMessagesData() {
+    const supabase = window.OsliraApp.supabase;
+    const user = window.OsliraApp.user;
+    
+    if (!supabase || !user) return this.getDemoMessagesData();
+    
+    try {
+        const { data, error } = await supabase
+            .from('lead_messages')  // ← Changed from 'messages'
+            .select(`
+                *,
+                campaigns(name, status),
+                leads(company_name, industry)
+            `)
+            .eq('user_id', user.id)
+            .gte('created_at', this.getDateRange().start)
+            .lte('created_at', this.getDateRange().end)
+            .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            return data || [];
-        } catch (error) {
-            console.error('Error loading messages:', error);
-            return this.getDemoMessagesData();
-        }
+        if (error) throw error;
+        return data || [];
+    } catch (error) {
+        console.error('Error loading messages:', error);
+        return this.getDemoMessagesData();
     }
-
+}
     async loadLeadsData() {
    const supabase = window.OsliraApp.supabase;
    const user = window.OsliraApp.user;
