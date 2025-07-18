@@ -541,7 +541,7 @@ class OsliraAnalytics {
                 avgScore: this.analyticsData.performance.avgFeedbackScore
             };
 
-            const claudeResponse = await fetch(`${window.CONFIG.WORKER_URL}/analytics/claude-insights`, {
+            const claudeResponse = await fetch(`${window.ENV_CONFIG.WORKER_URL}/analytics/claude-insights`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
