@@ -8,6 +8,42 @@
  * Features: Validation, runtime updates, environment detection, security controls
  * Version 2.0.0 - Enhanced validation and error handling
  */
+// Helper function to safely access environment variables in browser
+function getEnvVar(name, defaultValue = null) {
+    // Check if we're in a build environment with injected variables
+    if (typeof window !== 'undefined' && window.__ENV__) {
+        return window.__ENV__[name] || defaultValue;
+    }
+    
+    // Check for Vite/Webpack environment variables
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+        return import.meta.env[name] || defaultValue;
+    }
+    
+    // Fallback for development
+    return defaultValue;
+}
+
+// Helper function to detect environment
+function detectEnvironment() {
+    if (typeof window === 'undefined') return 'server';
+    
+    const hostname = window.location.hostname;
+    
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('dev')) {
+        return 'development';
+    }
+    
+    if (hostname.includes('staging')) {
+        return 'staging';
+    }
+    
+    if (hostname.includes('oslira.com')) {
+        return 'production';
+    }
+    
+    return 'development'; // Default fallback
+}
 
 const SECURE_ANALYTICS_CONFIG = {
     // Worker Configuration - Cloudflare Worker endpoints and settings
@@ -344,14 +380,14 @@ const SECURE_ANALYTICS_CONFIG = {
         
         // Version and Build Information
         version: {
-            app: '1.3.0',
-            config: '2.1.0',
-            api: '1.2.0',
-            build: process.env.BUILD_NUMBER || 'development',
-            buildDate: new Date().toISOString(),
-            gitCommit: process.env.GIT_COMMIT || 'unknown',
-            environment: process.env.NODE_ENV || 'development'
-        },
+    app: '1.3.0',
+    config: '2.1.0',
+    api: '1.2.0',
+    build: getEnvVar('BUILD_NUMBER', 'development'),
+    buildDate: new Date().toISOString(),
+    gitCommit: getEnvVar('GIT_COMMIT', 'unknown'),
+    environment: getEnvVar('NODE_ENV', detectEnvironment())
+},
         
         // Environment Detection
         environment: {
