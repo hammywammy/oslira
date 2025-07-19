@@ -40,7 +40,7 @@
   status = 200
 
 [[redirects]]
-  from = "/home"
+  from = "/"
   to = "/home/index.html"
   status = 200
 
