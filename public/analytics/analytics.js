@@ -7,6 +7,8 @@ import { SecureMessageStyleMatrix } from './modules/SecureMessageStyleMatrix.js'
 import { SecureLeadConversionHeatmap } from './modules/SecureLeadConversionHeatmap.js';
 import { SecureCTAEffectivenessTracker } from './modules/SecureCTAEffectivenessTracker.js';
 import { SecureFeedbackSignalExplorer } from './modules/SecureFeedbackSignalExplorer.js';
+import { SecureCRMPerformanceComparator } from './modules/SecureCRMPerformanceComparator.js';
+
 
 
 
@@ -21,6 +23,8 @@ window.OsliraApp.integrationService = new SecureIntegrationService();
 window.SecureMessageStyleMatrix = SecureMessageStyleMatrix;
 window.SecureLeadConversionHeatmap = SecureLeadConversionHeatmap;
 window.SecureCTAEffectivenessTracker = SecureCTAEffectivenessTracker;
+window.SecureCRMPerformanceComparator = SecureCRMPerformanceComparator;
+
 
 
 
@@ -99,6 +103,8 @@ const WORKER_ENDPOINTS = {
 };
 
 //this is all reference for how to call the sections
+
+//heatmap
 const heatmapContainer = document.querySelector('#heatmap-container');
 const secureAnalyticsService = window.OsliraApp?.services?.secureAnalyticsService;
 
@@ -110,6 +116,7 @@ if (heatmapContainer && secureAnalyticsService) {
     heatmap.render();
 }
 
+//cta effectiveness
 const ctaContainer = document.querySelector('#cta-effectiveness-container');
 const analyticsService = window.OsliraApp?.services?.secureAnalyticsService;
 
@@ -120,6 +127,7 @@ if (ctaContainer && window.SecureCTAEffectivenessTracker && analyticsService) {
     ctaTracker.render();
 }
 
+//feedback signal
 const feedbackContainer = document.querySelector('#feedback-signal-container');
 const analyticsService = window.OsliraApp?.services?.secureAnalyticsService;
 const claudeService = window.OsliraApp?.services?.secureClaudeService;
@@ -134,6 +142,17 @@ if (feedbackContainer && analyticsService && claudeService) {
     feedbackExplorer.render();
 }
 
+//crm performance comparator
+const crmContainer = document.querySelector('#crm-performance-container');
+const analyticsService = window.OsliraApp?.services?.secureAnalyticsService;
+
+if (crmContainer && analyticsService) {
+    const crmComparator = new SecureCRMPerformanceComparator(crmContainer, analyticsService);
+    window.OsliraApp.modules.crmComparator = crmComparator;
+    crmComparator.render();
+}
+
+
 
 
 
@@ -143,37 +162,6 @@ if (feedbackContainer && analyticsService && claudeService) {
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE CRM PERFORMANCE COMPARATOR =====
-class SecureCRMPerformanceComparator {
-    constructor(container, secureAnalyticsService) {
-        // Initialize secure CRM comparator
-        // - Setup secure analytics service connection
-        // - Configure CRM comparison displays
-        // - Initialize ranking visualizations
-    }
-
-    async render(filters = {}) {
-        // Render secure CRM performance comparison
-        // - Fetch CRM data via Worker endpoints
-        // - Calculate rankings and scores server-side
-        // - Display interactive comparison charts
-    }
-
-    async updateCRMData(newData) {
-        // Update CRM comparison with secure data
-        // - Process Worker-validated CRM metrics
-        // - Update ranking calculations
-        // - Refresh comparison visualizations
-    }
-
-    createComparisonChart(data) {
-        // Create secure CRM comparison visualization
-        // - Use Worker-calculated performance metrics
-        // - Display multi-metric radar charts
-        // - Enable secure CRM analysis drill-down
-    }
-}
 
 // ===== SECURE OUTREACH TIMELINE OVERLAY =====
 class SecureOutreachTimelineOverlay {
