@@ -1,3 +1,4 @@
+import { chart_themes, themeUtils, colorPalettes } from './Chart_Themes.js';
 class SecureChartFactory {
     constructor() {
         this.chartInstances = new Map();
@@ -603,5 +604,10 @@ class SecureChartFactory {
         this.chartInstances.clear();
         console.log('✅ All secure charts destroyed');
     }
+    initializeThemes() {
+    this.themes = chart_themes;
+    this.themeUtils = themeUtils;
+    this.colorPalettes = colorPalettes;
+  }
 }
-export { SecureChartFactory };
+export { SecureChartFactory, chart_themes as CHART_THEMES };
