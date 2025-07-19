@@ -588,7 +588,7 @@ export class QuickSummaryPanel extends BaseSecureModule {
         }
     }
     
-    handleExportData(event) {
+    async handleExportData(event) {
     event.preventDefault();
     
     try {
