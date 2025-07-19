@@ -3,18 +3,18 @@
 // Enterprise-Grade Analytics Dashboard Component
 // ==========================================
 
+import { BaseSecureModule } from '../utils/baseSecureModule.js';
 import { setCachedData, getCachedData } from '../utils/moduleCache.js';
 import { createIcon, addTooltip, formatNumber } from '../utils/UIHelpers.js';
 
-export class QuickSummaryPanel {
+export class QuickSummaryPanel extends BaseSecureModule {
     constructor(container, secureAnalyticsService, secureCreditService) {
-        // Initialize with secure services
-        this.container = container;
-        this.analyticsService = secureAnalyticsService;
-        this.creditService = secureCreditService;
+        // Call parent constructor with services
+        super(container, secureAnalyticsService, null, secureCreditService);
         
-        // Module configuration
+        // Module-specific configuration
         this.config = {
+            ...this.config, // Inherit base config
             cacheKey: 'summary',
             cacheTTL: 180000, // 3 minutes for frequently changing data
             refreshInterval: 120000, // 2 minutes
@@ -34,1815 +34,98 @@ export class QuickSummaryPanel {
                 excellentGrowth: 15
             },
             comparisonPeriods: ['1w', '1m', '3m'],
-            analyticsLogging: true
+            analyticsLogging: true,
+            autoRefresh: true,
+            sparklineEnabled: true,
+            compactMode: false
         };
         
-        // State management
-        this.state = {
-            isLoading: false,
-            lastUpdate: null,
+        // Module-specific state
+        this.moduleState = {
             summaryData: {},
             trendData: {},
-            error: null,
-            refreshTimer: null,
-            loadingProgress: 0,
-            isVisible: true
-        };
-        
-        // Performance tracking
-        this.performanceMetrics = {
-            renderTime: 0,
-            dataFetchTime: 0,
-            cacheHits: 0,
-            cacheMisses: 0,
-            totalRequests: 0,
-            errorCount: 0,
-            averageLoadTime: 0
+            sparklines: new Map(),
+            lastUpdate: null,
+            isVisible: true,
+            comparisonPeriod: '1w'
         };
         
         // Animation and UI state
         this.animations = {
             countupDuration: 1500,
-            slideInDelay: 100,
-            pulseIntensity: 0.9,
-            enableTransitions: true
+            sparklineDelay: 300,
+            staggerDelay: 100
         };
         
-        // Event handlers
+        // Bound event handlers
         this.boundHandlers = {
             refresh: this.handleRefresh.bind(this),
-            viewDetails: this.handleViewDetails.bind(this),
-            exportSummary: this.handleExportSummary.bind(this),
-            toggleCompactMode: this.handleToggleCompactMode.bind(this)
+            toggleCompact: this.handleToggleCompact.bind(this),
+            changePeriod: this.handleChangePeriod.bind(this),
+            exportData: this.handleExportData.bind(this)
         };
         
-        // Intersection observer for performance optimization
-        this.setupVisibilityObserver();
-        
-        // Initialize auto-refresh
-        this.initializeAutoRefresh();
-        
-        console.log('📊 QuickSummaryPanel initialized with secure services');
+        console.log('📊 QuickSummaryPanel initialized with HUD-style analytics');
     }
-
-    async render(options = {}) {
-        const renderStartTime = performance.now();
+    
+    // ===== REQUIRED LIFECYCLE METHODS =====
+    
+    async render(filters = {}) {
+        const startTime = performance.now();
+        this.setState('rendering');
         
         try {
-            this.state.isLoading = true;
-            this.state.error = null;
-            
-            // Create container structure
-            this.createContainerStructure();
-            
             // Show loading state
-            this.showLoadingState();
+            this.showLoading('Loading summary metrics...');
             
-            // Try to load cached data first for instant display
-            const cachedSummary = this.loadCachedSummary();
-            if (cachedSummary && !options.forceRefresh) {
-                console.log('📋 Loading cached summary for instant display');
-                this.renderSummaryData(cachedSummary, true);
-            }
+            // Fetch summary data
+            const summaryData = await this.fetchSummaryData(filters);
             
-            // Fetch fresh data in background
-            if (!cachedSummary || options.forceRefresh || this.shouldRefreshData()) {
-                await this.fetchAndRenderFreshSummary(options);
-            }
+            // Render summary UI
+            await this.renderSummaryUI(summaryData);
             
-            this.performanceMetrics.renderTime = performance.now() - renderStartTime;
-            this.logPerformanceMetrics();
+            // Setup event listeners
+            this.setupEventListeners();
             
-        } catch (error) {
-            console.error('❌ QuickSummaryPanel render failed:', error);
-            this.handleRenderError(error);
-        } finally {
-            this.state.isLoading = false;
-        }
-    }
-
-    createContainerStructure() {
-        this.container.innerHTML = `
-            <div class="summary-panel-wrapper" data-module="summary">
-                <div class="summary-header">
-                    <div class="summary-title-section">
-                        <h3 class="summary-title">
-                            ${createIcon('activity')}
-                            <span>Analytics Summary</span>
-                            <span class="summary-status" id="summary-status">Live</span>
-                        </h3>
-                        <div class="summary-metadata" id="summary-metadata">
-                            <span class="last-updated">Loading...</span>
-                        </div>
-                    </div>
-                    <div class="summary-controls">
-                        <button class="btn-compact" id="toggle-compact" title="Toggle Compact Mode">
-                            ${createIcon('minimize')}
-                        </button>
-                        <button class="btn-refresh" id="refresh-summary" title="Refresh Data">
-                            ${createIcon('refresh')}
-                        </button>
-                        <button class="btn-details" id="view-details" title="View Detailed Analytics">
-                            ${createIcon('bar-chart')}
-                        </button>
-                        <button class="btn-export" id="export-summary" title="Export Summary">
-                            ${createIcon('download')}
-                        </button>
-                    </div>
-                </div>
-                <div class="summary-content" id="summary-content">
-                    <!-- Summary metrics will be rendered here -->
-                </div>
-                <div class="summary-footer" id="summary-footer">
-                    <div class="summary-progress" id="summary-progress" style="display: none;">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 0%;"></div>
-                        </div>
-                        <span class="progress-text">Loading...</span>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Attach event handlers
-        this.attachEventHandlers();
-        
-        // Apply enterprise styling
-        this.applyEnterpriseStyles();
-    }
-
-    attachEventHandlers() {
-        const refreshBtn = this.container.querySelector('#refresh-summary');
-        const detailsBtn = this.container.querySelector('#view-details');
-        const exportBtn = this.container.querySelector('#export-summary');
-        const compactBtn = this.container.querySelector('#toggle-compact');
-        
-        if (refreshBtn) refreshBtn.addEventListener('click', this.boundHandlers.refresh);
-        if (detailsBtn) detailsBtn.addEventListener('click', this.boundHandlers.viewDetails);
-        if (exportBtn) exportBtn.addEventListener('click', this.boundHandlers.exportSummary);
-        if (compactBtn) compactBtn.addEventListener('click', this.boundHandlers.toggleCompactMode);
-        
-        // Add tooltips for better UX
-        if (refreshBtn) addTooltip(refreshBtn, 'Refresh analytics summary');
-        if (detailsBtn) addTooltip(detailsBtn, 'Open detailed analytics dashboard');
-        if (exportBtn) addTooltip(exportBtn, 'Export summary data to CSV or JSON');
-        if (compactBtn) addTooltip(compactBtn, 'Switch between compact and expanded view');
-    }
-
-    async fetchAndRenderFreshSummary(options = {}) {
-        const fetchStartTime = performance.now();
-        
-        try {
-            this.updateLoadingProgress(20, 'Gathering analytics data...');
+            // Start animations
+            await this.startAnimations();
             
-            // Prepare analytics request with comprehensive filters
-            const analyticsData = await this.prepareSummaryRequest(options);
+            // Update performance metrics
+            const renderTime = performance.now() - startTime;
+            this.updatePerformanceMetrics('renderTime', renderTime);
+            this.performanceMetrics.totalRenders++;
             
-            this.updateLoadingProgress(60, 'Processing metrics...');
-            
-            // Fetch summary data via secure analytics service
-            const summaryResponse = await this.fetchSummaryData(analyticsData);
-            
-            this.updateLoadingProgress(80, 'Calculating trends...');
-            
-            // Process and enhance summary data
-            const processedSummary = this.processSummaryData(summaryResponse);
-            
-            this.updateLoadingProgress(90, 'Caching results...');
-            
-            // Cache the results
-            this.cacheSummary(processedSummary);
-            
-            this.updateLoadingProgress(100, 'Complete!');
-            
-            // Render fresh summary
-            this.renderSummaryData(processedSummary, false);
-            
-            this.performanceMetrics.dataFetchTime = performance.now() - fetchStartTime;
-            this.performanceMetrics.totalRequests++;
+            console.log(`✅ QuickSummaryPanel rendered in ${renderTime.toFixed(2)}ms`);
             
         } catch (error) {
-            console.error('❌ Failed to fetch fresh summary:', error);
-            this.performanceMetrics.errorCount++;
-            
-            // Try to fall back to cached data
-            const cachedSummary = this.loadCachedSummary();
-            if (cachedSummary) {
-                console.log('📋 Falling back to cached summary due to error');
-                this.renderSummaryData(cachedSummary, true);
-                this.showErrorBanner('Using cached data - ' + error.message);
-            } else {
-                this.showErrorState(error);
-            }
-        } finally {
-            this.hideLoadingProgress();
+            await this.onError(error, { operation: 'render', filters });
+            throw error;
         }
     }
-
-    async prepareSummaryRequest(options = {}) {
-        try {
-            // Prepare comprehensive analytics request
-            const timeframe = options.timeframe || '7d';
-            const includeComparisons = options.includeComparisons !== false;
-            const includeBreakdowns = options.includeBreakdowns !== false;
-            
-            const requestData = {
-                timeframe: timeframe,
-                metrics: this.config.summaryMetrics,
-                requestId: this.generateRequestId(),
-                options: {
-                    includeComparisons: includeComparisons,
-                    includeBreakdowns: includeBreakdowns,
-                    comparisonPeriods: this.config.comparisonPeriods,
-                    includeTrends: true,
-                    includeProjections: true,
-                    granularity: 'daily'
-                },
-                filters: {
-                    excludeTestData: true,
-                    minimumConfidence: 0.8,
-                    ...options.filters
-                }
-            };
-            
-            return requestData;
-            
-        } catch (error) {
-            console.error('❌ Failed to prepare summary request:', error);
-            throw new Error(`Summary request preparation failed: ${error.message}`);
-        }
-    }
-
-    async fetchSummaryData(requestData) {
-        try {
-            // Call secure analytics service via Worker endpoint
-            const response = await this.analyticsService.makeAnalyticsRequest('/analytics/summary', requestData);
-            
-            if (!response.success) {
-                throw new Error(response.message || 'Summary data fetch failed');
-            }
-            
-            return response.data;
-            
-        } catch (error) {
-            console.error('❌ Analytics summary fetch failed:', error);
-            throw new Error(`Analytics summary fetch failed: ${error.message}`);
-        }
-    }
-
-    processSummaryData(rawSummary) {
-        try {
-            // Validate and process analytics response
-            if (!rawSummary || !rawSummary.metrics) {
-                throw new Error('Invalid summary response structure');
-            }
-            
-            const processedSummary = {
-                metrics: {
-                    totalLeads: {
-                        value: rawSummary.metrics.totalLeads || 0,
-                        change: rawSummary.metrics.totalLeadsChange || 0,
-                        trend: this.calculateTrendDirection(rawSummary.metrics.totalLeadsChange),
-                        status: this.getMetricStatus('totalLeads', rawSummary.metrics.totalLeads, rawSummary.metrics.totalLeadsChange)
-                    },
-                    highRiskPercentage: {
-                        value: rawSummary.metrics.highRiskPercentage || 0,
-                        change: rawSummary.metrics.highRiskPercentageChange || 0,
-                        trend: this.calculateTrendDirection(rawSummary.metrics.highRiskPercentageChange, true), // inverted for risk
-                        status: this.getMetricStatus('highRisk', rawSummary.metrics.highRiskPercentage)
-                    },
-                    averageROI: {
-                        value: rawSummary.metrics.averageROI || 0,
-                        change: rawSummary.metrics.averageROIChange || 0,
-                        trend: this.calculateTrendDirection(rawSummary.metrics.averageROIChange),
-                        status: this.getMetricStatus('averageROI', rawSummary.metrics.averageROI, rawSummary.metrics.averageROIChange)
-                    },
-                    weeklyChange: {
-                        value: rawSummary.metrics.weeklyChange || 0,
-                        previousValue: rawSummary.metrics.previousWeeklyChange || 0,
-                        trend: this.calculateTrendDirection(rawSummary.metrics.weeklyChange),
-                        status: this.getMetricStatus('weeklyChange', rawSummary.metrics.weeklyChange)
-                    },
-                    conversionRate: {
-                        value: rawSummary.metrics.conversionRate || 0,
-                        change: rawSummary.metrics.conversionRateChange || 0,
-                        trend: this.calculateTrendDirection(rawSummary.metrics.conversionRateChange),
-                        status: this.getMetricStatus('conversionRate', rawSummary.metrics.conversionRate, rawSummary.metrics.conversionRateChange)
-                    },
-                    activeOutreach: {
-                        value: rawSummary.metrics.activeOutreach || 0,
-                        change: rawSummary.metrics.activeOutreachChange || 0,
-                        trend: this.calculateTrendDirection(rawSummary.metrics.activeOutreachChange),
-                        status: this.getMetricStatus('activeOutreach', rawSummary.metrics.activeOutreach, rawSummary.metrics.activeOutreachChange)
-                    }
-                },
-                
-                metadata: {
-                    generatedAt: new Date().toISOString(),
-                    timeframe: rawSummary.metadata?.timeframe || '7d',
-                    dataQuality: rawSummary.metadata?.dataQuality || 'good',
-                    confidence: rawSummary.metadata?.confidence || 0.85,
-                    requestId: rawSummary.metadata?.requestId || this.generateRequestId(),
-                    version: rawSummary.metadata?.version || '1.0'
-                },
-                
-                trends: {
-                    overall: this.calculateOverallTrend(rawSummary.metrics),
-                    performance: this.calculatePerformanceTrend(rawSummary.metrics),
-                    risk: this.calculateRiskTrend(rawSummary.metrics),
-                    growth: this.calculateGrowthTrend(rawSummary.metrics)
-                },
-                
-                summary: {
-                    totalMetrics: Object.keys(rawSummary.metrics).length,
-                    positiveMetrics: this.countPositiveMetrics(rawSummary.metrics),
-                    alertMetrics: this.countAlertMetrics(rawSummary.metrics),
-                    overallHealth: this.calculateOverallHealth(rawSummary.metrics)
-                }
-            };
-            
-            return processedSummary;
-            
-        } catch (error) {
-            console.error('❌ Summary processing failed:', error);
-            throw new Error(`Summary processing failed: ${error.message}`);
-        }
-    }
-
-    renderSummaryData(summaryData, isFromCache = false) {
-        try {
-            const contentContainer = this.container.querySelector('#summary-content');
-            const statusElement = this.container.querySelector('#summary-status');
-            
-            if (!contentContainer) {
-                console.error('❌ Summary content container not found');
-                return;
-            }
-            
-            // Update metadata
-            this.updateMetadata(summaryData.metadata, isFromCache);
-            
-            // Update status indicator
-            if (statusElement) {
-                statusElement.textContent = isFromCache ? 'Cached' : 'Live';
-                statusElement.className = `summary-status ${isFromCache ? 'cached' : 'live'}`;
-            }
-            
-            // Render metrics grid
-            const metricsHTML = this.renderMetricsGrid(summaryData.metrics);
-            
-            contentContainer.innerHTML = `
-                <div class="summary-grid">
-                    ${metricsHTML}
-                </div>
-                <div class="summary-insights">
-                    ${this.renderSummaryInsights(summaryData)}
-                </div>
-                ${isFromCache ? '<div class="cache-indicator">📋 Showing cached data</div>' : ''}
-            `;
-            
-            // Animate metric cards if transitions are enabled
-            if (this.animations.enableTransitions) {
-                this.animateMetricCards();
-            }
-            
-            // Update state
-            this.state.summaryData = summaryData;
-            this.state.lastUpdate = new Date().toISOString();
-            
-            console.log(`✅ Rendered summary with ${Object.keys(summaryData.metrics).length} metrics (${isFromCache ? 'cached' : 'fresh'})`);
-            
-        } catch (error) {
-            console.error('❌ Summary rendering failed:', error);
-            this.showErrorState(error);
-        }
-    }
-
-    renderMetricsGrid(metrics) {
-        return Object.entries(metrics).map(([key, metric]) => {
-            const config = this.getMetricConfig(key);
-            const changeIndicator = this.getChangeIndicator(metric.change, metric.trend);
-            const statusClass = `metric-${metric.status}`;
-            
-            return `
-                <div class="metric-card ${statusClass}" data-metric="${key}">
-                    <div class="metric-header">
-                        <div class="metric-icon">
-                            ${config.icon}
-                        </div>
-                        <div class="metric-trend">
-                            ${changeIndicator}
-                        </div>
-                    </div>
-                    <div class="metric-content">
-                        <div class="metric-value" data-value="${metric.value}">
-                            ${this.formatMetricValue(key, metric.value)}
-                        </div>
-                        <div class="metric-label">${config.label}</div>
-                        <div class="metric-change">
-                            ${this.formatMetricChange(key, metric.change)}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
-
-    getMetricConfig(metricKey) {
-        const configs = {
-            totalLeads: {
-                label: 'Total Leads',
-                icon: createIcon('users'),
-                format: 'number'
-            },
-            highRiskPercentage: {
-                label: '% High Risk',
-                icon: createIcon('alert-triangle'),
-                format: 'percentage'
-            },
-            averageROI: {
-                label: 'Avg ROI',
-                icon: createIcon('trending-up'),
-                format: 'decimal'
-            },
-            weeklyChange: {
-                label: 'Weekly Change',
-                icon: createIcon('calendar'),
-                format: 'percentage'
-            },
-            conversionRate: {
-                label: 'Conversion Rate',
-                icon: createIcon('target'),
-                format: 'percentage'
-            },
-            activeOutreach: {
-                label: 'Active Outreach',
-                icon: createIcon('send'),
-                format: 'number'
-            }
-        };
+    
+    async cleanup() {
+        console.log('🧹 QuickSummaryPanel cleanup starting...');
         
-        return configs[metricKey] || {
-            label: metricKey,
-            icon: createIcon('bar-chart'),
-            format: 'number'
-        };
-    }
-
-    formatMetricValue(metricKey, value) {
-        const config = this.getMetricConfig(metricKey);
+        // Stop any running animations
+        this.stopAnimations();
         
-        switch (config.format) {
-            case 'percentage':
-                return `${value.toFixed(1)}%`;
-            case 'decimal':
-                return `${value.toFixed(2)}x`;
-            case 'currency':
-                return `$${formatNumber(value)}`;
-            case 'number':
-            default:
-                return formatNumber(value);
-        }
-    }
-
-    formatMetricChange(metricKey, change) {
-        if (Math.abs(change) < 0.01) return 'No change';
+        // Clear sparklines
+        this.moduleState.sparklines.clear();
         
-        const config = this.getMetricConfig(metricKey);
-        const prefix = change > 0 ? '+' : '';
+        // Clear summary data
+        this.moduleState.summaryData = {};
+        this.moduleState.trendData = {};
         
-        switch (config.format) {
-            case 'percentage':
-                return `${prefix}${change.toFixed(1)}pp`;
-            case 'decimal':
-                return `${prefix}${change.toFixed(2)}`;
-            default:
-                return `${prefix}${formatNumber(change)}`;
-        }
-    }
-
-    getChangeIndicator(change, trend) {
-        if (Math.abs(change) < 0.01) {
-            return `<span class="trend-neutral">${createIcon('minus')}</span>`;
-        }
+        // Call base cleanup
+        await this.baseCleanup();
         
-        switch (trend) {
-            case 'up':
-                return `<span class="trend-up">${createIcon('trending-up')}</span>`;
-            case 'down':
-                return `<span class="trend-down">${createIcon('trending-down')}</span>`;
-            default:
-                return `<span class="trend-neutral">${createIcon('minus')}</span>`;
-        }
+        console.log('✅ QuickSummaryPanel cleanup completed');
     }
-
-    renderSummaryInsights(summaryData) {
-        const insights = [];
-        
-        // Overall health insight
-        const health = summaryData.summary.overallHealth;
-        if (health >= 0.8) {
-            insights.push({
-                type: 'success',
-                icon: createIcon('check-circle'),
-                text: 'Strong performance across all metrics'
-            });
-        } else if (health >= 0.6) {
-            insights.push({
-                type: 'warning', 
-                icon: createIcon('alert-circle'),
-                text: 'Some metrics need attention'
-            });
-        } else {
-            insights.push({
-                type: 'error',
-                icon: createIcon('x-circle'),
-                text: 'Multiple performance issues detected'
-            });
-        }
-        
-        // Growth insight
-        const weeklyChange = summaryData.metrics.weeklyChange.value;
-        if (weeklyChange >= this.config.thresholds.excellentGrowth) {
-            insights.push({
-                type: 'success',
-                icon: createIcon('arrow-up'),
-                text: 'Excellent growth momentum'
-            });
-        } else if (weeklyChange >= this.config.thresholds.goodGrowth) {
-            insights.push({
-                type: 'info',
-                icon: createIcon('arrow-up'),
-                text: 'Steady growth trajectory'
-            });
-        } else if (weeklyChange < 0) {
-            insights.push({
-                type: 'warning',
-                icon: createIcon('arrow-down'),
-                text: 'Declining weekly performance'
-            });
-        }
-        
-        // Risk insight
-        const riskPercentage = summaryData.metrics.highRiskPercentage.value;
-        if (riskPercentage >= this.config.thresholds.highRisk) {
-            insights.push({
-                type: 'warning',
-                icon: createIcon('shield-alert'),
-                text: 'High risk percentage requires attention'
-            });
-        }
-        
-        return insights.map(insight => `
-            <div class="summary-insight insight-${insight.type}">
-                <span class="insight-icon">${insight.icon}</span>
-                <span class="insight-text">${insight.text}</span>
-            </div>
-        `).join('');
-    }
-
-    // Utility Methods for Metric Processing
-    calculateTrendDirection(change, inverted = false) {
-        if (Math.abs(change) < 0.01) return 'neutral';
-        
-        const direction = change > 0 ? 'up' : 'down';
-        return inverted ? (direction === 'up' ? 'down' : 'up') : direction;
-    }
-
-    getMetricStatus(metricKey, value, change = 0) {
-        // Determine metric status based on value and thresholds
-        switch (metricKey) {
-            case 'highRisk':
-                return value >= this.config.thresholds.highRisk ? 'warning' : 'good';
-            case 'averageROI':
-                return value >= this.config.thresholds.lowROI ? 'good' : 'warning';
-            case 'weeklyChange':
-                if (value >= this.config.thresholds.excellentGrowth) return 'excellent';
-                if (value >= this.config.thresholds.goodGrowth) return 'good';
-                if (value < 0) return 'warning';
-                return 'neutral';
-            default:
-                if (change > 0) return 'good';
-                if (change < 0) return 'warning';
-                return 'neutral';
-        }
-    }
-
-    calculateOverallTrend(metrics) {
-        const trends = Object.values(metrics).map(m => m.change || 0);
-        const avgChange = trends.reduce((sum, change) => sum + change, 0) / trends.length;
-        return this.calculateTrendDirection(avgChange);
-    }
-
-    calculateOverallHealth(metrics) {
-        const healthScores = Object.entries(metrics).map(([key, metric]) => {
-            const status = this.getMetricStatus(key, metric.value, metric.change);
-            switch (status) {
-                case 'excellent': return 1.0;
-                case 'good': return 0.8;
-                case 'neutral': return 0.6;
-                case 'warning': return 0.4;
-                case 'error': return 0.2;
-                default: return 0.6;
-            }
-        });
-        
-        return healthScores.reduce((sum, score) => sum + score, 0) / healthScores.length;
-    }
-
-    countPositiveMetrics(metrics) {
-        return Object.values(metrics).filter(m => (m.change || 0) > 0).length;
-    }
-
-    countAlertMetrics(metrics) {
-        return Object.entries(metrics).filter(([key, metric]) => {
-            const status = this.getMetricStatus(key, metric.value, metric.change);
-            return status === 'warning' || status === 'error';
-        }).length;
-    }
-
-    // UI State Management
-    showLoadingState() {
-        const contentContainer = this.container.querySelector('#summary-content');
-        if (contentContainer) {
-            contentContainer.innerHTML = `
-                <div class="loading-state">
-                    <div class="loading-skeleton">
-                        ${Array(6).fill(0).map(() => `
-                            <div class="skeleton-metric-card">
-                                <div class="skeleton-header"></div>
-                                <div class="skeleton-value"></div>
-                                <div class="skeleton-label"></div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    updateLoadingProgress(percent, message) {
-        const progressContainer = this.container.querySelector('#summary-progress');
-        const progressFill = this.container.querySelector('.progress-fill');
-        const progressText = this.container.querySelector('.progress-text');
-        
-        if (progressContainer) {
-            progressContainer.style.display = 'block';
-        }
-        
-        if (progressFill) {
-            progressFill.style.width = `${percent}%`;
-        }
-        
-        if (progressText) {
-            progressText.textContent = message;
-        }
-        
-        this.state.loadingProgress = percent;
-    }
-
-    hideLoadingProgress() {
-        const progressContainer = this.container.querySelector('#summary-progress');
-        if (progressContainer) {
-            progressContainer.style.display = 'none';
-        }
-    }
-
-    showErrorState(error) {
-        const contentContainer = this.container.querySelector('#summary-content');
-        if (contentContainer) {
-            contentContainer.innerHTML = `
-                <div class="error-state">
-                    <div class="error-icon">${createIcon('alert-circle')}</div>
-                    <h4>Unable to Load Summary</h4>
-                    <p>${error.message || 'An unexpected error occurred'}</p>
-                    <button class="btn-retry" onclick="this.closest('.summary-panel-wrapper').querySelector('#refresh-summary').click()">
-                        Retry
-                    </button>
-                </div>
-            `;
-        }
-        
-        this.state.error = error;
-    }
-
-    showErrorBanner(message) {
-        const header = this.container.querySelector('.summary-header');
-        if (header) {
-            const banner = document.createElement('div');
-            banner.className = 'error-banner';
-            banner.innerHTML = `
-                <span>${createIcon('alert-triangle')} ${message}</span>
-                <button onclick="this.parentElement.remove()">${createIcon('x')}</button>
-            `;
-            header.appendChild(banner);
-            
-            // Auto-remove after 8 seconds
-            setTimeout(() => banner.remove(), 8000);
-        }
-    }
-
-    updateMetadata(metadata, isFromCache) {
-        const metadataContainer = this.container.querySelector('#summary-metadata');
-        if (!metadataContainer) return;
-        
-        const timeAgo = this.getTimeAgo(new Date(metadata.generatedAt));
-        const cacheIndicator = isFromCache ? ' (cached)' : '';
-        
-        metadataContainer.innerHTML = `
-            <span class="last-updated">Updated ${timeAgo}${cacheIndicator}</span>
-            <span class="confidence">Confidence: ${Math.round(metadata.confidence * 100)}%</span>
-            <span class="timeframe">Period: ${metadata.timeframe}</span>
-        `;
-    }
-
-    // Event Handlers
-    async handleRefresh(event) {
-        event.preventDefault();
-        console.log('🔄 Refreshing summary...');
-        
-        const refreshBtn = event.target.closest('button');
-        const originalHTML = refreshBtn.innerHTML;
-        
-        try {
-            refreshBtn.innerHTML = createIcon('loader') + ' Refreshing...';
-            refreshBtn.disabled = true;
-            
-            await this.render({ forceRefresh: true });
-            
-        } catch (error) {
-            console.error('❌ Refresh failed:', error);
-            this.showErrorBanner('Refresh failed: ' + error.message);
-        } finally {
-            refreshBtn.innerHTML = originalHTML;
-            refreshBtn.disabled = false;
-        }
-    }
-
-    handleViewDetails(event) {
-        event.preventDefault();
-        console.log('📊 Opening detailed analytics...');
-        
-        // Navigate to full analytics dashboard or show modal
-        if (window.OsliraApp?.router) {
-            window.OsliraApp.router.navigate('/analytics/dashboard');
-        } else {
-            // Fallback: open in new window/tab
-            window.open('/analytics/', '_blank');
-        }
-        
-        // Track user interaction
-        this.trackUserInteraction('view_details', {
-            currentMetrics: Object.keys(this.state.summaryData?.metrics || {}),
-            overallHealth: this.state.summaryData?.summary?.overallHealth
-        });
-    }
-
-    async handleExportSummary(event) {
-        event.preventDefault();
-        console.log('📄 Exporting summary...');
-        
-        try {
-            const exportData = {
-                summary: this.state.summaryData,
-                metadata: {
-                    exportedAt: new Date().toISOString(),
-                    exportedBy: window.OsliraApp?.user?.id || 'anonymous',
-                    version: '1.0'
-                },
-                format: 'json'
-            };
-            
-            // Create download
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-                type: 'application/json' 
-            });
-            
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `analytics-summary-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            // Track export action
-            this.trackUserInteraction('export_summary', {
-                format: 'json',
-                metricsCount: Object.keys(this.state.summaryData?.metrics || {}).length
-            });
-            
-        } catch (error) {
-            console.error('❌ Export failed:', error);
-            this.showErrorBanner('Export failed: ' + error.message);
-        }
-    }
-
-    handleToggleCompactMode(event) {
-        event.preventDefault();
-        console.log('🔄 Toggling compact mode...');
-        
-        const wrapper = this.container.querySelector('.summary-panel-wrapper');
-        const compactBtn = event.target.closest('button');
-        
-        if (wrapper) {
-            wrapper.classList.toggle('compact-mode');
-            const isCompact = wrapper.classList.contains('compact-mode');
-            
-            // Update button icon and tooltip
-            compactBtn.innerHTML = isCompact ? createIcon('maximize') : createIcon('minimize');
-            compactBtn.title = isCompact ? 'Expand View' : 'Compact View';
-            
-            // Store preference
-            localStorage.setItem('summaryCompactMode', isCompact.toString());
-            
-            // Track interaction
-            this.trackUserInteraction('toggle_compact', { compact: isCompact });
-        }
-    }
-
-    // Animation Methods
-    animateMetricCards() {
-        const cards = this.container.querySelectorAll('.metric-card');
-        
-        cards.forEach((card, index) => {
-            // Stagger animation start times
-            setTimeout(() => {
-                card.style.animation = `slideInUp 0.6s ease-out forwards`;
-                
-                // Animate counter if it's a numeric value
-                const valueElement = card.querySelector('.metric-value');
-                if (valueElement) {
-                    this.animateCounter(valueElement, index * this.animations.slideInDelay);
-                }
-            }, index * this.animations.slideInDelay);
-        });
-    }
-
-    animateCounter(element, delay = 0) {
-        const targetValue = parseFloat(element.dataset.value || '0');
-        const isPercentage = element.textContent.includes('%');
-        const isDecimal = element.textContent.includes('x');
-        
-        setTimeout(() => {
-            let currentValue = 0;
-            const increment = targetValue / (this.animations.countupDuration / 16); // 60fps
-            
-            const updateCounter = () => {
-                currentValue += increment;
-                
-                if (currentValue >= targetValue) {
-                    currentValue = targetValue;
-                    element.textContent = this.formatAnimatedValue(currentValue, isPercentage, isDecimal);
-                    return;
-                }
-                
-                element.textContent = this.formatAnimatedValue(currentValue, isPercentage, isDecimal);
-                requestAnimationFrame(updateCounter);
-            };
-            
-            updateCounter();
-        }, delay);
-    }
-
-    formatAnimatedValue(value, isPercentage, isDecimal) {
-        if (isPercentage) {
-            return `${value.toFixed(1)}%`;
-        } else if (isDecimal) {
-            return `${value.toFixed(2)}x`;
-        } else {
-            return formatNumber(Math.round(value));
-        }
-    }
-
-    // Cache Management
-    loadCachedSummary() {
-        try {
-            const cached = getCachedData(this.config.cacheKey);
-            if (cached && this.isCacheValid(cached)) {
-                this.performanceMetrics.cacheHits++;
-                return cached;
-            }
-            
-            this.performanceMetrics.cacheMisses++;
-            return null;
-            
-        } catch (error) {
-            console.warn('⚠️ Cache load failed:', error);
-            return null;
-        }
-    }
-
-    cacheSummary(summaryData) {
-        try {
-            const cacheData = {
-                ...summaryData,
-                cachedAt: Date.now(),
-                ttl: this.config.cacheTTL
-            };
-            
-            setCachedData(this.config.cacheKey, cacheData);
-            console.log('💾 Summary cached successfully');
-            
-        } catch (error) {
-            console.warn('⚠️ Cache save failed:', error);
-        }
-    }
-
-    isCacheValid(cached) {
-        if (!cached || !cached.cachedAt) return false;
-        
-        const age = Date.now() - cached.cachedAt;
-        return age < (cached.ttl || this.config.cacheTTL);
-    }
-
-    shouldRefreshData() {
-        if (!this.state.lastUpdate) return true;
-        
-        const age = Date.now() - new Date(this.state.lastUpdate).getTime();
-        return age > this.config.refreshInterval;
-    }
-
-    // Auto-refresh Management
-    initializeAutoRefresh() {
-        if (this.config.refreshInterval > 0) {
-            this.state.refreshTimer = setInterval(() => {
-                if (!this.state.isLoading && this.shouldRefreshData() && this.state.isVisible) {
-                    console.log('⏰ Auto-refreshing summary...');
-                    this.render({ forceRefresh: false });
-                }
-            }, this.config.refreshInterval);
-        }
-    }
-
-    setupVisibilityObserver() {
-        // Optimize performance by pausing updates when not visible
-        if ('IntersectionObserver' in window) {
-            this.visibilityObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    this.state.isVisible = entry.isIntersecting;
-                    if (this.state.isVisible && this.shouldRefreshData()) {
-                        this.render({ forceRefresh: false });
-                    }
-                });
-            }, { threshold: 0.1 });
-            
-            // Start observing when container is available
-            if (this.container) {
-                this.visibilityObserver.observe(this.container);
-            }
-        }
-    }
-
-    // Public API Methods
-    updateData(newData) {
-        // Update summary with new data from external source
-        if (newData && newData.metrics) {
-            this.state.summaryData = newData;
-            this.renderSummaryData(newData, false);
-            this.cacheSummary(newData);
-        }
-    }
-
-    getSummaryData() {
-        // Return current summary data for external consumption
-        return {
-            summary: this.state.summaryData,
-            lastUpdate: this.state.lastUpdate,
-            performanceMetrics: { ...this.performanceMetrics },
-            isLoading: this.state.isLoading
-        };
-    }
-
-    setConfig(newConfig) {
-        // Update module configuration
-        this.config = { ...this.config, ...newConfig };
-        
-        // Restart auto-refresh if interval changed
-        if (newConfig.refreshInterval !== undefined) {
-            if (this.state.refreshTimer) {
-                clearInterval(this.state.refreshTimer);
-            }
-            this.initializeAutoRefresh();
-        }
-    }
-
-    // Analytics and Telemetry
-    trackUserInteraction(action, data = {}) {
-        if (this.config.analyticsLogging) {
-            const event = {
-                module: 'QuickSummaryPanel',
-                action: action,
-                timestamp: new Date().toISOString(),
-                data: data,
-                userId: window.OsliraApp?.user?.id || 'anonymous',
-                sessionId: window.OsliraApp?.session?.id || 'unknown'
-            };
-            
-            console.log('📊 User Interaction:', event);
-            
-            // Send to analytics service if available
-            if (window.OsliraApp?.analytics?.track) {
-                window.OsliraApp.analytics.track(event);
-            }
-        }
-    }
-
-    logPerformanceMetrics() {
-        if (this.config.analyticsLogging) {
-            const avgLoadTime = this.performanceMetrics.totalRequests > 0 
-                ? (this.performanceMetrics.renderTime + this.performanceMetrics.dataFetchTime) / this.performanceMetrics.totalRequests
-                : 0;
-                
-            this.performanceMetrics.averageLoadTime = avgLoadTime;
-            
-            console.log('📊 QuickSummaryPanel Performance:', {
-                renderTime: `${this.performanceMetrics.renderTime.toFixed(2)}ms`,
-                dataFetchTime: `${this.performanceMetrics.dataFetchTime.toFixed(2)}ms`,
-                averageLoadTime: `${avgLoadTime.toFixed(2)}ms`,
-                cacheHitRate: `${((this.performanceMetrics.cacheHits / (this.performanceMetrics.cacheHits + this.performanceMetrics.cacheMisses)) * 100 || 0).toFixed(1)}%`,
-                totalRequests: this.performanceMetrics.totalRequests,
-                errorRate: `${((this.performanceMetrics.errorCount / this.performanceMetrics.totalRequests) * 100 || 0).toFixed(1)}%`,
-                metricsCount: Object.keys(this.state.summaryData?.metrics || {}).length
-            });
-        }
-    }
-
-    // Error Recovery and Health Monitoring
-    async handleCriticalError(error) {
-        console.error('🚨 Critical QuickSummaryPanel error:', error);
-        
-        // Attempt recovery strategies
-        const recoveryStrategies = [
-            () => this.loadCachedSummary(),
-            () => this.loadFallbackSummary(),
-            () => this.showGracefulDegradation()
-        ];
-        
-        for (const strategy of recoveryStrategies) {
-            try {
-                const result = await strategy();
-                if (result) {
-                    console.log('✅ Recovery successful');
-                    return result;
-                }
-            } catch (recoveryError) {
-                console.warn('⚠️ Recovery strategy failed:', recoveryError);
-            }
-        }
-        
-        // Last resort: show error state
-        this.showErrorState(error);
-    }
-
-    loadFallbackSummary() {
-        // Provide static fallback summary when all else fails
-        const fallbackSummary = {
-            metrics: {
-                totalLeads: { value: 0, change: 0, trend: 'neutral', status: 'neutral' },
-                highRiskPercentage: { value: 0, change: 0, trend: 'neutral', status: 'good' },
-                averageROI: { value: 0, change: 0, trend: 'neutral', status: 'neutral' },
-                weeklyChange: { value: 0, change: 0, trend: 'neutral', status: 'neutral' },
-                conversionRate: { value: 0, change: 0, trend: 'neutral', status: 'neutral' },
-                activeOutreach: { value: 0, change: 0, trend: 'neutral', status: 'neutral' }
-            },
-            metadata: {
-                generatedAt: new Date().toISOString(),
-                timeframe: '7d',
-                dataQuality: 'fallback',
-                confidence: 0.0,
-                requestId: 'fallback_' + Date.now(),
-                version: '1.0'
-            },
-            trends: {
-                overall: 'neutral',
-                performance: 'neutral',
-                risk: 'neutral',
-                growth: 'neutral'
-            },
-            summary: {
-                totalMetrics: 6,
-                positiveMetrics: 0,
-                alertMetrics: 0,
-                overallHealth: 0.5
-            }
-        };
-        
-        this.renderSummaryData(fallbackSummary, true);
-        return fallbackSummary;
-    }
-
-    showGracefulDegradation() {
-        // Show helpful message when summary can't be loaded
-        const contentContainer = this.container.querySelector('#summary-content');
-        if (contentContainer) {
-            contentContainer.innerHTML = `
-                <div class="graceful-degradation">
-                    <div class="degradation-icon">${createIcon('info')}</div>
-                    <h4>Summary Temporarily Unavailable</h4>
-                    <p>We're experiencing technical difficulties loading your analytics summary.</p>
-                    <div class="degradation-actions">
-                        <button class="btn-retry" onclick="this.closest('.summary-panel-wrapper').querySelector('#refresh-summary').click()">
-                            ${createIcon('refresh')} Try Again
-                        </button>
-                        <button class="btn-details" onclick="this.closest('.summary-panel-wrapper').querySelector('#view-details').click()">
-                            ${createIcon('bar-chart')} View Full Analytics
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
-    }
-
-    // Module Health Check
-    async healthCheck() {
-        const health = {
-            status: 'healthy',
-            checks: [],
-            timestamp: new Date().toISOString(),
-            uptime: performance.now()
-        };
-        
-        try {
-            // Check container
-            health.checks.push({
-                name: 'container',
-                status: this.container && this.container.isConnected ? 'pass' : 'fail',
-                message: this.container ? 'Container available' : 'Container missing'
-            });
-            
-            // Check services
-            health.checks.push({
-                name: 'analyticsService',
-                status: this.analyticsService ? 'pass' : 'fail',
-                message: this.analyticsService ? 'Analytics service available' : 'Analytics service missing'
-            });
-            
-            // Check cache
-            const cachedData = this.loadCachedSummary();
-            health.checks.push({
-                name: 'cache',
-                status: cachedData ? 'pass' : 'warn',
-                message: cachedData ? 'Cache data available' : 'No cached data'
-            });
-            
-            // Check performance
-            const avgLoadTime = this.performanceMetrics.averageLoadTime;
-            health.checks.push({
-                name: 'performance',
-                status: avgLoadTime < 3000 ? 'pass' : 'warn',
-                message: `Average load time: ${avgLoadTime.toFixed(2)}ms`
-            });
-            
-            // Check auto-refresh
-            health.checks.push({
-                name: 'autoRefresh',
-                status: this.state.refreshTimer ? 'pass' : 'warn',
-                message: this.state.refreshTimer ? 'Auto-refresh active' : 'Auto-refresh disabled'
-            });
-            
-            // Overall status
-            const failCount = health.checks.filter(c => c.status === 'fail').length;
-            const warnCount = health.checks.filter(c => c.status === 'warn').length;
-            
-            if (failCount > 0) {
-                health.status = 'unhealthy';
-            } else if (warnCount > 0) {
-                health.status = 'degraded';
-            }
-            
-        } catch (error) {
-            health.status = 'error';
-            health.error = error.message;
-        }
-        
-        return health;
-    }
-
-    // Cleanup and Destruction
-    destroy() {
-        // Cleanup when module is destroyed
-        if (this.state.refreshTimer) {
-            clearInterval(this.state.refreshTimer);
-            this.state.refreshTimer = null;
-        }
-        
-        if (this.visibilityObserver) {
-            this.visibilityObserver.disconnect();
-            this.visibilityObserver = null;
-        }
-        
-        // Remove event listeners
-        Object.values(this.boundHandlers).forEach(handler => {
-            // Event listeners will be garbage collected when container is removed
-        });
-        
-        console.log('📊 QuickSummaryPanel destroyed');
-    }
-
-    // Utility Methods
-    generateRequestId() {
-        return `summary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    }
-
-    getTimeAgo(date) {
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-        
-        if (diffMins < 1) return 'just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        return `${diffDays}d ago`;
-    }
-
-    applyEnterpriseStyles() {
-        // Inject enterprise-grade styles for the summary panel
-        const styleId = 'summary-panel-styles';
-        if (document.getElementById(styleId)) return;
-        
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-            /* Quick Summary Panel Enterprise Styles */
-            .summary-panel-wrapper {
-                background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                padding: 20px;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                position: relative;
-                overflow: hidden;
-                transition: all 0.3s ease;
-            }
-            
-            .summary-panel-wrapper.compact-mode {
-                padding: 12px;
-            }
-            
-            .summary-panel-wrapper::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 3px;
-                background: linear-gradient(90deg, #10b981, #3b82f6, #8b5cf6);
-            }
-            
-            .summary-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                margin-bottom: 20px;
-                border-bottom: 1px solid #f1f5f9;
-                padding-bottom: 12px;
-            }
-            
-            .summary-panel-wrapper.compact-mode .summary-header {
-                margin-bottom: 12px;
-                padding-bottom: 8px;
-            }
-            
-            .summary-title-section {
-                flex: 1;
-            }
-            
-            .summary-title {
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                margin: 0 0 6px 0;
-                font-size: 1.125rem;
-                font-weight: 700;
-                color: #1e293b;
-            }
-            
-            .summary-panel-wrapper.compact-mode .summary-title {
-                font-size: 1rem;
-                gap: 8px;
-                margin-bottom: 4px;
-            }
-            
-            .summary-title svg {
-                width: 20px;
-                height: 20px;
-                color: #10b981;
-            }
-            
-            .summary-status {
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                padding: 2px 8px;
-                border-radius: 12px;
-                font-size: 0.75rem;
-                font-weight: 600;
-                text-transform: uppercase;
-                letter-spacing: 0.025em;
-            }
-            
-            .summary-status.live {
-                background: #dcfce7;
-                color: #166534;
-            }
-            
-            .summary-status.cached {
-                background: #fef3c7;
-                color: #92400e;
-            }
-            
-            .summary-metadata {
-                display: flex;
-                gap: 12px;
-                font-size: 0.8rem;
-                color: #64748b;
-                flex-wrap: wrap;
-            }
-            
-            .summary-panel-wrapper.compact-mode .summary-metadata {
-                font-size: 0.75rem;
-                gap: 8px;
-            }
-            
-            .summary-controls {
-                display: flex;
-                gap: 6px;
-                flex-shrink: 0;
-            }
-            
-            .summary-controls button {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 32px;
-                height: 32px;
-                border: 1px solid #e2e8f0;
-                border-radius: 6px;
-                background: white;
-                color: #64748b;
-                cursor: pointer;
-                transition: all 0.2s ease;
-                font-size: 0;
-            }
-            
-            .summary-panel-wrapper.compact-mode .summary-controls button {
-                width: 28px;
-                height: 28px;
-            }
-            
-            .summary-controls button:hover {
-                background: #f8fafc;
-                color: #3b82f6;
-                border-color: #3b82f6;
-                transform: translateY(-1px);
-            }
-            
-            .summary-controls button:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
-                transform: none;
-            }
-            
-            .summary-controls button svg {
-                width: 14px;
-                height: 14px;
-            }
-            
-            .summary-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                gap: 16px;
-                margin-bottom: 16px;
-            }
-            
-            .summary-panel-wrapper.compact-mode .summary-grid {
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                gap: 12px;
-                margin-bottom: 12px;
-            }
-            
-            .metric-card {
-                background: white;
-                border: 1px solid #f1f5f9;
-                border-radius: 8px;
-                padding: 16px;
-                transition: all 0.3s ease;
-                position: relative;
-                overflow: hidden;
-            }
-            
-            .summary-panel-wrapper.compact-mode .metric-card {
-                padding: 12px;
-            }
-            
-            .metric-card::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                height: 3px;
-                transition: all 0.3s ease;
-            }
-            
-            .metric-card.metric-good::before { background: #10b981; }
-            .metric-card.metric-excellent::before { background: #059669; }
-            .metric-card.metric-warning::before { background: #f59e0b; }
-            .metric-card.metric-error::before { background: #dc2626; }
-            .metric-card.metric-neutral::before { background: #64748b; }
-            
-            .metric-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 25px -3px rgba(0, 0, 0, 0.1);
-                border-color: #e2e8f0;
-            }
-            
-            .metric-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 12px;
-            }
-            
-            .summary-panel-wrapper.compact-mode .metric-header {
-                margin-bottom: 8px;
-            }
-            
-            .metric-icon {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 32px;
-                height: 32px;
-                border-radius: 8px;
-                background: #f8fafc;
-                color: #64748b;
-            }
-            
-            .summary-panel-wrapper.compact-mode .metric-icon {
-                width: 28px;
-                height: 28px;
-            }
-            
-            .metric-icon svg {
-                width: 16px;
-                height: 16px;
-            }
-            
-            .metric-trend {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 24px;
-                height: 24px;
-            }
-            
-            .trend-up { color: #10b981; }
-            .trend-down { color: #dc2626; }
-            .trend-neutral { color: #64748b; }
-            
-            .trend-up svg, .trend-down svg, .trend-neutral svg {
-                width: 14px;
-                height: 14px;
-            }
-            
-            .metric-content {
-                text-align: left;
-            }
-            
-            .metric-value {
-                display: block;
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: #1e293b;
-                margin-bottom: 4px;
-                line-height: 1.2;
-            }
-            
-            .summary-panel-wrapper.compact-mode .metric-value {
-                font-size: 1.25rem;
-                margin-bottom: 2px;
-            }
-            
-            .metric-label {
-                display: block;
-                font-size: 0.875rem;
-                font-weight: 500;
-                color: #64748b;
-                margin-bottom: 4px;
-            }
-            
-            .summary-panel-wrapper.compact-mode .metric-label {
-                font-size: 0.8rem;
-                margin-bottom: 2px;
-            }
-            
-            .metric-change {
-                font-size: 0.75rem;
-                font-weight: 500;
-                color: #64748b;
-            }
-            
-            .summary-panel-wrapper.compact-mode .metric-change {
-                font-size: 0.7rem;
-            }
-            
-            .summary-insights {
-                padding: 12px;
-                background: #f8fafc;
-                border-radius: 6px;
-                border: 1px solid #f1f5f9;
-            }
-            
-            .summary-panel-wrapper.compact-mode .summary-insights {
-                padding: 8px;
-            }
-            
-            .summary-insight {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 4px 0;
-                font-size: 0.875rem;
-            }
-            
-            .summary-panel-wrapper.compact-mode .summary-insight {
-                font-size: 0.8rem;
-                gap: 6px;
-                padding: 2px 0;
-            }
-            
-            .insight-icon svg {
-                width: 14px;
-                height: 14px;
-            }
-            
-            .insight-success .insight-icon { color: #10b981; }
-            .insight-warning .insight-icon { color: #f59e0b; }
-            .insight-error .insight-icon { color: #dc2626; }
-            .insight-info .insight-icon { color: #3b82f6; }
-            
-            .insight-text {
-                flex: 1;
-                color: #374151;
-                font-weight: 500;
-            }
-            
-            .loading-state {
-                padding: 20px 0;
-            }
-            
-            .loading-skeleton {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                gap: 16px;
-            }
-            
-            .skeleton-metric-card {
-                background: white;
-                border: 1px solid #f1f5f9;
-                border-radius: 8px;
-                padding: 16px;
-                animation: pulse 1.5s ease-in-out infinite;
-            }
-            
-            .skeleton-header {
-                width: 60%;
-                height: 16px;
-                background: #e2e8f0;
-                border-radius: 4px;
-                margin-bottom: 12px;
-            }
-            
-            .skeleton-value {
-                width: 80%;
-                height: 24px;
-                background: #e2e8f0;
-                border-radius: 4px;
-                margin-bottom: 8px;
-            }
-            
-            .skeleton-label {
-                width: 40%;
-                height: 12px;
-                background: #e2e8f0;
-                border-radius: 4px;
-            }
-            
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.5; }
-            }
-            
-            @keyframes slideInUp {
-                from {
-                    opacity: 0;
-                    transform: translateY(20px);
-                }
-                to {
-                    opacity: 1;
-                    transform: translateY(0);
-                }
-            }
-            
-            .error-state, .graceful-degradation {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 30px 20px;
-                text-align: center;
-                color: #64748b;
-            }
-            
-            .error-icon, .degradation-icon {
-                width: 40px;
-                height: 40px;
-                margin-bottom: 12px;
-                opacity: 0.6;
-            }
-            
-            .error-state h4, .graceful-degradation h4 {
-                margin: 0 0 6px 0;
-                color: #374151;
-                font-size: 1rem;
-            }
-            
-            .error-state p, .graceful-degradation p {
-                margin: 0 0 12px 0;
-                max-width: 300px;
-                font-size: 0.875rem;
-            }
-            
-            .btn-retry, .degradation-actions button {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 8px 16px;
-                background: #3b82f6;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 0.875rem;
-                font-weight: 500;
-                transition: all 0.2s ease;
-                text-decoration: none;
-            }
-            
-            .btn-retry:hover, .degradation-actions button:hover {
-                background: #2563eb;
-                transform: translateY(-1px);
-            }
-            
-            .degradation-actions {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 16px;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            
-            .cache-indicator {
-                text-align: center;
-                padding: 8px 12px;
-                background: #f0f9ff;
-                color: #0369a1;
-                border-radius: 4px;
-                font-size: 0.8rem;
-                margin-top: 12px;
-                border: 1px solid #e0f2fe;
-            }
-            
-            .error-banner {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 8px 12px;
-                background: #fef2f2;
-                color: #991b1b;
-                border: 1px solid #fecaca;
-                border-radius: 6px;
-                margin-top: 8px;
-                font-size: 0.8rem;
-            }
-            
-            .error-banner button {
-                background: none;
-                border: none;
-                color: #991b1b;
-                cursor: pointer;
-                padding: 2px;
-                border-radius: 3px;
-            }
-            
-            .error-banner button:hover {
-                background: #fee2e2;
-            }
-            
-            .summary-progress {
-                padding: 12px 0;
-            }
-            
-            .progress-bar {
-                width: 100%;
-                height: 6px;
-                background: #f1f5f9;
-                border-radius: 3px;
-                overflow: hidden;
-                margin-bottom: 6px;
-            }
-            
-            .progress-fill {
-                height: 100%;
-                background: linear-gradient(90deg, #10b981, #3b82f6);
-                border-radius: 3px;
-                transition: width 0.3s ease;
-            }
-            
-            .progress-text {
-                font-size: 0.8rem;
-                color: #64748b;
-                text-align: center;
-                display: block;
-            }
-            
-            /* Responsive Design */
-            @media (max-width: 768px) {
-                .summary-header {
-                    flex-direction: column;
-                    gap: 8px;
-                    align-items: stretch;
-                }
-                
-                .summary-controls {
-                    justify-content: center;
-                }
-                
-                .summary-grid {
-                    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-                    gap: 12px;
-                }
-                
-                .summary-metadata {
-                    flex-direction: column;
-                    gap: 4px;
-                }
-                
-                .metric-value {
-                    font-size: 1.25rem;
-                }
-                
-                .summary-panel-wrapper.compact-mode .metric-value {
-                    font-size: 1.125rem;
-                }
-                
-                .degradation-actions {
-                    flex-direction: column;
-                    align-items: center;
-                }
-            }
-            
-            @media (max-width: 480px) {
-                .summary-panel-wrapper {
-                    padding: 12px;
-                }
-                
-                .summary-grid {
-                    grid-template-columns: repeat(2, 1fr);
-                    gap: 8px;
-                }
-                
-                .metric-card {
-                    padding: 12px;
-                }
-                
-                .metric-value {
-                    font-size: 1.125rem;
-                }
-                
-                .summary-insights {
-                    padding: 8px;
-                }
-                
-                .summary-insight {
-                    font-size: 0.8rem;
-                }
-            }
-        `;
-        
-        document.head.appendChild(style);
-    }
-
-    // Module Information
+    
     getModuleInfo() {
         return {
             name: 'QuickSummaryPanel',
-            version: '1.0.0',
+            version: '2.0.0',
             description: 'HUD-style analytics summary panel for enterprise dashboard',
             author: 'Oslira Analytics Team',
             dependencies: [
@@ -1858,34 +141,1249 @@ export class QuickSummaryPanel {
                 'Auto-refresh functionality',
                 'Responsive design',
                 'Performance optimization',
-                'Compact mode toggle'
+                'Compact mode toggle',
+                'Sparkline visualizations',
+                'Data export'
             ],
             endpoints: [
                 '/analytics/summary'
             ],
             configuration: Object.keys(this.config),
             state: {
-                isLoading: this.state.isLoading,
-                metricsCount: Object.keys(this.state.summaryData?.metrics || {}).length,
-                lastUpdate: this.state.lastUpdate,
-                hasError: !!this.state.error,
-                isVisible: this.state.isVisible
+                isLoading: this.state === 'loading',
+                metricsCount: Object.keys(this.moduleState.summaryData?.metrics || {}).length,
+                lastUpdate: this.moduleState.lastUpdate,
+                hasError: this.state === 'error',
+                compactMode: this.config.compactMode,
+                comparisonPeriod: this.moduleState.comparisonPeriod
             },
-            performance: this.performanceMetrics
+            performance: this.getPerformanceMetrics()
         };
+    }
+    
+    // ===== OPTIONAL LIFECYCLE METHODS =====
+    
+    async ready() {
+        await super.ready();
+        
+        // Setup visibility change handler
+        this.setupVisibilityHandler();
+        
+        // Setup resize observer
+        this.setupResizeObserver();
+        
+        console.log('📊 QuickSummaryPanel ready for real-time updates');
+    }
+    
+    async onResize() {
+        const containerWidth = this.container.offsetWidth;
+        
+        // Auto-switch to compact mode on small screens
+        if (containerWidth < 500 && !this.config.compactMode) {
+            this.enableCompactMode();
+        } else if (containerWidth >= 500 && this.config.compactMode) {
+            this.disableCompactMode();
+        }
+        
+        // Redraw sparklines for new dimensions
+        this.redrawSparklines();
+    }
+    
+    // ===== DATA FETCHING METHODS =====
+    
+    async fetchSummaryData(filters = {}) {
+        try {
+            // Check cache first
+            const cacheKey = this.generateCacheKey('/analytics/summary', filters);
+            const cachedData = getCachedData(cacheKey);
+            
+            if (cachedData && this.config.cacheEnabled) {
+                this.performanceMetrics.cacheHits++;
+                console.log('📊 QuickSummaryPanel using cached data');
+                return cachedData;
+            }
+            
+            this.performanceMetrics.cacheMisses++;
+            
+            // Prepare summary request payload
+            const payload = {
+                moduleType: 'summary',
+                metrics: this.config.summaryMetrics,
+                comparisonPeriod: this.moduleState.comparisonPeriod,
+                thresholds: this.config.thresholds,
+                includeTrends: true,
+                includeSparklines: this.config.sparklineEnabled,
+                filters: filters
+            };
+            
+            // Fetch data using secure method from base class
+            const summaryData = await this.fetchSecureData('/analytics/summary', payload);
+            
+            // Validate and process summary data
+            const processedData = this.processSummaryData(summaryData);
+            
+            // Update module state
+            this.moduleState.summaryData = processedData.summary || {};
+            this.moduleState.trendData = processedData.trends || {};
+            this.moduleState.lastUpdate = Date.now();
+            
+            return processedData;
+            
+        } catch (error) {
+            console.error('❌ QuickSummaryPanel data fetch failed:', error);
+            
+            // Return fallback data if available
+            if (this.config.fallbackMode) {
+                return this.getFallbackSummary();
+            }
+            
+            throw error;
+        }
+    }
+    
+    processSummaryData(rawData) {
+        if (!rawData) {
+            throw new Error('No summary data received');
+        }
+        
+        const summary = {
+            metrics: {},
+            insights: [],
+            alerts: []
+        };
+        
+        // Process metrics
+        this.config.summaryMetrics.forEach(metricName => {
+            const metricData = rawData.metrics?.[metricName];
+            if (metricData) {
+                summary.metrics[metricName] = {
+                    value: metricData.value || 0,
+                    change: metricData.change || 0,
+                    trend: metricData.trend || 'stable',
+                    status: this.calculateMetricStatus(metricName, metricData),
+                    sparkline: metricData.sparkline || [],
+                    lastUpdated: metricData.lastUpdated || new Date().toISOString()
+                };
+            }
+        });
+        
+        // Process insights
+        if (rawData.insights) {
+            summary.insights = rawData.insights.filter(insight => insight.type === 'summary');
+        }
+        
+        // Process alerts
+        if (rawData.alerts) {
+            summary.alerts = rawData.alerts.filter(alert => alert.priority === 'high');
+        }
+        
+        return {
+            summary: summary,
+            trends: rawData.trends || {},
+            metadata: {
+                generatedAt: new Date().toISOString(),
+                comparisonPeriod: this.moduleState.comparisonPeriod,
+                metricsCount: Object.keys(summary.metrics).length
+            }
+        };
+    }
+    
+    calculateMetricStatus(metricName, metricData) {
+        const value = metricData.value || 0;
+        const change = metricData.change || 0;
+        
+        switch (metricName) {
+            case 'highRiskPercentage':
+                if (value > this.config.thresholds.highRisk) return 'danger';
+                if (value > this.config.thresholds.highRisk * 0.7) return 'warning';
+                return 'success';
+                
+            case 'averageROI':
+                if (value < this.config.thresholds.lowROI) return 'danger';
+                if (value < this.config.thresholds.lowROI * 1.5) return 'warning';
+                return 'success';
+                
+            case 'weeklyChange':
+                if (change < -this.config.thresholds.goodGrowth) return 'danger';
+                if (change < 0) return 'warning';
+                if (change > this.config.thresholds.excellentGrowth) return 'excellent';
+                return 'success';
+                
+            default:
+                if (change > 0) return 'success';
+                if (change < 0) return 'warning';
+                return 'neutral';
+        }
+    }
+    
+    getFallbackSummary() {
+        return {
+            summary: {
+                metrics: {
+                    totalLeads: {
+                        value: '--',
+                        change: 0,
+                        trend: 'stable',
+                        status: 'neutral',
+                        sparkline: [],
+                        lastUpdated: new Date().toISOString()
+                    }
+                },
+                insights: [{
+                    type: 'summary',
+                    message: 'Summary data temporarily unavailable',
+                    priority: 'low'
+                }],
+                alerts: []
+            },
+            trends: {},
+            metadata: {
+                generatedAt: new Date().toISOString(),
+                comparisonPeriod: this.moduleState.comparisonPeriod,
+                metricsCount: 1,
+                fallbackMode: true
+            }
+        };
+    }
+    
+    // ===== UI RENDERING METHODS =====
+    
+    async renderSummaryUI(data) {
+        const summary = data.summary || {};
+        const metadata = data.metadata || {};
+        
+        const summaryHtml = `
+            <div class="summary-panel-wrapper ${this.config.compactMode ? 'compact-mode' : ''}">
+                <!-- Header Section -->
+                <div class="summary-header">
+                    <div class="summary-title">
+                        <h3>
+                            ${createIcon('activity', { size: '20px' })}
+                            Quick Summary
+                        </h3>
+                        <div class="summary-meta">
+                            <span class="period-selector">
+                                <select class="period-select" data-action="changePeriod">
+                                    <option value="1w" ${this.moduleState.comparisonPeriod === '1w' ? 'selected' : ''}>1 Week</option>
+                                    <option value="1m" ${this.moduleState.comparisonPeriod === '1m' ? 'selected' : ''}>1 Month</option>
+                                    <option value="3m" ${this.moduleState.comparisonPeriod === '3m' ? 'selected' : ''}>3 Months</option>
+                                </select>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-controls">
+                        <button class="summary-btn compact-toggle" data-action="toggleCompact" title="Toggle compact mode">
+                            ${createIcon(this.config.compactMode ? 'maximize' : 'minimize', { size: '16px' })}
+                        </button>
+                        <button class="summary-btn summary-refresh" data-action="refresh" title="Refresh data">
+                            ${createIcon('refresh', { size: '16px' })}
+                        </button>
+                        <button class="summary-btn summary-export" data-action="export" title="Export data">
+                            ${createIcon('download', { size: '16px' })}
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Metrics Grid -->
+                <div class="summary-grid">
+                    ${Object.entries(summary.metrics || {}).map(([key, metric], index) => 
+                        this.renderMetricCard(key, metric, index)
+                    ).join('')}
+                </div>
+                
+                <!-- Insights Section -->
+                ${summary.insights && summary.insights.length > 0 ? `
+                    <div class="summary-insights">
+                        <h4>Key Insights</h4>
+                        <div class="insights-list">
+                            ${summary.insights.map(insight => this.renderInsight(insight)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Alerts Section -->
+                ${summary.alerts && summary.alerts.length > 0 ? `
+                    <div class="summary-alerts">
+                        <h4>Alerts</h4>
+                        <div class="alerts-list">
+                            ${summary.alerts.map(alert => this.renderAlert(alert)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Footer -->
+                <div class="summary-footer">
+                    <div class="summary-metadata">
+                        <span class="last-update">
+                            ${metadata.fallbackMode ? '⚠️ Fallback Mode' : `Updated ${this.formatLastUpdate(this.moduleState.lastUpdate)}`}
+                        </span>
+                        <span class="metrics-count">
+                            ${metadata.metricsCount || 0} metrics
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.container.innerHTML = summaryHtml;
+        
+        // Inject styles
+        this.injectStyles();
+        
+        // Store sparkline data for animations
+        Object.entries(summary.metrics || {}).forEach(([key, metric]) => {
+            if (metric.sparkline && metric.sparkline.length > 0) {
+                this.moduleState.sparklines.set(key, metric.sparkline);
+            }
+        });
+    }
+    
+    renderMetricCard(key, metric, index) {
+        const statusClass = `status-${metric.status}`;
+        const trendIcon = this.getTrendIcon(metric.trend);
+        const formattedValue = this.formatMetricValue(key, metric.value);
+        const changeFormatted = this.formatChange(metric.change);
+        
+        return `
+            <div class="metric-card ${statusClass}" data-metric="${key}" style="animation-delay: ${index * this.animations.staggerDelay}ms">
+                <div class="metric-header">
+                    <div class="metric-label">
+                        ${this.getMetricLabel(key)}
+                        ${trendIcon}
+                    </div>
+                    <div class="metric-status">
+                        <span class="status-indicator"></span>
+                    </div>
+                </div>
+                
+                <div class="metric-content">
+                    <div class="metric-value" data-value="${metric.value}">
+                        ${formattedValue}
+                    </div>
+                    
+                    <div class="metric-change ${metric.change >= 0 ? 'positive' : 'negative'}">
+                        ${changeFormatted}
+                        <span class="change-period">vs ${this.moduleState.comparisonPeriod}</span>
+                    </div>
+                    
+                    ${this.config.sparklineEnabled && metric.sparkline && metric.sparkline.length > 0 ? `
+                        <div class="metric-sparkline" data-sparkline="${key}">
+                            <canvas width="80" height="20"></canvas>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="metric-footer">
+                    <span class="last-updated">
+                        ${this.formatTimestamp(metric.lastUpdated)}
+                    </span>
+                </div>
+            </div>
+        `;
+    }
+    
+    renderInsight(insight) {
+        return `
+            <div class="summary-insight priority-${insight.priority}">
+                <span class="insight-icon">💡</span>
+                <span class="insight-text">${insight.message}</span>
+            </div>
+        `;
+    }
+    
+    renderAlert(alert) {
+        return `
+            <div class="summary-alert priority-${alert.priority}">
+                <span class="alert-icon">⚠️</span>
+                <span class="alert-text">${alert.message}</span>
+            </div>
+        `;
+    }
+    
+    // ===== EVENT HANDLING =====
+    
+    setupEventListeners() {
+        this.removeAllEventListeners();
+        
+        // Refresh button
+        const refreshBtn = this.container.querySelector('[data-action="refresh"]');
+        if (refreshBtn) {
+            this.addEventListener(refreshBtn, 'click', this.boundHandlers.refresh);
+        }
+        
+        // Compact toggle
+        const compactBtn = this.container.querySelector('[data-action="toggleCompact"]');
+        if (compactBtn) {
+            this.addEventListener(compactBtn, 'click', this.boundHandlers.toggleCompact);
+        }
+        
+        // Period selector
+        const periodSelect = this.container.querySelector('[data-action="changePeriod"]');
+        if (periodSelect) {
+            this.addEventListener(periodSelect, 'change', this.boundHandlers.changePeriod);
+        }
+        
+        // Export button
+        const exportBtn = this.container.querySelector('[data-action="export"]');
+        if (exportBtn) {
+            this.addEventListener(exportBtn, 'click', this.boundHandlers.exportData);
+        }
+        
+        // Setup tooltips
+        this.setupTooltips();
+    }
+    
+    setupTooltips() {
+        const metricCards = this.container.querySelectorAll('.metric-card');
+        metricCards.forEach(card => {
+            const metricKey = card.dataset.metric;
+            const tooltip = this.getMetricTooltip(metricKey);
+            if (tooltip) {
+                addTooltip(card, tooltip, { placement: 'top' });
+            }
+        });
+    }
+    
+    // ===== EVENT HANDLERS =====
+    
+    async handleRefresh(event) {
+        event.preventDefault();
+        
+        try {
+            console.log('🔄 QuickSummaryPanel refresh requested');
+            await this.refresh();
+        } catch (error) {
+            console.error('❌ QuickSummaryPanel refresh failed:', error);
+            await this.onError(error, { operation: 'manual_refresh' });
+        }
+    }
+    
+    handleToggleCompact(event) {
+        event.preventDefault();
+        
+        this.config.compactMode = !this.config.compactMode;
+        
+        if (this.config.compactMode) {
+            this.enableCompactMode();
+        } else {
+            this.disableCompactMode();
+        }
+    }
+    
+    async handleChangePeriod(event) {
+        event.preventDefault();
+        
+        const newPeriod = event.target.value;
+        if (newPeriod !== this.moduleState.comparisonPeriod) {
+            this.moduleState.comparisonPeriod = newPeriod;
+            
+            try {
+                await this.refresh();
+                console.log(`📊 QuickSummaryPanel period changed to ${newPeriod}`);
+            } catch (error) {
+                console.error('❌ Period change failed:', error);
+                await this.onError(error, { operation: 'period_change', period: newPeriod });
+            }
+        }
+    }
+    
+    handleExportData(event) {
+        event.preventDefault();
+        
+        try {
+            const exportData = {
+                summary: this.moduleState.summaryData,
+                trends: this.moduleState.trendData,
+                metadata: {
+                    exportTime: new Date().toISOString(),
+                    comparisonPeriod: this.moduleState.comparisonPeriod,
+                    moduleInfo: this.getModuleInfo()
+                }
+            };
+            
+            this.downloadJSON(exportData, 'oslira-summary');
+            console.log('📄 QuickSummaryPanel data exported');
+            
+        } catch (error) {
+            console.error('❌ QuickSummaryPanel export failed:', error);
+            await this.onError(error, { operation: 'export' });
+        }
+    }
+    
+    // ===== ANIMATIONS & VISUAL EFFECTS =====
+    
+    async startAnimations() {
+        // Animate metric cards
+        const metricCards = this.container.querySelectorAll('.metric-card');
+        metricCards.forEach((card, index) => {
+            setTimeout(() => {
+                card.classList.add('animate-in');
+                this.animateCountUp(card);
+            }, index * this.animations.staggerDelay);
+        });
+        
+        // Draw sparklines
+        if (this.config.sparklineEnabled) {
+            setTimeout(() => {
+                this.drawAllSparklines();
+            }, this.animations.sparklineDelay);
+        }
+    }
+    
+    stopAnimations() {
+        // Clear any animation timers
+        const metricCards = this.container.querySelectorAll('.metric-card');
+        metricCards.forEach(card => {
+            card.classList.remove('animate-in');
+        });
+    }
+    
+    animateCountUp(card) {
+        const valueElement = card.querySelector('.metric-value');
+        const targetValue = parseFloat(valueElement.dataset.value) || 0;
+        
+        if (isNaN(targetValue) || targetValue === 0) return;
+        
+        const duration = this.animations.countupDuration;
+        const startTime = performance.now();
+        
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing function
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const currentValue = targetValue * easeOut;
+            
+            valueElement.textContent = this.formatAnimatedValue(currentValue, targetValue);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    }
+    
+    drawAllSparklines() {
+        this.moduleState.sparklines.forEach((data, key) => {
+            this.drawSparkline(key, data);
+        });
+    }
+    
+    drawSparkline(metricKey, data) {
+        const sparklineElement = this.container.querySelector(`[data-sparkline="${metricKey}"] canvas`);
+        if (!sparklineElement || !data || data.length < 2) return;
+        
+        const ctx = sparklineElement.getContext('2d');
+        const width = sparklineElement.width;
+        const height = sparklineElement.height;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, width, height);
+        
+        // Find min/max for scaling
+        const min = Math.min(...data);
+        const max = Math.max(...data);
+        const range = max - min || 1;
+        
+        // Draw line
+        ctx.strokeStyle = this.getSparklineColor(metricKey);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        
+        data.forEach((value, index) => {
+            const x = (index / (data.length - 1)) * width;
+            const y = height - ((value - min) / range) * height;
+            
+            if (index === 0) {
+                ctx.moveTo(x, y);
+            } else {
+                ctx.lineTo(x, y);
+            }
+        });
+        
+        ctx.stroke();
+        
+        // Add gradient fill
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle = this.getSparklineColor(metricKey);
+        ctx.lineTo(width, height);
+        ctx.lineTo(0, height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+    
+    redrawSparklines() {
+        if (this.config.sparklineEnabled) {
+            setTimeout(() => {
+                this.drawAllSparklines();
+            }, 100);
+        }
+    }
+    
+    // ===== UTILITY METHODS =====
+    
+    getMetricLabel(key) {
+        const labels = {
+            totalLeads: 'Total Leads',
+            highRiskPercentage: 'High Risk %',
+            averageROI: 'Average ROI',
+            weeklyChange: 'Weekly Change',
+            conversionRate: 'Conversion Rate',
+            activeOutreach: 'Active Outreach'
+        };
+        
+        return labels[key] || key;
+    }
+    
+    getMetricTooltip(key) {
+        const tooltips = {
+            totalLeads: 'Total number of leads in your database',
+            highRiskPercentage: 'Percentage of leads flagged as high risk',
+            averageROI: 'Average return on investment across all campaigns',
+            weeklyChange: 'Change in performance compared to previous week',
+            conversionRate: 'Percentage of leads that convert to customers',
+            activeOutreach: 'Number of active outreach campaigns'
+        };
+        
+        return tooltips[key];
+    }
+    
+    getTrendIcon(trend) {
+        const icons = {
+            'up': createIcon('trending-up', { size: '14px', className: 'trend-up' }),
+            'down': createIcon('trending-down', { size: '14px', className: 'trend-down' }),
+            'stable': createIcon('minus', { size: '14px', className: 'trend-stable' })
+        };
+        
+        return icons[trend] || icons['stable'];
+    }
+    
+    formatMetricValue(key, value) {
+        if (value === '--' || value === null || value === undefined) {
+            return '--';
+        }
+        
+        switch (key) {
+            case 'highRiskPercentage':
+            case 'conversionRate':
+                return `${formatNumber(value, { decimals: 1 })}%`;
+            case 'averageROI':
+                return formatNumber(value, { decimals: 2, prefix: '$' });
+            case 'weeklyChange':
+                return `${formatNumber(value, { decimals: 1, suffix: '%' })}`;
+            default:
+                return formatNumber(value);
+        }
+    }
+    
+    formatChange(change) {
+        if (change === 0) return '0%';
+        
+        const prefix = change > 0 ? '+' : '';
+        return `${prefix}${formatNumber(change, { decimals: 1 })}%`;
+    }
+    
+    formatAnimatedValue(current, target) {
+        // Determine format based on target value structure
+        if (typeof target === 'string' && target.includes('%')) {
+            return `${Math.round(current)}%`;
+        }
+        
+        if (typeof target === 'string' && target.includes('$')) {
+            return `$${Math.round(current)}`;
+        }
+        
+        return Math.round(current).toLocaleString();
+    }
+    
+    formatLastUpdate(timestamp) {
+        if (!timestamp) return 'Never';
+        
+        const now = new Date();
+        const updated = new Date(timestamp);
+        const diffMs = now - updated;
+        const diffMins = Math.floor(diffMs / 60000);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        return `${Math.floor(diffMins / 60)}h ago`;
+    }
+    
+    formatTimestamp(timestamp) {
+        return new Date(timestamp).toLocaleTimeString();
+    }
+    
+    getSparklineColor(metricKey) {
+        const colors = {
+            totalLeads: '#3b82f6',      // Blue
+            highRiskPercentage: '#dc2626',  // Red
+            averageROI: '#10b981',      // Green
+            weeklyChange: '#f59e0b',    // Orange
+            conversionRate: '#8b5cf6',  // Purple
+            activeOutreach: '#06b6d4'   // Cyan
+        };
+        
+        return colors[metricKey] || '#6b7280';
+    }
+    
+    enableCompactMode() {
+        this.config.compactMode = true;
+        this.container.querySelector('.summary-panel-wrapper')?.classList.add('compact-mode');
+        
+        // Update toggle button icon
+        const toggleBtn = this.container.querySelector('.compact-toggle');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = createIcon('maximize', { size: '16px' });
+            toggleBtn.title = 'Exit compact mode';
+        }
+        
+        console.log('📊 QuickSummaryPanel compact mode enabled');
+    }
+    
+    disableCompactMode() {
+        this.config.compactMode = false;
+        this.container.querySelector('.summary-panel-wrapper')?.classList.remove('compact-mode');
+        
+        // Update toggle button icon
+        const toggleBtn = this.container.querySelector('.compact-toggle');
+        if (toggleBtn) {
+            toggleBtn.innerHTML = createIcon('minimize', { size: '16px' });
+            toggleBtn.title = 'Enable compact mode';
+        }
+        
+        console.log('📊 QuickSummaryPanel compact mode disabled');
+    }
+    
+    setupVisibilityHandler() {
+        document.addEventListener('visibilitychange', () => {
+            this.moduleState.isVisible = !document.hidden;
+            
+            if (this.moduleState.isVisible && this.config.autoRefresh) {
+                // Resume refresh when page becomes visible
+                console.log('📊 QuickSummaryPanel resuming updates');
+            }
+        });
+    }
+    
+    setupResizeObserver() {
+        if ('ResizeObserver' in window) {
+            const resizeObserver = new ResizeObserver(() => {
+                this.onResize();
+            });
+            
+            resizeObserver.observe(this.container);
+            this.observers.add(resizeObserver);
+        }
+    }
+    
+    downloadJSON(data, filename) {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+    }
+    
+    // ===== STYLES INJECTION =====
+    
+    injectStyles() {
+        if (document.getElementById('quick-summary-panel-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'quick-summary-panel-styles';
+        style.textContent = `
+            .summary-panel-wrapper {
+                background: var(--bg-primary, #ffffff);
+                border-radius: 12px;
+                padding: 1.5rem;
+                border: 1px solid var(--border-light, #e5e7eb);
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .summary-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 1.5rem;
+                padding-bottom: 1rem;
+                border-bottom: 1px solid var(--border-light, #e5e7eb);
+            }
+            
+            .summary-title h3 {
+                margin: 0 0 0.5rem 0;
+                color: var(--text-primary, #1f2937);
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 1.25rem;
+                font-weight: 700;
+            }
+            
+            .summary-meta {
+                margin-top: 0.5rem;
+            }
+            
+            .period-select {
+                padding: 0.25rem 0.5rem;
+                border: 1px solid var(--border-light, #e5e7eb);
+                border-radius: 4px;
+                background: var(--bg-secondary, #f9fafb);
+                color: var(--text-primary, #1f2937);
+                font-size: 0.875rem;
+                cursor: pointer;
+            }
+            
+            .period-select:focus {
+                outline: none;
+                border-color: var(--primary-blue, #3b82f6);
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+            }
+            
+            .summary-controls {
+                display: flex;
+                gap: 0.5rem;
+            }
+            
+            .summary-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 32px;
+                height: 32px;
+                background: var(--bg-secondary, #f9fafb);
+                border: 1px solid var(--border-light, #e5e7eb);
+                border-radius: 6px;
+                color: var(--text-primary, #1f2937);
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            
+            .summary-btn:hover {
+                background: var(--primary-blue, #3b82f6);
+                color: white;
+                border-color: var(--primary-blue, #3b82f6);
+                transform: translateY(-1px);
+            }
+            
+            .summary-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 1rem;
+                flex: 1;
+                margin-bottom: 1rem;
+            }
+            
+            .metric-card {
+                background: var(--bg-secondary, #f9fafb);
+                border-radius: 8px;
+                padding: 1rem;
+                border: 1px solid var(--border-light, #e5e7eb);
+                transition: all 0.3s ease;
+                opacity: 0;
+                transform: translateY(20px);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .metric-card.animate-in {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            
+            .metric-card:hover {
+                border-color: var(--primary-blue, #3b82f6);
+                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+                transform: translateY(-2px);
+            }
+            
+            .metric-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: var(--status-color, #6b7280);
+                opacity: 0.7;
+            }
+            
+            .metric-card.status-success::before {
+                background: var(--success, #10b981);
+            }
+            
+            .metric-card.status-warning::before {
+                background: var(--warning, #f59e0b);
+            }
+            
+            .metric-card.status-danger::before {
+                background: var(--error, #dc2626);
+            }
+            
+            .metric-card.status-excellent::before {
+                background: var(--primary-blue, #3b82f6);
+            }
+            
+            .metric-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 0.75rem;
+            }
+            
+            .metric-label {
+                font-size: 0.875rem;
+                color: var(--text-secondary, #6b7280);
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 0.25rem;
+            }
+            
+            .metric-label .trend-up {
+                color: var(--success, #10b981);
+            }
+            
+            .metric-label .trend-down {
+                color: var(--error, #dc2626);
+            }
+            
+            .metric-label .trend-stable {
+                color: var(--text-secondary, #6b7280);
+            }
+            
+            .metric-status {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--status-color, #6b7280);
+            }
+            
+            .status-success .status-indicator {
+                background: var(--success, #10b981);
+            }
+            
+            .status-warning .status-indicator {
+                background: var(--warning, #f59e0b);
+            }
+            
+            .status-danger .status-indicator {
+                background: var(--error, #dc2626);
+            }
+            
+            .status-excellent .status-indicator {
+                background: var(--primary-blue, #3b82f6);
+            }
+            
+            .metric-content {
+                margin-bottom: 0.75rem;
+            }
+            
+            .metric-value {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: var(--text-primary, #1f2937);
+                margin-bottom: 0.25rem;
+                line-height: 1.2;
+            }
+            
+            .metric-change {
+                font-size: 0.875rem;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 0.25rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .metric-change.positive {
+                color: var(--success, #10b981);
+            }
+            
+            .metric-change.negative {
+                color: var(--error, #dc2626);
+            }
+            
+            .change-period {
+                font-size: 0.75rem;
+                color: var(--text-secondary, #6b7280);
+                font-weight: 400;
+            }
+            
+            .metric-sparkline {
+                margin-top: 0.5rem;
+                display: flex;
+                justify-content: center;
+            }
+            
+            .metric-sparkline canvas {
+                opacity: 0.8;
+            }
+            
+            .metric-footer {
+                margin-top: auto;
+                padding-top: 0.5rem;
+                border-top: 1px solid var(--border-light, #e5e7eb);
+            }
+            
+            .last-updated {
+                font-size: 0.75rem;
+                color: var(--text-secondary, #6b7280);
+            }
+            
+            .summary-insights {
+                margin-bottom: 1rem;
+                padding: 1rem;
+                background: rgba(59, 130, 246, 0.05);
+                border-radius: 8px;
+                border: 1px solid rgba(59, 130, 246, 0.1);
+            }
+            
+            .summary-insights h4 {
+                margin: 0 0 0.75rem 0;
+                font-size: 1rem;
+                color: var(--text-primary, #1f2937);
+                font-weight: 600;
+            }
+            
+            .insights-list {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .summary-insight {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.875rem;
+                color: var(--text-secondary, #6b7280);
+                line-height: 1.4;
+            }
+            
+            .insight-icon {
+                flex-shrink: 0;
+            }
+            
+            .summary-alerts {
+                margin-bottom: 1rem;
+                padding: 1rem;
+                background: rgba(220, 38, 38, 0.05);
+                border-radius: 8px;
+                border: 1px solid rgba(220, 38, 38, 0.1);
+            }
+            
+            .summary-alerts h4 {
+                margin: 0 0 0.75rem 0;
+                font-size: 1rem;
+                color: var(--error, #dc2626);
+                font-weight: 600;
+            }
+            
+            .alerts-list {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .summary-alert {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                font-size: 0.875rem;
+                color: var(--error, #dc2626);
+                line-height: 1.4;
+            }
+            
+            .alert-icon {
+                flex-shrink: 0;
+            }
+            
+            .summary-footer {
+                margin-top: auto;
+                padding-top: 1rem;
+                border-top: 1px solid var(--border-light, #e5e7eb);
+            }
+            
+            .summary-metadata {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 0.875rem;
+                color: var(--text-secondary, #6b7280);
+            }
+            
+            /* Compact Mode Styles */
+            .summary-panel-wrapper.compact-mode {
+                padding: 1rem;
+            }
+            
+            .summary-panel-wrapper.compact-mode .summary-header {
+                margin-bottom: 1rem;
+                padding-bottom: 0.75rem;
+            }
+            
+            .summary-panel-wrapper.compact-mode .summary-title h3 {
+                font-size: 1.125rem;
+            }
+            
+            .summary-panel-wrapper.compact-mode .summary-grid {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 0.75rem;
+            }
+            
+            .summary-panel-wrapper.compact-mode .metric-card {
+                padding: 0.75rem;
+            }
+            
+            .summary-panel-wrapper.compact-mode .metric-value {
+                font-size: 1.25rem;
+            }
+            
+            .summary-panel-wrapper.compact-mode .metric-change,
+            .summary-panel-wrapper.compact-mode .metric-label {
+                font-size: 0.75rem;
+            }
+            
+            .summary-panel-wrapper.compact-mode .summary-insights,
+            .summary-panel-wrapper.compact-mode .summary-alerts {
+                padding: 0.75rem;
+            }
+            
+            .summary-panel-wrapper.compact-mode .summary-metadata {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+            
+            /* Responsive Design */
+            @media (max-width: 768px) {
+                .summary-panel-wrapper {
+                    padding: 1rem;
+                }
+                
+                .summary-header {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 1rem;
+                }
+                
+                .summary-meta {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .summary-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 0.75rem;
+                }
+                
+                .metric-card {
+                    padding: 0.75rem;
+                }
+                
+                .metric-value {
+                    font-size: 1.25rem;
+                }
+                
+                .summary-metadata {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 0.25rem;
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .summary-panel-wrapper {
+                    padding: 0.75rem;
+                }
+                
+                .summary-grid {
+                    grid-template-columns: 1fr;
+                    gap: 0.5rem;
+                }
+                
+                .metric-card {
+                    padding: 0.75rem;
+                }
+                
+                .metric-value {
+                    font-size: 1.125rem;
+                }
+                
+                .summary-controls {
+                    justify-content: stretch;
+                }
+                
+                .summary-btn {
+                    flex: 1;
+                    width: auto;
+                }
+            }
+            
+            /* Animation Keyframes */
+            @keyframes fadeInUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            .metric-card.animate-in {
+                animation: fadeInUp 0.5s ease forwards;
+            }
+            
+            /* Loading States */
+            .metric-card.loading {
+                opacity: 0.6;
+                pointer-events: none;
+            }
+            
+            .metric-card.loading::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+                animation: shimmer 1.5s infinite;
+            }
+            
+            @keyframes shimmer {
+                0% { left: -100%; }
+                100% { left: 100%; }
+            }
+        `;
+        
+        document.head.appendChild(style);
     }
 }
 
 // Export for ES6 modules
 export { QuickSummaryPanel };
 
-// Also make available globally for dynamic loading
-window.QuickSummaryPanel = QuickSummaryPanel;
-
-// Module registration for analytics dashboard
+// Global registration for dynamic loading
 if (window.OsliraApp && window.OsliraApp.modules) {
-    window.OsliraApp.modules.QuickSummaryPanel = QuickSummaryPanel;
+    window.OsliraApp.modules.set('QuickSummaryPanel', QuickSummaryPanel);
 }
 
-console.log('📊 QuickSummaryPanel module loaded successfully');
-
+console.log('📊 QuickSummaryPanel module loaded successfully with BaseSecureModule integration');
