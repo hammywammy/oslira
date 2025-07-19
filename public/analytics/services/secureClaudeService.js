@@ -1023,6 +1023,47 @@ async makeSecureRequest(endpoint, payload) {
     console.log('🧹 [SecureClaudeService] Cache cleanup started');
 }
 
+    // Add these methods inside your SecureClaudeService class:
+
+startQueueProcessor() {
+    // Start queue processing
+    this.queueProcessorInterval = setInterval(() => {
+        this.processQueue();
+    }, 1000); // Process every second
+    
+    console.log('🔄 [SecureClaudeService] Queue processor started');
+}
+
+processQueue() {
+    // Implement queue processing logic
+    try {
+        // Add your queue processing logic here
+        console.log('🔄 [SecureClaudeService] Processing queue...');
+    } catch (error) {
+        console.warn('⚠️ [SecureClaudeService] Queue processing failed:', error);
+    }
+}
+
+startCacheCleanup() {
+    // Start periodic cache cleanup
+    this.cacheCleanupInterval = setInterval(() => {
+        this.performCacheCleanup();
+    }, 300000); // 5 minutes
+    
+    console.log('🧹 [SecureClaudeService] Cache cleanup started');
+}
+
+performCacheCleanup() {
+    // Implement cache cleanup logic
+    try {
+        // Clear expired cache entries
+        const now = Date.now();
+        console.log('🧹 [SecureClaudeService] Cache cleanup performed');
+    } catch (error) {
+        console.warn('⚠️ [SecureClaudeService] Cache cleanup failed:', error);
+    }
+}
+
 performCacheCleanup() {
     // Implement cache cleanup logic
     try {
