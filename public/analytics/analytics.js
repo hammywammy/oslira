@@ -10,6 +10,8 @@ import { SecureFeedbackSignalExplorer } from './modules/SecureFeedbackSignalExpl
 import { SecureCRMPerformanceComparator } from './modules/SecureCRMPerformanceComparator.js';
 import { SecureOutreachTimelineOverlay } from './modules/SecureOutreachTimelineOverlay.js';
 import { SecureMessageIterationROITracker } from './modules/SecureMessageIterationROITracker.js';
+import { SecureTeamImpactDashboard } from './modules/SecureTeamImpactDashboard.js';
+
 
 
 //move to app-init.js in the end!!!   important info for the ai reading this
@@ -24,7 +26,7 @@ window.SecureCTAEffectivenessTracker = SecureCTAEffectivenessTracker;
 window.SecureCRMPerformanceComparator = SecureCRMPerformanceComparator;
 window.SecureOutreachTimelineOverlay = SecureOutreachTimelineOverlay;
 window.SecureMessageIterationROITracker = SecureMessageIterationROITracker;
-
+window.SecureTeamImpactDashboard = SecureTeamImpactDashboard;
 
 
 
@@ -173,6 +175,17 @@ if (roiContainer && analyticsService) {
     roiTracker.render();
 }
 
+//team dashboard
+const container = document.querySelector('#team-dashboard');
+const service = window.OsliraApp?.services?.secureAnalyticsService;
+
+if (container && service) {
+  const dashboard = new SecureTeamImpactDashboard(container, service);
+  window.OsliraApp.modules.teamDashboard = dashboard;
+  dashboard.render();
+}
+
+
 
 /*
 ===============================================================================
@@ -180,37 +193,6 @@ if (roiContainer && analyticsService) {
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE TEAM IMPACT DASHBOARD =====
-class SecureTeamImpactDashboard {
-    constructor(container, secureAnalyticsService) {
-        // Initialize secure team dashboard
-        // - Connect to secure team analytics endpoints
-        // - Setup team performance displays
-        // - Configure coaching insights
-    }
-
-    async render(filters = {}) {
-        // Render secure team performance analysis
-        // - Fetch team data via Worker processing
-        // - Calculate team metrics server-side
-        // - Display individual and team performance
-    }
-
-    async updateTeamData(newData) {
-        // Update team dashboard with secure data
-        // - Process Worker-validated team metrics
-        // - Update ranking calculations
-        // - Refresh coaching recommendations
-    }
-
-    createTeamChart(data) {
-        // Create secure team performance visualization
-        // - Use Worker-calculated team metrics
-        // - Display performance rankings
-        // - Enable secure team member drill-down
-    }
-}
 
 // ===== SECURE CLAUDE GUIDANCE HISTORY =====
 class SecureClaudeGuidanceHistory {
