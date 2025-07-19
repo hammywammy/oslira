@@ -965,4 +965,4 @@ class SecureClaudeGuidanceHistory {
     }
 }
 
-export { SecureClaudeGuidanceHistory }
+export { SecureClaudeGuidanceHistory };
