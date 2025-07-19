@@ -47,7 +47,7 @@ console.log('✅ Environment configuration loaded from Netlify');
 console.log('🔧 Available services:', Object.keys(window.CONFIG));`;
 
 // Write to public directory
-const publicDir = path.join(__dirname, 'public', 'pages');
+const publicDir = path.join(__dirname, 'public');
 if (!fs.existsSync(publicDir)) {
   fs.mkdirSync(publicDir, { recursive: true });
   console.log('📁 Created public directory');
