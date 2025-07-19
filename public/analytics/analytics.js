@@ -13,8 +13,7 @@ import { SecureMessageIterationROITracker } from './modules/SecureMessageIterati
 import { SecureTeamImpactDashboard } from './modules/SecureTeamImpactDashboard.js';
 import { SecureClaudeGuidanceHistory } from './modules/SecureClaudeGuidanceHistory.js';
 import { SecureMessageRiskClassifier } from './modules/SecureMessageRiskClassifier.js';
-
-
+import { SecureChartFactory } from './modules/SecureChartFactory.js';
 
 
 //move to app-init.js in the end!!!   important info for the ai reading this
@@ -32,7 +31,7 @@ window.SecureMessageIterationROITracker = SecureMessageIterationROITracker;
 window.SecureTeamImpactDashboard = SecureTeamImpactDashboard;
 window.SecureClaudeGuidanceHistory = SecureClaudeGuidanceHistory;
 window.OsliraApp.riskClassifier = riskClassifier;
-
+window.OsliraApp.chartFactory = new SecureChartFactory();
 
 
 
@@ -213,6 +212,38 @@ const riskClassifier = new SecureMessageRiskClassifier(container, window.OsliraA
 window.dashboard = riskClassifier; // optional global exposure
 riskClassifier.render();
 
+//chart factory
+import { SecureChartFactory } from './modules/SecureChartFactory.js'; // adjust path
+
+// Inject chart factory globally (once per app)
+window.OsliraApp.chartFactory = new SecureChartFactory();
+
+// Initialize a specific chart inside your HTML
+const container = document.getElementById('lead-performance-chart');
+const chartType = 'bar';
+
+const sampleData = {
+    labels: ['Jan', 'Feb', 'Mar', 'Apr'],
+    datasets: [{
+        label: 'Lead Volume',
+        data: [12, 19, 30, 25]
+    }]
+};
+
+const chartOptions = {
+    plugins: {
+        title: {
+            display: true,
+            text: 'Lead Performance'
+        }
+    }
+};
+
+const leadChart = window.OsliraApp.chartFactory.createChart(chartType, container, sampleData, chartOptions);
+
+window.leadPerformanceChart = leadChart;
+
+
 
 /*
 ===============================================================================
@@ -222,36 +253,7 @@ Secure chart creation and management system using Chart.js with Worker data
 */
 
 // ===== SECURE CHART FACTORY =====
-class SecureChartFactory {
-    constructor() {
-        // Initialize secure chart factory
-        // - Setup Chart.js with security configurations
-        // - Configure data validation for Worker responses
-        // - Initialize chart theming and styling
-    }
 
-    createChart(type, container, secureData, options = {}) {
-        // Create secure chart with Worker-validated data
-        // - Validate data structure from Worker responses
-        // - Apply security-conscious chart configurations
-        // - Setup secure interaction handlers
-        // - Return chart instance with security context
-    }
-
-    updateChart(chartInstance, newSecureData) {
-        // Update chart with new secure data
-        // - Validate new data from Worker endpoints
-        // - Update chart data securely
-        // - Maintain chart state and interactions
-    }
-
-    destroyChart(chartInstance) {
-        // Securely destroy chart instance
-        // - Clean up chart resources
-        // - Clear sensitive data from memory
-        // - Log chart destruction for audit
-    }
-}
 
 /*
 ===============================================================================
