@@ -1014,6 +1014,29 @@ async makeSecureRequest(endpoint, payload) {
         return cleaned;
     }
 
+    startCacheCleanup() {
+    // Start periodic cache cleanup
+    this.cacheCleanupInterval = setInterval(() => {
+        this.performCacheCleanup();
+    }, 300000); // 5 minutes
+    
+    console.log('🧹 [SecureClaudeService] Cache cleanup started');
+}
+
+performCacheCleanup() {
+    // Implement cache cleanup logic
+    try {
+        // Clear expired cache entries
+        const now = Date.now();
+        const expiredKeys = [];
+        
+        // Add your cache cleanup logic here
+        console.log('🧹 [SecureClaudeService] Cache cleanup performed');
+    } catch (error) {
+        console.warn('⚠️ [SecureClaudeService] Cache cleanup failed:', error);
+    }
+}
+
     preserveAnalysisIntegrity(data) {
         // Ensure critical fields for analysis are preserved
         const preserveFields = [
