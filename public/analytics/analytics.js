@@ -14,6 +14,7 @@ import { SecureTeamImpactDashboard } from './modules/SecureTeamImpactDashboard.j
 import { SecureClaudeGuidanceHistory } from './modules/SecureClaudeGuidanceHistory.js';
 import { SecureMessageRiskClassifier } from './modules/SecureMessageRiskClassifier.js';
 import { SecureChartFactory } from './modules/SecureChartFactory.js';
+import { SECURE_ANALYTICS_CONFIG, SecureAnalyticsConfigManager } from './config/secureAnalyticsConfig.js'; 
 
 
 //move to app-init.js in the end!!!   important info for the ai reading this
@@ -32,7 +33,7 @@ window.SecureTeamImpactDashboard = SecureTeamImpactDashboard;
 window.SecureClaudeGuidanceHistory = SecureClaudeGuidanceHistory;
 window.OsliraApp.riskClassifier = riskClassifier;
 window.OsliraApp.chartFactory = new SecureChartFactory();
-
+window.OsliraApp.analyticsConfig = new SecureAnalyticsConfigManager();
 
 
 
@@ -212,13 +213,10 @@ const riskClassifier = new SecureMessageRiskClassifier(container, window.OsliraA
 window.dashboard = riskClassifier; // optional global exposure
 riskClassifier.render();
 
-//chart factory
 import { SecureChartFactory } from './modules/SecureChartFactory.js'; // adjust path
 
-// Inject chart factory globally (once per app)
 window.OsliraApp.chartFactory = new SecureChartFactory();
 
-// Initialize a specific chart inside your HTML
 const container = document.getElementById('lead-performance-chart');
 const chartType = 'bar';
 
@@ -242,70 +240,35 @@ const chartOptions = {
 const leadChart = window.OsliraApp.chartFactory.createChart(chartType, container, sampleData, chartOptions);
 
 window.leadPerformanceChart = leadChart;
+//end
 
 
+//analytics config
+document.addEventListener('DOMContentLoaded', () => {
+    // Access full config object
+    const config = window.OsliraApp.analyticsConfig.getConfig();
 
-/*
-===============================================================================
-                           CHART RENDERING SYSTEM
-===============================================================================
-Secure chart creation and management system using Chart.js with Worker data
-*/
+    // Example: Access AI prompt version
+    const promptVersion = window.OsliraApp.analyticsConfig.getConfig('ai.promptVersion');
 
-// ===== SECURE CHART FACTORY =====
-
-
-/*
-===============================================================================
-                        SECURE CONFIGURATION SYSTEM
-===============================================================================
-Updated configuration system for Worker-based architecture
-*/
-
-// ===== SECURE ANALYTICS CONFIG =====
-const SECURE_ANALYTICS_CONFIG = {
-    // Worker Configuration
-    worker: {
-        baseUrl: window.OsliraApp?.config?.workerUrl,
-        timeout: 60000,
-        retryAttempts: 3,
-        retryDelay: 2000,
-        batchSize: 10
-    },
-    
-    // Security Configuration
-    security: {
-        enableRequestSigning: true,
-        enableDataSanitization: true,
-        enableAuditLogging: true,
-        maxRequestSize: 10485760, // 10MB
-        rateLimitRequests: 100
-    },
-    
-    // Credit Configuration
-    credits: {
-        checkBalanceBeforeOperation: true,
-        enableUsagePrediction: true,
-        enableCostOptimization: true,
-        logAllTransactions: true
-    },
-    
-    // AI Configuration
-    ai: {
-        enableAdvancedRiskScoring: true,
-        enableInsightGeneration: true,
-        enableFeedbackClassification: true,
-        enableExperimentSuggestions: false,
-        promptVersion: 'v2.1'
+    // Example: Check if a feature flag is enabled
+    if (window.OsliraApp.analyticsConfig.isFeatureEnabled('enableAdvancedCharts')) {
+        console.log('📊 Advanced charts are enabled');
     }
-};
 
-/*
-===============================================================================
-                        SECURE INITIALIZATION SYSTEM
-===============================================================================
-Updated initialization sequence for Worker-based architecture
-*/
+    // Example: Get module-specific config
+    const riskConfig = window.OsliraApp.analyticsConfig.getModuleConfig('riskClassifier');
+    if (riskConfig?.enabled) {
+        console.log('🛡️ Risk classifier module loaded:', riskConfig);
+    }
+
+    // Example: Validate security compliance
+    const meetsSecurity = window.OsliraApp.analyticsConfig.validateSecurityRequirements();
+    console.log('🔐 Security compliance met:', meetsSecurity);
+});
+//end
+
+
 
 // ===== SECURE ANALYTICS DASHBOARD =====
 class SecureAnalyticsDashboard {
