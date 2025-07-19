@@ -1252,6 +1252,43 @@ class SecureAnalyticsService {
         return optimized;
     }
 
+    async makeSecureRequest(endpoint, options = {}) {
+    try {
+        const {
+            method = 'GET',
+            data = null,
+            headers = {},
+            timeout = this.config.timeout
+        } = options;
+
+        const url = `${this.config.baseUrl}${endpoint}`;
+        
+        const requestOptions = {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                ...headers
+            },
+            signal: AbortSignal.timeout(timeout)
+        };
+
+        if (data && (method === 'POST' || method === 'PUT')) {
+            requestOptions.body = JSON.stringify(data);
+        }
+
+        const response = await fetch(url, requestOptions);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('❌ [SecureAnalyticsService] Request failed:', error);
+        throw error;
+    }
+}
+
     updateRequestStats(endpoint, duration, success, responseSize) {
         this.requestStats.totalRequests++;
         
