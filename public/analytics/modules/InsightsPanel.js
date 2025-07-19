@@ -2115,4 +2115,3 @@ if (window.OsliraApp && window.OsliraApp.modules) {
 }
 
 console.log('🧠 InsightsPanel module loaded successfully');
-export default InsightsPanel;
