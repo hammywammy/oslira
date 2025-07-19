@@ -1,6 +1,6 @@
 // ==========================================
 // SHARED-CORE.JS - Universal app foundation
-// Include this FIRST in every page: <script src="/js/shared-core.js"></script>
+// Include this FIRST in every page: <script src="/core_utils/shared-code.js"></script>
 // ==========================================
 
 // =============================================================================
@@ -84,20 +84,15 @@ async function loadAppConfig() {
 
 async function initializeSupabase() {
     try {
-        if (!window.supabase) {
-            throw new Error('Supabase library not loaded');
-        }
+        console.log('🔧 Initializing Supabase...');
         
         const config = window.OsliraApp.config;
         if (!config.supabaseUrl || !config.supabaseAnonKey) {
             throw new Error('Supabase configuration missing');
         }
         
-        // Initialize Supabase client
-        window.OsliraApp.supabase = window.supabase.createClient(
-            config.supabaseUrl,
-            config.supabaseAnonKey
-        );
+        const { createClient } = supabase;
+        window.OsliraApp.supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
         
         console.log('✅ Supabase initialized');
         return window.OsliraApp.supabase;
@@ -113,40 +108,30 @@ async function initializeSupabase() {
 // =============================================================================
 
 async function checkAuthentication() {
-    const supabase = window.OsliraApp.supabase;
-    
-    console.log('🔐 Starting authentication check...');
-    console.log('📊 Supabase available:', !!supabase);
-    
-    if (!supabase) {
-        console.warn('🚧 Supabase not available - using fallback');
-        return setupDemoUser();
-    }
-    
     try {
-        console.log('🔍 Getting session from Supabase...');
+        console.log('🔐 Checking authentication...');
+        
+        const supabase = window.OsliraApp.supabase;
+        if (!supabase) {
+            throw new Error('Supabase not initialized');
+        }
+        
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        console.log('📋 Session data:', session);
-        console.log('❌ Session error:', error);
-        
         if (error) {
-            console.error('Auth error:', error);
-            redirectToLogin();
-            return null;
+            throw error;
         }
         
         if (!session) {
-            console.log('❌ No active session found');
+            console.log('❌ No active session');
             redirectToLogin();
             return null;
         }
         
-        // Store session and user
         window.OsliraApp.session = session;
         window.OsliraApp.user = session.user;
         
-        console.log('✅ User authenticated successfully!');
+        console.log('✅ User authenticated');
         console.log('👤 User email:', session.user.email);
         console.log('🆔 User ID:', session.user.id);
         
@@ -203,102 +188,12 @@ function redirectToLogin() {
     const currentPage = getCurrentPageName();
     
     if (protectedPages.includes(currentPage)) {
-        window.location.href = '/auth.html';  // Also fix the URL
+        window.location.href = '/auth.html';
     }
 }
 
 // =============================================================================
-// 5. USER DATA MANAGEMENT
-// =============================================================================
-
-async function loadUserProfile() {
-    const supabase = window.OsliraApp.supabase;
-    const user = window.OsliraApp.user;
-    
-    if (!supabase || !user) {
-        return setupDemoProfile();
-    }
-    
-    try {
-        const { data: profile, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-        
-        if (error && error.code !== 'PGRST116') { // Not found is ok for new users
-            console.warn('Error loading user profile:', error);
-            return setupDemoProfile();
-        }
-        
-        return profile || setupDemoProfile();
-        
-    } catch (error) {
-        console.error('Profile loading failed:', error);
-        return setupDemoProfile();
-    }
-}
-
-function setupDemoProfile() {
-    return {
-        id: window.OsliraApp.user?.id || 'demo-user',
-        email: window.OsliraApp.user?.email || 'demo@oslira.com',
-        subscription_plan: 'free',
-        subscription_status: 'active',
-        credits: 10,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    };
-}
-
-async function loadBusinessProfiles() {
-    const supabase = window.OsliraApp.supabase;
-    const user = window.OsliraApp.user;
-    
-    if (!supabase || !user) {
-        return setupDemoBusinesses();
-    }
-    
-    try {
-        const { data: businesses, error } = await supabase
-            .from('business_profiles')
-            .select('*')
-            .eq('user_id', user.id);
-        
-        if (error) {
-            console.warn('Error loading businesses:', error);
-            return setupDemoBusinesses();
-        }
-        
-        window.OsliraApp.businesses = businesses || [];
-        
-        if (businesses && businesses.length > 0) {
-            window.OsliraApp.business = businesses[0];
-        }
-        
-        return businesses || [];
-        
-    } catch (error) {
-        console.error('Business loading failed:', error);
-        return setupDemoBusinesses();
-    }
-}
-
-function setupDemoBusinesses() {
-    const demoBusiness = {
-        id: 'demo-business',
-        business_name: 'Demo Business',
-        business_type: 'SaaS',
-        target_audience: 'Entrepreneurs'
-    };
-    
-    window.OsliraApp.businesses = [demoBusiness];
-    window.OsliraApp.business = demoBusiness;
-    
-    return [demoBusiness];
-}
-
-// =============================================================================
-// 6. TIMEZONE HANDLING
+// 5. TIMEZONE HANDLING
 // =============================================================================
 
 function initializeTimezone() {
@@ -321,6 +216,85 @@ function getUserTimezone() {
     return localStorage.getItem('userTimezone') || 'UTC';
 }
 
+function formatDateInUserTimezone(dateInput, options = {}) {
+    try {
+        const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+        const timezone = getUserTimezone();
+        
+        const defaultOptions = {
+            timeZone: timezone,
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        
+        return new Intl.DateTimeFormat('en-US', { ...defaultOptions, ...options }).format(date);
+        
+    } catch (error) {
+        console.warn('Date formatting failed:', error);
+        return dateInput?.toString() || 'Invalid Date';
+    }
+}
+
+// =============================================================================
+// 6. BUSINESS CONTEXT MANAGEMENT
+// =============================================================================
+
+async function loadBusinesses() {
+    try {
+        console.log('🏢 Loading businesses...');
+        
+        const supabase = window.OsliraApp.supabase;
+        if (!supabase) {
+            throw new Error('Supabase not initialized');
+        }
+        
+        const { data: businesses, error } = await supabase
+            .from('businesses')
+            .select('*')
+            .eq('user_id', window.OsliraApp.user.id)
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            throw error;
+        }
+        
+        window.OsliraApp.businesses = businesses || [];
+        
+        // Set default business if none selected
+        const savedBusinessId = localStorage.getItem('selectedBusinessId');
+        if (savedBusinessId && businesses.find(b => b.id === savedBusinessId)) {
+            window.OsliraApp.business = businesses.find(b => b.id === savedBusinessId);
+        } else if (businesses.length > 0) {
+            window.OsliraApp.business = businesses[0];
+            localStorage.setItem('selectedBusinessId', businesses[0].id);
+        }
+        
+        console.log(`✅ Loaded ${businesses.length} businesses`);
+        return businesses;
+        
+    } catch (error) {
+        console.error('❌ Failed to load businesses:', error);
+        return [];
+    }
+}
+
+function setActiveBusiness(businessId) {
+    const business = window.OsliraApp.businesses.find(b => b.id === businessId);
+    if (business) {
+        window.OsliraApp.business = business;
+        localStorage.setItem('selectedBusinessId', businessId);
+        
+        // Emit business change event
+        window.OsliraApp.events.dispatchEvent(new CustomEvent('businessChanged', {
+            detail: { business }
+        }));
+        
+        console.log('🏢 Active business changed:', business.name);
+    }
+}
 
 // =============================================================================
 // 7. API HELPERS
@@ -337,317 +311,382 @@ async function apiRequest(endpoint, options = {}) {
         }
     };
     
-    const finalOptions = {
+    const requestOptions = {
         ...defaultOptions,
         ...options,
-        headers: { ...defaultOptions.headers, ...options.headers }
+        headers: {
+            ...defaultOptions.headers,
+            ...options.headers
+        }
     };
     
+    const url = endpoint.startsWith('http') ? endpoint : `${config.apiUrl || ''}${endpoint}`;
+    
     try {
-        const response = await fetch(config.workerUrl + endpoint, finalOptions);
+        console.log(`🌐 API Request: ${requestOptions.method || 'GET'} ${url}`);
+        
+        const response = await fetch(url, requestOptions);
         
         if (!response.ok) {
-            let errorData;
-            try {
-                errorData = await response.json();
-            } catch {
-                errorData = { error: `HTTP ${response.status}` };
-            }
-            throw new Error(errorData.error || errorData.message || `Request failed: ${response.status}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        return await response.json();
+        const data = await response.json();
+        return data;
         
     } catch (error) {
-        console.error(`API request failed [${endpoint}]:`, error);
+        console.error('❌ API Request failed:', error);
         throw error;
     }
 }
-function formatDateInUserTimezone(dateString, options) {
-    // Set default options if not provided
-    if (!options) {
-        options = {};
-    }
-    
-    // Add caching to prevent excessive calls
-    if (!this.dateFormatCache) {
-        this.dateFormatCache = new Map();
-    }
-    
-    const cacheKey = dateString + '_' + JSON.stringify(options);
-    if (this.dateFormatCache.has(cacheKey)) {
-        return this.dateFormatCache.get(cacheKey);
-    }
-    
-    if (!dateString) {
-        return 'Invalid date';
-    }
-    
-    try {
-        const date = new Date(dateString);
-        const timezone = this.getUserTimezone();
-        
-        // Build options object manually instead of using spread operator
-        const defaultOptions = {
-            year: 'numeric',
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: timezone
-        };
-        
-        // Merge options manually
-        for (const key in options) {
-            if (options.hasOwnProperty(key)) {
-                defaultOptions[key] = options[key];
-            }
-        }
-        
-        const formatted = date.toLocaleString('en-US', defaultOptions);
-        
-        // Cache the result
-        this.dateFormatCache.set(cacheKey, formatted);
-        
-        // Limit cache size to prevent memory issues
-        if (this.dateFormatCache.size > 100) {
-            const firstKey = this.dateFormatCache.keys().next().value;
-            this.dateFormatCache.delete(firstKey);
-        }
-        
-        return formatted;
-        
-    } catch (error) {
-        console.error('Date formatting error:', error);
-        const errorResult = 'Invalid date';
-        this.dateFormatCache.set(cacheKey, errorResult);
-        return errorResult;
-    }
-}
+
 // =============================================================================
-// 8. UI UTILITIES
+// 8. UI HELPERS
 // =============================================================================
 
-function showMessage(text, type = 'success', duration = 5000) {
-    // Remove existing messages
-    document.querySelectorAll('.oslira-message').forEach(msg => msg.remove());
+function showMessage(message, type = 'info', duration = 5000) {
+    const messageContainer = document.getElementById('message-container') || createMessageContainer();
     
-    const message = document.createElement('div');
-    message.className = `oslira-message oslira-message-${type}`;
-    message.textContent = text;
-    
-    const colors = {
-        success: 'linear-gradient(135deg, #10B981, #34D399)',
-        error: 'linear-gradient(135deg, #EF4444, #F87171)',
-        warning: 'linear-gradient(135deg, #F59E0B, #FBBF24)',
-        info: 'linear-gradient(135deg, #3B82F6, #60A5FA)'
-    };
-    
-    message.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 16px 24px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 600;
-        z-index: 10000;
-        opacity: 0;
-        transform: translateX(100%);
-        transition: all 0.3s ease;
-        max-width: 400px;
-        word-wrap: break-word;
-        background: ${colors[type] || colors.info};
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    `;
-    
-    document.body.appendChild(message);
-    
-    setTimeout(() => {
-        message.style.opacity = '1';
-        message.style.transform = 'translateX(0)';
-    }, 100);
-    
-    setTimeout(() => {
-        message.style.opacity = '0';
-        message.style.transform = 'translateX(100%)';
-        setTimeout(() => message.remove(), 300);
-    }, duration);
-}
-
-function showLoadingOverlay(text = 'Loading...') {
-    removeLoadingOverlay();
-    
-    const overlay = document.createElement('div');
-    overlay.id = 'oslira-loading-overlay';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(255, 255, 255, 0.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10001;
-        backdrop-filter: blur(4px);
-    `;
-    
-    overlay.innerHTML = `
-        <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
-            <div style="width: 40px; height: 40px; border: 4px solid #E5E7EB; border-top: 4px solid #3B82F6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
-            <p style="margin: 0; color: #374151; font-weight: 600;">${text}</p>
+    const messageElement = document.createElement('div');
+    messageElement.className = `message message-${type}`;
+    messageElement.innerHTML = `
+        <div class="message-content">
+            <span class="message-icon">${getMessageIcon(type)}</span>
+            <span class="message-text">${message}</span>
+            <button class="message-close" onclick="this.parentElement.parentElement.remove()">×</button>
         </div>
-        <style>
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        </style>
     `;
     
-    document.body.appendChild(overlay);
+    messageContainer.appendChild(messageElement);
+    
+    // Auto-remove after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            if (messageElement.parentElement) {
+                messageElement.remove();
+            }
+        }, duration);
+    }
+    
+    return messageElement;
+}
+
+function createMessageContainer() {
+    const container = document.createElement('div');
+    container.id = 'message-container';
+    container.className = 'message-container';
+    document.body.appendChild(container);
+    return container;
+}
+
+function getMessageIcon(type) {
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    return icons[type] || icons.info;
+}
+
+function showLoadingOverlay(message = 'Loading...') {
+    let overlay = document.getElementById('loading-overlay');
+    
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loading-overlay';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <p class="loading-message">${message}</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+    
+    overlay.querySelector('.loading-message').textContent = message;
+    overlay.style.display = 'flex';
+    window.OsliraApp.loading = true;
 }
 
 function removeLoadingOverlay() {
-    const overlay = document.getElementById('oslira-loading-overlay');
-    if (overlay) overlay.remove();
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+    window.OsliraApp.loading = false;
+}
+
+function updateLoadingMessage(message) {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        const messageElement = overlay.querySelector('.loading-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+    }
 }
 
 // =============================================================================
-// 9. NAVIGATION & PAGE DETECTION
+// 9. UTILITY FUNCTIONS
 // =============================================================================
 
 function getCurrentPageName() {
     const path = window.location.pathname;
-    const page = path.split('/').pop().replace('.html', '') || 'home';
-    return page;
+    const filename = path.split('/').pop();
+    return filename.replace('.html', '') || 'index';
 }
 
-function setupGlobalNavigation() {
-    // Add logout functionality to all pages
-    document.addEventListener('click', (e) => {
-        if (e.target.matches('[data-action="logout"]')) {
-            e.preventDefault();
-            logout();
-        }
-    });
+function debounce(func, wait, immediate = false) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            timeout = null;
+            if (!immediate) func(...args);
+        };
+        const callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func(...args);
+    };
 }
+
+function generateId(prefix = 'id') {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function sanitizeHTML(html) {
+    const div = document.createElement('div');
+    div.textContent = html;
+    return div.innerHTML;
+}
+
+function formatNumber(number, options = {}) {
+    if (typeof number !== 'number') return number;
+    
+    const defaults = {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    };
+    
+    return new Intl.NumberFormat('en-US', { ...defaults, ...options }).format(number);
+}
+
+function copyToClipboard(text) {
+    if (navigator.clipboard) {
+        return navigator.clipboard.writeText(text);
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return Promise.resolve();
+    }
+}
+
+// =============================================================================
+// 10. LOGOUT FUNCTIONALITY
+// =============================================================================
 
 async function logout() {
-    const supabase = window.OsliraApp.supabase;
-    
     try {
+        console.log('🚪 Logging out...');
+        
+        const supabase = window.OsliraApp.supabase;
         if (supabase) {
             await supabase.auth.signOut();
         }
+        
+        // Clear local storage
+        localStorage.removeItem('selectedBusinessId');
+        localStorage.removeItem('userTimezone');
         
         // Clear app state
         window.OsliraApp.user = null;
         window.OsliraApp.session = null;
         window.OsliraApp.business = null;
+        window.OsliraApp.businesses = [];
         
-        // Clear localStorage
-        localStorage.removeItem('userTimezone');
-        
-        showMessage('Logged out successfully', 'success');
-        
-        setTimeout(() => {
-    window.location.href = '/auth.html';   // ✅ Correct URL
-}, 1000);
+        console.log('✅ Logout successful');
+        window.location.href = '/auth.html';
         
     } catch (error) {
-        console.error('Logout error:', error);
-        window.location.href = '/auth.html';
+        console.error('❌ Logout failed:', error);
+        showMessage('Logout failed. Please try again.', 'error');
     }
 }
 
 // =============================================================================
-// 10. INITIALIZATION SYSTEM
+// 11. PAGE INITIALIZER CLASS
 // =============================================================================
 
 class OsliraPageInitializer {
     constructor() {
-        this.initialized = false;
-        this.initPromise = null;
+        this.initializationSteps = [
+            { name: 'Configuration', fn: this.initConfig.bind(this) },
+            { name: 'Supabase', fn: this.initSupabase.bind(this) },
+            { name: 'Authentication', fn: this.initAuth.bind(this) },
+            { name: 'Timezone', fn: this.initTimezone.bind(this) },
+            { name: 'Business Context', fn: this.initBusinessContext.bind(this) },
+            { name: 'UI Setup', fn: this.initUI.bind(this) }
+        ];
+        this.isInitialized = false;
     }
-    
+
     async initialize() {
-        if (this.initialized) return;
-        if (this.initPromise) return this.initPromise;
-        
-        this.initPromise = this._doInitialize();
-        return this.initPromise;
-    }
-    
-    async _doInitialize() {
+        if (this.isInitialized) {
+            console.log('⚠️ [Initializer] Already initialized');
+            return;
+        }
+
         try {
-            console.log('🚀 Initializing Oslira App...');
-            
-            // Set current page
-            window.OsliraApp.currentPage = getCurrentPageName();
-            
-            // Load configuration
-            await loadAppConfig();
-            
-            // Initialize Supabase
-            await initializeSupabase();
-            
-            // Initialize timezone
-            initializeTimezone();
-            
-            // Check authentication for protected pages
-            const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings', 'admin', 'campaigns',];
-            if (protectedPages.includes(window.OsliraApp.currentPage)) {
-                await checkAuthentication();
+            console.log('🚀 [Initializer] Starting Oslira page initialization...');
+            showLoadingOverlay('Initializing Oslira...');
+
+            for (const [index, step] of this.initializationSteps.entries()) {
+                const progress = Math.round(((index + 1) / this.initializationSteps.length) * 100);
+                updateLoadingMessage(`${step.name}... (${progress}%)`);
                 
-                if (window.OsliraApp.user) {
-                    // Load user data
-                    await Promise.all([
-                        loadUserProfile(),
-                        loadBusinessProfiles()
-                    ]);
-                }
+                console.log(`🔧 [Initializer] Step ${index + 1}: ${step.name}`);
+                await step.fn();
+                console.log(`✅ [Initializer] ${step.name} completed`);
             }
-            
-            // Set up global navigation
-            setupGlobalNavigation();
-            
-            this.initialized = true;
-            console.log('✅ Oslira App initialized successfully');
+
+            this.isInitialized = true;
+            console.log('🎯 [Initializer] Oslira initialization completed successfully');
             
             // Emit initialization complete event
-            window.OsliraApp.events.dispatchEvent(new CustomEvent('appInitialized'));
-            
+            window.dispatchEvent(new CustomEvent('oslira:initialized', {
+                detail: { timestamp: Date.now() }
+            }));
+
+            removeLoadingOverlay();
+
         } catch (error) {
-            console.error('❌ App initialization failed:', error);
-            this._showInitializationError(error);
+            console.error('❌ [Initializer] Initialization failed:', error);
+            showMessage(`Initialization failed: ${error.message}`, 'error');
+            removeLoadingOverlay();
             throw error;
         }
     }
-    
-    _showInitializationError(error) {
-        document.body.innerHTML = `
-            <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, sans-serif;">
-                <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px;">
-                    <div style="font-size: 48px; margin-bottom: 20px;">❌</div>
-                    <h2 style="color: #dc2626; margin-bottom: 16px;">Initialization Error</h2>
-                    <p style="color: #6b7280; margin-bottom: 16px;">
-                        ${error.message || 'An unexpected error occurred'}
-                    </p>
-                    <button onclick="window.location.reload()" 
-                            style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        Retry
-                    </button>
-                </div>
-            </div>
-        `;
+
+    async initConfig() {
+        await loadAppConfig();
+    }
+
+    async initSupabase() {
+        await initializeSupabase();
+    }
+
+    async initAuth() {
+        const currentPage = getCurrentPageName();
+        const publicPages = ['auth', 'index', 'landing'];
+        
+        if (publicPages.includes(currentPage)) {
+            console.log('📖 [Initializer] Public page - skipping auth');
+            return;
+        }
+
+        const user = await checkAuthentication();
+        if (!user) {
+            throw new Error('Authentication required');
+        }
+    }
+
+    async initTimezone() {
+        initializeTimezone();
+    }
+
+    async initBusinessContext() {
+        if (window.OsliraApp.user) {
+            await loadBusinesses();
+        }
+    }
+
+    async initUI() {
+        this.setupGlobalUIHandlers();
+        this.populateUIElements();
+    }
+
+    setupGlobalUIHandlers() {
+        // Logout links
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-action="logout"]')) {
+                e.preventDefault();
+                logout();
+            }
+        });
+
+        // Business selector
+        const businessSelect = document.getElementById('business-select');
+        if (businessSelect) {
+            businessSelect.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    setActiveBusiness(e.target.value);
+                }
+            });
+        }
+    }
+
+    populateUIElements() {
+        // Populate business selector
+        this.populateBusinessSelector();
+        
+        // Update user info
+        this.updateUserInfo();
+        
+        // Update subscription info
+        this.updateSubscriptionInfo();
+    }
+
+    populateBusinessSelector() {
+        const selectors = document.querySelectorAll('#business-select, #business-filter');
+        
+        selectors.forEach(select => {
+            // Clear existing options except the first one
+            const firstOption = select.firstElementChild;
+            select.innerHTML = '';
+            if (firstOption) select.appendChild(firstOption);
+            
+            // Add business options
+            window.OsliraApp.businesses.forEach(business => {
+                const option = document.createElement('option');
+                option.value = business.id;
+                option.textContent = business.name;
+                option.selected = window.OsliraApp.business?.id === business.id;
+                select.appendChild(option);
+            });
+        });
+    }
+
+    updateUserInfo() {
+        const userEmailElement = document.getElementById('user-email');
+        if (userEmailElement && window.OsliraApp.user) {
+            userEmailElement.textContent = window.OsliraApp.user.email;
+        }
+    }
+
+    updateSubscriptionInfo() {
+        // Update plan info
+        const planElement = document.getElementById('sidebar-plan');
+        if (planElement) {
+            planElement.textContent = 'Pro Plan'; // Default for now
+        }
+
+        // Update billing info
+        const billingElement = document.getElementById('sidebar-billing');
+        if (billingElement) {
+            billingElement.textContent = 'Active'; // Default for now
+        }
     }
 }
 
 // =============================================================================
-// 11. GLOBAL EXPORTS
+// 12. GLOBAL EXPORTS
 // =============================================================================
 
 // Create global initializer instance
@@ -663,7 +702,12 @@ window.OsliraApp.formatDate = formatDateInUserTimezone;
 window.OsliraApp.getUserTimezone = getUserTimezone;
 window.OsliraApp.logout = logout;
 window.OsliraApp.formatDateInUserTimezone = formatDateInUserTimezone;
-
+window.OsliraApp.setActiveBusiness = setActiveBusiness;
+window.OsliraApp.formatNumber = formatNumber;
+window.OsliraApp.copyToClipboard = copyToClipboard;
+window.OsliraApp.debounce = debounce;
+window.OsliraApp.generateId = generateId;
+window.OsliraApp.sanitizeHTML = sanitizeHTML;
 
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
@@ -675,4 +719,4 @@ if (document.readyState === 'loading') {
     window.OsliraApp.initialize().catch(console.error);
 }
 
-console.log('📦 Oslira shared core loaded');
+console.log('📦 Oslira shared core loaded successfully');
