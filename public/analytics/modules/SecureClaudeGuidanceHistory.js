@@ -964,3 +964,5 @@ class SecureClaudeGuidanceHistory {
         console.log('🗑️ SecureClaudeGuidanceHistory destroyed');
     }
 }
+
+export { SecureClaudeGuidanceHistory }
