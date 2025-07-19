@@ -44,6 +44,8 @@ import { ErrorHandler } from './utils/errorHandler.js';
 import { ExportManager } from './utils/exportManager.js';
 import { SecureChartFactory } from './utils/secureChartFactory.js';
 import { UIHelpers } from './utils/uiHelpers.js';
+import { addTooltip } from './utils/UIHelpers.js';
+import { getCachedData, setCachedData } from './utils/moduleCache.js';
 
 // ===== GLOBAL STATE INITIALIZATION =====
 
