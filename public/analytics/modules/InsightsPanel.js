@@ -3,7 +3,7 @@
 // Enterprise-Grade Analytics Dashboard Component
 // ==========================================
 
-import { BaseSecureModule } from './modules/baseSecureModule.js';
+import { BaseSecureModule } from './baseSecureModule.js';
 import { setCachedData, getCachedData } from '../utils/moduleCache.js';
 import { createIcon, addTooltip, formatNumber } from '../utils/UIHelpers.js';
 
