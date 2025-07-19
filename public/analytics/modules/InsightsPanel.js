@@ -11,7 +11,15 @@ export class InsightsPanel extends BaseSecureModule {
     constructor(container, secureAnalyticsService, secureClaudeService, secureCreditService) {
         // Call parent constructor with services
         super(container, secureAnalyticsService, secureClaudeService, secureCreditService);
-        
+
+         this.analyticsService = analyticsService || null;
+    this.claudeService = claudeService || null;
+    this.creditService = creditService || null;
+    
+    // Only bind methods if services exist
+    if (this.claudeService && typeof this.claudeService.someMethod === 'function') {
+        this.boundMethod = this.claudeService.someMethod.bind(this.claudeService);
+    }
         // Module-specific configuration
         this.config = {
             ...this.config, // Inherit base config
@@ -132,6 +140,53 @@ export class InsightsPanel extends BaseSecureModule {
             performance: this.getPerformanceMetrics()
         };
     }
+
+    async initializeServiceBatch(serviceConfigs) {
+    const promises = serviceConfigs.map(async (config) => {
+        try {
+            console.log(`🔧 [ServiceManager] Initializing ${config.name} service...`);
+            
+            const serviceInstance = new config.class();
+            
+            // Initialize with health check
+            if (typeof serviceInstance.initialize === 'function') {
+                await serviceInstance.initialize();
+            }
+
+            this.services.set(config.name, serviceInstance);
+            this.serviceHealth.set(config.name, { status: 'healthy', lastCheck: Date.now() });
+            
+            console.log(`✅ [ServiceManager] ${config.name} service initialized`);
+            
+            return { name: config.name, success: true };
+        } catch (error) {
+            console.error(`❌ [ServiceManager] Failed to initialize ${config.name}:`, error);
+            this.serviceHealth.set(config.name, { status: 'failed', lastCheck: Date.now(), error });
+            
+            // For non-critical services, create a mock service
+            if (!config.critical) {
+                const mockService = this.createMockService(config.name);
+                this.services.set(config.name, mockService);
+                console.log(`🔄 [ServiceManager] Using mock service for ${config.name}`);
+            } else {
+                throw error;
+            }
+            
+            return { name: config.name, success: false, error };
+        }
+    });
+
+    return Promise.all(promises);
+}
+
+createMockService(serviceName) {
+    return {
+        healthCheck: () => Promise.resolve(false),
+        makeSecureRequest: () => Promise.reject(new Error(`${serviceName} service not available`)),
+        initialize: () => Promise.resolve(),
+        [serviceName]: 'mock'
+    };
+}
     
     // ===== OPTIONAL LIFECYCLE METHODS =====
     
