@@ -9,6 +9,8 @@ import { SecureCTAEffectivenessTracker } from './modules/SecureCTAEffectivenessT
 import { SecureFeedbackSignalExplorer } from './modules/SecureFeedbackSignalExplorer.js';
 import { SecureCRMPerformanceComparator } from './modules/SecureCRMPerformanceComparator.js';
 import { SecureOutreachTimelineOverlay } from './modules/SecureOutreachTimelineOverlay.js';
+import { SecureMessageIterationROITracker } from './modules/SecureMessageIterationROITracker.js';
+
 
 //move to app-init.js in the end!!!   important info for the ai reading this
 window.OsliraApp.creditService = creditService;
@@ -21,6 +23,7 @@ window.SecureLeadConversionHeatmap = SecureLeadConversionHeatmap;
 window.SecureCTAEffectivenessTracker = SecureCTAEffectivenessTracker;
 window.SecureCRMPerformanceComparator = SecureCRMPerformanceComparator;
 window.SecureOutreachTimelineOverlay = SecureOutreachTimelineOverlay;
+window.SecureMessageIterationROITracker = SecureMessageIterationROITracker;
 
 
 
@@ -160,6 +163,15 @@ if (timelineContainer && service) {
   outreachTimeline.render();
 }
 
+//message iteration roi tracker
+const roiContainer = document.querySelector('#roi-tracker-container');
+const analyticsService = window.OsliraApp?.services?.secureAnalyticsService;
+
+if (roiContainer && analyticsService) {
+    const roiTracker = new SecureMessageIterationROITracker(roiContainer, analyticsService);
+    window.OsliraApp.modules.roiTracker = roiTracker;
+    roiTracker.render();
+}
 
 
 /*
@@ -168,37 +180,6 @@ if (timelineContainer && service) {
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE MESSAGE ITERATION ROI TRACKER =====
-class SecureMessageIterationROITracker {
-    constructor(container, secureAnalyticsService) {
-        // Initialize secure ROI tracker
-        // - Setup secure analytics service connection
-        // - Configure ROI calculation displays
-        // - Initialize iteration tracking
-    }
-
-    async render(filters = {}) {
-        // Render secure iteration ROI analysis
-        // - Fetch iteration data via Worker endpoints
-        // - Calculate ROI metrics server-side
-        // - Display before/after comparisons
-    }
-
-    async updateROIData(newData) {
-        // Update ROI tracking with secure data
-        // - Process Worker-calculated ROI metrics
-        // - Update improvement calculations
-        // - Refresh ROI visualizations
-    }
-
-    calculateIterationROI(data) {
-        // Calculate secure iteration ROI
-        // - Use Worker-validated performance data
-        // - Calculate improvement percentages
-        // - Include cost-benefit analysis
-    }
-}
 
 // ===== SECURE TEAM IMPACT DASHBOARD =====
 class SecureTeamImpactDashboard {
