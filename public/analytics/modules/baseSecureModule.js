@@ -3,8 +3,8 @@
 // Standardized base class for all Oslira analytics modules
 // ==========================================
 
-import { setCachedData, getCachedData } from './moduleCache.js';
-import { createIcon, addTooltip } from './UIHelpers.js';
+import { setCachedData, getCachedData } from '/utils/moduleCache.js';
+import { createIcon, addTooltip } from '/utils/UIHelpers.js';
 
 /**
  * Base class for all secure analytics modules
