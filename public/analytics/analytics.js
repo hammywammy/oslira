@@ -658,9 +658,10 @@ class OsliraDashboardController {
             window.OsliraApp.statusMonitor = this.statusMonitor;
 
             // 2. Initialize configuration
-            this.updateLoadingProgress(20, 'Loading configuration...');
-            await this.configManager.initialize();
-            window.OsliraApp.config = { ...this.configManager.getConfig() };
+            // 2. Initialize configuration
+this.updateLoadingProgress(20, 'Loading configuration...');
+// Configuration manager initializes automatically in constructor
+window.OsliraApp.config = { ...this.configManager.getConfig() };
 
             // 3. Initialize services
             this.updateLoadingProgress(40, 'Starting enterprise services...');
