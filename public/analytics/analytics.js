@@ -6,6 +6,8 @@ import { SecureIntegrationService } from '/services/integrationService.js';
 import { SecureMessageStyleMatrix } from './modules/SecureMessageStyleMatrix.js';
 import { SecureLeadConversionHeatmap } from './modules/SecureLeadConversionHeatmap.js';
 import { SecureCTAEffectivenessTracker } from './modules/SecureCTAEffectivenessTracker.js';
+import { SecureFeedbackSignalExplorer } from './modules/SecureFeedbackSignalExplorer.js';
+
 
 
 
@@ -96,10 +98,6 @@ const WORKER_ENDPOINTS = {
     }
 };
 
-//i was told this is necessary placeholder, important piece to fix
-<div id="heatmap-container"></div>
-<div id="cta-effectiveness-container"></div>
-
 //this is all reference for how to call the sections
 const heatmapContainer = document.querySelector('#heatmap-container');
 const secureAnalyticsService = window.OsliraApp?.services?.secureAnalyticsService;
@@ -122,6 +120,21 @@ if (ctaContainer && window.SecureCTAEffectivenessTracker && analyticsService) {
     ctaTracker.render();
 }
 
+const feedbackContainer = document.querySelector('#feedback-signal-container');
+const analyticsService = window.OsliraApp?.services?.secureAnalyticsService;
+const claudeService = window.OsliraApp?.services?.secureClaudeService;
+
+if (feedbackContainer && analyticsService && claudeService) {
+    const feedbackExplorer = new SecureFeedbackSignalExplorer(
+        feedbackContainer,
+        analyticsService,
+        claudeService
+    );
+    window.OsliraApp.modules.feedbackExplorer = feedbackExplorer;
+    feedbackExplorer.render();
+}
+
+
 
 
 /*
@@ -130,37 +143,6 @@ if (ctaContainer && window.SecureCTAEffectivenessTracker && analyticsService) {
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE FEEDBACK SIGNAL EXPLORER =====
-class SecureFeedbackSignalExplorer {
-    constructor(container, secureAnalyticsService, secureClaudeService) {
-        // Initialize secure feedback explorer
-        // - Connect to secure analytics and Claude services
-        // - Setup sentiment analysis components
-        // - Configure theme extraction displays
-    }
-
-    async render(filters = {}) {
-        // Render secure feedback analysis
-        // - Fetch feedback data via Worker endpoints
-        // - Process sentiment analysis via secure Claude service
-        // - Display theme clusters and sentiment trends
-    }
-
-    async processFeedbackWithClaude(feedbackData) {
-        // Process feedback via secure Claude service
-        // - Send feedback to Worker for Claude analysis
-        // - Extract themes and sentiment server-side
-        // - Return structured classification results
-    }
-
-    createSentimentChart(data) {
-        // Create secure sentiment visualization
-        // - Use Worker-processed sentiment data
-        // - Display sentiment distribution and trends
-        // - Enable secure sentiment drill-down
-    }
-}
 
 // ===== SECURE CRM PERFORMANCE COMPARATOR =====
 class SecureCRMPerformanceComparator {
