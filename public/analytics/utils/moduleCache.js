@@ -1,28 +1,39 @@
 // ==========================================
-// MODULE CACHE - Enterprise Caching System
-// Secure localStorage-based caching with TTL, compression, and analytics
+// MODULE CACHE - Enterprise LocalStorage TTL Cache System
+// High-performance caching with compression and analytics
 // ==========================================
 
 /**
- * Enterprise-grade caching system for analytics modules
- * Provides secure localStorage management with TTL, compression, and monitoring
+ * Enterprise-grade caching system for Oslira Analytics Dashboard
+ * Features: TTL management, compression, analytics, quota management
+ * Version 2.0.0 - Fixed memory leaks and added proper cleanup
  */
 
-// Cache configuration and constants
+// Cache configuration with secure defaults
 const CACHE_CONFIG = {
-    PREFIX: 'oslira_analytics_',
-    VERSION: '1.0.0',
-    MAX_CACHE_SIZE: 10 * 1024 * 1024, // 10MB total cache limit
-    MAX_ITEM_SIZE: 2 * 1024 * 1024,   // 2MB per item limit
-    DEFAULT_TTL: 3600000,             // 1 hour default TTL
-    CLEANUP_INTERVAL: 300000,         // 5 minutes cleanup interval
-    COMPRESSION_THRESHOLD: 10240,     // 10KB - compress items larger than this
+    PREFIX: 'oslira_cache_',
+    METADATA_KEY: 'oslira_cache_metadata',
+    STATS_KEY: 'oslira_cache_stats',
+    DEFAULT_TTL: 300000, // 5 minutes
+    MAX_SIZE: 50 * 1024 * 1024, // 50MB localStorage limit
+    COMPRESSION_THRESHOLD: 1024, // Compress items larger than 1KB
+    CLEANUP_INTERVAL: 60000, // Cleanup every minute
+    EMERGENCY_CLEANUP_THRESHOLD: 0.9, // 90% of max size
+    MAX_CACHE_ITEMS: 1000, // Maximum number of cached items
     ENABLE_ANALYTICS: true,
-    ENABLE_ENCRYPTION: false          // Future enhancement
+    ENABLE_COMPRESSION: true
 };
 
-// Cache statistics and monitoring
-const CACHE_STATS = {
+// Global cache metadata and statistics
+let CACHE_METADATA = {
+    totalSize: 0,
+    itemCount: 0,
+    items: new Map(),
+    lastCleanup: Date.now(),
+    version: '2.0.0'
+};
+
+let CACHE_STATS = {
     hits: 0,
     misses: 0,
     sets: 0,
@@ -33,49 +44,49 @@ const CACHE_STATS = {
     errors: 0,
     totalSize: 0,
     itemCount: 0,
-    lastCleanup: Date.now(),
-    createdAt: Date.now()
+    startTime: Date.now()
 };
 
-// Cache metadata storage
-const CACHE_METADATA = {
-    items: new Map(),       // key -> { size, ttl, compressed, created, accessed }
-    totalSize: 0,
-    cleanupTimer: null,
-    initialized: false
-};
+// Cleanup timer reference
+let cleanupTimer = null;
+let isInitialized = false;
 
 /**
  * Initialize the cache system
  */
 function initializeCache() {
-    if (CACHE_METADATA.initialized) return;
+    if (isInitialized) return;
     
     try {
-        // Load existing metadata from localStorage
+        // Load existing metadata
         loadCacheMetadata();
         
-        // Start periodic cleanup
-        startCleanupTimer();
+        // Load existing stats
+        loadCacheStats();
         
-        // Setup storage event listener for cross-tab sync
-        setupStorageListener();
+        // Validate and clean existing cache
+        validateExistingCache();
+        
+        // Start periodic cleanup
+        startPeriodicCleanup();
         
         // Setup beforeunload cleanup
         setupUnloadCleanup();
         
-        CACHE_METADATA.initialized = true;
-        
-        console.log('💾 Module cache initialized:', {
-            version: CACHE_CONFIG.VERSION,
-            maxSize: formatBytes(CACHE_CONFIG.MAX_CACHE_SIZE),
-            itemCount: CACHE_METADATA.items.size,
-            totalSize: formatBytes(CACHE_METADATA.totalSize)
-        });
+        isInitialized = true;
+        console.log('💾 Cache system initialized successfully');
         
     } catch (error) {
         console.error('❌ Cache initialization failed:', error);
-        CACHE_STATS.errors++;
+        // Initialize with empty state
+        CACHE_METADATA = {
+            totalSize: 0,
+            itemCount: 0,
+            items: new Map(),
+            lastCleanup: Date.now(),
+            version: '2.0.0'
+        };
+        isInitialized = true;
     }
 }
 
@@ -84,29 +95,25 @@ function initializeCache() {
  */
 function loadCacheMetadata() {
     try {
-        const metadataKey = `${CACHE_CONFIG.PREFIX}metadata`;
-        const stored = localStorage.getItem(metadataKey);
-        
+        const stored = localStorage.getItem(CACHE_CONFIG.METADATA_KEY);
         if (stored) {
             const metadata = JSON.parse(stored);
             
-            // Validate and restore metadata
-            if (metadata.version === CACHE_CONFIG.VERSION) {
-                CACHE_METADATA.items = new Map(metadata.items);
-                CACHE_METADATA.totalSize = metadata.totalSize || 0;
-                
-                // Validate items still exist and update statistics
-                validateStoredItems();
+            // Convert items array back to Map
+            if (metadata.items && Array.isArray(metadata.items)) {
+                CACHE_METADATA = {
+                    ...metadata,
+                    items: new Map(metadata.items)
+                };
             } else {
-                console.warn('💾 Cache version mismatch, clearing cache');
-                clearAllCachedData();
+                CACHE_METADATA.items = new Map();
             }
+            
+            console.log(`💾 Loaded cache metadata: ${CACHE_METADATA.itemCount} items, ${formatBytes(CACHE_METADATA.totalSize)}`);
         }
-        
     } catch (error) {
         console.warn('⚠️ Failed to load cache metadata:', error);
-        CACHE_METADATA.items.clear();
-        CACHE_METADATA.totalSize = 0;
+        CACHE_METADATA.items = new Map();
     }
 }
 
@@ -115,28 +122,54 @@ function loadCacheMetadata() {
  */
 function saveCacheMetadata() {
     try {
-        const metadataKey = `${CACHE_CONFIG.PREFIX}metadata`;
-        const metadata = {
-            version: CACHE_CONFIG.VERSION,
-            items: Array.from(CACHE_METADATA.items.entries()),
-            totalSize: CACHE_METADATA.totalSize,
-            savedAt: Date.now()
+        const metadataToSave = {
+            ...CACHE_METADATA,
+            items: Array.from(CACHE_METADATA.items.entries())
         };
         
-        localStorage.setItem(metadataKey, JSON.stringify(metadata));
-        
+        localStorage.setItem(CACHE_CONFIG.METADATA_KEY, JSON.stringify(metadataToSave));
     } catch (error) {
-        console.warn('⚠️ Failed to save cache metadata:', error);
-        CACHE_STATS.errors++;
+        console.error('❌ Failed to save cache metadata:', error);
     }
 }
 
 /**
- * Validate that stored items still exist in localStorage
+ * Load cache statistics from localStorage
  */
-function validateStoredItems() {
+function loadCacheStats() {
+    try {
+        const stored = localStorage.getItem(CACHE_CONFIG.STATS_KEY);
+        if (stored) {
+            const stats = JSON.parse(stored);
+            CACHE_STATS = { ...CACHE_STATS, ...stats };
+            console.log(`📊 Loaded cache stats: ${CACHE_STATS.hits} hits, ${CACHE_STATS.misses} misses`);
+        }
+    } catch (error) {
+        console.warn('⚠️ Failed to load cache stats:', error);
+    }
+}
+
+/**
+ * Save cache statistics to localStorage
+ */
+function saveCacheStats() {
+    try {
+        CACHE_STATS.totalSize = CACHE_METADATA.totalSize;
+        CACHE_STATS.itemCount = CACHE_METADATA.itemCount;
+        
+        localStorage.setItem(CACHE_CONFIG.STATS_KEY, JSON.stringify(CACHE_STATS));
+    } catch (error) {
+        console.warn('⚠️ Failed to save cache stats:', error);
+    }
+}
+
+/**
+ * Validate existing cache items and remove invalid ones
+ */
+function validateExistingCache() {
     const invalidKeys = [];
     
+    // Check each cached item
     CACHE_METADATA.items.forEach((metadata, key) => {
         const fullKey = `${CACHE_CONFIG.PREFIX}${key}`;
         
@@ -157,6 +190,244 @@ function validateStoredItems() {
     if (invalidKeys.length > 0) {
         console.log(`💾 Cleaned up ${invalidKeys.length} invalid cache entries`);
         saveCacheMetadata();
+    }
+}
+
+/**
+ * Start periodic cleanup timer
+ */
+function startPeriodicCleanup() {
+    if (cleanupTimer) return;
+    
+    cleanupTimer = setInterval(() => {
+        try {
+            performCleanup();
+        } catch (error) {
+            console.error('❌ Periodic cleanup failed:', error);
+        }
+    }, CACHE_CONFIG.CLEANUP_INTERVAL);
+    
+    console.log('🧹 Periodic cache cleanup started');
+}
+
+/**
+ * Stop periodic cleanup timer
+ */
+function stopPeriodicCleanup() {
+    if (cleanupTimer) {
+        clearInterval(cleanupTimer);
+        cleanupTimer = null;
+        console.log('🛑 Periodic cache cleanup stopped');
+    }
+}
+
+/**
+ * Setup cleanup on page unload
+ */
+function setupUnloadCleanup() {
+    window.addEventListener('beforeunload', () => {
+        try {
+            saveCacheMetadata();
+            saveCacheStats();
+            stopPeriodicCleanup();
+        } catch (error) {
+            console.error('❌ Unload cleanup failed:', error);
+        }
+    });
+}
+
+/**
+ * Perform cache cleanup - remove expired items
+ */
+function performCleanup() {
+    const now = Date.now();
+    const expiredKeys = [];
+    
+    // Find expired items
+    CACHE_METADATA.items.forEach((metadata, key) => {
+        if (now > metadata.ttl) {
+            expiredKeys.push(key);
+        }
+    });
+    
+    // Remove expired items
+    expiredKeys.forEach(key => {
+        deleteCachedData(key);
+        CACHE_STATS.evictions++;
+    });
+    
+    // Check if emergency cleanup is needed
+    if (CACHE_METADATA.totalSize > CACHE_CONFIG.MAX_SIZE * CACHE_CONFIG.EMERGENCY_CLEANUP_THRESHOLD) {
+        performEmergencyCleanup();
+    }
+    
+    // Update last cleanup time
+    CACHE_METADATA.lastCleanup = now;
+    
+    if (expiredKeys.length > 0) {
+        console.log(`🧹 Cache cleanup: removed ${expiredKeys.length} expired items`);
+        saveCacheMetadata();
+        saveCacheStats();
+    }
+}
+
+/**
+ * Perform emergency cleanup when cache is near quota
+ */
+function performEmergencyCleanup() {
+    console.warn('⚠️ Performing emergency cache cleanup');
+    
+    // Sort items by access time (oldest first) and size (largest first)
+    const itemsToClean = Array.from(CACHE_METADATA.items.entries())
+        .map(([key, metadata]) => ({ key, ...metadata }))
+        .sort((a, b) => {
+            // Prioritize: old items first, then large items
+            const ageWeight = a.accessTime - b.accessTime;
+            const sizeWeight = (b.size - a.size) * 0.1; // Lower weight for size
+            return ageWeight + sizeWeight;
+        });
+    
+    // Remove oldest/largest items until we're under the threshold
+    const targetSize = CACHE_CONFIG.MAX_SIZE * 0.7; // Clean to 70% capacity
+    let removedCount = 0;
+    
+    for (const item of itemsToClean) {
+        if (CACHE_METADATA.totalSize <= targetSize) break;
+        
+        deleteCachedData(item.key);
+        removedCount++;
+        CACHE_STATS.evictions++;
+    }
+    
+    console.log(`🚨 Emergency cleanup: removed ${removedCount} items, freed ${formatBytes(CACHE_CONFIG.MAX_SIZE * CACHE_CONFIG.EMERGENCY_CLEANUP_THRESHOLD - CACHE_METADATA.totalSize)}`);
+}
+
+/**
+ * Cache data with TTL and optional compression
+ * @param {string} key - Cache key
+ * @param {*} data - Data to cache
+ * @param {number} ttl - Time to live in milliseconds
+ * @returns {boolean} - Success status
+ */
+export function setCachedData(key, data, ttl = CACHE_CONFIG.DEFAULT_TTL) {
+    initializeCache();
+    
+    if (!key || typeof key !== 'string') {
+        console.warn('💾 setCachedData: Invalid key provided');
+        return false;
+    }
+    
+    if (data === undefined) {
+        console.warn('💾 setCachedData: Cannot cache undefined data');
+        return false;
+    }
+    
+    try {
+        // Serialize data
+        let serializedData = JSON.stringify(data);
+        let isCompressed = false;
+        let originalSize = new Blob([serializedData]).size;
+        
+        // Compress if enabled and data is large enough
+        if (CACHE_CONFIG.ENABLE_COMPRESSION && originalSize > CACHE_CONFIG.COMPRESSION_THRESHOLD) {
+            try {
+                const compressed = compressString(serializedData);
+                if (compressed.length < serializedData.length * 0.9) { // Only use if 10%+ savings
+                    serializedData = compressed;
+                    isCompressed = true;
+                    CACHE_STATS.compressions++;
+                }
+            } catch (compressionError) {
+                console.warn('⚠️ Compression failed, storing uncompressed:', compressionError);
+            }
+        }
+        
+        const finalSize = new Blob([serializedData]).size;
+        const now = Date.now();
+        
+        // Create cache item
+        const cacheItem = {
+            data: serializedData,
+            compressed: isCompressed,
+            created: now,
+            ttl: now + ttl,
+            accessTime: now,
+            accessCount: 0,
+            originalSize: originalSize,
+            compressedSize: finalSize
+        };
+        
+        const fullKey = `${CACHE_CONFIG.PREFIX}${key}`;
+        
+        // Check if we need to remove existing item
+        const existingMetadata = CACHE_METADATA.items.get(key);
+        if (existingMetadata) {
+            CACHE_METADATA.totalSize -= existingMetadata.size;
+        }
+        
+        // Check quota before storing
+        const newSize = finalSize + 100; // Add overhead estimate
+        if (CACHE_METADATA.totalSize + newSize > CACHE_CONFIG.MAX_SIZE) {
+            // Try cleanup first
+            performCleanup();
+            
+            // If still too large, try emergency cleanup
+            if (CACHE_METADATA.totalSize + newSize > CACHE_CONFIG.MAX_SIZE) {
+                performEmergencyCleanup();
+            }
+            
+            // If still can't fit, reject
+            if (CACHE_METADATA.totalSize + newSize > CACHE_CONFIG.MAX_SIZE) {
+                console.warn(`💾 Cache quota exceeded, cannot store ${key}`);
+                return false;
+            }
+        }
+        
+        // Store in localStorage
+        localStorage.setItem(fullKey, JSON.stringify(cacheItem));
+        
+        // Update metadata
+        const metadata = {
+            size: finalSize,
+            ttl: cacheItem.ttl,
+            created: cacheItem.created,
+            accessTime: cacheItem.accessTime,
+            accessCount: cacheItem.accessCount,
+            compressed: isCompressed,
+            originalSize: originalSize
+        };
+        
+        CACHE_METADATA.items.set(key, metadata);
+        CACHE_METADATA.totalSize += finalSize;
+        CACHE_METADATA.itemCount = CACHE_METADATA.items.size;
+        
+        // Update stats
+        CACHE_STATS.sets++;
+        CACHE_STATS.totalSize = CACHE_METADATA.totalSize;
+        CACHE_STATS.itemCount = CACHE_METADATA.itemCount;
+        
+        // Periodic save (not on every operation for performance)
+        if (CACHE_STATS.sets % 10 === 0) {
+            saveCacheMetadata();
+            saveCacheStats();
+        }
+        
+        console.log(`💾 Cached "${key}" (${formatBytes(finalSize)}${isCompressed ? ', compressed' : ''})`);
+        
+        return true;
+        
+    } catch (error) {
+        console.error(`❌ Error caching data for key "${key}":`, error);
+        CACHE_STATS.errors++;
+        
+        // Handle quota exceeded error
+        if (error.name === 'QuotaExceededError') {
+            console.warn('💾 localStorage quota exceeded, attempting cleanup');
+            performEmergencyCleanup();
+            return false;
+        }
+        
+        return false;
     }
 }
 
@@ -212,145 +483,86 @@ export function getCachedData(key) {
             return null;
         }
         
+        // Update access statistics
+        const now = Date.now();
+        cacheItem.accessTime = now;
+        cacheItem.accessCount = (cacheItem.accessCount || 0) + 1;
+        
+        // Update metadata
+        metadata.accessTime = now;
+        metadata.accessCount = cacheItem.accessCount;
+        
+        // Save updated item (async to avoid blocking)
+        setTimeout(() => {
+            try {
+                localStorage.setItem(fullKey, JSON.stringify(cacheItem));
+            } catch (error) {
+                console.warn('Failed to update access stats:', error);
+            }
+        }, 0);
+        
         // Decompress if needed
         let data = cacheItem.data;
-        if (metadata.compressed && cacheItem.compressed) {
-            data = decompressData(cacheItem.data);
-            CACHE_STATS.decompressions++;
+        if (cacheItem.compressed) {
+            try {
+                data = decompressString(data);
+                CACHE_STATS.decompressions++;
+            } catch (decompressionError) {
+                console.error(`💾 Decompression failed for key "${key}":`, decompressionError);
+                deleteCachedData(key);
+                CACHE_STATS.errors++;
+                CACHE_STATS.misses++;
+                return null;
+            }
         }
         
-        // Update access time
-        metadata.accessed = Date.now();
-        saveCacheMetadata();
+        // Parse final data
+        const parsedData = JSON.parse(data);
         
+        // Update stats
         CACHE_STATS.hits++;
         
-        return data;
+        console.log(`💾 Cache hit for "${key}" (${formatBytes(metadata.size)}${metadata.compressed ? ', compressed' : ''})`);
+        
+        return parsedData;
         
     } catch (error) {
         console.error(`❌ Error retrieving cached data for key "${key}":`, error);
         CACHE_STATS.errors++;
-        
-        // Clean up corrupted item
-        try {
-            deleteCachedData(key);
-        } catch (cleanupError) {
-            console.error('❌ Failed to clean up corrupted cache item:', cleanupError);
-        }
-        
+        CACHE_STATS.misses++;
         return null;
     }
 }
 
 /**
- * Set cached data with TTL and size management
- * @param {string} key - Cache key
- * @param {*} data - Data to cache
- * @param {number} ttl - Time to live in milliseconds (optional)
+ * Delete cached data
+ * @param {string} key - Cache key to delete
  * @returns {boolean} - Success status
  */
-export function setCachedData(key, data, ttl = CACHE_CONFIG.DEFAULT_TTL) {
-    if (!key || typeof key !== 'string') {
-        console.warn('💾 setCachedData: Invalid key provided');
-        return false;
-    }
-    
-    if (data === undefined) {
-        console.warn('💾 setCachedData: Cannot cache undefined data');
-        return false;
-    }
-    
-    initializeCache();
-    
+function deleteCachedData(key) {
     try {
-        // Serialize data
-        const serialized = JSON.stringify(data);
-        const dataSize = new Blob([serialized]).size;
-        
-        // Check item size limit
-        if (dataSize > CACHE_CONFIG.MAX_ITEM_SIZE) {
-            console.warn(`💾 Item too large to cache: ${key} (${formatBytes(dataSize)})`);
-            return false;
-        }
-        
-        // Prepare cache item
-        let cacheItem = {
-            data: data,
-            version: CACHE_CONFIG.VERSION,
-            created: Date.now(),
-            compressed: false
-        };
-        
-        let shouldCompress = false;
-        let compressedData = null;
-        
-        // Check if compression is beneficial
-        if (dataSize > CACHE_CONFIG.COMPRESSION_THRESHOLD) {
-            compressedData = compressData(data);
-            const compressedSize = new Blob([JSON.stringify(compressedData)]).size;
-            
-            if (compressedSize < dataSize * 0.8) { // Only compress if at least 20% savings
-                shouldCompress = true;
-                cacheItem.data = compressedData;
-                cacheItem.compressed = true;
-                CACHE_STATS.compressions++;
-            }
-        }
-        
-        // Calculate final item size
-        const itemString = JSON.stringify(cacheItem);
-        const finalSize = new Blob([itemString]).size;
-        
-        // Check if we need to evict items
-        const requiredSpace = finalSize;
-        if (!ensureSpace(requiredSpace, key)) {
-            console.warn(`💾 Unable to free enough space for: ${key}`);
-            return false;
-        }
-        
-        // Store the item
         const fullKey = `${CACHE_CONFIG.PREFIX}${key}`;
-        localStorage.setItem(fullKey, itemString);
+        const metadata = CACHE_METADATA.items.get(key);
+        
+        // Remove from localStorage
+        localStorage.removeItem(fullKey);
         
         // Update metadata
-        const existingMetadata = CACHE_METADATA.items.get(key);
-        if (existingMetadata) {
-            CACHE_METADATA.totalSize -= existingMetadata.size;
+        if (metadata) {
+            CACHE_METADATA.totalSize -= metadata.size;
+            CACHE_METADATA.items.delete(key);
+            CACHE_METADATA.itemCount = CACHE_METADATA.items.size;
         }
         
-        const newMetadata = {
-            size: finalSize,
-            ttl: Date.now() + ttl,
-            compressed: shouldCompress,
-            created: Date.now(),
-            accessed: Date.now()
-        };
-        
-        CACHE_METADATA.items.set(key, newMetadata);
-        CACHE_METADATA.totalSize += finalSize;
-        
-        // Save metadata
-        saveCacheMetadata();
-        
-        CACHE_STATS.sets++;
+        CACHE_STATS.deletes++;
         CACHE_STATS.totalSize = CACHE_METADATA.totalSize;
-        CACHE_STATS.itemCount = CACHE_METADATA.items.size;
-        
-        console.log(`💾 Cached: ${key} (${formatBytes(finalSize)}${shouldCompress ? ', compressed' : ''})`);
+        CACHE_STATS.itemCount = CACHE_METADATA.itemCount;
         
         return true;
         
     } catch (error) {
-        console.error(`❌ Error caching data for key "${key}":`, error);
+        console.error(`❌ Error deleting cached data for key "${key}":`, error);
         CACHE_STATS.errors++;
-        
-        // Handle quota exceeded error
-        if (error.name === 'QuotaExceededError') {
-            console.warn('💾 localStorage quota exceeded, attempting cleanup');
-            performEmergencyCleanup();
-            return false;
-        }
-        
         return false;
     }
 }
@@ -370,39 +582,6 @@ export function clearCachedData(key) {
 }
 
 /**
- * Delete cached data (internal function)
- * @param {string} key - Cache key to delete
- * @returns {boolean} - Success status
- */
-function deleteCachedData(key) {
-    try {
-        const fullKey = `${CACHE_CONFIG.PREFIX}${key}`;
-        const metadata = CACHE_METADATA.items.get(key);
-        
-        // Remove from localStorage
-        localStorage.removeItem(fullKey);
-        
-        // Update metadata
-        if (metadata) {
-            CACHE_METADATA.totalSize -= metadata.size;
-            CACHE_METADATA.items.delete(key);
-            saveCacheMetadata();
-        }
-        
-        CACHE_STATS.deletes++;
-        CACHE_STATS.totalSize = CACHE_METADATA.totalSize;
-        CACHE_STATS.itemCount = CACHE_METADATA.items.size;
-        
-        return true;
-        
-    } catch (error) {
-        console.error(`❌ Error deleting cached data for key "${key}":`, error);
-        CACHE_STATS.errors++;
-        return false;
-    }
-}
-
-/**
  * Clear all cached data
  * @returns {boolean} - Success status
  */
@@ -416,21 +595,21 @@ export function clearAllCachedData() {
             localStorage.removeItem(fullKey);
         });
         
-        // Remove metadata
-        const metadataKey = `${CACHE_CONFIG.PREFIX}metadata`;
-        localStorage.removeItem(metadataKey);
-        
-        // Reset metadata
+        // Clear metadata
         CACHE_METADATA.items.clear();
         CACHE_METADATA.totalSize = 0;
+        CACHE_METADATA.itemCount = 0;
         
-        // Reset stats
+        // Update stats
         CACHE_STATS.deletes += keys.length;
         CACHE_STATS.totalSize = 0;
         CACHE_STATS.itemCount = 0;
         
-        console.log(`💾 Cleared all cached data (${keys.length} items)`);
+        // Save updated metadata and stats
+        saveCacheMetadata();
+        saveCacheStats();
         
+        console.log(`💾 Cleared all cached data (${keys.length} items)`);
         return true;
         
     } catch (error) {
@@ -441,314 +620,253 @@ export function clearAllCachedData() {
 }
 
 /**
- * Get cache statistics and health information
+ * Get cache statistics
  * @returns {Object} - Cache statistics
  */
 export function getCacheStats() {
     initializeCache();
     
-    const hitRate = CACHE_STATS.hits + CACHE_STATS.misses > 0 
-        ? (CACHE_STATS.hits / (CACHE_STATS.hits + CACHE_STATS.misses)) * 100 
-        : 0;
-    
-    const compressionRate = CACHE_STATS.sets > 0 
-        ? (CACHE_STATS.compressions / CACHE_STATS.sets) * 100 
-        : 0;
+    const uptime = Date.now() - CACHE_STATS.startTime;
+    const hitRate = CACHE_STATS.hits + CACHE_STATS.misses > 0 ? 
+        (CACHE_STATS.hits / (CACHE_STATS.hits + CACHE_STATS.misses)) * 100 : 0;
     
     return {
-        // Basic stats
-        hits: CACHE_STATS.hits,
-        misses: CACHE_STATS.misses,
+        ...CACHE_STATS,
         hitRate: Math.round(hitRate * 100) / 100,
-        
-        // Operations
-        sets: CACHE_STATS.sets,
-        deletes: CACHE_STATS.deletes,
-        evictions: CACHE_STATS.evictions,
-        errors: CACHE_STATS.errors,
-        
-        // Compression
-        compressions: CACHE_STATS.compressions,
-        decompressions: CACHE_STATS.decompressions,
-        compressionRate: Math.round(compressionRate * 100) / 100,
-        
-        // Size and capacity
-        itemCount: CACHE_METADATA.items.size,
-        totalSize: CACHE_METADATA.totalSize,
-        totalSizeFormatted: formatBytes(CACHE_METADATA.totalSize),
-        maxSize: CACHE_CONFIG.MAX_CACHE_SIZE,
-        maxSizeFormatted: formatBytes(CACHE_CONFIG.MAX_CACHE_SIZE),
-        utilizationPercent: Math.round((CACHE_METADATA.totalSize / CACHE_CONFIG.MAX_CACHE_SIZE) * 100),
-        
-        // Health
-        lastCleanup: CACHE_STATS.lastCleanup,
-        uptime: Date.now() - CACHE_STATS.createdAt,
-        
-        // Configuration
-        config: {
-            defaultTTL: CACHE_CONFIG.DEFAULT_TTL,
-            maxItemSize: CACHE_CONFIG.MAX_ITEM_SIZE,
-            compressionThreshold: CACHE_CONFIG.COMPRESSION_THRESHOLD,
-            cleanupInterval: CACHE_CONFIG.CLEANUP_INTERVAL
-        }
+        uptime: uptime,
+        uptimeFormatted: formatDuration(uptime),
+        totalSizeFormatted: formatBytes(CACHE_STATS.totalSize),
+        averageItemSize: CACHE_STATS.itemCount > 0 ? 
+            Math.round(CACHE_STATS.totalSize / CACHE_STATS.itemCount) : 0,
+        quotaUsed: Math.round((CACHE_STATS.totalSize / CACHE_CONFIG.MAX_SIZE) * 100),
+        compressionRatio: CACHE_STATS.compressions > 0 ? 
+            Math.round((CACHE_STATS.compressions / CACHE_STATS.sets) * 100) : 0
     };
 }
 
 /**
- * Get information about cached items
- * @returns {Array} - Array of cache item information
+ * Get cache item information
+ * @param {string} key - Cache key
+ * @returns {Object|null} - Cache item info
  */
-export function getCacheItems() {
+export function getCacheItemInfo(key) {
+    if (!key || typeof key !== 'string') {
+        return null;
+    }
+    
     initializeCache();
     
-    const items = [];
+    const metadata = CACHE_METADATA.items.get(key);
+    if (!metadata) {
+        return null;
+    }
+    
     const now = Date.now();
+    const age = now - metadata.created;
+    const timeToExpiry = metadata.ttl - now;
+    
+    return {
+        key: key,
+        size: metadata.size,
+        sizeFormatted: formatBytes(metadata.size),
+        originalSize: metadata.originalSize,
+        originalSizeFormatted: formatBytes(metadata.originalSize),
+        compressed: metadata.compressed,
+        compressionRatio: metadata.compressed ? 
+            Math.round((1 - metadata.size / metadata.originalSize) * 100) : 0,
+        created: new Date(metadata.created).toISOString(),
+        age: age,
+        ageFormatted: formatDuration(age),
+        ttl: metadata.ttl,
+        timeToExpiry: timeToExpiry,
+        timeToExpiryFormatted: timeToExpiry > 0 ? formatDuration(timeToExpiry) : 'Expired',
+        accessCount: metadata.accessCount,
+        lastAccess: new Date(metadata.accessTime).toISOString(),
+        isExpired: timeToExpiry <= 0
+    };
+}
+
+/**
+ * List all cached items
+ * @returns {Array} - Array of cache item info
+ */
+export function listCachedItems() {
+    initializeCache();
+    
+    return Array.from(CACHE_METADATA.items.keys())
+        .map(key => getCacheItemInfo(key))
+        .filter(Boolean)
+        .sort((a, b) => b.accessCount - a.accessCount); // Sort by access count
+}
+
+/**
+ * Optimize cache by removing old or unused items
+ * @param {Object} options - Optimization options
+ * @returns {Object} - Optimization results
+ */
+export function optimizeCache(options = {}) {
+    const {
+        maxAge = 24 * 60 * 60 * 1000, // 24 hours
+        minAccessCount = 1,
+        targetQuota = 0.8 // 80% of max size
+    } = options;
+    
+    initializeCache();
+    
+    const now = Date.now();
+    const targetSize = CACHE_CONFIG.MAX_SIZE * targetQuota;
+    let removedCount = 0;
+    let freedBytes = 0;
+    
+    // Find items to remove
+    const itemsToRemove = [];
     
     CACHE_METADATA.items.forEach((metadata, key) => {
-        items.push({
-            key,
-            size: metadata.size,
-            sizeFormatted: formatBytes(metadata.size),
-            compressed: metadata.compressed,
-            created: new Date(metadata.created).toISOString(),
-            accessed: new Date(metadata.accessed).toISOString(),
-            ttl: metadata.ttl,
-            expiresIn: Math.max(0, metadata.ttl - now),
-            expired: now > metadata.ttl,
-            age: now - metadata.created
-        });
-    });
-    
-    return items.sort((a, b) => b.accessed - a.accessed);
-}
-
-/**
- * Ensure sufficient space is available for new item
- * @param {number} requiredSize - Required space in bytes
- * @param {string} excludeKey - Key to exclude from eviction
- * @returns {boolean} - Whether space was made available
- */
-function ensureSpace(requiredSize, excludeKey = null) {
-    const availableSpace = CACHE_CONFIG.MAX_CACHE_SIZE - CACHE_METADATA.totalSize;
-    
-    if (availableSpace >= requiredSize) {
-        return true;
-    }
-    
-    const spaceNeeded = requiredSize - availableSpace;
-    let spaceFreed = 0;
-    
-    // Get items sorted by access time (oldest first)
-    const items = Array.from(CACHE_METADATA.items.entries())
-        .filter(([key]) => key !== excludeKey)
-        .sort(([, a], [, b]) => a.accessed - b.accessed);
-    
-    // Evict oldest items until we have enough space
-    for (const [key, metadata] of items) {
-        if (spaceFreed >= spaceNeeded) break;
+        const age = now - metadata.created;
+        const shouldRemove = (
+            age > maxAge || 
+            metadata.accessCount < minAccessCount ||
+            now > metadata.ttl
+        );
         
-        deleteCachedData(key);
-        spaceFreed += metadata.size;
-        CACHE_STATS.evictions++;
-        
-        console.log(`💾 Evicted cache item: ${key} (${formatBytes(metadata.size)})`);
-    }
-    
-    return spaceFreed >= spaceNeeded;
-}
-
-/**
- * Perform cleanup of expired items
- */
-function performCleanup() {
-    const now = Date.now();
-    const expiredKeys = [];
-    
-    CACHE_METADATA.items.forEach((metadata, key) => {
-        if (now > metadata.ttl) {
-            expiredKeys.push(key);
+        if (shouldRemove) {
+            itemsToRemove.push({ key, size: metadata.size, reason: 
+                now > metadata.ttl ? 'expired' :
+                age > maxAge ? 'old' : 'unused'
+            });
         }
     });
     
-    expiredKeys.forEach(key => {
-        deleteCachedData(key);
-    });
-    
-    CACHE_STATS.lastCleanup = now;
-    
-    if (expiredKeys.length > 0) {
-        console.log(`💾 Cleanup removed ${expiredKeys.length} expired items`);
-    }
-}
-
-/**
- * Perform emergency cleanup when quota is exceeded
- */
-function performEmergencyCleanup() {
-    console.warn('💾 Performing emergency cache cleanup');
-    
-    // Remove oldest 25% of items
-    const items = Array.from(CACHE_METADATA.items.entries())
-        .sort(([, a], [, b]) => a.accessed - b.accessed);
-    
-    const itemsToRemove = Math.ceil(items.length * 0.25);
-    
-    for (let i = 0; i < itemsToRemove && i < items.length; i++) {
-        const [key] = items[i];
-        deleteCachedData(key);
-        CACHE_STATS.evictions++;
-    }
-    
-    console.log(`💾 Emergency cleanup removed ${itemsToRemove} items`);
-}
-
-/**
- * Start periodic cleanup timer
- */
-function startCleanupTimer() {
-    if (CACHE_METADATA.cleanupTimer) {
-        clearInterval(CACHE_METADATA.cleanupTimer);
-    }
-    
-    CACHE_METADATA.cleanupTimer = setInterval(() => {
-        try {
-            performCleanup();
-        } catch (error) {
-            console.error('❌ Cache cleanup error:', error);
-            CACHE_STATS.errors++;
-        }
-    }, CACHE_CONFIG.CLEANUP_INTERVAL);
-}
-
-/**
- * Setup storage event listener for cross-tab synchronization
- */
-function setupStorageListener() {
-    window.addEventListener('storage', (event) => {
-        if (event.key && event.key.startsWith(CACHE_CONFIG.PREFIX)) {
-            // Another tab modified cache, reload metadata
-            loadCacheMetadata();
+    // Remove identified items
+    itemsToRemove.forEach(item => {
+        if (deleteCachedData(item.key)) {
+            removedCount++;
+            freedBytes += item.size;
         }
     });
-}
-
-/**
- * Setup cleanup on page unload
- */
-function setupUnloadCleanup() {
-    window.addEventListener('beforeunload', () => {
-        if (CACHE_METADATA.cleanupTimer) {
-            clearInterval(CACHE_METADATA.cleanupTimer);
-        }
+    
+    // If still over target, remove oldest items
+    if (CACHE_METADATA.totalSize > targetSize) {
+        const remainingItems = Array.from(CACHE_METADATA.items.entries())
+            .map(([key, metadata]) => ({ key, ...metadata }))
+            .sort((a, b) => a.accessTime - b.accessTime); // Oldest first
         
-        // Final cleanup
-        try {
-            performCleanup();
-        } catch (error) {
-            // Ignore errors during unload
-        }
-    });
-}
-
-/**
- * Simple compression using Run-Length Encoding for repeated data
- * @param {*} data - Data to compress
- * @returns {string} - Compressed data
- */
-function compressData(data) {
-    try {
-        const jsonString = JSON.stringify(data);
-        
-        // Simple RLE compression for demonstration
-        // In production, consider using a proper compression library
-        let compressed = '';
-        let count = 1;
-        let prev = jsonString[0];
-        
-        for (let i = 1; i < jsonString.length; i++) {
-            const char = jsonString[i];
+        for (const item of remainingItems) {
+            if (CACHE_METADATA.totalSize <= targetSize) break;
             
-            if (char === prev && count < 255) {
-                count++;
-            } else {
-                if (count > 3) {
-                    compressed += `~${count}${prev}`;
-                } else {
-                    compressed += prev.repeat(count);
-                }
-                prev = char;
-                count = 1;
+            if (deleteCachedData(item.key)) {
+                removedCount++;
+                freedBytes += item.size;
             }
         }
-        
-        // Handle last character
-        if (count > 3) {
-            compressed += `~${count}${prev}`;
-        } else {
-            compressed += prev.repeat(count);
-        }
-        
-        return compressed.length < jsonString.length ? compressed : jsonString;
-        
-    } catch (error) {
-        console.warn('💾 Compression failed:', error);
-        return JSON.stringify(data);
     }
+    
+    // Save metadata after optimization
+    saveCacheMetadata();
+    saveCacheStats();
+    
+    const results = {
+        removedCount,
+        freedBytes,
+        freedBytesFormatted: formatBytes(freedBytes),
+        remainingItems: CACHE_METADATA.itemCount,
+        remainingSize: CACHE_METADATA.totalSize,
+        remainingSizeFormatted: formatBytes(CACHE_METADATA.totalSize),
+        quotaUsed: Math.round((CACHE_METADATA.totalSize / CACHE_CONFIG.MAX_SIZE) * 100)
+    };
+    
+    console.log(`🔧 Cache optimized: removed ${removedCount} items, freed ${formatBytes(freedBytes)}`);
+    
+    return results;
 }
 
 /**
- * Decompress data compressed with compressData
- * @param {string} compressedData - Compressed data string
- * @returns {*} - Decompressed data
+ * Simple string compression using LZ-style algorithm
+ * @param {string} str - String to compress
+ * @returns {string} - Compressed string
  */
-function decompressData(compressedData) {
+function compressString(str) {
+    if (!str) return '';
+    
     try {
-        // Check if data was actually compressed
-        if (!compressedData.includes('~')) {
-            return JSON.parse(compressedData);
-        }
+        // Simple RLE + dictionary compression
+        const dict = new Map();
+        let dictSize = 256;
+        let result = [];
+        let w = '';
         
-        let decompressed = '';
-        let i = 0;
-        
-        while (i < compressedData.length) {
-            if (compressedData[i] === '~') {
-                // Extract count and character
-                i++; // Skip ~
-                let countStr = '';
-                
-                while (i < compressedData.length && /\d/.test(compressedData[i])) {
-                    countStr += compressedData[i];
-                    i++;
-                }
-                
-                const count = parseInt(countStr);
-                const char = compressedData[i];
-                
-                decompressed += char.repeat(count);
-                i++;
+        for (let i = 0; i < str.length; i++) {
+            const c = str.charAt(i);
+            const wc = w + c;
+            
+            if (dict.has(wc)) {
+                w = wc;
             } else {
-                decompressed += compressedData[i];
-                i++;
+                if (w) {
+                    result.push(dict.has(w) ? dict.get(w) : w);
+                }
+                dict.set(wc, dictSize++);
+                w = c;
             }
         }
         
-        return JSON.parse(decompressed);
+        if (w) {
+            result.push(dict.has(w) ? dict.get(w) : w);
+        }
+        
+        return JSON.stringify(result);
         
     } catch (error) {
-        console.warn('💾 Decompression failed:', error);
-        // Try to parse as regular JSON
-        try {
-            return JSON.parse(compressedData);
-        } catch (parseError) {
-            console.error('💾 Failed to parse compressed data as JSON:', parseError);
-            return null;
-        }
+        console.warn('Compression failed, returning original:', error);
+        return str;
     }
 }
 
 /**
- * Format bytes into human-readable string
+ * Decompress string compressed with compressString
+ * @param {string} compressed - Compressed string
+ * @returns {string} - Decompressed string
+ */
+function decompressString(compressed) {
+    if (!compressed) return '';
+    
+    try {
+        const data = JSON.parse(compressed);
+        if (!Array.isArray(data)) return compressed;
+        
+        const dict = new Map();
+        let dictSize = 256;
+        let result = '';
+        let w = String.fromCharCode(data[0]);
+        result = w;
+        
+        for (let i = 1; i < data.length; i++) {
+            const k = data[i];
+            let entry;
+            
+            if (dict.has(k)) {
+                entry = dict.get(k);
+            } else if (k === dictSize) {
+                entry = w + w.charAt(0);
+            } else {
+                throw new Error('Invalid compressed data');
+            }
+            
+            result += entry;
+            dict.set(dictSize++, w + entry.charAt(0));
+            w = entry;
+        }
+        
+        return result;
+        
+    } catch (error) {
+        console.warn('Decompression failed, returning as-is:', error);
+        return compressed;
+    }
+}
+
+/**
+ * Format bytes in human readable format
  * @param {number} bytes - Number of bytes
  * @returns {string} - Formatted string
  */
@@ -763,90 +881,54 @@ function formatBytes(bytes) {
 }
 
 /**
- * Check if cache key exists
- * @param {string} key - Cache key to check
- * @returns {boolean} - Whether key exists and is not expired
+ * Format duration in human readable format
+ * @param {number} ms - Duration in milliseconds
+ * @returns {string} - Formatted duration
  */
-export function hasCachedData(key) {
-    if (!key || typeof key !== 'string') return false;
-    
-    initializeCache();
-    
-    const metadata = CACHE_METADATA.items.get(key);
-    if (!metadata) return false;
-    
-    return Date.now() <= metadata.ttl;
+function formatDuration(ms) {
+    if (ms < 1000) return `${ms}ms`;
+    if (ms < 60000) return `${Math.round(ms / 1000)}s`;
+    if (ms < 3600000) return `${Math.round(ms / 60000)}m`;
+    if (ms < 86400000) return `${Math.round(ms / 3600000)}h`;
+    return `${Math.round(ms / 86400000)}d`;
 }
 
 /**
- * Get remaining TTL for a cache key
- * @param {string} key - Cache key
- * @returns {number} - Remaining TTL in milliseconds, or -1 if not found
+ * Destroy cache system and cleanup
  */
-export function getCacheTTL(key) {
-    if (!key || typeof key !== 'string') return -1;
-    
-    initializeCache();
-    
-    const metadata = CACHE_METADATA.items.get(key);
-    if (!metadata) return -1;
-    
-    return Math.max(0, metadata.ttl - Date.now());
-}
-
-/**
- * Update TTL for existing cache item
- * @param {string} key - Cache key
- * @param {number} newTTL - New TTL in milliseconds
- * @returns {boolean} - Success status
- */
-export function updateCacheTTL(key, newTTL) {
-    if (!key || typeof key !== 'string') return false;
-    
-    initializeCache();
-    
-    const metadata = CACHE_METADATA.items.get(key);
-    if (!metadata) return false;
-    
-    metadata.ttl = Date.now() + newTTL;
-    saveCacheMetadata();
-    
-    return true;
+export function destroyCache() {
+    try {
+        // Stop cleanup timer
+        stopPeriodicCleanup();
+        
+        // Save final state
+        saveCacheMetadata();
+        saveCacheStats();
+        
+        // Clear memory
+        CACHE_METADATA.items.clear();
+        
+        // Reset initialization flag
+        isInitialized = false;
+        
+        console.log('💾 Cache system destroyed and cleaned up');
+        
+    } catch (error) {
+        console.error('❌ Error destroying cache:', error);
+    }
 }
 
 // Export cache configuration for external access
-export const cacheConfig = CACHE_CONFIG;
+export const CACHE_CONFIG_READONLY = { ...CACHE_CONFIG };
 
-// Initialize cache on module load
-initializeCache();
-
-export {
-  getCachedData,
-  setCachedData,
-  clearCachedData,
-  clearAllCachedData,
-  getCacheStats,
-  getCacheItems,
-  hasCachedData,
-  getCacheTTL,
-  updateCacheTTL,
-  cacheConfig
-};
-
-if (typeof window !== 'undefined') {
-  window.OsliraApp = window.OsliraApp || {};
-  window.OsliraApp.moduleCache = {
-    getCachedData,
-    setCachedData,
-    clearCachedData,
-    clearAllCachedData,
-    getCacheStats,
-    getCacheItems,
-    hasCachedData,
-    getCacheTTL,
-    updateCacheTTL,
-    cacheConfig
-  };
+// Export for debugging
+export function getInternalState() {
+    return {
+        metadata: CACHE_METADATA,
+        stats: CACHE_STATS,
+        config: CACHE_CONFIG,
+        isInitialized
+    };
 }
 
-console.log('💾 Module cache system loaded successfully');
+console.log('💾 ModuleCache system loaded successfully with enterprise features');
