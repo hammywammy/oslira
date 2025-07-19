@@ -589,27 +589,27 @@ export class QuickSummaryPanel extends BaseSecureModule {
     }
     
     handleExportData(event) {
-        event.preventDefault();
+    event.preventDefault();
+    
+    try {
+        const exportData = {
+            summary: this.moduleState.summaryData,
+            trends: this.moduleState.trendData,
+            metadata: {
+                exportTime: new Date().toISOString(),
+                comparisonPeriod: this.moduleState.comparisonPeriod,
+                moduleInfo: this.getModuleInfo()
+            }
+        };
         
-        try {
-            const exportData = {
-                summary: this.moduleState.summaryData,
-                trends: this.moduleState.trendData,
-                metadata: {
-                    exportTime: new Date().toISOString(),
-                    comparisonPeriod: this.moduleState.comparisonPeriod,
-                    moduleInfo: this.getModuleInfo()
-                }
-            };
-            
-            this.downloadJSON(exportData, 'oslira-summary');
-            console.log('📄 QuickSummaryPanel data exported');
-            
-        } catch (error) {
-            console.error('❌ QuickSummaryPanel export failed:', error);
-            await this.onError(error, { operation: 'export' });
-        }
+        this.downloadJSON(exportData, 'oslira-summary');
+        console.log('📄 QuickSummaryPanel data exported');
+        
+    } catch (error) {
+        console.error('❌ QuickSummaryPanel export failed:', error);
+        await this.onError(error, { operation: 'export_operation' });
     }
+}
     
     // ===== ANIMATIONS & VISUAL EFFECTS =====
     
