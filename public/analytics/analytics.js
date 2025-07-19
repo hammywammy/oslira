@@ -1,18 +1,22 @@
 // ==========================================
-// ENHANCED ANALYTICS DASHBOARD - ENTERPRISE GRADE v3.3.0
-// Secure Worker-First Architecture with AI-Powered Diagnostics
+// OSLIRA ANALYTICS DASHBOARD - ENTERPRISE GRADE v4.0.0
+// Complete Worker-First Architecture with Zero API Exposure
 // ==========================================
 
-// ===== IMPORT STATEMENTS (GROUPED & ALPHABETIZED) =====
+// ===== PERFORMANCE TRACKING =====
+performance.mark('analytics-start');
+console.log('🚀 [Analytics] Starting enterprise analytics engine...');
 
-// Core Services
+// ===== CRITICAL IMPORTS (ES MODULES) =====
+
+// Core Services (Worker-First Architecture)
 import { SecureAnalyticsService } from './services/secureAnalyticsService.js';
 import { SecureClaudeService } from './services/secureClaudeService.js';
 import { SecureCreditService } from './services/secureCreditService.js';
 import { SecureDataWriteService } from './services/secureDataWriteService.js';
 import { SecureIntegrationService } from './services/secureIntegrationService.js';
 
-// Analytics Modules
+// Analytics Modules (Secure & Lifecycle Compliant)
 import { SecureChartFactory, CHART_THEMES } from './modules/secureChartFactory.js';
 import { SecureCTAEffectivenessTracker } from './modules/secureCTAEffectivenessTracker.js';
 import { SecureClaudeGuidanceHistory } from './modules/secureClaudeGuidanceHistory.js';
@@ -24,378 +28,390 @@ import { SecureMessageRiskClassifier } from './modules/secureMessageRiskClassifi
 import { SecureMessageStyleMatrix } from './modules/secureMessageStyleMatrix.js';
 import { SecureOutreachTimelineOverlay } from './modules/secureOutreachTimelineOverlay.js';
 import { SecureTeamImpactDashboard } from './modules/secureTeamImpactDashboard.js';
+
+// New Priority Modules
 import { InsightsPanel } from './modules/InsightsPanel.js';
 import { QuickSummaryPanel } from './modules/QuickSummaryPanel.js';
 import { ModuleNavSidebar } from './modules/ModuleNavSidebar.js';
 
-// Configuration & Constants
+// Configuration & Utilities
 import { SECURE_ANALYTICS_CONFIG, SecureAnalyticsConfigManager } from './config/secureAnalyticsConfig.js';
 import { CACHE_KEYS } from './config/cacheKeys.js';
-import { setCachedData, getCachedData, clearAllCachedData } from './utils/moduleCache.js';
-import { createIcon, addTooltip, formatNumber } from './utils/UIHelpers.js';
+import { setCachedData, getCachedData, clearAllCachedData, getCacheStats } from './utils/moduleCache.js';
+import { createIcon, addTooltip, formatNumber, formatDuration, debounce } from './utils/UIHelpers.js';
+
+// ===== CONSTANTS & CONFIGURATION =====
+const ANALYTICS_VERSION = '4.0.0';
+const MODULE_LIFECYCLE_VERSION = '3.0.0';
+const CRITICAL_LOAD_TIMEOUT = 15000; // 15 seconds for critical modules
+const STANDARD_LOAD_TIMEOUT = 30000; // 30 seconds for standard modules
 
 // ===== GLOBAL STATE INITIALIZATION =====
 
-const APP_VERSION = '3.3.0';
-const MODULE_LIFECYCLE_VERSION = '2.0.0';
+// Initialize Oslira namespace with enterprise structure
+if (!window.OsliraApp) {
+    window.OsliraApp = {
+        version: ANALYTICS_VERSION,
+        moduleLifecycleVersion: MODULE_LIFECYCLE_VERSION,
+        modules: new Map(),
+        services: new Map(),
+        config: {},
+        performance: new Map(),
+        errors: [],
+        loadingErrors: [],
+        initialized: false,
+        startTime: performance.now()
+    };
+}
 
-// Initialize global Oslira namespace with proper structure
-if (!window.OsliraApp) window.OsliraApp = {};
-if (!window.OsliraApp.modules) window.OsliraApp.modules = new Map();
-if (!window.OsliraApp.services) window.OsliraApp.services = new Map();
-if (!window.OsliraApp.config) window.OsliraApp.config = {};
-if (!window.OsliraApp.performance) window.OsliraApp.performance = new Map();
-if (!window.OsliraApp.errors) window.OsliraApp.errors = [];
+// ===== ENTERPRISE ERROR BOUNDARY SYSTEM =====
 
-// Version tracking
-window.OsliraApp.version = APP_VERSION;
-window.OsliraApp.moduleLifecycleVersion = MODULE_LIFECYCLE_VERSION;
-
-// Initialization state
-let isInitialized = false;
-let initializationPromise = null;
-
-// ===== STANDARDIZED MODULE LIFECYCLE INTERFACE =====
-
-class StandardModuleLifecycle {
+class EnterpriseErrorBoundary {
     constructor() {
-        this.requiredMethods = ['render', 'cleanup', 'getModuleInfo'];
-        this.optionalMethods = ['ready', 'fallbackRender', 'onError', 'onResize'];
-        this.lifecycleStates = ['uninitialized', 'initializing', 'ready', 'error', 'cleanup'];
+        this.errorCount = 0;
+        this.maxErrors = 10;
+        this.errorReports = [];
+        this.setupGlobalHandlers();
     }
 
-    validateModule(moduleInstance, moduleName) {
-        const errors = [];
-        
-        // Check required methods
-        for (const method of this.requiredMethods) {
-            if (typeof moduleInstance[method] !== 'function') {
-                errors.push(`Missing required method: ${method}`);
-            }
-        }
-        
-        // Check if module has proper constructor signature
-        if (!moduleInstance.container) {
-            errors.push('Module must have container property');
-        }
-        
-        if (errors.length > 0) {
-            throw new Error(`Module ${moduleName} validation failed: ${errors.join(', ')}`);
-        }
-        
-        return true;
+    setupGlobalHandlers() {
+        window.addEventListener('error', (event) => {
+            this.handleError(event.error, { 
+                type: 'javascript', 
+                filename: event.filename, 
+                lineno: event.lineno, 
+                colno: event.colno 
+            });
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            this.handleError(event.reason, { 
+                type: 'promise', 
+                promise: event.promise 
+            });
+        });
     }
 
-    async executeLifecycleMethod(moduleInstance, methodName, ...args) {
-        const startTime = performance.now();
-        
-        try {
-            if (typeof moduleInstance[methodName] === 'function') {
-                const result = await moduleInstance[methodName](...args);
-                const duration = performance.now() - startTime;
-                
-                this.logPerformance(moduleInstance.constructor.name, methodName, duration);
-                return result;
-            }
-        } catch (error) {
-            const duration = performance.now() - startTime;
-            this.logError(moduleInstance.constructor.name, methodName, error, duration);
-            throw error;
-        }
-    }
-
-    logPerformance(moduleName, method, duration) {
-        if (!window.OsliraApp.performance.has(moduleName)) {
-            window.OsliraApp.performance.set(moduleName, {});
-        }
-        
-        const modulePerf = window.OsliraApp.performance.get(moduleName);
-        if (!modulePerf[method]) {
-            modulePerf[method] = { calls: 0, totalTime: 0, avgTime: 0 };
-        }
-        
-        modulePerf[method].calls++;
-        modulePerf[method].totalTime += duration;
-        modulePerf[method].avgTime = modulePerf[method].totalTime / modulePerf[method].calls;
-        
-        if (duration > 1000) {
-            console.warn(`⚠️ Slow ${method} in ${moduleName}: ${duration.toFixed(2)}ms`);
-        }
-    }
-
-    logError(moduleName, method, error, duration) {
-        const errorData = {
-            module: moduleName,
-            method: method,
-            error: error.message,
-            stack: error.stack,
+    handleError(error, context = {}) {
+        this.errorCount++;
+        const errorReport = {
+            id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             timestamp: new Date().toISOString(),
-            duration: duration
+            error: {
+                name: error?.name || 'Unknown',
+                message: error?.message || String(error),
+                stack: error?.stack || 'No stack trace available'
+            },
+            context,
+            userAgent: navigator.userAgent,
+            url: window.location.href,
+            version: ANALYTICS_VERSION
         };
-        
-        window.OsliraApp.errors.push(errorData);
-        console.error(`❌ Error in ${moduleName}.${method}:`, error);
-        
-        // Keep only last 100 errors to prevent memory bloat
-        if (window.OsliraApp.errors.length > 100) {
-            window.OsliraApp.errors = window.OsliraApp.errors.slice(-100);
+
+        this.errorReports.push(errorReport);
+        window.OsliraApp.errors.push(errorReport);
+
+        // Log to console with structured data
+        console.error('🚨 [ErrorBoundary] Enterprise Error Captured:', errorReport);
+
+        // Show user-friendly error if too many errors
+        if (this.errorCount >= this.maxErrors) {
+            this.showCriticalErrorUI();
+        }
+
+        // In production, send to monitoring service
+        this.reportToMonitoring(errorReport);
+    }
+
+    showCriticalErrorUI() {
+        const errorBoundary = document.getElementById('global-error-boundary');
+        if (errorBoundary) {
+            errorBoundary.style.display = 'block';
+        }
+    }
+
+    async reportToMonitoring(errorReport) {
+        try {
+            // In production environment, send to monitoring service
+            if (window.OsliraApp.config.environment === 'production') {
+                await fetch('/api/errors/report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(errorReport)
+                });
+            }
+        } catch (reportingError) {
+            console.warn('Failed to report error to monitoring service:', reportingError);
         }
     }
 }
 
-// ===== SECURE SERVICE INITIALIZATION SYSTEM =====
+// ===== ENTERPRISE SERVICE MANAGER =====
 
-class SecureServiceManager {
+class EnterpriseServiceManager {
     constructor() {
         this.services = new Map();
-        this.initializationOrder = [
-            'config',
-            'analytics',
-            'credit', 
-            'claude',
-            'dataWrite',
-            'integration'
+        this.serviceHealth = new Map();
+        this.healthCheckInterval = null;
+        this.initializationPromises = new Map();
+    }
+
+    async initializeServices() {
+        performance.mark('services-init-start');
+        console.log('🔧 [ServiceManager] Initializing enterprise services...');
+
+        const serviceConfigs = [
+            { name: 'analytics', class: SecureAnalyticsService, critical: true },
+            { name: 'claude', class: SecureClaudeService, critical: false },
+            { name: 'credit', class: SecureCreditService, critical: true },
+            { name: 'dataWrite', class: SecureDataWriteService, critical: false },
+            { name: 'integration', class: SecureIntegrationService, critical: false }
         ];
-        this.retryAttempts = 3;
-        this.retryDelay = 2000;
+
+        // Initialize critical services first
+        const criticalServices = serviceConfigs.filter(config => config.critical);
+        const standardServices = serviceConfigs.filter(config => !config.critical);
+
+        try {
+            // Initialize critical services with timeout
+            await Promise.race([
+                this.initializeServiceBatch(criticalServices),
+                this.createTimeout(CRITICAL_LOAD_TIMEOUT, 'Critical services timeout')
+            ]);
+
+            // Initialize standard services in background
+            this.initializeServiceBatch(standardServices).catch(error => {
+                console.warn('⚠️ [ServiceManager] Non-critical service initialization failed:', error);
+            });
+
+            performance.mark('services-init-end');
+            performance.measure('services-init-duration', 'services-init-start', 'services-init-end');
+            
+            console.log('✅ [ServiceManager] Critical services initialized successfully');
+            this.startHealthMonitoring();
+
+        } catch (error) {
+            console.error('❌ [ServiceManager] Critical service initialization failed:', error);
+            throw new Error(`Failed to initialize critical services: ${error.message}`);
+        }
     }
 
-    async initializeAllServices() {
-        console.log('🔧 [Services] Starting secure service initialization...');
-        
-        const startTime = performance.now();
-        const results = new Map();
-        
-        for (const serviceName of this.initializationOrder) {
+    async initializeServiceBatch(serviceConfigs) {
+        const promises = serviceConfigs.map(async (config) => {
             try {
-                const service = await this.initializeServiceWithRetry(serviceName);
-                this.services.set(serviceName, service);
-                results.set(serviceName, { status: 'success', service });
-                console.log(`✅ [Services] ${serviceName} initialized successfully`);
-            } catch (error) {
-                results.set(serviceName, { status: 'failed', error });
-                console.error(`❌ [Services] ${serviceName} failed:`, error);
+                console.log(`🔧 [ServiceManager] Initializing ${config.name} service...`);
                 
-                // For critical services, halt initialization
-                if (['config', 'analytics'].includes(serviceName)) {
-                    throw new Error(`Critical service ${serviceName} failed: ${error.message}`);
+                const serviceInstance = new config.class();
+                
+                // Initialize with health check
+                if (typeof serviceInstance.initialize === 'function') {
+                    await serviceInstance.initialize();
                 }
-            }
-        }
-        
-        // Store services globally for module access
-        window.OsliraApp.services = this.services;
-        
-        const totalTime = performance.now() - startTime;
-        console.log(`🎯 [Services] Initialization complete in ${totalTime.toFixed(2)}ms`);
-        
-        return results;
-    }
 
-    async initializeServiceWithRetry(serviceName) {
-        let lastError;
-        
-        for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
-            try {
-                return await this.createService(serviceName);
+                this.services.set(config.name, serviceInstance);
+                this.serviceHealth.set(config.name, { status: 'healthy', lastCheck: Date.now() });
+                
+                console.log(`✅ [ServiceManager] ${config.name} service initialized`);
+                
+                return { name: config.name, success: true };
             } catch (error) {
-                lastError = error;
+                console.error(`❌ [ServiceManager] Failed to initialize ${config.name}:`, error);
+                this.serviceHealth.set(config.name, { status: 'failed', lastCheck: Date.now(), error });
                 
-                if (attempt < this.retryAttempts) {
-                    console.warn(`⚠️ [Services] ${serviceName} attempt ${attempt} failed, retrying...`);
-                    await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+                if (config.critical) {
+                    throw error;
                 }
+                
+                return { name: config.name, success: false, error };
             }
-        }
-        
-        throw new Error(`Service ${serviceName} failed after ${this.retryAttempts} attempts: ${lastError.message}`);
-    }
+        });
 
-    async createService(serviceName) {
-        const serviceConfig = window.OsliraApp.config;
-        
-        switch (serviceName) {
-            case 'config':
-                return new SecureAnalyticsConfigManager();
-                
-            case 'analytics':
-                const analyticsService = new SecureAnalyticsService();
-                // Add health check method
-                analyticsService.healthCheck = async () => {
-                    try {
-                        const startTime = Date.now();
-                        await analyticsService.makeSecureRequest('/health', {});
-                        const responseTime = Date.now() - startTime;
-                        return { healthy: true, responseTime };
-                    } catch (error) {
-                        return { healthy: false, error: error.message };
-                    }
-                };
-                return analyticsService;
-                
-            case 'claude':
-                const claudeService = new SecureClaudeService();
-                // Add AI analysis methods
-                claudeService.analyzeError = async (diagnosticPayload) => {
-                    return await claudeService.makeSecureRequest('/ai/error-analysis', diagnosticPayload);
-                };
-                claudeService.summarizeInsights = async (insights) => {
-                    return await claudeService.makeSecureRequest('/ai/insight-summary', insights);
-                };
-                return claudeService;
-                
-            case 'credit':
-                return new SecureCreditService();
-                
-            case 'dataWrite':
-                return new SecureDataWriteService();
-                
-            case 'integration':
-                return new SecureIntegrationService();
-                
-            default:
-                throw new Error(`Unknown service: ${serviceName}`);
-        }
+        return Promise.all(promises);
     }
 
     getService(serviceName) {
         const service = this.services.get(serviceName);
         if (!service) {
-            throw new Error(`Service ${serviceName} not found or not initialized`);
+            console.warn(`⚠️ [ServiceManager] Service '${serviceName}' not found or not initialized`);
+            return null;
         }
         return service;
     }
 
-    async healthCheckAll() {
-        const results = new Map();
-        
+    createTimeout(ms, message) {
+        return new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(message)), ms);
+        });
+    }
+
+    startHealthMonitoring() {
+        this.healthCheckInterval = setInterval(() => {
+            this.performHealthChecks();
+        }, 60000); // Check every minute
+    }
+
+    async performHealthChecks() {
         for (const [serviceName, service] of this.services) {
             try {
                 if (typeof service.healthCheck === 'function') {
-                    results.set(serviceName, await service.healthCheck());
-                } else {
-                    results.set(serviceName, { healthy: true, message: 'No health check available' });
+                    const isHealthy = await service.healthCheck();
+                    this.serviceHealth.set(serviceName, {
+                        status: isHealthy ? 'healthy' : 'degraded',
+                        lastCheck: Date.now()
+                    });
                 }
             } catch (error) {
-                results.set(serviceName, { healthy: false, error: error.message });
-            }
-        }
-        
-        return results;
-    }
-}
-
-// ===== ENHANCED CONTAINER REGISTRY SYSTEM =====
-
-class ContainerRegistry {
-    constructor() {
-        this.containers = new Map();
-        this.moduleDefinitions = new Map();
-        this.initializationQueue = [];
-        this.observer = null;
-    }
-
-    registerContainer(containerId, moduleConfig) {
-        if (!containerId || !moduleConfig) {
-            throw new Error('Container ID and module config are required');
-        }
-        
-        this.containers.set(containerId, {
-            config: moduleConfig,
-            element: null,
-            module: null,
-            state: 'registered',
-            lastError: null,
-            retryCount: 0
-        });
-        
-        console.log(`📦 [Registry] Container registered: ${containerId}`);
-    }
-
-    async discoverContainers() {
-        // Auto-discover containers with data-module attributes
-        const elements = document.querySelectorAll('[data-module]');
-        
-        for (const element of elements) {
-            const moduleName = element.dataset.module;
-            const containerId = element.id || `auto-${moduleName}-${Date.now()}`;
-            
-            if (!element.id) {
-                element.id = containerId;
-            }
-            
-            if (!this.containers.has(containerId)) {
-                this.registerContainer(containerId, {
-                    moduleName: moduleName,
-                    autoDiscovered: true
+                this.serviceHealth.set(serviceName, {
+                    status: 'failed',
+                    lastCheck: Date.now(),
+                    error
                 });
             }
         }
-        
-        console.log(`🔍 [Registry] Discovered ${elements.length} containers`);
     }
 
-    async initializeAllContainers() {
-        console.log('🏗️ [Registry] Initializing all containers...');
-        
-        const results = new Map();
-        
-        for (const [containerId, containerData] of this.containers) {
-            try {
-                await this.initializeContainer(containerId);
-                results.set(containerId, { status: 'success' });
-            } catch (error) {
-                results.set(containerId, { status: 'failed', error });
-                console.error(`❌ [Registry] Container ${containerId} failed:`, error);
+    getServiceHealth() {
+        return Object.fromEntries(this.serviceHealth);
+    }
+}
+
+// ===== ENTERPRISE MODULE LIFECYCLE MANAGER =====
+
+class EnterpriseModuleLifecycle {
+    constructor() {
+        this.modules = new Map();
+        this.moduleStates = new Map();
+        this.loadingQueue = new Map();
+        this.retryAttempts = new Map();
+        this.maxRetries = 3;
+        this.moduleMetrics = new Map();
+    }
+
+    async initializeModule(containerId, moduleConfig) {
+        const startTime = performance.now();
+        console.log(`🔧 [ModuleLifecycle] Initializing module: ${containerId}`);
+
+        try {
+            // Get container element
+            const container = document.getElementById(containerId);
+            if (!container) {
+                throw new Error(`Container element not found: ${containerId}`);
+            }
+
+            // Get module class
+            const ModuleClass = this.getModuleClass(moduleConfig.moduleName);
+            if (!ModuleClass) {
+                throw new Error(`Module class not found: ${moduleConfig.moduleName}`);
+            }
+
+            // Get required services
+            const services = this.getRequiredServices(moduleConfig.services || []);
+
+            // Create module instance
+            const moduleInstance = new ModuleClass(container, ...services);
+
+            // Validate module compliance
+            this.validateModuleCompliance(moduleInstance, moduleConfig.moduleName);
+
+            // Set initial state
+            this.moduleStates.set(containerId, 'initializing');
+
+            // Execute lifecycle: initialize → render → ready
+            await this.executeModuleLifecycle(moduleInstance, containerId);
+
+            // Store module
+            this.modules.set(containerId, moduleInstance);
+            window.OsliraApp.modules.set(containerId, moduleInstance);
+
+            // Record metrics
+            const duration = performance.now() - startTime;
+            this.moduleMetrics.set(containerId, {
+                loadTime: duration,
+                status: 'success',
+                retries: this.retryAttempts.get(containerId) || 0
+            });
+
+            console.log(`✅ [ModuleLifecycle] Module ${containerId} initialized in ${duration.toFixed(2)}ms`);
+            return moduleInstance;
+
+        } catch (error) {
+            const duration = performance.now() - startTime;
+            console.error(`❌ [ModuleLifecycle] Module ${containerId} failed to initialize:`, error);
+
+            // Record failure metrics
+            this.moduleMetrics.set(containerId, {
+                loadTime: duration,
+                status: 'failed',
+                error: error.message,
+                retries: this.retryAttempts.get(containerId) || 0
+            });
+
+            // Attempt retry if under limit
+            const retries = this.retryAttempts.get(containerId) || 0;
+            if (retries < this.maxRetries) {
+                this.retryAttempts.set(containerId, retries + 1);
+                console.log(`🔄 [ModuleLifecycle] Retrying ${containerId} (attempt ${retries + 1})`);
+                
+                // Exponential backoff
+                const delay = Math.pow(2, retries) * 1000;
+                setTimeout(() => {
+                    this.initializeModule(containerId, moduleConfig);
+}, delay);
+                return null;
+            }
+
+            // All retries exhausted - render fallback
+            this.renderModuleFallback(containerId, error);
+            throw error;
+        }
+    }
+
+    async executeModuleLifecycle(moduleInstance, containerId) {
+        try {
+            // 1. Initialize (if method exists)
+            if (typeof moduleInstance.initialize === 'function') {
+                await moduleInstance.initialize();
+            }
+
+            // 2. Render
+            this.moduleStates.set(containerId, 'rendering');
+            await moduleInstance.render();
+
+            // 3. Ready
+            this.moduleStates.set(containerId, 'ready');
+            if (typeof moduleInstance.ready === 'function') {
+                await moduleInstance.ready();
+            }
+
+        } catch (error) {
+            this.moduleStates.set(containerId, 'error');
+            
+            // Try fallback render
+            if (typeof moduleInstance.fallbackRender === 'function') {
+                try {
+                    await moduleInstance.fallbackRender(error);
+                    this.moduleStates.set(containerId, 'fallback');
+                } catch (fallbackError) {
+                    console.error(`❌ [ModuleLifecycle] Fallback render failed for ${containerId}:`, fallbackError);
+                    throw error;
+                }
+            } else {
+                throw error;
             }
         }
-        
-        return results;
     }
 
-    async initializeContainer(containerId) {
-        const containerData = this.containers.get(containerId);
-        if (!containerData) {
-            throw new Error(`Container ${containerId} not found`);
+    validateModuleCompliance(moduleInstance, moduleName) {
+        const requiredMethods = ['render', 'cleanup', 'getModuleInfo'];
+        const missing = requiredMethods.filter(method => typeof moduleInstance[method] !== 'function');
+        
+        if (missing.length > 0) {
+            throw new Error(`Module ${moduleName} missing required methods: ${missing.join(', ')}`);
         }
-        
-        // Find DOM element
-        const element = document.getElementById(containerId);
-        if (!element) {
-            throw new Error(`DOM element not found for container ${containerId}`);
+
+        if (!moduleInstance.container) {
+            throw new Error(`Module ${moduleName} missing container property`);
         }
-        
-        containerData.element = element;
-        containerData.state = 'initializing';
-        
-        // Get module definition
-        const moduleConfig = containerData.config;
-        const ModuleClass = this.getModuleClass(moduleConfig.moduleName);
-        
-        if (!ModuleClass) {
-            throw new Error(`Module class not found: ${moduleConfig.moduleName}`);
-        }
-        
-        // Get required services
-        const services = this.getRequiredServices(moduleConfig.services || []);
-        
-        // Create module instance
-        const moduleInstance = new ModuleClass(element, ...services);
-        
-        // Validate module lifecycle compliance
-        const lifecycle = new StandardModuleLifecycle();
-        lifecycle.validateModule(moduleInstance, moduleConfig.moduleName);
-        
-        // Store module instance
-        containerData.module = moduleInstance;
-        containerData.state = 'initialized';
-        
-        // Add to global registry
-        window.OsliraApp.modules.set(containerId, moduleInstance);
-        
-        console.log(`✅ [Registry] Container ${containerId} initialized with ${moduleConfig.moduleName}`);
-        
-        return moduleInstance;
     }
 
     getModuleClass(moduleName) {
@@ -421,554 +437,603 @@ class ContainerRegistry {
     getRequiredServices(serviceNames) {
         const serviceManager = window.OsliraApp.serviceManager;
         if (!serviceManager) {
-            throw new Error('Service manager not initialized');
+            console.warn('⚠️ [ModuleLifecycle] Service manager not available');
+            return [];
         }
         
         return serviceNames.map(serviceName => {
-            try {
-                return serviceManager.getService(serviceName);
-            } catch (error) {
-                console.warn(`⚠️ Service ${serviceName} not available, using fallback`);
-                return null;
+            const service = serviceManager.getService(serviceName);
+            if (!service) {
+                console.warn(`⚠️ [ModuleLifecycle] Service ${serviceName} not available`);
             }
+            return service;
         }).filter(Boolean);
     }
-}
 
-// ===== ENHANCED ERROR BOUNDARY SYSTEM =====
+    renderModuleFallback(containerId, error) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
 
-class ErrorBoundary {
-    constructor() {
-        this.setupGlobalErrorHandlers();
-        this.errorCount = 0;
-        this.maxErrors = 10;
-        this.errorResetTime = 300000; // 5 minutes
-    }
-
-    setupGlobalErrorHandlers() {
-        // Handle uncaught JavaScript errors
-        window.addEventListener('error', (event) => {
-            this.handleError(event.error, {
-                type: 'javascript',
-                filename: event.filename,
-                lineno: event.lineno,
-                colno: event.colno
-            });
-        });
-
-        // Handle unhandled promise rejections
-        window.addEventListener('unhandledrejection', (event) => {
-            this.handleError(event.reason, {
-                type: 'promise',
-                promise: event.promise
-            });
-            event.preventDefault(); // Prevent console error
-        });
-
-        // Handle CSP violations
-        document.addEventListener('securitypolicyviolation', (event) => {
-            this.handleError(new Error('CSP Violation'), {
-                type: 'security',
-                violatedDirective: event.violatedDirective,
-                sourceFile: event.sourceFile
-            });
-        });
-    }
-
-    handleError(error, context = {}) {
-        this.errorCount++;
-        
-        const errorData = {
-            message: error.message || 'Unknown error',
-            stack: error.stack,
-            context: context,
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent,
-            url: window.location.href,
-            errorCount: this.errorCount
-        };
-
-        // Log to console with details
-        console.error('🚨 [ErrorBoundary] Error caught:', errorData);
-
-        // Store in global error log
-        window.OsliraApp.errors.push(errorData);
-
-        // Check if we've exceeded error threshold
-        if (this.errorCount >= this.maxErrors) {
-            this.handleCriticalFailure();
-        }
-
-        // Reset error count after timeout
-        setTimeout(() => {
-            if (this.errorCount > 0) this.errorCount--;
-        }, this.errorResetTime);
-
-        // Try to recover gracefully
-        this.attemptRecovery(error, context);
-    }
-
-    handleCriticalFailure() {
-        console.error('🚨 [ErrorBoundary] Critical failure threshold reached');
-        
-        // Show user-friendly error message
-        this.showCriticalErrorUI();
-        
-        // Attempt system reset
-        setTimeout(() => {
-            if (confirm('The application has encountered multiple errors. Would you like to reset?')) {
-                this.resetApplication();
-            }
-        }, 2000);
-    }
-
-    showCriticalErrorUI() {
-        const errorOverlay = document.createElement('div');
-        errorOverlay.id = 'critical-error-overlay';
-        errorOverlay.innerHTML = `
-            <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: center; justify-content: center;">
-                <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 500px; text-align: center;">
-                    <h2 style="color: #dc2626; margin-bottom: 1rem;">⚠️ System Error</h2>
-                    <p style="margin-bottom: 1.5rem;">The analytics dashboard has encountered multiple errors. This may be due to a temporary connectivity issue.</p>
-                    <button onclick="window.OsliraApp.errorBoundary.resetApplication()" style="background: #3b82f6; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; margin-right: 1rem;">
-                        Reset Dashboard
-                    </button>
-                    <button onclick="document.getElementById('critical-error-overlay').remove()" style="background: #6b7280; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer;">
-                        Continue Anyway
-                    </button>
-                </div>
+        container.innerHTML = `
+            <div class="module-fallback">
+                <div class="fallback-icon">⚠️</div>
+                <h3>Module Unavailable</h3>
+                <p>This module encountered an error and couldn't load.</p>
+                <button onclick="location.reload()">Reload Dashboard</button>
+                <details>
+                    <summary>Error Details</summary>
+                    <pre>${error.message}</pre>
+                </details>
             </div>
         `;
-        
-        document.body.appendChild(errorOverlay);
     }
 
-    attemptRecovery(error, context) {
-        // Module-specific recovery strategies
-        if (context.module) {
-            this.recoverModule(context.module, error);
-        }
+    async cleanupAll() {
+        console.log('🧹 [ModuleLifecycle] Cleaning up all modules...');
         
-        // Service-specific recovery
-        if (context.service) {
-            this.recoverService(context.service, error);
-        }
-    }
-
-    recoverModule(moduleName, error) {
-        console.log(`🔄 [ErrorBoundary] Attempting module recovery: ${moduleName}`);
-        
-        const moduleInstance = window.OsliraApp.modules.get(moduleName);
-        if (moduleInstance && typeof moduleInstance.fallbackRender === 'function') {
+        for (const [containerId, moduleInstance] of this.modules) {
             try {
-                moduleInstance.fallbackRender(error);
-                console.log(`✅ [ErrorBoundary] Module ${moduleName} recovered with fallback`);
-            } catch (fallbackError) {
-                console.error(`❌ [ErrorBoundary] Module ${moduleName} fallback failed:`, fallbackError);
+                if (typeof moduleInstance.cleanup === 'function') {
+                    await moduleInstance.cleanup();
+                }
+                this.moduleStates.set(containerId, 'cleaned');
+            } catch (error) {
+                console.error(`❌ [ModuleLifecycle] Cleanup failed for ${containerId}:`, error);
             }
         }
     }
 
-    resetApplication() {
-        console.log('🔄 [ErrorBoundary] Resetting application...');
-        
-        // Clear caches
-        clearAllCachedData();
-        
-        // Clear error overlay
-        const overlay = document.getElementById('critical-error-overlay');
-        if (overlay) overlay.remove();
-        
-        // Reset error count
-        this.errorCount = 0;
-        
-        // Reload page
-        window.location.reload();
+    getModuleMetrics() {
+        return Object.fromEntries(this.moduleMetrics);
     }
 }
 
-// ===== MAIN INITIALIZATION SYSTEM =====
+// ===== ENTERPRISE CONTAINER REGISTRY =====
 
-async function initializeAnalyticsDashboard() {
-    if (isInitialized) {
-        console.warn('⚠️ Analytics dashboard already initialized');
-        return initializationPromise;
+class EnterpriseContainerRegistry {
+    constructor() {
+        this.containers = new Map();
+        this.loadPriorities = new Map();
+        this.setupPredefinedContainers();
     }
 
-    if (initializationPromise) {
-        return initializationPromise;
+    setupPredefinedContainers() {
+        const containerConfigs = [
+            // Priority 1: Critical Overview Modules
+            { id: 'summary-panel', moduleName: 'QuickSummaryPanel', services: ['analytics', 'credit'], priority: 1 },
+            { id: 'insights-panel', moduleName: 'InsightsPanel', services: ['analytics', 'claude', 'credit'], priority: 1 },
+            { id: 'module-nav-sidebar', moduleName: 'ModuleNavSidebar', services: [], priority: 1 },
+            
+            // Priority 2: Core Analytics
+            { id: 'message-style-matrix-container', moduleName: 'SecureMessageStyleMatrix', services: ['analytics'], priority: 2 },
+            { id: 'heatmap-container', moduleName: 'SecureLeadConversionHeatmap', services: ['analytics'], priority: 2 },
+            { id: 'cta-effectiveness-container', moduleName: 'SecureCTAEffectivenessTracker', services: ['analytics'], priority: 2 },
+            
+            // Priority 3: Intelligence Modules
+            { id: 'feedback-signal-container', moduleName: 'SecureFeedbackSignalExplorer', services: ['analytics', 'claude'], priority: 3 },
+            { id: 'claude-guidance-history', moduleName: 'SecureClaudeGuidanceHistory', services: ['analytics', 'claude'], priority: 3 },
+            { id: 'message-risk-dashboard', moduleName: 'SecureMessageRiskClassifier', services: ['analytics', 'claude'], priority: 3 },
+            
+            // Priority 4: Performance Modules
+            { id: 'crm-performance-container', moduleName: 'SecureCRMPerformanceComparator', services: ['analytics'], priority: 4 },
+            { id: 'roi-tracker-container', moduleName: 'SecureMessageIterationROITracker', services: ['analytics'], priority: 4 },
+            { id: 'team-dashboard-container', moduleName: 'SecureTeamImpactDashboard', services: ['analytics'], priority: 4 },
+            
+            // Priority 5: Timeline & Historical
+            { id: 'outreach-timeline-container', moduleName: 'SecureOutreachTimelineOverlay', services: ['analytics'], priority: 5 }
+        ];
+
+        containerConfigs.forEach(config => {
+            this.containers.set(config.id, config);
+            this.loadPriorities.set(config.priority, 
+                (this.loadPriorities.get(config.priority) || []).concat(config)
+            );
+        });
+
+        console.log(`📦 [ContainerRegistry] Registered ${containerConfigs.length} containers across ${this.loadPriorities.size} priority levels`);
     }
 
-    initializationPromise = performInitialization();
-    return initializationPromise;
+    getContainersByPriority(priority) {
+        return this.loadPriorities.get(priority) || [];
+    }
+
+    getAllContainers() {
+        return Array.from(this.containers.values());
+    }
+
+    getContainer(containerId) {
+        return this.containers.get(containerId);
+    }
 }
 
-async function performInitialization() {
-    const startTime = performance.now();
-    console.log('🚀 [Dashboard] Starting analytics dashboard initialization...');
+// ===== SYSTEM STATUS MONITOR =====
 
-    try {
-        // 1. Initialize error boundary first
-        window.OsliraApp.errorBoundary = new ErrorBoundary();
-        console.log('✅ [Dashboard] Error boundary initialized');
+class SystemStatusMonitor {
+    constructor() {
+        this.statusElements = {
+            worker: document.getElementById('worker-status'),
+            cache: document.getElementById('cache-status'),
+            ai: document.getElementById('ai-status')
+        };
+        this.updateInterval = null;
+    }
 
-        // 2. Initialize service manager
-        window.OsliraApp.serviceManager = new SecureServiceManager();
-        await window.OsliraApp.serviceManager.initializeAllServices();
-        console.log('✅ [Dashboard] Services initialized');
+    startMonitoring() {
+        this.updateStatus();
+        this.updateInterval = setInterval(() => {
+            this.updateStatus();
+        }, 5000); // Update every 5 seconds
+    }
 
-        // 3. Initialize container registry
-        window.OsliraApp.containerRegistry = new ContainerRegistry();
+    updateStatus() {
+        this.updateWorkerStatus();
+        this.updateCacheStatus();
+        this.updateAIStatus();
+    }
+
+    updateWorkerStatus() {
+        const serviceManager = window.OsliraApp.serviceManager;
+        const health = serviceManager?.getServiceHealth() || {};
         
-        // Auto-discover containers
-        await window.OsliraApp.containerRegistry.discoverContainers();
+        const analyticsHealthy = health.analytics?.status === 'healthy';
+        this.setStatus('worker', analyticsHealthy, analyticsHealthy ? 'Connected' : 'Disconnected');
+    }
+
+    updateCacheStatus() {
+        try {
+            const stats = getCacheStats();
+            const hitRate = stats.hitRate || 0;
+            const status = hitRate > 50 ? 'good' : hitRate > 20 ? 'warning' : 'error';
+            this.setStatus('cache', status === 'good', `${hitRate}% hit rate`);
+        } catch (error) {
+            this.setStatus('cache', false, 'Error');
+        }
+    }
+
+    updateAIStatus() {
+        const serviceManager = window.OsliraApp.serviceManager;
+        const health = serviceManager?.getServiceHealth() || {};
         
-        // Register predefined containers
-        registerPredefinedContainers();
+        const claudeHealthy = health.claude?.status === 'healthy';
+        this.setStatus('ai', claudeHealthy, claudeHealthy ? 'Available' : 'Limited');
+    }
+
+    setStatus(type, isHealthy, text) {
+        const element = this.statusElements[type];
+        if (!element) return;
+
+        const indicator = element.parentElement.querySelector('.status-indicator');
+        const textSpan = element.parentElement.querySelector('span:last-child');
+
+        if (indicator) {
+            indicator.className = `status-indicator ${isHealthy ? 'connected' : 'error'}`;
+        }
+
+        if (textSpan) {
+            textSpan.textContent = `${type.charAt(0).toUpperCase() + type.slice(1)}: ${text}`;
+        }
+    }
+
+    stopMonitoring() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
+    }
+}
+
+// ===== MAIN DASHBOARD CONTROLLER =====
+
+class OsliraDashboardController {
+    constructor() {
+        this.errorBoundary = new EnterpriseErrorBoundary();
+        this.serviceManager = new EnterpriseServiceManager();
+        this.moduleLifecycle = new EnterpriseModuleLifecycle();
+        this.containerRegistry = new EnterpriseContainerRegistry();
+        this.statusMonitor = new SystemStatusMonitor();
+        this.configManager = new SecureAnalyticsConfigManager();
         
-        // Initialize all containers
-        await window.OsliraApp.containerRegistry.initializeAllContainers();
-        console.log('✅ [Dashboard] Containers initialized');
+        this.initialized = false;
+        this.loadingProgress = 0;
+    }
 
-        // 4. Initialize module lifecycle manager
-        window.OsliraApp.moduleLifecycle = new StandardModuleLifecycle();
-        console.log('✅ [Dashboard] Module lifecycle initialized');
+    async initialize() {
+        if (this.initialized) {
+            console.log('⚠️ [Dashboard] Already initialized');
+            return;
+        }
 
-        // 5. Setup global event listeners
-        setupGlobalEventListeners();
-        console.log('✅ [Dashboard] Event listeners setup');
+        try {
+            performance.mark('dashboard-init-start');
+            console.log('🚀 [Dashboard] Starting enterprise initialization...');
 
-        // 6. Render all modules
-        await renderAllModules();
-        console.log('✅ [Dashboard] Modules rendered');
+            this.showLoadingOverlay();
+            this.updateLoadingProgress(10, 'Initializing core systems...');
 
-        // 7. Setup auto-refresh and monitoring
-        setupPeriodicTasks();
-        console.log('✅ [Dashboard] Periodic tasks setup');
+            // 1. Attach to global scope
+            window.OsliraApp.errorBoundary = this.errorBoundary;
+            window.OsliraApp.serviceManager = this.serviceManager;
+            window.OsliraApp.moduleLifecycle = this.moduleLifecycle;
+            window.OsliraApp.containerRegistry = this.containerRegistry;
+            window.OsliraApp.statusMonitor = this.statusMonitor;
 
-        isInitialized = true;
-        const totalTime = performance.now() - startTime;
+            // 2. Initialize configuration
+            this.updateLoadingProgress(20, 'Loading configuration...');
+            await this.configManager.initialize();
+            window.OsliraApp.config = { ...this.configManager.getConfig() };
+
+            // 3. Initialize services
+            this.updateLoadingProgress(40, 'Starting enterprise services...');
+            await this.serviceManager.initializeServices();
+
+            // 4. Load modules by priority
+            this.updateLoadingProgress(60, 'Loading analytics modules...');
+            await this.loadModulesByPriority();
+
+            // 5. Setup global event handlers
+            this.updateLoadingProgress(80, 'Setting up event handlers...');
+            this.setupGlobalEventHandlers();
+
+            // 6. Start monitoring
+            this.updateLoadingProgress(90, 'Starting system monitoring...');
+            this.statusMonitor.startMonitoring();
+
+            // 7. Setup periodic tasks
+            this.setupPeriodicTasks();
+
+            this.updateLoadingProgress(100, 'Dashboard ready!');
+            
+            performance.mark('dashboard-init-end');
+            performance.measure('dashboard-init-duration', 'dashboard-init-start', 'dashboard-init-end');
+            
+            this.initialized = true;
+            const totalTime = performance.now() - window.OsliraApp.startTime;
+            
+            console.log(`🎯 [Dashboard] Enterprise dashboard initialized in ${totalTime.toFixed(2)}ms`);
+            
+            // Dispatch ready event
+            window.dispatchEvent(new CustomEvent('oslira:dashboard:ready', {
+                detail: { 
+                    initTime: totalTime,
+                    moduleCount: window.OsliraApp.modules.size,
+                    serviceCount: window.OsliraApp.serviceManager.services.size
+                }
+            }));
+
+            // Hide loading after brief delay
+            setTimeout(() => this.hideLoadingOverlay(), 500);
+
+        } catch (error) {
+            console.error('❌ [Dashboard] Critical initialization failure:', error);
+            this.showCriticalError(error);
+            throw error;
+        }
+    }
+
+    async loadModulesByPriority() {
+        const maxPriority = Math.max(...this.containerRegistry.loadPriorities.keys());
         
-        console.log(`🎯 [Dashboard] Analytics dashboard initialized successfully in ${totalTime.toFixed(2)}ms`);
-        
-        // Dispatch ready event
-        window.dispatchEvent(new CustomEvent('oslira:dashboard:ready', {
-            detail: { 
-                initTime: totalTime,
-                moduleCount: window.OsliraApp.modules.size,
-                serviceCount: window.OsliraApp.services.size
+        for (let priority = 1; priority <= maxPriority; priority++) {
+            const containers = this.containerRegistry.getContainersByPriority(priority);
+            if (containers.length === 0) continue;
+
+            console.log(`📦 [Dashboard] Loading priority ${priority} modules (${containers.length} modules)...`);
+            
+            const promises = containers.map(async (config) => {
+                try {
+                    // Check if container exists in DOM
+                    const element = document.getElementById(config.id);
+                    if (!element) {
+                        console.warn(`⚠️ [Dashboard] Container ${config.id} not found in DOM`);
+                        return null;
+                    }
+
+                    return await this.moduleLifecycle.initializeModule(config.id, config);
+                } catch (error) {
+                    console.error(`❌ [Dashboard] Failed to load ${config.id}:`, error);
+                    return null;
+                }
+            });
+
+            // Wait for current priority to complete before moving to next
+            if (priority <= 2) {
+                await Promise.all(promises);
+            } else {
+                // Load lower priority modules in background
+                Promise.all(promises).catch(error => {
+                    console.warn(`⚠️ [Dashboard] Background module loading failed:`, error);
+                });
             }
-        }));
 
-        return true;
+            const progressBase = 60;
+            const progressIncrement = 20 / maxPriority;
+            this.updateLoadingProgress(progressBase + (priority * progressIncrement), 
+                `Loaded priority ${priority} modules...`);
+        }
+    }
+
+    setupGlobalEventHandlers() {
+        // Resize handler with debouncing
+        const debouncedResize = debounce(() => {
+            window.OsliraApp.modules.forEach(moduleInstance => {
+                if (typeof moduleInstance.onResize === 'function') {
+                    moduleInstance.onResize().catch(error => {
+                        console.warn('Module resize failed:', error);
+                    });
+                }
+            });
+        }, 250);
+
+        window.addEventListener('resize', debouncedResize);
+
+        // Visibility change handler for performance optimization
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('🔇 [Dashboard] Tab hidden - pausing updates');
+                this.pausePeriodicUpdates();
+            } else {
+                console.log('🔊 [Dashboard] Tab visible - resuming updates');
+                this.resumePeriodicUpdates();
+            }
+        });
+
+        // Beforeunload cleanup
+        window.addEventListener('beforeunload', () => {
+            this.cleanup();
+        });
+
+        // Navigation controls
+        this.setupNavigationHandlers();
+    }
+
+    setupNavigationHandlers() {
+        // Refresh button
+        const refreshBtn = document.getElementById('refresh-data');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => this.refreshAllModules());
+        }
+
+        // Export button
+        const exportBtn = document.getElementById('export-data');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => this.showExportModal());
+        }
+
+        // Filter handlers
+        const timeFilter = document.getElementById('time-filter');
+        if (timeFilter) {
+            timeFilter.addEventListener('change', (e) => this.handleFilterChange('time', e.target.value));
+        }
+
+        const businessFilter = document.getElementById('business-filter');
+        if (businessFilter) {
+            businessFilter.addEventListener('change', (e) => this.handleFilterChange('business', e.target.value));
+        }
+    }
+
+    setupPeriodicTasks() {
+        // Refresh data every 5 minutes
+        this.dataRefreshInterval = setInterval(() => {
+            if (!document.hidden) {
+                this.refreshAllModules();
+            }
+        }, 300000);
+
+        // Cache cleanup every hour
+        this.cacheCleanupInterval = setInterval(() => {
+            console.log('🧹 [Dashboard] Running periodic cache cleanup...');
+            // Implement cache cleanup logic
+        }, 3600000);
+
+        // Performance metrics collection every 30 seconds
+        this.metricsInterval = setInterval(() => {
+            this.collectPerformanceMetrics();
+        }, 30000);
+    }
+
+    pausePeriodicUpdates() {
+        if (this.dataRefreshInterval) {
+            clearInterval(this.dataRefreshInterval);
+            this.dataRefreshInterval = null;
+        }
+    }
+
+    resumePeriodicUpdates() {
+        if (!this.dataRefreshInterval) {
+            this.setupPeriodicTasks();
+        }
+    }
+
+    async refreshAllModules() {
+        console.log('🔄 [Dashboard] Refreshing all modules...');
+        
+        const refreshPromises = Array.from(window.OsliraApp.modules.entries()).map(async ([containerId, moduleInstance]) => {
+            try {
+                if (typeof moduleInstance.refresh === 'function') {
+                    await moduleInstance.refresh();
+                } else if (typeof moduleInstance.render === 'function') {
+                    await moduleInstance.render();
+                }
+            } catch (error) {
+                console.error(`❌ [Dashboard] Failed to refresh ${containerId}:`, error);
+            }
+        });
+
+        await Promise.allSettled(refreshPromises);
+        console.log('✅ [Dashboard] Module refresh completed');
+    }
+
+    async handleFilterChange(filterType, value) {
+        console.log(`🔍 [Dashboard] Filter changed: ${filterType} = ${value}`);
+        
+        const filters = this.getCurrentFilters();
+        filters[filterType] = value;
+        
+        // Apply filters to all modules
+        const filterPromises = Array.from(window.OsliraApp.modules.values()).map(async (moduleInstance) => {
+            try {
+                if (typeof moduleInstance.applyFilters === 'function') {
+                    await moduleInstance.applyFilters(filters);
+                } else if (typeof moduleInstance.render === 'function') {
+                    await moduleInstance.render(filters);
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] Filter application failed:', error);
+            }
+        });
+
+        await Promise.allSettled(filterPromises);
+    }
+
+    getCurrentFilters() {
+        return {
+            time: document.getElementById('time-filter')?.value || '30d',
+            business: document.getElementById('business-filter')?.value || 'all'
+        };
+    }
+
+    showExportModal() {
+        const modal = document.getElementById('export-modal');
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    }
+
+    collectPerformanceMetrics() {
+        const metrics = {
+            timestamp: Date.now(),
+            memory: performance.memory ? {
+                used: performance.memory.usedJSHeapSize,
+                total: performance.memory.totalJSHeapSize,
+                limit: performance.memory.jsHeapSizeLimit
+            } : null,
+            moduleMetrics: this.moduleLifecycle.getModuleMetrics(),
+            serviceHealth: this.serviceManager.getServiceHealth(),
+            cacheStats: getCacheStats()
+        };
+
+        window.OsliraApp.performance.set(Date.now(), metrics);
+
+        // Keep only last 100 performance snapshots
+        if (window.OsliraApp.performance.size > 100) {
+            const oldestKey = Math.min(...window.OsliraApp.performance.keys());
+            window.OsliraApp.performance.delete(oldestKey);
+        }
+    }
+
+    showLoadingOverlay() {
+        const overlay = document.getElementById('analytics-loading');
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+    }
+
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('analytics-loading');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    updateLoadingProgress(percentage, message) {
+        this.loadingProgress = percentage;
+        
+        const progressBar = document.getElementById('loading-progress-bar');
+        if (progressBar) {
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        const messageElement = document.getElementById('loading-message');
+        if (messageElement) {
+            messageElement.textContent = message;
+        }
+
+        console.log(`⏳ [Dashboard] Loading: ${percentage}% - ${message}`);
+    }
+
+    showCriticalError(error) {
+        const errorBoundary = document.getElementById('global-error-boundary');
+        if (errorBoundary) {
+            errorBoundary.style.display = 'block';
+        }
+
+        this.hideLoadingOverlay();
+    }
+
+    async cleanup() {
+        console.log('🧹 [Dashboard] Starting dashboard cleanup...');
+
+        // Stop monitoring
+        this.statusMonitor.stopMonitoring();
+
+        // Clear intervals
+        if (this.dataRefreshInterval) clearInterval(this.dataRefreshInterval);
+        if (this.cacheCleanupInterval) clearInterval(this.cacheCleanupInterval);
+        if (this.metricsInterval) clearInterval(this.metricsInterval);
+
+        // Cleanup modules
+        await this.moduleLifecycle.cleanupAll();
+
+        console.log('✅ [Dashboard] Cleanup completed');
+    }
+}
+
+// ===== INITIALIZATION & STARTUP =====
+
+// Create dashboard controller instance
+const dashboardController = new OsliraDashboardController();
+window.OsliraApp.controller = dashboardController;
+
+// Initialize when DOM is ready
+async function initializeDashboard() {
+    try {
+        // Wait for core dependencies
+        if (!window.OsliraApp.initialize) {
+            console.log('⏳ [Dashboard] Waiting for shared-code.js to load...');
+            await new Promise(resolve => {
+                const checkInterval = setInterval(() => {
+                    if (window.OsliraApp.initialize) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+
+        // Initialize shared code first
+        await window.OsliraApp.initialize();
+
+        // Initialize dashboard
+        await dashboardController.initialize();
 
     } catch (error) {
         console.error('❌ [Dashboard] Initialization failed:', error);
-        window.OsliraApp.errorBoundary?.handleError(error, { phase: 'initialization' });
         throw error;
     }
 }
 
-function registerPredefinedContainers() {
-    const containerConfigs = [
-        { id: 'summary-panel', moduleName: 'QuickSummaryPanel', services: ['analytics', 'credit'] },
-        { id: 'insights-panel', moduleName: 'InsightsPanel', services: ['analytics', 'claude', 'credit'] },
-        { id: 'module-nav-sidebar', moduleName: 'ModuleNavSidebar', services: [] },
-        { id: 'message-style-matrix-container', moduleName: 'SecureMessageStyleMatrix', services: ['analytics'] },
-        { id: 'heatmap-container', moduleName: 'SecureLeadConversionHeatmap', services: ['analytics'] },
-        { id: 'cta-effectiveness-container', moduleName: 'SecureCTAEffectivenessTracker', services: ['analytics'] },
-        { id: 'feedback-signal-container', moduleName: 'SecureFeedbackSignalExplorer', services: ['analytics', 'claude'] },
-        { id: 'claude-guidance-history', moduleName: 'SecureClaudeGuidanceHistory', services: ['analytics', 'claude'] },
-        { id: 'message-risk-dashboard', moduleName: 'SecureMessageRiskClassifier', services: ['analytics', 'claude'] },
-        { id: 'crm-performance-container', moduleName: 'SecureCRMPerformanceComparator', services: ['analytics'] },
-        { id: 'roi-tracker-container', moduleName: 'SecureMessageIterationROITracker', services: ['analytics'] },
-        { id: 'team-dashboard-container', moduleName: 'SecureTeamImpactDashboard', services: ['analytics'] },
-        { id: 'outreach-timeline-container', moduleName: 'SecureOutreachTimelineOverlay', services: ['analytics'] }
-    ];
-
-    for (const config of containerConfigs) {
-        window.OsliraApp.containerRegistry.registerContainer(config.id, config);
-    }
-}
-
-async function renderAllModules() {
-    console.log('🎨 [Dashboard] Rendering all modules...');
-    
-    const lifecycle = window.OsliraApp.moduleLifecycle;
-    const renderPromises = [];
-
-    for (const [containerId, moduleInstance] of window.OsliraApp.modules) {
-        renderPromises.push(
-            lifecycle.executeLifecycleMethod(moduleInstance, 'render')
-                .then(() => {
-                    console.log(`✅ [Dashboard] Module ${containerId} rendered`);
-                    return lifecycle.executeLifecycleMethod(moduleInstance, 'ready');
-                })
-                .catch(error => {
-                    console.error(`❌ [Dashboard] Module ${containerId} render failed:`, error);
-                    return lifecycle.executeLifecycleMethod(moduleInstance, 'fallbackRender', error);
-                })
-        );
-    }
-
-    await Promise.allSettled(renderPromises);
-}
-
-function setupGlobalEventListeners() {
-    // Window resize handler
-    let resizeTimeout;
-    window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(async () => {
-            for (const [containerId, moduleInstance] of window.OsliraApp.modules) {
-                if (typeof moduleInstance.onResize === 'function') {
-                    try {
-                        await moduleInstance.onResize();
-                    } catch (error) {
-                        console.error(`❌ Resize handler failed for ${containerId}:`, error);
-                    }
-                }
-            }
-        }, 250);
-    });
-
-    // Page visibility handler
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            console.log('📱 [Dashboard] Page hidden - pausing updates');
-            pausePeriodicTasks();
-        } else {
-            console.log('📱 [Dashboard] Page visible - resuming updates');
-            resumePeriodicTasks();
-        }
-    });
-
-    // Beforeunload cleanup
-    window.addEventListener('beforeunload', () => {
-        console.log('🧹 [Dashboard] Cleaning up before unload');
-        cleanupAllModules();
-    });
-}
-
-function setupPeriodicTasks() {
-    // Health check every 5 minutes
-    setInterval(async () => {
-        try {
-            const healthResults = await window.OsliraApp.serviceManager.healthCheckAll();
-            console.log('💚 [Dashboard] Health check completed:', healthResults);
-        } catch (error) {
-            console.error('❌ [Dashboard] Health check failed:', error);
-        }
-    }, 300000);
-
-    // Performance monitoring every minute
-    setInterval(() => {
-        const memoryInfo = performance.memory;
-        if (memoryInfo && memoryInfo.usedJSHeapSize > 100 * 1024 * 1024) { // 100MB
-            console.warn('⚠️ [Dashboard] High memory usage detected:', memoryInfo);
-        }
-    }, 60000);
-}
-
-let periodicTasksPaused = false;
-
-function pausePeriodicTasks() {
-    periodicTasksPaused = true;
-}
-
-	function resumePeriodicTasks() {
-    periodicTasksPaused = false;
-}
-
-async function cleanupAllModules() {
-    const lifecycle = window.OsliraApp.moduleLifecycle;
-    
-    for (const [containerId, moduleInstance] of window.OsliraApp.modules) {
-        try {
-            await lifecycle.executeLifecycleMethod(moduleInstance, 'cleanup');
-            console.log(`✅ [Dashboard] Module ${containerId} cleaned up`);
-        } catch (error) {
-            console.error(`❌ [Dashboard] Module ${containerId} cleanup failed:`, error);
-        }
-    }
-    
-    // Clear module registry
-    window.OsliraApp.modules.clear();
-    console.log('🧹 [Dashboard] All modules cleaned up');
-}
-
-// ===== UTILITY FUNCTIONS =====
-
-function getModuleHealth() {
-    const health = {
-        modules: {},
-        services: {},
-        overall: 'healthy'
-    };
-    
-    // Check module health
-    for (const [containerId, moduleInstance] of window.OsliraApp.modules) {
-        try {
-            const moduleInfo = moduleInstance.getModuleInfo();
-            health.modules[containerId] = {
-                name: moduleInfo.name || containerId,
-                version: moduleInfo.version || 'unknown',
-                status: moduleInfo.status || 'unknown',
-                lastError: moduleInfo.lastError || null
-            };
-        } catch (error) {
-            health.modules[containerId] = {
-                status: 'error',
-                error: error.message
-            };
-            health.overall = 'degraded';
-        }
-    }
-    
-    // Check service health
-    for (const [serviceName, service] of window.OsliraApp.services) {
-        health.services[serviceName] = {
-            initialized: true,
-            hasHealthCheck: typeof service.healthCheck === 'function'
-        };
-    }
-    
-    return health;
-}
-
-function getPerformanceMetrics() {
-    const metrics = {
-        modules: {},
-        memory: {},
-        errors: window.OsliraApp.errors.slice(-10), // Last 10 errors
-        timestamp: new Date().toISOString()
-    };
-    
-    // Module performance
-    for (const [moduleName, modulePerf] of window.OsliraApp.performance) {
-        metrics.modules[moduleName] = { ...modulePerf };
-    }
-    
-    // Memory info
-    if (performance.memory) {
-        metrics.memory = {
-            used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
-            total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024),
-            limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)
-        };
-    }
-    
-    return metrics;
-}
-
-async function refreshAllModules() {
-    console.log('🔄 [Dashboard] Refreshing all modules...');
-    
-    const lifecycle = window.OsliraApp.moduleLifecycle;
-    const refreshPromises = [];
-    
-    for (const [containerId, moduleInstance] of window.OsliraApp.modules) {
-        if (typeof moduleInstance.refresh === 'function') {
-            refreshPromises.push(
-                lifecycle.executeLifecycleMethod(moduleInstance, 'refresh')
-                    .catch(error => {
-                        console.error(`❌ [Dashboard] Module ${containerId} refresh failed:`, error);
-                    })
-            );
-        }
-    }
-    
-    await Promise.allSettled(refreshPromises);
-    console.log('✅ [Dashboard] Module refresh completed');
-}
-
-// ===== GLOBAL API EXPOSURE =====
-
-// Expose key functions globally for debugging and external access
-window.OsliraApp.analytics = {
-    // Core functions
-    initialize: initializeAnalyticsDashboard,
-    refresh: refreshAllModules,
-    cleanup: cleanupAllModules,
-    
-    // Diagnostics
-    getHealth: getModuleHealth,
-    getPerformance: getPerformanceMetrics,
-    
-    // Module management
-    getModule: (containerId) => window.OsliraApp.modules.get(containerId),
-    getAllModules: () => Array.from(window.OsliraApp.modules.entries()),
-    
-    // Service management
-    getService: (serviceName) => window.OsliraApp.services.get(serviceName),
-    getAllServices: () => Array.from(window.OsliraApp.services.entries()),
-    
-    // Cache management
-    clearCache: clearAllCachedData,
-    getCacheStats: () => {
-        try {
-            return JSON.parse(localStorage.getItem('oslira_cache_stats') || '{}');
-        } catch {
-            return {};
-        }
-    },
-    
-    // Error management
-    getErrors: () => window.OsliraApp.errors.slice(),
-    clearErrors: () => { window.OsliraApp.errors.length = 0; },
-    
-    // Configuration
-    getConfig: () => window.OsliraApp.config,
-    updateConfig: (path, value) => {
-        const config = window.OsliraApp.services.get('config');
-        if (config && typeof config.updateConfig === 'function') {
-            config.updateConfig(path, value);
-        }
-    },
-    
-    // Version info
-    version: APP_VERSION,
-    moduleLifecycleVersion: MODULE_LIFECYCLE_VERSION
-};
-
-// ===== AUTO-INITIALIZATION =====
-
-// Auto-initialize when DOM is ready
+// Start initialization based on DOM state
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', async () => {
-        try {
-            await initializeAnalyticsDashboard();
-        } catch (error) {
-            console.error('❌ [Dashboard] Auto-initialization failed:', error);
-        }
-    });
+    document.addEventListener('DOMContentLoaded', initializeDashboard);
 } else {
-    // DOM already ready, initialize immediately
-    initializeAnalyticsDashboard().catch(error => {
-        console.error('❌ [Dashboard] Auto-initialization failed:', error);
-    });
+    // DOM already ready
+    initializeDashboard().catch(console.error);
 }
 
-// ===== MODULE EXPORTS =====
+// ===== EXPORTS FOR DEBUGGING =====
 
-export {
-    initializeAnalyticsDashboard,
-    StandardModuleLifecycle,
-    SecureServiceManager,
-    ContainerRegistry,
-    ErrorBoundary,
-    refreshAllModules,
-    cleanupAllModules,
-    getModuleHealth,
-    getPerformanceMetrics
+// Expose key functions for debugging and external access
+window.OsliraApp.dashboard = {
+    controller: dashboardController,
+    refreshAllModules: () => dashboardController.refreshAllModules(),
+    getPerformanceMetrics: () => Object.fromEntries(window.OsliraApp.performance),
+    getModuleMetrics: () => dashboardController.moduleLifecycle.getModuleMetrics(),
+    getServiceHealth: () => dashboardController.serviceManager.getServiceHealth(),
+    version: ANALYTICS_VERSION
 };
 
-// Legacy global export for backward compatibility
-window.OsliraAnalytics = {
-    initialize: initializeAnalyticsDashboard,
-    version: APP_VERSION
-};
-
-console.log(`🎯 [Analytics] Dashboard system v${APP_VERSION} loaded successfully`);
-console.log(`📊 [Analytics] Module lifecycle v${MODULE_LIFECYCLE_VERSION} ready`);
-console.log('🚀 [Analytics] Ready for initialization...');
+console.log(`📊 [Analytics] Enterprise analytics engine v${ANALYTICS_VERSION} loaded successfully`);
+performance.mark('analytics-loaded');
