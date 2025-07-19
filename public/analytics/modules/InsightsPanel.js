@@ -8,9 +8,8 @@ import { setCachedData, getCachedData } from '../utils/moduleCache.js';
 import { createIcon, addTooltip, formatNumber } from '../utils/UIHelpers.js';
 
 export class InsightsPanel extends BaseSecureModule {
-    constructor(container, secureAnalyticsService, secureClaudeService, secureCreditService) {
-        // Call parent constructor with services
-        super(container, secureAnalyticsService, secureClaudeService, secureCreditService);
+    constructor(container, analyticsService, claudeService, creditService) {
+    super(container);
 
          this.analyticsService = analyticsService || null;
     this.claudeService = claudeService || null;
