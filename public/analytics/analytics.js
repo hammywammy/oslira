@@ -5,6 +5,8 @@ import { SecureDataWriteService } from '/services/dataWriteService.js';
 import { SecureIntegrationService } from '/services/integrationService.js';
 import { SecureMessageStyleMatrix } from './modules/SecureMessageStyleMatrix.js';
 import { SecureLeadConversionHeatmap } from './modules/SecureLeadConversionHeatmap.js';
+import { SecureCTAEffectivenessTracker } from './modules/SecureCTAEffectivenessTracker.js';
+
 
 
 
@@ -16,6 +18,8 @@ window.OsliraApp.dataWriteService = new SecureDataWriteService();
 window.OsliraApp.integrationService = new SecureIntegrationService();
 window.SecureMessageStyleMatrix = SecureMessageStyleMatrix;
 window.SecureLeadConversionHeatmap = SecureLeadConversionHeatmap;
+window.SecureCTAEffectivenessTracker = SecureCTAEffectivenessTracker;
+
 
 
 /*
@@ -94,6 +98,30 @@ const WORKER_ENDPOINTS = {
 
 //i was told this is necessary placeholder, important piece to fix
 <div id="heatmap-container"></div>
+<div id="cta-effectiveness-container"></div>
+
+//this is all reference for how to call the sections
+const heatmapContainer = document.querySelector('#heatmap-container');
+const secureAnalyticsService = window.OsliraApp?.services?.secureAnalyticsService;
+
+if (heatmapContainer && secureAnalyticsService) {
+    const heatmap = new SecureLeadConversionHeatmap(heatmapContainer, secureAnalyticsService);
+    window.OsliraApp.modules.heatmap = heatmap;
+    
+    // Auto-render on load
+    heatmap.render();
+}
+
+const ctaContainer = document.querySelector('#cta-effectiveness-container');
+const analyticsService = window.OsliraApp?.services?.secureAnalyticsService;
+
+if (ctaContainer && window.SecureCTAEffectivenessTracker && analyticsService) {
+    const ctaTracker = new window.SecureCTAEffectivenessTracker(ctaContainer, analyticsService);
+    window.OsliraApp.modules.ctaTracker = ctaTracker;
+
+    ctaTracker.render();
+}
+
 
 
 /*
@@ -102,37 +130,6 @@ const WORKER_ENDPOINTS = {
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE CTA EFFECTIVENESS TRACKER =====
-class SecureCTAEffectivenessTracker {
-    constructor(container, secureAnalyticsService) {
-        // Initialize secure CTA tracker
-        // - Connect to secure analytics endpoints
-        // - Setup CTA performance monitoring
-        // - Configure tracking visualizations
-    }
-
-    async render(filters = {}) {
-        // Render secure CTA effectiveness analysis
-        // - Fetch CTA data via Worker processing
-        // - Calculate effectiveness scores server-side
-        // - Display ranked CTA performance
-    }
-
-    async updateCTAData(newData) {
-        // Update CTA tracking with secure data
-        // - Process Worker-validated CTA metrics
-        // - Update ranking and trend calculations
-        // - Refresh recommendation displays
-    }
-
-    createCTAChart(data) {
-        // Create secure CTA performance visualization
-        // - Use Worker-calculated effectiveness scores
-        // - Display usage patterns and trends
-        // - Enable secure drill-down capabilities
-    }
-}
 
 // ===== SECURE FEEDBACK SIGNAL EXPLORER =====
 class SecureFeedbackSignalExplorer {
