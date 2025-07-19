@@ -3,9 +3,9 @@
 // Enterprise-Grade Analytics Dashboard Component
 // ==========================================
 
-import { BaseSecureModule } from '/modules/baseSecureModule.js';
-import { setCachedData, getCachedData } from '/utils/moduleCache.js';
-import { createIcon, addTooltip, formatNumber } from '/utils/UIHelpers.js';
+import { BaseSecureModule } from './baseSecureModule.js';
+import { setCachedData, getCachedData } from '/analytics/utils/moduleCache.js';
+import { createIcon, addTooltip, formatNumber } from '/analytics/utils/UIHelpers.js';
 
 export class InsightsPanel extends BaseSecureModule {
     constructor(container, secureAnalyticsService, secureClaudeService, secureCreditService) {
