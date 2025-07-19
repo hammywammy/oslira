@@ -12,6 +12,8 @@ import { SecureOutreachTimelineOverlay } from './modules/SecureOutreachTimelineO
 import { SecureMessageIterationROITracker } from './modules/SecureMessageIterationROITracker.js';
 import { SecureTeamImpactDashboard } from './modules/SecureTeamImpactDashboard.js';
 import { SecureClaudeGuidanceHistory } from './modules/SecureClaudeGuidanceHistory.js';
+import { SecureMessageRiskClassifier } from './modules/SecureMessageRiskClassifier.js';
+
 
 
 
@@ -29,6 +31,8 @@ window.SecureOutreachTimelineOverlay = SecureOutreachTimelineOverlay;
 window.SecureMessageIterationROITracker = SecureMessageIterationROITracker;
 window.SecureTeamImpactDashboard = SecureTeamImpactDashboard;
 window.SecureClaudeGuidanceHistory = SecureClaudeGuidanceHistory;
+window.OsliraApp.riskClassifier = riskClassifier;
+
 
 
 
@@ -200,45 +204,15 @@ if (guidanceContainer) {
   window.OsliraApp.modules.guidance = guidanceModule;
 }
 
+//message risk clasifier
+import { SecureMessageRiskClassifier } from './modules/SecureMessageRiskClassifier.js'; // adjust path
 
+const container = document.getElementById('message-risk-dashboard');
+const riskClassifier = new SecureMessageRiskClassifier(container, window.OsliraApp.analyticsService, window.OsliraApp.claudeService);
 
-/*
-===============================================================================
-                        UPDATED ANALYTICS MODULES
-===============================================================================
-Analytics modules updated to use secure Worker-based services
-*/
+window.dashboard = riskClassifier; // optional global exposure
+riskClassifier.render();
 
-// ===== SECURE MESSAGE RISK CLASSIFIER =====
-class SecureMessageRiskClassifier {
-    constructor(container, secureAnalyticsService, secureClaudeService) {
-        // Initialize secure risk classifier
-        // - Connect to secure Claude risk analysis service
-        // - Setup risk monitoring displays
-        // - Configure alert systems
-    }
-
-    async render(filters = {}) {
-        // Render secure risk analysis dashboard
-        // - Fetch risk data via Worker endpoints
-        // - Process risk classification via secure Claude service
-        // - Display risk distribution and alerts
-    }
-
-    async classifyMessage(message) {
-        // Classify message risk via secure service
-        // - Send message to Worker for Claude analysis
-        // - Return structured risk assessment
-        // - Log risk classification for audit
-    }
-
-    async updateRiskData(newData) {
-        // Update risk analysis with secure data
-        // - Process Worker-validated risk metrics
-        // - Update risk trend calculations
-        // - Refresh alert configurations
-    }
-}
 
 /*
 ===============================================================================
