@@ -11,6 +11,7 @@ import { SecureCRMPerformanceComparator } from './modules/SecureCRMPerformanceCo
 import { SecureOutreachTimelineOverlay } from './modules/SecureOutreachTimelineOverlay.js';
 import { SecureMessageIterationROITracker } from './modules/SecureMessageIterationROITracker.js';
 import { SecureTeamImpactDashboard } from './modules/SecureTeamImpactDashboard.js';
+import { SecureClaudeGuidanceHistory } from './modules/SecureClaudeGuidanceHistory.js';
 
 
 
@@ -27,6 +28,7 @@ window.SecureCRMPerformanceComparator = SecureCRMPerformanceComparator;
 window.SecureOutreachTimelineOverlay = SecureOutreachTimelineOverlay;
 window.SecureMessageIterationROITracker = SecureMessageIterationROITracker;
 window.SecureTeamImpactDashboard = SecureTeamImpactDashboard;
+window.SecureClaudeGuidanceHistory = SecureClaudeGuidanceHistory;
 
 
 
@@ -185,6 +187,19 @@ if (container && service) {
   dashboard.render();
 }
 
+//claude guidance history
+const guidanceContainer = document.getElementById('claude-guidance-history');
+
+if (guidanceContainer) {
+  const guidanceModule = new SecureClaudeGuidanceHistory(
+    guidanceContainer,
+    window.OsliraApp.secureAnalyticsService,
+    window.OsliraApp.secureClaudeService
+  );
+  guidanceModule.render();
+  window.OsliraApp.modules.guidance = guidanceModule;
+}
+
 
 
 /*
@@ -193,37 +208,6 @@ if (container && service) {
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE CLAUDE GUIDANCE HISTORY =====
-class SecureClaudeGuidanceHistory {
-    constructor(container, secureAnalyticsService, secureClaudeService) {
-        // Initialize secure guidance history
-        // - Connect to secure analytics and Claude services
-        // - Setup guidance tracking displays
-        // - Configure implementation monitoring
-    }
-
-    async render(filters = {}) {
-        // Render secure Claude guidance analysis
-        // - Fetch guidance data via Worker endpoints
-        // - Track implementation success server-side
-        // - Display advice correlation with results
-    }
-
-    async updateGuidanceData(newData) {
-        // Update guidance tracking with secure data
-        // - Process Worker-validated guidance metrics
-        // - Update implementation tracking
-        // - Refresh advice effectiveness displays
-    }
-
-    trackAdviceImplementation(advice, outcomes) {
-        // Track secure advice implementation
-        // - Log implementation status securely
-        // - Calculate outcome correlations
-        // - Update advice effectiveness scores
-    }
-}
 
 // ===== SECURE MESSAGE RISK CLASSIFIER =====
 class SecureMessageRiskClassifier {
