@@ -13,6 +13,7 @@ import { SecureDataWriteService } from './services/secureDataWriteService.js';
 import { SecureIntegrationService } from './services/secureIntegrationService.js';
 
 // Analytics Modules
+import { SecureChartFactory, CHART_THEMES } from './modules/secureChartFactory.js';
 import { SecureCTAEffectivenessTracker } from './modules/secureCTAEffectivenessTracker.js';
 import { SecureClaudeGuidanceHistory } from './modules/secureClaudeGuidanceHistory.js';
 import { SecureCRMPerformanceComparator } from './modules/secureCRMPerformanceComparator.js';
@@ -29,6 +30,7 @@ import { ModuleNavSidebar } from './modules/ModuleNavSidebar.js';
 
 // Configuration & Constants
 import { SECURE_ANALYTICS_CONFIG, SecureAnalyticsConfigManager } from './config/secureAnalyticsConfig.js';
+import { CACHE_KEYS } from './config/cacheKeys.js';
 import { setCachedData, getCachedData, clearAllCachedData } from './utils/moduleCache.js';
 import { createIcon, addTooltip, formatNumber } from './utils/UIHelpers.js';
 
