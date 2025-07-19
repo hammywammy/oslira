@@ -92,27 +92,36 @@ class EnterpriseErrorBoundary {
         });
     }
 
-    handleError(error, context = {}) {
-        this.errorCount++;
-        const errorReport = {
-            id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            timestamp: new Date().toISOString(),
-            error: {
-                name: error?.name || 'Unknown',
-                message: error?.message || String(error),
-                stack: error?.stack || 'No stack trace available'
-            },
-            context,
-            userAgent: navigator.userAgent,
-            url: window.location.href,
-            version: ANALYTICS_VERSION
-        };
+   handleError(error, context = {}) {
+    this.errorCount++;
+    const errorReport = {
+        id: `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        error: {
+            name: error?.name || 'Unknown',
+            message: error?.message || String(error),
+            stack: error?.stack || 'No stack trace available'
+        },
+        context,
+        userAgent: navigator.userAgent,
+        url: window.location.href,
+        version: ANALYTICS_VERSION
+    };
 
-        this.errorReports.push(errorReport);
+    this.errorReports.push(errorReport);
+    
+    // FIX: Check if window.OsliraApp.errors exists before pushing
+    if (window.OsliraApp && window.OsliraApp.errors) {
         window.OsliraApp.errors.push(errorReport);
+    } else {
+        // Initialize if it doesn't exist
+        if (!window.OsliraApp) window.OsliraApp = {};
+        if (!window.OsliraApp.errors) window.OsliraApp.errors = [];
+        window.OsliraApp.errors.push(errorReport);
+    }
 
-        // Log to console with structured data
-        console.error('🚨 [ErrorBoundary] Enterprise Error Captured:', errorReport);
+    // Log to console with structured data
+    console.error('🚨 [ErrorBoundary] Enterprise Error Captured:', errorReport);
 
         // Show user-friendly error if too many errors
         if (this.errorCount >= this.maxErrors) {
@@ -449,6 +458,32 @@ throw error;
             return service;
         }).filter(Boolean);
     }
+
+ // Store module instance with security context
+const chartId = this.generateChartId();
+const securityContext = {
+    id: chartId,
+    type: type,
+    createdAt: new Date().toISOString(),
+    userId: window.OsliraApp.user?.id,
+    dataSource: 'worker_validated'
+};
+
+// FIX: Check if this.modules exists before calling set
+if (!this.modules) {
+    this.modules = new Map();
+}
+this.modules.set(containerId, {
+    chart: moduleInstance,
+    security: securityContext,
+    container: container
+});
+
+// Also fix the global storage
+if (!window.OsliraApp.modules) {
+    window.OsliraApp.modules = new Map();
+}
+window.OsliraApp.modules.set(containerId, moduleInstance);
 
     renderModuleFallback(containerId, error) {
         const container = document.getElementById(containerId);
