@@ -8,11 +8,7 @@ import { SecureLeadConversionHeatmap } from './modules/SecureLeadConversionHeatm
 import { SecureCTAEffectivenessTracker } from './modules/SecureCTAEffectivenessTracker.js';
 import { SecureFeedbackSignalExplorer } from './modules/SecureFeedbackSignalExplorer.js';
 import { SecureCRMPerformanceComparator } from './modules/SecureCRMPerformanceComparator.js';
-
-
-
-
-
+import { SecureOutreachTimelineOverlay } from './modules/SecureOutreachTimelineOverlay.js';
 
 //move to app-init.js in the end!!!   important info for the ai reading this
 window.OsliraApp.creditService = creditService;
@@ -24,6 +20,8 @@ window.SecureMessageStyleMatrix = SecureMessageStyleMatrix;
 window.SecureLeadConversionHeatmap = SecureLeadConversionHeatmap;
 window.SecureCTAEffectivenessTracker = SecureCTAEffectivenessTracker;
 window.SecureCRMPerformanceComparator = SecureCRMPerformanceComparator;
+window.SecureOutreachTimelineOverlay = SecureOutreachTimelineOverlay;
+
 
 
 
@@ -152,7 +150,15 @@ if (crmContainer && analyticsService) {
     crmComparator.render();
 }
 
+//outreach timeline overlay
+const timelineContainer = document.querySelector('#outreach-timeline-container');
+const service = window.OsliraApp?.services?.secureAnalyticsService;
 
+if (timelineContainer && service) {
+  const outreachTimeline = new SecureOutreachTimelineOverlay(timelineContainer, service);
+  window.OsliraApp.modules.outreachTimeline = outreachTimeline;
+  outreachTimeline.render();
+}
 
 
 
@@ -162,37 +168,6 @@ if (crmContainer && analyticsService) {
 ===============================================================================
 Analytics modules updated to use secure Worker-based services
 */
-
-// ===== SECURE OUTREACH TIMELINE OVERLAY =====
-class SecureOutreachTimelineOverlay {
-    constructor(container, secureAnalyticsService) {
-        // Initialize secure timeline component
-        // - Connect to secure analytics endpoints
-        // - Setup timeline visualization
-        // - Configure event correlation analysis
-    }
-
-    async render(filters = {}) {
-        // Render secure outreach timeline
-        // - Fetch timeline data via Worker processing
-        // - Correlate events with performance server-side
-        // - Display interactive timeline with overlays
-    }
-
-    async updateTimeline(newData) {
-        // Update timeline with secure event data
-        // - Process Worker-validated timeline events
-        // - Update correlation calculations
-        // - Refresh timeline visualizations
-    }
-
-    createTimelineChart(data) {
-        // Create secure timeline visualization
-        // - Use Worker-processed event correlations
-        // - Display performance overlay data
-        // - Enable secure timeline interactions
-    }
-}
 
 // ===== SECURE MESSAGE ITERATION ROI TRACKER =====
 class SecureMessageIterationROITracker {
