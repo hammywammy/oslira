@@ -1394,9 +1394,6 @@ export class ModuleNavSidebar extends BaseSecureModule {
     }
 }
 
-// Export for ES6 modules
-export { ModuleNavSidebar };
-
 // Global registration for dynamic loading
 if (window.OsliraApp && window.OsliraApp.modules) {
     window.OsliraApp.modules.set('ModuleNavSidebar', ModuleNavSidebar);
