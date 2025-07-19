@@ -994,9 +994,6 @@ export class InsightsPanel extends BaseSecureModule {
     }
 }
 
-// Export for ES6 modules
-export { InsightsPanel };
-
 // Global registration for dynamic loading
 if (window.OsliraApp && window.OsliraApp.modules) {
     window.OsliraApp.modules.set('InsightsPanel', InsightsPanel);
