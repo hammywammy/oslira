@@ -1258,25 +1258,31 @@ class SecureAnalyticsService {
             method = 'GET',
             data = null,
             headers = {},
-            timeout = this.config.timeout
+            timeout = this.config?.timeout || 60000  // ADD DEFAULT TIMEOUT
         } = options;
 
-        const url = `${this.config.baseUrl}${endpoint}`;
+        const url = `${this.config?.baseUrl || 'https://oslira-worker.example.workers.dev'}${endpoint}`;
         
         const requestOptions = {
             method,
             headers: {
                 'Content-Type': 'application/json',
                 ...headers
-            },
-            signal: AbortSignal.timeout(timeout)
+            }
         };
+
+        // Use fetch with timeout handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         if (data && (method === 'POST' || method === 'PUT')) {
             requestOptions.body = JSON.stringify(data);
         }
 
+        requestOptions.signal = controller.signal;
+
         const response = await fetch(url, requestOptions);
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
