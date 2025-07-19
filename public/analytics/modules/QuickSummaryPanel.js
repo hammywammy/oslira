@@ -1378,7 +1378,6 @@ export class QuickSummaryPanel extends BaseSecureModule {
     }
 }
 
-export { QuickSummaryPanel };
 // Global registration for dynamic loading
 if (window.OsliraApp && window.OsliraApp.modules) {
     window.OsliraApp.modules.set('QuickSummaryPanel', QuickSummaryPanel);
