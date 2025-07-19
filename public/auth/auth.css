@@ -140,12 +140,6 @@ body {
     margin-bottom: 24px;
 }
 
-.logo-image {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-}
-
 .logo h1 {
     font-size: 32px;
     font-weight: 800;
