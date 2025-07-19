@@ -459,32 +459,6 @@ throw error;
         }).filter(Boolean);
     }
 
- // Store module instance with security context
-const chartId = this.generateChartId();
-const securityContext = {
-    id: chartId,
-    type: type,
-    createdAt: new Date().toISOString(),
-    userId: window.OsliraApp.user?.id,
-    dataSource: 'worker_validated'
-};
-
-// FIX: Check if this.modules exists before calling set
-if (!this.modules) {
-    this.modules = new Map();
-}
-this.modules.set(containerId, {
-    chart: moduleInstance,
-    security: securityContext,
-    container: container
-});
-
-// Also fix the global storage
-if (!window.OsliraApp.modules) {
-    window.OsliraApp.modules = new Map();
-}
-window.OsliraApp.modules.set(containerId, moduleInstance);
-
     renderModuleFallback(containerId, error) {
         const container = document.getElementById(containerId);
         if (!container) return;
