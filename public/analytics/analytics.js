@@ -348,21 +348,21 @@ class EnterpriseModuleLifecycle {
 
             // Attempt retry if under limit
             const retries = this.retryAttempts.get(containerId) || 0;
-            if (retries < this.maxRetries) {
-                this.retryAttempts.set(containerId, retries + 1);
-                console.log(`🔄 [ModuleLifecycle] Retrying ${containerId} (attempt ${retries + 1})`);
-                
-                // Exponential backoff
-                const delay = Math.pow(2, retries) * 1000;
-                setTimeout(() => {
-                    this.initializeModule(containerId, moduleConfig);
-}, delay);
-                return null;
-            }
+if (retries < this.maxRetries) {
+    this.retryAttempts.set(containerId, retries + 1);
+    console.log(`🔄 [ModuleLifecycle] Retrying ${containerId} (attempt ${retries + 1})`);
+    
+    // Exponential backoff
+    const delay = Math.pow(2, retries) * 1000;
+    setTimeout(() => {
+        this.initializeModule(containerId, moduleConfig);
+    }, delay);
+    return null; // ADD THIS LINE
+} // ADD THIS CLOSING BRACE
 
-            // All retries exhausted - render fallback
-            this.renderModuleFallback(containerId, error);
-            throw error;
+// All retries exhausted - render fallback
+this.renderModuleFallback(containerId, error);
+throw error;
         }
     }
 
