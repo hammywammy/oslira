@@ -1,91 +1,31 @@
-// ===== SECURE LEAD CONVERSION HEATMAP =====
 class SecureLeadConversionHeatmap {
-    constructor(container, secureAnalyticsService) {
-        // Initialize secure heatmap component
+    constructor(container, analyticsService) {
         this.container = container;
-        this.analyticsService = secureAnalyticsService;
+        this.analyticsService = analyticsService;
         
-        // Heatmap configuration
+        // ⭐ FIX: Initialize methods before binding
+        this.moduleState = {
+            isLoading: false,
+            hasError: false,
+            lastUpdate: null,
+            heatmapData: null
+        };
+        
+        // Initialize configuration
         this.config = {
-            cellSize: 50,
-            padding: 15,
-            colorSteps: 7,
-            minOpacity: 0.1,
-            maxOpacity: 0.9,
-            animationDuration: 800,
-            hoverAnimationDuration: 200,
-            refreshInterval: 30000, // 30 seconds
-            maxDataAge: 300000, // 5 minutes
-            creditCost: 1 // Credits for detailed heatmap analysis
+            cellSize: 12,
+            animationDuration: 300,
+            colorScheme: 'thermal',
+            showTooltips: true,
+            enableInteractions: true
         };
         
-        // Chart and state management
-        this.chartInstance = null;
-        this.currentData = null;
-        this.currentFilters = {};
-        this.lastDataFetch = null;
-        this.refreshTimer = null;
+        // ⭐ FIX: Bind methods safely
+        this.handleHover = this.handleHover?.bind ? this.handleHover.bind(this) : () => {};
+        this.handleClick = this.handleClick?.bind ? this.handleClick.bind(this) : () => {};
+        this.handleResize = this.handleResize?.bind ? this.handleResize.bind(this) : () => {};
         
-        // Interaction tracking
-        this.interactionState = {
-            hoveredCell: null,
-            selectedSegment: null,
-            tooltipPosition: { x: 0, y: 0 },
-            isInteracting: false
-        };
-        
-        // Performance optimization
-        this.isLoading = false;
-        this.renderQueue = [];
-        this.updateDebounced = this.debounce(this._updateInternal.bind(this), 250);
-        
-        // Security and audit
-        this.securitySettings = {
-            enableDataSanitization: true,
-            logInteractions: true,
-            validateDataIntegrity: true,
-            encryptSensitiveData: true
-        };
-        this.auditTrail = [];
-        
-        // Color schemes for different contexts
-        this.colorSchemes = {
-            default: {
-                low: '#E3F2FD',      // Light blue
-                medium: '#1976D2',    // Medium blue  
-                high: '#0D47A1',      // Dark blue
-                excellent: '#1B5E20'  // Dark green
-            },
-            performance: {
-                poor: '#FFEBEE',      // Light red
-                below: '#FF5722',     // Orange-red
-                average: '#FF9800',   // Orange
-                good: '#4CAF50',      // Green
-                excellent: '#1B5E20'  // Dark green
-            },
-            accessibility: {
-                low: '#F5F5F5',       // Light gray
-                medium: '#9E9E9E',    // Medium gray
-                high: '#424242',      // Dark gray
-                excellent: '#212121'  // Very dark gray
-            }
-        };
-        
-        this.currentColorScheme = 'default';
-        
-        // Setup secure analytics service connection
-        this.setupServiceConnection();
-        
-        // Configure heatmap visualization options
-        this.setupVisualizationOptions();
-        
-        // Initialize interaction handlers
-        this.initializeInteractionHandlers();
-        
-        // Setup container
-        this.setupContainer();
-        
-        console.log('SecureLeadConversionHeatmap initialized');
+        console.log('🔥 SecureLeadConversionHeatmap initialized');
     }
 
     setupServiceConnection() {
@@ -443,6 +383,58 @@ class SecureLeadConversionHeatmap {
             this.logAuditEvent('render_failed', { error: error.message, filters });
         }
     }
+
+    async cleanup() {
+        console.log('🧹 SecureLeadConversionHeatmap cleanup starting...');
+        
+        // Clear chart instance
+        if (this.chartInstance) {
+            this.chartInstance.destroy();
+            this.chartInstance = null;
+        }
+        
+        // Clear event listeners
+        if (this.container) {
+            this.container.removeEventListener('mouseover', this.handleHover);
+            this.container.removeEventListener('click', this.handleClick);
+            window.removeEventListener('resize', this.handleResize);
+        }
+        
+        // Clear module state
+        this.moduleState = {
+            isLoading: false,
+            hasError: false,
+            lastUpdate: null,
+            heatmapData: null
+        };
+        
+        console.log('✅ SecureLeadConversionHeatmap cleanup completed');
+    }
+    
+    getModuleInfo() {
+        return {
+            name: 'SecureLeadConversionHeatmap',
+            version: '1.0.0',
+            description: 'Lead conversion heatmap visualization module',
+            author: 'Oslira Analytics Team',
+            dependencies: ['SecureAnalyticsService'],
+            capabilities: [
+                'Lead conversion visualization',
+                'Heatmap generation',
+                'Interactive analytics',
+                'Performance insights'
+            ],
+            configuration: Object.keys(this.config || {}),
+            state: {
+                isLoading: this.moduleState.isLoading,
+                hasError: this.moduleState.hasError,
+                lastUpdate: this.moduleState.lastUpdate,
+                hasData: !!this.moduleState.heatmapData
+            },
+            endpoints: ['/analytics/lead-conversion']
+        };
+    }
+}
 
     async fetchConversionData(filters) {
         // Fetch conversion data via Worker endpoints
@@ -1524,50 +1516,6 @@ class SecureLeadConversionHeatmap {
             hasData: !!this.currentData
         };
     }
-
-    // Add to each failing module class
-async cleanup() {
-    console.log(`🧹 ${this.constructor.name} cleanup starting...`);
-    
-    // Clear any timers
-    if (this.updateTimer) {
-        clearInterval(this.updateTimer);
-        this.updateTimer = null;
-    }
-    
-    // Clear any event listeners
-    if (this.container) {
-        this.container.removeEventListener('click', this.handleClick);
-    }
-    
-    // Clear any cached data
-    if (this.moduleState) {
-        Object.keys(this.moduleState).forEach(key => {
-            if (this.moduleState[key] instanceof Map) {
-                this.moduleState[key].clear();
-            }
-        });
-    }
-    
-    console.log(`✅ ${this.constructor.name} cleanup completed`);
-}
-
-getModuleInfo() {
-    return {
-        name: this.constructor.name,
-        version: '1.0.0',
-        description: `${this.constructor.name} analytics module`,
-        author: 'Oslira Analytics Team',
-        dependencies: ['SecureAnalyticsService'],
-        capabilities: [],
-        configuration: Object.keys(this.config || {}),
-        state: {
-            isLoading: this.state === 'loading',
-            hasError: this.state === 'error',
-            lastUpdate: this.lastUpdate || null
-        }
-    };
-}
 
     destroy() {
         // Clean up heatmap component
