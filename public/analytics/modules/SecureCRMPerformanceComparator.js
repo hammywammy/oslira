@@ -2160,6 +2160,50 @@ class SecureCRMPerformanceComparator {
         }, 1000);
     }
 
+    cleanup() {
+    console.log('🧹 [SecureCRMPerformanceComparator] Cleaning up...');
+    
+    // Clear timers
+    if (this.refreshTimer) {
+        clearInterval(this.refreshTimer);
+        this.refreshTimer = null;
+    }
+    
+    // Clear charts
+    if (this.performanceChart) {
+        this.performanceChart.destroy();
+        this.performanceChart = null;
+    }
+    
+    if (this.comparisonChart) {
+        this.comparisonChart.destroy();
+        this.comparisonChart = null;
+    }
+    
+    // Clear container
+    if (this.container) {
+        this.container.innerHTML = '';
+    }
+    
+    // Clear data
+    this.currentData = null;
+    this.lastComparison = null;
+}
+
+getModuleInfo() {
+    return {
+        name: 'SecureCRMPerformanceComparator',
+        version: '1.0.0',
+        description: 'Secure CRM performance comparison and analysis',
+        type: 'analytics',
+        priority: 4,
+        capabilities: ['crm_analysis', 'performance_comparison', 'trend_analysis'],
+        status: this.isLoading ? 'loading' : 'ready',
+        lastUpdate: this.lastDataFetch,
+        comparisonCount: this.currentData ? this.currentData.comparisons?.length : 0
+    };
+}
+
     setupAccessibilityFeatures() {
         // Setup additional accessibility features
         const tableRows = this.container.querySelectorAll('.ranking-row');
