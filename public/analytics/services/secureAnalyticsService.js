@@ -112,6 +112,28 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
         });
     }
 
+    function fixRequestPayload(payload, endpoint) {
+    // Add missing requestType based on endpoint
+    const endpointToRequestType = {
+        '/analytics/cta-effectiveness': 'cta_effectiveness',
+        '/analytics/feedback-signals': 'feedback_signals', 
+        '/analytics/crm-performance': 'crm_performance',
+        '/analytics/timeline': 'timeline_data',
+        '/analytics/team-impact': 'team_impact',
+        '/analytics/iteration-roi': 'iteration_roi',
+        '/analytics/claude-history': 'claude_guidance',
+        '/analytics/message-matrix': 'message_matrix',
+        '/analytics/lead-conversion': 'lead_conversion'
+    };
+    
+    return {
+        ...payload,
+        requestType: payload.requestType || endpointToRequestType[endpoint] || 'analytics_request',
+        timestamp: payload.timestamp || new Date().toISOString(),
+        version: payload.version || 'v1.0'
+    };
+}
+
     async getMessageMatrix(filters = {}) {
         // 🔐 Fetch message style performance matrix via Worker
         try {
@@ -886,16 +908,19 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
         const startTime = Date.now();
         
         try {
-            console.log('🔐 Making secure analytics request...', {
-                endpoint: endpoint.split('/').pop(),
-                requestId,
-                payloadSize: JSON.stringify(payload).length
-            });
-            
-            // Validate request payload
-            if (this.dataValidation) {
-                this.validateRequestPayload(payload);
-            }
+            const fixedPayload = fixRequestPayload(payload, endpoint);
+        
+        console.log('🔐 Making secure analytics request...', {
+            endpoint: endpoint.split('/').pop(),
+            requestId,
+            payloadSize: JSON.stringify(fixedPayload).length,
+            hasRequestType: !!fixedPayload.requestType
+        });
+        
+        // Validate request payload
+        if (this.dataValidation) {
+            this.validateRequestPayload(fixedPayload);
+        }
             
             // Check for active duplicate requests
             const requestKey = this.generateRequestKey(endpoint, payload);
