@@ -53,8 +53,19 @@ async function loadAppConfig() {
         // Primary: Use window.CONFIG from env-config.js
         if (window.CONFIG) {
             Object.assign(window.OsliraApp.config, window.CONFIG);
-            console.log('✅ Configuration loaded from window.CONFIG');
-            return window.CONFIG;
+
+// Ensure workerUrl is set for analytics services
+if (!window.OsliraApp.config.workerUrl) {
+    window.OsliraApp.config.workerUrl = window.CONFIG.WORKER_URL || 
+                                       window.CONFIG.workerUrl || 
+                                       'https://oslira-worker.oslira-worker.workers.dev';
+}
+
+console.log('✅ Configuration loaded from window.CONFIG', {
+    workerUrl: window.OsliraApp.config.workerUrl,
+    hasSupabase: !!window.OsliraApp.config.supabaseUrl
+});
+return window.CONFIG;
         }
         
         // Fallback: Use API endpoint
