@@ -449,20 +449,33 @@ throw error;
     }
 
     getRequiredServices(serviceNames) {
-        const serviceManager = window.OsliraApp.serviceManager;
-        if (!serviceManager) {
-            console.warn('⚠️ [ModuleLifecycle] Service manager not available');
-            return [];
-        }
-        
-        return serviceNames.map(serviceName => {
-            const service = serviceManager.getService(serviceName);
-            if (!service) {
-                console.warn(`⚠️ [ModuleLifecycle] Service ${serviceName} not available`);
-            }
-            return service;
-        }).filter(Boolean);
+    const serviceManager = window.OsliraApp.serviceManager;
+    if (!serviceManager) {
+        console.warn('⚠️ [ModuleLifecycle] Service manager not available, creating mock services');
+        return serviceNames.map(name => this.createMockService(name));
     }
+    
+    return serviceNames.map(serviceName => {
+        const service = serviceManager.getService(serviceName);
+        if (!service) {
+            console.warn(`⚠️ [ModuleLifecycle] Service ${serviceName} not available, using mock`);
+            return this.createMockService(serviceName);
+        }
+        return service;
+    }).filter(Boolean);
+}
+
+createMockService(serviceName) {
+    return {
+        healthCheck: () => Promise.resolve(false),
+        makeSecureRequest: () => Promise.reject(new Error(`${serviceName} service not available`)),
+        generateInsights: () => Promise.resolve([]),
+        getInsightData: () => Promise.resolve({}),
+        initialize: () => Promise.resolve(),
+        [serviceName]: 'mock',
+        isMock: true
+    };
+}
 
     renderModuleFallback(containerId, error) {
         const container = document.getElementById(containerId);
