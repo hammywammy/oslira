@@ -885,6 +885,114 @@ async makeSecureRequest(endpoint, payload) {
         }
     }
 
+    // Add this method to your public/analytics/services/secureClaudeService.js file
+// Add it inside the SecureClaudeService class
+
+// Missing method: simulateFeedbackClassification
+simulateFeedbackClassification(feedbackData, options = {}) {
+    try {
+        console.log('🧪 [SecureClaudeService] Running feedback classification simulation...', {
+            feedbackCount: feedbackData.length,
+            testMode: true
+        });
+        
+        // Generate realistic simulation results
+        const simulatedResults = {
+            success: true,
+            results: feedbackData.map((feedback, index) => {
+                // Simulate sentiment analysis
+                const sentimentScores = [0.8, -0.3, 0.6, -0.7, 0.2, 0.9, -0.1];
+                const sentimentScore = sentimentScores[index % sentimentScores.length];
+                
+                // Simulate theme classification
+                const themes = ['product', 'service', 'communication', 'pricing', 'support'];
+                const theme = themes[index % themes.length];
+                
+                return {
+                    id: feedback.id || `feedback_${index}`,
+                    text: feedback.text || `Sample feedback ${index + 1}`,
+                    sentiment: {
+                        score: sentimentScore,
+                        label: sentimentScore > 0.4 ? 'positive' : sentimentScore < -0.4 ? 'negative' : 'neutral',
+                        confidence: Math.random() * 0.3 + 0.7 // 0.7 to 1.0
+                    },
+                    themes: [{
+                        name: theme,
+                        confidence: Math.random() * 0.3 + 0.7,
+                        category: theme
+                    }],
+                    priority: sentimentScore < -0.5 ? 'high' : sentimentScore < 0 ? 'medium' : 'low',
+                    actionable: sentimentScore < 0
+                };
+            }),
+            sentimentSummary: {
+                overall: 'mixed',
+                positive: 40,
+                negative: 25,
+                neutral: 35,
+                averageScore: 0.15
+            },
+            themeAnalysis: {
+                uniqueThemes: 5,
+                topThemes: [
+                    { name: 'product', frequency: 35, avgSentiment: 0.3 },
+                    { name: 'service', frequency: 28, avgSentiment: 0.6 },
+                    { name: 'communication', frequency: 22, avgSentiment: -0.2 },
+                    { name: 'pricing', frequency: 18, avgSentiment: -0.4 },
+                    { name: 'support', frequency: 15, avgSentiment: 0.8 }
+                ]
+            },
+            priorityIssues: [
+                {
+                    issue: 'Communication timing needs improvement',
+                    severity: 'medium',
+                    frequency: 12,
+                    sentiment: -0.3
+                },
+                {
+                    issue: 'Pricing concerns in multiple feedback',
+                    severity: 'high', 
+                    frequency: 8,
+                    sentiment: -0.6
+                }
+            ],
+            actionableInsights: [
+                'Improve response time for customer inquiries',
+                'Review pricing strategy based on feedback',
+                'Enhance product documentation',
+                'Train team on better communication practices'
+            ],
+            trends: {
+                sentimentTrend: 'improving',
+                themeTrend: 'service-focused',
+                volumeTrend: 'increasing'
+            },
+            metadata: {
+                processingTime: Math.random() * 2000 + 500, // 500-2500ms
+                confidence: 0.85,
+                languagesDetected: ['en'],
+                promptVersion: 'simulation_v1.0',
+                tokensUsed: feedbackData.length * 150, // Simulate token usage
+                testMode: true,
+                simulationTimestamp: new Date().toISOString()
+            }
+        };
+        
+        console.log('✅ [SecureClaudeService] Feedback classification simulation completed:', {
+            resultsCount: simulatedResults.results.length,
+            overallSentiment: simulatedResults.sentimentSummary.overall,
+            uniqueThemes: simulatedResults.themeAnalysis.uniqueThemes,
+            priorityIssues: simulatedResults.priorityIssues.length
+        });
+        
+        return simulatedResults;
+        
+    } catch (error) {
+        console.error('❌ [SecureClaudeService] Simulation failed:', error);
+        throw new Error(`Feedback classification simulation failed: ${error.message}`);
+    }
+}
+    
     sanitizeForTransport(data) {
         // Remove sensitive fields before sending to Worker
         try {
