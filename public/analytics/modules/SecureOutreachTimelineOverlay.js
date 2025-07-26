@@ -2290,6 +2290,45 @@ class SecureOutreachTimelineOverlay {
         };
     }
 
+    cleanup() {
+    console.log('🧹 [SecureOutreachTimelineOverlay] Cleaning up...');
+    
+    // Clear timers
+    if (this.refreshTimer) {
+        clearInterval(this.refreshTimer);
+        this.refreshTimer = null;
+    }
+    
+    // Clear charts
+    if (this.timelineChart) {
+        this.timelineChart.destroy();
+        this.timelineChart = null;
+    }
+    
+    // Clear container
+    if (this.container) {
+        this.container.innerHTML = '';
+    }
+    
+    // Clear data
+    this.currentData = null;
+    this.timelineEvents = [];
+}
+
+getModuleInfo() {
+    return {
+        name: 'SecureOutreachTimelineOverlay',
+        version: '1.0.0',
+        description: 'Secure outreach timeline overlay with event tracking',
+        type: 'analytics',
+        priority: 5,
+        capabilities: ['timeline_analysis', 'event_tracking', 'temporal_patterns'],
+        status: this.isLoading ? 'loading' : 'ready',
+        lastUpdate: this.lastDataFetch,
+        eventCount: this.timelineEvents ? this.timelineEvents.length : 0
+    };
+}
+
     destroy() {
         // Clean up timeline overlay resources
         if (this.refreshTimer) {
