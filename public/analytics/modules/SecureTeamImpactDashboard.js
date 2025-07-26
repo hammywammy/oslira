@@ -769,6 +769,50 @@ class SecureTeamImpactDashboard {
         this.chartInstance.update();
     }
 
+    // Add to each failing module class
+async cleanup() {
+    console.log(`🧹 ${this.constructor.name} cleanup starting...`);
+    
+    // Clear any timers
+    if (this.updateTimer) {
+        clearInterval(this.updateTimer);
+        this.updateTimer = null;
+    }
+    
+    // Clear any event listeners
+    if (this.container) {
+        this.container.removeEventListener('click', this.handleClick);
+    }
+    
+    // Clear any cached data
+    if (this.moduleState) {
+        Object.keys(this.moduleState).forEach(key => {
+            if (this.moduleState[key] instanceof Map) {
+                this.moduleState[key].clear();
+            }
+        });
+    }
+    
+    console.log(`✅ ${this.constructor.name} cleanup completed`);
+}
+
+getModuleInfo() {
+    return {
+        name: this.constructor.name,
+        version: '1.0.0',
+        description: `${this.constructor.name} analytics module`,
+        author: 'Oslira Analytics Team',
+        dependencies: ['SecureAnalyticsService'],
+        capabilities: [],
+        configuration: Object.keys(this.config || {}),
+        state: {
+            isLoading: this.state === 'loading',
+            hasError: this.state === 'error',
+            lastUpdate: this.lastUpdate || null
+        }
+    };
+}
+
     destroy() {
         if (this.chartInstance) {
             this.chartInstance.destroy();
