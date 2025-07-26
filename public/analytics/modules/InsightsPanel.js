@@ -9,52 +9,57 @@ import { createIcon, addTooltip, formatNumber } from '../utils/UIHelpers.js';
 
 constructor(container, analyticsService, claudeService, creditService) {
     super(container);
-
+    
     this.analyticsService = analyticsService || null;
     this.claudeService = claudeService || null;
     this.creditService = creditService || null;
     
-    // Only bind methods if services exist and have the methods
+    // Safe binding - only bind if methods actually exist
     this.boundMethods = {};
-    if (this.claudeService && typeof this.claudeService.generateInsights === 'function') {
-        this.boundMethods.generateInsights = this.claudeService.generateInsights.bind(this.claudeService);
+    
+    // Only bind methods that actually exist on the services
+    if (this.claudeService) {
+        // Don't bind specific methods until we know they exist
+        console.log('Claude service available:', Object.getOwnPropertyNames(this.claudeService));
     }
-    if (this.analyticsService && typeof this.analyticsService.getInsightData === 'function') {
-        this.boundMethods.getInsightData = this.analyticsService.getInsightData.bind(this.analyticsService);
+    
+    if (this.analyticsService) {
+        console.log('Analytics service available:', Object.getOwnPropertyNames(this.analyticsService));
     }
-        // Module-specific configuration
-        this.config = {
-            ...this.config, // Inherit base config
-            cacheKey: 'insights',
-            cacheTTL: 300000, // 5 minutes
-            maxInsights: 5,
-            minConfidenceThreshold: 0.6,
-            refreshInterval: 600000, // 10 minutes
-            priorityInsights: ['risk_patterns', 'performance_opportunities', 'lead_optimization'],
-            fallbackMode: true,
-            analyticsLogging: true,
-            autoRefresh: true
-        };
-        
-        // Module-specific state
-        this.moduleState = {
-            insights: [],
-            metadata: {},
-            lastUpdate: null,
-            loadingProgress: 0,
-            expandedInsights: new Set()
-        };
-        
-        // Event handlers for module-specific events
-        this.boundHandlers = {
-            refresh: this.handleRefresh.bind(this),
-            expand: this.handleExpand.bind(this),
-            exportInsights: this.handleExportInsights.bind(this),
-            toggleInsight: this.handleToggleInsight.bind(this)
-        };
-        
-        console.log('🧠 InsightsPanel initialized with AI capabilities');
-    }
+    
+    // Module-specific configuration
+    this.config = {
+        ...this.config, // Inherit base config
+        cacheKey: 'insights',
+        cacheTTL: 300000, // 5 minutes
+        maxInsights: 5,
+        minConfidenceThreshold: 0.6,
+        refreshInterval: 600000, // 10 minutes
+        priorityInsights: ['risk_patterns', 'performance_opportunities', 'lead_optimization'],
+        fallbackMode: true,
+        analyticsLogging: true,
+        autoRefresh: true
+    };
+    
+    // Module-specific state
+    this.moduleState = {
+        insights: [],
+        metadata: {},
+        lastUpdate: null,
+        loadingProgress: 0,
+        expandedInsights: new Set()
+    };
+    
+    // Event handlers for module-specific events
+    this.boundHandlers = {
+        refresh: this.handleRefresh.bind(this),
+        expand: this.handleExpand.bind(this),
+        exportInsights: this.handleExportInsights.bind(this),
+        toggleInsight: this.handleToggleInsight.bind(this)
+    };
+    
+    console.log('🧠 InsightsPanel initialized with AI capabilities');
+}
     
     // ===== REQUIRED LIFECYCLE METHODS =====
     
