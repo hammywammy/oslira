@@ -1373,6 +1373,46 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
         });
     }
 
+    // Add to public/analytics/services/secureAnalyticsService.js
+async getFeedbackSignalData(filters = {}) {
+    try {
+        return await this.makeAnalyticsRequest('/analytics/feedback-signals', {
+            filters,
+            requestId: this.generateRequestId(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Feedback signal data fetch failed:', error);
+        throw error;
+    }
+}
+
+async getCRMPerformanceData(filters = {}) {
+    try {
+        return await this.makeAnalyticsRequest('/analytics/crm-performance', {
+            filters,
+            requestId: this.generateRequestId(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ CRM performance data fetch failed:', error);
+        throw error;
+    }
+}
+
+async getTimelineData(filters = {}) {
+    try {
+        return await this.makeAnalyticsRequest('/analytics/timeline', {
+            filters,
+            requestId: this.generateRequestId(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('❌ Timeline data fetch failed:', error);
+        throw error;
+    }
+}
+
     startCacheManagement() {
         // Start background cache cleanup
         setInterval(() => {
