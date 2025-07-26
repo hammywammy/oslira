@@ -7,25 +7,26 @@ import { BaseSecureModule } from '../utils/baseSecureModule.js';
 import { setCachedData, getCachedData } from '../utils/moduleCache.js';
 import { createIcon, addTooltip, formatNumber } from '../utils/UIHelpers.js';
 
-constructor(container, analyticsService, claudeService, creditService) {
-    super(container);
-    
-    this.analyticsService = analyticsService || null;
-    this.claudeService = claudeService || null;
-    this.creditService = creditService || null;
-    
-    // Safe binding - only bind if methods actually exist
-    this.boundMethods = {};
-    
-    // Only bind methods that actually exist on the services
-    if (this.claudeService) {
-        // Don't bind specific methods until we know they exist
-        console.log('Claude service available:', Object.getOwnPropertyNames(this.claudeService));
-    }
-    
-    if (this.analyticsService) {
-        console.log('Analytics service available:', Object.getOwnPropertyNames(this.analyticsService));
-    }
+export class InsightsPanel extends BaseSecureModule {
+    constructor(container, analyticsService, claudeService, creditService) {
+        super(container);
+        
+        this.analyticsService = analyticsService || null;
+        this.claudeService = claudeService || null;
+        this.creditService = creditService || null;
+        
+        // Safe binding - only bind if methods actually exist
+        this.boundMethods = {};
+        
+        // Only bind methods that actually exist on the services
+        if (this.claudeService) {
+            // Don't bind specific methods until we know they exist
+            console.log('Claude service available:', Object.getOwnPropertyNames(this.claudeService));
+        }
+        
+        if (this.analyticsService) {
+            console.log('Analytics service available:', Object.getOwnPropertyNames(this.analyticsService));
+        }
     
     // Module-specific configuration
     this.config = {
@@ -1056,9 +1057,11 @@ createMockService(serviceName) {
     }
 }
 
+
 // Global registration for dynamic loading
 if (window.OsliraApp && window.OsliraApp.modules) {
     window.OsliraApp.modules.set('InsightsPanel', InsightsPanel);
 }
 
 console.log('🧠 InsightsPanel module loaded successfully with BaseSecureModule integration');
+
