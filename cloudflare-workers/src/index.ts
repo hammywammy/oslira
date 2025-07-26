@@ -1644,12 +1644,19 @@ function verifyStripeWebhook(body: string, signature: string, secret: string): a
 // ------------------------------------
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('*', cors({ 
-  origin: '*', 
-  allowHeaders: ['Content-Type', 'Authorization'], 
-  allowMethods: ['GET', 'POST', 'OPTIONS'] 
+app.use('*', cors({
+  origin: ['https://oslira.com', 'http://localhost:3000'], // Add your domains
+  allowHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Request-ID',           // ⭐ ADD THIS
+    'X-Client-Version',       // ⭐ ADD THIS  
+    'X-Timestamp',           // ⭐ ADD THIS
+    'X-Analytics-Request'    // ⭐ ADD THIS
+  ],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true
 }));
-
 // Enhanced OPTIONS handler for analytics endpoints
 app.options('*', c => {
   return c.text('', 200, {
