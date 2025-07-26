@@ -224,15 +224,15 @@ class OsliraAppInit {
         }
     }
     
-    static async _checkAuth() {
-        const currentPage = this._getCurrentPageName();
-        const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings', 'admin', 'campaigns'];
-        
-        // Skip auth check for public pages
-        if (!protectedPages.includes(currentPage)) {
-            console.log('📖 [AppInit] Public page - skipping authentication');
-            return true;
-        }
+static async _checkAuth() {
+    const currentPage = this._getCurrentPageName();
+    const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings', 'admin', 'campaigns']; // ✅ 'analytics' is listed as protected
+    
+    // Skip auth check for public pages
+    if (!protectedPages.includes(currentPage)) {
+        console.log('📖 [AppInit] Public page - skipping authentication');
+        return true;
+    }
         
         try {
             console.log('🔐 [AppInit] Checking authentication...');
