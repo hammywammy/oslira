@@ -490,30 +490,76 @@ class SecureLeadConversionHeatmap {
     }
 
    async fetchConversionData(filters = {}) {
-        try {
-            console.log('🔥 Fetching lead conversion heatmap...', {
-                filterCount: Object.keys(filters).length,
-                leadTypes: filters.leadTypes?.length || 'all'
-            });
+    try {
+        console.log('🔥 Fetching lead conversion heatmap...', {
+            filterCount: Object.keys(filters).length,
+            leadTypes: filters.leadTypes?.length || 'all'
+        });
+        
+        const response = await this.analyticsService.getLeadConversionHeatmap({
+            ...filters,
+            includeMetrics: true,
+            includeConfidence: true,
+            aggregationType: 'weighted_average'
+        });
+        
+        // Updated validation - be more flexible with data structure
+        if (!response || (!response.heatmapData && !response.heatmapCells)) {
+            console.warn('⚠️ No heatmap data received, using fallback');
             
-            const response = await this.analyticsService.getLeadConversionHeatmap({
-                ...filters,
-                includeMetrics: true,
-                includeConfidence: true,
-                aggregationType: 'weighted_average'
-            });
-            
-            if (!response || !response.heatmapData) {
-                throw new Error('Invalid heatmap data received from server');
-            }
-            
-            return response;
-            
-        } catch (error) {
-            console.error('❌ Conversion data fetch failed:', error);
-            throw new Error(`Failed to fetch conversion data: ${error.message}`);
+            // Return fallback data instead of throwing error
+            return {
+                heatmapData: {
+                    cells: [],
+                    leadTypes: ['Email', 'LinkedIn', 'Cold Call', 'Referral'],
+                    stages: ['Initial Contact', 'Qualified', 'Proposal', 'Negotiation', 'Closed'],
+                    metrics: {
+                        totalLeads: 0,
+                        overallRate: '0.00%',
+                        hotspots: 0
+                    }
+                },
+                fallback: true,
+                message: 'Using demo data - no real data available'
+            };
         }
+        
+        // Handle different response formats
+        const heatmapData = response.heatmapData || response.heatmapCells || response;
+        
+        // Ensure required properties exist
+        if (!heatmapData.cells) {
+            heatmapData.cells = [];
+        }
+        if (!heatmapData.leadTypes) {
+            heatmapData.leadTypes = ['Email', 'LinkedIn', 'Cold Call', 'Referral'];
+        }
+        if (!heatmapData.stages) {
+            heatmapData.stages = ['Initial Contact', 'Qualified', 'Proposal', 'Negotiation', 'Closed'];
+        }
+        
+        return { heatmapData, fallback: false };
+        
+    } catch (error) {
+        console.error('❌ Conversion data fetch failed:', error);
+        
+        // Return fallback instead of throwing
+        return {
+            heatmapData: {
+                cells: [],
+                leadTypes: ['Email', 'LinkedIn', 'Cold Call', 'Referral'],
+                stages: ['Initial Contact', 'Qualified', 'Proposal', 'Negotiation', 'Closed'],
+                metrics: {
+                    totalLeads: 0,
+                    overallRate: '0.00%',
+                    hotspots: 0
+                }
+            },
+            fallback: true,
+            error: error.message
+        };
     }
+}
 
     validateHeatmapData(data) {
         // Validate heatmap data structure
