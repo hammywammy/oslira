@@ -178,12 +178,24 @@ export class BaseSecureModule {
     }
     
     getService(serviceName) {
-        const service = this.services.get(serviceName);
-        if (!service) {
-            throw new Error(`Service ${serviceName} not available in ${this.constructor.name}`);
+    // Try multiple sources for service access
+    const serviceManager = window.OsliraApp?.serviceManager;
+    
+    if (serviceManager && serviceManager.services) {
+        const service = serviceManager.services.get(serviceName);
+        if (service) {
+            return service;
         }
-        return service;
     }
+    
+    // Fallback: try global services
+    if (window.OsliraApp?.services?.[serviceName]) {
+        return window.OsliraApp.services[serviceName];
+    }
+    
+    console.warn(`⚠️ [${this.constructor.name}] Service ${serviceName} not found in registry`);
+    throw new Error(`Service ${serviceName} not available in ${this.constructor.name}`);
+}
     
     hasService(serviceName) {
         return this.services.has(serviceName);
