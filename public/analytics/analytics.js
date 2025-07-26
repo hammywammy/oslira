@@ -115,7 +115,12 @@ class EnterpriseErrorBoundary {
         window.OsliraApp.errors.push(errorReport);
     } else {
         // Initialize if it doesn't exist
-        if (!window.OsliraApp) window.OsliraApp = {};
+        if (!window.OsliraApp) {
+        window.OsliraApp = {};
+     }
+     if (!window.OsliraApp.modules) {
+       window.OsliraApp.modules = new Map();
+     }
         if (!window.OsliraApp.errors) window.OsliraApp.errors = [];
         window.OsliraApp.errors.push(errorReport);
     }
