@@ -52,14 +52,17 @@ export class InsightsPanel extends BaseSecureModule {
     };
     
     // Event handlers for module-specific events
-    this.boundHandlers = {
-        refresh: this.handleRefresh.bind(this),
-        expand: this.handleExpand.bind(this),
-        exportInsights: this.handleExportInsights.bind(this),
-        toggleInsight: this.handleToggleInsight.bind(this)
-    };
+    this.boundHandlers = {};
     
     console.log('🧠 InsightsPanel initialized with AI capabilities');
+
+    // Bind handlers after all methods are available
+    this.boundHandlers = {
+        refresh: this.handleRefresh?.bind(this) || (() => console.log('handleRefresh not implemented')),
+        expand: this.handleExpand?.bind(this) || (() => console.log('handleExpand not implemented')),
+        exportInsights: this.handleExportInsights?.bind(this) || (() => console.log('handleExportInsights not implemented')),
+        toggleInsight: this.handleToggleInsight?.bind(this) || (() => console.log('handleToggleInsight not implemented'))
+    };
 }
     
     // ===== REQUIRED LIFECYCLE METHODS =====
