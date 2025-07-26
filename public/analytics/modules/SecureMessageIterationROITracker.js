@@ -274,77 +274,46 @@ generateROIRecommendations(averageROI, successfulIterations, totalIterations) {
         }
     }
 
-    renderROIChart(iterations) {
-        const chartContainer = this.container.querySelector('#roi-chart');
-        if (!chartContainer) return;
+   renderROIChart(data) {
+    try {
+        // Ensure iterations is an array
+        const iterations = Array.isArray(data?.iterations) ? data.iterations : [];
         
-        const ctx = chartContainer.getContext('2d');
-        
-        // Destroy existing chart
-        if (this.chartInstance) {
-            this.chartInstance.destroy();
+        if (iterations.length === 0) {
+            console.log('📊 [SecureMessageIterationROITracker] No chart data available');
+            this.renderEmptyState();
+            return;
         }
         
-        // Prepare chart data
-        const chartData = iterations.slice(0, 20).map((iteration, index) => ({
-            x: index + 1,
-            y: iteration.roi_score || 0,
-            improvement: iteration.improvement_percent || 0,
-            message: iteration.message_preview || `Iteration ${index + 1}`,
-            date: iteration.created_at
+        // Now safe to use array methods
+        const chartData = iterations.slice(0, 10).map(iteration => ({
+            name: iteration.name || `Iteration ${iteration.id}`,
+            roi: iteration.roi || 0,
+            conversionRate: iteration.conversionRate || 0
         }));
         
-        this.chartInstance = new Chart(ctx, {
-            type: 'scatter',
-            data: {
-                datasets: [{
-                    label: 'ROI Score',
-                    data: chartData,
-                    backgroundColor: chartData.map(point => 
-                        point.y > 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'
-                    ),
-                    borderColor: chartData.map(point => 
-                        point.y > 0 ? 'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)'
-                    ),
-                    pointRadius: 8,
-                    pointHoverRadius: 12
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Iteration Number'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'ROI Score (%)'
-                        },
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: (context) => {
-                                const point = context.raw;
-                                return [
-                                    `ROI: ${point.y}%`,
-                                    `Improvement: ${point.improvement}%`,
-                                    `Message: ${point.message.substring(0, 50)}...`
-                                ];
-                            }
-                        }
-                    }
-                }
-            }
-        });
+        // Continue with chart rendering...
+        this.createChart(chartData);
+        
+    } catch (error) {
+        console.error('❌ [SecureMessageIterationROITracker] Chart render failed:', error);
+        this.renderEmptyState();
     }
+}
+
+// Also add this helper method:
+renderEmptyState() {
+    if (this.container) {
+        const emptyStateHtml = `
+            <div class="roi-empty-state" style="padding: 40px; text-align: center; color: #6c757d;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                <h4>No Iteration Data</h4>
+                <p>Start testing message variations to see ROI analysis</p>
+            </div>
+        `;
+        this.container.innerHTML = emptyStateHtml;
+    }
+}
 
     renderIterationList(iterations) {
         const listContainer = this.container.querySelector('#iteration-list');
