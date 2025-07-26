@@ -112,28 +112,6 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
         });
     }
 
-    function fixRequestPayload(payload, endpoint) {
-    // Add missing requestType based on endpoint
-    const endpointToRequestType = {
-        '/analytics/cta-effectiveness': 'cta_effectiveness',
-        '/analytics/feedback-signals': 'feedback_signals', 
-        '/analytics/crm-performance': 'crm_performance',
-        '/analytics/timeline': 'timeline_data',
-        '/analytics/team-impact': 'team_impact',
-        '/analytics/iteration-roi': 'iteration_roi',
-        '/analytics/claude-history': 'claude_guidance',
-        '/analytics/message-matrix': 'message_matrix',
-        '/analytics/lead-conversion': 'lead_conversion'
-    };
-    
-    return {
-        ...payload,
-        requestType: payload.requestType || endpointToRequestType[endpoint] || 'analytics_request',
-        timestamp: payload.timestamp || new Date().toISOString(),
-        version: payload.version || 'v1.0'
-    };
-}
-
     async getMessageMatrix(filters = {}) {
         // 🔐 Fetch message style performance matrix via Worker
         try {
@@ -902,28 +880,46 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
         }
     }
 
+        fixRequestPayload(payload, endpoint) {
+        // Add missing requestType based on endpoint
+        const endpointToRequestType = {
+            '/analytics/cta-effectiveness': 'cta_effectiveness',
+            '/analytics/feedback-signals': 'feedback_signals', 
+            '/analytics/crm-performance': 'crm_performance',
+            '/analytics/timeline': 'timeline_data',
+            '/analytics/team-impact': 'team_impact',
+            '/analytics/iteration-roi': 'iteration_roi',
+            '/analytics/claude-history': 'claude_guidance',
+            '/analytics/message-matrix': 'message_matrix',
+            '/analytics/lead-conversion': 'lead_conversion'
+        };
+        
+        return {
+            ...payload,
+            requestType: payload.requestType || endpointToRequestType[endpoint] || 'analytics_request',
+            timestamp: payload.timestamp || new Date().toISOString(),
+            version: payload.version || 'v1.0'
+        };
+    }
+    
+    // ⭐ UPDATE YOUR makeAnalyticsRequest METHOD
     async makeAnalyticsRequest(endpoint, payload) {
-        // Execute secure analytics data request
         const requestId = payload.requestId || this.generateRequestId();
         const startTime = Date.now();
         
         try {
-            const fixedPayload = fixRequestPayload(payload, endpoint);
-        
-        console.log('🔐 Making secure analytics request...', {
-            endpoint: endpoint.split('/').pop(),
-            requestId,
-            payloadSize: JSON.stringify(fixedPayload).length,
-            hasRequestType: !!fixedPayload.requestType
-        });
-        
-        // Validate request payload
-        if (this.dataValidation) {
-            this.validateRequestPayload(fixedPayload);
-        }
+            // ⭐ FIX: Auto-add missing fields using the class method
+            const fixedPayload = this.fixRequestPayload(payload, endpoint);
+            
+            console.log('🔐 Making secure analytics request...', {
+                endpoint: endpoint.split('/').pop(),
+                requestId,
+                payloadSize: JSON.stringify(fixedPayload).length,
+                hasRequestType: !!fixedPayload.requestType
+            });
             
             // Check for active duplicate requests
-            const requestKey = this.generateRequestKey(endpoint, payload);
+            const requestKey = this.generateRequestKey(endpoint, fixedPayload);
             if (this.activeRequests.has(requestKey)) {
                 console.log('🔄 Deduplicating identical analytics request');
                 throw new Error('Identical request already in progress');
@@ -953,7 +949,9 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
                 'X-Request-ID': requestId,
                 'X-Client-Version': 'v1.3.0',
                 'X-Timestamp': new Date().toISOString(),
-                'X-Analytics-Request': 'true'
+                'X-Analytics-Request': 'true',
+                'X-User-ID': session.user?.id || '',
+                'X-Business-ID': window.OsliraApp?.business?.id || ''
             };
             
             // Add compression headers if enabled
@@ -962,107 +960,59 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
                 headers['X-Compression'] = 'enabled';
             }
             
-            // Add user context
-            if (window.OsliraApp?.user?.id) {
-                headers['X-User-ID'] = window.OsliraApp.user.id;
+            // Validate request payload
+            if (this.dataValidation) {
+                this.validateRequestPayload(fixedPayload);
             }
             
-            // Make primary request attempt
-            let response = await this.attemptAnalyticsRequest(
-                targetUrl + endpoint,
-                payload,
-                headers
-            );
-            
-            // Handle large datasets efficiently with retries
-            let attempt = 1;
-            while (!response.success && attempt <= this.retryAttempts) {
-                console.warn(`⚠️ Analytics request failed, attempt ${attempt}/${this.retryAttempts}:`, response.error);
-                
-                // Don't retry client errors (4xx)
-                if (response.statusCode >= 400 && response.statusCode < 500) {
-                    break;
-                }
-                
-                // Calculate retry delay with exponential backoff
-                const delay = Math.min(
-                    this.retryDelay * Math.pow(2, attempt - 1),
-                    this.maxRetryDelay
-                );
-                
-                console.log(`⏳ Retrying analytics request in ${delay}ms...`);
-                await this.sleep(delay);
-                
-                // Try backup endpoint on later attempts
-                if (attempt > 1 && this.failoverEnabled && this.backupUrl) {
-                    console.log('🔄 Attempting analytics failover to backup...');
-                    const backupUrl = this.getBackupEndpointUrl();
-                    response = await this.attemptAnalyticsRequest(
-                        backupUrl + endpoint,
-                        payload,
-                        headers
+            // Make the request with retry logic
+            let lastError;
+            for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
+                try {
+                    const response = await this.attemptAnalyticsRequest(
+                        `${targetUrl}${endpoint}`, 
+                        fixedPayload, 
+                        headers, 
+                        attempt
                     );
-                    this.performanceMetrics.failoverRequests++;
-                } else {
-                    response = await this.attemptAnalyticsRequest(
-                        targetUrl + endpoint,
-                        payload,
-                        headers
-                    );
+                    
+                    // Success - clean up and return
+                    this.activeRequests.delete(requestKey);
+                    
+                    const duration = Date.now() - startTime;
+                    console.log(`✅ Analytics request completed: ${endpoint.split('/').pop()} (${duration}ms)`);
+                    
+                    return response;
+                    
+                } catch (error) {
+                    lastError = error;
+                    
+                    if (attempt < this.retryAttempts) {
+                        const delay = this.calculateRetryDelay(attempt);
+                        console.warn(`⚠️ Analytics request failed, attempt ${attempt}/${this.retryAttempts}: ${error.message}`);
+                        console.log(`⏳ Retrying analytics request in ${delay}ms...`);
+                        await this.delay(delay);
+                    }
                 }
-                
-                this.performanceMetrics.retryRequests++;
-                attempt++;
             }
             
-            if (!response.success) {
-                throw new Error(response.error || 'Analytics request failed after all attempts');
-            }
-            
-            // Validate response size
-            const responseSize = JSON.stringify(response.data).length;
-            if (responseSize > this.maxResponseSize) {
-                console.warn('⚠️ Large response detected:', `${(responseSize / 1024 / 1024).toFixed(2)}MB`);
-            }
-            
-            // Update performance metrics
+            // All attempts failed
+            this.activeRequests.delete(requestKey);
             const duration = Date.now() - startTime;
-            this.updateRequestStats(endpoint, duration, true, responseSize);
-            
-            // Track slow requests
-            if (duration > 10000) { // 10 seconds
-                this.performanceMetrics.slowRequests++;
-                console.warn('🐌 Slow analytics request detected:', `${duration}ms`);
-            }
-            
-            console.log('✅ Analytics request completed successfully:', {
-                requestId,
-                endpoint: endpoint.split('/').pop(),
-                duration: `${duration}ms`,
-                responseSize: `${(responseSize / 1024).toFixed(2)}KB`
-            });
-            
-            // Return formatted analytics data
-            return response;
-            
-        } catch (error) {
-            // Update error statistics
-            const duration = Date.now() - startTime;
-            this.updateRequestStats(endpoint, duration, false, 0);
             
             console.error('❌ Analytics request failed:', {
                 requestId,
                 endpoint,
-                error: error.message,
+                error: lastError.message,
                 duration: `${duration}ms`
             });
             
-            throw error;
+            throw new Error(`Failed to fetch: ${lastError.message}`);
             
-        } finally {
-            // Clean up request tracking
-            const requestKey = this.generateRequestKey(endpoint, payload);
-            this.activeRequests.delete(requestKey);
+        } catch (error) {
+            // Record error for analytics
+            this.recordError('analytics_request', error);
+            throw error;
         }
     }
 
