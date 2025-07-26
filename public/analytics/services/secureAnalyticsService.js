@@ -1,4 +1,4 @@
-class SecureAnalyticsService {
+class SecureAnalyticsService { 
     constructor() {
         // Initialize secure analytics data client
         this.baseUrl = window.OsliraApp?.config?.workerUrl || 
