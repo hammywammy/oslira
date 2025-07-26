@@ -336,7 +336,7 @@ class SecureLeadConversionHeatmap {
 
      async render(filters = {}) {
         const startTime = performance.now();
-        this.setState('rendering');
+        this.state = 'rendering';
         
         try {
             // Show loading state
@@ -362,6 +362,21 @@ class SecureLeadConversionHeatmap {
             throw error;
         }
     }
+
+    setState(newState) {
+    if (typeof newState === 'string') {
+        // Handle string state (like 'rendering', 'ready', etc.)
+        this.state = newState;
+    } else if (typeof newState === 'object') {
+        // Handle object state updates
+        this.state = { ...this.state, ...newState };
+    }
+    
+    // Optional: trigger state change events
+    if (this.onStateChange && typeof this.onStateChange === 'function') {
+        this.onStateChange(this.state);
+    }
+}
 
     async cleanup() {
         console.log('🧹 SecureLeadConversionHeatmap cleanup starting...');
