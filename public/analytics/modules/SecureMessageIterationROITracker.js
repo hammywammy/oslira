@@ -178,59 +178,80 @@ class SecureMessageIterationROITracker {
         }
     }
 
-    calculateIterationROI(data) {
-        if (!data || !data.iterations) {
-            return { totalROI: 0, avgImprovement: 0, bestPerformer: null };
+   calculateIterationROI(data) {
+    try {
+        // Ensure iterations is an array
+        const iterations = Array.isArray(data?.iterations) ? data.iterations : [];
+        
+        if (iterations.length === 0) {
+            console.log('📊 [SecureMessageIterationROITracker] No iterations data available');
+            return {
+                totalROI: 0,
+                averageROI: 0,
+                successfulIterations: 0,
+                totalIterations: 0,
+                recommendations: ['No iteration data available - start testing message variations']
+            };
         }
         
-        // Use Worker-validated performance data
-        const iterations = data.iterations;
         let totalROI = 0;
-        let totalImprovement = 0;
-        let bestPerformer = null;
-        let bestROI = -Infinity;
+        let successfulIterations = 0;
         
         iterations.forEach(iteration => {
-            // Calculate improvement percentages
-            const beforeScore = iteration.before_score || 0;
-            const afterScore = iteration.after_score || 0;
-            
-            if (beforeScore > 0) {
-                const improvement = ((afterScore - beforeScore) / beforeScore) * 100;
-                iteration.improvement_percent = Math.round(improvement * 100) / 100;
-                totalImprovement += improvement;
-                
-                // Include cost-benefit analysis
-                const timeCost = iteration.time_invested || 5; // minutes
-                const creditCost = iteration.credits_used || 2;
-                const benefitScore = improvement * (afterScore / 100);
-                
-                const roi = (benefitScore / (timeCost * 0.1 + creditCost)) * 100;
-                iteration.roi_score = Math.round(roi * 100) / 100;
-                totalROI += roi;
-                
-                if (roi > bestROI) {
-                    bestROI = roi;
-                    bestPerformer = iteration;
+            if (iteration && typeof iteration.roi === 'number') {
+                totalROI += iteration.roi;
+                if (iteration.roi > 0) {
+                    successfulIterations++;
                 }
-            } else {
-                iteration.improvement_percent = 0;
-                iteration.roi_score = 0;
             }
         });
         
-        const avgImprovement = iterations.length > 0 ? totalImprovement / iterations.length : 0;
-        const avgROI = iterations.length > 0 ? totalROI / iterations.length : 0;
+        const averageROI = iterations.length > 0 ? totalROI / iterations.length : 0;
         
         return {
-            totalROI: Math.round(avgROI * 100) / 100,
-            avgImprovement: Math.round(avgImprovement * 100) / 100,
-            bestPerformer,
+            totalROI,
+            averageROI,
+            successfulIterations,
             totalIterations: iterations.length,
-            successfulIterations: iterations.filter(i => i.improvement_percent > 0).length
+            successRate: iterations.length > 0 ? (successfulIterations / iterations.length) * 100 : 0,
+            recommendations: this.generateROIRecommendations(averageROI, successfulIterations, iterations.length)
+        };
+        
+    } catch (error) {
+        console.error('❌ [SecureMessageIterationROITracker] ROI calculation failed:', error);
+        
+        // Return safe fallback data
+        return {
+            totalROI: 0,
+            averageROI: 0,
+            successfulIterations: 0,
+            totalIterations: 0,
+            error: error.message,
+            recommendations: ['Error calculating ROI - please check data format']
         };
     }
+}
 
+// Also add this helper method to generate recommendations:
+generateROIRecommendations(averageROI, successfulIterations, totalIterations) {
+    const recommendations = [];
+    
+    if (totalIterations === 0) {
+        recommendations.push('Start A/B testing different message variations');
+        recommendations.push('Set up systematic iteration tracking');
+    } else if (averageROI < 0) {
+        recommendations.push('Review and optimize current message templates');
+        recommendations.push('Analyze what makes unsuccessful iterations fail');
+    } else if (successfulIterations / totalIterations < 0.5) {
+        recommendations.push('Focus on replicating successful iteration patterns');
+        recommendations.push('Reduce variation in unsuccessful approaches');
+    } else {
+        recommendations.push('Continue current iteration strategy');
+        recommendations.push('Explore more aggressive optimization');
+    }
+    
+    return recommendations;
+}
     updateSummaryMetrics(roiMetrics) {
         const totalIterationsEl = this.container.querySelector('#total-iterations');
         const avgImprovementEl = this.container.querySelector('#avg-improvement');
