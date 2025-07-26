@@ -1645,17 +1645,25 @@ function verifyStripeWebhook(body: string, signature: string, secret: string): a
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
-  origin: ['https://oslira.com', 'http://localhost:3000'], // Add your domains
+  origin: ['https://oslira.com', 'http://localhost:3000', 'http://localhost:8080'],
   allowHeaders: [
     'Content-Type', 
     'Authorization', 
-    'X-Request-ID',           // ⭐ ADD THIS
-    'X-Client-Version',       // ⭐ ADD THIS  
-    'X-Timestamp',           // ⭐ ADD THIS
-    'X-Analytics-Request'    // ⭐ ADD THIS
+    'X-Request-ID',           // ✅ Already added
+    'X-Client-Version',       // ✅ Already added  
+    'X-Timestamp',           // ✅ Already added
+    'X-Analytics-Request',   // ✅ Already added
+    'X-User-ID',             // ⭐ ADD THIS - was missing!
+    'X-Business-ID',         // ⭐ ADD THIS
+    'X-Session-ID',          // ⭐ ADD THIS
+    'X-Request-Type',        // ⭐ ADD THIS
+    'Accept',
+    'Accept-Language',
+    'Accept-Encoding'
   ],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  credentials: true,
+  maxAge: 86400 // Cache preflight for 24 hours
 }));
 // Enhanced OPTIONS handler for analytics endpoints
 app.options('*', c => {
