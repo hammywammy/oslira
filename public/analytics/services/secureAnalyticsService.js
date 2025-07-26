@@ -112,6 +112,83 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
         });
     }
 
+    // Add this method to your SecureAnalyticsService class:
+
+async getMessageRiskData(filters = {}) {
+    try {
+        console.log('⚠️ Fetching message risk analysis...', {
+            filterCount: Object.keys(filters).length,
+            riskTypes: filters.riskTypes || 'all'
+        });
+        
+        const payload = {
+            filters: this.sanitizeFilters ? this.sanitizeFilterData(filters) : filters,
+            requestType: 'message_risk',
+            timestamp: new Date().toISOString(),
+            requestId: this.generateRequestId(),
+            options: {
+                includeRiskFactors: true,
+                includeMitigations: true,
+                riskThreshold: filters.riskThreshold || 0.7,
+                analysisDepth: filters.analysisDepth || 'standard'
+            }
+        };
+        
+        // Check cache first
+        const cacheKey = this.generateCacheKey('messageRisk', payload);
+        const cached = this.getFromCache(cacheKey);
+        if (cached) {
+            console.log('📋 Returning cached message risk data');
+            return cached;
+        }
+        
+        // Make request to worker
+        const response = await this.makeAnalyticsRequest('/analytics/message-risk', payload);
+        
+        if (!response.success) {
+            throw new Error(response.error || 'Message risk fetch failed');
+        }
+        
+        // Process and return data
+        const processedData = {
+            success: true,
+            riskAnalysis: response.data || {},
+            riskFactors: response.data?.riskFactors || [],
+            mitigations: response.data?.mitigations || [],
+            overallRiskScore: response.data?.overallRiskScore || 0,
+            metadata: {
+                lastUpdate: new Date().toISOString(),
+                analysisVersion: 'v1.0'
+            }
+        };
+        
+        // Cache the result
+        this.setCache(cacheKey, processedData, this.cacheTTL.messageRisk || 300000);
+        
+        console.log('✅ Message risk analysis fetched successfully:', {
+            riskFactors: processedData.riskFactors.length,
+            overallScore: processedData.overallRiskScore,
+            mitigations: processedData.mitigations.length
+        });
+        
+        return processedData;
+        
+    } catch (error) {
+        console.error('❌ Message risk fetch failed:', error);
+        
+        // Return fallback data
+        return {
+            success: false,
+            error: error.message,
+            riskAnalysis: {},
+            riskFactors: [],
+            mitigations: [],
+            overallRiskScore: 0,
+            fallback: true
+        };
+    }
+}
+
     async getMessageMatrix(filters = {}) {
         // 🔐 Fetch message style performance matrix via Worker
         try {
