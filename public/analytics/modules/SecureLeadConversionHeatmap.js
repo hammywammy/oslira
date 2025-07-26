@@ -378,6 +378,39 @@ class SecureLeadConversionHeatmap {
     }
 }
 
+    async onError(error, context = {}) {
+    console.error(`❌ [SecureLeadConversionHeatmap] Error in ${context.operation || 'unknown'}:`, error);
+    
+    // Log error for debugging
+    this.lastError = {
+        error: error.message,
+        context,
+        timestamp: new Date().toISOString()
+    };
+    
+    // Show error UI
+    if (this.container) {
+        this.container.innerHTML = `
+            <div class="heatmap-error" style="padding: 20px; text-align: center; color: #dc3545;">
+                <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+                <h4>Unable to Load Heatmap</h4>
+                <p>${error.message}</p>
+                <button onclick="window.location.reload()" style="
+                    background: #007bff; 
+                    color: white; 
+                    border: none; 
+                    padding: 8px 16px; 
+                    border-radius: 4px; 
+                    cursor: pointer;
+                ">Retry</button>
+            </div>
+        `;
+    }
+    
+    // Update state
+    this.state = 'error';
+}
+
     async cleanup() {
         console.log('🧹 SecureLeadConversionHeatmap cleanup starting...');
         
