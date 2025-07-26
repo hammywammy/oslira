@@ -203,6 +203,10 @@ class EnterpriseServiceManager {
     }
     
     console.log('✅ [ServiceManager] Critical services initialized successfully');
+
+     // Store services globally for module access (add this after line ~205)
+window.OsliraApp.serviceManager = this;
+console.log('✅ [ServiceManager] Services registered globally:', this.services.size);
 }
 
     async initializeServiceBatch(serviceConfigs) {
