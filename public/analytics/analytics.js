@@ -171,44 +171,39 @@ class EnterpriseServiceManager {
     }
 
     async initializeServices() {
-        performance.mark('services-init-start');
-        console.log('🔧 [ServiceManager] Initializing enterprise services...');
-
-        const serviceConfigs = [
-            { name: 'analytics', class: SecureAnalyticsService, critical: true },
-            { name: 'claude', class: SecureClaudeService, critical: false },
-            { name: 'credit', class: SecureCreditService, critical: true },
-            { name: 'dataWrite', class: SecureDataWriteService, critical: false },
-            { name: 'integration', class: SecureIntegrationService, critical: false }
-        ];
-
-        // Initialize critical services first
-        const criticalServices = serviceConfigs.filter(config => config.critical);
-        const standardServices = serviceConfigs.filter(config => !config.critical);
-
-        try {
-            // Initialize critical services with timeout
-            await Promise.race([
-                this.initializeServiceBatch(criticalServices),
-                this.createTimeout(CRITICAL_LOAD_TIMEOUT, 'Critical services timeout')
-            ]);
-
-            // Initialize standard services in background
-            this.initializeServiceBatch(standardServices).catch(error => {
-                console.warn('⚠️ [ServiceManager] Non-critical service initialization failed:', error);
-            });
-
-            performance.mark('services-init-end');
-            performance.measure('services-init-duration', 'services-init-start', 'services-init-end');
-            
-            console.log('✅ [ServiceManager] Critical services initialized successfully');
-            this.startHealthMonitoring();
-
-        } catch (error) {
-            console.error('❌ [ServiceManager] Critical service initialization failed:', error);
-            throw new Error(`Failed to initialize critical services: ${error.message}`);
-        }
+    console.log('🔧 [ServiceManager] Initializing enterprise services...');
+    
+    // CRITICAL: Ensure workerUrl is available before creating any services
+    const workerUrl = window.OsliraApp?.config?.workerUrl || window.CONFIG?.workerUrl;
+    if (!workerUrl) {
+        throw new Error('Worker URL not configured in environment');
     }
+    
+    // Set workerUrl globally for all services
+    if (window.OsliraApp?.config) {
+        window.OsliraApp.config.workerUrl = workerUrl;
+    }
+    
+    console.log('🔧 [ServiceManager] Using worker URL:', workerUrl);
+    
+    const serviceConfigs = [
+        { name: 'analytics', class: SecureAnalyticsService, critical: true },
+        { name: 'credit', class: SecureCreditService, critical: false },
+        { name: 'claude', class: SecureClaudeService, critical: false },
+        { name: 'dataWrite', class: SecureDataWriteService, critical: false },
+        { name: 'integration', class: SecureIntegrationService, critical: false }
+    ];
+    
+    const results = await this.initializeServiceBatch(serviceConfigs);
+    
+    // Validate critical services
+    const criticalFailures = results.filter(r => !r.success && serviceConfigs.find(c => c.name === r.name)?.critical);
+    if (criticalFailures.length > 0) {
+        throw new Error(`Critical services failed: ${criticalFailures.map(f => f.name).join(', ')}`);
+    }
+    
+    console.log('✅ [ServiceManager] Critical services initialized successfully');
+}
 
     async initializeServiceBatch(serviceConfigs) {
         const promises = serviceConfigs.map(async (config) => {
