@@ -1649,14 +1649,15 @@ app.use('*', cors({
   allowHeaders: [
     'Content-Type', 
     'Authorization', 
-    'X-Request-ID',           // ✅ Already added
-    'X-Client-Version',       // ✅ Already added  
-    'X-Timestamp',           // ✅ Already added
-    'X-Analytics-Request',   // ✅ Already added
-    'X-User-ID',             // ⭐ ADD THIS - was missing!
-    'X-Business-ID',         // ⭐ ADD THIS
-    'X-Session-ID',          // ⭐ ADD THIS
-    'X-Request-Type',        // ⭐ ADD THIS
+    'X-Request-ID',           
+    'X-Client-Version',       
+    'X-Timestamp',           
+    'X-Analytics-Request',   
+    'X-User-ID',             
+    'X-Business-ID',         
+    'X-Session-ID',          
+    'X-Request-Type',        
+    'X-Compression',         // ⭐ ADD THIS - This was missing!
     'Accept',
     'Accept-Language',
     'Accept-Encoding'
@@ -1665,12 +1666,13 @@ app.use('*', cors({
   credentials: true,
   maxAge: 86400 // Cache preflight for 24 hours
 }));
-// Enhanced OPTIONS handler for analytics endpoints
+
+// Also update the OPTIONS handler to include X-Compression:
 app.options('*', c => {
   return c.text('', 200, {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Compression' // ⭐ ADD X-Compression here too
   });
 });
 
