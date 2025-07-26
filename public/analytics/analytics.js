@@ -1065,3 +1065,15 @@ window.OsliraApp.dashboard = {
 
 console.log(`📊 [Analytics] Enterprise analytics engine v${ANALYTICS_VERSION} loaded successfully`);
 performance.mark('analytics-loaded');
+
+// ===== DEBUG LOGGING =====
+window.addEventListener('load', () => {
+    setTimeout(() => {
+        console.log('🔍 [DEBUG] Analytics Dashboard Status:', {
+            workerUrl: window.OsliraApp?.config?.workerUrl,
+            modulesRegistry: window.OsliraApp?.modules?.size || 0,
+            serviceManager: !!window.OsliraApp?.serviceManager,
+            moduleStates: window.OsliraApp?.moduleLifecycle?.moduleStates || 'not available'
+        });
+    }, 2000);
+});
