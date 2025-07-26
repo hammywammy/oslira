@@ -479,10 +479,54 @@ function updateLoadingMessage(message) {
 // 9. UTILITY FUNCTIONS
 // =============================================================================
 
+// Find the getCurrentPageName function in your shared-code.js and replace it with this:
+
 function getCurrentPageName() {
-    const path = window.location.pathname;
-    const filename = path.split('/').pop();
-    return filename.replace('.html', '') || 'index';
+    const pathname = window.location.pathname;
+    
+    // Handle directory-style paths like /analytics/
+    if (pathname.startsWith('/analytics')) {
+        return 'analytics';
+    }
+    
+    if (pathname.startsWith('/auth')) {
+        return 'auth';
+    }
+    
+    if (pathname.startsWith('/dashboard')) {
+        return 'dashboard';
+    }
+    
+    if (pathname.startsWith('/leads')) {
+        return 'leads';
+    }
+    
+    if (pathname.startsWith('/subscription')) {
+        return 'subscription';
+    }
+    
+    if (pathname.startsWith('/settings')) {
+        return 'settings';
+    }
+    
+    // Handle file-based paths like /analytics.html
+    const filename = pathname.split('/').pop();
+    if (filename && filename.includes('.')) {
+        return filename.split('.')[0];
+    }
+    
+    // Handle root paths
+    if (pathname === '/' || pathname === '') {
+        return 'index';
+    }
+    
+    // Extract page name from path segments
+    const segments = pathname.split('/').filter(Boolean);
+    if (segments.length > 0) {
+        return segments[0];
+    }
+    
+    return 'index';
 }
 
 function debounce(func, wait, immediate = false) {
