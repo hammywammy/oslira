@@ -5,7 +5,7 @@ import { cors } from 'hono/cors';
 // Type Definitions
 // ------------------------------------
 interface ProfileData {
-  username: string;
+  username: string; 
   fullName?: string;
   biography?: string;
   followersCount: number;
