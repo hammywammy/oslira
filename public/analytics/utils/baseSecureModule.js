@@ -229,8 +229,20 @@ export class BaseSecureModule {
                 securityContext: this.securityContext
             };
             
-            // Make secure request
-            const data = await analyticsService.makeSecureRequest(endpoint, securePayload);
+            // 🔧 FIX: Determine correct HTTP method based on endpoint
+            const httpMethod = this.getEndpointMethod(endpoint);
+            
+            // 🔧 FIX: Pass payload as 'data' with proper method
+            const requestOptions = {
+                method: httpMethod,
+                data: securePayload,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
+            
+            // Make secure request with correct format
+            const data = await analyticsService.makeSecureRequest(endpoint, requestOptions);
             
             // Cache successful response if enabled
             if (this.config.cacheEnabled && data) {
@@ -252,6 +264,36 @@ export class BaseSecureModule {
             console.error(`❌ [${this.constructor.name}] Data fetch failed:`, error);
             throw error;
         }
+    }
+    
+    // 🔧 NEW: Method to determine HTTP method based on endpoint
+    getEndpointMethod(endpoint) {
+        // Define endpoint-specific HTTP methods
+        const endpointMethods = {
+            '/analytics/summary': 'GET',
+            '/ai/generate-insights': 'POST',
+            '/analytics/message-matrix': 'POST',
+            '/analytics/cta-effectiveness': 'POST', 
+            '/analytics/lead-conversion': 'POST',
+            '/analytics/timeline-overlay': 'POST',
+            '/analytics/iteration-roi': 'POST',
+            '/analytics/team-impact': 'POST',
+            '/analytics/crm-comparison': 'POST',
+            '/analytics/claude-history': 'POST'
+        };
+        
+        // Return the correct method or default to POST for analytics endpoints
+        const method = endpointMethods[endpoint];
+        if (method) {
+            return method;
+        }
+        
+        // Default logic: GET for summary endpoints, POST for everything else
+        if (endpoint.includes('/summary') || endpoint.includes('/health')) {
+            return 'GET';
+        }
+        
+        return 'POST'; // Default to POST for AI/analytics endpoints
     }
     
     generateCacheKey(endpoint, payload) {
