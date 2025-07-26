@@ -810,6 +810,45 @@ class SecureMessageStyleMatrix {
         };
     }
 
+    cleanup() {
+    console.log('🧹 [SecureMessageStyleMatrix] Cleaning up...');
+    
+    // Clear any timers
+    if (this.refreshTimer) {
+        clearInterval(this.refreshTimer);
+        this.refreshTimer = null;
+    }
+    
+    // Clear any charts
+    if (this.matrixChart) {
+        this.matrixChart.destroy();
+        this.matrixChart = null;
+    }
+    
+    // Clear container
+    if (this.container) {
+        this.container.innerHTML = '';
+    }
+    
+    // Clear data
+    this.currentData = null;
+    this.lastDataFetch = null;
+}
+
+getModuleInfo() {
+    return {
+        name: 'SecureMessageStyleMatrix',
+        version: '1.0.0',
+        description: 'Secure message style performance matrix analysis',
+        type: 'analytics',
+        priority: 2,
+        capabilities: ['matrix_analysis', 'style_comparison', 'performance_tracking'],
+        status: this.isLoading ? 'loading' : 'ready',
+        lastUpdate: this.lastDataFetch,
+        dataPoints: this.currentData ? Object.keys(this.currentData).length : 0
+    };
+}
+
     getMetrics() {
         // Get matrix performance metrics
         return {
