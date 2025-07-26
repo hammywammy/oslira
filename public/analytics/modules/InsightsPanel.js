@@ -7,17 +7,20 @@ import { BaseSecureModule } from '../utils/baseSecureModule.js';
 import { setCachedData, getCachedData } from '../utils/moduleCache.js';
 import { createIcon, addTooltip, formatNumber } from '../utils/UIHelpers.js';
 
-export class InsightsPanel extends BaseSecureModule {
-    constructor(container, analyticsService, claudeService, creditService) {
+constructor(container, analyticsService, claudeService, creditService) {
     super(container);
 
-         this.analyticsService = analyticsService || null;
+    this.analyticsService = analyticsService || null;
     this.claudeService = claudeService || null;
     this.creditService = creditService || null;
     
-    // Only bind methods if services exist
-    if (this.claudeService && typeof this.claudeService.someMethod === 'function') {
-        this.boundMethod = this.claudeService.someMethod.bind(this.claudeService);
+    // Only bind methods if services exist and have the methods
+    this.boundMethods = {};
+    if (this.claudeService && typeof this.claudeService.generateInsights === 'function') {
+        this.boundMethods.generateInsights = this.claudeService.generateInsights.bind(this.claudeService);
+    }
+    if (this.analyticsService && typeof this.analyticsService.getInsightData === 'function') {
+        this.boundMethods.getInsightData = this.analyticsService.getInsightData.bind(this.analyticsService);
     }
         // Module-specific configuration
         this.config = {
