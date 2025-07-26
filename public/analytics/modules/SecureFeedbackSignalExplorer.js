@@ -2394,6 +2394,57 @@ class SecureFeedbackSignalExplorer {
         };
     }
 
+    cleanup() {
+    console.log('🧹 [SecureFeedbackSignalExplorer] Cleaning up...');
+    
+    // Clear timers
+    if (this.refreshTimer) {
+        clearInterval(this.refreshTimer);
+        this.refreshTimer = null;
+    }
+    
+    // Clear charts
+    if (this.sentimentChart) {
+        this.sentimentChart.destroy();
+        this.sentimentChart = null;
+    }
+    
+    if (this.themeChart) {
+        this.themeChart.destroy();
+        this.themeChart = null;
+    }
+    
+    if (this.trendChart) {
+        this.trendChart.destroy();
+        this.trendChart = null;
+    }
+    
+    // Clear container
+    if (this.container) {
+        this.container.innerHTML = '';
+    }
+    
+    // Clear data
+    this.currentData = null;
+    this.lastAnalysis = null;
+    this.claudeProcessingQueue = [];
+}
+
+getModuleInfo() {
+    return {
+        name: 'SecureFeedbackSignalExplorer',
+        version: '1.0.0',
+        description: 'Secure feedback signal analysis with Claude AI',
+        type: 'analytics',
+        priority: 3,
+        capabilities: ['feedback_analysis', 'sentiment_analysis', 'theme_extraction', 'claude_integration'],
+        status: this.isProcessingWithClaude ? 'processing' : 'ready',
+        lastUpdate: this.lastDataFetch,
+        feedbackCount: this.currentData ? this.currentData.length : 0,
+        claudeQueueSize: this.claudeProcessingQueue.length
+    };
+}
+
     destroy() {
         // Clean up feedback explorer resources
         if (this.refreshTimer) {
