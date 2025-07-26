@@ -1265,7 +1265,7 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
             timeout = this.config?.timeout || 60000  // ADD DEFAULT TIMEOUT
         } = options;
 
-        const url = `${this.config?.baseUrl || 'https://oslira-worker.example.workers.dev'}${endpoint}`;
+        const url = `${this.baseUrl}${endpoint}`;
         
         const requestOptions = {
             method,
