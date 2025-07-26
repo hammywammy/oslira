@@ -3,7 +3,7 @@ class SecureLeadConversionHeatmap {
         this.container = container;
         this.analyticsService = analyticsService;
         
-        // ⭐ FIX: Initialize methods before binding
+        // ⭐ FIX: Initialize methods before binding (common issue)
         this.moduleState = {
             isLoading: false,
             hasError: false,
@@ -20,10 +20,10 @@ class SecureLeadConversionHeatmap {
             enableInteractions: true
         };
         
-        // ⭐ FIX: Bind methods safely
-        this.handleHover = this.handleHover?.bind ? this.handleHover.bind(this) : () => {};
-        this.handleClick = this.handleClick?.bind ? this.handleClick.bind(this) : () => {};
-        this.handleResize = this.handleResize?.bind ? this.handleResize.bind(this) : () => {};
+        // ⭐ FIX: Only bind methods that exist
+        this.handleHover = this.handleHover ? this.handleHover.bind(this) : () => {};
+        this.handleClick = this.handleClick ? this.handleClick.bind(this) : () => {};
+        this.handleResize = this.handleResize ? this.handleResize.bind(this) : () => {};
         
         console.log('🔥 SecureLeadConversionHeatmap initialized');
     }
@@ -334,128 +334,135 @@ class SecureLeadConversionHeatmap {
         this.container.appendChild(this.announcementRegion);
     }
 
-    async render(filters = {}) {
-        // Render secure lead conversion heatmap
+     async render(filters = {}) {
+        const startTime = performance.now();
+        this.setState('rendering');
+        
         try {
-            this.currentFilters = { ...filters };
-            this.showLoading();
-            this.clearError();
+            // Show loading state
+            this.showLoading('Loading conversion heatmap...');
             
-            // Fetch conversion data via Worker endpoints
+            // Fetch conversion data
             const heatmapData = await this.fetchConversionData(filters);
             
-            // Validate and process data
-            this.validateHeatmapData(heatmapData);
+            // Render heatmap UI
+            await this.renderHeatmapUI(heatmapData);
             
-            // Apply server-side filtering for security
-            const filteredData = this.applySecurityFiltering(heatmapData);
+            // Setup event listeners
+            this.setupEventListeners();
             
-            // Create interactive heatmap visualization
-            await this.createHeatmapChart(filteredData);
+            // Update performance metrics
+            const renderTime = performance.now() - startTime;
+            this.updatePerformanceMetrics('renderTime', renderTime);
             
-            // Update statistics
-            this.updateStatistics(filteredData);
-            
-            // Update current data
-            this.currentData = filteredData;
-            this.lastDataFetch = Date.now();
-            
-            // Setup auto-refresh
-            this.setupAutoRefresh();
-            
-            // Hide loading state
-            this.hideLoading();
-            
-            // Log successful render
-            this.logAuditEvent('heatmap_rendered', {
-                filters,
-                dataPoints: filteredData.cells?.length || 0,
-                renderTime: Date.now()
-            });
-            
-            // Announce to screen readers
-            this.announceToScreenReader(`Heatmap loaded with ${filteredData.cells?.length || 0} data points`);
+            console.log(`✅ SecureLeadConversionHeatmap rendered in ${renderTime.toFixed(2)}ms`);
             
         } catch (error) {
-            console.error('Heatmap render failed:', error);
-            this.showError(error.message);
-            this.hideLoading();
-            this.logAuditEvent('render_failed', { error: error.message, filters });
+            await this.onError(error, { operation: 'render', filters });
+            throw error;
         }
     }
 
     async cleanup() {
         console.log('🧹 SecureLeadConversionHeatmap cleanup starting...');
         
-        // Clear chart instance
-        if (this.chartInstance) {
-            this.chartInstance.destroy();
-            this.chartInstance = null;
+        try {
+            // Clear chart instance
+            if (this.chartInstance) {
+                this.chartInstance.destroy();
+                this.chartInstance = null;
+            }
+            
+            // Clear event listeners
+            if (this.container) {
+                this.container.removeEventListener('mouseover', this.handleHover);
+                this.container.removeEventListener('click', this.handleClick);
+                window.removeEventListener('resize', this.handleResize);
+            }
+            
+            // Clear resize observer
+            if (this.resizeObserver) {
+                this.resizeObserver.disconnect();
+                this.resizeObserver = null;
+            }
+            
+            // Clear timers
+            if (this.updateTimer) {
+                clearInterval(this.updateTimer);
+                this.updateTimer = null;
+            }
+            
+            // Clear module state
+            this.moduleState = {
+                isLoading: false,
+                hasError: false,
+                lastUpdate: null,
+                heatmapData: null
+            };
+            
+            // Clear container
+            if (this.container) {
+                this.container.innerHTML = '';
+            }
+            
+            console.log('✅ SecureLeadConversionHeatmap cleanup completed');
+            
+        } catch (error) {
+            console.error('❌ SecureLeadConversionHeatmap cleanup error:', error);
         }
-        
-        // Clear event listeners
-        if (this.container) {
-            this.container.removeEventListener('mouseover', this.handleHover);
-            this.container.removeEventListener('click', this.handleClick);
-            window.removeEventListener('resize', this.handleResize);
-        }
-        
-        // Clear module state
-        this.moduleState = {
-            isLoading: false,
-            hasError: false,
-            lastUpdate: null,
-            heatmapData: null
-        };
-        
-        console.log('✅ SecureLeadConversionHeatmap cleanup completed');
     }
     
     getModuleInfo() {
         return {
             name: 'SecureLeadConversionHeatmap',
             version: '1.0.0',
-            description: 'Lead conversion heatmap visualization module',
+            description: 'Advanced lead conversion heatmap with interactive analytics',
             author: 'Oslira Analytics Team',
-            dependencies: ['SecureAnalyticsService'],
+            dependencies: [
+                'SecureAnalyticsService'
+            ],
             capabilities: [
                 'Lead conversion visualization',
                 'Heatmap generation',
-                'Interactive analytics',
-                'Performance insights'
+                'Interactive cell exploration',
+                'Statistical confidence intervals',
+                'Performance insights',
+                'Real-time updates'
             ],
             configuration: Object.keys(this.config || {}),
             state: {
-                isLoading: this.moduleState.isLoading,
-                hasError: this.moduleState.hasError,
-                lastUpdate: this.moduleState.lastUpdate,
-                hasData: !!this.moduleState.heatmapData
+                isLoading: this.moduleState?.isLoading || false,
+                hasError: this.moduleState?.hasError || false,
+                lastUpdate: this.moduleState?.lastUpdate || null,
+                hasData: !!(this.moduleState?.heatmapData)
             },
-            endpoints: ['/analytics/lead-conversion']
+            endpoints: ['/analytics/lead-conversion'],
+            performance: this.getPerformanceMetrics ? this.getPerformanceMetrics() : {}
         };
     }
-}
 
-    async fetchConversionData(filters) {
-        // Fetch conversion data via Worker endpoints
+   async fetchConversionData(filters = {}) {
         try {
-            const response = await this.analyticsService.getLeadConversionHeatmap({
-                ...filters,
-                includeStatistics: true,
-                includeConfidence: true,
-                includeBreakdown: true,
-                aggregationType: 'weighted_average',
-                minSampleSize: 10 // Minimum for statistical significance
+            console.log('🔥 Fetching lead conversion heatmap...', {
+                filterCount: Object.keys(filters).length,
+                leadTypes: filters.leadTypes?.length || 'all'
             });
             
-            if (!response || !response.success) {
-                throw new Error(response?.message || 'Invalid response from conversion analytics service');
+            const response = await this.analyticsService.getLeadConversionHeatmap({
+                ...filters,
+                includeMetrics: true,
+                includeConfidence: true,
+                aggregationType: 'weighted_average'
+            });
+            
+            if (!response || !response.heatmapData) {
+                throw new Error('Invalid heatmap data received from server');
             }
             
-            return response.data;
+            return response;
             
         } catch (error) {
-            console.error('Conversion data fetch failed:', error);
+            console.error('❌ Conversion data fetch failed:', error);
             throw new Error(`Failed to fetch conversion data: ${error.message}`);
         }
     }
