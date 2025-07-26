@@ -130,6 +130,7 @@ async function checkAuthentication() {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
+            console.error('❌ Supabase auth error:', error);
             throw error;
         }
         
@@ -139,12 +140,20 @@ async function checkAuthentication() {
             return null;
         }
         
+        // 🔧 FIX: Properly sync session to global state
         window.OsliraApp.session = session;
         window.OsliraApp.user = session.user;
         
         console.log('✅ User authenticated');
         console.log('👤 User email:', session.user.email);
         console.log('🆔 User ID:', session.user.id);
+        console.log('🔑 Token synced to global state');
+        
+        // 🔧 FIX: Verify the sync worked
+        if (!window.OsliraApp.session?.access_token) {
+            console.error('❌ Session sync failed - token not in global state');
+            throw new Error('Session synchronization failed');
+        }
         
         setupAuthListener();
         return session.user;
@@ -176,22 +185,49 @@ function setupAuthListener() {
     if (!supabase) return;
     
     supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state changed:', event);
+        console.log('🔄 Auth state changed:', event);
         
         if (event === 'SIGNED_OUT' || !session) {
             window.OsliraApp.user = null;
             window.OsliraApp.session = null;
             redirectToLogin();
-        } else if (event === 'SIGNED_IN') {
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+            // 🔧 FIX: Always sync session on auth events
             window.OsliraApp.session = session;
             window.OsliraApp.user = session.user;
             
+            console.log('✅ Session updated in global state');
+            
             // Emit auth event for pages to listen to
-            window.OsliraApp.events.dispatchEvent(new CustomEvent('userAuthenticated', {
+            window.OsliraApp.events?.dispatchEvent(new CustomEvent('userAuthenticated', {
                 detail: { user: session.user }
             }));
         }
     });
+}
+
+async function refreshSessionSync() {
+    try {
+        const supabase = window.OsliraApp.supabase;
+        if (!supabase) return false;
+        
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+            console.log('⚠️ No valid session to sync');
+            return false;
+        }
+        
+        window.OsliraApp.session = session;
+        window.OsliraApp.user = session.user;
+        
+        console.log('🔄 Session refreshed and synced');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Session refresh failed:', error);
+        return false;
+    }
 }
 
 function redirectToLogin() {
