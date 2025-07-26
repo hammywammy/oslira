@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 // ------------------------------------
-// Type Definitions
+// Type Definitions 
 // ------------------------------------
 interface ProfileData {
   username: string; 
