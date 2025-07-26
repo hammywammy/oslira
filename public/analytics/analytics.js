@@ -676,6 +676,39 @@ class OsliraDashboardController {
         this.loadingProgress = 0;
     }
 
+     async ensureAuthenticationSync() {
+        try {
+            // Check if session is already synced
+            if (window.OsliraApp?.session?.access_token) {
+                console.log('✅ Session already synced for analytics');
+                return;
+            }
+
+            // Make sure session is synced before starting analytics
+            if (!window.OsliraApp?.session?.access_token && window.OsliraApp?.supabase) {
+                console.log('🔧 Session not synced, attempting refresh...');
+                
+                const { data: { session }, error } = await window.OsliraApp.supabase.auth.getSession();
+                
+                if (error) {
+                    console.error('❌ Failed to get Supabase session:', error);
+                    return;
+                }
+                
+                if (session) {
+                    window.OsliraApp.session = session;
+                    window.OsliraApp.user = session.user;
+                    console.log('✅ Session synced successfully for analytics');
+                } else {
+                    console.warn('⚠️ No valid session found - analytics will use demo mode');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Authentication sync failed:', error);
+            // Don't throw - allow analytics to continue with demo mode
+        }
+    }
+
     async initialize() {
         if (this.initialized) {
             console.log('⚠️ [Dashboard] Already initialized');
