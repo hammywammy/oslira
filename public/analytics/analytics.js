@@ -290,7 +290,6 @@ class EnterpriseServiceManager {
 }
 
 // ===== ENTERPRISE MODULE LIFECYCLE MANAGER =====
-
 class EnterpriseModuleLifecycle {
     constructor() {
         this.modules = new Map();
@@ -301,10 +300,10 @@ class EnterpriseModuleLifecycle {
         this.moduleMetrics = new Map();
     }
 
-    async initializeModule(containerId, moduleConfig) {
+    async initializeModule(containerId, moduleConfig, attempt = 1) {
         const startTime = performance.now();
-        console.log(`🔧 [ModuleLifecycle] Initializing module: ${containerId}`);
-
+        console.log(`🔧 [ModuleLifecycle] Initializing module: ${containerId} (attempt ${attempt})`);
+        
         try {
             // Get container element
             const container = document.getElementById(containerId);
@@ -333,16 +332,23 @@ class EnterpriseModuleLifecycle {
             // Execute lifecycle: initialize → render → ready
             await this.executeModuleLifecycle(moduleInstance, containerId);
 
-            // Store module
+            // Store module in both local and global registries
             this.modules.set(containerId, moduleInstance);
-            window.OsliraApp.modules.set(containerId, moduleInstance);
+            
+            // Safely store in global registry
+            if (window.OsliraApp && window.OsliraApp.modules) {
+                window.OsliraApp.modules.set(containerId, moduleInstance);
+            }
 
-            // Record metrics
+            // Clear retry counter on success
+            this.retryAttempts.delete(containerId);
+
+            // Record success metrics
             const duration = performance.now() - startTime;
             this.moduleMetrics.set(containerId, {
                 loadTime: duration,
                 status: 'success',
-                retries: this.retryAttempts.get(containerId) || 0
+                retries: attempt - 1
             });
 
             console.log(`✅ [ModuleLifecycle] Module ${containerId} initialized in ${duration.toFixed(2)}ms`);
@@ -357,26 +363,31 @@ class EnterpriseModuleLifecycle {
                 loadTime: duration,
                 status: 'failed',
                 error: error.message,
-                retries: this.retryAttempts.get(containerId) || 0
+                retries: attempt - 1
             });
 
             // Attempt retry if under limit
-            const retries = this.retryAttempts.get(containerId) || 0;
-if (retries < this.maxRetries) {
-    this.retryAttempts.set(containerId, retries + 1);
-    console.log(`🔄 [ModuleLifecycle] Retrying ${containerId} (attempt ${retries + 1})`);
-    
-    // Exponential backoff
-    const delay = Math.pow(2, retries) * 1000;
-    setTimeout(() => {
-        this.initializeModule(containerId, moduleConfig);
-    }, delay);
-    return null; // ADD THIS LINE
-} // ADD THIS CLOSING BRACE
+            if (attempt < this.maxRetries) {
+                console.log(`🔄 [ModuleLifecycle] Retrying ${containerId} (attempt ${attempt + 1})`);
+                
+                // Exponential backoff delay
+                const delay = Math.pow(2, attempt - 1) * 1000;
+                
+                setTimeout(() => {
+                    this.initializeModule(containerId, moduleConfig, attempt + 1).catch(retryError => {
+                        console.error(`❌ [ModuleLifecycle] Retry failed for ${containerId}:`, retryError);
+                    });
+                }, delay);
+                
+                return null; // Return null for retry attempts
+            }
 
-// All retries exhausted - render fallback
-this.renderModuleFallback(containerId, error);
-throw error;
+            // All retries exhausted - render fallback
+            console.error(`❌ [ModuleLifecycle] Max retries (${this.maxRetries}) reached for ${containerId}, using fallback`);
+            this.renderModuleFallback(containerId, error);
+            
+            // Don't throw error to prevent breaking other modules
+            return null;
         }
     }
 
@@ -449,33 +460,33 @@ throw error;
     }
 
     getRequiredServices(serviceNames) {
-    const serviceManager = window.OsliraApp.serviceManager;
-    if (!serviceManager) {
-        console.warn('⚠️ [ModuleLifecycle] Service manager not available, creating mock services');
-        return serviceNames.map(name => this.createMockService(name));
-    }
-    
-    return serviceNames.map(serviceName => {
-        const service = serviceManager.getService(serviceName);
-        if (!service) {
-            console.warn(`⚠️ [ModuleLifecycle] Service ${serviceName} not available, using mock`);
-            return this.createMockService(serviceName);
+        const serviceManager = window.OsliraApp.serviceManager;
+        if (!serviceManager) {
+            console.warn('⚠️ [ModuleLifecycle] Service manager not available, creating mock services');
+            return serviceNames.map(name => this.createMockService(name));
         }
-        return service;
-    }).filter(Boolean);
-}
+        
+        return serviceNames.map(serviceName => {
+            const service = serviceManager.getService(serviceName);
+            if (!service) {
+                console.warn(`⚠️ [ModuleLifecycle] Service ${serviceName} not available, using mock`);
+                return this.createMockService(serviceName);
+            }
+            return service;
+        }).filter(Boolean);
+    }
 
-createMockService(serviceName) {
-    return {
-        healthCheck: () => Promise.resolve(false),
-        makeSecureRequest: () => Promise.reject(new Error(`${serviceName} service not available`)),
-        generateInsights: () => Promise.resolve([]),
-        getInsightData: () => Promise.resolve({}),
-        initialize: () => Promise.resolve(),
-        [serviceName]: 'mock',
-        isMock: true
-    };
-}
+    createMockService(serviceName) {
+        return {
+            healthCheck: () => Promise.resolve(false),
+            makeSecureRequest: () => Promise.reject(new Error(`${serviceName} service not available`)),
+            generateInsights: () => Promise.resolve([]),
+            getInsightData: () => Promise.resolve({}),
+            initialize: () => Promise.resolve(),
+            [serviceName]: 'mock',
+            isMock: true
+        };
+    }
 
     renderModuleFallback(containerId, error) {
         const container = document.getElementById(containerId);
@@ -514,6 +525,8 @@ createMockService(serviceName) {
         return Object.fromEntries(this.moduleMetrics);
     }
 }
+
+
 
 // ===== ENTERPRISE CONTAINER REGISTRY =====
 
