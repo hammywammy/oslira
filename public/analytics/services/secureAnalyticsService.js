@@ -1,7 +1,11 @@
 class SecureAnalyticsService {
     constructor() {
         // Initialize secure analytics data client
-        this.baseUrl = window.OsliraApp?.config?.workerUrl;
+        this.baseUrl = window.OsliraApp?.config?.workerUrl || 
+               window.CONFIG?.workerUrl || 
+               'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
+
+console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
         this.backupUrl = window.OsliraApp?.config?.backupWorkerUrl || null;
         this.currentEndpoint = 'primary';
         
