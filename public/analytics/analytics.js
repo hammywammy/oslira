@@ -973,26 +973,35 @@ window.OsliraApp.config = { ...this.configManager.getConfig() };
     }
 
     collectPerformanceMetrics() {
+    try {
+        // ⭐ FIX: Check if performance map exists
+        if (!window.OsliraApp.performance) {
+            window.OsliraApp.performance = new Map();
+        }
+        
         const metrics = {
             timestamp: Date.now(),
-            memory: performance.memory ? {
-                used: performance.memory.usedJSHeapSize,
-                total: performance.memory.totalJSHeapSize,
-                limit: performance.memory.jsHeapSizeLimit
+            memoryUsage: performance.memory ? {
+                used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+                total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024),
+                limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)
             } : null,
-            moduleMetrics: this.moduleLifecycle.getModuleMetrics(),
-            serviceHealth: this.serviceManager.getServiceHealth(),
-            cacheStats: getCacheStats()
+            timing: performance.timing ? {
+                loadComplete: performance.timing.loadEventEnd - performance.timing.navigationStart,
+                domReady: performance.timing.domContentLoadedEventEnd - performance.timing.navigationStart,
+                firstPaint: performance.getEntriesByType('paint').find(p => p.name === 'first-paint')?.startTime || 0
+            } : null,
+            moduleStates: this.moduleLifecycle ? Object.fromEntries(this.moduleLifecycle.moduleStates) : {},
+            serviceHealth: this.serviceManager ? this.serviceManager.getServiceHealth() : {}
         };
-
-        window.OsliraApp.performance.set(Date.now(), metrics);
-
-        // Keep only last 100 performance snapshots
-        if (window.OsliraApp.performance.size > 100) {
-            const oldestKey = Math.min(...window.OsliraApp.performance.keys());
-            window.OsliraApp.performance.delete(oldestKey);
-        }
+        
+        window.OsliraApp.performance.set('metrics', metrics);
+        
+    } catch (error) {
+        console.warn('⚠️ Performance metrics collection failed:', error);
+        // Don't throw - this shouldn't break the dashboard
     }
+}
 
     showLoadingOverlay() {
         const overlay = document.getElementById('analytics-loading');
