@@ -203,6 +203,16 @@ class SecureMessageStyleMatrix {
             
             // Verify user credits before expensive operations
             const creditCheck = await this.verifyCreditBalance();
+
+// Handle bypass case
+if (creditCheck.message === 'Credit check bypassed' || creditCheck.message === 'Development bypass') {
+    console.log('💳 Credit check bypassed for development');
+} else if (creditCheck.credits && creditCheck.credits < this.config.creditCost) {
+    throw new Error(`Insufficient credits. Required: ${this.config.creditCost}, Available: ${creditCheck.credits}`);
+} else if (creditCheck.credits === undefined) {
+    // Default to allowing if credits are undefined (service not available)
+    console.log('💳 Credit service unavailable, proceeding with request');
+}
             if (!creditCheck.sufficient) {
                 throw new Error(`Insufficient credits. Required: ${this.config.creditCost}, Available: ${creditCheck.balance}`);
             }
