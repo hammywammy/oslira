@@ -112,6 +112,20 @@ console.log('🔧 [SecureAnalyticsService] Using baseUrl:', this.baseUrl);
         });
     }
 
+    cleanupStaleRequests() {
+    const now = Date.now();
+    const staleThreshold = this.requestTimeout;
+    
+    // Clean up active requests
+    for (const [requestId, timestamp] of this.activeRequests.entries()) {
+        if (now - timestamp > staleThreshold) {
+            console.log(`🧹 Cleaning up stale request: ${requestId}`);
+            this.activeRequests.delete(requestId);
+        }
+    }
+
+}
+
     // Add this method to your SecureAnalyticsService class:
 
 async getMessageRiskData(filters = {}) {
@@ -998,9 +1012,27 @@ async getMessageRiskData(filters = {}) {
             // Check for active duplicate requests
             const requestKey = this.generateRequestKey(endpoint, fixedPayload);
             if (this.activeRequests.has(requestKey)) {
-                console.log('🔄 Deduplicating identical analytics request');
-                throw new Error('Identical request already in progress');
+    console.log(`🔄 Request already in progress for ${endpoint}, waiting...`);
+    
+    // Wait for existing request to complete (with timeout)
+    return new Promise((resolve, reject) => {
+        const checkInterval = setInterval(() => {
+            if (!this.activeRequests.has(requestKey)) {
+                clearInterval(checkInterval);
+                // Retry the request
+                this.makeAnalyticsRequest(endpoint, payload, requestId)
+                    .then(resolve)
+                    .catch(reject);
             }
+        }, 500);
+        
+        // Timeout after 30 seconds
+        setTimeout(() => {
+            clearInterval(checkInterval);
+            reject(new Error('Request timeout - identical request took too long'));
+        }, this.requestTimeout);
+    });
+}
             
             // Rate limiting check
             if (this.activeRequests.size >= this.maxConcurrentRequests) {
