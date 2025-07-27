@@ -1988,15 +1988,14 @@ app.post('/analyze', async c => {
     // 9. Database operations
 const leadData = {
   user_id: userId,
-  business_id: data.business_id,
+  business_id: data.business_id || null,
   username: profileData.username,
   platform: data.platform || 'instagram',
   profile_url: data.profile_url,
   profile_pic_url: profileData.profilePicUrl || null,
   score: analysisResult.score || 0,
-  type: data.analysis_type,  // ← This line exists
-  // ADD THIS LINE:
-  analysis_type: data.analysis_type,  // ← ADD THIS
+  type: data.analysis_type,              // For dashboard compatibility
+  analysis_type: data.analysis_type,     // For database constraint
   user_timezone: body.timezone || 'UTC',
   user_local_time: body.user_local_time || new Date().toISOString(),
   created_at: body.request_timestamp || new Date().toISOString()
@@ -2007,16 +2006,23 @@ console.log('💾 About to save leadData:', JSON.stringify(leadData, null, 2));
 console.log('🖼️ Profile pic URL being saved:', leadData.profile_pic_url);
 
 let analysisData = null;
-if (analysis_type === 'deep') {
+if (data.analysis_type === 'deep') {
   analysisData = {
     user_id: userId,
-    business_id: business_id,  // ✅ ADD THIS LINE
     analysis_type: 'deep',
-    engagement_score: analysisResult.engagement_score || null,
-    score_niche_fit: analysisResult.niche_fit || null,
+    engagement_score: analysisResult.engagement_score || 0,
+    score_niche_fit: analysisResult.niche_fit || 0,
     score_total: analysisResult.score || 0,
+    ai_version_id: 'gpt-4o',
     outreach_message: outreachMessage || null,
-    selling_points: analysisResult.selling_points || null
+    selling_points: Array.isArray(analysisResult.selling_points) 
+      ? JSON.stringify(analysisResult.selling_points) 
+      : analysisResult.selling_points || null,
+    avg_comments: profileData.engagement?.avgComments?.toString() || null,
+    avg_likes: profileData.engagement?.avgLikes?.toString() || null,
+    engagement_rate: profileData.engagement?.engagementRate?.toString() || null,
+    audience_quality: 'High',
+    engagement_insights: null
   };
 }
 
@@ -2323,16 +2329,41 @@ app.post('/bulk-analyze', async c => {
           }
         }
 
+        const leadData = {
+  user_id: userId,
+  business_id: business_id || null,
+  username: validatedProfile.username,
+  platform: platform || 'instagram',
+  profile_url: `https://instagram.com/${username}`,
+  profile_pic_url: validatedProfile.profilePicUrl || null,
+  score: analysisResult.score || 0,
+  type: analysis_type,              // For dashboard compatibility
+  analysis_type: analysis_type,     // For database constraint
+  user_timezone: body.timezone || 'UTC',
+  user_local_time: body.user_local_time || new Date().toISOString(),
+  created_at: new Date(new Date(body.request_timestamp || new Date().toISOString()).getTime() + (i * 1000)).toISOString()
+};
+
         let analysisData = null;
         if (analysis_type === 'deep') {
           analysisData = {
             user_id: userId,
+            business_id: business_id || null,         // ✅ ADDED
+            lead_id: null,                            // ✅ Will be set by saveLeadAndAnalysis
             analysis_type: 'deep',
-            engagement_score: analysisResult.engagement_score || null,
-            score_niche_fit: analysisResult.niche_fit || null,
+            engagement_score: analysisResult.engagement_score || 0,
+            score_niche_fit: analysisResult.niche_fit || 0,
             score_total: analysisResult.score || 0,
+            ai_version_id: 'gpt-4o',                  // ✅ ADDED
             outreach_message: outreachMessage || null,
-            selling_points: analysisResult.selling_points || null
+            selling_points: Array.isArray(analysisResult.selling_points) 
+              ? JSON.stringify(analysisResult.selling_points) 
+              : analysisResult.selling_points || null,
+            avg_comments: validatedProfile.engagement?.avgComments?.toString() || null,
+            avg_likes: validatedProfile.engagement?.avgLikes?.toString() || null,
+            engagement_rate: validatedProfile.engagement?.engagementRate?.toString() || null,
+            audience_quality: 'High',                 // ✅ ADDED default
+            engagement_insights: null                 // ✅ ADDED
           };
         }
 
