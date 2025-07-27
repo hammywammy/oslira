@@ -513,7 +513,10 @@ async loadRecentActivity() {
     // EVENT HANDLERS
     // =============================================================================
 
-    setupEventListeners() {
+// Replace the setupEventListeners method in your dashboard.js file
+// Make sure to add the missing closing brace
+
+setupEventListeners() {
     // Analysis modal
     document.getElementById('research-lead-btn')?.addEventListener('click', () => this.showAnalysisModal());
     document.getElementById('research-action-card')?.addEventListener('click', () => this.showAnalysisModal());
@@ -523,7 +526,7 @@ async loadRecentActivity() {
     document.getElementById('bulk-upload-btn')?.addEventListener('click', () => this.showBulkUpload());
     document.getElementById('csv-import-action-card')?.addEventListener('click', () => this.showBulkUpload());
     
-    // FIX: Add missing campaigns handler
+    // Campaigns handler
     document.getElementById('campaigns-action-card')?.addEventListener('click', () => {
         window.location.href = '/campaigns.html';
     });
@@ -542,45 +545,15 @@ async loadRecentActivity() {
     document.getElementById('business-select')?.addEventListener('change', () => this.switchBusiness());
     
     // Forms
-        const analysisForm = document.getElementById('analysisForm');
-    if (analysisForm) {
-        console.log('✅ Found analysisForm element');
-        analysisForm.addEventListener('submit', (e) => {
-            console.log('🔥 Form submit event triggered!');
-            this.submitAnalysis(e);
-        });
-        
-        // Also add a click listener to the submit button as backup
-        const submitBtn = analysisForm.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            console.log('✅ Found submit button');
-            submitBtn.addEventListener('click', (e) => {
-                console.log('🔥 Submit button clicked!');
-                // Don't prevent default here, let the form submission handle it
-            });
-        } else {
-            console.error('❌ Submit button not found in form');
-        }
-    } else {
-        console.error('❌ analysisForm element not found!');
-    }
-    
-    const analysisTypeSelect = document.getElementById('analysis-type');
-    if (analysisTypeSelect) {
-        console.log('✅ Found analysis-type select');
-        analysisTypeSelect.addEventListener('change', () => {
-            console.log('🔥 Analysis type changed:', analysisTypeSelect.value);
-            this.updateInputField();
-        });
-    } else {
-       
+    document.getElementById('analysisForm')?.addEventListener('submit', (e) => this.submitAnalysis(e));
+    document.getElementById('analysis-type')?.addEventListener('change', () => this.updateInputField());
     
     // Modal controls
     document.getElementById('analysis-modal-close')?.addEventListener('click', () => this.closeModal('analysisModal'));
     document.getElementById('lead-modal-close')?.addEventListener('click', () => this.closeModal('leadModal'));
     document.getElementById('bulk-modal-close')?.addEventListener('click', () => this.closeModal('bulkModal'));
     
-    // FIX: Add missing support modal handlers
+    // Support modal handlers
     document.getElementById('support-btn')?.addEventListener('click', () => this.showSupportModal());
     document.getElementById('general-support-btn')?.addEventListener('click', () => this.contactSupport('support'));
     document.getElementById('billing-support-btn')?.addEventListener('click', () => this.contactSupport('billing'));
@@ -594,7 +567,7 @@ async loadRecentActivity() {
     // Global modal handling
     window.addEventListener('click', (e) => this.handleModalClick(e));
     document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
-}
+} // ← This closing brace was likely missing
 
     // =============================================================================
     // ANALYSIS FUNCTIONALITY
