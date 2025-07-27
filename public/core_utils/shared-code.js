@@ -389,7 +389,23 @@ async function apiRequest(endpoint, options = {}) {
         }
     };
     
-    const url = endpoint.startsWith('http') ? endpoint : `${config.apiUrl || ''}${endpoint}`;
+    // ✅ FIXED: Proper URL construction
+    let url;
+    if (endpoint.startsWith('http')) {
+        // Full URL provided
+        url = endpoint;
+    } else if (endpoint.startsWith('/analyze') || endpoint.startsWith('/bulk-analyze')) {
+        // API endpoints go to worker
+        const workerUrl = config.workerUrl || 'https://ai-outreach-api.oslira-worker.workers.dev';
+        url = `${workerUrl}${endpoint}`;
+    } else if (endpoint.startsWith('/api/')) {
+        // Netlify edge functions
+        url = endpoint;
+    } else {
+        // Default to worker for other endpoints
+        const workerUrl = config.workerUrl || 'https://ai-outreach-api.oslira-worker.workers.dev';
+        url = `${workerUrl}${endpoint}`;
+    }
     
     try {
         console.log(`🌐 API Request: ${requestOptions.method || 'GET'} ${url}`);
@@ -397,6 +413,8 @@ async function apiRequest(endpoint, options = {}) {
         const response = await fetch(url, requestOptions);
         
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ API Error: ${response.status} ${response.statusText}`, errorText);
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
@@ -408,7 +426,6 @@ async function apiRequest(endpoint, options = {}) {
         throw error;
     }
 }
-
 // =============================================================================
 // 8. UI UTILITY FUNCTIONS
 // =============================================================================
