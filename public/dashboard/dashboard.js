@@ -189,70 +189,98 @@ class OsliraDashboard {
     }
 
     async loadRecentActivity() {
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
-        
-        if (!supabase || !user) {
+    const supabase = window.OsliraApp.supabase;
+    const user = window.OsliraApp.user;
+    
+    if (!supabase || !user) {
+        console.log('⚠️ Supabase or user not available, showing demo data');
+        this.displayDemoLeads();
+        return;
+    }
+    
+    try {
+        // ✅ FIXED: Better error handling for leads query
+        let query = supabase
+            .from('leads')
+            .select(`
+                *,
+                profile_pic_url,
+                lead_analyses (
+                    engagement_score,
+                    score_niche_fit,
+                    score_total,
+                    ai_version_id,
+                    outreach_message,
+                    selling_points,
+                    analysis_type
+                )
+            `)
+            .eq('user_id', user.id);
+
+        // Apply timeframe filter safely
+        const timeframe = document.getElementById('timeframe-filter')?.value || 'month';
+        if (timeframe !== 'all') {
+            const now = new Date();
+            let startDate;
+            
+            switch (timeframe) {
+                case 'today':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                case 'week':
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                default:
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
+            }
+            
+            query = query.gte('created_at', startDate.toISOString());
+        }
+
+        // Apply activity filter safely
+        const activityFilter = document.getElementById('activity-filter')?.value || 'all';
+        if (activityFilter !== 'all') {
+            switch (activityFilter) {
+                case 'light':
+                case 'deep':
+                    query = query.eq('analysis_type', activityFilter);
+                    break;
+                case 'score_high':
+                    query = query.gte('score', 80);
+                    break;
+                case 'score_low':
+                    query = query.lt('score', 60);
+                    break;
+                case 'recent':
+                    query = query.order('created_at', { ascending: false });
+                    break;
+                case 'oldest':
+                    query = query.order('created_at', { ascending: true });
+                    break;
+            }
+        }
+
+        // Execute query with limit
+        const { data: leads, error } = await query
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error) {
+            console.error('❌ Error loading leads:', error);
             this.displayDemoLeads();
             return;
         }
+
+        console.log(`✅ Loaded ${(leads || []).length} leads`);
+        this.renderLeads(leads || []);
         
-        try {
-            let query = supabase
-                .from('leads')
-                .select(`
-                    *,
-                    profile_pic_url,
-                    lead_analyses (
-                        engagement_score,
-                        score_niche_fit,
-                        score_total,
-                        ai_version_id,
-                        outreach_message,
-                        selling_points,
-                        analysis_type
-                    )
-                `)
-                .eq('user_id', user.id);
-
-            // Apply timeframe filter
-            const timeframe = document.getElementById('timeframe-filter')?.value || 'month';
-            if (timeframe !== 'all') {
-                const now = new Date();
-                let startDate;
-                
-                switch (timeframe) {
-                    case 'today':
-                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                        break;
-                    case 'week':
-                        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                        break;
-                    case 'month':
-                        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                        break;
-                }
-                
-                if (startDate) {
-                    query = query.gte('created_at', startDate.toISOString());
-                }
-            }
-
-            const { data: leads, error } = await query
-                .order('created_at', { ascending: false })
-                .limit(50);
-            
-            if (error) throw error;
-            
-            this.allLeads = leads || [];
-            this.selectedLeads.clear();
-            this.applyActivityFilter();
-            
-        } catch (error) {
-            console.error('Error loading activity:', error);
-            this.displayErrorState('Failed to load leads: ' + error.message);
-        }
+    } catch (error) {
+        console.error('Error loading activity:', error);
+        this.displayDemoLeads();
     }
+}
 
     displayDemoLeads() {
         this.allLeads = [
