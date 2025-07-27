@@ -96,6 +96,52 @@ class SecureFeedbackSignalExplorer {
         
         console.log('SecureFeedbackSignalExplorer initialized');
     }
+    // ADD THESE METHODS after the constructor:
+
+getModuleInfo() {
+    return {
+        name: 'Message Style Matrix',
+        version: '1.0.0',
+        description: 'AI-powered message style performance analysis',
+        dependencies: ['claudeService', 'analyticsService'],
+        status: this.state || 'uninitialized',
+        container: this.container?.id || 'unknown'
+    };
+}
+
+cleanup() {
+    console.log('🧹 Cleaning up SecureMessageStyleMatrix');
+    
+    if (this.updateInterval) {
+        clearInterval(this.updateInterval);
+    }
+    
+    if (this.container) {
+        this.container.innerHTML = '';
+    }
+    
+    this.state = 'cleaned';
+}
+
+onError(error, context = {}) {
+    console.error(`❌ SecureMessageStyleMatrix error:`, error);
+    this.fallbackRender(error);
+}
+
+async fallbackRender(error) {
+    if (this.container) {
+        this.container.innerHTML = `
+            <div style="padding:20px;background:#f8f9fa;border-radius:8px;text-align:center;">
+                <h4>⚠️ Message Style Matrix Unavailable</h4>
+                <p>This feature requires credits or has a temporary issue.</p>
+                <button onclick="location.reload()" style="background:#3b82f6;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;">
+                    Reload Dashboard
+                </button>
+            </div>
+        `;
+    }
+    this.state = 'fallback';
+}
 
     setupServiceConnections() {
         // Connect to secure analytics and Claude services
@@ -2393,57 +2439,6 @@ class SecureFeedbackSignalExplorer {
             timeoutId = setTimeout(() => func.apply(this, args), delay);
         };
     }
-
-    cleanup() {
-    console.log('🧹 [SecureFeedbackSignalExplorer] Cleaning up...');
-    
-    // Clear timers
-    if (this.refreshTimer) {
-        clearInterval(this.refreshTimer);
-        this.refreshTimer = null;
-    }
-    
-    // Clear charts
-    if (this.sentimentChart) {
-        this.sentimentChart.destroy();
-        this.sentimentChart = null;
-    }
-    
-    if (this.themeChart) {
-        this.themeChart.destroy();
-        this.themeChart = null;
-    }
-    
-    if (this.trendChart) {
-        this.trendChart.destroy();
-        this.trendChart = null;
-    }
-    
-    // Clear container
-    if (this.container) {
-        this.container.innerHTML = '';
-    }
-    
-    // Clear data
-    this.currentData = null;
-    this.lastAnalysis = null;
-    this.claudeProcessingQueue = [];
-}
-
-getModuleInfo() {
-    return {
-        name: 'SecureFeedbackSignalExplorer',
-        version: '1.0.0',
-        description: 'Secure feedback signal analysis with Claude AI',
-        type: 'analytics',
-        priority: 3,
-        capabilities: ['feedback_analysis', 'sentiment_analysis', 'theme_extraction', 'claude_integration'],
-        status: this.isProcessingWithClaude ? 'processing' : 'ready',
-        lastUpdate: this.lastDataFetch,
-        feedbackCount: this.currentData ? this.currentData.length : 0,
-        claudeQueueSize: this.claudeProcessingQueue.length
-    };
-}
 
     destroy() {
         // Clean up feedback explorer resources
