@@ -157,6 +157,53 @@ class SecureOutreachTimelineOverlay {
         console.log('SecureOutreachTimelineOverlay initialized');
     }
 
+    // ADD THESE METHODS after the constructor:
+
+getModuleInfo() {
+    return {
+        name: 'Message Style Matrix',
+        version: '1.0.0',
+        description: 'AI-powered message style performance analysis',
+        dependencies: ['claudeService', 'analyticsService'],
+        status: this.state || 'uninitialized',
+        container: this.container?.id || 'unknown'
+    };
+}
+
+cleanup() {
+    console.log('🧹 Cleaning up SecureMessageStyleMatrix');
+    
+    if (this.updateInterval) {
+        clearInterval(this.updateInterval);
+    }
+    
+    if (this.container) {
+        this.container.innerHTML = '';
+    }
+    
+    this.state = 'cleaned';
+}
+
+onError(error, context = {}) {
+    console.error(`❌ SecureMessageStyleMatrix error:`, error);
+    this.fallbackRender(error);
+}
+
+async fallbackRender(error) {
+    if (this.container) {
+        this.container.innerHTML = `
+            <div style="padding:20px;background:#f8f9fa;border-radius:8px;text-align:center;">
+                <h4>⚠️ Message Style Matrix Unavailable</h4>
+                <p>This feature requires credits or has a temporary issue.</p>
+                <button onclick="location.reload()" style="background:#3b82f6;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;">
+                    Reload Dashboard
+                </button>
+            </div>
+        `;
+    }
+    this.state = 'fallback';
+}
+
     setupServiceConnection() {
         // Connect to secure analytics endpoints
         if (!this.analyticsService) {
@@ -2289,45 +2336,6 @@ class SecureOutreachTimelineOverlay {
             timeoutId = setTimeout(() => func.apply(this, args), delay);
         };
     }
-
-    cleanup() {
-    console.log('🧹 [SecureOutreachTimelineOverlay] Cleaning up...');
-    
-    // Clear timers
-    if (this.refreshTimer) {
-        clearInterval(this.refreshTimer);
-        this.refreshTimer = null;
-    }
-    
-    // Clear charts
-    if (this.timelineChart) {
-        this.timelineChart.destroy();
-        this.timelineChart = null;
-    }
-    
-    // Clear container
-    if (this.container) {
-        this.container.innerHTML = '';
-    }
-    
-    // Clear data
-    this.currentData = null;
-    this.timelineEvents = [];
-}
-
-getModuleInfo() {
-    return {
-        name: 'SecureOutreachTimelineOverlay',
-        version: '1.0.0',
-        description: 'Secure outreach timeline overlay with event tracking',
-        type: 'analytics',
-        priority: 5,
-        capabilities: ['timeline_analysis', 'event_tracking', 'temporal_patterns'],
-        status: this.isLoading ? 'loading' : 'ready',
-        lastUpdate: this.lastDataFetch,
-        eventCount: this.timelineEvents ? this.timelineEvents.length : 0
-    };
-}
 
     destroy() {
         // Clean up timeline overlay resources
