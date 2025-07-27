@@ -1994,7 +1994,7 @@ const leadData = {
   profile_url: data.profile_url,
   profile_pic_url: profileData.profilePicUrl || null,
   score: analysisResult.score || 0,
-  type: data.analysis_type,
+  analysis_type: data.analysis_type,  // ✅ CORRECT: sends as 'analysis_type'
   user_timezone: body.timezone || 'UTC',
   user_local_time: body.user_local_time || new Date().toISOString(),
   created_at: body.request_timestamp || new Date().toISOString()
