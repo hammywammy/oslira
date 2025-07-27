@@ -1582,7 +1582,11 @@ contactSupport(type = 'support') {
 
    buildLeadDetailsHTML(lead) {
     const analysis = lead.lead_analyses?.[0] || {};
-    const hasAnalysisData = analysis && Object.keys(analysis).length > 0;
+    const hasAnalysisData = analysis && 
+    typeof analysis === 'object' && 
+    analysis !== null && 
+    Object.keys(analysis).length > 0;
+
     const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
     const score = lead.score || 0;
     const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
@@ -1594,7 +1598,7 @@ contactSupport(type = 'support') {
         analysisType, 
         isDeepAnalysis, 
         hasAnalysisData, 
-        analysisKeys: Object.keys(analysis) 
+        analysisKeys: analysis && typeof analysis === 'object' && analysis !== null ? Object.keys(analysis) : []
     });
     
     // Build profile header with profile picture
@@ -1606,7 +1610,7 @@ contactSupport(type = 'support') {
     html += this.buildAnalysisStatusSection(lead, analysisType);
     
     // Add advanced sections for deep analysis
-    if (isDeepAnalysis && analysis && Object.keys(analysis).length > 0) {
+   if (isDeepAnalysis && analysis && typeof analysis === 'object' && analysis !== null && Object.keys(analysis).length > 0) {
         console.log('📊 Adding advanced sections for deep analysis');
         html += this.buildAdvancedMetricsSection(analysis);
         html += this.buildEngagementSection(analysis);
