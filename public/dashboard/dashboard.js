@@ -648,74 +648,95 @@ class OsliraDashboard {
     }
 
     async submitAnalysis(event) {
-        event.preventDefault();
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('button[type="submit"]');
+    const originalText = submitButton.textContent;
+    
+    // Get form values
+    const profileUrl = formData.get('profile_url')?.trim();
+    const analysisType = formData.get('analysis_type') || 'light';
+    const businessId = formData.get('business_id');
+    
+    // Validation
+    if (!profileUrl) {
+        window.OsliraApp.showMessage('Please enter a profile URL', 'error');
+        return;
+    }
+    
+    if (!businessId) {
+        window.OsliraApp.showMessage('Please select a business profile', 'error');
+        return;
+    }
+    
+    // Show loading state
+    submitButton.textContent = 'Analyzing...';
+    submitButton.disabled = true;
+    
+    try {
+        console.log('🔄 Starting analysis submission...');
         
-        const analysisType = document.getElementById('analysis-type').value;
-        const profileInput = document.getElementById('profile-input').value.trim();
-        const businessId = document.getElementById('business-id').value;
+        // ✅ FIXED: Use the correct worker URL directly instead of apiRequest
+        const workerUrl = window.OsliraApp.config?.workerUrl || 
+                         window.CONFIG?.workerUrl || 
+                         'https://ai-outreach-api.oslira-worker.workers.dev';
         
-        if (!analysisType || !profileInput) {
-            window.OsliraApp.showMessage('Please fill in all required fields', 'error');
-            return;
+        const session = window.OsliraApp.session;
+        if (!session) {
+            throw new Error('User not authenticated');
         }
         
-        const username = profileInput.replace('@', '');
-        
-        if (!this.validateUsername(username)) {
-            window.OsliraApp.showMessage('Please enter a valid Instagram username', 'error');
-            return;
-        }
-        
-        const profileUrl = `https://instagram.com/${username}`;
-        
-        const submitBtn = event.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.innerHTML = '🔄 Analyzing... <small style="display: block; font-size: 10px; margin-top: 4px;">This may take 30-60 seconds</small>';
-        submitBtn.disabled = true;
-        
-        window.OsliraApp.showMessage('Starting analysis... This may take up to 60 seconds', 'info');
-        
-        try {
-            const user = window.OsliraApp.user;
-            const session = window.OsliraApp.session;
-            
-            if (!user || !session) {
-                throw new Error('Please log in to continue');
-            }
-
-            const timezoneInfo = this.getCurrentTimestampWithTimezone();
-            
-            const requestBody = {
+        // ✅ FIXED: Direct fetch to worker endpoint
+        const response = await fetch(`${workerUrl}/analyze`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify({
                 profile_url: profileUrl,
                 analysis_type: analysisType,
-                business_id: businessId || null,
-                user_id: user.id,
-                platform: 'instagram',
-                timezone: timezoneInfo.timezone,
-                user_local_time: timezoneInfo.local_time,
-                request_timestamp: timezoneInfo.timestamp
-            };
-            
-            const result = await window.OsliraApp.apiRequest('/analyze', {
-                method: 'POST',
-                body: JSON.stringify(requestBody)
-            });
-            
-            window.OsliraApp.showMessage('Analysis completed successfully!', 'success');
-            this.closeModal('analysisModal');
-            
-            // Refresh dashboard data
-            await this.loadDashboardData();
-            await this.refreshCreditsDisplay();
-            
-        } catch (error) {
-            console.error('Analysis error:', error);
-            window.OsliraApp.showMessage(`Analysis failed: ${error.message}`, 'error');
-        } finally {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
+                business_id: businessId,
+                user_id: window.OsliraApp.user.id,
+                timezone: window.OsliraApp.getUserTimezone(),
+                user_local_time: new Date().toISOString(),
+                request_timestamp: new Date().toISOString()
+            })
+        });
+        
+        console.log('📡 Response status:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Analysis failed:', response.status, errorText);
+            throw new Error(`Analysis failed: ${response.status} ${errorText}`);
         }
+        
+        const result = await response.json();
+        console.log('✅ Analysis successful:', result);
+        
+        // Show success message
+        window.OsliraApp.showMessage('Analysis completed successfully!', 'success');
+        
+        // Close modal and refresh data
+        this.closeModal('analysisModal');
+        await this.loadDashboardData();
+        
+        // Reset form
+        form.reset();
+        
+    } catch (error) {
+        console.error('Analysis error:', error);
+        window.OsliraApp.showMessage(`Analysis failed: ${error.message}`, 'error');
+    } finally {
+        // Reset button
+        submitButton.textContent = originalText;
+        submitButton.disabled = false;
     }
+}
+
 
     validateUsername(username) {
         const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
