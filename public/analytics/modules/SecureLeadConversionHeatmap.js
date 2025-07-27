@@ -1718,6 +1718,48 @@ setupHeatmapInteractions() {
             timeoutId = setTimeout(() => func.apply(this, args), delay);
         };
     }
+    // Add this method to your SecureLeadConversionHeatmap class:
+
+updatePerformanceMetrics(metricName, value) {
+    try {
+        // Initialize performance metrics if not exists
+        if (!this.performanceMetrics) {
+            this.performanceMetrics = {
+                renderTime: 0,
+                dataFetchTime: 0,
+                interactionCount: 0,
+                errorCount: 0,
+                lastUpdate: null
+            };
+        }
+        
+        // Update the specific metric
+        this.performanceMetrics[metricName] = value;
+        this.performanceMetrics.lastUpdate = new Date().toISOString();
+        
+        // Log performance for debugging
+        console.log(`📊 [SecureLeadConversionHeatmap] Performance metric updated: ${metricName} = ${value}`);
+        
+        // Optional: Send to analytics if needed
+        if (window.OsliraApp?.analytics?.recordMetric) {
+            window.OsliraApp.analytics.recordMetric('heatmap', metricName, value);
+        }
+        
+    } catch (error) {
+        console.warn('⚠️ Failed to update performance metric:', error);
+    }
+}
+
+// Also add this method for getting performance metrics:
+getPerformanceMetrics() {
+    return this.performanceMetrics || {
+        renderTime: 0,
+        dataFetchTime: 0,
+        interactionCount: 0,
+        errorCount: 0,
+        lastUpdate: null
+    };
+}
 
     getMetrics() {
         // Get heatmap performance metrics
