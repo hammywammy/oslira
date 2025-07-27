@@ -297,7 +297,8 @@ class EnterpriseModuleLifecycle {
         this.retryAttempts = new Map();
         this.maxRetries = 3;
         this.moduleMetrics = new Map();
-     this.moduleStates = new Map();
+       this.loadedModules = new Set();
+ 
     }
 
     async initializeModule(containerId, moduleConfig, attempt = 1) {
@@ -717,6 +718,13 @@ class OsliraDashboardController {
         }
 
         try {
+         if (!this.moduleStates) {
+            console.warn('⚠️ moduleStates not initialized, creating new Map');
+            this.moduleStates = new Map();
+        }
+        
+        const startTime = performance.now();
+         
             performance.mark('dashboard-init-start');
             console.log('🚀 [Dashboard] Starting enterprise initialization...');
 
