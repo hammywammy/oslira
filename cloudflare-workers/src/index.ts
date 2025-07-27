@@ -18,7 +18,7 @@ interface ProfileData {
   businessCategory?: string;
   // Deep analysis specific fields
   latestPosts?: any[];
-  engagement?: {
+  engagement?: { 
     avgLikes?: number;
     avgComments?: number;
     engagementRate?: number;
