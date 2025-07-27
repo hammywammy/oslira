@@ -2006,18 +2006,19 @@ const leadData = {
 console.log('💾 About to save leadData:', JSON.stringify(leadData, null, 2));
 console.log('🖼️ Profile pic URL being saved:', leadData.profile_pic_url);
 
-    let analysisData = null;
-    if (data.analysis_type === 'deep') {
-      analysisData = {
-        user_id: userId,
-        analysis_type: 'deep' as const,
-        engagement_score: analysisResult.engagement_score || null,
-        score_niche_fit: analysisResult.niche_fit || null,
-        score_total: analysisResult.score || 0,
-        outreach_message: outreachMessage || null,
-        selling_points: analysisResult.selling_points || null
-      };
-    }
+let analysisData = null;
+if (analysis_type === 'deep') {
+  analysisData = {
+    user_id: userId,
+    business_id: business_id,  // ✅ ADD THIS LINE
+    analysis_type: 'deep',
+    engagement_score: analysisResult.engagement_score || null,
+    score_niche_fit: analysisResult.niche_fit || null,
+    score_total: analysisResult.score || 0,
+    outreach_message: outreachMessage || null,
+    selling_points: analysisResult.selling_points || null
+  };
+}
 
     let leadId;
     try {
