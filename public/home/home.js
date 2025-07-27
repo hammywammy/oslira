@@ -212,8 +212,12 @@ function validateUsername(username) {
 
 async function performRealDemo(username) {
     try {
-        // Call the actual API
-        const response = await fetch(`${window.CONFIG.workerUrl}/analyze`, {
+        // ✅ FIXED: Safe access to config
+        const workerUrl = window.CONFIG?.workerUrl || 
+                         window.OsliraApp?.config?.workerUrl || 
+                         'https://ai-outreach-api.oslira-worker.workers.dev';
+        
+        const response = await fetch(`${workerUrl}/analyze`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
