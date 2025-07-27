@@ -297,8 +297,12 @@ class EnterpriseModuleLifecycle {
         this.retryAttempts = new Map();
         this.maxRetries = 3;
         this.moduleMetrics = new Map();
-       this.loadedModules = new Set();
- 
+        this.loadedModules = new Set();
+        
+        // CRITICAL FIX: Ensure moduleStates is always available
+        if (!this.moduleStates) {
+            this.moduleStates = new Map();
+        }
     }
 
     async initializeModule(containerId, moduleConfig, attempt = 1) {
@@ -674,6 +678,9 @@ class OsliraDashboardController {
         this.statusMonitor = new SystemStatusMonitor();
         this.configManager = new SecureAnalyticsConfigManager();
         
+        // CRITICAL FIX: Initialize moduleStates Map
+        this.moduleStates = new Map();
+        
         this.initialized = false;
         this.loadingProgress = 0;
     }
@@ -773,12 +780,16 @@ window.OsliraApp.config = { ...this.configManager.getConfig() };
             
             console.log(`🎯 [Dashboard] Enterprise dashboard initialized in ${totalTime.toFixed(2)}ms`);
             
+            // CRITICAL FIX: Safe access to module count
+            const moduleCount = this.moduleStates ? this.moduleStates.size : 0;
+            const serviceCount = window.OsliraApp?.serviceManager?.services?.size || 0;
+            
             // Dispatch ready event
             window.dispatchEvent(new CustomEvent('oslira:dashboard:ready', {
                 detail: { 
                     initTime: totalTime,
-                    moduleCount: window.OsliraApp.modules.size,
-                    serviceCount: window.OsliraApp.serviceManager.services.size
+                    moduleCount: moduleCount,
+                    serviceCount: serviceCount
                 }
             }));
 
