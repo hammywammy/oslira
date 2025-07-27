@@ -51,6 +51,53 @@ class SecureMessageStyleMatrix {
         console.log('SecureMessageStyleMatrix initialized');
     }
 
+    // ADD THESE METHODS after the constructor:
+
+getModuleInfo() {
+    return {
+        name: 'Message Style Matrix',
+        version: '1.0.0',
+        description: 'AI-powered message style performance analysis',
+        dependencies: ['claudeService', 'analyticsService'],
+        status: this.state || 'uninitialized',
+        container: this.container?.id || 'unknown'
+    };
+}
+
+cleanup() {
+    console.log('🧹 Cleaning up SecureMessageStyleMatrix');
+    
+    if (this.updateInterval) {
+        clearInterval(this.updateInterval);
+    }
+    
+    if (this.container) {
+        this.container.innerHTML = '';
+    }
+    
+    this.state = 'cleaned';
+}
+
+onError(error, context = {}) {
+    console.error(`❌ SecureMessageStyleMatrix error:`, error);
+    this.fallbackRender(error);
+}
+
+async fallbackRender(error) {
+    if (this.container) {
+        this.container.innerHTML = `
+            <div style="padding:20px;background:#f8f9fa;border-radius:8px;text-align:center;">
+                <h4>⚠️ Message Style Matrix Unavailable</h4>
+                <p>This feature requires credits or has a temporary issue.</p>
+                <button onclick="location.reload()" style="background:#3b82f6;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;">
+                    Reload Dashboard
+                </button>
+            </div>
+        `;
+    }
+    this.state = 'fallback';
+}
+
     setupContainer() {
         // Setup visualization container
         if (!this.container) {
@@ -831,45 +878,6 @@ if (creditCheck.message === 'Credit check bypassed' || creditCheck.message === '
             timeoutId = setTimeout(() => func.apply(this, args), delay);
         };
     }
-
-    cleanup() {
-    console.log('🧹 [SecureMessageStyleMatrix] Cleaning up...');
-    
-    // Clear any timers
-    if (this.refreshTimer) {
-        clearInterval(this.refreshTimer);
-        this.refreshTimer = null;
-    }
-    
-    // Clear any charts
-    if (this.matrixChart) {
-        this.matrixChart.destroy();
-        this.matrixChart = null;
-    }
-    
-    // Clear container
-    if (this.container) {
-        this.container.innerHTML = '';
-    }
-    
-    // Clear data
-    this.currentData = null;
-    this.lastDataFetch = null;
-}
-
-getModuleInfo() {
-    return {
-        name: 'SecureMessageStyleMatrix',
-        version: '1.0.0',
-        description: 'Secure message style performance matrix analysis',
-        type: 'analytics',
-        priority: 2,
-        capabilities: ['matrix_analysis', 'style_comparison', 'performance_tracking'],
-        status: this.isLoading ? 'loading' : 'ready',
-        lastUpdate: this.lastDataFetch,
-        dataPoints: this.currentData ? Object.keys(this.currentData).length : 0
-    };
-}
 
     getMetrics() {
         // Get matrix performance metrics
