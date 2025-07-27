@@ -297,6 +297,7 @@ class EnterpriseModuleLifecycle {
         this.retryAttempts = new Map();
         this.maxRetries = 3;
         this.moduleMetrics = new Map();
+     this.moduleStates = new Map();
     }
 
     async initializeModule(containerId, moduleConfig, attempt = 1) {
