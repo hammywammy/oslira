@@ -542,8 +542,38 @@ async loadRecentActivity() {
     document.getElementById('business-select')?.addEventListener('change', () => this.switchBusiness());
     
     // Forms
-    document.getElementById('analysisForm')?.addEventListener('submit', (e) => this.submitAnalysis(e));
-    document.getElementById('analysis-type')?.addEventListener('change', () => this.updateInputField());
+        const analysisForm = document.getElementById('analysisForm');
+    if (analysisForm) {
+        console.log('✅ Found analysisForm element');
+        analysisForm.addEventListener('submit', (e) => {
+            console.log('🔥 Form submit event triggered!');
+            this.submitAnalysis(e);
+        });
+        
+        // Also add a click listener to the submit button as backup
+        const submitBtn = analysisForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            console.log('✅ Found submit button');
+            submitBtn.addEventListener('click', (e) => {
+                console.log('🔥 Submit button clicked!');
+                // Don't prevent default here, let the form submission handle it
+            });
+        } else {
+            console.error('❌ Submit button not found in form');
+        }
+    } else {
+        console.error('❌ analysisForm element not found!');
+    }
+    
+    const analysisTypeSelect = document.getElementById('analysis-type');
+    if (analysisTypeSelect) {
+        console.log('✅ Found analysis-type select');
+        analysisTypeSelect.addEventListener('change', () => {
+            console.log('🔥 Analysis type changed:', analysisTypeSelect.value);
+            this.updateInputField();
+        });
+    } else {
+       
     
     // Modal controls
     document.getElementById('analysis-modal-close')?.addEventListener('click', () => this.closeModal('analysisModal'));
@@ -627,93 +657,127 @@ async loadRecentActivity() {
         }
     }
 
-    async submitAnalysis(event) {
+    // Add this debugging version to your submitAnalysis method in dashboard.js
+// Replace the existing submitAnalysis method with this enhanced version
+
+async submitAnalysis(event) {
     event.preventDefault();
     
-    const form = event.target;
-    const formData = new FormData(form);
-    const submitButton = form.querySelector('button[type="submit"]');
-    const originalText = submitButton.textContent;
+    // DEBUG: Check if method is being called
+    console.log('🔍 submitAnalysis method called');
     
-    // Get form values
-    const profileUrl = formData.get('profile_url')?.trim();
-    const analysisType = formData.get('analysis_type') || 'light';
-    const businessId = formData.get('business_id');
+    // DEBUG: Check form elements exist
+    const analysisTypeEl = document.getElementById('analysis-type');
+    const profileInputEl = document.getElementById('profile-input');
+    const businessIdEl = document.getElementById('business-id');
     
-    // Validation
-    if (!profileUrl) {
-        window.OsliraApp.showMessage('Please enter a profile URL', 'error');
+    console.log('🔍 Form elements check:');
+    console.log('- analysisType element:', analysisTypeEl);
+    console.log('- profileInput element:', profileInputEl);
+    console.log('- businessId element:', businessIdEl);
+    
+    if (!analysisTypeEl || !profileInputEl) {
+        console.error('❌ Required form elements not found!');
+        window.OsliraApp.showMessage('Form elements not found. Please refresh the page.', 'error');
         return;
     }
     
-    if (!businessId) {
-        window.OsliraApp.showMessage('Please select a business profile', 'error');
+    // Get values
+    const analysisType = analysisTypeEl.value;
+    const profileInput = profileInputEl.value.trim();
+    const businessId = businessIdEl ? businessIdEl.value : null;
+    
+    // DEBUG: Log values
+    console.log('🔍 Form values:');
+    console.log('- analysisType:', analysisType);
+    console.log('- profileInput:', profileInput);
+    console.log('- businessId:', businessId);
+    
+    // Check if analysis type is selected
+    if (!analysisType) {
+        console.log('❌ No analysis type selected');
+        window.OsliraApp.showMessage('Please select an analysis type', 'error');
         return;
     }
     
-    // Show loading state
-    submitButton.textContent = 'Analyzing...';
-    submitButton.disabled = true;
+    // Check if profile input container is visible
+    const inputContainer = document.getElementById('input-field-container');
+    console.log('🔍 Input container display:', inputContainer ? inputContainer.style.display : 'not found');
+    
+    // Check if profile input is filled
+    if (!profileInput) {
+        console.log('❌ No profile input provided');
+        window.OsliraApp.showMessage('Please enter an Instagram username', 'error');
+        return;
+    }
+    
+    const username = profileInput.replace('@', '');
+    console.log('🔍 Processed username:', username);
+    
+    // Validate username
+    if (!this.validateUsername(username)) {
+        console.log('❌ Invalid username format');
+        window.OsliraApp.showMessage('Please enter a valid Instagram username', 'error');
+        return;
+    }
+    
+    console.log('✅ Validation passed, starting analysis...');
+    
+    const profileUrl = `https://instagram.com/${username}`;
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.innerHTML = '🔄 Analyzing... <small style="display: block; font-size: 10px; margin-top: 4px;">This may take 30-60 seconds</small>';
+    submitBtn.disabled = true;
+    
+    window.OsliraApp.showMessage('Starting analysis... This may take up to 60 seconds', 'info');
     
     try {
-        console.log('🔄 Starting analysis submission...');
-        
-        // ✅ FIXED: Use the correct worker URL directly instead of apiRequest
-        const workerUrl = window.OsliraApp.config?.workerUrl || 
-                         window.CONFIG?.workerUrl || 
-                         'https://ai-outreach-api.oslira-worker.workers.dev';
-        
+        const user = window.OsliraApp.user;
         const session = window.OsliraApp.session;
-        if (!session) {
-            throw new Error('User not authenticated');
-        }
         
-        // ✅ FIXED: Direct fetch to worker endpoint
-        const response = await fetch(`${workerUrl}/analyze`, {
+        console.log('🔍 Auth check:');
+        console.log('- user:', user);
+        console.log('- session:', session);
+        
+        if (!user || !session) {
+            throw new Error('Please log in to continue');
+        }
+
+        const timezoneInfo = this.getCurrentTimestampWithTimezone();
+        
+        const requestBody = {
+            profile_url: profileUrl,
+            analysis_type: analysisType,
+            business_id: businessId || null,
+            user_id: user.id,
+            platform: 'instagram',
+            timezone: timezoneInfo.timezone,
+            user_local_time: timezoneInfo.local_time,
+            request_timestamp: timezoneInfo.timestamp
+        };
+        
+        console.log('🔍 Request body:', requestBody);
+        
+        const result = await window.OsliraApp.apiRequest('/analyze', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify({
-                profile_url: profileUrl,
-                analysis_type: analysisType,
-                business_id: businessId,
-                user_id: window.OsliraApp.user.id,
-                timezone: window.OsliraApp.getUserTimezone(),
-                user_local_time: new Date().toISOString(),
-                request_timestamp: new Date().toISOString()
-            })
+            body: JSON.stringify(requestBody)
         });
         
-        console.log('📡 Response status:', response.status);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Analysis failed:', response.status, errorText);
-            throw new Error(`Analysis failed: ${response.status} ${errorText}`);
-        }
-        
-        const result = await response.json();
-        console.log('✅ Analysis successful:', result);
-        
-        // Show success message
+        console.log('✅ Analysis completed successfully!');
         window.OsliraApp.showMessage('Analysis completed successfully!', 'success');
-        
-        // Close modal and refresh data
         this.closeModal('analysisModal');
-        await this.loadDashboardData();
         
-        // Reset form
-        form.reset();
+        // Refresh dashboard data
+        await this.loadDashboardData();
+        await this.refreshCreditsDisplay();
         
     } catch (error) {
-        console.error('Analysis error:', error);
+        console.error('❌ Analysis error:', error);
         window.OsliraApp.showMessage(`Analysis failed: ${error.message}`, 'error');
     } finally {
-        // Reset button
-        submitButton.textContent = originalText;
-        submitButton.disabled = false;
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
     }
 }
 
