@@ -299,7 +299,7 @@ static async _checkAuth() {
         try {
             const supabase = window.OsliraApp.supabase;
             const { data: businesses, error } = await supabase
-                .from('businesses')
+                .from('business_profiles')
                 .select('*')
                 .eq('user_id', window.OsliraApp.user.id)
                 .order('created_at', { ascending: false });
