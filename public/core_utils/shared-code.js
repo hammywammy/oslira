@@ -299,7 +299,7 @@ async function loadBusinesses() {
         }
         
         const { data: businesses, error } = await supabase
-            .from('businesses')
+            .from('business_profiles')
             .select('*')
             .eq('user_id', window.OsliraApp.user.id)
             .order('created_at', { ascending: false });
