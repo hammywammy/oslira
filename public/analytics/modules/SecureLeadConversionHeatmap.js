@@ -43,6 +43,124 @@ class SecureLeadConversionHeatmap {
         this.testServiceConnection();
     }
 
+    // Add this method to your SecureLeadConversionHeatmap class:
+
+async renderHeatmapUI(heatmapResponse) {
+    try {
+        const { heatmapData, fallback, error } = heatmapResponse;
+        
+        // Create the main heatmap container HTML
+        const heatmapHTML = `
+            <div class="heatmap-wrapper" style="padding: 20px;">
+                <div class="heatmap-header" style="margin-bottom: 20px;">
+                    <h3 style="margin: 0; color: #333;">Lead Conversion Heatmap</h3>
+                    <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">
+                        ${fallback ? 'Demo data - ' : ''}Conversion rates by lead type and stage
+                    </p>
+                </div>
+                
+                <div class="heatmap-content">
+                    ${heatmapData.cells && heatmapData.cells.length > 0 ? 
+                        this.renderHeatmapGrid(heatmapData) : 
+                        this.renderEmptyHeatmap()
+                    }
+                </div>
+                
+                <div class="heatmap-legend" style="margin-top: 20px;">
+                    <div class="legend-gradient" style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 12px; color: #666;">Conversion Rate:</span>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span style="font-size: 11px;">0%</span>
+                            <div style="width: 100px; height: 10px; background: linear-gradient(to right, #e3f2fd, #1976d2); border-radius: 5px;"></div>
+                            <span style="font-size: 11px;">100%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                ${error ? `<div class="error-notice" style="margin-top: 10px; padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; font-size: 12px; color: #856404;">
+                    Note: ${error}
+                </div>` : ''}
+            </div>
+        `;
+        
+        // Insert the HTML into the container
+        this.container.innerHTML = heatmapHTML;
+        
+        // Set up any interactive features
+        this.setupHeatmapInteractions();
+        
+        console.log('✅ Heatmap UI rendered successfully');
+        
+    } catch (error) {
+        console.error('❌ Heatmap UI render failed:', error);
+        
+        // Fallback to simple error display
+        this.container.innerHTML = `
+            <div style="padding: 40px; text-align: center; color: #dc3545;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                <h4>Heatmap Unavailable</h4>
+                <p>Unable to render heatmap visualization</p>
+                <button onclick="window.location.reload()" style="
+                    background: #007bff; 
+                    color: white; 
+                    border: none; 
+                    padding: 8px 16px; 
+                    border-radius: 4px; 
+                    cursor: pointer;
+                ">Refresh</button>
+            </div>
+        `;
+    }
+}
+
+// Helper method for rendering the heatmap grid
+renderHeatmapGrid(heatmapData) {
+    if (!heatmapData.leadTypes || !heatmapData.stages) {
+        return this.renderEmptyHeatmap();
+    }
+    
+    // Create a simple grid representation
+    return `
+        <div class="heatmap-grid" style="display: grid; grid-template-columns: 150px repeat(${heatmapData.stages.length}, 1fr); gap: 1px; background: #ddd;">
+            <div style="background: #f8f9fa; padding: 8px; font-weight: bold; font-size: 12px;">Lead Type</div>
+            ${heatmapData.stages.map(stage => 
+                `<div style="background: #f8f9fa; padding: 8px; font-weight: bold; font-size: 12px; text-align: center;">${stage}</div>`
+            ).join('')}
+            
+            ${heatmapData.leadTypes.map(leadType => `
+                <div style="background: #f8f9fa; padding: 8px; font-weight: bold; font-size: 12px;">${leadType}</div>
+                ${heatmapData.stages.map(stage => {
+                    const cell = heatmapData.cells.find(c => c.leadType === leadType && c.stage === stage);
+                    const rate = cell ? cell.conversionRate : 0;
+                    const intensity = Math.min(rate / 50, 1); // Normalize to 0-1
+                    const color = `rgba(25, 118, 210, ${intensity})`;
+                    
+                    return `<div style="background: ${color}; padding: 8px; text-align: center; font-size: 12px; color: ${intensity > 0.5 ? 'white' : 'black'};">
+                        ${rate.toFixed(1)}%
+                    </div>`;
+                }).join('')}
+            `).join('')}
+        </div>
+    `;
+}
+
+// Helper method for empty state
+renderEmptyHeatmap() {
+    return `
+        <div style="padding: 40px; text-align: center; color: #6c757d;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+            <h4>No Conversion Data</h4>
+            <p>Start tracking leads to see conversion heatmap</p>
+        </div>
+    `;
+}
+
+// Helper method for interactions
+setupHeatmapInteractions() {
+    // Add any click handlers or hover effects here
+    console.log('🔧 Heatmap interactions setup complete');
+}
+
     async testServiceConnection() {
         // Test analytics service connection
         try {
