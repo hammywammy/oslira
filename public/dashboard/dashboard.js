@@ -188,18 +188,18 @@ class OsliraDashboard {
         ]);
     }
 
-    async loadRecentActivity() {
+    // Replace the loadRecentActivity method in dashboard.js (around line 200-280)
+
+async loadRecentActivity() {
     const supabase = window.OsliraApp.supabase;
     const user = window.OsliraApp.user;
     
     if (!supabase || !user) {
-        console.log('⚠️ Supabase or user not available, showing demo data');
         this.displayDemoLeads();
         return;
     }
     
     try {
-        // ✅ FIXED: Better error handling for leads query
         let query = supabase
             .from('leads')
             .select(`
@@ -212,12 +212,17 @@ class OsliraDashboard {
                     ai_version_id,
                     outreach_message,
                     selling_points,
-                    analysis_type
+                    analysis_type,
+                    avg_comments,
+                    avg_likes,
+                    engagement_rate,
+                    audience_quality,
+                    engagement_insights
                 )
             `)
             .eq('user_id', user.id);
 
-        // Apply timeframe filter safely
+        // Apply timeframe filter
         const timeframe = document.getElementById('timeframe-filter')?.value || 'month';
         if (timeframe !== 'all') {
             const now = new Date();
@@ -231,57 +236,32 @@ class OsliraDashboard {
                     startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
                     break;
                 case 'month':
-                default:
                     startDate = new Date(now.getFullYear(), now.getMonth(), 1);
                     break;
             }
             
-            query = query.gte('created_at', startDate.toISOString());
-        }
-
-        // Apply activity filter safely
-        const activityFilter = document.getElementById('activity-filter')?.value || 'all';
-        if (activityFilter !== 'all') {
-            switch (activityFilter) {
-                case 'light':
-                case 'deep':
-                    query = query.eq('analysis_type', activityFilter);
-                    break;
-                case 'score_high':
-                    query = query.gte('score', 80);
-                    break;
-                case 'score_low':
-                    query = query.lt('score', 60);
-                    break;
-                case 'recent':
-                    query = query.order('created_at', { ascending: false });
-                    break;
-                case 'oldest':
-                    query = query.order('created_at', { ascending: true });
-                    break;
+            if (startDate) {
+                query = query.gte('created_at', startDate.toISOString());
             }
         }
 
-        // Execute query with limit
         const { data: leads, error } = await query
             .order('created_at', { ascending: false })
             .limit(50);
-
-        if (error) {
-            console.error('❌ Error loading leads:', error);
-            this.displayDemoLeads();
-            return;
-        }
-
-        console.log(`✅ Loaded ${(leads || []).length} leads`);
-        this.renderLeads(leads || []);
+        
+        if (error) throw error;
+        
+        this.allLeads = leads || [];
+        this.selectedLeads.clear();
+        
+        // FIX: Call applyActivityFilter instead of this.renderLeads
+        this.applyActivityFilter();
         
     } catch (error) {
         console.error('Error loading activity:', error);
-        this.displayDemoLeads();
+        this.displayErrorState('Failed to load leads: ' + error.message);
     }
 }
-
     displayDemoLeads() {
         this.allLeads = [
             {
