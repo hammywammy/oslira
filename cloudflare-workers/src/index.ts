@@ -1994,7 +1994,9 @@ const leadData = {
   profile_url: data.profile_url,
   profile_pic_url: profileData.profilePicUrl || null,
   score: analysisResult.score || 0,
-  analysis_type: data.analysis_type,  // ✅ CORRECT: sends as 'analysis_type'
+  type: data.analysis_type,  // ← This line exists
+  // ADD THIS LINE:
+  analysis_type: data.analysis_type,  // ← ADD THIS
   user_timezone: body.timezone || 'UTC',
   user_local_time: body.user_local_time || new Date().toISOString(),
   created_at: body.request_timestamp || new Date().toISOString()
@@ -2319,21 +2321,6 @@ app.post('/bulk-analyze', async c => {
             console.warn(`⚠️ Message generation failed for @${username}:`, messageError.message);
           }
         }
-
-        // Save to database
-const leadData = {
-  user_id: userId,
-  business_id: business_id,
-  username: validatedProfile.username,
-  platform: platform || 'instagram',
-  profile_url: `https://instagram.com/${username}`,
-  profile_pic_url: validatedProfile.profilePicUrl || null,
-  score: analysisResult.score || 0,
-  type: analysis_type,
-  user_timezone: body.timezone || 'UTC',
-  user_local_time: body.user_local_time || new Date().toISOString(),
-  created_at: new Date(new Date(body.request_timestamp || new Date().toISOString()).getTime() + (i * 1000)).toISOString()
-};
 
         let analysisData = null;
         if (analysis_type === 'deep') {
