@@ -91,6 +91,53 @@ class SecureCRMPerformanceComparator {
         console.log('SecureCRMPerformanceComparator initialized');
     }
 
+    // ADD THESE METHODS after the constructor:
+
+getModuleInfo() {
+    return {
+        name: 'Message Style Matrix',
+        version: '1.0.0',
+        description: 'AI-powered message style performance analysis',
+        dependencies: ['claudeService', 'analyticsService'],
+        status: this.state || 'uninitialized',
+        container: this.container?.id || 'unknown'
+    };
+}
+
+cleanup() {
+    console.log('🧹 Cleaning up SecureMessageStyleMatrix');
+    
+    if (this.updateInterval) {
+        clearInterval(this.updateInterval);
+    }
+    
+    if (this.container) {
+        this.container.innerHTML = '';
+    }
+    
+    this.state = 'cleaned';
+}
+
+onError(error, context = {}) {
+    console.error(`❌ SecureMessageStyleMatrix error:`, error);
+    this.fallbackRender(error);
+}
+
+async fallbackRender(error) {
+    if (this.container) {
+        this.container.innerHTML = `
+            <div style="padding:20px;background:#f8f9fa;border-radius:8px;text-align:center;">
+                <h4>⚠️ Message Style Matrix Unavailable</h4>
+                <p>This feature requires credits or has a temporary issue.</p>
+                <button onclick="location.reload()" style="background:#3b82f6;color:white;padding:8px 16px;border:none;border-radius:4px;cursor:pointer;">
+                    Reload Dashboard
+                </button>
+            </div>
+        `;
+    }
+    this.state = 'fallback';
+}
+
     setupServiceConnection() {
         // Setup secure analytics service connection
         if (!this.analyticsService) {
@@ -2159,51 +2206,6 @@ class SecureCRMPerformanceComparator {
             document.body.removeChild(announcement);
         }, 1000);
     }
-
-    cleanup() {
-    console.log('🧹 [SecureCRMPerformanceComparator] Cleaning up...');
-    
-    // Clear timers
-    if (this.refreshTimer) {
-        clearInterval(this.refreshTimer);
-        this.refreshTimer = null;
-    }
-    
-    // Clear charts
-    if (this.performanceChart) {
-        this.performanceChart.destroy();
-        this.performanceChart = null;
-    }
-    
-    if (this.comparisonChart) {
-        this.comparisonChart.destroy();
-        this.comparisonChart = null;
-    }
-    
-    // Clear container
-    if (this.container) {
-        this.container.innerHTML = '';
-    }
-    
-    // Clear data
-    this.currentData = null;
-    this.lastComparison = null;
-}
-
-getModuleInfo() {
-    return {
-        name: 'SecureCRMPerformanceComparator',
-        version: '1.0.0',
-        description: 'Secure CRM performance comparison and analysis',
-        type: 'analytics',
-        priority: 4,
-        capabilities: ['crm_analysis', 'performance_comparison', 'trend_analysis'],
-        status: this.isLoading ? 'loading' : 'ready',
-        lastUpdate: this.lastDataFetch,
-        comparisonCount: this.currentData ? this.currentData.comparisons?.length : 0
-    };
-}
-
     setupAccessibilityFeatures() {
         // Setup additional accessibility features
         const tableRows = this.container.querySelectorAll('.ranking-row');
