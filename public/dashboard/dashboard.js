@@ -634,26 +634,22 @@ setupEventListeners() {
 async submitAnalysis(e) {
     e.preventDefault();
     
-    // DEBUG: Check business ID
-    console.log('🔍 Current business ID before analysis:', this.currentBusinessId);
-    
     try {
         const analysisType = document.getElementById('analysis-type').value;
         const profileInput = document.getElementById('profile-input').value.trim();
+        
+        // ✅ DEBUG: Log the exact URL being sent
+        console.log('🔍 Raw profile input:', profileInput);
+        console.log('🔍 Profile input length:', profileInput.length);
+        console.log('🔍 Profile input chars:', [...profileInput]);
         
         if (!profileInput) {
             throw new Error('Please enter an Instagram profile URL');
         }
         
-        if (!this.currentBusinessId) {
-            // Try to get from dropdown as fallback
-            const businessSelect = document.getElementById('business-select');
-            if (businessSelect && businessSelect.value) {
-                this.currentBusinessId = businessSelect.value;
-                console.log('✅ Got business ID from dropdown:', this.currentBusinessId);
-            } else {
-                throw new Error('No business profile selected. Please select a business first.');
-            }
+        // ✅ VALIDATE URL FORMAT BEFORE SENDING
+        if (!profileInput.includes('instagram.com/')) {
+            throw new Error('Please enter a valid Instagram URL (e.g., https://instagram.com/username)');
         }
         
         const requestBody = {
@@ -662,7 +658,7 @@ async submitAnalysis(e) {
             business_id: this.currentBusinessId
         };
         
-        console.log('📤 Sending analysis request:', requestBody);
+        console.log('📤 Sending request:', requestBody);
         
         const response = await apiRequest('/v1/analyze', {
             method: 'POST',
