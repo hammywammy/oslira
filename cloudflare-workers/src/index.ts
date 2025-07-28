@@ -729,6 +729,76 @@ Return JSON: {"message": "your message here"}`;
   }
 }
 
+function requestLoggingMiddleware(env: Env) {
+  return async (c: any, next: any) => {
+    const start = Date.now();
+    const requestId = generateRequestId();
+    
+    c.set('requestId', requestId);
+    c.set('startTime', start);
+    
+    await next();
+    
+    const duration = Date.now() - start;
+    if (env.ENVIRONMENT === 'development') {
+      logger('info', 'Request completed', {
+        requestId,
+        path: c.req.path,
+        method: c.req.method,
+        duration,
+        status: c.res.status
+      }, requestId);
+    }
+  };
+}
+
+function errorHandlingMiddleware(env: Env) {
+  return async (c: any, next: any) => {
+    try {
+      await next();
+    } catch (error: any) {
+      const requestId = c.get('requestId') || generateRequestId();
+      
+      logger('error', 'Request failed', {
+        requestId,
+        error: error.message,
+        stack: error.stack,
+        path: c.req.path,
+        method: c.req.method
+      }, requestId);
+      
+      return c.json(createStandardResponse(
+        false,
+        undefined,
+        env.ENVIRONMENT === 'development' ? error.message : 'Internal server error',
+        requestId
+      ), 500);
+    }
+  };
+}
+
+function rateLimitMiddleware(env: Env) {
+  return async (c: any, next: any) => {
+    await next();
+  };
+}
+
+function bodyLimitMiddleware(maxSizeBytes: number = 1024 * 1024) {
+  return async (c: any, next: any) => {
+    const contentLength = c.req.header('content-length');
+    
+    if (contentLength && parseInt(contentLength) > maxSizeBytes) {
+      return c.json(createStandardResponse(
+        false,
+        undefined,
+        'Request body too large'
+      ), 413);
+    }
+    
+    await next();
+  };
+}
+
 // ===============================================================================
 // APPLICATION SETUP
 // ===============================================================================
