@@ -1987,6 +1987,39 @@ function verifyStripeWebhook(body: string, signature: string, secret: string): a
   }
 }
 
+// Add this function to your worker
+async function insertAnalysisNuclear(leadId: string, username: string, userId: string, businessId: string | null, analysisData: any, env: Env) {
+  const headers = {
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+    'Content-Type': 'application/json'
+  };
+
+  // Absolutely minimal data that matches your exact schema
+  const nuclearData = {
+    user_id: userId,
+    business_id: businessId,
+    lead_id: leadId,
+    username: username, // GUARANTEED not null
+    analysis_type: 'deep'
+  };
+
+  console.log('🚨 NUCLEAR INSERT:', JSON.stringify(nuclearData, null, 2));
+
+  const response = await fetch(`${env.SUPABASE_URL}/rest/v1/lead_analyses`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(nuclearData)
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Analysis insert failed: ${error}`);
+  }
+
+  return await response.json();
+}
+
 // ------------------------------------
 // Enhanced Hono App Setup
 // ------------------------------------
@@ -2227,13 +2260,14 @@ app.post('/analyze', async c => {
 
     // 10. Message generation for deep analysis
     let outreachMessage = '';
-    if (data.analysis_type === 'deep') {
-      try {
-        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
-      } catch (messageError: any) {
-        console.warn('⚠️ Message generation failed:', messageError.message);
-      }
-    }
+if (data.analysis_type === 'deep') {
+  try {
+    await insertAnalysisNuclear(leadId, GUARANTEED_USERNAME, userId, data.business_id, analysisResult, c.env);
+    console.log('✅ Nuclear analysis insert succeeded');
+  } catch (e: any) {
+    console.error('❌ Even nuclear insert failed:', e.message);
+  }
+}
 
     // 11. DATABASE OPERATIONS - GUARANTEED USERNAME
     console.log(`🔒 FINAL USERNAME CHECK: "${GUARANTEED_USERNAME}" (length: ${GUARANTEED_USERNAME.length})`);
