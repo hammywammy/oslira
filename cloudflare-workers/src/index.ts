@@ -2542,12 +2542,12 @@ if (data.analysis_type === 'deep') {
       }
     });
 
-  } catch (error: any) {
+} catch (error: any) {
     const totalTime = Date.now() - startTime;
     console.error('❌ CRITICAL ERROR in /analyze endpoint:');
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
-
+    
     return c.json({
       error: 'Analysis failed',
       message: error.message || 'Unknown error',
@@ -2559,7 +2559,6 @@ if (data.analysis_type === 'deep') {
       }
     }, 500);
   }
-});
 
 // ENHANCED BULK ANALYZE ENDPOINT
 app.post('/bulk-analyze', async c => {
