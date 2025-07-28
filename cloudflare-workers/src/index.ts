@@ -3407,6 +3407,43 @@ app.get('/test-apify', async c => {
   }
 });
 
+app.post('/test-table-broken', async c => {
+  try {
+    const headers = {
+      apikey: c.env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json'
+    };
+
+    // Test with ONLY the absolutely required fields
+    const absoluteMinimal = {
+      user_id: 'd6cecbfb-f062-4564-a182-4ad35771d9e0',
+      lead_id: '00000000-0000-0000-0000-000000000001',
+      username: 'test123',
+      analysis_type: 'deep'
+    };
+
+    console.log('Testing absolute minimal:', JSON.stringify(absoluteMinimal));
+
+    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/lead_analyses`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(absoluteMinimal)
+    });
+
+    const result = await response.text();
+    
+    return c.json({
+      test: 'absolute_minimal',
+      success: response.ok,
+      status: response.status,
+      response: result
+    });
+
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
 app.get('/test-openai', async c => {
   try {
     const response = await fetch('https://api.openai.com/v1/models', {
