@@ -2828,18 +2828,7 @@ async processBulkAnalysis(profiles, analysisType) {
         
     } catch (error) {
         console.error('Failed to load businesses:', error);
-    }}
-
-switchBusiness() {
-    const businessSelect = document.getElementById('business-select');
-    if (businessSelect) {
-        this.currentBusinessId = businessSelect.value;
-        console.log('✅ Business switched to:', this.currentBusinessId);
-        
-        // Refresh data for new business
-        this.loadRecentActivity();
     }
-}
 
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
@@ -2877,6 +2866,17 @@ switchBusiness() {
             event.preventDefault();
             this.showAnalysisModal();
         }
+    }
+}
+
+switchBusiness() {
+    const businessSelect = document.getElementById('business-select');
+    if (businessSelect) {
+        this.currentBusinessId = businessSelect.value;
+        console.log('✅ Business switched to:', this.currentBusinessId);
+        
+        // Refresh data for new business
+        this.loadRecentActivity();
     }
 }
 
