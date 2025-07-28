@@ -389,21 +389,21 @@ async function apiRequest(endpoint, options = {}) {
         }
     };
     
-    // ✅ FIXED: Proper URL construction
+    // ✅ UPDATED: New endpoint routing
     let url;
     if (endpoint.startsWith('http')) {
-        // Full URL provided
         url = endpoint;
-    } else if (endpoint.startsWith('/analyze') || endpoint.startsWith('/bulk-analyze')) {
-        // API endpoints go to worker
-        const workerUrl = config.workerUrl || 'https://ai-outreach-api.oslira-worker.workers.dev';
+    } else if (endpoint.startsWith('/v1/')) {
+        // NEW: v1 endpoints go to worker
+        const workerUrl = config.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
         url = `${workerUrl}${endpoint}`;
-    } else if (endpoint.startsWith('/api/')) {
-        // Netlify edge functions
-        url = endpoint;
+    } else if (endpoint.startsWith('/analyze') || endpoint.startsWith('/bulk-analyze')) {
+        // OLD: Convert old endpoints to new v1 format
+        const workerUrl = config.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
+        url = `${workerUrl}/v1${endpoint}`;
     } else {
-        // Default to worker for other endpoints
-        const workerUrl = config.workerUrl || 'https://ai-outreach-api.oslira-worker.workers.dev';
+        // Default to worker
+        const workerUrl = config.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
         url = `${workerUrl}${endpoint}`;
     }
     
@@ -414,11 +414,12 @@ async function apiRequest(endpoint, options = {}) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`❌ API Error: ${response.status} ${response.statusText}`, errorText);
+            console.error(`❌ API Error: ${response.status}`, errorText);
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
+        console.log('✅ API Response:', data);
         return data;
         
     } catch (error) {
