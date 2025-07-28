@@ -634,6 +634,9 @@ setupEventListeners() {
 async submitAnalysis(e) {
     e.preventDefault();
     
+    // DEBUG: Check business ID
+    console.log('🔍 Current business ID before analysis:', this.currentBusinessId);
+    
     try {
         const analysisType = document.getElementById('analysis-type').value;
         const profileInput = document.getElementById('profile-input').value.trim();
@@ -642,19 +645,24 @@ async submitAnalysis(e) {
             throw new Error('Please enter an Instagram profile URL');
         }
         
-        // ✅ DEBUG: Log what you're sending
+        if (!this.currentBusinessId) {
+            // Try to get from dropdown as fallback
+            const businessSelect = document.getElementById('business-select');
+            if (businessSelect && businessSelect.value) {
+                this.currentBusinessId = businessSelect.value;
+                console.log('✅ Got business ID from dropdown:', this.currentBusinessId);
+            } else {
+                throw new Error('No business profile selected. Please select a business first.');
+            }
+        }
+        
         const requestBody = {
             profile_url: profileInput,
             analysis_type: analysisType,
-            business_id: this.currentBusinessId  // ← Make sure this exists!
+            business_id: this.currentBusinessId
         };
         
-        console.log('📤 Sending request:', requestBody);
-        
-        // Make sure currentBusinessId is not null/undefined
-        if (!this.currentBusinessId) {
-            throw new Error('No business profile selected');
-        }
+        console.log('📤 Sending analysis request:', requestBody);
         
         const response = await apiRequest('/v1/analyze', {
             method: 'POST',
@@ -670,7 +678,6 @@ async submitAnalysis(e) {
         
     } catch (error) {
         console.error('❌ Analysis error:', error);
-        // ✅ FIX: Use proper error display
         this.displayError(error.message);
     }
 }
@@ -2801,18 +2808,38 @@ async processBulkAnalysis(profiles, analysisType) {
         }
     }
 
-    switchBusiness() {
-        const businessSelect = document.getElementById('business-select');
-        const selectedBusinessId = businessSelect.value;
+    async loadBusinessProfiles() {
+    try {
+        const { data: businesses } = await supabase
+            .from('business_profiles')
+            .select('*')
+            .eq('user_id', this.user.id);
         
-        if (selectedBusinessId) {
-            window.OsliraApp.business = window.OsliraApp.businesses.find(b => b.id === selectedBusinessId);
-            this.loadDashboardData();
+        const businessSelect = document.getElementById('business-select');
+        if (businessSelect && businesses.length > 0) {
+            businessSelect.innerHTML = businesses.map(business => 
+                `<option value="${business.id}">${business.name}</option>`
+            ).join('');
             
-            const modalSelect = document.getElementById('business-id');
-            if (modalSelect) modalSelect.value = selectedBusinessId;
+            // ✅ SET THE CURRENT BUSINESS ID
+            this.currentBusinessId = businesses[0].id;
+            console.log('✅ Business loaded:', this.currentBusinessId);
         }
+        
+    } catch (error) {
+        console.error('Failed to load businesses:', error);
     }
+
+switchBusiness() {
+    const businessSelect = document.getElementById('business-select');
+    if (businessSelect) {
+        this.currentBusinessId = businessSelect.value;
+        console.log('✅ Business switched to:', this.currentBusinessId);
+        
+        // Refresh data for new business
+        this.loadRecentActivity();
+    }
+}
 
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
