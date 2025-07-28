@@ -735,6 +735,34 @@ Return JSON: {"message": "your message here"}`;
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Fixed CORS - Simple and working
+app.use('*', cors({
+  origin: [
+    'https://oslira.com',
+    'https://oslira.netlify.app', 
+    'http://localhost:3000',
+    'http://localhost:8080'
+  ],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+  allowMethods: ['GET', 'POST', 'OPTIONS'],
+  credentials: true,
+  maxAge: 86400
+}));
+
+// Environment-specific middleware
+app.use('*', async (c, next) => {
+  const env = c.env;
+  
+  await errorHandlingMiddleware(env)(c, async () => {
+    await requestLoggingMiddleware(env)(c, async () => {
+      await rateLimitMiddleware(env)(c, async () => {
+        await bodyLimitMiddleware()(c, next);
+      });
+    });
+  });
+});
+
+
 // ===============================================================================
 // ROUTES
 // ===============================================================================
