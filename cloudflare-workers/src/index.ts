@@ -2193,18 +2193,33 @@ const leadData = {
 console.log('💾 About to save leadData:', JSON.stringify(leadData, null, 2));
 console.log('🖼️ Profile pic URL being saved:', leadData.profile_pic_url);
 
-    let analysisData = null;
-    if (data.analysis_type === 'deep') {
-      analysisData = {
-        user_id: userId,
-        analysis_type: 'deep' as const,
-        engagement_score: analysisResult.engagement_score || null,
-        score_niche_fit: analysisResult.niche_fit || null,
-        score_total: analysisResult.score || 0,
-        outreach_message: outreachMessage || null,
-        selling_points: analysisResult.selling_points || null
-      };
-    }
+// FIXED: Analysis data creation in /analyze endpoint
+let analysisData = null;
+if (data.analysis_type === 'deep') {
+  analysisData = {
+    user_id: userId,
+    business_id: data.business_id, // ADD this if your schema requires it
+    username: profileData.username, // ← FIX: ADD THIS REQUIRED FIELD
+    analysis_type: 'deep',
+    engagement_score: analysisResult.engagement_score || 0,
+    score_niche_fit: analysisResult.niche_fit || 0,
+    score_total: analysisResult.score || 0,
+    ai_version_id: 'gpt-4o', // ADD this if your schema requires it
+    outreach_message: outreachMessage || null,
+    selling_points: Array.isArray(analysisResult.selling_points) 
+      ? JSON.stringify(analysisResult.selling_points) 
+      : null,
+    avg_comments: profileData.engagement?.avgComments?.toString() || null,
+    avg_likes: profileData.engagement?.avgLikes?.toString() || null,
+    engagement_rate: profileData.engagement?.engagementRate?.toString() || null,
+    audience_quality: 'standard', // ADD this if your schema requires it
+    engagement_insights: Array.isArray(analysisResult.reasons) 
+      ? JSON.stringify(analysisResult.reasons) 
+      : null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+}
 
     let leadId;
     try {
