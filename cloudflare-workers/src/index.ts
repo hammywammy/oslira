@@ -969,6 +969,188 @@ app.post('/analyze', async c => {
     console.log('🤖 Starting AI analysis...');
     const analysisResult = await analyzeProfile(profileData, businessProfile, data.analysis_type || 'light', c.env);
     console.log('✅ AI analysis completed:', {
+      try {
+        business = await fetchBusinessProfile(data.business_id, userId, c.env);
+      } catch (businessError: any) {
+        return c.json({ error: 'Failed to load business profile', details: businessError.message }, 500);
+      }
+    } else {
+      return c.json({ error: 'Business profile is required for analysis' }, 400);
+    }
+
+    // 8. Profile scraping
+    let profileData;
+    try {
+      profileData = await scrapeInstagramProfile(GUARANTEED_USERNAME, data.analysis_type!, c.env);
+      console.log(`✅ Profile scraped for: @${GUARANTEED_USERNAME}`);
+    } catch (scrapeError: any) {
+      return c.json({ error: 'Profile scraping failed', details: scrapeError.message }, 500);
+    }
+
+    // 9. AI Analysis
+    let analysisResult;
+    try {
+      analysisResult = await performAIAnalysis(profileData, business, data.analysis_type!, c.env);
+    } catch (aiError: any) {
+      return c.json({ error: 'AI analysis failed', details: aiError.message }, 500);
+    }
+
+    // 10. Message generation for deep analysis
+    let outreachMessage = '';
+if (data.analysis_type === 'deep') {
+  try {
+    await insertAnalysisNuclear(leadId, GUARANTEED_USERNAME, userId, data.business_id, analysisResult, c.env);
+    console.log('✅ Nuclear analysis insert succeeded');
+  } catch (e: any) {
+    console.error('❌ Even nuclear insert failed:', e.message);
+  }
+}
+
+    // 11. DATABASE OPERATIONS - GUARANTEED USERNAME
+    console.log(`🔒 FINAL USERNAME CHECK: "${GUARANTEED_USERNAME}" (length: ${GUARANTEED_USERNAME.length})`);
+
+    // Create lead data with GUARANTEED username
+    const leadData = {
+      user_id: userId,
+      business_id: data.business_id,
+      username: GUARANTEED_USERNAME, // GUARANTEED to not be null/empty
+      platform: 'instagram',
+      profile_url: profileUrl,
+      profile_pic_url: profileData.profilePicUrl || null,
+      score: analysisResult.score || 0,
+      type: data.analysis_type,
+      analysis_type: data.analysis_type,
+      user_timezone: data.timezone || 'UTC',
+      user_local_time: data.user_local_time || new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Create analysis data with SAME GUARANTEED username
+    let analysisData = null;
+    if (data.analysis_type === 'deep') {
+      analysisData = {
+        user_id: userId,
+        business_id: data.business_id,
+        username: GUARANTEED_USERNAME, // SAME guaranteed username
+        analysis_type: 'deep',
+        engagement_score: analysisResult.engagement_score || 0,
+        score_niche_fit: analysisResult.niche_fit || 0,
+        score_total: analysisResult.score || 0,
+        ai_version_id: 'gpt-4o',
+        outreach_message: outreachMessage || null,
+        selling_points: Array.isArray(analysisResult.selling_points) 
+          ? JSON.stringify(analysisResult.selling_points) 
+          : null,
+        avg_comments: profileData.engagement?.avgComments?.toString() || null,
+        avg_likes: profileData.engagement?.avgLikes?.toString() || null,
+        engagement_rate: profileData.engagement?.engagementRate?.toString() || null,
+        audience_quality: 'High',
+        engagement_insights: null
+      };
+    }
+
+    console.log('💾 FINAL DATA CHECK:', {
+      leadData_username: leadData.username,
+      analysisData_username: analysisData?.username,
+      both_usernames_identical: leadData.username === analysisData?.username
+    });
+
+    // 12. Save to database
+    let leadId;
+    try {
+      leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
+    } catch (saveError: any) {
+      return c.json({ error: 'Failed to save analysis results', details: saveError.message }, 500);
+    }
+
+    // 13. Update credits
+    try {
+      const newBalance = currentCredits - cost;
+      await updateCreditsAndTransaction(userId, cost, newBalance, `${data.analysis_type} analysis for @${GUARANTEED_USERNAME}`, leadId, c.env);
+    } catch (creditError: any) {
+      return c.json({ error: 'Failed to update credits', details: creditError.message }, 500);
+    }
+
+    const totalTime = Date.now() - startTime;
+    
+    // 14. Success response
+    return c.json({
+      success: true,
+      lead_id: leadId,
+      analysis: {
+        score: analysisResult.score,
+        summary: analysisResult.summary || '',
+        niche_fit: analysisResult.niche_fit || 0,
+        engagement_score: analysisResult.engagement_score || 0,
+        selling_points: analysisResult.selling_points || [],
+        reasons: analysisResult.reasons || []
+      },
+      outreach_message: outreachMessage,
+      profile: {
+        username: GUARANTEED_USERNAME,
+        full_name: profileData.fullName,
+        followers: profileData.followersCount,
+        following: profileData.followingCount,
+        posts: profileData.postsCount,
+        verified: profileData.isVerified,
+        bio: profileData.biography,
+        external_url: profileData.externalUrl,
+        business_category: profileData.businessCategory,
+        profile_pic_url: profileData.profilePicUrl,
+        engagement: profileData.engagement
+      },
+      credits: {
+        used: cost,
+        remaining: currentCredits - cost
+      },
+      metadata: {
+        processing_time_ms: totalTime,
+        analysis_type: data.analysis_type,
+        guaranteed_username: GUARANTEED_USERNAME,
+        version: '7.0.2'
+     }
+    }); // Make sure this semicolon is here
+
+  } catch (error: any) {
+    const totalTime = Date.now() - startTime;
+    console.error('❌ CRITICAL ERROR in /analyze endpoint:');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    return c.json({
+      error: 'Analysis failed',
+      message: error.message || 'Unknown error',
+      type: 'critical_error',
+      debug: {
+        error_type: error.constructor.name,
+        processing_time_ms: totalTime,
+        timestamp: new Date().toISOString()
+      }
+    }, 500);
+  }
+}); 
+
+    // 9. Enhanced Message Generation (deep analysis only)
+    let outreachMessage = '';
+    if (data.analysis_type === 'deep') {
+      try {
+        console.log('💬 Generating enhanced outreach message...');
+        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
+        console.log(`✅ Message generated: ${outreachMessage.length} characters`);
+      } catch (messageError: any) {
+        console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
+      }
+    }
+
+    // 10. Enhanced Database Operations
+    const leadData: Partial<LeadRecord> = {
+      user_id: userId,
+      business_id: data.business_id,
+      username: username, // Use extracted username instead of profileData.username
+      platform: data.platform,
+      profile_url: data.profile_url,
+      profile_pic_url: profileData.profilePicUrl,
       score: analysisResult.score,
       niche_fit: analysisResult.niche_fit
     });
@@ -1051,7 +1233,7 @@ app.post('/analyze', async c => {
       }
     });
 
-  } catch (error: any) {
+} catch (error: any) {
     const totalTime = Date.now() - startTime;
     console.error('❌ CRITICAL ERROR in /analyze endpoint:');
     console.error('Error message:', error.message);
@@ -1068,7 +1250,6 @@ app.post('/analyze', async c => {
       }
     }, 500);
   }
-});
 
 // ENHANCED BULK ANALYZE ENDPOINT
 app.post('/bulk-analyze', async c => {
