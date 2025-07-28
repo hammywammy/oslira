@@ -2257,253 +2257,152 @@ app.get('/debug-env', c => {
 // MAIN ENHANCED ANALYZE ENDPOINT
 app.post('/analyze', async c => {
   const startTime = Date.now();
-  console.log('=== ENHANCED Analysis request started ===', new Date().toISOString());
+  console.log('=== DEFINITIVE Analysis request started ===', new Date().toISOString());
 
   try {
-    // 1. Enhanced Authentication
+    // 1. Authentication
     const auth = c.req.header('Authorization')?.replace('Bearer ', '');
     if (!auth) {
-      console.error('❌ Missing Authorization header');
       return c.json({ error: 'Missing Authorization header' }, 401);
     }
 
-    console.log('🔐 Auth token present, verifying...');
     const userId = await verifyJWT(auth);
     if (!userId) {
-      console.error('❌ JWT verification failed');
       return c.json({ error: 'Invalid or expired token' }, 401);
     }
-    console.log(`✅ User authenticated: ${userId}`);
 
-    // 2. Enhanced Request Parsing
+    // 2. Request Parsing
     let body;
     try {
       body = await c.req.json<AnalysisRequest>();
-      console.log('📝 Request body parsed:', JSON.stringify(body, null, 2));
+      console.log('📝 Request body:', JSON.stringify(body, null, 2));
     } catch (parseError: any) {
-      console.error('❌ JSON parsing failed:', parseError.message);
-      return c.json({ error: 'Invalid JSON in request body', details: parseError.message }, 400);
+      return c.json({ error: 'Invalid JSON in request body' }, 400);
     }
 
-    // 3. Enhanced Request Validation
+    // 3. Extract username FIRST and validate
+    const profileUrl = body.profile_url || `https://instagram.com/${body.username}`;
+    const extractedUsername = extractUsername(profileUrl);
+    
+    console.log('🔍 USERNAME EXTRACTION DEBUG:', {
+      input_profile_url: body.profile_url,
+      input_username: body.username,
+      final_profile_url: profileUrl,
+      extracted_username: extractedUsername,
+      extracted_length: extractedUsername?.length || 0
+    });
+
+    if (!extractedUsername || extractedUsername.trim() === '') {
+      return c.json({ 
+        error: 'Could not extract valid username',
+        details: `Profile URL: ${profileUrl}, Extracted: "${extractedUsername}"` 
+      }, 400);
+    }
+
+    const GUARANTEED_USERNAME = extractedUsername.trim().toLowerCase();
+    console.log(`🔒 GUARANTEED USERNAME SET: "${GUARANTEED_USERNAME}"`);
+
+    // 4. Validate request
     const { valid, errors, data } = normalizeRequest(body);
     if (!valid) {
-      console.error('❌ Request validation failed:', errors);
       return c.json({ error: 'Invalid request', details: errors }, 400);
     }
 
-    console.log('🔍 Normalized request data:', JSON.stringify(data, null, 2));
-
-    const username = extractUsername(data.profile_url!);
-    console.log('🔍 Username extraction:', {
-      input_url: data.profile_url,
-      extracted_username: username,
-      extraction_successful: !!username,
-      username_length: username?.length || 0
-    });
-
-    if (!username || username.trim() === '') {
-      console.error('❌ Invalid username extracted from:', data.profile_url);
-      return c.json({ error: 'Invalid username format or empty username' }, 400);
-    }
-
-    const cleanUsername = username.trim();
-    console.log(`📊 Processing analysis: username="${cleanUsername}", type=${data.analysis_type}`);
-
-    // 4. Environment Validation
-    const requiredEnvVars = {
-      SUPABASE_URL: c.env.SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE: c.env.SUPABASE_SERVICE_ROLE,
-      OPENAI_KEY: c.env.OPENAI_KEY,
-      APIFY_API_TOKEN: c.env.APIFY_API_TOKEN
-    };
-
-    const missingEnvVars = Object.entries(requiredEnvVars)
-      .filter(([key, value]) => !value)
-      .map(([key]) => key);
-
+    // 5. Environment validation
+    const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE', 'OPENAI_KEY', 'APIFY_API_TOKEN'];
+    const missingEnvVars = requiredEnvVars.filter(key => !c.env[key]);
     if (missingEnvVars.length > 0) {
-      console.error('❌ Missing environment variables:', missingEnvVars);
-      return c.json({
-        error: 'Service configuration error',
-        details: `Missing: ${missingEnvVars.join(', ')}`
-      }, 500);
+      return c.json({ error: 'Service configuration error', details: `Missing: ${missingEnvVars.join(', ')}` }, 500);
     }
-    console.log('✅ All required environment variables present');
 
-    // 5. Enhanced User and Credits Validation
-    let user, currentCredits;
+    // 6. User and credits validation
+    let currentCredits;
     try {
-      console.log('💳 Fetching user and credits...');
       const result = await fetchUserAndCredits(userId, c.env);
-      user = result.user;
       currentCredits = result.credits;
-      console.log(`✅ User found: credits=${currentCredits}`);
     } catch (userError: any) {
-      console.error('❌ fetchUserAndCredits failed:', userError.message);
-      return c.json({
-        error: 'Failed to verify user account',
-        details: userError.message
-      }, 500);
+      return c.json({ error: 'Failed to verify user account', details: userError.message }, 500);
     }
 
     const cost = data.analysis_type === 'deep' ? 2 : 1;
     if (currentCredits < cost) {
-      console.log(`❌ Insufficient credits: ${currentCredits} < ${cost}`);
-      return c.json({
-        error: 'Insufficient credits',
-        available: currentCredits,
-        required: cost,
-        type: data.analysis_type
-      }, 402);
+      return c.json({ error: 'Insufficient credits', available: currentCredits, required: cost }, 402);
     }
 
-    // 6. Enhanced Business Profile Validation
+    // 7. Business profile validation
     let business;
     if (data.business_id) {
       try {
-        console.log('🏢 Fetching business profile...');
         business = await fetchBusinessProfile(data.business_id, userId, c.env);
-        console.log(`✅ Business profile found: ${business.business_name}`);
       } catch (businessError: any) {
-        console.error('❌ fetchBusinessProfile failed:', businessError.message);
-        return c.json({
-          error: 'Failed to load business profile',
-          details: businessError.message
-        }, 500);
+        return c.json({ error: 'Failed to load business profile', details: businessError.message }, 500);
       }
     } else {
-      console.error('❌ Missing business_id for analysis');
       return c.json({ error: 'Business profile is required for analysis' }, 400);
     }
 
-    // 7. Enhanced Profile Scraping
+    // 8. Profile scraping
     let profileData;
     try {
-      console.log('🕷️ Starting enhanced profile scraping...');
-      profileData = await scrapeInstagramProfile(cleanUsername, data.analysis_type!, c.env);
-      console.log(`✅ Profile scraped: @${profileData.username}, followers=${profileData.followersCount.toLocaleString()}`);
-
-      if (profileData.engagement) {
-        console.log(`📈 Engagement data: ${JSON.stringify(profileData.engagement)}`);
-      }
+      profileData = await scrapeInstagramProfile(GUARANTEED_USERNAME, data.analysis_type!, c.env);
+      console.log(`✅ Profile scraped for: @${GUARANTEED_USERNAME}`);
     } catch (scrapeError: any) {
-      console.error('❌ scrapeInstagramProfile failed:', scrapeError.message);
-
-      let errorMessage = 'Failed to retrieve profile data';
-      let statusCode = 500;
-
-      if (scrapeError.message.includes('not found')) {
-        errorMessage = 'Instagram profile not found';
-        statusCode = 404;
-      } else if (scrapeError.message.includes('private')) {
-        errorMessage = 'This Instagram profile is private';
-        statusCode = 403;
-      } else if (scrapeError.message.includes('rate limit') || scrapeError.message.includes('429')) {
-        errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
-        statusCode = 429;
-      } else if (scrapeError.message.includes('timeout')) {
-        errorMessage = 'Profile scraping timed out. Please try again.';
-        statusCode = 408;
-      }
-
-      return c.json({
-        error: errorMessage,
-        details: scrapeError.message,
-        type: 'scraping_error'
-      }, statusCode);
+      return c.json({ error: 'Profile scraping failed', details: scrapeError.message }, 500);
     }
 
-    // 8. Enhanced AI Analysis
+    // 9. AI Analysis
     let analysisResult;
     try {
-      console.log('🤖 Starting enhanced AI analysis...');
       analysisResult = await performAIAnalysis(profileData, business, data.analysis_type!, c.env);
-      console.log(`✅ AI analysis complete: score=${analysisResult.score}`);
     } catch (aiError: any) {
-      console.error('❌ performAIAnalysis failed:', aiError.message);
-      return c.json({
-        error: 'AI analysis failed',
-        details: aiError.message,
-        type: 'ai_error'
-      }, 500);
+      return c.json({ error: 'AI analysis failed', details: aiError.message }, 500);
     }
 
-    // 9. Enhanced Message Generation (deep analysis only)
+    // 10. Message generation for deep analysis
     let outreachMessage = '';
     if (data.analysis_type === 'deep') {
       try {
-        console.log('💬 Generating enhanced outreach message...');
         outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
-        console.log(`✅ Message generated: ${outreachMessage.length} characters`);
       } catch (messageError: any) {
-        console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
+        console.warn('⚠️ Message generation failed:', messageError.message);
       }
     }
 
-    // 10. Enhanced Database Operations - CRITICAL USERNAME HANDLING
-    const finalUsername = (profileData.username || cleanUsername || 'unknown').trim();
-    
-    console.log('🔍 FINAL USERNAME ASSIGNMENT:', {
-      profileData_username: profileData.username,
-      extracted_cleanUsername: cleanUsername,
-      final_username: finalUsername,
-      final_username_length: finalUsername.length,
-      final_username_empty: finalUsername === ''
-    });
+    // 11. DATABASE OPERATIONS - GUARANTEED USERNAME
+    console.log(`🔒 FINAL USERNAME CHECK: "${GUARANTEED_USERNAME}" (length: ${GUARANTEED_USERNAME.length})`);
 
-    if (!finalUsername || finalUsername === '') {
-      throw new Error(`Critical error: Final username is empty. ProfileData: "${profileData.username}", Extracted: "${cleanUsername}"`);
-    }
-
-    const leadData: Partial<LeadRecord> = {
+    // Create lead data with GUARANTEED username
+    const leadData = {
       user_id: userId,
       business_id: data.business_id,
-      username: finalUsername, // CRITICAL: Use the verified final username
-      platform: data.platform,
-      profile_url: data.profile_url,
-      profile_pic_url: profileData.profilePicUrl,
-      score: analysisResult.score,
+      username: GUARANTEED_USERNAME, // GUARANTEED to not be null/empty
+      platform: 'instagram',
+      profile_url: profileUrl,
+      profile_pic_url: profileData.profilePicUrl || null,
+      score: analysisResult.score || 0,
       type: data.analysis_type,
       analysis_type: data.analysis_type,
-      user_timezone: data.timezone,
-      user_local_time: data.user_local_time,
-      created_at: data.request_timestamp
+      user_timezone: data.timezone || 'UTC',
+      user_local_time: data.user_local_time || new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
-    console.log('🔍 Lead data username verification:', {
-      leadData_username: leadData.username,
-      leadData_username_length: leadData.username?.length,
-      leadData_username_empty: leadData.username === ''
-    });
-
-    let analysisData: Partial<LeadAnalysisRecord> | null = null;
+    // Create analysis data with SAME GUARANTEED username
+    let analysisData = null;
     if (data.analysis_type === 'deep') {
-      // CRITICAL: Ensure username is NEVER null or empty for analysis
-      const analysisUsername = finalUsername; // Use the same verified username
-      
-      console.log('🔍 ANALYSIS USERNAME ASSIGNMENT:', {
-        analysis_username: analysisUsername,
-        analysis_username_length: analysisUsername.length,
-        analysis_username_empty: analysisUsername === ''
-      });
-      
-      if (!analysisUsername || analysisUsername.trim() === '') {
-        throw new Error(`Analysis username cannot be empty. Final username: "${finalUsername}"`);
-      }
-
       analysisData = {
         user_id: userId,
         business_id: data.business_id,
-        username: analysisUsername.trim(), // CRITICAL: Ensure it's trimmed and not empty
+        username: GUARANTEED_USERNAME, // SAME guaranteed username
         analysis_type: 'deep',
         engagement_score: analysisResult.engagement_score || 0,
         score_niche_fit: analysisResult.niche_fit || 0,
         score_total: analysisResult.score || 0,
         ai_version_id: 'gpt-4o',
         outreach_message: outreachMessage || null,
-        selling_points: Array.isArray(analysisResult.selling_points)
-          ? JSON.stringify(analysisResult.selling_points)
+        selling_points: Array.isArray(analysisResult.selling_points) 
+          ? JSON.stringify(analysisResult.selling_points) 
           : null,
         avg_comments: profileData.engagement?.avgComments?.toString() || null,
         avg_likes: profileData.engagement?.avgLikes?.toString() || null,
@@ -2511,60 +2410,33 @@ app.post('/analyze', async c => {
         audience_quality: 'High',
         engagement_insights: null
       };
-
-      console.log('💾 Final analysis data username check:', {
-        analysisData_username: analysisData.username,
-        analysisData_username_length: analysisData.username?.length,
-        analysisData_username_empty: analysisData.username === ''
-      });
     }
 
-    console.log('💾 About to save - Final verification:', {
+    console.log('💾 FINAL DATA CHECK:', {
       leadData_username: leadData.username,
       analysisData_username: analysisData?.username,
-      both_usernames_valid: !!(leadData.username && (!analysisData || analysisData.username))
+      both_usernames_identical: leadData.username === analysisData?.username
     });
 
+    // 12. Save to database
     let leadId;
     try {
-      console.log('💾 Saving to enhanced database...');
       leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
-      console.log(`✅ Saved to database: leadId=${leadId}`);
     } catch (saveError: any) {
-      console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
-      return c.json({
-        error: 'Failed to save analysis results',
-        details: saveError.message,
-        type: 'database_error'
-      }, 500);
+      return c.json({ error: 'Failed to save analysis results', details: saveError.message }, 500);
     }
 
-    // 11. Enhanced Credit Update
+    // 13. Update credits
     try {
-      console.log('🔄 Updating credits with transaction...');
       const newBalance = currentCredits - cost;
-      await updateCreditsAndTransaction(
-        userId,
-        cost,
-        newBalance,
-        `${data.analysis_type} analysis for @${finalUsername}`,
-        leadId,
-        c.env
-      );
-      console.log(`✅ Credits updated: ${currentCredits} -> ${newBalance}`);
+      await updateCreditsAndTransaction(userId, cost, newBalance, `${data.analysis_type} analysis for @${GUARANTEED_USERNAME}`, leadId, c.env);
     } catch (creditError: any) {
-      console.error('❌ updateCreditsAndTransaction failed:', creditError.message);
-      return c.json({
-        error: 'Failed to update credits',
-        details: creditError.message,
-        type: 'credit_error'
-      }, 500);
+      return c.json({ error: 'Failed to update credits', details: creditError.message }, 500);
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`✅ Enhanced analysis completed successfully in ${totalTime}ms`);
-
-    // 12. Enhanced Response
+    
+    // 14. Success response
     return c.json({
       success: true,
       lead_id: leadId,
@@ -2578,7 +2450,7 @@ app.post('/analyze', async c => {
       },
       outreach_message: outreachMessage,
       profile: {
-        username: profileData.username,
+        username: GUARANTEED_USERNAME,
         full_name: profileData.fullName,
         followers: profileData.followersCount,
         following: profileData.followingCount,
@@ -2596,30 +2468,19 @@ app.post('/analyze', async c => {
       },
       metadata: {
         processing_time_ms: totalTime,
-        scraper_actor: data.analysis_type === 'light' ? 'dSCLg0C3YEZ83HzYX' : 'shu8hvrXbJbY3Eb9W',
         analysis_type: data.analysis_type,
-        ai_model: 'gpt-4o',
-        message_model: c.env.CLAUDE_KEY ? 'claude-3-5-sonnet' : 'gpt-4o',
-        version: '7.0.1',
-        final_username_used: finalUsername
+        guaranteed_username: GUARANTEED_USERNAME,
+        version: '7.0.2'
       }
     });
 
   } catch (error: any) {
     const totalTime = Date.now() - startTime;
-    console.error('❌ CRITICAL ERROR in /analyze endpoint:');
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-
+    console.error('❌ CRITICAL ERROR:', error.message);
     return c.json({
       error: 'Analysis failed',
-      message: error.message || 'Unknown error',
-      type: 'critical_error',
-      debug: {
-        error_type: error.constructor.name,
-        processing_time_ms: totalTime,
-        timestamp: new Date().toISOString()
-      }
+      message: error.message,
+      processing_time_ms: totalTime
     }, 500);
   }
 });
