@@ -2339,7 +2339,7 @@ app.post('/analyze', async c => {
     const leadData: Partial<LeadRecord> = {
       user_id: userId,
       business_id: data.business_id,
-      username: profileData.username,
+      username: username, // Use extracted username instead of profileData.username
       platform: data.platform,
       profile_url: data.profile_url,
       profile_pic_url: profileData.profilePicUrl,
