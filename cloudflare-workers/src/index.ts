@@ -1036,9 +1036,18 @@ async function saveLeadAndAnalysis(
         throw new Error(`Username cannot be empty for lead analysis. analysisData.username: "${analysisData.username}", completeLeadData.username: "${completeLeadData.username}"`);
       }
 
-      // Build analysis data with EXPLICIT field mapping
+     // CRITICAL: Use the actual lead ID returned from the database
+      const actualLeadId = createdLead.id;
+      
+      console.log('🔍 Lead ID verification:', {
+        expected_leadId: leadId,
+        actual_createdLead_id: actualLeadId,
+        ids_match: leadId === actualLeadId
+      });
+
+      // Build analysis data with the ACTUAL lead ID from database
       const completeAnalysisData = {
-        lead_id: leadId,
+        lead_id: actualLeadId, // CRITICAL: Use the actual ID from the created lead
         user_id: analysisData.user_id || completeLeadData.user_id,
         business_id: analysisData.business_id || completeLeadData.business_id,
         username: finalUsername, // CRITICAL: This field MUST NOT be null or empty
@@ -1057,6 +1066,87 @@ async function saveLeadAndAnalysis(
         created_at: analysisData.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+
+      // Validate the lead exists before inserting analysis
+      console.log('🔍 Verifying lead exists before analysis insert...');
+      try {
+        const leadCheckResponse = await fetchJson<any[]>(
+          `${env.SUPABASE_URL}/rest/v1/leads?id=eq.${actualLeadId}&select=id`,
+          { headers },
+          10000
+        );
+        
+        if (!Array.isArray(leadCheckResponse) || leadCheckResponse.length === 0) {
+          throw new Error(`Lead with ID ${actualLeadId} does not exist for analysis insertion`);
+        }
+        
+        console.log('✅ Lead exists, proceeding with analysis insert');
+      } catch (leadCheckError: any) {
+        throw new Error(`Lead verification failed: ${leadCheckError.message}`);
+      }
+
+      // Final validation
+      if (!completeAnalysisData.username || completeAnalysisData.username.trim() === '') {
+        throw new Error('Username validation failed - username is empty after processing');
+      }
+
+      if (!completeAnalysisData.user_id) {
+        throw new Error('User ID is required for lead analysis record but is missing');
+      }
+
+      if (!completeAnalysisData.lead_id) {
+        throw new Error('Lead ID is required for lead analysis record but is missing');
+      }
+
+      console.log('💾 Saving analysis data with verified lead ID:', {
+        lead_id: completeAnalysisData.lead_id,
+        username: completeAnalysisData.username,
+        user_id: completeAnalysisData.user_id,
+        business_id: completeAnalysisData.business_id,
+        analysis_type: completeAnalysisData.analysis_type
+      });
+
+      try {
+        const analysisResponse = await fetchJson<LeadAnalysisRecord[]>(
+          `${env.SUPABASE_URL}/rest/v1/lead_analyses`,
+          {
+            method: 'POST',
+            headers: { ...headers, Prefer: 'return=representation' },
+            body: JSON.stringify(completeAnalysisData),
+          },
+          20000
+        );
+
+        if (!Array.isArray(analysisResponse) || analysisResponse.length === 0) {
+          throw new Error('Failed to create analysis record - no data returned from database');
+        }
+
+        console.log('✅ Lead analysis saved successfully');
+
+      } catch (analysisError: any) {
+        console.error('❌ Analysis insert failed, rolling back lead:', analysisError.message);
+        console.error('❌ Failed analysis data:', JSON.stringify(completeAnalysisData, null, 2));
+
+        // Rollback: Delete the created lead
+        try {
+          await fetchJson(
+            `${env.SUPABASE_URL}/rest/v1/leads?id=eq.${actualLeadId}`,
+            {
+              method: 'DELETE',
+              headers,
+            },
+            15000
+          );
+          console.log('✅ Lead rollback completed');
+        } catch (rollbackError: any) {
+          console.error('❌ Failed to rollback lead creation:', rollbackError.message);
+        }
+
+        throw new Error(`Failed to save analysis data: ${analysisError.message}`);
+      }
+    }
+
+    return actualLeadId; // Return the actual lead ID
 
       // Final validation
       if (!completeAnalysisData.username || completeAnalysisData.username.trim() === '') {
