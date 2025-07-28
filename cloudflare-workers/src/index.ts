@@ -278,6 +278,8 @@ async function scrapeProfile(username: string, analysisType: AnalysisType, env: 
   };
 
   try {
+    console.log(`🔍 Starting Apify scrape for @${username} with actor ${actorId}`);
+    
     const runResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${env.APIFY_API_TOKEN}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -285,11 +287,12 @@ async function scrapeProfile(username: string, analysisType: AnalysisType, env: 
     });
 
     if (!runResponse.ok) {
-      throw new Error(`Apify run failed: ${runResponse.status}`);
+      throw new Error(`Apify run failed: ${runResponse.status} ${runResponse.statusText}`);
     }
 
     const runData = await runResponse.json();
     const runId = runData.data.id;
+    console.log(`🔄 Apify run started with ID: ${runId}`);
 
     let attempt = 0;
     const maxAttempts = 30;
@@ -300,39 +303,73 @@ async function scrapeProfile(username: string, analysisType: AnalysisType, env: 
       const statusResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs/${runId}?token=${env.APIFY_API_TOKEN}`);
       const statusData = await statusResponse.json();
       
+      console.log(`📊 Attempt ${attempt + 1}: Status = ${statusData.data.status}`);
+      
       if (statusData.data.status === 'SUCCEEDED') {
         const resultsResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs/${runId}/dataset/items?token=${env.APIFY_API_TOKEN}`);
         const results = await resultsResponse.json();
         
-        if (results.length === 0) {
-          throw new Error('No profile data found');
+        console.log(`📋 Scraping results:`, JSON.stringify(results, null, 2));
+        
+        if (!results || results.length === 0) {
+          throw new Error(`No profile data found for @${username}. Profile may be private or not exist.`);
         }
 
         const profile = results[0];
-        return {
-          username: profile.username || username,
-          fullName: profile.fullName || '',
-          biography: profile.biography || '',
-          followersCount: profile.followersCount || 0,
-          followingCount: profile.followingCount || 0,
-          postsCount: profile.postsCount || 0,
-          isVerified: profile.isVerified || false,
-          private: profile.private || false,
-          profilePicUrl: profile.profilePicUrl || null,
-          externalUrl: profile.externalUrl || null,
-          businessCategory: profile.businessCategory || null,
-          latestPosts: profile.latestPosts || [],
-          engagement: profile.engagement || {}
+        console.log(`📝 Raw profile data:`, JSON.stringify(profile, null, 2));
+        
+        // Handle different possible response structures
+        const profileData: ProfileData = {
+          username: profile.username || profile.user?.username || profile.handle || username,
+          fullName: profile.fullName || profile.full_name || profile.displayName || profile.name || '',
+          biography: profile.biography || profile.bio || profile.description || '',
+          followersCount: profile.followersCount || profile.followers_count || profile.followers || 0,
+          followingCount: profile.followingCount || profile.following_count || profile.following || 0,
+          postsCount: profile.postsCount || profile.posts_count || profile.mediaCount || profile.posts || 0,
+          isVerified: profile.isVerified || profile.is_verified || profile.verified || false,
+          private: profile.private || profile.isPrivate || profile.is_private || false,
+          profilePicUrl: profile.profilePicUrl || profile.profile_pic_url || profile.profilePictureUrl || profile.avatar || null,
+          externalUrl: profile.externalUrl || profile.external_url || profile.website || null,
+          businessCategory: profile.businessCategory || profile.business_category || profile.category || null,
+          latestPosts: profile.latestPosts || profile.latest_posts || profile.posts || [],
+          engagement: {
+            avgLikes: profile.engagement?.avgLikes || profile.avg_likes || 0,
+            avgComments: profile.engagement?.avgComments || profile.avg_comments || 0,
+            engagementRate: profile.engagement?.engagementRate || profile.engagement_rate || 0
+          }
         };
+
+        console.log(`✅ Processed profile data:`, JSON.stringify(profileData, null, 2));
+        
+        // Validate that we have essential data
+        if (!profileData.username) {
+          console.error('❌ No username found in scraped data');
+          profileData.username = username; // Fall back to input username
+        }
+        
+        return profileData;
+        
       } else if (statusData.data.status === 'FAILED') {
-        throw new Error('Scraping failed');
+        const errorMessage = statusData.data.statusMessage || 'Unknown scraping error';
+        throw new Error(`Scraping failed: ${errorMessage}`);
+      } else if (statusData.data.status === 'ABORTED') {
+        throw new Error('Scraping was aborted');
       }
       
       attempt++;
     }
     
-    throw new Error('Scraping timeout');
+    throw new Error(`Scraping timeout after ${maxAttempts} attempts (${maxAttempts * 2} seconds)`);
+    
   } catch (error: any) {
+    console.error('❌ Scraping error:', error.message);
+    console.error('❌ Full error:', error);
+    
+    // If scraping fails completely, return minimal data so analysis can continue
+    if (error.message.includes('private') || error.message.includes('not exist')) {
+      throw error; // Re-throw profile-specific errors
+    }
+    
     throw new Error(`Scraping failed: ${error.message}`);
   }
 }
