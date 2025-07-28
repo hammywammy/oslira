@@ -1648,19 +1648,9 @@ app.use('*', cors({
   origin: ['https://oslira.com', 'http://localhost:3000', 'http://localhost:8080'],
   allowHeaders: [
     'Content-Type', 
-    'Authorization', 
-    'X-Request-ID',           
-    'X-Client-Version',       
-    'X-Timestamp',           
-    'X-Analytics-Request',   
-    'X-User-ID',             
-    'X-Business-ID',         
-    'X-Session-ID',          
-    'X-Request-Type',        
+    'Authorization',       
     'X-Compression',         // ⭐ ADD THIS - This was missing!
     'Accept',
-    'Accept-Language',
-    'Accept-Encoding'
   ],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   credentials: true,
@@ -3345,23 +3335,6 @@ app.notFound(c => c.json({
     'GET /',
     'GET /health',
     'GET /config',
-    'GET /debug-env',
-    'GET /analytics/summary',           // NEW
-    'POST /ai/generate-insights',       // NEW
-    'POST /analytics/message-matrix',   // NEW
-    'POST /analytics/lead-conversion',  // NEW
-    'POST /analytics/cta-effectiveness', // NEW
-    'POST /analytics/timeline-overlay', // NEW
-    'POST /analytics/iteration-roi',    // NEW
-    'POST /analytics/team-impact',      // NEW
-    'POST /analytics/crm-comparison',   // NEW
-    'POST /analytics/claude-history',   // NEW
-    'GET /debug-scrape/:username',
-    'GET /test-scraper-integration/:username',
-    'GET /test-supabase',
-    'GET /test-openai', 
-    'GET /test-apify',
-    'POST /test-post',
     'POST /analyze',
     'POST /bulk-analyze',
     'POST /billing/create-checkout-session',
