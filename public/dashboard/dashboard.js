@@ -1187,47 +1187,146 @@ buildAnalysisStatusSection(lead, analysisType) {
         </div>
     `;
 }
+
+parseEngagementInsights(analysis) {
+    // Get engagement insights from the analysis data
+    let insights = [];
+    
+    if (analysis.engagement_insights) {
+        try {
+            // Try to parse as JSON array first
+            if (typeof analysis.engagement_insights === 'string') {
+                if (analysis.engagement_insights.startsWith('[')) {
+                    // It's a JSON array string
+                    insights = JSON.parse(analysis.engagement_insights);
+                } else if (analysis.engagement_insights.includes('|')) {
+                    // It's a pipe-separated string
+                    insights = analysis.engagement_insights.split('|').map(s => s.trim());
+                } else {
+                    // It's a single string, split by periods or newlines
+                    insights = analysis.engagement_insights
+                        .split(/[.!]\s+/)
+                        .filter(s => s.trim().length > 10)
+                        .map(s => s.trim());
+                }
+            } else if (Array.isArray(analysis.engagement_insights)) {
+                insights = analysis.engagement_insights;
+            }
+        } catch (e) {
+            console.warn('Failed to parse engagement insights:', e);
+            // Fallback: split the string manually
+            insights = [analysis.engagement_insights];
+        }
+    }
+    
+    // Also check reasons field as backup
+    if (insights.length === 0 && analysis.reasons) {
+        try {
+            if (Array.isArray(analysis.reasons)) {
+                insights = analysis.reasons;
+            } else if (typeof analysis.reasons === 'string') {
+                insights = JSON.parse(analysis.reasons);
+            }
+        } catch (e) {
+            console.warn('Failed to parse reasons:', e);
+        }
+    }
+    
+    return insights.filter(insight => insight && insight.length > 5);
+}
+
+copyAllInsights(insights) {
+    const formattedText = insights.map((insight, index) => `${index + 1}. ${insight}`).join('\n\n');
+    navigator.clipboard.writeText(formattedText);
+    
+    // Show feedback
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '✅ Copied!';
+    button.style.background = 'var(--success)';
+    setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = 'var(--accent-teal)';
+    }, 2000);
+}
+
     
 buildEngagementSection(analysis) {
     // Extract engagement data from analysis
     const engagementData = this.parseEngagementData(analysis);
     
+    // Parse engagement insights like selling points
+    const engagementInsights = this.parseEngagementInsights(analysis);
+    
+    // Build insights display like selling points
+    const insightsHtml = engagementInsights.length > 0 ? engagementInsights.map((insight, index) => `
+        <div style="margin-bottom: 12px; padding: 16px; background: rgba(6, 182, 212, 0.05); border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.15);">
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <div style="background: var(--accent-teal); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">
+                    ${index + 1}
+                </div>
+                <div style="flex: 1;">
+                    <div style="color: var(--text-primary); line-height: 1.6; font-size: 14px;">
+                        ${insight}
+                    </div>
+                </div>
+                <button onclick="navigator.clipboard.writeText('${insight.replace(/'/g, "\\'")}'); this.innerHTML='✓'; setTimeout(() => this.innerHTML='📋', 2000)" 
+                        style="background: none; border: 1px solid var(--accent-teal); color: var(--accent-teal); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: all 0.2s;"
+                        onmouseover="this.style.background='var(--accent-teal)'; this.style.color='white'"
+                        onmouseout="this.style.background='none'; this.style.color='var(--accent-teal)'">
+                    📋
+                </button>
+            </div>
+        </div>
+    `).join('') : `
+        <div style="padding: 16px; background: rgba(6, 182, 212, 0.05); border-radius: 8px; border: 1px solid rgba(6, 182, 212, 0.15); text-align: center; color: var(--text-secondary);">
+            <div style="font-size: 24px; margin-bottom: 8px;">🔍</div>
+            <div>This profile shows consistent engagement patterns with their audience, indicating genuine influence and potential for effective collaboration.</div>
+        </div>
+    `;
+    
     return `
         <div class="detail-section" style="grid-column: 1 / -1;">
             <h4 style="color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                🔥 Engagement Analysis
+                🔥 AI Engagement Insights
                 <span style="background: var(--accent-teal); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
-                    Premium Feature
+                    ${engagementInsights.length} insights
                 </span>
+                ${engagementInsights.length > 0 ? `
+                <button onclick="this.copyAllInsights(${JSON.stringify(engagementInsights).replace(/"/g, '&quot;')})"
+                        style="background: var(--accent-teal); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; margin-left: auto;">
+                    📋 Copy All
+                </button>
+                ` : ''}
             </h4>
             
             <div style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(14, 165, 233, 0.05)); padding: 20px; border-radius: 12px; border: 1px solid rgba(6, 182, 212, 0.2);">
                 <!-- Engagement Metrics Grid -->
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
                     <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
+                        <div style="font-size: 24px; margin-bottom: 8px;">💗</div>
+                        <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
+                            ${engagementData.avgLikes || 'N/A'}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+                            Avg Likes
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
                         <div style="font-size: 24px; margin-bottom: 8px;">💬</div>
                         <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
-                            ${engagementData.avgComments}
+                            ${engagementData.avgComments || 'N/A'}
                         </div>
                         <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
-                            Avg Comments/Post
+                            Avg Comments
                         </div>
                     </div>
                     
                     <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">❤️</div>
+                        <div style="font-size: 24px; margin-bottom: 8px;">📈</div>
                         <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
-                            ${engagementData.avgLikes}
-                        </div>
-                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
-                            Avg Likes/Post
-                        </div>
-                    </div>
-                    
-                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
-                        <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
-                        <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
-                            ${engagementData.engagementRate}%
+                            ${engagementData.engagementRate || 'N/A'}${engagementData.engagementRate ? '%' : ''}
                         </div>
                         <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
                             Engagement Rate
@@ -1237,7 +1336,7 @@ buildEngagementSection(analysis) {
                     <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.7); border-radius: 8px;">
                         <div style="font-size: 24px; margin-bottom: 8px;">👥</div>
                         <div style="font-size: 20px; font-weight: 700; color: var(--accent-teal);">
-                            ${engagementData.audienceQuality}
+                            ${engagementData.audienceQuality || 'Standard'}
                         </div>
                         <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
                             Audience Quality
@@ -1245,14 +1344,12 @@ buildEngagementSection(analysis) {
                     </div>
                 </div>
                 
-                <!-- Engagement Insights -->
-                <div style="background: rgba(255, 255, 255, 0.9); padding: 16px; border-radius: 8px; border-left: 4px solid var(--accent-teal);">
-                    <h5 style="margin: 0 0 12px 0; color: var(--accent-teal); font-size: 14px;">
-                        🔍 AI Engagement Insights
+                <!-- AI Insights Display -->
+                <div style="background: rgba(255, 255, 255, 0.9); padding: 16px; border-radius: 8px;">
+                    <h5 style="margin: 0 0 16px 0; color: var(--accent-teal); font-size: 14px;">
+                        🎯 Detailed Engagement Analysis
                     </h5>
-                    <div style="color: var(--text-primary); line-height: 1.6; font-size: 14px;">
-                        ${engagementData.insights || 'This profile shows consistent engagement patterns with their audience, indicating genuine influence and potential for effective collaboration.'}
-                    </div>
+                    ${insightsHtml}
                 </div>
             </div>
         </div>
