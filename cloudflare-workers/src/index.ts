@@ -735,14 +735,6 @@ Return JSON: {"message": "your message here"}`;
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('*', compress());
-app.use('*', cors({
-  origin: ['https://oslira.com', 'https://oslira.netlify.app'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'OPTIONS'],
-  credentials: true
-}));
-
 // ===============================================================================
 // ROUTES
 // ===============================================================================
