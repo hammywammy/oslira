@@ -188,72 +188,80 @@ class OsliraDashboard {
         ]);
     }
 
-    async loadRecentActivity() {
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
-        
-        if (!supabase || !user) {
-            this.displayDemoLeads();
-            return;
-        }
-        
-        try {
-            let query = supabase
-                .from('leads')
-                .select(`
-                    *,
-                    profile_pic_url,
-                    lead_analyses (
-                        engagement_score,
-                        score_niche_fit,
-                        score_total,
-                        ai_version_id,
-                        outreach_message,
-                        selling_points,
-                        analysis_type
-                    )
-                `)
-                .eq('user_id', user.id);
+    // Replace the loadRecentActivity method in dashboard.js (around line 200-280)
 
-            // Apply timeframe filter
-            const timeframe = document.getElementById('timeframe-filter')?.value || 'month';
-            if (timeframe !== 'all') {
-                const now = new Date();
-                let startDate;
-                
-                switch (timeframe) {
-                    case 'today':
-                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                        break;
-                    case 'week':
-                        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-                        break;
-                    case 'month':
-                        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                        break;
-                }
-                
-                if (startDate) {
-                    query = query.gte('created_at', startDate.toISOString());
-                }
-            }
-
-            const { data: leads, error } = await query
-                .order('created_at', { ascending: false })
-                .limit(50);
-            
-            if (error) throw error;
-            
-            this.allLeads = leads || [];
-            this.selectedLeads.clear();
-            this.applyActivityFilter();
-            
-        } catch (error) {
-            console.error('Error loading activity:', error);
-            this.displayErrorState('Failed to load leads: ' + error.message);
-        }
+async loadRecentActivity() {
+    const supabase = window.OsliraApp.supabase;
+    const user = window.OsliraApp.user;
+    
+    if (!supabase || !user) {
+        this.displayDemoLeads();
+        return;
     }
+    
+    try {
+        let query = supabase
+            .from('leads')
+            .select(`
+                *,
+                profile_pic_url,
+                lead_analyses (
+                    engagement_score,
+                    score_niche_fit,
+                    score_total,
+                    ai_version_id,
+                    outreach_message,
+                    selling_points,
+                    analysis_type,
+                    avg_comments,
+                    avg_likes,
+                    engagement_rate,
+                    audience_quality,
+                    engagement_insights
+                )
+            `)
+            .eq('user_id', user.id);
 
+        // Apply timeframe filter
+        const timeframe = document.getElementById('timeframe-filter')?.value || 'month';
+        if (timeframe !== 'all') {
+            const now = new Date();
+            let startDate;
+            
+            switch (timeframe) {
+                case 'today':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    break;
+                case 'week':
+                    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    break;
+            }
+            
+            if (startDate) {
+                query = query.gte('created_at', startDate.toISOString());
+            }
+        }
+
+        const { data: leads, error } = await query
+            .order('created_at', { ascending: false })
+            .limit(50);
+        
+        if (error) throw error;
+        
+        this.allLeads = leads || [];
+        this.selectedLeads.clear();
+        
+        // FIX: Call applyActivityFilter instead of this.renderLeads
+        this.applyActivityFilter();
+        
+    } catch (error) {
+        console.error('Error loading activity:', error);
+        this.displayErrorState('Failed to load leads: ' + error.message);
+    }
+}
     displayDemoLeads() {
         this.allLeads = [
             {
@@ -505,7 +513,10 @@ class OsliraDashboard {
     // EVENT HANDLERS
     // =============================================================================
 
-    setupEventListeners() {
+// Replace the setupEventListeners method in your dashboard.js file
+// Make sure to add the missing closing brace
+
+setupEventListeners() {
     // Analysis modal
     document.getElementById('research-lead-btn')?.addEventListener('click', () => this.showAnalysisModal());
     document.getElementById('research-action-card')?.addEventListener('click', () => this.showAnalysisModal());
@@ -515,7 +526,7 @@ class OsliraDashboard {
     document.getElementById('bulk-upload-btn')?.addEventListener('click', () => this.showBulkUpload());
     document.getElementById('csv-import-action-card')?.addEventListener('click', () => this.showBulkUpload());
     
-    // FIX: Add missing campaigns handler
+    // Campaigns handler
     document.getElementById('campaigns-action-card')?.addEventListener('click', () => {
         window.location.href = '/campaigns.html';
     });
@@ -542,7 +553,7 @@ class OsliraDashboard {
     document.getElementById('lead-modal-close')?.addEventListener('click', () => this.closeModal('leadModal'));
     document.getElementById('bulk-modal-close')?.addEventListener('click', () => this.closeModal('bulkModal'));
     
-    // FIX: Add missing support modal handlers
+    // Support modal handlers
     document.getElementById('support-btn')?.addEventListener('click', () => this.showSupportModal());
     document.getElementById('general-support-btn')?.addEventListener('click', () => this.contactSupport('support'));
     document.getElementById('billing-support-btn')?.addEventListener('click', () => this.contactSupport('billing'));
@@ -556,7 +567,7 @@ class OsliraDashboard {
     // Global modal handling
     window.addEventListener('click', (e) => this.handleModalClick(e));
     document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
-}
+} // ← This closing brace was likely missing
 
     // =============================================================================
     // ANALYSIS FUNCTIONALITY
@@ -619,75 +630,130 @@ class OsliraDashboard {
         }
     }
 
-    async submitAnalysis(event) {
-        event.preventDefault();
-        
-        const analysisType = document.getElementById('analysis-type').value;
-        const profileInput = document.getElementById('profile-input').value.trim();
-        const businessId = document.getElementById('business-id').value;
-        
-        if (!analysisType || !profileInput) {
-            window.OsliraApp.showMessage('Please fill in all required fields', 'error');
-            return;
-        }
-        
-        const username = profileInput.replace('@', '');
-        
-        if (!this.validateUsername(username)) {
-            window.OsliraApp.showMessage('Please enter a valid Instagram username', 'error');
-            return;
-        }
-        
-        const profileUrl = `https://instagram.com/${username}`;
-        
-        const submitBtn = event.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.textContent;
-        submitBtn.innerHTML = '🔄 Analyzing... <small style="display: block; font-size: 10px; margin-top: 4px;">This may take 30-60 seconds</small>';
-        submitBtn.disabled = true;
-        
-        window.OsliraApp.showMessage('Starting analysis... This may take up to 60 seconds', 'info');
-        
-        try {
-            const user = window.OsliraApp.user;
-            const session = window.OsliraApp.session;
-            
-            if (!user || !session) {
-                throw new Error('Please log in to continue');
-            }
+    // Add this debugging version to your submitAnalysis method in dashboard.js
+// Replace the existing submitAnalysis method with this enhanced version
 
-            const timezoneInfo = this.getCurrentTimestampWithTimezone();
-            
-            const requestBody = {
-                profile_url: profileUrl,
-                analysis_type: analysisType,
-                business_id: businessId || null,
-                user_id: user.id,
-                platform: 'instagram',
-                timezone: timezoneInfo.timezone,
-                user_local_time: timezoneInfo.local_time,
-                request_timestamp: timezoneInfo.timestamp
-            };
-            
-            const result = await window.OsliraApp.apiRequest('/analyze', {
-                method: 'POST',
-                body: JSON.stringify(requestBody)
-            });
-            
-            window.OsliraApp.showMessage('Analysis completed successfully!', 'success');
-            this.closeModal('analysisModal');
-            
-            // Refresh dashboard data
-            await this.loadDashboardData();
-            await this.refreshCreditsDisplay();
-            
-        } catch (error) {
-            console.error('Analysis error:', error);
-            window.OsliraApp.showMessage(`Analysis failed: ${error.message}`, 'error');
-        } finally {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }
+async submitAnalysis(event) {
+    event.preventDefault();
+    
+    // DEBUG: Check if method is being called
+    console.log('🔍 submitAnalysis method called');
+    
+    // DEBUG: Check form elements exist
+    const analysisTypeEl = document.getElementById('analysis-type');
+    const profileInputEl = document.getElementById('profile-input');
+    const businessIdEl = document.getElementById('business-id');
+    
+    console.log('🔍 Form elements check:');
+    console.log('- analysisType element:', analysisTypeEl);
+    console.log('- profileInput element:', profileInputEl);
+    console.log('- businessId element:', businessIdEl);
+    
+    if (!analysisTypeEl || !profileInputEl) {
+        console.error('❌ Required form elements not found!');
+        window.OsliraApp.showMessage('Form elements not found. Please refresh the page.', 'error');
+        return;
     }
+    
+    // Get values
+    const analysisType = analysisTypeEl.value;
+    const profileInput = profileInputEl.value.trim();
+    const businessId = businessIdEl ? businessIdEl.value : null;
+    
+    // DEBUG: Log values
+    console.log('🔍 Form values:');
+    console.log('- analysisType:', analysisType);
+    console.log('- profileInput:', profileInput);
+    console.log('- businessId:', businessId);
+    
+    // Check if analysis type is selected
+    if (!analysisType) {
+        console.log('❌ No analysis type selected');
+        window.OsliraApp.showMessage('Please select an analysis type', 'error');
+        return;
+    }
+    
+    // Check if profile input container is visible
+    const inputContainer = document.getElementById('input-field-container');
+    console.log('🔍 Input container display:', inputContainer ? inputContainer.style.display : 'not found');
+    
+    // Check if profile input is filled
+    if (!profileInput) {
+        console.log('❌ No profile input provided');
+        window.OsliraApp.showMessage('Please enter an Instagram username', 'error');
+        return;
+    }
+    
+    const username = profileInput.replace('@', '');
+    console.log('🔍 Processed username:', username);
+    
+    // Validate username
+    if (!this.validateUsername(username)) {
+        console.log('❌ Invalid username format');
+        window.OsliraApp.showMessage('Please enter a valid Instagram username', 'error');
+        return;
+    }
+    
+    console.log('✅ Validation passed, starting analysis...');
+    
+    const profileUrl = `https://instagram.com/${username}`;
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.innerHTML = '🔄 Analyzing... <small style="display: block; font-size: 10px; margin-top: 4px;">This may take 30-60 seconds</small>';
+    submitBtn.disabled = true;
+    
+    window.OsliraApp.showMessage('Starting analysis... This may take up to 60 seconds', 'info');
+    
+    try {
+        const user = window.OsliraApp.user;
+        const session = window.OsliraApp.session;
+        
+        console.log('🔍 Auth check:');
+        console.log('- user:', user);
+        console.log('- session:', session);
+        
+        if (!user || !session) {
+            throw new Error('Please log in to continue');
+        }
+
+        const timezoneInfo = this.getCurrentTimestampWithTimezone();
+        
+        const requestBody = {
+            profile_url: profileUrl,
+            analysis_type: analysisType,
+            business_id: businessId || null,
+            user_id: user.id,
+            platform: 'instagram',
+            timezone: timezoneInfo.timezone,
+            user_local_time: timezoneInfo.local_time,
+            request_timestamp: timezoneInfo.timestamp
+        };
+        
+        console.log('🔍 Request body:', requestBody);
+        
+        const result = await window.OsliraApp.apiRequest('/analyze', {
+            method: 'POST',
+            body: JSON.stringify(requestBody)
+        });
+        
+        console.log('✅ Analysis completed successfully!');
+        window.OsliraApp.showMessage('Analysis completed successfully!', 'success');
+        this.closeModal('analysisModal');
+        
+        // Refresh dashboard data
+        await this.loadDashboardData();
+        await this.refreshCreditsDisplay();
+        
+    } catch (error) {
+        console.error('❌ Analysis error:', error);
+        window.OsliraApp.showMessage(`Analysis failed: ${error.message}`, 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
 
     validateUsername(username) {
         const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
@@ -1582,7 +1648,11 @@ contactSupport(type = 'support') {
 
    buildLeadDetailsHTML(lead) {
     const analysis = lead.lead_analyses?.[0] || {};
-    const hasAnalysisData = analysis && Object.keys(analysis).length > 0;
+    const hasAnalysisData = analysis && 
+    typeof analysis === 'object' && 
+    analysis !== null && 
+    Object.keys(analysis).length > 0;
+
     const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
     const score = lead.score || 0;
     const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
@@ -1594,7 +1664,7 @@ contactSupport(type = 'support') {
         analysisType, 
         isDeepAnalysis, 
         hasAnalysisData, 
-        analysisKeys: Object.keys(analysis) 
+        analysisKeys: analysis && typeof analysis === 'object' && analysis !== null ? Object.keys(analysis) : []
     });
     
     // Build profile header with profile picture
@@ -1606,7 +1676,7 @@ contactSupport(type = 'support') {
     html += this.buildAnalysisStatusSection(lead, analysisType);
     
     // Add advanced sections for deep analysis
-    if (isDeepAnalysis && analysis && Object.keys(analysis).length > 0) {
+   if (isDeepAnalysis && analysis && typeof analysis === 'object' && analysis !== null && Object.keys(analysis).length > 0) {
         console.log('📊 Adding advanced sections for deep analysis');
         html += this.buildAdvancedMetricsSection(analysis);
         html += this.buildEngagementSection(analysis);

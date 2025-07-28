@@ -54,18 +54,18 @@ async function loadAppConfig() {
         if (window.CONFIG) {
             Object.assign(window.OsliraApp.config, window.CONFIG);
 
-// Ensure workerUrl is set for analytics services
-if (!window.OsliraApp.config.workerUrl) {
-    window.OsliraApp.config.workerUrl = window.CONFIG.WORKER_URL || 
-                                       window.CONFIG.workerUrl || 
-                                       'https://oslira-worker.oslira-worker.workers.dev';
-}
+            // Ensure workerUrl is set for analytics services
+            if (!window.OsliraApp.config.workerUrl) {
+                window.OsliraApp.config.workerUrl = window.CONFIG.WORKER_URL || 
+                                                   window.CONFIG.workerUrl || 
+                                                   'https://oslira-worker.oslira-worker.workers.dev';
+            }
 
-console.log('✅ Configuration loaded from window.CONFIG', {
-    workerUrl: window.OsliraApp.config.workerUrl,
-    hasSupabase: !!window.OsliraApp.config.supabaseUrl
-});
-return window.CONFIG;
+            console.log('✅ Configuration loaded from window.CONFIG', {
+                workerUrl: window.OsliraApp.config.workerUrl,
+                hasSupabase: !!window.OsliraApp.config.supabaseUrl
+            });
+            return window.CONFIG;
         }
         
         // Fallback: Use API endpoint
@@ -97,15 +97,28 @@ async function initializeSupabase() {
     try {
         console.log('🔧 Initializing Supabase...');
         
-        const config = window.OsliraApp.config;
-        if (!config.supabaseUrl || !config.supabaseAnonKey) {
-            throw new Error('Supabase configuration missing');
+        if (typeof supabase === 'undefined') {
+            throw new Error('Supabase library not loaded. Include the Supabase CDN script.');
         }
         
-        const { createClient } = supabase;
-        window.OsliraApp.supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+        const config = window.OsliraApp.config;
+        if (!config.supabaseUrl || !config.supabaseAnonKey) {
+            throw new Error('Supabase configuration missing. Check your environment variables.');
+        }
         
-        console.log('✅ Supabase initialized');
+        window.OsliraApp.supabase = supabase.createClient(
+            config.supabaseUrl,
+            config.supabaseAnonKey,
+            {
+                auth: {
+                    autoRefreshToken: true,
+                    persistSession: true,
+                    detectSessionInUrl: true
+                }
+            }
+        );
+        
+        console.log('✅ Supabase initialized successfully');
         return window.OsliraApp.supabase;
         
     } catch (error) {
@@ -130,28 +143,32 @@ async function checkAuthentication() {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-            console.error('❌ Supabase auth error:', error);
+            console.error('❌ Session check error:', error);
             throw error;
         }
         
         if (!session) {
-            console.log('❌ No active session');
-            redirectToLogin();
+            console.log('❌ No active session found');
             return null;
         }
         
-        // 🔧 FIX: Properly sync session to global state
+        // Store session and user data
         window.OsliraApp.session = session;
         window.OsliraApp.user = session.user;
         
-        console.log('✅ User authenticated');
-        console.log('👤 User email:', session.user.email);
-        console.log('🆔 User ID:', session.user.id);
-        console.log('🔑 Token synced to global state');
+        console.log('✅ User authenticated:', session.user.email);
         
-        // 🔧 FIX: Verify the sync worked
-        if (!window.OsliraApp.session?.access_token) {
-            console.error('❌ Session sync failed - token not in global state');
+        // Verify session is still valid
+        const isValid = await refreshSessionSync();
+        if (!isValid) {
+            console.log('❌ Session invalid, clearing auth');
+            window.OsliraApp.session = null;
+            window.OsliraApp.user = null;
+            return null;
+        }
+        
+        if (!session.user.email_confirmed_at) {
+            console.warn('⚠️ Email not confirmed');
             throw new Error('Session synchronization failed');
         }
         
@@ -240,33 +257,39 @@ function redirectToLogin() {
 }
 
 // =============================================================================
-// 5. TIMEZONE HANDLING
+// 5. TIMEZONE DETECTION
 // =============================================================================
 
 function initializeTimezone() {
     try {
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        localStorage.setItem('userTimezone', timezone);
+        let timezone = localStorage.getItem('userTimezone');
         
+        if (!timezone) {
+            timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+            localStorage.setItem('userTimezone', timezone);
+        }
+        
+        window.OsliraApp.timezone = timezone;
         console.log('🌍 Timezone detected:', timezone);
-        return timezone;
         
+        return timezone;
     } catch (error) {
-        console.warn('Timezone detection failed:', error);
+        console.warn('⚠️ Timezone detection failed:', error);
         const fallback = 'UTC';
         localStorage.setItem('userTimezone', fallback);
+        window.OsliraApp.timezone = fallback;
         return fallback;
     }
 }
 
 function getUserTimezone() {
-    return localStorage.getItem('userTimezone') || 'UTC';
+    return window.OsliraApp.timezone || initializeTimezone();
 }
 
-function formatDateInUserTimezone(dateInput, options = {}) {
+function formatDateInUserTimezone(dateString, options = {}) {
     try {
-        const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
         const timezone = getUserTimezone();
+        const date = new Date(dateString);
         
         const defaultOptions = {
             timeZone: timezone,
@@ -278,10 +301,9 @@ function formatDateInUserTimezone(dateInput, options = {}) {
         };
         
         return new Intl.DateTimeFormat('en-US', { ...defaultOptions, ...options }).format(date);
-        
     } catch (error) {
         console.warn('Date formatting failed:', error);
-        return dateInput?.toString() || 'Invalid Date';
+        return new Date(dateString).toLocaleDateString();
     }
 }
 
@@ -299,7 +321,7 @@ async function loadBusinesses() {
         }
         
         const { data: businesses, error } = await supabase
-            .from('businesses')
+            .from('business_profiles')
             .select('*')
             .eq('user_id', window.OsliraApp.user.id)
             .order('created_at', { ascending: false });
@@ -339,7 +361,7 @@ function setActiveBusiness(businessId) {
             detail: { business }
         }));
         
-        console.log('🏢 Active business changed:', business.name);
+        console.log('🏢 Active business changed:', business.business_name);
     }
 }
 
@@ -367,7 +389,23 @@ async function apiRequest(endpoint, options = {}) {
         }
     };
     
-    const url = endpoint.startsWith('http') ? endpoint : `${config.apiUrl || ''}${endpoint}`;
+    // ✅ FIXED: Proper URL construction
+    let url;
+    if (endpoint.startsWith('http')) {
+        // Full URL provided
+        url = endpoint;
+    } else if (endpoint.startsWith('/analyze') || endpoint.startsWith('/bulk-analyze')) {
+        // API endpoints go to worker
+        const workerUrl = config.workerUrl || 'https://ai-outreach-api.oslira-worker.workers.dev';
+        url = `${workerUrl}${endpoint}`;
+    } else if (endpoint.startsWith('/api/')) {
+        // Netlify edge functions
+        url = endpoint;
+    } else {
+        // Default to worker for other endpoints
+        const workerUrl = config.workerUrl || 'https://ai-outreach-api.oslira-worker.workers.dev';
+        url = `${workerUrl}${endpoint}`;
+    }
     
     try {
         console.log(`🌐 API Request: ${requestOptions.method || 'GET'} ${url}`);
@@ -375,6 +413,8 @@ async function apiRequest(endpoint, options = {}) {
         const response = await fetch(url, requestOptions);
         
         if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`❌ API Error: ${response.status} ${response.statusText}`, errorText);
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
@@ -386,75 +426,122 @@ async function apiRequest(endpoint, options = {}) {
         throw error;
     }
 }
-
 // =============================================================================
-// 8. UI HELPERS
+// 8. UI UTILITY FUNCTIONS
 // =============================================================================
 
 function showMessage(message, type = 'info', duration = 5000) {
-    const messageContainer = document.getElementById('message-container') || createMessageContainer();
+    // Create message container if it doesn't exist
+    let container = document.getElementById('message-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'message-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            max-width: 400px;
+        `;
+        document.body.appendChild(container);
+    }
     
-    const messageElement = document.createElement('div');
-    messageElement.className = `message message-${type}`;
-    messageElement.innerHTML = `
-        <div class="message-content">
-            <span class="message-icon">${getMessageIcon(type)}</span>
-            <span class="message-text">${message}</span>
-            <button class="message-close" onclick="this.parentElement.parentElement.remove()">×</button>
-        </div>
+    // Create message element
+    const messageEl = document.createElement('div');
+    messageEl.className = `message message-${type}`;
+    messageEl.style.cssText = `
+        background: ${type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6'};
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease-out;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1.4;
     `;
     
-    messageContainer.appendChild(messageElement);
+    messageEl.textContent = message;
     
-    // Auto-remove after duration
+    // Add click to dismiss
+    messageEl.addEventListener('click', () => {
+        messageEl.remove();
+    });
+    
+    container.appendChild(messageEl);
+    
+    // Auto remove
     if (duration > 0) {
         setTimeout(() => {
-            if (messageElement.parentElement) {
-                messageElement.remove();
+            if (messageEl.parentNode) {
+                messageEl.style.animation = 'slideOut 0.3s ease-in forwards';
+                setTimeout(() => messageEl.remove(), 300);
             }
         }, duration);
     }
     
-    return messageElement;
-}
-
-function createMessageContainer() {
-    const container = document.createElement('div');
-    container.id = 'message-container';
-    container.className = 'message-container';
-    document.body.appendChild(container);
-    return container;
-}
-
-function getMessageIcon(type) {
-    const icons = {
-        success: '✅',
-        error: '❌',
-        warning: '⚠️',
-        info: 'ℹ️'
-    };
-    return icons[type] || icons.info;
+    // Add CSS animations if not already added
+    if (!document.getElementById('message-animations')) {
+        const style = document.createElement('style');
+        style.id = 'message-animations';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
 function showLoadingOverlay(message = 'Loading...') {
     let overlay = document.getElementById('loading-overlay');
-    
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'loading-overlay';
-        overlay.className = 'loading-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        `;
+        
         overlay.innerHTML = `
-            <div class="loading-content">
-                <div class="loading-spinner"></div>
-                <p class="loading-message">${message}</p>
+            <div style="text-align: center; padding: 20px;">
+                <div style="width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top: 4px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+                <div style="color: #374151; font-weight: 500;">${message}</div>
             </div>
         `;
+        
         document.body.appendChild(overlay);
+        
+        // Add spin animation
+        if (!document.getElementById('loading-animations')) {
+            const style = document.createElement('style');
+            style.id = 'loading-animations';
+            style.textContent = `
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
     
-    overlay.querySelector('.loading-message').textContent = message;
     overlay.style.display = 'flex';
-    window.OsliraApp.loading = true;
 }
 
 function removeLoadingOverlay() {
@@ -462,24 +549,88 @@ function removeLoadingOverlay() {
     if (overlay) {
         overlay.style.display = 'none';
     }
-    window.OsliraApp.loading = false;
 }
 
-function updateLoadingMessage(message) {
-    const overlay = document.getElementById('loading-overlay');
-    if (overlay) {
-        const messageElement = overlay.querySelector('.loading-message');
-        if (messageElement) {
-            messageElement.textContent = message;
+async function logout() {
+    try {
+        console.log('🚪 Logging out...');
+        
+        const supabase = window.OsliraApp.supabase;
+        if (supabase) {
+            await supabase.auth.signOut();
         }
+        
+        // Clear local storage
+        localStorage.removeItem('selectedBusinessId');
+        localStorage.removeItem('userTimezone');
+        
+        // Clear app state
+        window.OsliraApp.user = null;
+        window.OsliraApp.session = null;
+        window.OsliraApp.business = null;
+        window.OsliraApp.businesses = [];
+        
+        console.log('✅ Logout successful');
+        window.location.href = '/auth.html';
+        
+    } catch (error) {
+        console.error('❌ Logout failed:', error);
+        // Force redirect anyway
+        window.location.href = '/auth.html';
     }
 }
 
 // =============================================================================
-// 9. UTILITY FUNCTIONS
+// 9. MODAL MANAGEMENT
 // =============================================================================
 
-// Find the getCurrentPageName function in your shared-code.js and replace it with this:
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        window.OsliraApp.modals.add(modalId);
+        
+        // Add click outside to close
+        modal.addEventListener('click', function closeOnOutsideClick(e) {
+            if (e.target === modal) {
+                closeModal(modalId);
+                modal.removeEventListener('click', closeOnOutsideClick);
+            }
+        });
+        
+        // Add escape key to close
+        document.addEventListener('keydown', function closeOnEscape(e) {
+            if (e.key === 'Escape') {
+                closeModal(modalId);
+                document.removeEventListener('keydown', closeOnEscape);
+            }
+        });
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        window.OsliraApp.modals.delete(modalId);
+        
+        // Restore body scroll if no modals are open
+        if (window.OsliraApp.modals.size === 0) {
+            document.body.style.overflow = '';
+        }
+    }
+}
+
+function closeAllModals() {
+    window.OsliraApp.modals.forEach(modalId => {
+        closeModal(modalId);
+    });
+}
+
+// =============================================================================
+// 10. UTILITY FUNCTIONS
+// =============================================================================
 
 function getCurrentPageName() {
     const pathname = window.location.pathname;
@@ -507,6 +658,22 @@ function getCurrentPageName() {
     
     if (pathname.startsWith('/settings')) {
         return 'settings';
+    }
+    
+    if (pathname.startsWith('/admin')) {
+        return 'admin';
+    }
+    
+    if (pathname.startsWith('/campaigns')) {
+        return 'campaigns';
+    }
+    
+    if (pathname.startsWith('/onboarding')) {
+        return 'onboarding';
+    }
+    
+    if (pathname.startsWith('/home')) {
+        return 'home';
     }
     
     // Handle file-based paths like /analytics.html
@@ -579,82 +746,130 @@ function copyToClipboard(text) {
     }
 }
 
-// =============================================================================
-// 10. LOGOUT FUNCTIONALITY
-// =============================================================================
+function safeObjectKeys(obj) {
+    return obj && typeof obj === 'object' && obj !== null ? Object.keys(obj) : [];
+}
 
-async function logout() {
+function safeJsonParse(str, fallback = {}) {
     try {
-        console.log('🚪 Logging out...');
-        
-        const supabase = window.OsliraApp.supabase;
-        if (supabase) {
-            await supabase.auth.signOut();
-        }
-        
-        // Clear local storage
-        localStorage.removeItem('selectedBusinessId');
-        localStorage.removeItem('userTimezone');
-        
-        // Clear app state
-        window.OsliraApp.user = null;
-        window.OsliraApp.session = null;
-        window.OsliraApp.business = null;
-        window.OsliraApp.businesses = [];
-        
-        console.log('✅ Logout successful');
-        window.location.href = '/auth.html';
-        
+        return JSON.parse(str);
     } catch (error) {
-        console.error('❌ Logout failed:', error);
-        showMessage('Logout failed. Please try again.', 'error');
+        console.warn('JSON parse failed:', error);
+        return fallback;
     }
 }
 
+function truncateText(text, maxLength = 100, suffix = '...') {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength - suffix.length) + suffix;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function unescapeHtml(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+}
+
+function validateEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+function validateUrl(url) {
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function formatCurrency(amount, currency = 'USD') {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: currency
+    }).format(amount);
+}
+
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+function getRelativeTime(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    
+    return new Date(date).toLocaleDateString();
+}
+
+function isElementInViewport(el) {
+    const rect = el.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+}
+
+function scrollToElement(element, options = {}) {
+    const defaultOptions = {
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest'
+    };
+    
+    element.scrollIntoView({ ...defaultOptions, ...options });
+}
+
 // =============================================================================
-// 11. PAGE INITIALIZER CLASS
+// 11. MAIN PAGE INITIALIZER CLASS
 // =============================================================================
 
 class OsliraPageInitializer {
     constructor() {
-        this.initializationSteps = [
-            { name: 'Configuration', fn: this.initConfig.bind(this) },
-            { name: 'Supabase', fn: this.initSupabase.bind(this) },
-            { name: 'Authentication', fn: this.initAuth.bind(this) },
-            { name: 'Timezone', fn: this.initTimezone.bind(this) },
-            { name: 'Business Context', fn: this.initBusinessContext.bind(this) },
-            { name: 'UI Setup', fn: this.initUI.bind(this) }
-        ];
-        this.isInitialized = false;
+        this.initializationPromise = null;
     }
 
     async initialize() {
-        if (this.isInitialized) {
-            console.log('⚠️ [Initializer] Already initialized');
-            return;
+        if (this.initializationPromise) {
+            return this.initializationPromise;
         }
 
+        this.initializationPromise = this.performInitialization();
+        return this.initializationPromise;
+    }
+
+    async performInitialization() {
         try {
-            console.log('🚀 [Initializer] Starting Oslira page initialization...');
-            showLoadingOverlay('Initializing Oslira...');
+            console.log('🚀 [Initializer] Starting app initialization...');
+            showLoadingOverlay('Initializing application...');
 
-            for (const [index, step] of this.initializationSteps.entries()) {
-                const progress = Math.round(((index + 1) / this.initializationSteps.length) * 100);
-                updateLoadingMessage(`${step.name}... (${progress}%)`);
-                
-                console.log(`🔧 [Initializer] Step ${index + 1}: ${step.name}`);
-                await step.fn();
-                console.log(`✅ [Initializer] ${step.name} completed`);
-            }
+            // Core initialization steps
+            await this.initConfig();
+            await this.initSupabase();
+            await this.initTimezone();
+            await this.initAuth();
+            await this.initBusinessContext();
+            await this.initUI();
 
-            this.isInitialized = true;
-            console.log('🎯 [Initializer] Oslira initialization completed successfully');
-            
-            // Emit initialization complete event
-            window.dispatchEvent(new CustomEvent('oslira:initialized', {
-                detail: { timestamp: Date.now() }
-            }));
-
+            console.log('✅ [Initializer] App initialization completed successfully');
             removeLoadingOverlay();
 
         } catch (error) {
@@ -675,7 +890,7 @@ class OsliraPageInitializer {
 
     async initAuth() {
         const currentPage = getCurrentPageName();
-        const publicPages = ['auth', 'index', 'landing'];
+        const publicPages = ['auth', 'index', 'landing', 'home'];
         
         if (publicPages.includes(currentPage)) {
             console.log('📖 [Initializer] Public page - skipping auth');
@@ -721,6 +936,29 @@ class OsliraPageInitializer {
                 }
             });
         }
+
+        // Modal handlers
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-modal-open]')) {
+                e.preventDefault();
+                const modalId = e.target.getAttribute('data-modal-open');
+                openModal(modalId);
+            }
+            
+            if (e.target.matches('[data-modal-close]')) {
+                e.preventDefault();
+                const modalId = e.target.getAttribute('data-modal-close');
+                closeModal(modalId);
+            }
+        });
+
+        // Global keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                closeAllModals();
+            }
+        });
     }
 
     populateUIElements() {
@@ -747,7 +985,7 @@ class OsliraPageInitializer {
             window.OsliraApp.businesses.forEach(business => {
                 const option = document.createElement('option');
                 option.value = business.id;
-                option.textContent = business.name;
+                option.textContent = business.business_name;
                 option.selected = window.OsliraApp.business?.id === business.id;
                 select.appendChild(option);
             });
@@ -799,15 +1037,483 @@ window.OsliraApp.copyToClipboard = copyToClipboard;
 window.OsliraApp.debounce = debounce;
 window.OsliraApp.generateId = generateId;
 window.OsliraApp.sanitizeHTML = sanitizeHTML;
+window.OsliraApp.safeObjectKeys = safeObjectKeys;
+window.OsliraApp.safeJsonParse = safeJsonParse;
+window.OsliraApp.truncateText = truncateText;
+window.OsliraApp.escapeHtml = escapeHtml;
+window.OsliraApp.unescapeHtml = unescapeHtml;
+window.OsliraApp.validateEmail = validateEmail;
+window.OsliraApp.validateUrl = validateUrl;
+window.OsliraApp.formatCurrency = formatCurrency;
+window.OsliraApp.formatBytes = formatBytes;
+window.OsliraApp.getRelativeTime = getRelativeTime;
+window.OsliraApp.isElementInViewport = isElementInViewport;
+window.OsliraApp.scrollToElement = scrollToElement;
+window.OsliraApp.openModal = openModal;
+window.OsliraApp.closeModal = closeModal;
+window.OsliraApp.closeAllModals = closeAllModals;
+window.OsliraApp.loadBusinesses = loadBusinesses;
+window.OsliraApp.getCurrentPageName = getCurrentPageName;
 
-// Auto-initialize when DOM is ready
+// Additional helper functions for text handling
+window.OsliraApp.copyText = function(text) {
+    copyToClipboard(text).then(() => {
+        showMessage('Copied to clipboard!', 'success', 2000);
+    }).catch(() => {
+        showMessage('Failed to copy to clipboard', 'error', 3000);
+    });
+};
+
+window.OsliraApp.downloadAsFile = function(content, filename, mimeType = 'text/plain') {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
+
+window.OsliraApp.parseCSV = function(csvText) {
+    const lines = csvText.split('\n').filter(line => line.trim());
+    if (lines.length === 0) return [];
+    
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const data = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+        const row = {};
+        headers.forEach((header, index) => {
+            row[header] = values[index] || '';
+        });
+        data.push(row);
+    }
+    
+    return data;
+};
+
+window.OsliraApp.formatCsvData = function(data) {
+    if (!Array.isArray(data) || data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+        headers.join(','),
+        ...data.map(row => 
+            headers.map(header => `"${(row[header] || '').toString().replace(/"/g, '""')}"`).join(',')
+        )
+    ].join('\n');
+    
+    return csvContent;
+};
+
+window.OsliraApp.validateInstagramUsername = function(username) {
+    if (!username) return false;
+    const cleaned = username.replace('@', '').trim();
+    const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
+    return usernameRegex.test(cleaned) && 
+           !cleaned.includes('..') && 
+           !cleaned.startsWith('.') && 
+           !cleaned.endsWith('.');
+};
+
+window.OsliraApp.extractInstagramUsername = function(input) {
+    if (!input) return '';
+    
+    const cleaned = input.trim().replace(/^@/, '').toLowerCase();
+    
+    // Handle Instagram URLs
+    if (cleaned.includes('instagram.com')) {
+        try {
+            const url = new URL(cleaned.startsWith('http') ? cleaned : `https://${cleaned}`);
+            const pathSegments = url.pathname.split('/').filter(Boolean);
+            return pathSegments[0] || '';
+        } catch {
+            return '';
+        }
+    }
+    
+    // Handle plain usernames
+    return cleaned.replace(/[^a-z0-9._]/g, '');
+};
+
+window.OsliraApp.formatScore = function(score) {
+    if (typeof score !== 'number') return '0';
+    return Math.round(score).toString();
+};
+
+window.OsliraApp.getScoreColor = function(score) {
+    if (score >= 80) return '#10b981'; // Green
+    if (score >= 60) return '#3b82f6'; // Blue
+    if (score >= 40) return '#f59e0b'; // Orange
+    return '#ef4444'; // Red
+};
+
+window.OsliraApp.getScoreClass = function(score) {
+    if (score >= 80) return 'score-high';
+    if (score >= 60) return 'score-medium';
+    return 'score-low';
+};
+
+window.OsliraApp.formatFollowerCount = function(count) {
+    if (typeof count !== 'number') return '0';
+    
+    if (count >= 1000000) {
+        return (count / 1000000).toFixed(1) + 'M';
+    }
+    if (count >= 1000) {
+        return (count / 1000).toFixed(1) + 'K';
+    }
+    return count.toString();
+};
+
+window.OsliraApp.capitalizeFirst = function(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+window.OsliraApp.slugify = function(str) {
+    return str
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s_-]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+};
+
+window.OsliraApp.randomId = function() {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+window.OsliraApp.sleep = function(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+};
+
+window.OsliraApp.retry = async function(fn, maxAttempts = 3, delay = 1000) {
+    let lastError;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            lastError = error;
+            
+            if (attempt === maxAttempts) {
+                break;
+            }
+            
+            console.warn(`Attempt ${attempt} failed, retrying in ${delay}ms...`, error);
+            await window.OsliraApp.sleep(delay);
+            delay *= 2; // Exponential backoff
+        }
+    }
+    
+    throw lastError;
+};
+
+window.OsliraApp.isOnline = function() {
+    return navigator.onLine;
+};
+
+window.OsliraApp.waitForOnline = function() {
+    return new Promise(resolve => {
+        if (navigator.onLine) {
+            resolve();
+        } else {
+            const handler = () => {
+                window.removeEventListener('online', handler);
+                resolve();
+            };
+            window.addEventListener('online', handler);
+        }
+    });
+};
+
+window.OsliraApp.getDeviceInfo = function() {
+    return {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        cookieEnabled: navigator.cookieEnabled,
+        onLine: navigator.onLine,
+        screenWidth: screen.width,
+        screenHeight: screen.height,
+        windowWidth: window.innerWidth,
+        windowHeight: window.innerHeight,
+        timezone: getUserTimezone()
+    };
+};
+
+window.OsliraApp.isMobileDevice = function() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
+window.OsliraApp.isTabletDevice = function() {
+    return /iPad|Android(?!.*Mobile)/i.test(navigator.userAgent);
+};
+
+window.OsliraApp.isDesktopDevice = function() {
+    return !window.OsliraApp.isMobileDevice() && !window.OsliraApp.isTabletDevice();
+};
+
+window.OsliraApp.getOS = function() {
+    const userAgent = navigator.userAgent;
+    
+    if (userAgent.includes('Windows')) return 'Windows';
+    if (userAgent.includes('Mac')) return 'macOS';
+    if (userAgent.includes('Linux')) return 'Linux';
+    if (userAgent.includes('Android')) return 'Android';
+    if (userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS';
+    
+    return 'Unknown';
+};
+
+window.OsliraApp.getBrowser = function() {
+    const userAgent = navigator.userAgent;
+    
+    if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) return 'Chrome';
+    if (userAgent.includes('Firefox')) return 'Firefox';
+    if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) return 'Safari';
+    if (userAgent.includes('Edg')) return 'Edge';
+    if (userAgent.includes('Opera')) return 'Opera';
+    
+    return 'Unknown';
+};
+
+// =============================================================================
+// 13. PERFORMANCE MONITORING
+// =============================================================================
+
+window.OsliraApp.performance = {
+    marks: new Map(),
+    measures: new Map(),
+    
+    mark: function(name) {
+        const timestamp = performance.now();
+        this.marks.set(name, timestamp);
+        console.log(`🔍 Performance mark: ${name} at ${timestamp.toFixed(2)}ms`);
+    },
+    
+    measure: function(name, startMark, endMark) {
+        const startTime = this.marks.get(startMark);
+        const endTime = endMark ? this.marks.get(endMark) : performance.now();
+        
+        if (startTime === undefined) {
+            console.warn(`Start mark "${startMark}" not found`);
+            return;
+        }
+        
+        const duration = endTime - startTime;
+        this.measures.set(name, duration);
+        console.log(`⏱️ Performance measure: ${name} took ${duration.toFixed(2)}ms`);
+        return duration;
+    },
+    
+    getReport: function() {
+        return {
+            marks: Object.fromEntries(this.marks),
+            measures: Object.fromEntries(this.measures),
+            memory: performance.memory ? {
+                usedJSHeapSize: performance.memory.usedJSHeapSize,
+                totalJSHeapSize: performance.memory.totalJSHeapSize,
+                jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+            } : null,
+            navigation: performance.getEntriesByType('navigation')[0],
+            timing: performance.timing
+        };
+    }
+};
+
+// =============================================================================
+// 14. ERROR HANDLING & LOGGING
+// =============================================================================
+
+window.OsliraApp.errorHandler = {
+    errors: [],
+    maxErrors: 50,
+    
+    logError: function(error, context = {}) {
+        const errorInfo = {
+            message: error.message || 'Unknown error',
+            stack: error.stack || 'No stack trace',
+            timestamp: new Date().toISOString(),
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            context: context,
+            user: window.OsliraApp.user?.id || 'anonymous'
+        };
+        
+        this.errors.push(errorInfo);
+        
+        // Keep only recent errors
+        if (this.errors.length > this.maxErrors) {
+            this.errors = this.errors.slice(-this.maxErrors);
+        }
+        
+        console.error('🚨 Error logged:', errorInfo);
+        
+        // Send to error reporting service in production
+        if (window.location.hostname !== 'localhost') {
+            this.reportError(errorInfo);
+        }
+    },
+    
+    reportError: function(errorInfo) {
+        // This would integrate with your error reporting service
+        // For now, just log to console
+        console.log('📊 Would report error to service:', errorInfo);
+    },
+    
+    getErrorReport: function() {
+        return {
+            errorCount: this.errors.length,
+            recentErrors: this.errors.slice(-10),
+            errorsByType: this.errors.reduce((acc, error) => {
+                const type = error.message.split(':')[0] || 'Unknown';
+                acc[type] = (acc[type] || 0) + 1;
+                return acc;
+            }, {})
+        };
+    }
+};
+
+// Global error handler
+window.addEventListener('error', (event) => {
+    window.OsliraApp.errorHandler.logError(event.error || new Error(event.message), {
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno
+    });
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    window.OsliraApp.errorHandler.logError(new Error(event.reason), {
+        type: 'unhandledRejection'
+    });
+});
+
+// =============================================================================
+// 15. AUTO-INITIALIZATION WITH ERROR HANDLING
+// =============================================================================
+
+// Auto-initialize when DOM is ready with comprehensive error handling
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.OsliraApp.initialize().catch(console.error);
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            window.OsliraApp.performance.mark('initialization-start');
+            await window.OsliraApp.initialize();
+            window.OsliraApp.performance.mark('initialization-end');
+            window.OsliraApp.performance.measure('total-initialization', 'initialization-start', 'initialization-end');
+        } catch (error) {
+            console.error('❌ App initialization failed:', error);
+            window.OsliraApp.errorHandler.logError(error, { phase: 'initialization' });
+            
+            // Show user-friendly error message
+            if (typeof showMessage === 'function') {
+                showMessage('App failed to load. Please refresh the page.', 'error', 10000);
+            } else {
+                // Fallback error display
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #ef4444;
+                    color: white;
+                    padding: 16px;
+                    border-radius: 8px;
+                    z-index: 10000;
+                    max-width: 400px;
+                `;
+                errorDiv.textContent = 'App failed to load. Please refresh the page.';
+                document.body.appendChild(errorDiv);
+            }
+        }
     });
 } else {
     // DOM already ready
-    window.OsliraApp.initialize().catch(console.error);
+    setTimeout(async () => {
+        try {
+            window.OsliraApp.performance.mark('initialization-start');
+            await window.OsliraApp.initialize();
+            window.OsliraApp.performance.mark('initialization-end');
+            window.OsliraApp.performance.measure('total-initialization', 'initialization-start', 'initialization-end');
+        } catch (error) {
+            console.error('❌ App initialization failed:', error);
+            window.OsliraApp.errorHandler.logError(error, { phase: 'initialization' });
+            
+            if (typeof showMessage === 'function') {
+                showMessage('App failed to load. Please refresh the page.', 'error', 10000);
+            }
+        }
+    }, 100); // Small delay to ensure all scripts load
+}
+
+// =============================================================================
+// 16. DEBUG UTILITIES (Development only)
+// =============================================================================
+
+if (window.location.hostname === 'localhost' || window.location.hostname.includes('netlify')) {
+    window.OsliraApp.debug = {
+        logState: function() {
+            console.group('🔍 Oslira App State');
+            console.log('Config:', window.OsliraApp.config);
+            console.log('User:', window.OsliraApp.user);
+            console.log('Session:', window.OsliraApp.session);
+            console.log('Business:', window.OsliraApp.business);
+            console.log('Businesses:', window.OsliraApp.businesses);
+            console.log('Features:', window.OsliraApp.features);
+            console.log('Cache:', window.OsliraApp.cache);
+            console.groupEnd();
+        },
+        
+        logPerformance: function() {
+            console.group('⏱️ Performance Report');
+            console.log(window.OsliraApp.performance.getReport());
+            console.groupEnd();
+        },
+        
+        logErrors: function() {
+            console.group('🚨 Error Report');
+            console.log(window.OsliraApp.errorHandler.getErrorReport());
+            console.groupEnd();
+        },
+        
+        clearCache: function() {
+            window.OsliraApp.cache = {
+                leads: [],
+                stats: null,
+                lastRefresh: null
+            };
+            localStorage.removeItem('selectedBusinessId');
+            console.log('🧹 Cache cleared');
+        },
+        
+        simulateError: function() {
+            throw new Error('Simulated error for testing');
+        },
+        
+        testApi: async function() {
+            try {
+                const response = await window.OsliraApp.apiRequest('/health');
+                console.log('✅ API test successful:', response);
+            } catch (error) {
+                console.error('❌ API test failed:', error);
+            }
+        }
+    };
+    
+    console.log('🛠️ Debug utilities available at window.OsliraApp.debug');
 }
 
 console.log('📦 Oslira shared core loaded successfully');
+console.log('🚀 Available at window.OsliraApp');
+console.log('📊 App will initialize automatically when DOM is ready');
+
+// Export for potential module usage
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = window.OsliraApp;
+}
+    
