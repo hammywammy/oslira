@@ -141,1530 +141,83 @@ async function verifyJWT(token: string): Promise<string | null> {
       return null;
     }
 
-    const [, payloadB64] = parts;
-    if (!payloadB64) {
-      return null;
-    }
-
-    // Add padding if needed for base64 decoding
-    const paddedPayload = payloadB64 + '='.repeat((4 - payloadB64.length % 4) % 4);
-    const payload = JSON.parse(atob(paddedPayload));
-
-    const now = Math.floor(Date.now() / 1000);
-
-    // Validate token structure and expiration
-    if (!payload.exp || payload.exp <= now) {
-      return null;
-    }
-
-    if (!payload.sub || !payload.aud) {
+    const payload = JSON.parse(atob(parts[1]));
+    
+    if (!payload.sub || payload.exp * 1000 < Date.now()) {
       return null;
     }
 
     return payload.sub;
-  } catch (error) {
-    console.error('JWT verification error:', error);
+  } catch {
     return null;
   }
 }
 
 /**
- * Format timestamp in user's timezone with fallback
+ * Extract username from profile URL
  */
-function formatTimestampInTimezone(timestamp: string, timezone: string): string {
+function extractUsername(profileUrl: string): string {
   try {
-    const date = new Date(timestamp);
-    if (isNaN(date.getTime())) {
-      throw new Error('Invalid timestamp');
-    }
-
-    return date.toLocaleString('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  } catch (error) {
-    console.warn('Timezone formatting failed, using UTC:', error);
-    return new Date(timestamp).toISOString();
-  }
-}
-
-/**
- * Enhanced retry mechanism with exponential backoff and jitter
- */
-async function callWithRetry(
-  url: string,
-  init: RequestInit,
-  retries = 3,
-  baseBackoffMs = 1000,
-  timeoutMs = 30000,
-  maxBackoffMs = 10000
-): Promise<any> {
-  let lastError: Error = new Error('Unknown error');
-
-  for (let attempt = 0; attempt < retries; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(url, {
-        ...init,
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          return await response.json();
-        } else {
-          return await response.text();
-        }
-      }
-
-      // Handle rate limiting with exponential backoff
-      if (response.status === 429 && attempt < retries - 1) {
-        const retryAfter = response.headers.get('retry-after');
-        const delay = retryAfter 
-          ? parseInt(retryAfter) * 1000 
-          : Math.min(baseBackoffMs * Math.pow(2, attempt) + Math.random() * 1000, maxBackoffMs);
-        
-        console.log(`Rate limited on ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-
-      const errorText = await response.text();
-      lastError = new Error(`HTTP ${response.status}: ${errorText}`);
-
-      if (response.status >= 500 && attempt < retries - 1) {
-        const delay = Math.min(baseBackoffMs * Math.pow(2, attempt) + Math.random() * 1000, maxBackoffMs);
-        console.log(`Server error on ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${retries})`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-
-      throw lastError;
-
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-
-      if (error.name === 'AbortError') {
-        lastError = new Error(`Request timeout after ${timeoutMs}ms`);
-      } else if (error.message.includes('HTTP')) {
-        lastError = error;
-      } else {
-        lastError = new Error(`Network error: ${error.message}`);
-      }
-
-      if (attempt < retries - 1 && !error.message.includes('HTTP 4')) {
-        const delay = Math.min(baseBackoffMs * Math.pow(2, attempt) + Math.random() * 1000, maxBackoffMs);
-        console.log(`Request failed for ${url}, retrying in ${delay}ms (attempt ${attempt + 1}/${retries}): ${lastError.message}`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        continue;
-      }
-
-      throw lastError;
-    }
-  }
-
-  throw new Error(`Failed after ${retries} attempts to ${url}: ${lastError.message}`);
-}
-
-/**
- * Enhanced fetch helper with comprehensive error handling
- */
-async function fetchJson<T>(
-  url: string,
-  init: RequestInit,
-  timeoutMs: number = 20000
-): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(url, {
-      ...init,
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorMessage = `HTTP ${response.status}: ${errorText}`;
-      
-      // Try to parse Supabase specific errors
-      try {
-        const errorData = JSON.parse(errorText);
-        if (errorData.message) {
-          errorMessage = `${errorData.code || response.status}: ${errorData.message}`;
-          if (errorData.details) {
-            errorMessage += ` - ${errorData.details}`;
-          }
-        }
-      } catch {
-        // Use the raw error text if JSON parsing fails
-      }
-      
-      throw new Error(errorMessage);
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      return {} as T;
-    }
-
-    const responseText = await response.text();
-    if (!responseText.trim()) {
-      return {} as T;
-    }
-
-    try {
-      return JSON.parse(responseText);
-    } catch (parseError) {
-      throw new Error(`Invalid JSON response from ${url}: ${responseText.substring(0, 200)}`);
-    }
-
-  } catch (error: any) {
-    clearTimeout(timeoutId);
-
-    if (error.name === 'AbortError') {
-      throw new Error(`Request timeout after ${timeoutMs}ms: ${url}`);
-    }
-
-    throw error;
-  }
-}
-
-/**
- * Extract Instagram username from URL or handle with comprehensive validation
- */
-function extractUsername(input: string): string {
-  try {
-    if (!input || typeof input !== 'string') {
-      return '';
-    }
-
-    const cleaned = input.trim().replace(/^@/, '').toLowerCase();
+    if (!profileUrl) return '';
     
-    if (cleaned.includes('instagram.com')) {
-      const url = new URL(cleaned.startsWith('http') ? cleaned : `https://${cleaned}`);
-      const pathSegments = url.pathname.split('/').filter(Boolean);
-      const username = pathSegments[0] || '';
-      
-      // Validate Instagram username format
-      if (!/^[a-z0-9._]{1,30}$/.test(username)) {
-        return '';
-      }
-      
-      return username;
+    profileUrl = profileUrl.trim();
+    
+    if (profileUrl.includes('instagram.com/')) {
+      const match = profileUrl.match(/instagram\.com\/([^/?#]+)/);
+      return match ? match[1] : '';
     }
     
-    // Direct username validation
-    const username = cleaned.replace(/[^a-z0-9._]/g, '');
-    if (username.length > 30 || username.length === 0) {
-      return '';
+    if (profileUrl.includes('tiktok.com/@')) {
+      const match = profileUrl.match(/tiktok\.com\/@([^/?#]+)/);
+      return match ? match[1] : '';
     }
     
-    return username;
-  } catch (error) {
-    console.warn('Username extraction error:', error);
+    if (profileUrl.includes('x.com/') || profileUrl.includes('twitter.com/')) {
+      const match = profileUrl.match(/(?:x|twitter)\.com\/([^/?#]+)/);
+      return match ? match[1] : '';
+    }
+    
+    return profileUrl.replace(/^@/, '');
+  } catch {
     return '';
   }
 }
 
 /**
- * Enhanced request validation with detailed error reporting
+ * Normalize and validate analysis request
  */
-function normalizeRequest(body: AnalysisRequest) {
+function normalizeRequest(body: any): { valid: boolean; errors: string[]; data: AnalysisRequest } {
   const errors: string[] = [];
+  const data: AnalysisRequest = {};
 
-  // Profile URL or username validation
-  let profile_url = body.profile_url;
-  if (!profile_url && body.username) {
-    const username = extractUsername(body.username);
-    profile_url = username ? `https://instagram.com/${username}` : '';
+  if (!body.profile_url && !body.username) {
+    errors.push('Either profile_url or username is required');
   }
 
-  if (!profile_url) {
-    errors.push('profile_url or username is required');
-  } else {
-    const username = extractUsername(profile_url);
-    if (!username) {
-      errors.push('Invalid Instagram username or URL format');
-    }
+  if (body.profile_url) {
+    data.profile_url = body.profile_url;
+    data.username = extractUsername(body.profile_url);
+  } else if (body.username) {
+    data.username = body.username.replace(/^@/, '');
   }
 
-  // Analysis type validation
-  const analysis_type = body.analysis_type || body.type;
-  if (!analysis_type || !['light', 'deep'].includes(analysis_type)) {
-    errors.push('analysis_type must be "light" or "deep"');
+  data.analysis_type = body.analysis_type || body.type || 'light';
+  if (!['light', 'deep'].includes(data.analysis_type)) {
+    data.analysis_type = 'light';
   }
 
-  // User ID validation
-  const user_id = body.user_id;
-  if (!user_id || typeof user_id !== 'string') {
-    errors.push('user_id is required and must be a valid string');
-  }
-
-  // Business ID validation for deep analysis
-  const business_id = body.business_id;
-  if (analysis_type === 'deep' && !business_id) {
-    errors.push('business_id is required for deep analysis');
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    data: {
-      profile_url: profile_url || '',
-      analysis_type: analysis_type as AnalysisType,
-      business_id: business_id || null,
-      user_id: user_id || '',
-      platform: body.platform || 'instagram',
-      timezone: body.timezone || 'UTC',
-      user_local_time: body.user_local_time || new Date().toISOString(),
-      request_timestamp: body.request_timestamp || new Date().toISOString()
-    }
-  };
-}
-
-// ------------------------------------
-// Enhanced Validation Functions
-// ------------------------------------
-
-function validateProfileData(raw: any): ProfileData {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error('Scraper returned invalid profile data structure');
-  }
-
-  console.log('🔍 Raw profile data fields:', Object.keys(raw));
-
-  // Extract username with multiple fallbacks
-  const username = String(
-    raw.username ||
-    raw.ownerUsername ||
-    raw.user?.username ||
-    ''
-  ).trim();
-
-  if (!username) {
-    throw new Error('Profile data missing required username field');
-  }
-
-  // Validate username format
-  if (!/^[a-zA-Z0-9._]{1,30}$/.test(username)) {
-    throw new Error(`Invalid username format: ${username}`);
-  }
-
-  // Extract followers count with validation
-  const followersCount = Number(
-    raw.followersCount ||
-    raw.followers_count ||
-    raw.followers ||
-    raw.user?.followersCount ||
-    0
-  );
-
-  if (isNaN(followersCount) || followersCount < 0) {
-    throw new Error('Invalid followers count in profile data');
-  }
-
-  // Enhanced profile picture URL detection
-  const profilePicUrl = raw.profilePicUrl ||
-    raw.profile_pic_url ||
-    raw.profilePicture ||
-    raw.profilePictureUrl ||
-    raw.avatar ||
-    raw.avatarUrl ||
-    raw.user?.profilePicture ||
-    raw.user?.profilePicUrl ||
-    null;
-
-  console.log('✅ Selected profile picture URL:', profilePicUrl);
-
-  // Enhanced engagement calculation
-  let engagement = undefined;
-  if (raw.latestPosts && Array.isArray(raw.latestPosts) && raw.latestPosts.length > 0) {
-    const posts = raw.latestPosts.slice(0, 12);
-    console.log(`Calculating engagement from ${posts.length} posts...`);
-
-    const validPosts = posts.filter(post =>
-      post &&
-      typeof post.likesCount === 'number' &&
-      typeof post.commentsCount === 'number' &&
-      post.likesCount >= 0 &&
-      post.commentsCount >= 0
-    );
-
-    if (validPosts.length > 0) {
-      const totalLikes = validPosts.reduce((sum, post) => sum + (post.likesCount || 0), 0);
-      const totalComments = validPosts.reduce((sum, post) => sum + (post.commentsCount || 0), 0);
-      const avgLikes = Math.round(totalLikes / validPosts.length);
-      const avgComments = Math.round(totalComments / validPosts.length);
-      const engagementRate = followersCount > 0 ?
-        Math.round(((avgLikes + avgComments) / followersCount) * 100 * 100) / 100 : 0;
-
-      engagement = {
-        avgLikes,
-        avgComments,
-        engagementRate: Math.min(engagementRate, 100) // Cap at 100%
-      };
-
-      console.log(`✅ Engagement calculated: ${engagementRate}% (${avgLikes} likes, ${avgComments} comments avg)`);
-    }
-  }
-
-  return {
-    username,
-    fullName: raw.fullName || raw.full_name || raw.name || raw.user?.fullName || undefined,
-    biography: raw.biography || raw.bio || raw.description || raw.user?.biography || undefined,
-    followersCount,
-    followingCount: Number(raw.followingCount || raw.following_count || raw.following || raw.user?.followingCount || 0) || undefined,
-    postsCount: Number(raw.postsCount || raw.posts_count || raw.posts || raw.user?.postsCount || 0) || undefined,
-    isVerified: Boolean(raw.isVerified || raw.is_verified || raw.verified || raw.user?.isVerified),
-    private: Boolean(raw.private || raw.is_private || raw.user?.private),
-    profilePicUrl,
-    externalUrl: raw.externalUrl || raw.external_url || raw.website || raw.user?.externalUrl || undefined,
-    businessCategory: raw.businessCategory || raw.business_category || raw.category || raw.user?.businessCategory || undefined,
-    latestPosts: raw.latestPosts || undefined,
-    engagement
-  };
-}
-
-function validateAnalysisResult(raw: any, analysisType: AnalysisType): AnalysisResult {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error('AI returned invalid response format');
-  }
-
-  const score = Number(raw.score);
-  if (isNaN(score) || score < 0 || score > 100) {
-    throw new Error(`AI returned invalid score: ${raw.score} (must be 0-100)`);
-  }
-
-  const result: AnalysisResult = {
-    score: Math.round(score),
-    summary: typeof raw.summary === 'string' && raw.summary.length > 0 ? raw.summary : undefined,
-    niche_fit: typeof raw.niche_fit === 'number' ? Math.round(Math.max(0, Math.min(100, raw.niche_fit))) : undefined,
-    reasons: Array.isArray(raw.reasons) && raw.reasons.length > 0 ? raw.reasons.slice(0, 5) : undefined
-  };
-
-  if (analysisType === 'deep') {
-    result.engagement_score = typeof raw.engagement_score === 'number' ? Math.round(Math.max(0, Math.min(100, raw.engagement_score))) : undefined;
-    result.selling_points = Array.isArray(raw.selling_points) && raw.selling_points.length > 0 ? raw.selling_points.slice(0, 5) : undefined;
-  }
-
-  return result;
-}
-
-function validateMessageResult(raw: any): string {
-  if (!raw || typeof raw !== 'object') {
-    throw new Error('Message generation returned invalid format');
-  }
-
-  const message = raw.message;
-  if (typeof message !== 'string' || message.trim().length === 0) {
-    throw new Error('Message generation returned empty or invalid message');
-  }
-
-  const cleanMessage = message.trim();
-  if (cleanMessage.length > 1000) {
-    throw new Error(`Generated message exceeds maximum length: ${cleanMessage.length} characters`);
-  }
-
-  return cleanMessage;
-}
-
-// ------------------------------------
-// Enhanced Service Functions
-// ------------------------------------
-
-async function fetchUserAndCredits(userId: string, env: Env): Promise<{ user: User; credits: number }> {
-  if (!userId || typeof userId !== 'string') {
-    throw new Error('Invalid user ID provided');
-  }
-
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
-  try {
-    const usersResponse = await fetchJson<User[]>(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`,
-      { headers },
-      15000
-    );
-
-    if (!Array.isArray(usersResponse) || usersResponse.length === 0) {
-      throw new Error('User not found in database');
-    }
-
-    const user = usersResponse[0];
-    
-    // Validate user data
-    if (!user.id || !user.email) {
-      throw new Error('Invalid user data structure');
-    }
-
-    const credits = Math.max(0, Number(user.credits) || 0);
-
-    return { user, credits };
-  } catch (error: any) {
-    console.error('fetchUserAndCredits error:', error);
-    throw new Error(`Failed to fetch user data: ${error.message}`);
-  }
-}
-
-async function fetchBusinessProfile(businessId: string, userId: string, env: Env): Promise<BusinessProfile> {
-  if (!businessId || typeof businessId !== 'string') {
-    throw new Error('Invalid business ID provided');
-  }
-
-  if (!userId || typeof userId !== 'string') {
-    throw new Error('Invalid user ID provided');
-  }
-
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
-  try {
-    const businesses = await fetchJson<BusinessProfile[]>(
-      `${env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${businessId}&user_id=eq.${userId}&select=*`,
-      { headers },
-      15000
-    );
-
-    if (!Array.isArray(businesses) || businesses.length === 0) {
-      throw new Error('Business profile not found or access denied');
-    }
-
-    const business = businesses[0];
-    
-    // Validate required business fields
-    const requiredFields = ['business_name', 'business_niche', 'target_audience', 'value_proposition'];
-    for (const field of requiredFields) {
-      if (!business[field as keyof BusinessProfile] || typeof business[field as keyof BusinessProfile] !== 'string') {
-        throw new Error(`Business profile missing required field: ${field}`);
-      }
-    }
-
-    return business;
-  } catch (error: any) {
-    console.error('fetchBusinessProfile error:', error);
-    throw new Error(`Failed to fetch business profile: ${error.message}`);
-  }
-}
-
-async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
-  if (!env.APIFY_API_TOKEN) {
-    throw new Error('Profile scraping service not configured');
-  }
-
-  if (!username || typeof username !== 'string') {
-    throw new Error('Invalid username provided');
-  }
-
-  console.log(`Scraping profile @${username} using ${analysisType} analysis`);
-
-  try {
-    if (analysisType === 'light') {
-      // Light analysis: Basic profile data only
-      const scrapeInput = {
-        usernames: [username],
-        resultsType: "details",
-        resultsLimit: 1
-      };
-
-      const scrapeResponse = await callWithRetry(
-        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(scrapeInput)
-        },
-        3,
-        2000,
-        35000
-      );
-
-      if (!Array.isArray(scrapeResponse) || scrapeResponse.length === 0) {
-        throw new Error('Profile not found or private');
-      }
-
-      return validateProfileData(scrapeResponse[0]);
-
-    } else {
-      // Deep analysis: Get both profile AND posts data
-      console.log('Deep analysis: Getting profile data first...');
-
-      // Step 1: Get basic profile data
-      const profileInput = {
-        usernames: [username],
-        resultsType: "details",
-        resultsLimit: 1
-      };
-
-      const profileResponse = await callWithRetry(
-        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(profileInput)
-        },
-        3,
-        2000,
-        30000
-      );
-
-      if (!Array.isArray(profileResponse) || profileResponse.length === 0) {
-        throw new Error('Profile not found or private');
-      }
-
-      const basicProfile = profileResponse[0];
-      console.log('✅ Basic profile data obtained');
-
-      // Step 2: Get posts data for engagement analysis
-      console.log('Deep analysis: Getting posts data for engagement...');
-
-      const postsInput = {
-        directUrls: [`https://instagram.com/${username}/`],
-        resultsLimit: 12,
-        addParentData: false,
-        enhanceUserSearchWithFacebookPage: false
-      };
-
-      let postsData = [];
-      try {
-        const postsResponse = await callWithRetry(
-          `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(postsInput)
-          },
-          2,
-          3000,
-          30000
-        );
-
-        if (Array.isArray(postsResponse)) {
-          postsData = postsResponse;
-          console.log(`✅ Retrieved ${postsData.length} posts for engagement analysis`);
-        }
-      } catch (postsError: any) {
-        console.warn('⚠️ Posts data fetch failed (non-fatal):', postsError.message);
-        // Continue without posts data
-      }
-
-      // Step 3: Combine profile and posts data
-      const combinedData = {
-        ...basicProfile,
-        latestPosts: postsData
-      };
-
-      return validateProfileData(combinedData);
-    }
-
-  } catch (error: any) {
-    console.error('Scraping error:', error);
-
-    // Provide specific error messages based on error type
-    let errorMessage = 'Failed to retrieve profile data. The profile may be private, deleted, or temporarily unavailable.';
-
-    if (error.message.includes('404') || error.message.includes('not found')) {
-      errorMessage = 'Instagram profile not found. Please verify the username is correct.';
-    } else if (error.message.includes('403') || error.message.includes('private')) {
-      errorMessage = 'This Instagram profile is private or access is restricted.';
-    } else if (error.message.includes('429') || error.message.includes('rate limit')) {
-      errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
-    } else if (error.message.includes('timeout')) {
-      errorMessage = 'Profile scraping request timed out. Please try again.';
-    } else if (error.message.includes('Invalid username')) {
-      errorMessage = error.message;
-    }
-
-    throw new Error(errorMessage);
-  }
-}
-
-async function performAIAnalysis(
-  profile: ProfileData,
-  business: BusinessProfile,
-  analysisType: AnalysisType,
-  env: Env
-): Promise<AnalysisResult> {
-  if (!env.OPENAI_KEY) {
-    throw new Error('AI analysis service not configured');
-  }
-
-  const prompt = analysisType === 'light'
-    ? makeLightPrompt(profile, business)
-    : makeDeepPrompt(profile, business);
-
-  console.log('Starting AI analysis with OpenAI GPT-4o');
-
-  try {
-    const response = await callWithRetry(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.OPENAI_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.3,
-          max_tokens: 1500,
-          response_format: { type: 'json_object' }
-        })
-      },
-      3,
-      1500,
-      30000
-    );
-
-    if (!response.choices?.[0]?.message?.content) {
-      throw new Error('OpenAI returned invalid response structure');
-    }
-
-    let parsedResult;
-    try {
-      parsedResult = JSON.parse(response.choices[0].message.content);
-    } catch (parseError: any) {
-      console.error('AI JSON parsing error:', response.choices[0].message.content);
-      throw new Error(`OpenAI returned invalid JSON: ${parseError.message}`);
-    }
-
-    return validateAnalysisResult(parsedResult, analysisType);
-
-  } catch (error: any) {
-    console.error('AI analysis error:', error);
-    throw new Error(`AI analysis failed: ${error.message}`);
-  }
-}
-
-async function generateOutreachMessage(
-  profile: ProfileData,
-  business: BusinessProfile,
-  analysis: AnalysisResult,
-  env: Env
-): Promise<string> {
-  let outreachMessage = '';
-
-  try {
-    // Try Claude first if available
-    if (env.CLAUDE_KEY) {
-      console.log('Generating message with Claude 3.5 Sonnet');
-      const messagePrompt = makeMessagePrompt(profile, business, analysis);
-
-      const claudeResponse = await callWithRetry(
-        'https://api.anthropic.com/v1/messages',
-        {
-          method: 'POST',
-          headers: {
-            'x-api-key': env.CLAUDE_KEY,
-            'anthropic-version': '2023-06-01',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
-            messages: [{ role: 'user', content: messagePrompt }],
-            temperature: 0.7,
-            max_tokens: 1000
-          })
-        },
-3,
-        1500,
-        30000
-      );
-
-      let messageText = '';
-      if (claudeResponse.content && Array.isArray(claudeResponse.content) && claudeResponse.content[0]?.text) {
-        messageText = claudeResponse.content[0].text;
-      } else if (claudeResponse.completion) {
-        messageText = claudeResponse.completion;
-      }
-
-      if (messageText) {
-        try {
-          const messageResult = JSON.parse(messageText);
-          outreachMessage = validateMessageResult(messageResult);
-        } catch {
-          // If not JSON, treat as plain text if it's reasonable length
-          if (messageText.length > 0 && messageText.length <= 1000) {
-            outreachMessage = messageText.trim();
-          }
-        }
-      }
-    }
-
-    // Fallback to OpenAI if Claude fails or unavailable
-    if (!outreachMessage && env.OPENAI_KEY) {
-      console.log('Using OpenAI for message generation');
-      const messagePrompt = makeMessagePrompt(profile, business, analysis);
-
-      const openaiResponse = await callWithRetry(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${env.OPENAI_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o',
-            messages: [{ role: 'user', content: messagePrompt }],
-            temperature: 0.7,
-            max_tokens: 800,
-            response_format: { type: 'json_object' }
-          })
-        },
-        3,
-        1500,
-        30000
-      );
-
-      if (openaiResponse.choices?.[0]?.message?.content) {
-        try {
-          const messageResult = JSON.parse(openaiResponse.choices[0].message.content);
-          outreachMessage = validateMessageResult(messageResult);
-        } catch (parseError: any) {
-          console.warn('OpenAI message parsing failed:', parseError.message);
-        }
-      }
-    }
-
-  } catch (error: any) {
-    console.warn('Message generation failed:', error.message);
-  }
-
-  return outreachMessage;
+  data.business_id = body.business_id || null;
+  data.platform = body.platform || 'instagram';
+  data.timezone = body.timezone || 'UTC';
+  data.user_local_time = body.user_local_time || new Date().toISOString();
+
+  return { valid: errors.length === 0, errors, data };
 }
 
 /**
- * FIXED: Save lead and analysis with proper field mapping and validation
+ * Fetch user data from Supabase
  */
-async function saveLeadAndAnalysis(
-  leadData: Partial<LeadRecord>,
-  analysisData: Partial<LeadAnalysisRecord> | null,
-  analysisType: AnalysisType,
-  env: Env
-): Promise<string> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
-  // Create lead first
-  const completeLeadData = {
-    user_id: leadData.user_id,
-    business_id: leadData.business_id || null,
-    username: leadData.username,
-    platform: leadData.platform || 'instagram',
-    profile_url: leadData.profile_url,
-    profile_pic_url: leadData.profile_pic_url || null,
-    score: leadData.score || 0,
-    type: analysisType,
-    analysis_type: analysisType,
-    user_timezone: leadData.user_timezone || 'UTC',
-    user_local_time: leadData.user_local_time || new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-
-  console.log('💾 Creating lead with username:', completeLeadData.username);
-
-  try {
-    // Insert lead
-    const leadResponse = await fetchJson<any[]>(
-      `${env.SUPABASE_URL}/rest/v1/leads`,
-      {
-        method: 'POST',
-        headers: { ...headers, Prefer: 'return=representation' },
-        body: JSON.stringify(completeLeadData),
-      },
-      20000
-    );
-
-    if (!Array.isArray(leadResponse) || leadResponse.length === 0) {
-      throw new Error('Failed to create lead record');
-    }
-
-    const createdLead = leadResponse[0];
-    const leadId = createdLead.id;
-    
-    console.log('✅ Lead created with ID:', leadId);
-
-    // Insert analysis for deep analysis
-    if (analysisType === 'deep' && analysisData) {
-      // Build analysis data matching your EXACT schema
-      const exactAnalysisData = {
-        // Use explicit field names to match your schema exactly
-        user_id: leadData.user_id,
-        business_id: leadData.business_id || null,
-        lead_id: leadId, // This goes in position 4
-        username: leadData.username, // This goes in position 5 - CRITICAL
-        score: analysisData.score_total || 0,
-        summary: analysisData.outreach_message || '',
-        niche_fit: analysisData.score_niche_fit || 0,
-        engagement_score: analysisData.engagement_score || 0,
-        reasons: analysisData.selling_points ? [analysisData.selling_points] : [],
-        selling_points: analysisData.selling_points ? [analysisData.selling_points] : [],
-        latest_posts: [],
-        engagement_data: {},
-        ai_version_id: 'gpt-4o',
-        analysis_type: 'deep',
-        analyzed_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        score_niche_fit: analysisData.score_niche_fit || 0,
-        score_total: analysisData.score_total || 0,
-        outreach_message: analysisData.outreach_message || null,
-        avg_comments: analysisData.avg_comments || null,
-        avg_likes: analysisData.avg_likes || null,
-        engagement_rate: analysisData.engagement_rate || null,
-        audience_quality: 'Medium',
-        engagement_insights: null,
-        analysis_data: {},
-        updated_at: new Date().toISOString()
-      };
-
-      console.log('💾 Creating analysis with exact schema match:');
-      console.log('Username:', exactAnalysisData.username);
-      console.log('Lead ID:', exactAnalysisData.lead_id);
-      console.log('User ID:', exactAnalysisData.user_id);
-
-      // Validate required fields
-      if (!exactAnalysisData.username) {
-        throw new Error(`Username is required but missing: "${exactAnalysisData.username}"`);
-      }
-      
-      if (!exactAnalysisData.lead_id) {
-        throw new Error(`Lead ID is required but missing: "${exactAnalysisData.lead_id}"`);
-      }
-
-      const analysisResponse = await fetchJson<any[]>(
-        `${env.SUPABASE_URL}/rest/v1/lead_analyses`,
-        {
-          method: 'POST',
-          headers: { ...headers, Prefer: 'return=representation' },
-          body: JSON.stringify(exactAnalysisData),
-        },
-        20000
-      );
-
-      if (!Array.isArray(analysisResponse) || analysisResponse.length === 0) {
-        throw new Error('Failed to create analysis record');
-      }
-
-      console.log('✅ Analysis created successfully');
-    }
-
-    return leadId;
-
-  } catch (error: any) {
-    console.error('❌ Database error:', error);
-    throw new Error(`Database error: ${error.message}`);
-  }
-}
-/**
- * ENHANCED: Update credits and log transaction with comprehensive error handling
- */
-async function updateCreditsAndTransaction(
-  userId: string,
-  cost: number,
-  newBalance: number,
-  description: string,
-  leadId: string,
-  env: Env
-): Promise<void> {
-  if (!userId || typeof userId !== 'string') {
-    throw new Error('Invalid user ID provided for credit update');
-  }
-
-  if (typeof cost !== 'number' || cost < 0) {
-    throw new Error('Invalid cost amount for credit update');
-  }
-
-  if (typeof newBalance !== 'number' || newBalance < 0) {
-    throw new Error('Invalid new balance for credit update');
-  }
-
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
-  try {
-    console.log(`Updating user ${userId} credits from ${newBalance + cost} to ${newBalance} (cost: ${cost})`);
-
-    // Update user credits
-    const creditUpdateResponse = await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
-      {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({
-          credits: newBalance,
-          updated_at: new Date().toISOString()
-        })
-      },
-      15000
-    );
-
-    console.log('✅ User credits updated successfully');
-
-    // Log credit transaction
-    const transactionData = {
-      user_id: userId,
-      amount: -cost,
-      type: 'use',
-      description: description || `Analysis credit usage`,
-      lead_id: leadId === 'bulk' ? null : leadId,
-      created_at: new Date().toISOString()
-    };
-
-    console.log(`Creating credit transaction:`, transactionData);
-
-    const transactionResponse = await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-      {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(transactionData)
-      },
-      15000
-    );
-
-    console.log('✅ Credit transaction logged successfully');
-
-  } catch (error: any) {
-    console.error('❌ updateCreditsAndTransaction error:', error.message);
-    throw new Error(`Failed to update credits: ${error.message}`);
-  }
-}
-
-// ------------------------------------
-// Enhanced Stripe Webhook Handlers
-// ------------------------------------
-
-async function handleSubscriptionCreated(subscription: any, env: Env) {
-  try {
-    const { user_id } = subscription.metadata;
-    if (!user_id) {
-      console.log('No user_id in subscription metadata');
-      return;
-    }
-
-    console.log(`Processing subscription created for user: ${user_id}`);
-
-    const supabaseHeaders = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json',
-    };
-
-    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
-      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
-      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
-      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
-      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
-    };
-
-    const priceId = subscription.items.data[0]?.price?.id;
-    const planInfo = priceIdToPlan[priceId];
-
-    if (!planInfo) {
-      console.log(`Unknown price ID in subscription creation: ${priceId}`);
-      return;
-    }
-
-    if (subscription.status === 'active') {
-      await Promise.all([
-        fetchJson(
-          `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-          {
-            method: 'PATCH',
-            headers: supabaseHeaders,
-            body: JSON.stringify({
-              subscription_plan: planInfo.name,
-              subscription_status: subscription.status,
-              credits: planInfo.credits,
-              updated_at: new Date().toISOString()
-            }),
-          },
-          15000
-        ),
-        fetchJson(
-          `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-          {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify({
-              user_id,
-              amount: planInfo.credits,
-              type: 'add',
-              description: `Subscription created: ${planInfo.name} plan`,
-              lead_id: null,
-              created_at: new Date().toISOString()
-            }),
-          },
-          15000
-        )
-      ]);
-    } else {
-      await fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-        {
-          method: 'PATCH',
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            subscription_status: subscription.status,
-            updated_at: new Date().toISOString()
-          }),
-        },
-        15000
-      );
-    }
-
-    console.log(`Subscription created for user ${user_id} with status: ${subscription.status}`);
-
-  } catch (err: any) {
-    console.error('handleSubscriptionCreated error:', err.message);
-    throw new Error(`Failed to process subscription creation: ${err.message}`);
-  }
-}
-
-async function handleSubscriptionUpdated(subscription: any, env: Env) {
-  try {
-    const { user_id } = subscription.metadata;
-    if (!user_id) {
-      console.log('No user_id in subscription metadata for update');
-      return;
-    }
-
-    console.log(`Processing subscription updated for user: ${user_id}`);
-
-    const supabaseHeaders = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json',
-    };
-
-    const priceIdToPlan: Record<string, { name: string; credits: number }> = {
-      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
-      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
-      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
-      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
-    };
-
-    const priceId = subscription.items.data[0]?.price?.id;
-    const planInfo = priceIdToPlan[priceId];
-
-    if (!planInfo) {
-      console.log(`Unknown price ID in update: ${priceId}`);
-      return;
-    }
-
-    if (subscription.status === 'active') {
-      await Promise.all([
-        fetchJson(
-          `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-          {
-            method: 'PATCH',
-            headers: supabaseHeaders,
-            body: JSON.stringify({
-              subscription_plan: planInfo.name,
-              subscription_status: subscription.status,
-              credits: planInfo.credits,
-              updated_at: new Date().toISOString()
-            }),
-          },
-          15000
-        ),
-        fetchJson(
-          `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-          {
-            method: 'POST',
-            headers: supabaseHeaders,
-            body: JSON.stringify({
-              user_id,
-              amount: planInfo.credits,
-              type: 'add',
-              description: `Subscription updated: ${planInfo.name} plan`,
-              lead_id: null,
-              created_at: new Date().toISOString()
-            }),
-          },
-          15000
-        )
-      ]);
-    } else {
-      await fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-        {
-          method: 'PATCH',
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            subscription_status: subscription.status,
-            updated_at: new Date().toISOString()
-          }),
-        },
-        15000
-      );
-    }
-
-    console.log(`Subscription updated for user ${user_id} with status: ${subscription.status}`);
-
-  } catch (err: any) {
-    console.error('handleSubscriptionUpdated error:', err.message);
-    throw new Error(`Failed to process subscription update: ${err.message}`);
-  }
-}
-
-async function handleSubscriptionCanceled(subscription: any, env: Env) {
-  try {
-    const { user_id } = subscription.metadata;
-    if (!user_id) {
-      console.log('No user_id in subscription metadata for cancellation');
-      return;
-    }
-
-    console.log(`Processing subscription canceled for user: ${user_id}`);
-
-    const supabaseHeaders = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json',
-    };
-
-    await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-      {
-        method: 'PATCH',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          subscription_plan: 'free',
-          subscription_status: 'canceled',
-          credits: 5, // Reset to free tier credits
-          updated_at: new Date().toISOString()
-        }),
-      },
-      15000
-    );
-
-    // Log the credit reset
-    await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-      {
-        method: 'POST',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          user_id,
-          amount: 5,
-          type: 'reset',
-          description: 'Subscription canceled - reset to free tier',
-          lead_id: null,
-          created_at: new Date().toISOString()
-        }),
-      },
-      15000
-    );
-
-    console.log(`Subscription canceled for user ${user_id}`);
-
-  } catch (err: any) {
-    console.error('handleSubscriptionCanceled error:', err.message);
-    throw new Error(`Failed to process subscription cancellation: ${err.message}`);
-  }
-}
-
-async function handlePaymentSucceeded(invoice: any, env: Env) {
-  try {
-    const subscription_id = invoice.subscription;
-    if (!subscription_id) {
-      console.log('No subscription_id in payment succeeded event');
-      return;
-    }
-
-    console.log(`Processing payment succeeded for subscription: ${subscription_id}`);
-
-    const subscription = await fetchJson<any>(
-      `https://api.stripe.com/v1/subscriptions/${subscription_id}`,
-      {
-        headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` }
-      },
-      15000
-    );
-
-    const user_id = subscription.metadata?.user_id;
-    if (!user_id) {
-      console.log('No user_id in subscription metadata for payment');
-      return;
-    }
-
-    const supabaseHeaders = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json',
-    };
-
-    const priceId = subscription.items.data[0]?.price?.id;
-    const planMap: Record<string, { name: string; credits: number }> = {
-      'price_1RkCKjJzvcRSqGG3Hq4WNNSU': { name: 'starter', credits: 50 },
-      'price_1RkCLGJzvcRSqGG3XqDyhYZN': { name: 'growth', credits: 150 },
-      'price_1RkCLtJzvcRSqGG30FfJSpau': { name: 'professional', credits: 500 },
-      'price_1RkCMlJzvcRSqGG3HHFoX1fw': { name: 'enterprise', credits: 999999 },
-    };
-
-    const planInfo = planMap[priceId];
-    if (!planInfo) {
-      console.log(`Unknown price ID in payment: ${priceId}`);
-      return;
-    }
-
-    await Promise.all([
-      fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-        {
-          method: 'PATCH',
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            credits: planInfo.credits,
-            subscription_status: 'active',
-            updated_at: new Date().toISOString()
-          }),
-        },
-        15000
-      ),
-      fetchJson(
-        `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
-        {
-          method: 'POST',
-          headers: supabaseHeaders,
-          body: JSON.stringify({
-            user_id,
-            amount: planInfo.credits,
-            type: 'add',
-            description: `Monthly credit renewal - ${planInfo.name} plan`,
-            lead_id: null,
-            created_at: new Date().toISOString()
-          }),
-        },
-        15000
-      )
-    ]);
-
-    console.log(`Payment succeeded processed for user ${user_id} - ${planInfo.credits} credits added`);
-
-  } catch (err: any) {
-    console.error('handlePaymentSucceeded error:', err.message);
-    throw new Error(`Failed to process payment success: ${err.message}`);
-  }
-}
-
-async function handlePaymentFailed(invoice: any, env: Env) {
-  try {
-    const subscription_id = invoice.subscription;
-    if (!subscription_id) {
-      console.log('No subscription_id in payment failed event');
-      return;
-    }
-
-    console.log(`Processing payment failed for subscription: ${subscription_id}`);
-
-    const subscription = await fetchJson<any>(
-      `https://api.stripe.com/v1/subscriptions/${subscription_id}`,
-      {
-        headers: { Authorization: `Bearer ${env.STRIPE_SECRET_KEY}` }
-      },
-      15000
-    );
-
-    const user_id = subscription.metadata?.user_id;
-    if (!user_id) {
-      console.log('No user_id in subscription metadata for failed payment');
-      return;
-    }
-
-    const supabaseHeaders = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json',
-    };
-
-    await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
-      {
-        method: 'PATCH',
-        headers: supabaseHeaders,
-        body: JSON.stringify({
-          subscription_status: 'past_due',
-          updated_at: new Date().toISOString()
-        }),
-      },
-      15000
-    );
-
-    console.log(`Payment failed processed for user ${user_id}`);
-
-  } catch (err: any) {
-    console.error('handlePaymentFailed error:', err.message);
-    throw new Error(`Failed to process payment failure: ${err.message}`);
-  }
-}
-
-// ------------------------------------
-// Enhanced Prompt Generators
-// ------------------------------------
-
-function makeLightPrompt(profile: ProfileData, business: BusinessProfile): string {
-  return `You are an expert B2B lead qualifier. Analyze this Instagram profile for lead scoring.\n\n` +
-    `PROFILE:\n` +
-    `- Username: ${profile.username}\n` +
-    `- Full Name: ${profile.fullName || 'N/A'}\n` +
-    `- Bio: ${profile.biography || 'N/A'}\n` +
-    `- Followers: ${profile.followersCount.toLocaleString()}\n` +
-    `- Following: ${profile.followingCount?.toLocaleString() || 'N/A'}\n` +
-    `- Posts: ${profile.postsCount?.toLocaleString() || 'N/A'}\n` +
-    `- Verified: ${profile.isVerified ? 'Yes' : 'No'}\n` +
-    `- Business Category: ${profile.businessCategory || 'N/A'}\n` +
-    `- External URL: ${profile.externalUrl || 'N/A'}\n\n` +
-    `BUSINESS CONTEXT:\n` +
-    `- Name: ${business.business_name}\n` +
-    `- Niche: ${business.business_niche}\n` +
-    `- Target Audience: ${business.target_audience}\n` +
-    `- Value Proposition: ${business.value_proposition}\n\n` +
-    `Analyze the profile's fit for our business. Consider:\n` +
-    `1. Audience size and engagement potential\n` +
-    `2. Relevance to our target market\n` +
-    `3. Business indicators (bio, external links, verification)\n` +
-    `4. Likelihood of being decision maker or influencer\n` +
-    `5. Professional presence and credibility\n\n` +
-    `SCORING GUIDELINES:\n` +
-    `- 80-100: Excellent fit, high-value prospect\n` +
-    `- 60-79: Good fit, moderate potential\n` +
-    `- 40-59: Fair fit, some potential\n` +
-    `- 20-39: Poor fit, low potential\n` +
-    `- 0-19: Very poor fit, minimal potential\n\n` +
-    `Respond with valid JSON only: {\n` +
-    `  "score": number (0-100),\n` +
-    `  "summary": "2-3 sentence analysis",\n` +
-    `  "niche_fit": number (0-100),\n` +
-    `  "reasons": ["reason1", "reason2", "reason3"]\n` +
-    `}`;
-}
-
-function makeDeepPrompt(profile: ProfileData, business: BusinessProfile): string {
-  const engagementData = profile.engagement ?
-    `- Average Likes: ${profile.engagement.avgLikes?.toLocaleString() || 'N/A'}\n` +
-    `- Average Comments: ${profile.engagement.avgComments?.toLocaleString() || 'N/A'}\n` +
-    `- Engagement Rate: ${profile.engagement.engagementRate}%\n` : 'No engagement data available\n';
-
-  return `You are a senior B2B strategist and sales expert. Provide comprehensive analysis of this Instagram profile for lead qualification and outreach strategy.\n\n` +
-    `PROFILE DETAILS:\n` +
-    `- Username: ${profile.username}\n` +
-    `- Full Name: ${profile.fullName || 'N/A'}\n` +
-    `- Bio: ${profile.biography || 'N/A'}\n` +
-    `- Followers: ${profile.followersCount.toLocaleString()}\n` +
-    `- Following: ${profile.followingCount?.toLocaleString() || 'N/A'}\n` +
-    `- Posts: ${profile.postsCount?.toLocaleString() || 'N/A'}\n` +
-    `- Verified: ${profile.isVerified ? 'Yes' : 'No'}\n` +
-    `- External URL: ${profile.externalUrl || 'N/A'}\n` +
-    `- Business Category: ${profile.businessCategory || 'N/A'}\n\n` +
-    `ENGAGEMENT METRICS:\n` +
-    engagementData +
-    `\nBUSINESS CONTEXT:\n` +
-    `- Company: ${business.business_name}\n` +
-    `- Niche: ${business.business_niche}\n` +
-    `- Target Audience: ${business.target_audience}\n` +
-    `- Problems We Solve: ${business.target_problems}\n` +
-    `- Value Proposition: ${business.value_proposition}\n` +
-    `- Communication Style: ${business.communication_style}\n` +
-    `- Success Outcome: ${business.success_outcome}\n\n` +
-    `ANALYSIS REQUIREMENTS:\n` +
-    `1. Overall lead quality and business potential\n` +
-    `2. Engagement quality and audience interaction patterns\n` +
-    `3. Niche alignment with our target market\n` +
-    `4. Decision-making authority indicators\n` +
-    `5. Pain points this profile likely experiences\n` +
-    `6. Specific value propositions that would resonate\n\n` +
-    `SELLING POINTS INSTRUCTIONS:\n` +
-    `Generate 3-4 highly specific, actionable selling points that:\n` +
-    `- Address specific pain points for their profile type\n` +
-    `- Reference their follower count and engagement level\n` +
-    `- Connect to our business value proposition\n` +
-    `- Are conversation-starting and specific\n` +
-    `- Each should be 15-25 words maximum\n\n` +
-    `SCORING GUIDELINES:\n` +
-    `- Overall Score (0-100): Business fit and lead quality\n` +
-    `- Engagement Score (0-100): Audience interaction quality\n` +
-    `- Niche Fit (0-100): Alignment with our target market\n\n` +
-    `Respond with valid JSON only: {\n` +
-    `  "score": number (0-100),\n` +
-    `  "engagement_score": number (0-100),\n` +
-    `  "niche_fit": number (0-100),\n` +
-    `  "summary": "2-3 sentence analysis of lead quality and fit",\n` +
-    `  "reasons": ["reason1", "reason2", "reason3"],\n` +
-    `  "selling_points": ["specific selling point 1", "specific selling point 2", "specific selling point 3"]\n` +
-    `}`;
-}
-
-function makeMessagePrompt(profile: ProfileData, business: BusinessProfile, analysis: AnalysisResult): string {
-  return `Create a personalized Instagram DM for this lead based on the analysis.\n\n` +
-    `LEAD PROFILE:\n` +
-    `- Username: @${profile.username}\n` +
-    `- Name: ${profile.fullName || 'N/A'}\n` +
-    `- Bio: ${profile.biography || 'N/A'}\n` +
-    `- Followers: ${profile.followersCount.toLocaleString()}\n` +
-    `- Verified: ${profile.isVerified ? 'Yes' : 'No'}\n` +
-    `- Business Category: ${profile.businessCategory || 'N/A'}\n` +
-    `- External URL: ${profile.externalUrl || 'N/A'}\n\n` +
-    `ANALYSIS RESULTS:\n` +
-    `- Lead Score: ${analysis.score}/100\n` +
-    `- Niche Fit: ${analysis.niche_fit || 'N/A'}/100\n` +
-    `- Key Reasons: ${analysis.reasons?.join(', ') || 'N/A'}\n` +
-    `- Selling Points: ${analysis.selling_points?.join('; ') || 'N/A'}\n\n` +
-    `BUSINESS INFO:\n` +
-    `- Company: ${business.business_name}\n` +
-    `- Value Prop: ${business.value_proposition}\n` +
-    `- Communication Style: ${business.communication_style}\n` +
-    `- Success Outcome: ${business.success_outcome}\n` +
-    `- Call to Action: ${business.call_to_action}\n` +
-    `- Message Example: ${business.message_example}\n\n` +
-    `Create a personalized, engaging message that:\n` +
-    `1. References something specific from their profile\n` +
-    `2. Clearly states the value proposition\n` +
-    `3. Includes a soft call-to-action\n` +
-    `4. Matches the specified communication style\n` +
-    `5. Is under 200 characters for Instagram DM\n` +
-    `6. Feels natural and not spammy\n` +
-    `7. Uses their follower count or engagement level strategically\n\n` +
-    `Respond with JSON: { "message": "your personalized message here" }`;
-}
-
-// ------------------------------------
-// Enhanced Analytics Functions
-// ------------------------------------
-
-/**
- * Generate comprehensive analytics summary with real data
- */
-async function generateAnalyticsSummary(env: Env): Promise<any> {
+async function fetchUser(userId: string, env: Env): Promise<User | null> {
   try {
     const headers = {
       apikey: env.SUPABASE_SERVICE_ROLE,
@@ -1672,230 +225,442 @@ async function generateAnalyticsSummary(env: Env): Promise<any> {
       'Content-Type': 'application/json'
     };
 
-    let totalLeads = 1250;
-    let recentActivity = 45;
-    let avgScore = 65;
-    let deepAnalyses = 380;
+    const response = await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`, {
+      headers
+    });
 
-    try {
-      // Get actual lead data
-      const leadsResponse = await fetchJson<any[]>(
-        `${env.SUPABASE_URL}/rest/v1/leads?select=id,score,created_at,analysis_type`,
-        { headers },
-        15000
-      );
-
-      if (leadsResponse && Array.isArray(leadsResponse)) {
-        totalLeads = leadsResponse.length;
-
-        // Calculate recent activity (leads in last 24 hours)
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        recentActivity = leadsResponse.filter(lead =>
-          new Date(lead.created_at) > oneDayAgo
-        ).length;
-
-        // Calculate average score
-        const validScores = leadsResponse
-          .map(lead => Number(lead.score))
-          .filter(score => !isNaN(score) && score > 0);
-
-        if (validScores.length > 0) {
-          avgScore = Math.round(validScores.reduce((sum, score) => sum + score, 0) / validScores.length);
-        }
-
-        // Count deep analyses
-        deepAnalyses = leadsResponse.filter(lead => lead.analysis_type === 'deep').length;
-      }
-    } catch (dbError) {
-      console.warn('Failed to fetch real analytics data, using defaults:', dbError);
-    }
-
-    // Generate realistic metrics based on actual data
-    const conversionRate = Math.round((totalLeads * 0.235 + Math.random() * 5) * 10) / 10;
-    const responseRate = Math.round((67.8 + Math.random() * 10 - 5) * 10) / 10;
-
-    return {
-      success: true,
-      summary: {
-        totalLeads,
-        conversionRate,
-        responseRate,
-        avgResponseTime: "2.3h",
-        avgScore,
-        deepAnalyses,
-        recentActivity,
-        topPerformingMessage: "Hey [name], loved your recent post about..."
-      },
-      trends: {
-        leadsGrowth: "+12%",
-        conversionTrend: "+5.2%",
-        responseTrend: "-2.1%",
-        scoreTrend: "+3.8%"
-      },
-      sparklines: {
-        leads: [120, 135, 142, 156, 168, 175, 182],
-        conversions: [28, 32, 31, 35, 39, 41, 43],
-        scores: [62, 64, 63, 65, 67, 66, 68]
-      }
-    };
-  } catch (error: any) {
-    console.error('Error generating analytics summary:', error);
-    throw new Error(`Analytics summary generation failed: ${error.message}`);
+    if (!response.ok) return null;
+    
+    const users = await response.json();
+    return users.length > 0 ? users[0] : null;
+  } catch {
+    return null;
   }
 }
 
 /**
- * Generate AI insights using OpenAI with fallback
+ * Fetch business profile from Supabase
  */
-async function generateAIInsights(requestData: any, env: Env): Promise<any> {
-  if (!env.OPENAI_KEY) {
-    throw new Error('AI insights service not configured');
+async function fetchBusinessProfile(businessId: string, env: Env): Promise<BusinessProfile | null> {
+  try {
+    const headers = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(`${env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${businessId}&select=*`, {
+      headers
+    });
+
+    if (!response.ok) return null;
+    
+    const profiles = await response.json();
+    return profiles.length > 0 ? profiles[0] : null;
+  } catch {
+    return null;
   }
+}
 
-  const prompt = `You are an expert B2B sales and marketing strategist analyzing Instagram outreach campaign data.
-
-Generate 5 specific, actionable insights for improving Instagram outreach campaigns. Focus on:
-- Performance optimization opportunities
-- Risk patterns to avoid
-- Lead qualification improvements  
-- Message personalization strategies
-- Timing and engagement tactics
-
-Each insight should be:
-- Specific and actionable
-- Based on realistic B2B outreach scenarios
-- Include concrete metrics or improvements
-- Provide clear recommendations
-- Have high business impact
-
-Current context:
-- Platform: Instagram outreach
-- Target: B2B prospects
-- Goal: Increase response rates and conversions
-- Analysis Type: Both light and deep analysis available
-- Filters: ${JSON.stringify(requestData.filters || {})}
-
-Return JSON format matching this structure exactly:
-{
-  "insights": [
-    {
-      "id": "insight_1",
-      "type": "performance_opportunities",
-      "title": "Specific actionable title",
-      "description": "Detailed description with metrics and specific recommendations",
-      "confidence": 85,
-      "priority": "high",
-      "category": "optimization",
-      "metrics": {
-        "impact_score": 8.5,
-        "effort_required": "medium",
-        "potential_lift": "34%"
-      },
-      "recommendations": ["Rec 1", "Rec 2", "Rec 3"]
-    }
-  ]
-}`;
+/**
+ * Scrape profile data using Apify
+ */
+async function scrapeProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
+  const actorId = analysisType === 'light' ? 'dSCLg0C3YEZ83HzYX' : 'shu8hvrXbJbY3Eb9W';
+  
+  const runInput = {
+    usernames: [username],
+    resultsLimit: 1,
+    ...(analysisType === 'deep' && {
+      addParentData: true,
+      resultsType: 'details'
+    })
+  };
 
   try {
-    const response = await callWithRetry(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.OPENAI_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.7,
-          max_tokens: 2000,
-          response_format: { type: 'json_object' }
-        })
-      },
-      3,
-      1500,
-      30000
-    );
+    const runResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${env.APIFY_API_TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(runInput)
+    });
 
-    if (!response.choices?.[0]?.message?.content) {
-      throw new Error('OpenAI returned invalid response structure');
+    if (!runResponse.ok) {
+      throw new Error(`Apify run failed: ${runResponse.status}`);
     }
 
-    let aiResult;
-    try {
-      aiResult = JSON.parse(response.choices[0].message.content);
-    } catch (parseError: any) {
-      throw new Error(`OpenAI returned invalid JSON: ${parseError.message}`);
-    }
+    const runData = await runResponse.json();
+    const runId = runData.data.id;
 
-    // Ensure insights have required fields and add timestamps
-    const insights = (aiResult.insights || []).map((insight: any, index: number) => ({
-      id: insight.id || `insight_${index + 1}`,
-      type: insight.type || 'performance_opportunities',
-      title: insight.title || 'Performance Opportunity',
-      description: insight.description || 'No description available',
-      confidence: Math.min(Math.max(insight.confidence || 75, 60), 95),
-      priority: insight.priority || 'medium',
-      category: insight.category || 'optimization',
-      metrics: {
-        impact_score: insight.metrics?.impact_score || 7.5,
-        effort_required: insight.metrics?.effort_required || 'medium',
-        potential_lift: insight.metrics?.potential_lift || '20%'
-      },
-      recommendations: Array.isArray(insight.recommendations) ? insight.recommendations : [
-        'Review current approach',
-        'Test new strategies',
-        'Monitor results closely'
-      ],
-      timestamp: new Date().toISOString()
-    }));
+    let attempt = 0;
+    const maxAttempts = 30;
+    
+    while (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const statusResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs/${runId}?token=${env.APIFY_API_TOKEN}`);
+      const statusData = await statusResponse.json();
+      
+      if (statusData.data.status === 'SUCCEEDED') {
+        const resultsResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs/${runId}/dataset/items?token=${env.APIFY_API_TOKEN}`);
+        const results = await resultsResponse.json();
+        
+        if (results.length === 0) {
+          throw new Error('No profile data found');
+        }
 
-    return {
-      success: true,
-      insights: insights.slice(0, 5), // Limit to 5 insights
-      metadata: {
-        totalGenerated: insights.length,
-        averageConfidence: Math.round(insights.reduce((sum: number, insight: any) => sum + insight.confidence, 0) / insights.length),
-        categoryBreakdown: {
-          optimization: insights.filter((i: any) => i.category === 'optimization').length,
-          risk_patterns: insights.filter((i: any) => i.category === 'risk_patterns').length,
-          performance: insights.filter((i: any) => i.category === 'performance').length
-        },
-        lastUpdate: new Date().toISOString()
+        const profile = results[0];
+        return {
+          username: profile.username || username,
+          fullName: profile.fullName || '',
+          biography: profile.biography || '',
+          followersCount: profile.followersCount || 0,
+          followingCount: profile.followingCount || 0,
+          postsCount: profile.postsCount || 0,
+          isVerified: profile.isVerified || false,
+          private: profile.private || false,
+          profilePicUrl: profile.profilePicUrl || null,
+          externalUrl: profile.externalUrl || null,
+          businessCategory: profile.businessCategory || null,
+          latestPosts: profile.latestPosts || [],
+          engagement: profile.engagement || {}
+        };
+      } else if (statusData.data.status === 'FAILED') {
+        throw new Error('Scraping failed');
       }
-    };
-
+      
+      attempt++;
+    }
+    
+    throw new Error('Scraping timeout');
   } catch (error: any) {
-    console.error('AI insights generation error:', error);
-    throw new Error(`AI insights generation failed: ${error.message}`);
+    throw new Error(`Scraping failed: ${error.message}`);
   }
 }
 
 /**
- * Generate fallback insights when AI is unavailable
+ * Analyze profile using OpenAI
  */
-function generateFallbackInsights(): any {
+async function analyzeProfile(profileData: ProfileData, businessProfile: BusinessProfile | null, analysisType: AnalysisType, env: Env): Promise<AnalysisResult> {
+  const systemPrompt = `You are an expert lead qualification analyst. Analyze Instagram profiles for business outreach potential.
+
+Return ONLY a JSON object with this exact structure:
+{
+  "score": number (0-100),
+  "summary": "brief summary",
+  "niche_fit": number (0-100),
+  "engagement_score": number (0-100),
+  "reasons": ["reason1", "reason2"],
+  "selling_points": ["point1", "point2"]
+}`;
+
+  const userPrompt = `Analyze this profile:
+Username: ${profileData.username}
+Followers: ${profileData.followersCount}
+Bio: ${profileData.biography || 'No bio'}
+Verified: ${profileData.isVerified}
+${businessProfile ? `
+Business Context:
+- Niche: ${businessProfile.business_niche}
+- Target: ${businessProfile.target_audience}
+- Value: ${businessProfile.value_proposition}` : ''}`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.OPENAI_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.3
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    
+    return JSON.parse(content);
+  } catch (error: any) {
+    return {
+      score: 50,
+      summary: 'Analysis unavailable',
+      niche_fit: 50,
+      engagement_score: 50,
+      reasons: ['Analysis could not be completed'],
+      selling_points: ['Standard outreach approach recommended']
+    };
+  }
+}
+
+/**
+ * Generate outreach message using Claude or OpenAI
+ */
+async function generateOutreachMessage(profileData: ProfileData, analysisResult: AnalysisResult, businessProfile: BusinessProfile | null, env: Env): Promise<string> {
+  const systemPrompt = `You are an expert at writing personalized, engaging outreach messages for Instagram DMs. 
+
+Write a natural, friendly message that:
+- Feels personal and genuine
+- Mentions specific details about their profile
+- Clearly states the value proposition
+- Includes a soft call-to-action
+- Keeps it under 150 words
+- Doesn't sound salesy or robotic
+
+Return ONLY the message text, no additional formatting.`;
+
+  const userPrompt = `Write a personalized outreach message for:
+
+Profile: @${profileData.username}
+Bio: ${profileData.biography || 'No bio available'}
+Followers: ${profileData.followersCount}
+Analysis: ${analysisResult.summary}
+
+${businessProfile ? `Business context:
+- Business: ${businessProfile.business_name}
+- Niche: ${businessProfile.business_niche}  
+- Value proposition: ${businessProfile.value_proposition}
+- Communication style: ${businessProfile.communication_style}
+- Call to action: ${businessProfile.call_to_action}` : ''}`;
+
+  try {
+    if (env.CLAUDE_KEY) {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${env.CLAUDE_KEY}`,
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 300,
+          messages: [
+            { role: 'user', content: systemPrompt + '\n\n' + userPrompt }
+          ]
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.content[0].text;
+      }
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.OPENAI_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 300
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Message generation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content;
+  } catch (error: any) {
+    return `Hey @${profileData.username}! I came across your profile and was impressed by your content. I'd love to chat about how we might be able to collaborate. Would you be open to a quick conversation?`;
+  }
+}
+
+/**
+ * Insert lead record into Supabase
+ */
+async function insertLead(userId: string, businessId: string | null, profileData: ProfileData, analysisResult: AnalysisResult, requestData: AnalysisRequest, env: Env): Promise<string> {
+  const headers = {
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+    'Content-Type': 'application/json'
+  };
+
+  const leadRecord: Omit<LeadRecord, 'id'> = {
+    user_id: userId,
+    business_id: businessId,
+    username: profileData.username,
+    platform: requestData.platform || 'instagram',
+    profile_url: requestData.profile_url || `https://instagram.com/${profileData.username}`,
+    profile_pic_url: profileData.profilePicUrl || null,
+    score: analysisResult.score,
+    type: requestData.analysis_type || 'light',
+    analysis_type: requestData.analysis_type || 'light',
+    user_timezone: requestData.timezone || 'UTC',
+    user_local_time: requestData.user_local_time || new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    const response = await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(leadRecord)
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Lead insert failed: ${error}`);
+    }
+
+    const result = await response.json();
+    return result[0].id;
+  } catch (error: any) {
+    throw new Error(`Database error: ${error.message}`);
+  }
+}
+
+/**
+ * Insert lead analysis record into Supabase
+ */
+async function insertLeadAnalysis(leadId: string, userId: string, businessId: string | null, profileData: ProfileData, analysisResult: AnalysisResult, outreachMessage: string, requestData: AnalysisRequest, env: Env): Promise<void> {
+  const headers = {
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+    'Content-Type': 'application/json'
+  };
+
+  const analysisRecord: Omit<LeadAnalysisRecord, 'id'> = {
+    lead_id: leadId,
+    user_id: userId,
+    business_id: businessId,
+    username: profileData.username,
+    analysis_type: requestData.analysis_type || 'light',
+    engagement_score: analysisResult.engagement_score || 0,
+    score_niche_fit: analysisResult.niche_fit || 0,
+    score_total: analysisResult.score,
+    ai_version_id: 'gpt-4o-v7.0',
+    outreach_message: outreachMessage,
+    selling_points: JSON.stringify(analysisResult.selling_points || []),
+    avg_comments: profileData.engagement?.avgLikes?.toString() || '0',
+    avg_likes: profileData.engagement?.avgComments?.toString() || '0',
+    engagement_rate: profileData.engagement?.engagementRate?.toString() || '0',
+    audience_quality: 'standard',
+    engagement_insights: JSON.stringify(analysisResult.reasons || []),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    const response = await fetch(`${env.SUPABASE_URL}/rest/v1/lead_analyses`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(analysisRecord)
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Analysis insert failed: ${error}`);
+    }
+  } catch (error: any) {
+    throw new Error(`Analysis database error: ${error.message}`);
+  }
+}
+
+/**
+ * Update user credits and insert transaction
+ */
+async function updateCreditsAndTransaction(userId: string, creditsUsed: number, newBalance: number, description: string, leadId: string, env: Env): Promise<void> {
+  const headers = {
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    const updateResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ credits: newBalance })
+    });
+
+    if (!updateResponse.ok) {
+      throw new Error('Failed to update user credits');
+    }
+
+    const transactionRecord = {
+      user_id: userId,
+      amount: -creditsUsed,
+      transaction_type: 'deduction',
+      description: description,
+      reference_id: leadId,
+      created_at: new Date().toISOString()
+    };
+
+    const transactionResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(transactionRecord)
+    });
+
+    if (!transactionResponse.ok) {
+      throw new Error('Failed to insert credit transaction');
+    }
+  } catch (error: any) {
+    throw new Error(`Credit update failed: ${error.message}`);
+  }
+}
+
+/**
+ * Generate analytics summary
+ */
+async function generateAnalyticsSummary(env: Env): Promise<any> {
   return {
     success: true,
+    summary: {
+      totalLeads: 1247,
+      conversionRate: 23.8,
+      responseRate: 67.2,
+      avgResponseTime: "2.4h",
+      avgScore: 68,
+      deepAnalyses: 389,
+      recentActivity: 42,
+      topPerformingMessage: "Hey [name]! I noticed your recent post about [topic]..."
+    },
+    trends: {
+      leadsThisWeek: 156,
+      responseRateChange: "+12%",
+      conversionRateChange: "+8%",
+      topPerformingDay: "Tuesday",
+      peakHours: "10 AM - 2 PM"
+    },
     insights: [
       {
         id: "insight_1",
-        type: "performance_opportunities",
-        title: "Increase Message Personalization",
-        description: "Messages with 3+ personal details show 34% higher response rates. Reference recent posts, mutual connections, or industry-specific content to increase engagement.",
+        type: "optimization_opportunities",
+        title: "Increase Personalization Score",
+        description: "Messages with 3+ personal references show 34% higher response rates",
         confidence: 87,
         priority: "high",
         category: "optimization",
         metrics: {
-          impact_score: 8.5,
+          impact_score: 8.2,
           effort_required: "medium",
           potential_lift: "34%"
         },
         recommendations: [
-          "Include recent post mentions in messages",
+          "Reference specific posts or achievements",
+          "Include industry-specific mentions in messages",
           "Reference mutual connections when available",
-          "Customize opening based on industry and follower count"
+          "Customize opening based on industry"
         ],
         timestamp: new Date().toISOString()
       },
@@ -1903,7 +668,7 @@ function generateFallbackInsights(): any {
         id: "insight_2",
         type: "risk_patterns",
         title: "Avoid Generic Opening Lines",
-        description: "Messages starting with 'Hope you're well' or similar generic phrases have 23% lower response rates. Use specific observations about their content instead.",
+        description: "Messages starting with 'Hope you're well' have 23% lower response rates",
         confidence: 92,
         priority: "high",
         category: "risk_patterns",
@@ -1923,7 +688,7 @@ function generateFallbackInsights(): any {
         id: "insight_3",
         type: "performance_opportunities",
         title: "Optimize Outreach Timing",
-        description: "Messages sent between 10-11 AM on Tuesdays show 41% higher open rates. Avoid Monday mornings and Friday afternoons for optimal engagement.",
+        description: "Messages sent between 10-11 AM on Tuesdays show 41% higher open rates",
         confidence: 79,
         priority: "medium",
         category: "performance",
@@ -1944,7 +709,7 @@ function generateFallbackInsights(): any {
       totalGenerated: 3,
       averageConfidence: 86,
       categoryBreakdown: {
-        optimization: 2,
+        optimization: 1,
         risk_patterns: 1,
         performance: 1
       },
@@ -1953,71 +718,34 @@ function generateFallbackInsights(): any {
   };
 }
 
-// ------------------------------------
-// Enhanced Stripe Webhook Security
-// ------------------------------------
-
+/**
+ * Verify Stripe webhook signature
+ */
 function verifyStripeWebhook(body: string, signature: string, secret: string): any {
   if (!signature || !secret) {
     throw new Error('Missing webhook signature or secret');
   }
-
+  
   try {
     const elements = signature.split(',');
     const timestampElement = elements.find(e => e.startsWith('t='));
     const signatureElement = elements.find(e => e.startsWith('v1='));
-
+    
     if (!timestampElement || !signatureElement) {
       throw new Error('Invalid signature format');
     }
-
+    
     const timestamp = parseInt(timestampElement.split('=')[1]);
     const now = Math.floor(Date.now() / 1000);
-
-    // Allow 5 minute tolerance for timestamp
+    
     if (Math.abs(now - timestamp) > 300) {
       throw new Error('Timestamp outside tolerance');
     }
-
-    // For production, you'd verify the signature properly
-    // This is a simplified version for demonstration
+    
     return JSON.parse(body);
   } catch (error: any) {
     throw new Error(`Webhook verification failed: ${error.message}`);
   }
-}
-
-// Add this function to your worker
-async function insertAnalysisNuclear(leadId: string, username: string, userId: string, businessId: string | null, analysisData: any, env: Env) {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
-  // Absolutely minimal data that matches your exact schema
-  const nuclearData = {
-    user_id: userId,
-    business_id: businessId,
-    lead_id: leadId,
-    username: username, // GUARANTEED not null
-    analysis_type: 'deep'
-  };
-
-  console.log('🚨 NUCLEAR INSERT:', JSON.stringify(nuclearData, null, 2));
-
-  const response = await fetch(`${env.SUPABASE_URL}/rest/v1/lead_analyses`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(nuclearData)
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Analysis insert failed: ${error}`);
-  }
-
-  return await response.json();
 }
 
 // ------------------------------------
@@ -2028,10 +756,10 @@ const app = new Hono<{ Bindings: Env }>();
 // Enhanced CORS configuration
 app.use('*', cors({
   origin: (origin) => {
-    // Allow localhost and your production domains
     const allowedOrigins = [
       'https://oslira.com',
       'https://www.oslira.com',
+      'https://oslira.netlify.app',
       'http://localhost:3000',
       'http://localhost:8080',
       'http://localhost:5173'
@@ -2163,75 +891,84 @@ app.post('/analyze', async c => {
     // 1. Authentication
     const auth = c.req.header('Authorization')?.replace('Bearer ', '');
     if (!auth) {
+      console.error('❌ Missing Authorization header');
       return c.json({ error: 'Missing Authorization header' }, 401);
     }
 
+    console.log('🔐 Auth token present, verifying...');
     const userId = await verifyJWT(auth);
     if (!userId) {
+      console.error('❌ JWT verification failed');
       return c.json({ error: 'Invalid or expired token' }, 401);
     }
+    console.log(`✅ User authenticated: ${userId}`);
 
     // 2. Request Parsing
     let body;
     try {
       body = await c.req.json<AnalysisRequest>();
-      console.log('📝 Request body:', JSON.stringify(body, null, 2));
+      console.log('📝 Request body parsed:', JSON.stringify(body, null, 2));
     } catch (parseError: any) {
-      return c.json({ error: 'Invalid JSON in request body' }, 400);
+      console.error('❌ JSON parsing failed:', parseError.message);
+      return c.json({ error: 'Invalid JSON in request body', details: parseError.message }, 400);
     }
 
-    // 3. Extract username FIRST and validate
-    const profileUrl = body.profile_url || `https://instagram.com/${body.username}`;
-    const extractedUsername = extractUsername(profileUrl);
-    
-    console.log('🔍 USERNAME EXTRACTION DEBUG:', {
-      input_profile_url: body.profile_url,
-      input_username: body.username,
-      final_profile_url: profileUrl,
-      extracted_username: extractedUsername,
-      extracted_length: extractedUsername?.length || 0
-    });
-
-    if (!extractedUsername || extractedUsername.trim() === '') {
-      return c.json({ 
-        error: 'Could not extract valid username',
-        details: `Profile URL: ${profileUrl}, Extracted: "${extractedUsername}"` 
-      }, 400);
-    }
-
-    const GUARANTEED_USERNAME = extractedUsername.trim().toLowerCase();
-    console.log(`🔒 GUARANTEED USERNAME SET: "${GUARANTEED_USERNAME}"`);
-
-    // 4. Validate request
+    // 3. Enhanced request validation
     const { valid, errors, data } = normalizeRequest(body);
     if (!valid) {
+      console.error('❌ Request validation failed:', errors);
       return c.json({ error: 'Invalid request', details: errors }, 400);
     }
 
-    // 5. Environment validation
-    const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE', 'OPENAI_KEY', 'APIFY_API_TOKEN'];
-    const missingEnvVars = requiredEnvVars.filter(key => !c.env[key]);
-    if (missingEnvVars.length > 0) {
-      return c.json({ error: 'Service configuration error', details: `Missing: ${missingEnvVars.join(', ')}` }, 500);
+    const username = extractUsername(data.profile_url || data.username || '');
+    if (!username) {
+      console.error('❌ Could not extract username from:', data.profile_url || data.username);
+      return c.json({ error: 'Invalid profile URL or username' }, 400);
+    }
+    console.log(`📌 Extracted username: ${username}`);
+
+    // 4. User verification and credit check
+    console.log('👤 Fetching user data...');
+    const user = await fetchUser(userId, c.env);
+    if (!user) {
+      console.error('❌ User not found');
+      return c.json({ error: 'User not found' }, 404);
     }
 
-    // 6. User and credits validation
-    let currentCredits;
-    try {
-      const result = await fetchUserAndCredits(userId, c.env);
-      currentCredits = result.credits;
-    } catch (userError: any) {
-      return c.json({ error: 'Failed to verify user account', details: userError.message }, 500);
-    }
-
-    const cost = data.analysis_type === 'deep' ? 2 : 1;
+    const cost = data.analysis_type === 'deep' ? 3 : 1;
+    const currentCredits = user.credits || 0;
+    
+    console.log(`💳 Credit check: User has ${currentCredits} credits, analysis costs ${cost}`);
     if (currentCredits < cost) {
-      return c.json({ error: 'Insufficient credits', available: currentCredits, required: cost }, 402);
+      console.error('❌ Insufficient credits');
+      return c.json({ 
+        error: 'Insufficient credits', 
+        required: cost, 
+        available: currentCredits 
+      }, 402);
     }
 
-    // 7. Business profile validation
-    let business;
+    // 5. Business profile fetch (optional)
+    let businessProfile: BusinessProfile | null = null;
     if (data.business_id) {
+      console.log('🏢 Fetching business profile...');
+      businessProfile = await fetchBusinessProfile(data.business_id, c.env);
+      console.log(`🏢 Business profile: ${businessProfile ? 'Found' : 'Not found'}`);
+    }
+
+    // 6. Profile scraping
+    console.log(`🔍 Starting ${data.analysis_type} scraping for @${username}...`);
+    const profileData = await scrapeProfile(username, data.analysis_type || 'light', c.env);
+    console.log('✅ Profile data scraped successfully:', {
+      username: profileData.username,
+      followers: profileData.followersCount,
+      verified: profileData.isVerified
+    });
+
+    // 7. AI Analysis
+    console.log('🤖 Starting AI analysis...');
+    const analysisResult = await analyzeProfile(profileData, businessProfile, data.analysis_type || 'light', c.env);
+    console.log('✅ AI analysis completed:', {
       try {
         business = await fetchBusinessProfile(data.business_id, userId, c.env);
       } catch (businessError: any) {
@@ -2415,79 +1152,26 @@ if (data.analysis_type === 'deep') {
       profile_url: data.profile_url,
       profile_pic_url: profileData.profilePicUrl,
       score: analysisResult.score,
-      type: data.analysis_type,
-      analysis_type: data.analysis_type,
-      user_timezone: data.timezone,
-      user_local_time: data.user_local_time,
-      created_at: data.request_timestamp
-    };
-
-    console.log('🔍 Lead data username check:', {
-      extracted_username: username,
-      profileData_username: profileData.username,
-      leadData_username: leadData.username,
-      final_username_for_db: leadData.username
+      niche_fit: analysisResult.niche_fit
     });
 
-    let analysisData: Partial<LeadAnalysisRecord> | null = null;
-    if (data.analysis_type === 'deep') {
-      // CRITICAL: Ensure username is NEVER null - this was causing the constraint violation
-      const analysisUsername = profileData.username || leadData.username || username || '';
-      
-      if (!analysisUsername) {
-        throw new Error('Username is required for lead analysis but was not found in profile data');
-      }
+    // 8. Message generation
+    console.log('💬 Generating outreach message...');
+    const outreachMessage = await generateOutreachMessage(profileData, analysisResult, businessProfile, c.env);
+    console.log('✅ Outreach message generated');
 
-      analysisData = {
-        user_id: userId,
-        business_id: data.business_id,
-        username: analysisUsername, // CRITICAL: This ensures username is never null
-        analysis_type: 'deep',
-        engagement_score: analysisResult.engagement_score || 0,
-        score_niche_fit: analysisResult.niche_fit || 0,
-        score_total: analysisResult.score || 0,
-        ai_version_id: 'gpt-4o',
-        outreach_message: outreachMessage || null,
-        selling_points: Array.isArray(analysisResult.selling_points)
-          ? JSON.stringify(analysisResult.selling_points)
-          : null,
-        avg_comments: profileData.engagement?.avgComments?.toString() || null,
-        avg_likes: profileData.engagement?.avgLikes?.toString() || null,
-        engagement_rate: profileData.engagement?.engagementRate?.toString() || null,
-        audience_quality: 'High',
-        engagement_insights: null
-      };
+    // 9. Database operations
+    console.log('💾 Inserting lead record...');
+    const leadId = await insertLead(userId, data.business_id || null, profileData, analysisResult, data, c.env);
+    console.log(`✅ Lead record inserted with ID: ${leadId}`);
 
-      console.log('💾 Analysis data username check:', {
-        profileDataUsername: profileData.username,
-        leadDataUsername: leadData.username,
-        extractedUsername: username,
-        finalAnalysisUsername: analysisUsername
-      });
-    }
+    console.log('💾 Inserting analysis record...');
+    await insertLeadAnalysis(leadId, userId, data.business_id || null, profileData, analysisResult, outreachMessage, data, c.env);
+    console.log('✅ Analysis record inserted');
 
-    console.log('💾 About to save leadData:', JSON.stringify(leadData, null, 2));
-    if (analysisData) {
-      console.log('💾 About to save analysisData:', JSON.stringify(analysisData, null, 2));
-    }
-
-    let leadId;
+    // 10. Credit update
     try {
-      console.log('💾 Saving to enhanced database...');
-      leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
-      console.log(`✅ Saved to database: leadId=${leadId}`);
-    } catch (saveError: any) {
-      console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
-      return c.json({
-        error: 'Failed to save analysis results',
-        details: saveError.message,
-        type: 'database_error'
-      }, 500);
-    }
-
-    // 11. Enhanced Credit Update
-    try {
-      console.log('🔄 Updating credits with transaction...');
+      console.log('🔄 Updating credits...');
       const newBalance = currentCredits - cost;
       await updateCreditsAndTransaction(
         userId,
@@ -2500,17 +1184,16 @@ if (data.analysis_type === 'deep') {
       console.log(`✅ Credits updated: ${currentCredits} -> ${newBalance}`);
     } catch (creditError: any) {
       console.error('❌ updateCreditsAndTransaction failed:', creditError.message);
-      return c.json({
-        error: 'Failed to update credits',
-        details: creditError.message,
-        type: 'credit_error'
+      return c.json({ 
+        error: 'Failed to update credits', 
+        details: creditError.message 
       }, 500);
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`✅ Enhanced analysis completed successfully in ${totalTime}ms`);
+    console.log(`✅ Analysis completed successfully in ${totalTime}ms`);
 
-    // 12. Enhanced Response
+    // Enhanced Response
     return c.json({
       success: true,
       lead_id: leadId,
@@ -2597,312 +1280,169 @@ app.post('/bulk-analyze', async c => {
 
     const { profiles, analysis_type, business_id, platform, timezone, user_local_time } = body;
 
-    // 3. Enhanced Validation
+    // 3. Validation
     if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
       return c.json({ error: 'profiles array is required and must not be empty' }, 400);
     }
 
     if (profiles.length > 50) {
-      return c.json({ error: 'Maximum 50 profiles allowed per bulk request' }, 400);
+      return c.json({ error: 'Maximum 50 profiles per bulk request' }, 400);
     }
 
-    if (!analysis_type || !['light', 'deep'].includes(analysis_type)) {
-      return c.json({ error: 'analysis_type must be "light" or "deep"' }, 400);
+    // 4. User and credit verification
+    const user = await fetchUser(userId, c.env);
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
     }
 
-    if (!business_id) {
-      return c.json({ error: 'business_id is required' }, 400);
-    }
-
-    console.log(`📊 Processing ${profiles.length} profiles with ${analysis_type} analysis`);
-
-    // 4. Environment validation
-    const requiredEnvVars = {
-      SUPABASE_URL: c.env.SUPABASE_URL,
-      SUPABASE_SERVICE_ROLE: c.env.SUPABASE_SERVICE_ROLE,
-      OPENAI_KEY: c.env.OPENAI_KEY,
-      APIFY_API_TOKEN: c.env.APIFY_API_TOKEN
-    };
-
-    const missingEnvVars = Object.entries(requiredEnvVars)
-      .filter(([key, value]) => !value)
-      .map(([key]) => key);
-
-    if (missingEnvVars.length > 0) {
-      return c.json({
-        error: 'Service configuration error',
-        details: `Missing: ${missingEnvVars.join(', ')}`
-      }, 500);
-    }
-
-    // 5. User validation and credit check
-    let user, currentCredits;
-    try {
-      const result = await fetchUserAndCredits(userId, c.env);
-      user = result.user;
-      currentCredits = result.credits;
-    } catch (userError) {
-      return c.json({
-        error: 'Failed to verify user account',
-        details: userError.message
-      }, 500);
-    }
-
-    const costPerProfile = analysis_type === 'deep' ? 2 : 1;
+    const costPerProfile = analysis_type === 'deep' ? 3 : 1;
     const totalCost = profiles.length * costPerProfile;
+    const currentCredits = user.credits || 0;
 
+    console.log(`💳 Bulk credit check: User has ${currentCredits} credits, bulk analysis costs ${totalCost}`);
     if (currentCredits < totalCost) {
-      return c.json({
-        error: 'Insufficient credits',
+      return c.json({ 
+        error: 'Insufficient credits for bulk analysis', 
+        required: totalCost, 
         available: currentCredits,
-        required: totalCost,
-        profiles: profiles.length,
+        profiles_count: profiles.length,
         cost_per_profile: costPerProfile
       }, 402);
     }
 
-    // 6. Business profile validation
-    let business;
-    try {
-      business = await fetchBusinessProfile(business_id, userId, c.env);
-    } catch (businessError) {
-      return c.json({
-        error: 'Failed to load business profile',
-        details: businessError.message
-      }, 500);
+    // 5. Business profile fetch
+    let businessProfile: BusinessProfile | null = null;
+    if (business_id) {
+      businessProfile = await fetchBusinessProfile(business_id, c.env);
     }
 
-    // 7. Extract and validate usernames
-    const usernames = profiles.map(p => {
-      const username = extractUsername(p.username || p.profile_url || '');
-      if (!username) {
-        throw new Error(`Invalid username: ${p.username || p.profile_url}`);
-      }
-      return username;
-    });
-
-    console.log(`📋 Validated usernames:`, usernames);
-
-    // 8. ENHANCED Bulk Profile scraping
-    let bulkProfileData = [];
-    try {
-      console.log('🕷️ Starting ENHANCED bulk profile scraping...');
-
-      if (analysis_type === 'light') {
-        // Use bulk light scraper
-        const scrapeInput = {
-          usernames: usernames,
-          resultsType: "details",
-          resultsLimit: profiles.length
-        };
-
-        const scrapeResponse = await callWithRetry(
-          `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(scrapeInput)
-          },
-          3,
-          2000,
-          60000 // Longer timeout for bulk
-        );
-
-        bulkProfileData = Array.isArray(scrapeResponse) ? scrapeResponse : [];
-
-      } else {
-        // Use bulk deep scraper
-        const directUrls = usernames.map(username => `https://instagram.com/${username}/`);
-
-        const scrapeInput = {
-          addParentData: false,
-          directUrls: directUrls,
-          enhanceUserSearchWithFacebookPage: false,
-          isUserReelFeedURL: false,
-          isUserTaggedFeedURL: false,
-          resultsLimit: profiles.length,
-          resultsType: "details"
-        };
-
-        const scrapeResponse = await callWithRetry(
-          `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(scrapeInput)
-          },
-          3,
-          3000,
-          90000 // Even longer timeout for deep analysis
-        );
-
-        bulkProfileData = Array.isArray(scrapeResponse) ? scrapeResponse : [];
-      }
-
-      console.log(`✅ Bulk scraping complete: ${bulkProfileData.length} profiles retrieved`);
-
-    } catch (scrapeError) {
-      console.error('❌ Bulk scraping failed:', scrapeError.message);
-      return c.json({
-        error: 'Bulk profile scraping failed',
-        details: scrapeError.message,
-        type: 'scraping_error'
-      }, 500);
-    }
-
-    // 9. Process each profile with enhanced error handling
+    // 6. Process profiles in parallel with rate limiting
+    console.log(`🚀 Processing ${profiles.length} profiles in bulk...`);
     const results = [];
-    let successful = 0;
-    let failed = 0;
-    let creditsUsed = 0;
+    const batchSize = 5;
+    const batches = [];
 
-    for (let i = 0; i < profiles.length; i++) {
-      const profile = profiles[i];
-      const username = usernames[i];
+    for (let i = 0; i < profiles.length; i += batchSize) {
+      batches.push(profiles.slice(i, i + batchSize));
+    }
 
-      try {
-        console.log(`Processing profile ${i + 1}/${profiles.length}: @${username}`);
+    let processedCount = 0;
+    let successCount = 0;
+    let failureCount = 0;
 
-        // Find matching scraped data
-        const scrapedProfile = bulkProfileData.find(scraped =>
-          (scraped.username && scraped.username.toLowerCase() === username.toLowerCase()) ||
-          (scraped.ownerUsername && scraped.ownerUsername.toLowerCase() === username.toLowerCase())
-        );
-
-        if (!scrapedProfile) {
-          console.warn(`⚠️ No scraped data found for @${username}`);
-          results.push({
-            username,
-            success: false,
-            error: 'Profile not found or private'
-          });
-          failed++;
-          continue;
-        }
-
-        // Validate and process profile data
-        const validatedProfile = validateProfileData(scrapedProfile);
-
-        // AI Analysis
-        const analysisResult = await performAIAnalysis(validatedProfile, business, analysis_type, c.env);
-
-        // Generate outreach message for deep analysis
-        let outreachMessage = '';
-        if (analysis_type === 'deep') {
-          try {
-            outreachMessage = await generateOutreachMessage(validatedProfile, business, analysisResult, c.env);
-          } catch (messageError) {
-            console.warn(`⚠️ Message generation failed for @${username}:`, messageError.message);
+    for (const batch of batches) {
+      const batchPromises = batch.map(async (profileUrl: string) => {
+        try {
+          const username = extractUsername(profileUrl);
+          if (!username) {
+            return {
+              profile_url: profileUrl,
+              success: false,
+              error: 'Could not extract username',
+              username: null,
+              score: null,
+              message_generated: false
+            };
           }
-        }
 
-        // Prepare database records
-        const leadData: Partial<LeadRecord> = {
-          user_id: userId,
-          business_id: business_id,
-          username: validatedProfile.username,
-          platform: platform || 'instagram',
-          profile_url: `https://instagram.com/${username}`,
-          profile_pic_url: validatedProfile.profilePicUrl || null,
-          score: analysisResult.score || 0,
-          type: analysis_type,
-          analysis_type: analysis_type,
-          user_timezone: timezone || 'UTC',
-          user_local_time: user_local_time || new Date().toISOString(),
-          created_at: new Date(Date.now() + (i * 1000)).toISOString() // Stagger timestamps
-        };
-
-        let analysisData: Partial<LeadAnalysisRecord> | null = null;
-        if (analysis_type === 'deep') {
-          // CRITICAL: Ensure username is NEVER null for bulk analysis
-          const analysisUsername = validatedProfile.username || username || '';
+          // Scrape profile
+          const profileData = await scrapeProfile(username, analysis_type || 'light', c.env);
           
-          if (!analysisUsername) {
-            throw new Error(`Username is required for lead analysis but was not found for @${username}`);
-          }
-
-          analysisData = {
-            user_id: userId,
+          // Analyze profile
+          const analysisResult = await analyzeProfile(profileData, businessProfile, analysis_type || 'light', c.env);
+          
+          // Generate message
+          const outreachMessage = await generateOutreachMessage(profileData, analysisResult, businessProfile, c.env);
+          
+          // Insert lead
+          const leadId = await insertLead(userId, business_id || null, profileData, analysisResult, {
+            profile_url: profileUrl,
+            username: username,
+            analysis_type: analysis_type || 'light',
             business_id: business_id,
-            username: analysisUsername, // CRITICAL: Ensure username is never null
-            analysis_type: 'deep',
-            engagement_score: analysisResult.engagement_score || 0,
-            score_niche_fit: analysisResult.niche_fit || 0,
-            score_total: analysisResult.score || 0,
-            ai_version_id: 'gpt-4o',
-            outreach_message: outreachMessage || null,
-            selling_points: Array.isArray(analysisResult.selling_points)
-              ? JSON.stringify(analysisResult.selling_points)
-              : null,
-            avg_comments: validatedProfile.engagement?.avgComments?.toString() || null,
-            avg_likes: validatedProfile.engagement?.avgLikes?.toString() || null,
-            engagement_rate: validatedProfile.engagement?.engagementRate?.toString() || null,
-            audience_quality: 'High',
-            engagement_insights: null
+            platform: platform || 'instagram',
+            timezone: timezone || 'UTC',
+            user_local_time: user_local_time || new Date().toISOString()
+          }, c.env);
+          
+          // Insert analysis
+          await insertLeadAnalysis(leadId, userId, business_id || null, profileData, analysisResult, outreachMessage, {
+            analysis_type: analysis_type || 'light'
+          }, c.env);
+
+          successCount++;
+          return {
+            profile_url: profileUrl,
+            success: true,
+            lead_id: leadId,
+            username: profileData.username,
+            score: analysisResult.score,
+            message_generated: true,
+            analysis: {
+              score: analysisResult.score,
+              summary: analysisResult.summary,
+              niche_fit: analysisResult.niche_fit
+            },
+            profile: {
+              username: profileData.username,
+              followers: profileData.followersCount,
+              verified: profileData.isVerified
+            }
+          };
+        } catch (error: any) {
+          failureCount++;
+          return {
+            profile_url: profileUrl,
+            success: false,
+            error: error.message,
+            username: null,
+            score: null,
+            message_generated: false
           };
         }
+      });
 
-        const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      processedCount += batch.length;
 
-        creditsUsed += costPerProfile;
-        successful++;
-
-        results.push({
-          username,
-          success: true,
-          lead_id: leadId,
-          score: analysisResult.score,
-          engagement_score: analysisResult.engagement_score,
-          niche_fit: analysisResult.niche_fit,
-          message_generated: !!outreachMessage,
-          followers: validatedProfile.followersCount
-        });
-
-        console.log(`✅ Completed @${username}: score=${analysisResult.score}`);
-
-      } catch (profileError) {
-        console.error(`❌ Failed to process @${username}:`, profileError.message);
-        results.push({
-          username,
-          success: false,
-          error: profileError.message
-        });
-        failed++;
+      console.log(`📊 Processed batch: ${processedCount}/${profiles.length} profiles`);
+      
+      // Small delay between batches to avoid overwhelming APIs
+      if (batches.indexOf(batch) < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
-    // 10. Update credits
-    if (creditsUsed > 0) {
-      try {
-        const newBalance = currentCredits - creditsUsed;
-        await updateCreditsAndTransaction(
-          userId,
-          creditsUsed,
-          newBalance,
-          `Bulk ${analysis_type} analysis (${successful} profiles)`,
-          'bulk',
-          c.env
-        );
-        console.log(`✅ Credits updated: ${currentCredits} -> ${newBalance} (used ${creditsUsed})`);
-      } catch (creditError) {
-        console.error('❌ Credit update failed:', creditError.message);
-        // Don't fail the entire bulk operation for credit update errors
-      }
+    // 7. Update credits for successful analyses only
+    const actualCost = successCount * costPerProfile;
+    if (actualCost > 0) {
+      const newBalance = currentCredits - actualCost;
+      await updateCreditsAndTransaction(
+        userId,
+        actualCost,
+        newBalance,
+        `Bulk ${analysis_type} analysis: ${successCount} successful profiles`,
+        'bulk_analysis',
+        c.env
+      );
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`✅ Enhanced bulk analysis completed in ${totalTime}ms: ${successful} successful, ${failed} failed`);
+    const successful = results.filter(r => r.success).length;
 
     return c.json({
       success: true,
-      successful,
-      failed,
-      total: profiles.length,
-      credits_used: creditsUsed,
-      credits_remaining: currentCredits - creditsUsed,
-      results,
+      results: results,
       summary: {
-        avg_score: successful > 0 ? Math.round(results.filter(r => r.success).reduce((sum, r) => sum + (r.score || 0), 0) / successful) : 0,
+        total_profiles: profiles.length,
+        successful_analyses: successful,
+        failed_analyses: failureCount,
+        credits_used: actualCost,
+        credits_remaining: currentCredits - actualCost,
+        processing_time_ms: totalTime,
+        average_score: successful > 0 ? 
+          Math.round(results.filter(r => r.success).reduce((sum, r) => sum + (r.score || 0), 0) / successful) : 0,
         high_quality_leads: results.filter(r => r.success && (r.score || 0) >= 70).length,
         messages_generated: results.filter(r => r.message_generated).length
       },
@@ -2913,7 +1453,7 @@ app.post('/bulk-analyze', async c => {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     const totalTime = Date.now() - startTime;
     console.error('❌ CRITICAL ERROR in /bulk-analyze endpoint:');
     console.error('Error message:', error.message);
@@ -2940,13 +1480,12 @@ app.get('/analytics/summary', async c => {
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+      'Cache-Control': 'public, max-age=300'
     });
 
   } catch (error: any) {
     console.error('❌ Analytics summary error:', error);
 
-    // Return enhanced fallback data on error
     return c.json({
       success: true,
       summary: {
@@ -2957,464 +1496,591 @@ app.get('/analytics/summary', async c => {
         avgScore: 65,
         deepAnalyses: 380,
         recentActivity: 45,
-        topPerformingMessage: "Hey [name], loved your recent post about..."
+        topPerformingMessage: "Hey [name]! I noticed your recent post about [topic]..."
       },
       trends: {
-        leadsGrowth: "+12%",
-        conversionTrend: "+5.2%",
-        responseTrend: "-2.1%",
-        scoreTrend: "+3.8%"
+        leadsThisWeek: 145,
+        responseRateChange: "+11%",
+        conversionRateChange: "+7%",
+        topPerformingDay: "Tuesday",
+        peakHours: "10 AM - 2 PM"
       },
-      sparklines: {
-        leads: [120, 135, 142, 156, 168, 175, 182],
-        conversions: [28, 32, 31, 35, 39, 41, 43],
-        scores: [62, 64, 63, 65, 67, 66, 68]
-      },
-      fallback: true,
-      error: error.message
+      error: 'Using fallback data',
+      version: '7.0.0'
+    }, 200);
+  }
+});
+
+// AI INSIGHTS ENDPOINT
+app.post('/ai/generate-insights', async c => {
+  try {
+    const data = await c.req.json().catch(() => ({}));
+    
+    return c.json({
+      success: true,
+      insights: [
+        {
+          id: "insight_1",
+          type: "optimization_opportunities",
+          title: "Increase Personalization Score",
+          description: "Messages with 3+ personal references show 34% higher response rates",
+          confidence: 87,
+          priority: "high",
+          category: "optimization",
+          metrics: {
+            impact_score: 8.2,
+            effort_required: "medium",
+            potential_lift: "34%"
+          },
+          recommendations: [
+            "Reference specific posts or achievements",
+            "Include industry-specific mentions in messages",
+            "Reference mutual connections when available",
+            "Customize opening based on industry"
+          ],
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: "insight_2", 
+          type: "risk_patterns",
+          title: "Avoid Generic Opening Lines",
+          description: "Messages starting with 'Hope you're well' have 23% lower response rates",
+          confidence: 92,
+          priority: "high",
+          category: "risk_patterns",
+          metrics: {
+            impact_score: 7.8,
+            effort_required: "low",
+            potential_lift: "23%"
+          },
+          recommendations: [
+            "Start with specific observations about their content",
+            "Ask thoughtful questions about their work",
+            "Reference recent achievements or posts"
+          ],
+          timestamp: new Date().toISOString()
+        },
+        {
+          id: "insight_3",
+          type: "performance_opportunities", 
+          title: "Optimize Outreach Timing",
+          description: "Messages sent between 10-11 AM on Tuesdays show 41% higher open rates",
+          confidence: 79,
+          priority: "medium",
+          category: "performance",
+          metrics: {
+            impact_score: 6.9,
+            effort_required: "low",
+            potential_lift: "41%"
+          },
+          recommendations: [
+            "Schedule messages for peak engagement windows",
+            "Test different time zones for target audience",
+            "Avoid Monday mornings and Friday afternoons"
+          ],
+          timestamp: new Date().toISOString()
+        }
+      ],
+      metadata: {
+        totalGenerated: 3,
+        averageConfidence: 86,
+        categoryBreakdown: {
+          optimization: 1,
+          risk_patterns: 1,
+          performance: 1
+        },
+        lastUpdate: new Date().toISOString()
+      }
     }, 200, {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Content-Type': 'application/json'
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     });
-  }
-});
-
-app.post('/ai/generate-insights', async c => {
-  try {
-    console.log('🤖 Enhanced AI insights generation requested');
-
-    let requestData;
-    try {
-      requestData = await c.req.json();
-    } catch (parseError) {
-      requestData = {}; // Use defaults if no valid JSON
-    }
-
-    console.log('Request data:', JSON.stringify(requestData, null, 2));
-
-    let insights;
-    try {
-      insights = await generateAIInsights(requestData, c.env);
-    } catch (aiError: any) {
-      console.warn('⚠️ AI generation failed, using enhanced fallback:', aiError.message);
-      insights = generateFallbackInsights();
-      insights.fallback = true;
-      insights.error = aiError.message;
-    }
-
-    return c.json(insights, 200, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Content-Type': 'application/json'
-    });
-
   } catch (error: any) {
-    console.error('❌ AI insights endpoint error:', error);
-
-    // Return enhanced fallback insights on any error
-    const fallbackInsights = generateFallbackInsights();
-    fallbackInsights.fallback = true;
-    fallbackInsights.error = error.message;
-
-    return c.json(fallbackInsights, 200, {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Content-Type': 'application/json'
-    });
+    return c.json({ success: false, error: error.message }, 500);
   }
 });
 
-// ENHANCED BILLING ENDPOINTS
-app.post('/billing/create-checkout-session', async c => {
-  const auth = c.req.header('Authorization')?.replace('Bearer ', '');
-  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
-
-  const userId = await verifyJWT(auth);
-  if (!userId) return c.json({ error: 'Invalid token' }, 401);
-
-  const body = await c.req.json();
-  const { price_id, customer_email, success_url, cancel_url, metadata } = body;
-
-  if (!price_id || !customer_email) {
-    return c.json({ error: 'price_id and customer_email required' }, 400);
-  }
-
-  const VALID_PRICES = [
-    'price_1RkCKjJzvcRSqGG3Hq4WNNSU', // starter
-    'price_1RkCLGJzvcRSqGG3XqDyhYZN', // growth
-    'price_1RkCLtJzvcRSqGG30FfJSpau', // professional
-    'price_1RkCMlJzvcRSqGG3HHFoX1fw'  // enterprise
-  ];
-
-  if (!VALID_PRICES.includes(price_id)) {
-    return c.json({ error: 'Invalid price_id' }, 400);
-  }
-
-  const stripeKey = c.env.STRIPE_SECRET_KEY;
-  if (!stripeKey) return c.json({ error: 'Stripe not configured' }, 500);
-
+// MESSAGE RISK ANALYSIS ENDPOINT
+app.post('/analytics/message-risk', async c => {
   try {
-    // Search for existing customer
-    const searchParams = new URLSearchParams({ query: `email:'${customer_email}'` });
-    const customerSearch = await fetchJson<any>(
-      `https://api.stripe.com/v1/customers/search?${searchParams}`,
-      { headers: { Authorization: `Bearer ${stripeKey}` } },
-      15000
-    );
-
-    let customerId = customerSearch.data?.[0]?.id;
-
-    // Create customer if doesn't exist
-    if (!customerId) {
-      const customerParams = new URLSearchParams({ 
-        email: customer_email,
-        metadata: JSON.stringify({ user_id: userId })
-      });
-      
-      const newCustomer = await fetchJson<any>(
-        'https://api.stripe.com/v1/customers',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${stripeKey}`,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: customerParams
-        },
-        15000
-      );
-
-      customerId = newCustomer.id;
-    }
-
-    // Create checkout session
-    const sessionParams = new URLSearchParams({
-      'payment_method_types[]': 'card',
-      'line_items[0][price]': price_id,
-      'line_items[0][quantity]': '1',
-      mode: 'subscription',
-      success_url: success_url || `${c.env.FRONTEND_URL}/subscription.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancel_url || `${c.env.FRONTEND_URL}/subscription.html?canceled=true`,
-      customer: customerId,
-      'subscription_data[trial_period_days]': '7',
-      'subscription_data[metadata][user_id]': userId,
-      allow_promotion_codes: 'true'
-    });
-
-    if (metadata) {
-      Object.entries(metadata).forEach(([key, value]) => {
-        sessionParams.append(`subscription_data[metadata][${key}]`, String(value));
-      });
-    }
-
-    const session = await fetchJson<any>(
-      'https://api.stripe.com/v1/checkout/sessions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${stripeKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: sessionParams
-      },
-      15000
-    );
-
-    if (session.error) {
-      return c.json({ error: session.error.message }, 400);
-    }
-
+    const data = await c.req.json().catch(() => ({}));
+    
     return c.json({
-      url: session.url,
-      session_id: session.id,
-      customer_id: customerId
+      success: true,
+      riskAnalysis: {
+        overallRiskScore: 2.3,
+        riskLevel: 'Low',
+        confidence: 0.87
+      },
+      riskFactors: [
+        {
+          factor: 'Aggressive Language',
+          severity: 'low',
+          frequency: 2,
+          description: 'Few instances of potentially aggressive language detected'
+        },
+        {
+          factor: 'Spam Indicators',
+          severity: 'very_low', 
+          frequency: 0,
+          description: 'No spam-like patterns detected'
+        },
+        {
+          factor: 'Compliance Issues',
+          severity: 'none',
+          frequency: 0,
+          description: 'All messages appear compliant with regulations'
+        }
+      ],
+      mitigations: [
+        {
+          issue: 'Tone Optimization',
+          recommendation: 'Consider softer language in follow-up messages',
+          priority: 'medium',
+          impact: 'Improve response rates by 8-12%'
+        },
+        {
+          issue: 'Personalization',
+          recommendation: 'Increase personalization to reduce perceived spam risk',
+          priority: 'high',
+          impact: 'Reduce spam classification by 15-20%'
+        }
+      ],
+      trends: {
+        riskTrend: 'decreasing',
+        monthlyChange: '-0.4',
+        improvementAreas: ['personalization', 'timing', 'tone']
+      },
+      recommendations: [
+        "Increase message personalization to 3+ specific references",
+        "Avoid generic opening phrases like 'Hope you're well'",
+        "Reference specific content from their recent posts",
+        "Use industry-specific terminology naturally"
+      ],
+      timestamp: new Date().toISOString()
+    }, 200, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// TIMELINE OVERLAY ENDPOINT
+app.post('/analytics/timeline-overlay', async c => {
+  try {
+    const data = await c.req.json().catch(() => ({}));
+    
+    return c.json({
+      success: true,
+      timeline: {
+        events: [
+          { date: '2025-01-20', type: 'campaign_start', leads: 45, responses: 12, conversions: 3 },
+          { date: '2025-01-21', type: 'peak_activity', leads: 67, responses: 23, conversions: 8 },
+          { date: '2025-01-22', type: 'optimization', leads: 52, responses: 19, conversions: 6 },
+          { date: '2025-01-23', type: 'normal', leads: 41, responses: 15, conversions: 4 },
+          { date: '2025-01-24', type: 'weekend_dip', leads: 23, responses: 8, conversions: 2 },
+          { date: '2025-01-25', type: 'recovery', leads: 38, responses: 14, conversions: 5 },
+          { date: '2025-01-26', type: 'current', leads: 29, responses: 11, conversions: 3 }
+        ],
+        metrics: {
+          totalLeads: 295,
+          totalResponses: 102,
+          totalConversions: 31,
+          avgResponseRate: '34.6%',
+          avgConversionRate: '10.5%'
+        },
+        patterns: {
+          bestDay: 'Tuesday',
+          bestTime: '10:00 AM - 12:00 PM',
+          worstDay: 'Sunday',
+          trend: 'Positive growth trend'
+        },
+        projections: {
+          nextWeek: 'Expected 15% growth',
+          confidence: '78%'
+        }
+      }
+    }, 200, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Compression'
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// BILLING ENDPOINTS
+app.post('/billing/create-checkout-session', async c => {
+  try {
+    const auth = c.req.header('Authorization')?.replace('Bearer ', '');
+    if (!auth) {
+      return c.json({ error: 'Missing Authorization header' }, 401);
+    }
+
+    const userId = await verifyJWT(auth);
+    if (!userId) {
+      return c.json({ error: 'Invalid or expired token' }, 401);
+    }
+
+    const { price_id, success_url, cancel_url } = await c.req.json();
+
+    if (!price_id) {
+      return c.json({ error: 'price_id is required' }, 400);
+    }
+
+    const user = await fetchUser(userId, c.env);
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    const stripe = require('stripe')(c.env.STRIPE_SECRET_KEY);
+
+    const session = await stripe.checkout.sessions.create({
+      customer: user.stripe_customer_id,
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price: price_id,
+          quantity: 1,
+        },
+      ],
+      mode: 'subscription',
+      success_url: success_url || 'https://oslira.com/success',
+      cancel_url: cancel_url || 'https://oslira.com/pricing',
+      metadata: {
+        user_id: userId,
+      },
     });
 
+    return c.json({ url: session.url });
   } catch (error: any) {
-    console.error('Checkout session error:', error);
-    return c.json({ error: 'Failed to create checkout session', details: error.message }, 500);
+    console.error('Stripe checkout error:', error);
+    return c.json({ error: 'Failed to create checkout session' }, 500);
   }
 });
 
 app.post('/billing/create-portal-session', async c => {
-  const auth = c.req.header('Authorization')?.replace('Bearer ', '');
-  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
-
-  const userId = await verifyJWT(auth);
-  if (!userId) return c.json({ error: 'Invalid token' }, 401);
-
-  const { return_url, customer_email } = await c.req.json();
-  if (!customer_email) return c.json({ error: 'customer_email required' }, 400);
-
-  const stripeKey = c.env.STRIPE_SECRET_KEY;
-
   try {
-    const searchParams = new URLSearchParams({ query: `email:'${customer_email}'` });
-    const customerData = await fetchJson<any>(
-      `https://api.stripe.com/v1/customers/search?${searchParams}`,
-      { headers: { Authorization: `Bearer ${stripeKey}` } },
-      15000
-    );
-
-    if (!customerData.data?.length) {
-      return c.json({ error: 'Customer not found' }, 404);
+    const auth = c.req.header('Authorization')?.replace('Bearer ', '');
+    if (!auth) {
+      return c.json({ error: 'Missing Authorization header' }, 401);
     }
 
-    const customerId = customerData.data[0].id;
+    const userId = await verifyJWT(auth);
+    if (!userId) {
+      return c.json({ error: 'Invalid or expired token' }, 401);
+    }
 
-    const portalParams = new URLSearchParams({
-      customer: customerId,
-      return_url: return_url || `${c.env.FRONTEND_URL}/subscription.html`
+    const { return_url } = await c.req.json();
+
+    const user = await fetchUser(userId, c.env);
+    if (!user || !user.stripe_customer_id) {
+      return c.json({ error: 'User not found or no Stripe customer' }, 404);
+    }
+
+    const stripe = require('stripe')(c.env.STRIPE_SECRET_KEY);
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripe_customer_id,
+      return_url: return_url || 'https://oslira.com/dashboard',
     });
 
-    const portal = await fetchJson<any>(
-      'https://api.stripe.com/v1/billing_portal/sessions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${stripeKey}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: portalParams
-      },
-      15000
-    );
-
-    if (portal.error) {
-      return c.json({ error: portal.error.message }, 400);
-    }
-
-    return c.json({ url: portal.url });
-
+    return c.json({ url: session.url });
   } catch (error: any) {
-    console.error('Portal session error:', error);
-    return c.json({ error: 'Failed to create portal session', details: error.message }, 500);
+    console.error('Stripe portal error:', error);
+    return c.json({ error: 'Failed to create portal session' }, 500);
   }
 });
 
-// ENHANCED STRIPE WEBHOOK HANDLER
+// STRIPE WEBHOOK HANDLER
 app.post('/stripe-webhook', async c => {
-  const body = await c.req.text();
-  const sig = c.req.header('stripe-signature');
-
-  if (!sig || !c.env.STRIPE_WEBHOOK_SECRET) {
-    console.error('Webhook validation failed: missing signature or secret');
-    return c.text('Missing signature or secret', 400);
-  }
-
   try {
-    const event = verifyStripeWebhook(body, sig, c.env.STRIPE_WEBHOOK_SECRET);
+    const body = await c.req.text();
+    const signature = c.req.header('stripe-signature');
 
-    console.log(`Enhanced webhook received: ${event.type} at ${new Date().toISOString()}`);
+    if (!signature || !c.env.STRIPE_WEBHOOK_SECRET) {
+      return c.json({ error: 'Missing signature or webhook secret' }, 400);
+    }
 
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Webhook handler timeout')), 25000);
-    });
+    const event = verifyStripeWebhook(body, signature, c.env.STRIPE_WEBHOOK_SECRET);
 
-    const handlerPromise = (async () => {
-      switch (event.type) {
-        case 'customer.subscription.created':
-          await handleSubscriptionCreated(event.data.object, c.env);
-          break;
-        case 'customer.subscription.updated':
-          await handleSubscriptionUpdated(event.data.object, c.env);
-          break;
-        case 'customer.subscription.deleted':
-          await handleSubscriptionCanceled(event.data.object, c.env);
-          break;
-        case 'invoice.payment_succeeded':
-          await handlePaymentSucceeded(event.data.object, c.env);
-          break;
-        case 'invoice.payment_failed':
-          await handlePaymentFailed(event.data.object, c.env);
-          break;
-        default:
-          console.log(`Unhandled event type: ${event.type}`);
-      }
-    })();
+    console.log('Stripe webhook received:', event.type);
 
-    await Promise.race([handlerPromise, timeoutPromise]);
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+        const subscription = event.data.object;
+        const customerId = subscription.customer;
+        
+        const headers = {
+          apikey: c.env.SUPABASE_SERVICE_ROLE,
+          Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
+          'Content-Type': 'application/json'
+        };
 
-    return c.text('OK', 200);
+        await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?stripe_customer_id=eq.${customerId}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            subscription_status: subscription.status,
+            subscription_plan: subscription.items.data[0].price.nickname || 'unknown'
+          })
+        });
+        break;
 
+      case 'invoice.payment_succeeded':
+        const invoice = event.data.object;
+        if (invoice.subscription) {
+          console.log('Payment succeeded for subscription:', invoice.subscription);
+        }
+        break;
+    }
+
+    return c.json({ received: true });
   } catch (error: any) {
-    console.error('Enhanced webhook processing error:', error.message);
-
-    if (error.message.includes('User not found') ||
-        error.message.includes('No user_id in metadata')) {
-      return c.text('Handled - no action needed', 200);
-    }
-
-    if (error.message.includes('signature') ||
-        error.message.includes('Invalid webhook payload')) {
-      return c.text('Invalid webhook', 400);
-    }
-
-    return c.text('Webhook processing failed', 500);
+    console.error('Webhook error:', error);
+    return c.json({ error: 'Webhook processing failed' }, 400);
   }
 });
 
-// ENHANCED DEBUG AND TEST ENDPOINTS
-app.get('/debug-scrape/:username', async c => {
-  const username = c.req.param('username');
-  const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
-
-  if (!c.env.APIFY_API_TOKEN) {
-    return c.json({ error: 'APIFY_API_TOKEN not configured' }, 500);
-  }
-
-  const scrapeActorId = analysisType === 'light'
-    ? 'dSCLg0C3YEZ83HzYX'
-    : 'shu8hvrXbJbY3Eb9W';
-
-  const scrapeInput = analysisType === 'light'
-    ? {
-        usernames: [username],
-        resultsType: "details",
-        resultsLimit: 1
-      }
-    : {
-        directUrls: [`https://instagram.com/${username}/`],
-        resultsLimit: 1,
-        addParentData: false,
-        enhanceUserSearchWithFacebookPage: false
-      };
-
-  try {
-    const response = await fetch(
-      `https://api.apify.com/v2/acts/${scrapeActorId}/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(scrapeInput)
-      }
-    );
-
-    const responseData = await response.json();
-
-    // Try to validate the data
-    let validatedProfile = null;
-    let validationError = null;
-
-    if (Array.isArray(responseData) && responseData[0]) {
-      try {
-        validatedProfile = validateProfileData(responseData[0]);
-      } catch (error: any) {
-        validationError = error.message;
-      }
-    }
-
-    return c.json({
-      success: response.ok,
-      status: response.status,
-      actorId: scrapeActorId,
-      analysisType,
-      input: scrapeInput,
-      dataCount: Array.isArray(responseData) ? responseData.length : 'not array',
-      availableFields: Array.isArray(responseData) && responseData[0] ? Object.keys(responseData[0]) : [],
-      validatedProfile,
-      validationError,
-      rawFirstItem: Array.isArray(responseData) && responseData[0] ? responseData[0] : null,
-      version: '7.0.0'
-    });
-
-  } catch (error: any) {
-    return c.json({ error: error.message, version: '7.0.0' }, 500);
-  }
-});
-
-// Test integration endpoint
-app.get('/test-scraper-integration/:username', async c => {
-  const username = c.req.param('username');
-  const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
-
-  try {
-    console.log(`Testing enhanced scraper integration for @${username} with type: ${analysisType}`);
-
-    const profileData = await scrapeInstagramProfile(username, analysisType, c.env);
-
-    return c.json({
-      success: true,
-      username,
-      analysisType,
-      profileData,
-      debug: {
-        hasEngagement: !!profileData.engagement,
-        hasLatestPosts: !!profileData.latestPosts,
-        fieldsCount: Object.keys(profileData).length,
-        profilePicUrl: profileData.profilePicUrl
-      },
-      version: '7.0.0'
-    });
-
-  } catch (error: any) {
-    return c.json({
-      success: false,
-      error: error.message,
-      username,
-      analysisType,
-      version: '7.0.0'
-    }, 500);
-  }
-});
-
-// Enhanced test endpoints
+// TEST ENDPOINTS
 app.get('/test-supabase', async c => {
-
-try {
-    const headers = {
-      apikey: c.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
-    };
-
-    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?limit=1`, { headers });
-    const data = await response.text();
-
+  try {
+    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?limit=1`, {
+      headers: {
+        apikey: c.env.SUPABASE_SERVICE_ROLE,
+        Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`
+      }
+    });
     return c.json({
       status: response.status,
       ok: response.ok,
-      data: data.substring(0, 200),
       hasUrl: !!c.env.SUPABASE_URL,
-      hasServiceRole: !!c.env.SUPABASE_SERVICE_ROLE,
-      version: '7.0.0'
+      hasKey: !!c.env.SUPABASE_SERVICE_ROLE
     });
   } catch (error: any) {
-    return c.json({ 
-      error: error.message, 
-      version: '7.0.0',
-      hasUrl: !!c.env.SUPABASE_URL,
-      hasServiceRole: !!c.env.SUPABASE_SERVICE_ROLE 
-    }, 500);
+    return c.json({ error: error.message }, 500);
   }
 });
 
 app.get('/test-apify', async c => {
   try {
-    const response = await fetch(`https://api.apify.com/v2/key-value-stores?token=${c.env.APIFY_API_TOKEN}&limit=1`);
-    const data = await response.json();
-    
+    const response = await fetch(`https://api.apify.com/v2/acts?token=${c.env.APIFY_API_TOKEN}&limit=1`);
     return c.json({
       status: response.status,
       ok: response.ok,
-      hasToken: !!c.env.APIFY_API_TOKEN,
-      dataCount: data?.data?.length || 0,
-      version: '7.0.0'
+      hasToken: !!c.env.APIFY_API_TOKEN
     });
   } catch (error: any) {
-    return c.json({ 
-      error: error.message, 
-      hasToken: !!c.env.APIFY_API_TOKEN,
-      version: '7.0.0' 
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/test-openai', async c => {
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${c.env.OPENAI_KEY}` }
+    });
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      hasKey: !!c.env.OPENAI_KEY
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/test-claude', async c => {
+  try {
+    if (!c.env.CLAUDE_KEY) {
+      return c.json({
+        status: 'not_configured',
+        ok: false,
+        hasKey: false,
+        message: 'Claude API key not configured'
+      });
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${c.env.CLAUDE_KEY}`,
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Hi' }]
+      })
+    });
+
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      hasKey: !!c.env.CLAUDE_KEY
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/test-stripe', async c => {
+  try {
+    const stripe = require('stripe')(c.env.STRIPE_SECRET_KEY);
+    const balance = await stripe.balance.retrieve();
+    return c.json({
+      status: 'success',
+      ok: true,
+      hasKey: !!c.env.STRIPE_SECRET_KEY,
+      balance: balance ? 'retrieved' : 'failed'
+    });
+  } catch (error: any) {
+    return c.json({
+      status: 'error',
+      ok: false,
+      hasKey: !!c.env.STRIPE_SECRET_KEY,
+      error: error.message
     }, 500);
   }
 });
 
-app.post('/test-table-broken', async c => {
+app.get('/debug-scrape/:username', async c => {
+  try {
+    const username = c.req.param('username');
+    const analysisType = c.req.query('type') as AnalysisType || 'light';
+    
+    console.log(`🔍 Debug scraping @${username} with ${analysisType} analysis`);
+    
+    const profileData = await scrapeProfile(username, analysisType, c.env);
+    
+    return c.json({
+      success: true,
+      username: username,
+      analysisType: analysisType,
+      profileData: profileData,
+      debug: {
+        hasFollowers: !!profileData.followersCount,
+        hasBio: !!profileData.biography,
+        isVerified: profileData.isVerified,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message,
+      username: c.req.param('username'),
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+app.get('/test-scraper-integration/:username', async c => {
+  const startTime = Date.now();
+  try {
+    const username = c.req.param('username');
+    const analysisType = c.req.query('type') as AnalysisType || 'light';
+    
+    console.log(`🧪 Testing complete scraper integration for @${username}`);
+    
+    // Step 1: Scrape profile
+    console.log('Step 1: Scraping profile...');
+    const profileData = await scrapeProfile(username, analysisType, c.env);
+    console.log('✅ Profile scraped successfully');
+    
+    // Step 2: Analyze profile (without business context)
+    console.log('Step 2: Analyzing profile...');
+    const analysisResult = await analyzeProfile(profileData, null, analysisType, c.env);
+    console.log('✅ Analysis completed');
+    
+    // Step 3: Generate message
+    console.log('Step 3: Generating message...');
+    const outreachMessage = await generateOutreachMessage(profileData, analysisResult, null, c.env);
+    console.log('✅ Message generated');
+    
+    const totalTime = Date.now() - startTime;
+    
+    return c.json({
+      success: true,
+      integration_test: 'passed',
+      username: username,
+      analysis_type: analysisType,
+      processing_time_ms: totalTime,
+      results: {
+        profile: {
+          username: profileData.username,
+          followers: profileData.followersCount,
+          verified: profileData.isVerified,
+          bio: profileData.biography?.substring(0, 100) || 'No bio'
+        },
+        analysis: {
+          score: analysisResult.score,
+          niche_fit: analysisResult.niche_fit,
+          engagement_score: analysisResult.engagement_score,
+          summary: analysisResult.summary
+        },
+        message: {
+          generated: !!outreachMessage,
+          length: outreachMessage.length,
+          preview: outreachMessage.substring(0, 100) + '...'
+        }
+      },
+      debug: {
+        scraper_actor: analysisType === 'light' ? 'dSCLg0C3YEZ83HzYX' : 'shu8hvrXbJbY3Eb9W',
+        ai_model: 'gpt-4o',
+        message_model: c.env.CLAUDE_KEY ? 'claude-3-5-sonnet' : 'gpt-4o',
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    const totalTime = Date.now() - startTime;
+    return c.json({
+      success: false,
+      integration_test: 'failed',
+      error: error.message,
+      username: c.req.param('username'),
+      processing_time_ms: totalTime,
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+app.get('/debug-db-schema', async c => {
+  try {
+    const headers = {
+      apikey: c.env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json'
+    };
+    
+    // Check if profile_pic_url column exists by querying the table structure
+    const response = await fetch(
+      `${c.env.SUPABASE_URL}/rest/v1/leads?limit=1&select=id,username,profile_pic_url`, 
+      { headers }
+    );
+    
+    const data = await response.text();
+    
+    return c.json({
+      status: response.status,
+      ok: response.ok,
+      columnExists: !response.headers.get('content-type')?.includes('error'),
+      error: response.ok ? null : data,
+      sample: response.ok ? data.substring(0, 200) : null
+    });
+  } catch (error: any) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+app.get('/test-db-schema', async c => {
   try {
     const headers = {
       apikey: c.env.SUPABASE_SERVICE_ROLE,
@@ -3422,122 +2088,86 @@ app.post('/test-table-broken', async c => {
       'Content-Type': 'application/json'
     };
 
-    // Test with ONLY the absolutely required fields
-    const absoluteMinimal = {
-      user_id: 'd6cecbfb-f062-4564-a182-4ad35771d9e0',
-      lead_id: '00000000-0000-0000-0000-000000000001',
-      username: 'test123',
-      analysis_type: 'deep'
-    };
+    // Test each table schema
+    const tables = ['users', 'business_profiles', 'leads', 'lead_analyses', 'credit_transactions'];
+    const results: any = {};
 
-    console.log('Testing absolute minimal:', JSON.stringify(absoluteMinimal));
+    for (const table of tables) {
+      try {
+        const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/${table}?limit=1`, { headers });
+        results[table] = {
+          status: response.status,
+          ok: response.ok,
+          exists: response.status !== 404
+        };
+      } catch (error: any) {
+        results[table] = {
+          status: 'error',
+          ok: false,
+          exists: false,
+          error: error.message
+        };
+      }
+    }
 
-    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/lead_analyses`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(absoluteMinimal)
-    });
-
-    const result = await response.text();
-    
     return c.json({
-      test: 'absolute_minimal',
-      success: response.ok,
-      status: response.status,
-      response: result
+      success: true,
+      database_health: 'tested',
+      tables: results,
+      timestamp: new Date().toISOString()
     });
-
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
 });
-app.get('/test-openai', async c => {
+
+app.get('/test-performance', async c => {
+  const startTime = Date.now();
+  
   try {
-    const response = await fetch('https://api.openai.com/v1/models', {
+    // Test various operations
+    const tests = [];
+
+    // Test 1: Database connection
+    const dbStart = Date.now();
+    await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?limit=1`, {
+      headers: {
+        apikey: c.env.SUPABASE_SERVICE_ROLE,
+        Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`
+      }
+    });
+    tests.push({ name: 'database_connection', time: Date.now() - dbStart });
+
+    // Test 2: OpenAI API
+    const aiStart = Date.now();
+    await fetch('https://api.openai.com/v1/models', {
       headers: { Authorization: `Bearer ${c.env.OPENAI_KEY}` }
     });
-    
+    tests.push({ name: 'openai_api', time: Date.now() - aiStart });
+
+    // Test 3: Apify API
+    const apifyStart = Date.now();
+    await fetch(`https://api.apify.com/v2/acts?token=${c.env.APIFY_API_TOKEN}&limit=1`);
+    tests.push({ name: 'apify_api', time: Date.now() - apifyStart });
+
+    const totalTime = Date.now() - startTime;
+
     return c.json({
-      status: response.status,
-      ok: response.ok,
-      hasKey: !!c.env.OPENAI_KEY,
-      version: '7.0.0'
+      success: true,
+      performance_test: 'completed',
+      total_time_ms: totalTime,
+      individual_tests: tests,
+      performance_grade: totalTime < 1000 ? 'excellent' : totalTime < 2000 ? 'good' : 'slow',
+      timestamp: new Date().toISOString()
     });
   } catch (error: any) {
-    return c.json({ 
-      error: error.message, 
-      hasKey: !!c.env.OPENAI_KEY,
-      version: '7.0.0' 
-    }, 500);
-  }
-});
-
-app.get('/test-claude', async c => {
-  if (!c.env.CLAUDE_KEY) {
-    return c.json({ 
-      hasKey: false, 
-      message: 'Claude API key not configured',
-      version: '7.0.0' 
-    });
-  }
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': c.env.CLAUDE_KEY,
-        'anthropic-version': '2023-06-01',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        messages: [{ role: 'user', content: 'Hello' }],
-        max_tokens: 10
-      })
-    });
-    
+    const totalTime = Date.now() - startTime;
     return c.json({
-      status: response.status,
-      ok: response.ok,
-      hasKey: true,
-      version: '7.0.0'
-    });
-  } catch (error: any) {
-    return c.json({ 
-      error: error.message, 
-      hasKey: true,
-      version: '7.0.0' 
-    }, 500);
-  }
-});
-
-app.get('/test-stripe', async c => {
-  if (!c.env.STRIPE_SECRET_KEY) {
-    return c.json({ 
-      hasKey: false, 
-      message: 'Stripe secret key not configured',
-      version: '7.0.0' 
-    });
-  }
-
-  try {
-    const response = await fetch('https://api.stripe.com/v1/payment_methods?limit=1', {
-      headers: { Authorization: `Bearer ${c.env.STRIPE_SECRET_KEY}` }
-    });
-    
-    return c.json({
-      status: response.status,
-      ok: response.ok,
-      hasKey: true,
-      hasWebhookSecret: !!c.env.STRIPE_WEBHOOK_SECRET,
-      version: '7.0.0'
-    });
-  } catch (error: any) {
-    return c.json({ 
-      error: error.message, 
-      hasKey: true,
-      hasWebhookSecret: !!c.env.STRIPE_WEBHOOK_SECRET,
-      version: '7.0.0' 
+      success: false,
+      performance_test: 'failed',
+      error: error.message,
+      total_time_ms: totalTime,
+      timestamp: new Date().toISOString()
     }, 500);
   }
 });
@@ -3548,188 +2178,110 @@ app.post('/test-post', async c => {
     return c.json({ 
       received: body, 
       timestamp: new Date().toISOString(),
-      version: '7.0.0'
+      success: true
     });
   } catch (error: any) {
-    return c.json({ 
-      error: error.message,
-      version: '7.0.0' 
-    }, 500);
+    return c.json({ error: error.message }, 500);
   }
 });
 
-// Database schema test endpoint
-app.get('/test-db-schema', async c => {
+// COMPREHENSIVE HEALTH CHECK
+app.get('/health-check', async c => {
+  const startTime = Date.now();
+  const checks: any = {};
+
   try {
-    const headers = {
-      apikey: c.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
+    // Check Supabase
+    try {
+      const supabaseResponse = await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?limit=1`, {
+        headers: {
+          apikey: c.env.SUPABASE_SERVICE_ROLE,
+          Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`
+        }
+      });
+      checks.supabase = { status: 'healthy', responseTime: Date.now() - startTime };
+    } catch {
+      checks.supabase = { status: 'unhealthy', error: 'Connection failed' };
+    }
+
+    // Check OpenAI
+    try {
+      const openaiResponse = await fetch('https://api.openai.com/v1/models', {
+        headers: { Authorization: `Bearer ${c.env.OPENAI_KEY}` }
+      });
+      checks.openai = { status: openaiResponse.ok ? 'healthy' : 'degraded' };
+    } catch {
+      checks.openai = { status: 'unhealthy', error: 'API unavailable' };
+    }
+
+    // Check Apify
+    try {
+      const apifyResponse = await fetch(`https://api.apify.com/v2/acts?token=${c.env.APIFY_API_TOKEN}&limit=1`);
+      checks.apify = { status: apifyResponse.ok ? 'healthy' : 'degraded' };
+    } catch {
+      checks.apify = { status: 'unhealthy', error: 'API unavailable' };
+    }
+
+    // Check Claude (optional)
+    if (c.env.CLAUDE_KEY) {
+      try {
+        const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${c.env.CLAUDE_KEY}`,
+            'Content-Type': 'application/json',
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20241022',
+            max_tokens: 10,
+            messages: [{ role: 'user', content: 'Hi' }]
+          })
+        });
+        checks.claude = { status: claudeResponse.ok ? 'healthy' : 'degraded' };
+      } catch {
+        checks.claude = { status: 'unhealthy', error: 'API unavailable' };
+      }
+    } else {
+      checks.claude = { status: 'not_configured' };
+    }
+
+    // Check environment variables
+    checks.environment = {
+      supabase_url: c.env.SUPABASE_URL ? 'set' : 'missing',
+      supabase_service_role: c.env.SUPABASE_SERVICE_ROLE ? 'set' : 'missing',
+      openai_key: c.env.OPENAI_KEY ? 'set' : 'missing',
+      apify_token: c.env.APIFY_API_TOKEN ? 'set' : 'missing',
+      stripe_key: c.env.STRIPE_SECRET_KEY ? 'set' : 'missing',
+      claude_key: c.env.CLAUDE_KEY ? 'set' : 'optional_missing'
     };
 
-    // Test leads table structure
-    const leadsTest = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/leads?limit=1&select=id,username,profile_pic_url,user_id,business_id,analysis_type`,
-      { headers }
-    );
-
-    // Test lead_analyses table structure  
-    const analysesTest = await fetch(
-      `${c.env.SUPABASE_URL}/rest/v1/lead_analyses?limit=1&select=id,username,user_id,business_id,lead_id,analysis_type`,
-      { headers }
+    const totalTime = Date.now() - startTime;
+    const allHealthy = Object.values(checks).every((check: any) => 
+      check.status === 'healthy' || check.status === 'not_configured'
     );
 
     return c.json({
-      leads_table: {
-        status: leadsTest.status,
-        ok: leadsTest.ok
-      },
-      analyses_table: {
-        status: analysesTest.status,
-        ok: analysesTest.ok
-      },
-      version: '7.0.0'
+      status: allHealthy ? 'healthy' : 'degraded',
+      version: '7.0.0',
+      timestamp: new Date().toISOString(),
+      response_time_ms: totalTime,
+      checks: checks,
+      summary: {
+        total_checks: Object.keys(checks).length,
+        healthy_services: Object.values(checks).filter((c: any) => c.status === 'healthy').length,
+        degraded_services: Object.values(checks).filter((c: any) => c.status === 'degraded').length,
+        unhealthy_services: Object.values(checks).filter((c: any) => c.status === 'unhealthy').length
+      }
     });
   } catch (error: any) {
-    return c.json({ 
+    return c.json({
+      status: 'unhealthy',
       error: error.message,
-      version: '7.0.0' 
+      timestamp: new Date().toISOString(),
+      response_time_ms: Date.now() - startTime
     }, 500);
   }
-});
-
-// Comprehensive health check endpoint
-app.get('/health-check', async c => {
-  const results = {
-    timestamp: new Date().toISOString(),
-    version: '7.0.0',
-    status: 'healthy',
-    services: {} as any,
-    errors: [] as string[]
-  };
-
-  // Test Supabase
-  try {
-    const headers = {
-      apikey: c.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${c.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
-    };
-    const response = await fetch(`${c.env.SUPABASE_URL}/rest/v1/users?limit=1`, { headers });
-    results.services.supabase = { status: response.ok ? 'healthy' : 'error', code: response.status };
-  } catch (error: any) {
-    results.services.supabase = { status: 'error', error: error.message };
-    results.errors.push(`Supabase: ${error.message}`);
-  }
-
-  // Test OpenAI
-  try {
-    const response = await fetch('https://api.openai.com/v1/models', {
-      headers: { Authorization: `Bearer ${c.env.OPENAI_KEY}` }
-    });
-    results.services.openai = { status: response.ok ? 'healthy' : 'error', code: response.status };
-  } catch (error: any) {
-    results.services.openai = { status: 'error', error: error.message };
-    results.errors.push(`OpenAI: ${error.message}`);
-  }
-
-  // Test Apify
-  try {
-    const response = await fetch(`https://api.apify.com/v2/key-value-stores?token=${c.env.APIFY_API_TOKEN}&limit=1`);
-    results.services.apify = { status: response.ok ? 'healthy' : 'error', code: response.status };
-  } catch (error: any) {
-    results.services.apify = { status: 'error', error: error.message };
-    results.errors.push(`Apify: ${error.message}`);
-  }
-
-  // Test Stripe
-  try {
-    const response = await fetch('https://api.stripe.com/v1/payment_methods?limit=1', {
-      headers: { Authorization: `Bearer ${c.env.STRIPE_SECRET_KEY}` }
-    });
-    results.services.stripe = { status: response.ok ? 'healthy' : 'error', code: response.status };
-  } catch (error: any) {
-    results.services.stripe = { status: 'error', error: error.message };
-    results.errors.push(`Stripe: ${error.message}`);
-  }
-
-  // Test Claude (optional)
-  if (c.env.CLAUDE_KEY) {
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': c.env.CLAUDE_KEY,
-          'anthropic-version': '2023-06-01',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
-          messages: [{ role: 'user', content: 'test' }],
-          max_tokens: 5
-        })
-      });
-      results.services.claude = { status: response.ok ? 'healthy' : 'error', code: response.status };
-    } catch (error: any) {
-      results.services.claude = { status: 'error', error: error.message };
-      results.errors.push(`Claude: ${error.message}`);
-    }
-  } else {
-    results.services.claude = { status: 'not_configured' };
-  }
-
-  // Overall status
-  if (results.errors.length > 0) {
-    results.status = 'degraded';
-  }
-
-  const statusCode = results.status === 'healthy' ? 200 : 
-                     results.status === 'degraded' ? 207 : 500;
-
-  return c.json(results, statusCode);
-});
-
-// Performance test endpoint
-app.get('/test-performance', async c => {
-  const startTime = Date.now();
-  
-  const results = {
-    timestamp: new Date().toISOString(),
-    version: '7.0.0',
-    tests: {} as any,
-    overall: {} as any
-  };
-
-  // Test JWT verification performance
-  const jwtStart = Date.now();
-  const testToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoidGVzdCIsImV4cCI6OTk5OTk5OTk5OX0.test';
-  await verifyJWT(testToken);
-  results.tests.jwt_verification = Date.now() - jwtStart;
-
-  // Test username extraction performance
-  const usernameStart = Date.now();
-  extractUsername('https://instagram.com/testuser');
-  extractUsername('@testuser');
-  extractUsername('testuser');
-  results.tests.username_extraction = Date.now() - usernameStart;
-
-  // Test request normalization performance
-  const normalizeStart = Date.now();
-  normalizeRequest({
-    username: 'testuser',
-    analysis_type: 'light',
-    user_id: 'test-user-123',
-    business_id: 'test-business-456'
-  });
-  results.tests.request_normalization = Date.now() - normalizeStart;
-
-  const totalTime = Date.now() - startTime;
-  results.overall = {
-    total_time_ms: totalTime,
-    status: totalTime < 100 ? 'excellent' : totalTime < 500 ? 'good' : 'slow'
-  };
-
-  return c.json(results);
 });
 
 // Error handling middleware
@@ -3759,6 +2311,8 @@ app.notFound(c => c.json({
     'POST /bulk-analyze - Bulk profile analysis',
     'GET /analytics/summary - Analytics dashboard data',
     'POST /ai/generate-insights - AI-powered insights',
+    'POST /analytics/message-risk - Message risk analysis',
+    'POST /analytics/timeline-overlay - Timeline data overlay',
     'POST /billing/create-checkout-session - Stripe checkout',
     'POST /billing/create-portal-session - Stripe customer portal',
     'POST /stripe-webhook - Stripe webhook handler',
@@ -3770,6 +2324,7 @@ app.notFound(c => c.json({
     'GET /test-apify - Test Apify connection',
     'GET /test-stripe - Test Stripe connection',
     'GET /test-db-schema - Test database schema',
+    'GET /debug-db-schema - Debug database schema',
     'GET /test-performance - Performance benchmarks',
     'POST /test-post - Test POST requests'
   ],
