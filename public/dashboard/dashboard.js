@@ -629,131 +629,42 @@ setupEventListeners() {
             inputContainer.style.display = 'none';
         }
     }
-
-    // Add this debugging version to your submitAnalysis method in dashboard.js
 // Replace the existing submitAnalysis method with this enhanced version
 
-async submitAnalysis(event) {
-    event.preventDefault();
-    
-    // DEBUG: Check if method is being called
-    console.log('🔍 submitAnalysis method called');
-    
-    // DEBUG: Check form elements exist
-    const analysisTypeEl = document.getElementById('analysis-type');
-    const profileInputEl = document.getElementById('profile-input');
-    const businessIdEl = document.getElementById('business-id');
-    
-    console.log('🔍 Form elements check:');
-    console.log('- analysisType element:', analysisTypeEl);
-    console.log('- profileInput element:', profileInputEl);
-    console.log('- businessId element:', businessIdEl);
-    
-    if (!analysisTypeEl || !profileInputEl) {
-        console.error('❌ Required form elements not found!');
-        window.OsliraApp.showMessage('Form elements not found. Please refresh the page.', 'error');
-        return;
-    }
-    
-    // Get values
-    const analysisType = analysisTypeEl.value;
-    const profileInput = profileInputEl.value.trim();
-    const businessId = businessIdEl ? businessIdEl.value : null;
-    
-    // DEBUG: Log values
-    console.log('🔍 Form values:');
-    console.log('- analysisType:', analysisType);
-    console.log('- profileInput:', profileInput);
-    console.log('- businessId:', businessId);
-    
-    // Check if analysis type is selected
-    if (!analysisType) {
-        console.log('❌ No analysis type selected');
-        window.OsliraApp.showMessage('Please select an analysis type', 'error');
-        return;
-    }
-    
-    // Check if profile input container is visible
-    const inputContainer = document.getElementById('input-field-container');
-    console.log('🔍 Input container display:', inputContainer ? inputContainer.style.display : 'not found');
-    
-    // Check if profile input is filled
-    if (!profileInput) {
-        console.log('❌ No profile input provided');
-        window.OsliraApp.showMessage('Please enter an Instagram username', 'error');
-        return;
-    }
-    
-    const username = profileInput.replace('@', '');
-    console.log('🔍 Processed username:', username);
-    
-    // Validate username
-    if (!this.validateUsername(username)) {
-        console.log('❌ Invalid username format');
-        window.OsliraApp.showMessage('Please enter a valid Instagram username', 'error');
-        return;
-    }
-    
-    console.log('✅ Validation passed, starting analysis...');
-    
-    const profileUrl = `https://instagram.com/${username}`;
-    
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.innerHTML = '🔄 Analyzing... <small style="display: block; font-size: 10px; margin-top: 4px;">This may take 30-60 seconds</small>';
-    submitBtn.disabled = true;
-    
-    window.OsliraApp.showMessage('Starting analysis... This may take up to 60 seconds', 'info');
+async submitAnalysis(e) {
+    e.preventDefault();
     
     try {
-        const user = window.OsliraApp.user;
-        const session = window.OsliraApp.session;
+        const analysisType = document.getElementById('analysis-type').value;
+        const profileInput = document.getElementById('profile-input').value.trim();
         
-        console.log('🔍 Auth check:');
-        console.log('- user:', user);
-        console.log('- session:', session);
-        
-        if (!user || !session) {
-            throw new Error('Please log in to continue');
+        if (!profileInput) {
+            throw new Error('Please enter an Instagram profile URL');
         }
-
-        const timezoneInfo = this.getCurrentTimestampWithTimezone();
         
-        const requestBody = {
-            profile_url: profileUrl,
-            analysis_type: analysisType,
-            business_id: businessId || null,
-            user_id: user.id,
-            platform: 'instagram',
-            timezone: timezoneInfo.timezone,
-            user_local_time: timezoneInfo.local_time,
-            request_timestamp: timezoneInfo.timestamp
-        };
-        
-        console.log('🔍 Request body:', requestBody);
-        
-        const result = await window.OsliraApp.apiRequest('/analyze', {
+        // ✅ UPDATED: Use new v1/analyze endpoint
+        const response = await apiRequest('/v1/analyze', {
             method: 'POST',
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify({
+                profile_url: profileInput,
+                analysis_type: analysisType,
+                business_id: this.currentBusinessId
+            })
         });
         
-        console.log('✅ Analysis completed successfully!');
-        window.OsliraApp.showMessage('Analysis completed successfully!', 'success');
-        this.closeModal('analysisModal');
-        
-        // Refresh dashboard data
-        await this.loadDashboardData();
-        await this.refreshCreditsDisplay();
+        // ✅ UPDATED: Handle new response format
+        if (response.success) {
+            console.log('✅ Analysis completed:', response.data);
+            this.handleAnalysisSuccess(response.data);
+        } else {
+            throw new Error(response.error || 'Analysis failed');
+        }
         
     } catch (error) {
         console.error('❌ Analysis error:', error);
-        window.OsliraApp.showMessage(`Analysis failed: ${error.message}`, 'error');
-    } finally {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
+        this.showMessage(error.message, 'error');
     }
 }
-
 
     validateUsername(username) {
         const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
@@ -1898,6 +1809,61 @@ editMessage(message) {
     }
 }
 
+    handleAnalysisSuccess(data) {
+    // ✅ UPDATED: Handle new response structure
+    const analysis = data.analysis;
+    const outreachMessage = data.outreach_message;
+    const creditsRemaining = data.credits_remaining;
+    
+    // Update credits display
+    this.updateCreditsDisplay(creditsRemaining);
+    
+    // Show analysis results
+    this.displayAnalysisResults(analysis, outreachMessage);
+    
+    // Refresh recent activity
+    this.loadRecentActivity();
+    
+    // Close modal
+    this.closeModal('analysisModal');
+}
+
+displayAnalysisResults(analysis, outreachMessage) {
+    // ✅ UPDATED: Handle new analysis structure
+    const modal = document.getElementById('leadModal');
+    
+    // Update modal content with new fields
+    modal.querySelector('.lead-score').textContent = analysis.score;
+    modal.querySelector('.lead-category').textContent = analysis.category.replace('_', ' ');
+    modal.querySelector('.lead-reasoning').textContent = analysis.reasoning;
+    modal.querySelector('.research-summary').textContent = analysis.deep_research_summary;
+    
+    // Handle new arrays
+    this.updateArrayDisplay('.brand-themes', analysis.personal_brand_themes);
+    this.updateArrayDisplay('.business-signals', analysis.business_signals);
+    this.updateArrayDisplay('.risk-factors', analysis.risk_factors);
+    
+    // Contact strategy
+    const strategy = analysis.contact_strategy;
+    modal.querySelector('.contact-timing').textContent = strategy.timing;
+    modal.querySelector('.contact-approach').textContent = strategy.approach;
+    this.updateArrayDisplay('.talking-points', strategy.talking_points);
+    
+    // Outreach message
+    if (outreachMessage) {
+        modal.querySelector('.outreach-message').textContent = outreachMessage;
+    }
+    
+    this.showModal('leadModal');
+}
+
+updateArrayDisplay(selector, array) {
+    const container = document.querySelector(selector);
+    if (container && array && array.length > 0) {
+        container.innerHTML = array.map(item => `<li>${item}</li>`).join('');
+    }
+}
+
     // =============================================================================
     // INSIGHTS & ANALYTICS
     // =============================================================================
@@ -2652,17 +2618,31 @@ renderWelcomeInsights() {
         }
     }
 }
-
-    async processBulkAnalysis() {
-        if (!this.csvData || this.csvData.length === 0) {
-            window.OsliraApp.showMessage('No CSV data to process', 'error');
-            return;
+async processBulkAnalysis(profiles, analysisType) {
+    try {
+        // ✅ UPDATED: Use new v1/bulk-analyze endpoint
+        const response = await apiRequest('/v1/bulk-analyze', {
+            method: 'POST',
+            body: JSON.stringify({
+                profiles: profiles,
+                analysis_type: analysisType,
+                business_id: this.currentBusinessId
+            })
+        });
+        
+        // ✅ UPDATED: Handle new response format
+        if (response.success) {
+            console.log('✅ Bulk analysis completed:', response.data);
+            return response.data;
+        } else {
+            throw new Error(response.error || 'Bulk analysis failed');
         }
         
-        window.OsliraApp.showMessage('Bulk analysis starting... This feature will be enhanced in the next update.', 'info');
-        this.closeModal('bulkModal');
+    } catch (error) {
+        console.error('❌ Bulk analysis error:', error);
+        throw error;
     }
-
+}
     populateBulkBusinessProfiles() {
         const select = document.getElementById('bulk-business-id');
         if (!select) return;
