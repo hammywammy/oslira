@@ -2372,19 +2372,27 @@ if (data.analysis_type === 'deep') {
         analysis_type: data.analysis_type,
         guaranteed_username: GUARANTEED_USERNAME,
         version: '7.0.2'
-      }
-    });
+     }
+    }); // Make sure this semicolon is here
 
   } catch (error: any) {
     const totalTime = Date.now() - startTime;
-    console.error('❌ CRITICAL ERROR:', error.message);
+    console.error('❌ CRITICAL ERROR in /analyze endpoint:');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
     return c.json({
       error: 'Analysis failed',
-      message: error.message,
-      processing_time_ms: totalTime
+      message: error.message || 'Unknown error',
+      type: 'critical_error',
+      debug: {
+        error_type: error.constructor.name,
+        processing_time_ms: totalTime,
+        timestamp: new Date().toISOString()
+      }
     }, 500);
   }
-});
+}); 
 
     // 9. Enhanced Message Generation (deep analysis only)
     let outreachMessage = '';
