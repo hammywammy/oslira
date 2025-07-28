@@ -2174,7 +2174,11 @@ app.post('/analyze', async c => {
       }
     }
 
-    // 9. Database operations
+// FIXED: Proper variable scoping
+
+// 9. Database operations - DECLARE analysisData OUTSIDE the if block
+let analysisData = null; // ✅ Declare at function scope
+
 const leadData = {
   user_id: userId,
   business_id: data.business_id,
@@ -2189,14 +2193,9 @@ const leadData = {
   created_at: body.request_timestamp || new Date().toISOString()
 };
 
-// DEBUG: Log what we're about to save
-console.log('💾 About to save leadData:', JSON.stringify(leadData, null, 2));
-console.log('🖼️ Profile pic URL being saved:', leadData.profile_pic_url);
-
-// FIXED: Proper array handling for PostgreSQL
-let analysisDataSupabase = null;
+// ✅ ASSIGN analysisData conditionally (not declare)
 if (data.analysis_type === 'deep') {
-  analysisDataSupabase = {
+  analysisData = { // ✅ Use = not let = 
     user_id: userId,
     business_id: data.business_id,
     username: profileData.username,
@@ -2207,9 +2206,9 @@ if (data.analysis_type === 'deep') {
     ai_version_id: 'gpt-4o',
     outreach_message: outreachMessage || null,
     
-    // ✅ BEST: Let Supabase handle the array conversion
+    // Handle arrays properly for PostgreSQL
     selling_points: Array.isArray(analysisResult.selling_points) 
-      ? analysisResult.selling_points 
+      ? analysisResult.selling_points  // Let Supabase handle array conversion
       : null,
     
     avg_comments: profileData.engagement?.avgComments?.toString() || null,
@@ -2217,9 +2216,8 @@ if (data.analysis_type === 'deep') {
     engagement_rate: profileData.engagement?.engagementRate?.toString() || null,
     audience_quality: 'standard',
     
-    // ✅ BEST: Let Supabase handle the array conversion
     engagement_insights: Array.isArray(analysisResult.reasons) 
-      ? analysisResult.reasons 
+      ? analysisResult.reasons  // Let Supabase handle array conversion
       : null,
       
     created_at: new Date().toISOString(),
@@ -2227,18 +2225,19 @@ if (data.analysis_type === 'deep') {
   };
 }
 
-    let leadId;
-    try {
-      console.log('💾 Saving to database...');
-      leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
-      console.log(`✅ Saved to database: leadId=${leadId}`);
-    } catch (saveError: any) {
-      console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
-      return c.json({ 
-        error: 'Failed to save analysis results', 
-        details: saveError.message 
-      }, 500);
-    }
+// ✅ Now analysisData is available in this scope
+let leadId;
+try {
+  console.log('💾 Saving to database...');
+  leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
+  console.log(`✅ Saved to database: leadId=${leadId}`);
+} catch (saveError: any) {
+  console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
+  return c.json({ 
+    error: 'Failed to save analysis results', 
+    details: saveError.message 
+  }, 500);
+}
 
     // 10. Credit update
     try {
