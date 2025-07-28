@@ -642,17 +642,25 @@ async submitAnalysis(e) {
             throw new Error('Please enter an Instagram profile URL');
         }
         
-        // ✅ UPDATED: Use new v1/analyze endpoint
+        // ✅ DEBUG: Log what you're sending
+        const requestBody = {
+            profile_url: profileInput,
+            analysis_type: analysisType,
+            business_id: this.currentBusinessId  // ← Make sure this exists!
+        };
+        
+        console.log('📤 Sending request:', requestBody);
+        
+        // Make sure currentBusinessId is not null/undefined
+        if (!this.currentBusinessId) {
+            throw new Error('No business profile selected');
+        }
+        
         const response = await apiRequest('/v1/analyze', {
             method: 'POST',
-            body: JSON.stringify({
-                profile_url: profileInput,
-                analysis_type: analysisType,
-                business_id: this.currentBusinessId
-            })
+            body: JSON.stringify(requestBody)
         });
         
-        // ✅ UPDATED: Handle new response format
         if (response.success) {
             console.log('✅ Analysis completed:', response.data);
             this.handleAnalysisSuccess(response.data);
@@ -662,7 +670,35 @@ async submitAnalysis(e) {
         
     } catch (error) {
         console.error('❌ Analysis error:', error);
-        this.showMessage(error.message, 'error');
+        // ✅ FIX: Use proper error display
+        this.displayError(error.message);
+    }
+}
+
+    // Add this method to your OsliraDashboard class
+displayError(message) {
+    // Simple error display - update based on your UI
+    const errorEl = document.getElementById('error-message');
+    if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+        setTimeout(() => {
+            errorEl.style.display = 'none';
+        }, 5000);
+    } else {
+        // Fallback to alert if no error element
+        alert(`Error: ${message}`);
+    }
+}
+
+// Or if you want to use the shared-code showMessage function:
+showMessage(message, type = 'error') {
+    // Call the global showMessage function from shared-code.js
+    if (window.showMessage) {
+        window.showMessage(message, type);
+    } else {
+        console.error('showMessage function not available:', message);
+        alert(message);
     }
 }
 
