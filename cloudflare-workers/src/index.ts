@@ -969,42 +969,28 @@ async function saveLeadAndAnalysis(
     'Content-Type': 'application/json'
   };
 
-  // Ensure all required fields are present for leads table
-  const completeLeadData: LeadRecord = {
-    user_id: leadData.user_id || '',
+  // Create lead first
+  const completeLeadData = {
+    user_id: leadData.user_id,
     business_id: leadData.business_id || null,
-    username: (leadData.username || '').trim(),
+    username: leadData.username,
     platform: leadData.platform || 'instagram',
-    profile_url: leadData.profile_url || '',
+    profile_url: leadData.profile_url,
     profile_pic_url: leadData.profile_pic_url || null,
-    score: Math.max(0, Math.min(100, leadData.score || 0)),
+    score: leadData.score || 0,
     type: analysisType,
     analysis_type: analysisType,
     user_timezone: leadData.user_timezone || 'UTC',
     user_local_time: leadData.user_local_time || new Date().toISOString(),
-    created_at: leadData.created_at || new Date().toISOString(),
+    created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 
-  // Validate required fields
-  if (!completeLeadData.user_id || !completeLeadData.username) {
-    throw new Error(`Missing required fields: user_id="${completeLeadData.user_id}", username="${completeLeadData.username}"`);
-  }
-
-  // Validate data constraints
-  if (completeLeadData.username.length > 50) {
-    throw new Error('Username exceeds maximum length of 50 characters');
-  }
-
-  if (completeLeadData.profile_url.length > 500) {
-    throw new Error('Profile URL exceeds maximum length of 500 characters');
-  }
-
-  console.log('💾 Saving lead data with username:', completeLeadData.username);
+  console.log('💾 Creating lead with username:', completeLeadData.username);
 
   try {
-    // Insert lead record
-    const leadResponse = await fetchJson<LeadRecord[]>(
+    // Insert lead
+    const leadResponse = await fetchJson<any[]>(
       `${env.SUPABASE_URL}/rest/v1/leads`,
       {
         method: 'POST',
@@ -1015,204 +1001,85 @@ async function saveLeadAndAnalysis(
     );
 
     if (!Array.isArray(leadResponse) || leadResponse.length === 0) {
-      throw new Error('Failed to create lead record - no data returned from database');
+      throw new Error('Failed to create lead record');
     }
 
     const createdLead = leadResponse[0];
     const leadId = createdLead.id;
+    
+    console.log('✅ Lead created with ID:', leadId);
 
-    if (!leadId) {
-      throw new Error('Failed to get lead ID from database response');
-    }
-
-    console.log(`✅ Lead created successfully with ID: ${leadId}`);
-
-    // Insert analysis record for deep analysis
+    // Insert analysis for deep analysis
     if (analysisType === 'deep' && analysisData) {
-      // CRITICAL: Ensure username is NEVER null or empty
-      const finalUsername = (analysisData.username || completeLeadData.username || 'unknown').trim();
-      
-      if (!finalUsername || finalUsername === '') {
-        throw new Error(`Username cannot be empty for lead analysis. analysisData.username: "${analysisData.username}", completeLeadData.username: "${completeLeadData.username}"`);
-      }
-
-     // CRITICAL: Use the actual lead ID returned from the database
-      const actualLeadId = createdLead.id;
-      
-      console.log('🔍 Lead ID verification:', {
-        expected_leadId: leadId,
-        actual_createdLead_id: actualLeadId,
-        ids_match: leadId === actualLeadId
-      });
-
-      // Build analysis data with the ACTUAL lead ID from database
-      const completeAnalysisData = {
-        lead_id: actualLeadId, // CRITICAL: Use the actual ID from the created lead
-        user_id: analysisData.user_id || completeLeadData.user_id,
-        business_id: analysisData.business_id || completeLeadData.business_id,
-        username: finalUsername, // CRITICAL: This field MUST NOT be null or empty
-        analysis_type: (analysisData.analysis_type || 'deep').trim(),
-        engagement_score: Math.max(0, Math.min(100, Number(analysisData.engagement_score) || 0)),
-        score_niche_fit: Math.max(0, Math.min(100, Number(analysisData.score_niche_fit) || 0)),
-        score_total: Math.max(0, Math.min(100, Number(analysisData.score_total) || 0)),
-        ai_version_id: (analysisData.ai_version_id || 'gpt-4o').trim(),
+      // Build analysis data matching your EXACT schema
+      const exactAnalysisData = {
+        // Use explicit field names to match your schema exactly
+        user_id: leadData.user_id,
+        business_id: leadData.business_id || null,
+        lead_id: leadId, // This goes in position 4
+        username: leadData.username, // This goes in position 5 - CRITICAL
+        score: analysisData.score_total || 0,
+        summary: analysisData.outreach_message || '',
+        niche_fit: analysisData.score_niche_fit || 0,
+        engagement_score: analysisData.engagement_score || 0,
+        reasons: analysisData.selling_points ? [analysisData.selling_points] : [],
+        selling_points: analysisData.selling_points ? [analysisData.selling_points] : [],
+        latest_posts: [],
+        engagement_data: {},
+        ai_version_id: 'gpt-4o',
+        analysis_type: 'deep',
+        analyzed_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        score_niche_fit: analysisData.score_niche_fit || 0,
+        score_total: analysisData.score_total || 0,
         outreach_message: analysisData.outreach_message || null,
-        selling_points: analysisData.selling_points || null,
         avg_comments: analysisData.avg_comments || null,
         avg_likes: analysisData.avg_likes || null,
         engagement_rate: analysisData.engagement_rate || null,
-        audience_quality: (analysisData.audience_quality || 'Medium').trim(),
-        engagement_insights: analysisData.engagement_insights || null,
-        created_at: analysisData.created_at || new Date().toISOString(),
+        audience_quality: 'Medium',
+        engagement_insights: null,
+        analysis_data: {},
         updated_at: new Date().toISOString()
       };
 
-      // Validate the lead exists before inserting analysis
-      console.log('🔍 Verifying lead exists before analysis insert...');
-      try {
-        const leadCheckResponse = await fetchJson<any[]>(
-          `${env.SUPABASE_URL}/rest/v1/leads?id=eq.${actualLeadId}&select=id`,
-          { headers },
-          10000
-        );
-        
-        if (!Array.isArray(leadCheckResponse) || leadCheckResponse.length === 0) {
-          throw new Error(`Lead with ID ${actualLeadId} does not exist for analysis insertion`);
-        }
-        
-        console.log('✅ Lead exists, proceeding with analysis insert');
-      } catch (leadCheckError: any) {
-        throw new Error(`Lead verification failed: ${leadCheckError.message}`);
+      console.log('💾 Creating analysis with exact schema match:');
+      console.log('Username:', exactAnalysisData.username);
+      console.log('Lead ID:', exactAnalysisData.lead_id);
+      console.log('User ID:', exactAnalysisData.user_id);
+
+      // Validate required fields
+      if (!exactAnalysisData.username) {
+        throw new Error(`Username is required but missing: "${exactAnalysisData.username}"`);
+      }
+      
+      if (!exactAnalysisData.lead_id) {
+        throw new Error(`Lead ID is required but missing: "${exactAnalysisData.lead_id}"`);
       }
 
-      // Final validation
-      if (!completeAnalysisData.username || completeAnalysisData.username.trim() === '') {
-        throw new Error('Username validation failed - username is empty after processing');
+      const analysisResponse = await fetchJson<any[]>(
+        `${env.SUPABASE_URL}/rest/v1/lead_analyses`,
+        {
+          method: 'POST',
+          headers: { ...headers, Prefer: 'return=representation' },
+          body: JSON.stringify(exactAnalysisData),
+        },
+        20000
+      );
+
+      if (!Array.isArray(analysisResponse) || analysisResponse.length === 0) {
+        throw new Error('Failed to create analysis record');
       }
 
-      if (!completeAnalysisData.user_id) {
-        throw new Error('User ID is required for lead analysis record but is missing');
-      }
-
-      if (!completeAnalysisData.lead_id) {
-        throw new Error('Lead ID is required for lead analysis record but is missing');
-      }
-
-      console.log('💾 Saving analysis data with verified lead ID:', {
-        lead_id: completeAnalysisData.lead_id,
-        username: completeAnalysisData.username,
-        user_id: completeAnalysisData.user_id,
-        business_id: completeAnalysisData.business_id,
-        analysis_type: completeAnalysisData.analysis_type
-      });
-
-      try {
-        const analysisResponse = await fetchJson<LeadAnalysisRecord[]>(
-          `${env.SUPABASE_URL}/rest/v1/lead_analyses`,
-          {
-            method: 'POST',
-            headers: { ...headers, Prefer: 'return=representation' },
-            body: JSON.stringify(completeAnalysisData),
-          },
-          20000
-        );
-
-        if (!Array.isArray(analysisResponse) || analysisResponse.length === 0) {
-          throw new Error('Failed to create analysis record - no data returned from database');
-        }
-
-        console.log('✅ Lead analysis saved successfully');
-
-      } catch (analysisError: any) {
-        console.error('❌ Analysis insert failed, rolling back lead:', analysisError.message);
-        console.error('❌ Failed analysis data:', JSON.stringify(completeAnalysisData, null, 2));
-
-        // Rollback: Delete the created lead
-        try {
-          await fetchJson(
-            `${env.SUPABASE_URL}/rest/v1/leads?id=eq.${actualLeadId}`,
-            {
-              method: 'DELETE',
-              headers,
-            },
-            15000
-          );
-          console.log('✅ Lead rollback completed');
-        } catch (rollbackError: any) {
-          console.error('❌ Failed to rollback lead creation:', rollbackError.message);
-        }
-
-        throw new Error(`Failed to save analysis data: ${analysisError.message}`);
-      }
-    }
-
-    return actualLeadId; // Return the actual lead ID
-
-      // Final validation
-      if (!completeAnalysisData.username || completeAnalysisData.username.trim() === '') {
-        throw new Error('Username validation failed - username is empty after processing');
-      }
-
-      if (!completeAnalysisData.user_id) {
-        throw new Error('User ID is required for lead analysis record but is missing');
-      }
-
-      console.log('💾 Saving analysis data:', {
-        username: completeAnalysisData.username,
-        lead_id: completeAnalysisData.lead_id,
-        user_id: completeAnalysisData.user_id,
-        business_id: completeAnalysisData.business_id,
-        analysis_type: completeAnalysisData.analysis_type
-      });
-
-      try {
-        const analysisResponse = await fetchJson<LeadAnalysisRecord[]>(
-          `${env.SUPABASE_URL}/rest/v1/lead_analyses`,
-          {
-            method: 'POST',
-            headers: { ...headers, Prefer: 'return=representation' },
-            body: JSON.stringify(completeAnalysisData),
-          },
-          20000
-        );
-
-        if (!Array.isArray(analysisResponse) || analysisResponse.length === 0) {
-          throw new Error('Failed to create analysis record - no data returned from database');
-        }
-
-        console.log('✅ Lead analysis saved successfully');
-
-      } catch (analysisError: any) {
-        console.error('❌ Analysis insert failed, rolling back lead:', analysisError.message);
-        console.error('❌ Failed analysis data:', JSON.stringify(completeAnalysisData, null, 2));
-
-        // Rollback: Delete the created lead
-        try {
-          await fetchJson(
-            `${env.SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`,
-            {
-              method: 'DELETE',
-              headers,
-            },
-            15000
-          );
-          console.log('✅ Lead rollback completed');
-        } catch (rollbackError: any) {
-          console.error('❌ Failed to rollback lead creation:', rollbackError.message);
-        }
-
-        throw new Error(`Failed to save analysis data: ${analysisError.message}`);
-      }
+      console.log('✅ Analysis created successfully');
     }
 
     return leadId;
 
   } catch (error: any) {
-    console.error('❌ Database operation failed:', error);
+    console.error('❌ Database error:', error);
     throw new Error(`Database error: ${error.message}`);
   }
 }
-
 /**
  * ENHANCED: Update credits and log transaction with comprehensive error handling
  */
