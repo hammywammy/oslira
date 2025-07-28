@@ -1164,12 +1164,4 @@ app.onError((err, c) => {
   return c.json(createStandardResponse(false, undefined, 'Internal server error', requestId), 500);
 });
 
-// ===============================================================================
-// WORKER EXPORT
-// ===============================================================================
-
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    return app.fetch(request, env, ctx);
-  }
-};
+export default app;
