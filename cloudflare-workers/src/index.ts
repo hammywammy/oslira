@@ -2345,10 +2345,17 @@ app.post('/analyze', async c => {
 
     let analysisData: Partial<LeadAnalysisRecord> | null = null;
     if (data.analysis_type === 'deep') {
+      // CRITICAL: Ensure username is NEVER null - this was causing the constraint violation
+      const analysisUsername = profileData.username || leadData.username || username || '';
+      
+      if (!analysisUsername) {
+        throw new Error('Username is required for lead analysis but was not found in profile data');
+      }
+
       analysisData = {
         user_id: userId,
         business_id: data.business_id,
-        username: profileData.username, // CRITICAL: This ensures username is never null
+        username: analysisUsername, // CRITICAL: This ensures username is never null
         analysis_type: 'deep',
         engagement_score: analysisResult.engagement_score || 0,
         score_niche_fit: analysisResult.niche_fit || 0,
@@ -2364,6 +2371,13 @@ app.post('/analyze', async c => {
         audience_quality: 'High',
         engagement_insights: null
       };
+
+      console.log('💾 Analysis data username check:', {
+        profileDataUsername: profileData.username,
+        leadDataUsername: leadData.username,
+        extractedUsername: username,
+        finalAnalysisUsername: analysisUsername
+      });
     }
 
     console.log('💾 About to save leadData:', JSON.stringify(leadData, null, 2));
@@ -2715,10 +2729,17 @@ app.post('/bulk-analyze', async c => {
 
         let analysisData: Partial<LeadAnalysisRecord> | null = null;
         if (analysis_type === 'deep') {
+          // CRITICAL: Ensure username is NEVER null for bulk analysis
+          const analysisUsername = validatedProfile.username || username || '';
+          
+          if (!analysisUsername) {
+            throw new Error(`Username is required for lead analysis but was not found for @${username}`);
+          }
+
           analysisData = {
             user_id: userId,
             business_id: business_id,
-            username: validatedProfile.username, // CRITICAL: Ensure username is never null
+            username: analysisUsername, // CRITICAL: Ensure username is never null
             analysis_type: 'deep',
             engagement_score: analysisResult.engagement_score || 0,
             score_niche_fit: analysisResult.niche_fit || 0,
