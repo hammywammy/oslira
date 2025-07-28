@@ -973,7 +973,7 @@ async function saveLeadAndAnalysis(
   const completeLeadData: LeadRecord = {
     user_id: leadData.user_id || '',
     business_id: leadData.business_id || null,
-    username: leadData.username || '',
+    username: (leadData.username || '').trim(),
     platform: leadData.platform || 'instagram',
     profile_url: leadData.profile_url || '',
     profile_pic_url: leadData.profile_pic_url || null,
@@ -988,10 +988,10 @@ async function saveLeadAndAnalysis(
 
   // Validate required fields
   if (!completeLeadData.user_id || !completeLeadData.username) {
-    throw new Error('Missing required fields: user_id and username are mandatory');
+    throw new Error(`Missing required fields: user_id="${completeLeadData.user_id}", username="${completeLeadData.username}"`);
   }
 
-  // Validate data types and constraints
+  // Validate data constraints
   if (completeLeadData.username.length > 50) {
     throw new Error('Username exceeds maximum length of 50 characters');
   }
@@ -1000,7 +1000,7 @@ async function saveLeadAndAnalysis(
     throw new Error('Profile URL exceeds maximum length of 500 characters');
   }
 
-  console.log('💾 Saving lead data:', JSON.stringify(completeLeadData, null, 2));
+  console.log('💾 Saving lead data with username:', completeLeadData.username);
 
   try {
     // Insert lead record
@@ -1029,38 +1029,51 @@ async function saveLeadAndAnalysis(
 
     // Insert analysis record for deep analysis
     if (analysisType === 'deep' && analysisData) {
-      // Ensure all required fields are present for lead_analyses table
-      const completeAnalysisData: LeadAnalysisRecord = {
+      // CRITICAL: Ensure username is NEVER null or empty
+      const finalUsername = (analysisData.username || completeLeadData.username || 'unknown').trim();
+      
+      if (!finalUsername || finalUsername === '') {
+        throw new Error(`Username cannot be empty for lead analysis. analysisData.username: "${analysisData.username}", completeLeadData.username: "${completeLeadData.username}"`);
+      }
+
+      // Build analysis data with EXPLICIT field mapping
+      const completeAnalysisData = {
         lead_id: leadId,
         user_id: analysisData.user_id || completeLeadData.user_id,
         business_id: analysisData.business_id || completeLeadData.business_id,
-        username: analysisData.username || completeLeadData.username, // CRITICAL: This was missing!
-        analysis_type: analysisData.analysis_type || 'deep',
-        engagement_score: Math.max(0, Math.min(100, analysisData.engagement_score || 0)),
-        score_niche_fit: Math.max(0, Math.min(100, analysisData.score_niche_fit || 0)),
-        score_total: Math.max(0, Math.min(100, analysisData.score_total || 0)),
-        ai_version_id: analysisData.ai_version_id || 'gpt-4o',
+        username: finalUsername, // CRITICAL: This field MUST NOT be null or empty
+        analysis_type: (analysisData.analysis_type || 'deep').trim(),
+        engagement_score: Math.max(0, Math.min(100, Number(analysisData.engagement_score) || 0)),
+        score_niche_fit: Math.max(0, Math.min(100, Number(analysisData.score_niche_fit) || 0)),
+        score_total: Math.max(0, Math.min(100, Number(analysisData.score_total) || 0)),
+        ai_version_id: (analysisData.ai_version_id || 'gpt-4o').trim(),
         outreach_message: analysisData.outreach_message || null,
         selling_points: analysisData.selling_points || null,
         avg_comments: analysisData.avg_comments || null,
         avg_likes: analysisData.avg_likes || null,
         engagement_rate: analysisData.engagement_rate || null,
-        audience_quality: analysisData.audience_quality || 'Medium',
+        audience_quality: (analysisData.audience_quality || 'Medium').trim(),
         engagement_insights: analysisData.engagement_insights || null,
         created_at: analysisData.created_at || new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
-      // Validate required fields for analysis
-      if (!completeAnalysisData.username) {
-        throw new Error('Username is required for lead analysis record');
+      // Final validation
+      if (!completeAnalysisData.username || completeAnalysisData.username.trim() === '') {
+        throw new Error('Username validation failed - username is empty after processing');
       }
 
       if (!completeAnalysisData.user_id) {
-        throw new Error('User ID is required for lead analysis record');
+        throw new Error('User ID is required for lead analysis record but is missing');
       }
 
-      console.log('💾 Saving analysis data:', JSON.stringify(completeAnalysisData, null, 2));
+      console.log('💾 Saving analysis data:', {
+        username: completeAnalysisData.username,
+        lead_id: completeAnalysisData.lead_id,
+        user_id: completeAnalysisData.user_id,
+        business_id: completeAnalysisData.business_id,
+        analysis_type: completeAnalysisData.analysis_type
+      });
 
       try {
         const analysisResponse = await fetchJson<LeadAnalysisRecord[]>(
@@ -1081,6 +1094,7 @@ async function saveLeadAndAnalysis(
 
       } catch (analysisError: any) {
         console.error('❌ Analysis insert failed, rolling back lead:', analysisError.message);
+        console.error('❌ Failed analysis data:', JSON.stringify(completeAnalysisData, null, 2));
 
         // Rollback: Delete the created lead
         try {
@@ -2182,7 +2196,7 @@ app.post('/analyze', async c => {
     }
 
     // 3. Enhanced Request Validation
-   const { valid, errors, data } = normalizeRequest(body);
+    const { valid, errors, data } = normalizeRequest(body);
     if (!valid) {
       console.error('❌ Request validation failed:', errors);
       return c.json({ error: 'Invalid request', details: errors }, 400);
@@ -2194,15 +2208,17 @@ app.post('/analyze', async c => {
     console.log('🔍 Username extraction:', {
       input_url: data.profile_url,
       extracted_username: username,
-      extraction_successful: !!username
+      extraction_successful: !!username,
+      username_length: username?.length || 0
     });
 
-    if (!username) {
+    if (!username || username.trim() === '') {
       console.error('❌ Invalid username extracted from:', data.profile_url);
-      return c.json({ error: 'Invalid username format' }, 400);
+      return c.json({ error: 'Invalid username format or empty username' }, 400);
     }
 
-    console.log(`📊 Processing analysis: username=${username}, type=${data.analysis_type}`);
+    const cleanUsername = username.trim();
+    console.log(`📊 Processing analysis: username="${cleanUsername}", type=${data.analysis_type}`);
 
     // 4. Environment Validation
     const requiredEnvVars = {
@@ -2275,7 +2291,7 @@ app.post('/analyze', async c => {
     let profileData;
     try {
       console.log('🕷️ Starting enhanced profile scraping...');
-      profileData = await scrapeInstagramProfile(username, data.analysis_type!, c.env);
+      profileData = await scrapeInstagramProfile(cleanUsername, data.analysis_type!, c.env);
       console.log(`✅ Profile scraped: @${profileData.username}, followers=${profileData.followersCount.toLocaleString()}`);
 
       if (profileData.engagement) {
@@ -2322,6 +2338,201 @@ app.post('/analyze', async c => {
         type: 'ai_error'
       }, 500);
     }
+
+    // 9. Enhanced Message Generation (deep analysis only)
+    let outreachMessage = '';
+    if (data.analysis_type === 'deep') {
+      try {
+        console.log('💬 Generating enhanced outreach message...');
+        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
+        console.log(`✅ Message generated: ${outreachMessage.length} characters`);
+      } catch (messageError: any) {
+        console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
+      }
+    }
+
+    // 10. Enhanced Database Operations - CRITICAL USERNAME HANDLING
+    const finalUsername = (profileData.username || cleanUsername || 'unknown').trim();
+    
+    console.log('🔍 FINAL USERNAME ASSIGNMENT:', {
+      profileData_username: profileData.username,
+      extracted_cleanUsername: cleanUsername,
+      final_username: finalUsername,
+      final_username_length: finalUsername.length,
+      final_username_empty: finalUsername === ''
+    });
+
+    if (!finalUsername || finalUsername === '') {
+      throw new Error(`Critical error: Final username is empty. ProfileData: "${profileData.username}", Extracted: "${cleanUsername}"`);
+    }
+
+    const leadData: Partial<LeadRecord> = {
+      user_id: userId,
+      business_id: data.business_id,
+      username: finalUsername, // CRITICAL: Use the verified final username
+      platform: data.platform,
+      profile_url: data.profile_url,
+      profile_pic_url: profileData.profilePicUrl,
+      score: analysisResult.score,
+      type: data.analysis_type,
+      analysis_type: data.analysis_type,
+      user_timezone: data.timezone,
+      user_local_time: data.user_local_time,
+      created_at: data.request_timestamp
+    };
+
+    console.log('🔍 Lead data username verification:', {
+      leadData_username: leadData.username,
+      leadData_username_length: leadData.username?.length,
+      leadData_username_empty: leadData.username === ''
+    });
+
+    let analysisData: Partial<LeadAnalysisRecord> | null = null;
+    if (data.analysis_type === 'deep') {
+      // CRITICAL: Ensure username is NEVER null or empty for analysis
+      const analysisUsername = finalUsername; // Use the same verified username
+      
+      console.log('🔍 ANALYSIS USERNAME ASSIGNMENT:', {
+        analysis_username: analysisUsername,
+        analysis_username_length: analysisUsername.length,
+        analysis_username_empty: analysisUsername === ''
+      });
+      
+      if (!analysisUsername || analysisUsername.trim() === '') {
+        throw new Error(`Analysis username cannot be empty. Final username: "${finalUsername}"`);
+      }
+
+      analysisData = {
+        user_id: userId,
+        business_id: data.business_id,
+        username: analysisUsername.trim(), // CRITICAL: Ensure it's trimmed and not empty
+        analysis_type: 'deep',
+        engagement_score: analysisResult.engagement_score || 0,
+        score_niche_fit: analysisResult.niche_fit || 0,
+        score_total: analysisResult.score || 0,
+        ai_version_id: 'gpt-4o',
+        outreach_message: outreachMessage || null,
+        selling_points: Array.isArray(analysisResult.selling_points)
+          ? JSON.stringify(analysisResult.selling_points)
+          : null,
+        avg_comments: profileData.engagement?.avgComments?.toString() || null,
+        avg_likes: profileData.engagement?.avgLikes?.toString() || null,
+        engagement_rate: profileData.engagement?.engagementRate?.toString() || null,
+        audience_quality: 'High',
+        engagement_insights: null
+      };
+
+      console.log('💾 Final analysis data username check:', {
+        analysisData_username: analysisData.username,
+        analysisData_username_length: analysisData.username?.length,
+        analysisData_username_empty: analysisData.username === ''
+      });
+    }
+
+    console.log('💾 About to save - Final verification:', {
+      leadData_username: leadData.username,
+      analysisData_username: analysisData?.username,
+      both_usernames_valid: !!(leadData.username && (!analysisData || analysisData.username))
+    });
+
+    let leadId;
+    try {
+      console.log('💾 Saving to enhanced database...');
+      leadId = await saveLeadAndAnalysis(leadData, analysisData, data.analysis_type!, c.env);
+      console.log(`✅ Saved to database: leadId=${leadId}`);
+    } catch (saveError: any) {
+      console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
+      return c.json({
+        error: 'Failed to save analysis results',
+        details: saveError.message,
+        type: 'database_error'
+      }, 500);
+    }
+
+    // 11. Enhanced Credit Update
+    try {
+      console.log('🔄 Updating credits with transaction...');
+      const newBalance = currentCredits - cost;
+      await updateCreditsAndTransaction(
+        userId,
+        cost,
+        newBalance,
+        `${data.analysis_type} analysis for @${finalUsername}`,
+        leadId,
+        c.env
+      );
+      console.log(`✅ Credits updated: ${currentCredits} -> ${newBalance}`);
+    } catch (creditError: any) {
+      console.error('❌ updateCreditsAndTransaction failed:', creditError.message);
+      return c.json({
+        error: 'Failed to update credits',
+        details: creditError.message,
+        type: 'credit_error'
+      }, 500);
+    }
+
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ Enhanced analysis completed successfully in ${totalTime}ms`);
+
+    // 12. Enhanced Response
+    return c.json({
+      success: true,
+      lead_id: leadId,
+      analysis: {
+        score: analysisResult.score,
+        summary: analysisResult.summary || '',
+        niche_fit: analysisResult.niche_fit || 0,
+        engagement_score: analysisResult.engagement_score || 0,
+        selling_points: analysisResult.selling_points || [],
+        reasons: analysisResult.reasons || []
+      },
+      outreach_message: outreachMessage,
+      profile: {
+        username: profileData.username,
+        full_name: profileData.fullName,
+        followers: profileData.followersCount,
+        following: profileData.followingCount,
+        posts: profileData.postsCount,
+        verified: profileData.isVerified,
+        bio: profileData.biography,
+        external_url: profileData.externalUrl,
+        business_category: profileData.businessCategory,
+        profile_pic_url: profileData.profilePicUrl,
+        engagement: profileData.engagement
+      },
+      credits: {
+        used: cost,
+        remaining: currentCredits - cost
+      },
+      metadata: {
+        processing_time_ms: totalTime,
+        scraper_actor: data.analysis_type === 'light' ? 'dSCLg0C3YEZ83HzYX' : 'shu8hvrXbJbY3Eb9W',
+        analysis_type: data.analysis_type,
+        ai_model: 'gpt-4o',
+        message_model: c.env.CLAUDE_KEY ? 'claude-3-5-sonnet' : 'gpt-4o',
+        version: '7.0.1',
+        final_username_used: finalUsername
+      }
+    });
+
+  } catch (error: any) {
+    const totalTime = Date.now() - startTime;
+    console.error('❌ CRITICAL ERROR in /analyze endpoint:');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+
+    return c.json({
+      error: 'Analysis failed',
+      message: error.message || 'Unknown error',
+      type: 'critical_error',
+      debug: {
+        error_type: error.constructor.name,
+        processing_time_ms: totalTime,
+        timestamp: new Date().toISOString()
+      }
+    }, 500);
+  }
+});
 
     // 9. Enhanced Message Generation (deep analysis only)
     let outreachMessage = '';
