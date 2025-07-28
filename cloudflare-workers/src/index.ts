@@ -2194,9 +2194,9 @@ console.log('💾 About to save leadData:', JSON.stringify(leadData, null, 2));
 console.log('🖼️ Profile pic URL being saved:', leadData.profile_pic_url);
 
 // FIXED: Proper array handling for PostgreSQL
-let analysisData = null;
+let analysisDataSupabase = null;
 if (data.analysis_type === 'deep') {
-  analysisData = {
+  analysisDataSupabase = {
     user_id: userId,
     business_id: data.business_id,
     username: profileData.username,
@@ -2207,9 +2207,9 @@ if (data.analysis_type === 'deep') {
     ai_version_id: 'gpt-4o',
     outreach_message: outreachMessage || null,
     
-    // ✅ FIXED: Handle selling_points as text field (not array)
+    // ✅ BEST: Let Supabase handle the array conversion
     selling_points: Array.isArray(analysisResult.selling_points) 
-      ? analysisResult.selling_points.join(' | ')  // Convert to pipe-separated string
+      ? analysisResult.selling_points 
       : null,
     
     avg_comments: profileData.engagement?.avgComments?.toString() || null,
@@ -2217,9 +2217,9 @@ if (data.analysis_type === 'deep') {
     engagement_rate: profileData.engagement?.engagementRate?.toString() || null,
     audience_quality: 'standard',
     
-    // ✅ FIXED: Handle engagement_insights as text field (not array)
+    // ✅ BEST: Let Supabase handle the array conversion
     engagement_insights: Array.isArray(analysisResult.reasons) 
-      ? analysisResult.reasons.join(' | ')  // Convert to pipe-separated string
+      ? analysisResult.reasons 
       : null,
       
     created_at: new Date().toISOString(),
