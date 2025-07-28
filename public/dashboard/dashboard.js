@@ -2868,9 +2868,7 @@ closeModal(modalId) {  // ✅ PROPER METHOD DECLARATION
             this.showAnalysisModal();
         }
     }
-}
-
-switchBusiness() {
+    switchBusiness() {
     const businessSelect = document.getElementById('business-select');
     if (businessSelect) {
         this.currentBusinessId = businessSelect.value;
@@ -2879,7 +2877,7 @@ switchBusiness() {
         // Refresh data for new business
         this.loadRecentActivity();
     }
-}
+}}
 
 // =============================================================================
 // INITIALIZE DASHBOARD
