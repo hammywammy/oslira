@@ -2182,13 +2182,21 @@ app.post('/analyze', async c => {
     }
 
     // 3. Enhanced Request Validation
-    const { valid, errors, data } = normalizeRequest(body);
+   const { valid, errors, data } = normalizeRequest(body);
     if (!valid) {
       console.error('❌ Request validation failed:', errors);
       return c.json({ error: 'Invalid request', details: errors }, 400);
     }
 
+    console.log('🔍 Normalized request data:', JSON.stringify(data, null, 2));
+
     const username = extractUsername(data.profile_url!);
+    console.log('🔍 Username extraction:', {
+      input_url: data.profile_url,
+      extracted_username: username,
+      extraction_successful: !!username
+    });
+
     if (!username) {
       console.error('❌ Invalid username extracted from:', data.profile_url);
       return c.json({ error: 'Invalid username format' }, 400);
@@ -2342,6 +2350,13 @@ app.post('/analyze', async c => {
       user_local_time: data.user_local_time,
       created_at: data.request_timestamp
     };
+
+    console.log('🔍 Lead data username check:', {
+      extracted_username: username,
+      profileData_username: profileData.username,
+      leadData_username: leadData.username,
+      final_username_for_db: leadData.username
+    });
 
     let analysisData: Partial<LeadAnalysisRecord> | null = null;
     if (data.analysis_type === 'deep') {
