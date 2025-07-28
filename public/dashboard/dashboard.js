@@ -2808,7 +2808,7 @@ async processBulkAnalysis(profiles, analysisType) {
         }
     }
 
-    async loadBusinessProfiles() {
+async loadBusinessProfiles() {
     try {
         const { data: businesses } = await supabase
             .from('business_profiles')
@@ -2828,22 +2828,23 @@ async processBulkAnalysis(profiles, analysisType) {
         
     } catch (error) {
         console.error('Failed to load businesses:', error);
-    }}
-
-    closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        
-        if (modalId === 'analysisModal') {
-            const form = document.getElementById('analysisForm');
-            if (form) form.reset();
-            
-            const inputContainer = document.getElementById('input-field-container');
-            if (inputContainer) inputContainer.style.display = 'none';
-        }
     }
+}  // ✅ SINGLE CLOSING BRACE
+
+closeModal(modalId) {  // ✅ PROPER METHOD DECLARATION
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    if (modalId === 'analysisModal') {
+        const form = document.getElementById('analysisForm');
+        if (form) form.reset();
+        
+        const inputContainer = document.getElementById('input-field-container');
+        if (inputContainer) inputContainer.style.display = 'none';
+    }
+}
 
     handleModalClick(event) {
         const modals = document.querySelectorAll('.modal');
