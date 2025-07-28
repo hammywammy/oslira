@@ -2828,7 +2828,7 @@ async processBulkAnalysis(profiles, analysisType) {
         
     } catch (error) {
         console.error('Failed to load businesses:', error);
-    }
+    }}
 
     closeModal(modalId) {
         const modal = document.getElementById(modalId);
