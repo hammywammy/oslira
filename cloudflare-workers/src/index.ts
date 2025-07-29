@@ -1064,6 +1064,7 @@ app.get('/v1/config', (c) => {
   }));
 });
 
+// CORRECTED /v1/analyze endpoint
 app.post('/v1/analyze', async (c) => {
   const requestId = generateRequestId();
   const startTime = Date.now();
@@ -1118,21 +1119,81 @@ app.post('/v1/analyze', async (c) => {
     // Generate outreach message (deep analysis only)
     let outreachMessage = '';
     if (analysis_type === 'deep') {
-      outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+      try {
+        console.log('💬 Generating outreach message...');
+        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+        console.log(`✅ Message generated: ${outreachMessage.length} characters`);
+      } catch (messageError: any) {
+        console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
+      }
+    }
+    
+    // FIXED: Prepare data for dual table saving
+    const leadData = {
+      user_id: userId,
+      business_id: business_id,
+      username: profileData.username,
+      full_name: profileData.displayName || null,
+      bio: profileData.bio || null,
+      platform: 'instagram',
+      profile_url: profile_url,
+      profile_pic_url: profileData.profilePicUrl || null,
+      score: analysisResult.score || 0,
+      analysis_type: analysis_type, // FIXED: Use analysis_type instead of type
+      followers_count: profileData.followersCount || 0,
+      outreach_message: outreachMessage || null,
+      avg_likes: profileData.engagement?.avgLikes || 0,
+      avg_comments: profileData.engagement?.avgComments || 0,
+      engagement_rate: profileData.engagement?.engagementRate || 0,
+      user_timezone: body.timezone || 'UTC',
+      user_local_time: body.user_local_time || new Date().toISOString(),
+      created_at: body.request_timestamp || new Date().toISOString()
+    };
+
+    // Create analysis data for deep analysis only
+    let analysisData = null;
+    if (analysis_type === 'deep') {
+      analysisData = {
+        user_id: userId,
+        analysis_type: 'deep',
+        engagement_score: analysisResult.engagement_score || null,
+        score_niche_fit: analysisResult.niche_fit || null,
+        score_total: analysisResult.score || 0,
+        outreach_message: outreachMessage || null,
+        selling_points: Array.isArray(analysisResult.selling_points) 
+          ? analysisResult.selling_points.join('|') 
+          : null,
+        avg_comments: profileData.engagement?.avgComments || 0,
+        avg_likes: profileData.engagement?.avgLikes || 0,
+        engagement_rate: profileData.engagement?.engagementRate || 0,
+        audience_quality: analysisResult.audience_quality || null,
+        engagement_insights: Array.isArray(analysisResult.engagement_insights)
+          ? analysisResult.engagement_insights.join('|')
+          : null
+      };
     }
     
     // Save to database and update credits
-    await Promise.all([
-      saveAnalysisResults(profileData, analysisResult, business_id, userId, analysis_type, outreachMessage, c.env),
-      updateCreditsAndTransaction(
-        userId,
-        creditCost,
-        userResult.credits - creditCost,
-        `${analysis_type} analysis for @${username}`,
-        'use', // ✅ FIXED: Use 'use' instead of 'analysis'
-        c.env
-      )
-    ]);
+    let leadId;
+    try {
+      console.log('💾 Saving to database...');
+      // FIXED: Use saveLeadAndAnalysis for dual table saving
+      leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+      console.log(`✅ Saved to database: leadId=${leadId}`);
+    } catch (saveError: any) {
+      console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
+      return c.json(createStandardResponse(false, undefined, `Failed to save analysis results: ${saveError.message}`, requestId), 500);
+    }
+
+    // Update credits
+    await updateCreditsAndTransaction(
+      userId,
+      creditCost,
+      userResult.credits - creditCost,
+      `${analysis_type} analysis for @${username}`,
+      'use',
+      c.env
+    );
     
     const totalTime = Date.now() - startTime;
     logger('info', 'Analysis completed', { username, score: analysisResult.score, totalTime, requestId });
@@ -1157,6 +1218,7 @@ app.post('/v1/analyze', async (c) => {
   }
 });
 
+// CORRECTED /v1/bulk-analyze endpoint
 app.post('/v1/bulk-analyze', async (c) => {
   const requestId = generateRequestId();
   const startTime = Date.now();
@@ -1206,9 +1268,12 @@ app.post('/v1/bulk-analyze', async (c) => {
     let failed = 0;
     let creditsUsed = 0;
     
-    for (const profileUrl of profiles) {
+    for (let i = 0; i < profiles.length; i++) {
+      const profileUrl = profiles[i];
+      
       try {
         const username = extractUsername(profileUrl);
+        console.log(`Processing profile ${i + 1}/${profiles.length}: @${username}`);
         
         // Scrape and analyze
         const profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
@@ -1216,17 +1281,68 @@ app.post('/v1/bulk-analyze', async (c) => {
         
         let outreachMessage = '';
         if (analysis_type === 'deep') {
-          outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+          try {
+            outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+          } catch (messageError: any) {
+            console.warn(`⚠️ Message generation failed for @${username}:`, messageError.message);
+          }
         }
         
-        // Save to database
-        await saveAnalysisResults(profileData, analysisResult, business_id, userId, analysis_type, outreachMessage, c.env);
+        // FIXED: Prepare data for dual table saving
+        const leadData = {
+          user_id: userId,
+          business_id: business_id,
+          username: profileData.username,
+          full_name: profileData.displayName || null,
+          bio: profileData.bio || null,
+          platform: 'instagram',
+          profile_url: profileUrl,
+          profile_pic_url: profileData.profilePicUrl || null,
+          score: analysisResult.score || 0,
+          analysis_type: analysis_type, // FIXED: Use analysis_type instead of type
+          followers_count: profileData.followersCount || 0,
+          outreach_message: outreachMessage || null,
+          avg_likes: profileData.engagement?.avgLikes || 0,
+          avg_comments: profileData.engagement?.avgComments || 0,
+          engagement_rate: profileData.engagement?.engagementRate || 0,
+          user_timezone: body.timezone || 'UTC',
+          user_local_time: body.user_local_time || new Date().toISOString(),
+          // Stagger timestamps to avoid conflicts
+          created_at: new Date(new Date(body.request_timestamp || new Date().toISOString()).getTime() + (i * 1000)).toISOString()
+        };
+
+        // Create analysis data for deep analysis only
+        let analysisData = null;
+        if (analysis_type === 'deep') {
+          analysisData = {
+            user_id: userId,
+            analysis_type: 'deep',
+            engagement_score: analysisResult.engagement_score || null,
+            score_niche_fit: analysisResult.niche_fit || null,
+            score_total: analysisResult.score || 0,
+            outreach_message: outreachMessage || null,
+            selling_points: Array.isArray(analysisResult.selling_points) 
+              ? analysisResult.selling_points.join('|') 
+              : null,
+            avg_comments: profileData.engagement?.avgComments || 0,
+            avg_likes: profileData.engagement?.avgLikes || 0,
+            engagement_rate: profileData.engagement?.engagementRate || 0,
+            audience_quality: analysisResult.audience_quality || null,
+            engagement_insights: Array.isArray(analysisResult.engagement_insights)
+              ? analysisResult.engagement_insights.join('|')
+              : null
+          };
+        }
+
+        // FIXED: Use saveLeadAndAnalysis for dual table saving
+        const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
         
         results.push({
           username,
           success: true,
-          analysis: analysisResult,
-          outreach_message: outreachMessage
+          lead_id: leadId,
+          score: analysisResult.score,
+          message_generated: !!outreachMessage
         });
         
         successful++;
@@ -1248,13 +1364,13 @@ app.post('/v1/bulk-analyze', async (c) => {
     // Update credits
     if (creditsUsed > 0) {
       await updateCreditsAndTransaction(
-  userId,
-  creditsUsed,
-  userResult.credits - creditsUsed,
-  `Bulk ${analysis_type} analysis (${successful} profiles)`,
-  'use',  // ✅ CORRECT - use 'use' for credit deductions
-  c.env
-);
+        userId,
+        creditsUsed,
+        userResult.credits - creditsUsed,
+        `Bulk ${analysis_type} analysis (${successful} profiles)`,
+        'use',
+        c.env
+      );
     }
     
     const totalTime = Date.now() - startTime;
