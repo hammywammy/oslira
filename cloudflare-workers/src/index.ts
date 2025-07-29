@@ -256,6 +256,9 @@ async function fetchBusinessProfile(businessId: string, userId: string, env: Env
 // Add this function to your Worker index.ts file
 // This is the missing saveLeadAndAnalysis function
 
+// Add this function to your Worker index.ts file
+// This is the missing saveLeadAndAnalysis function
+
 async function saveLeadAndAnalysis(
   leadData: any,
   analysisData: any | null,
@@ -352,34 +355,49 @@ async function saveAnalysisResults(
   env: Env
 ): Promise<void> {
   
-  // Prepare data for leads table (flattened)
+  // FIXED: Prepare data for leads table with ONLY existing columns after cleanup
   const leadData = {
+    // Core required fields
     user_id: userId,
     business_id: businessId,
+    
+    // Profile information
     username: profileData.username,
     full_name: profileData.displayName || null,
     bio: profileData.bio || null,
     platform: 'instagram',
     profile_pic_url: profileData.profilePicUrl || null,
+    
+    // Analysis results
     score: analysisResult.score || 0,
     analysis_type: analysisType, // CRITICAL: This field determines light vs deep
+    
+    // Profile metrics
     followers_count: profileData.followersCount || 0,
     
-    // Include basic engagement data in leads table for both types
+    // Engagement data (0 for light, real values for deep)
     avg_likes: profileData.engagement?.avgLikes || 0,
     avg_comments: profileData.engagement?.avgComments || 0,
     engagement_rate: profileData.engagement?.engagementRate || 0,
     
-    // Outreach message (will be null for light analysis)
+    // Outreach message (null for light analysis)
     outreach_message: outreachMessage || null,
     
+    // Timestamp
     created_at: new Date().toISOString()
+    
+    // REMOVED: All fields that were dropped in cleanup:
+    // - user_local_time, user_timezone, request_timestamp
+    // - analyzed_at, updated_at, business_category, timezone, user_location
+    // - following_count, posts_count, verified, private, external_url
+    // - niche_fit, engagement_score, reason, talking_points
   };
 
   // Prepare data for lead_analyses table (detailed analysis for deep only)
   let analysisData = null;
   if (analysisType === 'deep') {
     analysisData = {
+      // Core fields
       user_id: userId,
       analysis_type: 'deep',
       
@@ -399,20 +417,22 @@ async function saveAnalysisResults(
       avg_likes: profileData.engagement?.avgLikes || 0,
       engagement_rate: profileData.engagement?.engagementRate || 0,
       
-      // Advanced analysis fields (for future use)
+      // Advanced analysis fields
       audience_quality: analysisResult.audience_quality || null,
       engagement_insights: Array.isArray(analysisResult.engagement_insights)
         ? analysisResult.engagement_insights.join('|')
         : (analysisResult.engagement_insights ? String(analysisResult.engagement_insights) : null),
       
       created_at: new Date().toISOString()
+      
+      // REMOVED: Fields that were dropped:
+      // - ai_version_id, updated_at
     };
   }
 
   // Use the saveLeadAndAnalysis function to save to both tables
   await saveLeadAndAnalysis(leadData, analysisData, analysisType, env);
-}
-// REPLACE your updateCreditsAndTransaction function with this:
+}// REPLACE your updateCreditsAndTransaction function with this:
 
 async function updateCreditsAndTransaction(
   userId: string,
