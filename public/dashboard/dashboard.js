@@ -2160,6 +2160,224 @@ updateArrayDisplay(selector, array) {
     }
 }
 
+    // Add these missing functions to your OsliraDashboard class in dashboard.js
+
+// 1. Missing loadStats function
+async loadStats() {
+    const supabase = window.OsliraApp.supabase;
+    const user = window.OsliraApp.user;
+    
+    if (!supabase || !user) {
+        // Show demo stats when not connected
+        this.updateStatsUI({
+            totalLeads: 0,
+            avgScore: 0,
+            highValueLeads: 0
+        });
+        return;
+    }
+    
+    try {
+        // Fetch leads data for stats calculation
+        const { data: leads, error } = await supabase
+            .from('leads')
+            .select('id, score, created_at')
+            .eq('user_id', user.id);
+            
+        if (error) throw error;
+        
+        const totalLeads = leads?.length || 0;
+        const scoresOnly = leads?.filter(lead => lead.score !== null && lead.score !== undefined) || [];
+        const avgScore = scoresOnly.length > 0 
+            ? Math.round(scoresOnly.reduce((sum, lead) => sum + lead.score, 0) / scoresOnly.length)
+            : 0;
+        const highValueLeads = leads?.filter(lead => lead.score >= 80).length || 0;
+        
+        this.updateStatsUI({
+            totalLeads,
+            avgScore,
+            highValueLeads
+        });
+        
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        // Show fallback stats on error
+        this.updateStatsUI({
+            totalLeads: 0,
+            avgScore: 0,
+            highValueLeads: 0
+        });
+    }
+}
+
+// 2. Missing updateStatsUI function
+updateStatsUI(stats) {
+    const { totalLeads, avgScore, highValueLeads } = stats;
+    
+    // Update total leads
+    const totalLeadsEl = document.getElementById('total-leads');
+    const leadsTrendEl = document.getElementById('leads-trend');
+    
+    if (totalLeadsEl) {
+        totalLeadsEl.textContent = totalLeads;
+    }
+    if (leadsTrendEl) {
+        if (totalLeads === 0) {
+            leadsTrendEl.textContent = 'Ready to start';
+            leadsTrendEl.className = 'trend';
+        } else {
+            leadsTrendEl.textContent = 'Growing database';
+            leadsTrendEl.className = 'trend up';
+        }
+    }
+    
+    // Update average score
+    const avgScoreEl = document.getElementById('avg-score');
+    const scoreTrendEl = document.getElementById('score-trend');
+    
+    if (avgScoreEl) {
+        avgScoreEl.textContent = avgScore;
+    }
+    if (scoreTrendEl) {
+        if (avgScore >= 70) {
+            scoreTrendEl.textContent = 'High quality leads';
+            scoreTrendEl.className = 'trend up';
+        } else if (avgScore >= 50) {
+            scoreTrendEl.textContent = 'Quality leads';
+            scoreTrendEl.className = 'trend';
+        } else {
+            scoreTrendEl.textContent = 'Building quality';
+            scoreTrendEl.className = 'trend';
+        }
+    }
+    
+    // Update high-value leads
+    const highValueLeadsEl = document.getElementById('high-value-leads');
+    const highValueTrendEl = document.getElementById('high-value-trend');
+    
+    if (highValueLeadsEl) {
+        highValueLeadsEl.textContent = highValueLeads;
+    }
+    if (highValueTrendEl) {
+        if (totalLeads > 0) {
+            const percentage = Math.round((highValueLeads / totalLeads) * 100);
+            highValueTrendEl.textContent = `${percentage}% high-value rate`;
+            highValueTrendEl.className = percentage >= 20 ? 'trend up' : 'trend';
+        } else {
+            highValueTrendEl.textContent = 'Score 80+';
+            highValueTrendEl.className = 'trend up';
+        }
+    }
+}
+
+// 3. Missing formatDateCached function (if not already present)
+formatDateCached(dateString) {
+    if (!dateString) return 'Unknown';
+    
+    try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        if (diffMins < 1) {
+            return 'Just now';
+        } else if (diffMins < 60) {
+            return `${diffMins}m ago`;
+        } else if (diffHours < 24) {
+            return `${diffHours}h ago`;
+        } else if (diffDays < 7) {
+            return `${diffDays}d ago`;
+        } else {
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            });
+        }
+    } catch (error) {
+        console.error('Date formatting error:', error);
+        return 'Invalid date';
+    }
+}
+
+// 4. Missing showBulkUpload function (if not already present)
+showBulkUpload() {
+    const modal = document.getElementById('bulkModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        
+        // Reset any previous state
+        const csvFile = document.getElementById('csv-file');
+        const csvPreview = document.getElementById('csv-preview');
+        const processBtn = document.getElementById('process-csv-btn');
+        
+        if (csvFile) csvFile.value = '';
+        if (csvPreview) {
+            csvPreview.style.display = 'none';
+            csvPreview.innerHTML = '';
+        }
+        if (processBtn) processBtn.disabled = true;
+        
+        // Clear any previous CSV data
+        this.csvData = null;
+    }
+}
+
+// 5. Missing showAnalysisModal function (if not already present)
+showAnalysisModal() {
+    const modal = document.getElementById('analysisModal');
+    if (!modal) return;
+    
+    const form = document.getElementById('analysisForm');
+    if (form) form.reset();
+    
+    const analysisType = document.getElementById('analysis-type');
+    const inputContainer = document.getElementById('input-field-container');
+    
+    if (analysisType) {
+        analysisType.value = '';
+    }
+    
+    if (inputContainer) {
+        inputContainer.style.display = 'none';
+    }
+    
+    modal.style.display = 'flex';
+}
+
+// 6. Missing updateInputField function (if not already present)
+updateInputField() {
+    const analysisType = document.getElementById('analysis-type')?.value;
+    const inputContainer = document.getElementById('input-field-container');
+    const inputLabel = document.getElementById('input-label');
+    const inputField = document.getElementById('profile-input');
+    const inputHelp = document.getElementById('input-help');
+    
+    if (!inputContainer) return;
+    
+    if (analysisType) {
+        inputContainer.style.display = 'block';
+        
+        if (inputLabel) {
+            inputLabel.textContent = 'Instagram Username *';
+        }
+        
+        if (inputField) {
+            inputField.placeholder = 'username';
+            inputField.required = true;
+        }
+        
+        if (inputHelp) {
+            inputHelp.textContent = 'Enter just the username (without @)';
+        }
+    } else {
+        inputContainer.style.display = 'none';
+    }
+}
+
     // =============================================================================
     // INSIGHTS & ANALYTICS
     // =============================================================================
