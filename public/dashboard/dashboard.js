@@ -638,36 +638,55 @@ async submitAnalysis(e) {
         const analysisType = document.getElementById('analysis-type').value;
         const handleInput = document.getElementById('profile-input').value.trim();
         
-        // ✅ DEBUG: Log what we're getting
         console.log('🔍 Raw handle input:', handleInput);
         console.log('🔍 Analysis type:', analysisType);
-        console.log('🔍 Business ID:', this.currentBusinessId);
+        console.log('🔍 Current business ID:', this.currentBusinessId);
         
         if (!handleInput) {
             throw new Error('Please enter an Instagram handle');
         }
         
-        if (!this.currentBusinessId) {
-            throw new Error('No business profile selected');
+        // ✅ ROBUST BUSINESS ID CHECK WITH FALLBACKS
+        let businessId = this.currentBusinessId;
+        
+        if (!businessId) {
+            console.log('⚠️ No currentBusinessId, trying fallbacks...');
+            
+            // Fallback 1: Get from dropdown
+            const businessSelect = document.getElementById('business-select');
+            if (businessSelect && businessSelect.value) {
+                businessId = businessSelect.value;
+                this.currentBusinessId = businessId; // Update the property
+                console.log('✅ Got business ID from dropdown:', businessId);
+            } else {
+                // Fallback 2: Reload businesses and get first one
+                console.log('⚠️ No business in dropdown, reloading...');
+                await this.loadBusinessProfiles();
+                businessId = this.currentBusinessId;
+                
+                if (!businessId) {
+                    throw new Error('No business profiles found. Please create a business profile first.');
+                }
+                console.log('✅ Got business ID after reload:', businessId);
+            }
         }
         
-        // ✅ CONVERT HANDLE TO FULL URL
+        // Convert handle to URL
         let profileUrl;
         if (handleInput.includes('instagram.com/')) {
-            // Already a full URL
             profileUrl = handleInput;
         } else {
-            // Just a handle - convert to full URL
-            const cleanHandle = handleInput.replace('@', ''); // Remove @ if present
+            const cleanHandle = handleInput.replace('@', '');
             profileUrl = `https://instagram.com/${cleanHandle}`;
         }
         
         console.log('🔍 Converted to URL:', profileUrl);
+        console.log('🔍 Final business ID:', businessId);
         
         const requestBody = {
             profile_url: profileUrl,
             analysis_type: analysisType,
-            business_id: this.currentBusinessId
+            business_id: businessId
         };
         
         console.log('📤 Final request body:', requestBody);
@@ -2817,27 +2836,49 @@ async processBulkAnalysis(profiles, analysisType) {
 
 async loadBusinessProfiles() {
     try {
-        const { data: businesses } = await supabase
+        console.log('🔄 Loading business profiles for user:', this.user?.id);
+        
+        const { data: businesses, error } = await supabase
             .from('business_profiles')
             .select('*')
             .eq('user_id', this.user.id);
         
+        if (error) {
+            console.error('❌ Error loading businesses:', error);
+            return;
+        }
+        
+        console.log('📊 Found businesses:', businesses);
+        
         const businessSelect = document.getElementById('business-select');
-        if (businessSelect && businesses.length > 0) {
+        if (businessSelect && businesses && businesses.length > 0) {
             businessSelect.innerHTML = businesses.map(business => 
                 `<option value="${business.id}">${business.name}</option>`
             ).join('');
             
-            // ✅ SET THE CURRENT BUSINESS ID
+            // Set the current business ID
             this.currentBusinessId = businesses[0].id;
-            console.log('✅ Business loaded:', this.currentBusinessId);
+            console.log('✅ Business loaded and set:', this.currentBusinessId);
+            
+            // Update any business display
+            this.updateBusinessDisplay(businesses[0]);
+        } else {
+            console.log('⚠️ No businesses found or no business select element');
+            this.currentBusinessId = null;
         }
         
     } catch (error) {
-        console.error('Failed to load businesses:', error);
+        console.error('❌ Failed to load businesses:', error);
     }
-}  // ✅ SINGLE CLOSING BRACE
+}
 
+// Helper method to update business display
+updateBusinessDisplay(business) {
+    const businessNameEl = document.getElementById('current-business-name');
+    if (businessNameEl && business) {
+        businessNameEl.textContent = business.name;
+    }
+}
 closeModal(modalId) {  // ✅ PROPER METHOD DECLARATION
     const modal = document.getElementById(modalId);
     if (modal) {
