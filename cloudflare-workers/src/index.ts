@@ -268,7 +268,7 @@ async function saveAnalysisResults(
     'Content-Type': 'application/json'
   };
   
-  // ✅ FINAL: Using exact columns from your cleaned leads table
+  // ✅ FIXED: Correct data type mapping
   const leadPayload = {
     // Required fields
     user_id: userId,
@@ -286,26 +286,28 @@ async function saveAnalysisResults(
     profile_url: profileData.profilePicUrl,
     external_url: profileData.externalUrl,
     
-    // Analysis fields
+    // Analysis fields - FIXED MAPPING
     platform: 'instagram',
     analysis_type: analysisType,
-    score: analysisResult.score,
-    summary: analysisResult.reasoning,
-    niche_fit: analysisResult.category,
-    engagement_score: analysisResult.confidence,
-    reason: analysisResult.reasoning,
-    talking_points: analysisResult.contact_strategy.talking_points.join(', '),
-    outreach_message: outreachMessage,
+    score: analysisResult.score, // INTEGER - correct
+    summary: analysisResult.reasoning, // TEXT - correct
+    niche_fit: analysisResult.category, // TEXT - put category here instead
+    engagement_score: analysisResult.confidence || 75, // INTEGER - confidence score
+    reason: analysisResult.reasoning, // TEXT - reasoning
+    talking_points: Array.isArray(analysisResult.contact_strategy?.talking_points) 
+      ? analysisResult.contact_strategy.talking_points.join(', ') 
+      : '', // TEXT - join array to string
+    outreach_message: outreachMessage || '',
     
-    // Engagement metrics (if available)
+    // Engagement metrics (ensure they're numbers)
     avg_likes: profileData.engagement?.avgLikes || 0,
     avg_comments: profileData.engagement?.avgComments || 0,
     engagement_rate: profileData.engagement?.engagementRate || 0,
     
     // Optional fields
-    business_category: null, // Set if you have this data
-    timezone: null, // Set if you have this data
-    user_location: null, // Set if you have this data
+    business_category: null,
+    timezone: null,
+    user_location: null,
     
     // Timestamps
     request_timestamp: new Date().toISOString(),
