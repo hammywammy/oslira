@@ -191,19 +191,24 @@ async function fetchUserAndCredits(userId: string, env: Env): Promise<{ user: an
     'Content-Type': 'application/json'
   };
   
-  const [userResponse, creditsResponse] = await Promise.all([
-    fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`, { headers }),
-    fetch(`${env.SUPABASE_URL}/rest/v1/user_credits?user_id=eq.${userId}&select=credits`, { headers })
-  ]);
+  // ✅ UPDATED: Get credits directly from users table
+  const userResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`, { headers });
   
-  if (!userResponse.ok || !creditsResponse.ok) {
+  if (!userResponse.ok) {
     throw new Error('Failed to fetch user data');
   }
   
-  const [users, credits] = await Promise.all([userResponse.json(), creditsResponse.json()]);
-  if (!users.length) throw new Error('User not found');
+  const users = await userResponse.json();
+  if (!users.length) {
+    throw new Error('User not found');
+  }
   
-  return { user: users[0], credits: credits.length ? credits[0].credits : 0 };
+  const user = users[0];
+  
+  return { 
+    user, 
+    credits: user.credits || 0  // ✅ Get credits from user.credits column
+  };
 }
 
 async function fetchBusinessProfile(businessId: string, userId: string, env: Env): Promise<BusinessProfile> {
@@ -285,32 +290,56 @@ async function saveAnalysisResults(profileData: ProfileData, analysisResult: Ana
   if (!analysisResponse.ok) throw new Error('Failed to save analysis results');
 }
 
-async function updateCreditsAndTransaction(userId: string, creditsUsed: number, newBalance: number, description: string, transactionType: string, env: Env): Promise<void> {
+async function updateCreditsAndTransaction(
+  userId: string,
+  creditsUsed: number,
+  newBalance: number,
+  description: string,
+  transactionType: string,
+  env: Env
+): Promise<void> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
     'Content-Type': 'application/json'
   };
   
-  await Promise.all([
-    fetch(`${env.SUPABASE_URL}/rest/v1/user_credits?user_id=eq.${userId}`, {
+  // ✅ UPDATED: Update credits in users table
+  const updateResponse = await fetch(
+    `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
+    {
       method: 'PATCH',
       headers,
-      body: JSON.stringify({ credits: newBalance, updated_at: new Date().toISOString() })
-    }),
-    fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        user_id: userId,
-        type: transactionType,
-        amount: -creditsUsed,
-        balance_after: newBalance,
-        description,
-        created_at: new Date().toISOString()
+      body: JSON.stringify({ 
+        credits: newBalance, 
+        updated_at: new Date().toISOString() 
       })
-    })
-  ]);
+    }
+  );
+  
+  if (!updateResponse.ok) {
+    throw new Error('Failed to update credits');
+  }
+  
+  // Log transaction (keep this the same)
+  const transactionPayload = {
+    user_id: userId,
+    type: transactionType,
+    amount: -creditsUsed,
+    balance_after: newBalance,
+    description,
+    created_at: new Date().toISOString()
+  };
+  
+  const transactionResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(transactionPayload)
+  });
+  
+  if (!transactionResponse.ok) {
+    throw new Error('Failed to log credit transaction');
+  }
 }
 
 // ===============================================================================
