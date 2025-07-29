@@ -434,6 +434,7 @@ async function saveAnalysisResults(
   if (analysisType === 'deep') {
     analysisData = {
       user_id: userId,
+      username: profileData.username,
       analysis_type: 'deep',
     engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0), // ✅ Fix
     score_niche_fit: Math.round(parseFloat(analysisResult.niche_fit) || 0), // ✅ Fix
@@ -1359,6 +1360,7 @@ app.post('/v1/analyze', async (c) => {
     if (analysis_type === 'deep') {
       analysisData = {
         user_id: userId,
+        username: profileData.username,
         analysis_type: 'deep',
         
         // ✅ FIX: Convert all scores to integers
