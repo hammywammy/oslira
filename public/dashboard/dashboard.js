@@ -913,6 +913,8 @@ async bulkDeleteLeads() {
         }
     }
 
+// Fixed viewLead function with correct Supabase query
+
 async viewLead(leadId) {
     if (!leadId) {
         console.error('viewLead: leadId is required');
@@ -942,32 +944,26 @@ async viewLead(leadId) {
     modal.style.display = 'flex';
     
     try {
+        // FIXED: Removed 'type' column that doesn't exist in leads table
         const { data: lead, error: leadError } = await window.OsliraApp.supabase
             .from('leads')
             .select(`
                 id,
                 username,
+                full_name,
+                bio,
                 profile_url,
                 profile_pic_url,
                 platform,
                 score,
-                type,
+                followers_count,
                 business_id,
                 created_at,
-                lead_analyses (
-                    engagement_score,
-                    score_niche_fit,
-                    score_total,
-                    ai_version_id,
-                    outreach_message,
-                    selling_points,
-                    analysis_type,
-                    avg_comments,
-                    avg_likes,
-                    engagement_rate,
-                    audience_quality,
-                    engagement_insights
-                )
+                analysis_type,
+                outreach_message,
+                avg_likes,
+                avg_comments,
+                engagement_rate
             `)
             .eq('id', leadId)
             .eq('user_id', window.OsliraApp.user.id)
@@ -983,27 +979,22 @@ async viewLead(leadId) {
         
         console.log('📋 Lead data loaded:', lead); // Debug log
         
-        // FIXED: Better analysis data handling
-        const analysis = lead.lead_analyses?.[0] || {};
-        console.log('📊 Analysis data:', analysis); // Debug log
+        // Build analysis object from lead data
+        const analysis = {
+            score: lead.score,
+            category: lead.score >= 80 ? 'high_potential' : lead.score >= 60 ? 'medium_potential' : 'low_potential',
+            reasoning: `Lead scored ${lead.score}/100 based on profile analysis.`,
+            engagement_rate: lead.engagement_rate,
+            avg_likes: lead.avg_likes,
+            avg_comments: lead.avg_comments
+        };
         
-        // FIXED: Determine analysis type more intelligently
-        let analysisType = lead.type;
-        if (!analysisType) {
-            // Determine based on data presence
-            if (analysis.outreach_message || analysis.selling_points || analysis.engagement_score) {
-                analysisType = 'deep';
-            } else {
-                analysisType = 'light';
-            }
-        }
-        
-        console.log('🎯 Final analysis type:', analysisType); // Debug log
-        
+        // Get analysis type from lead data
+        const analysisType = lead.analysis_type || 'light';
         const score = lead.score || 0;
         const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
         
-        // Build the HTML content
+        // Build the HTML content using the corrected lead data
         const detailsHtml = this.buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass);
         
         detailsContainer.innerHTML = detailsHtml;
