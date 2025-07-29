@@ -184,6 +184,25 @@ function extractUsername(profileUrl: string): string {
 // SUPABASE OPERATIONS
 // ===============================================================================
 
+// ✅ UPDATE: Add this helper function for safe JSON parsing
+async function safeJsonParse(response: Response): Promise<any> {
+  const text = await response.text();
+  
+  if (!text || text.trim() === '') {
+    console.log('⚠️ Empty response received');
+    return null;
+  }
+  
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('❌ JSON parse error:', error);
+    console.error('❌ Response text:', text);
+    throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+  }
+}
+
+// ✅ UPDATE: Use safe parsing in fetchUserAndCredits
 async function fetchUserAndCredits(userId: string, env: Env): Promise<{ user: any; credits: number }> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
@@ -191,23 +210,27 @@ async function fetchUserAndCredits(userId: string, env: Env): Promise<{ user: an
     'Content-Type': 'application/json'
   };
   
-  // ✅ UPDATED: Get credits directly from users table
+  console.log('🔍 Fetching user:', userId);
+  
   const userResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`, { headers });
   
   if (!userResponse.ok) {
-    throw new Error('Failed to fetch user data');
+    console.error('❌ User fetch failed:', userResponse.status, userResponse.statusText);
+    throw new Error(`Failed to fetch user data: ${userResponse.status}`);
   }
   
-  const users = await userResponse.json();
-  if (!users.length) {
+  const users = await safeJsonParse(userResponse);
+  
+  if (!users || !users.length) {
     throw new Error('User not found');
   }
   
   const user = users[0];
+  console.log('✅ User found:', user.email, 'Credits:', user.credits);
   
   return { 
     user, 
-    credits: user.credits || 0  // ✅ Get credits from user.credits column
+    credits: user.credits || 0
   };
 }
 
