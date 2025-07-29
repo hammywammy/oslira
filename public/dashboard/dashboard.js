@@ -347,9 +347,11 @@ async loadRecentActivity() {
                 <tr class="lead-row" data-lead-id="${lead.id}">
                     <td style="padding: 16px;">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <label style="display: flex; align-items: center; cursor: pointer;">
-                                <input type="checkbox" class="lead-checkbox" value="${lead.id}" 
-                                       style="margin-right: 8px; cursor: pointer;">
+                            <label class="checkbox-container">
+                                <input type="checkbox" class="lead-checkbox" data-lead-id="${lead.id}" 
+                                       onchange="dashboard.toggleLeadSelection('${lead.id}')" 
+                                       ${this.selectedLeads.has(lead.id) ? 'checked' : ''}>
+                                <span class="checkmark"></span>
                             </label>
                             <div style="position: relative;">
                                 ${profilePicHtml}
@@ -398,60 +400,9 @@ async loadRecentActivity() {
         `;
     }
     
-    this.updateBulkActions();
+    // Update bulk actions visibility after rendering
+    this.updateBulkActionsVisibility();
 }
-
-    displayErrorState(message) {
-        const tableBody = document.getElementById('activity-table');
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--warning);">
-                        ${message}
-                    </td>
-                </tr>
-            `;
-        }
-    }
-
-    async loadStats() {
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
-        
-        if (!supabase || !user) {
-            this.displayDemoStats();
-            return;
-        }
-        
-        try {
-            const { count: totalLeads } = await supabase
-                .from('leads')
-                .select('*', { count: 'exact' })
-                .eq('user_id', user.id);
-            
-            const { data: leadsWithScores } = await supabase
-                .from('leads')
-                .select('score')
-                .eq('user_id', user.id)
-                .not('score', 'is', null);
-            
-            const avgScore = leadsWithScores?.length > 0 
-                ? Math.round(leadsWithScores.reduce((sum, lead) => sum + (lead.score || 0), 0) / leadsWithScores.length)
-                : 0;
-            
-            const { count: highValueLeads } = await supabase
-                .from('leads')
-                .select('*', { count: 'exact' })
-                .eq('user_id', user.id)
-                .gte('score', 80);
-            
-            this.updateStatsUI(totalLeads || 0, avgScore, highValueLeads || 0);
-            
-        } catch (error) {
-            console.error('Error loading stats:', error);
-            this.displayDemoStats();
-        }
-    }
 
     displayDemoStats() {
         this.updateStatsUI(2, 78, 1);
@@ -834,95 +785,111 @@ showMessage(message, type = 'error') {
         this.updateBulkActionsVisibility();
         this.updateSelectAllButton();
     }
-
-    updateBulkActionsVisibility() {
-        const bulkActions = document.getElementById('bulk-actions');
-        const selectedCount = document.getElementById('selected-count');
-        
-        if (bulkActions && selectedCount) {
-            if (this.selectedLeads.size > 0) {
-                bulkActions.style.display = 'flex';
-                selectedCount.textContent = this.selectedLeads.size;
-            } else {
-                bulkActions.style.display = 'none';
-            }
-        }
+updateBulkActions() {
+    this.updateBulkActionsVisibility();
+}
+    
+updateBulkActionsVisibility() {
+    const bulkActions = document.getElementById('bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+    const hasSelections = this.selectedLeads.size > 0;
+    
+    if (bulkActions) {
+        bulkActions.style.display = hasSelections ? 'flex' : 'none';
     }
-
-    updateSelectAllButton() {
-        const selectAllBtn = document.getElementById('select-all-btn');
-        if (!selectAllBtn) return;
-        
-        const visibleLeads = document.querySelectorAll('.lead-checkbox').length;
-        const selectedCount = this.selectedLeads.size;
-        
-        if (selectedCount === 0) {
-            selectAllBtn.innerHTML = '☑️ Select All';
-        } else if (selectedCount === visibleLeads && visibleLeads > 0) {
-            selectAllBtn.innerHTML = '☐ Deselect All';
-        } else {
-            selectAllBtn.innerHTML = `☑️ Select All (${selectedCount}/${visibleLeads})`;
-        }
+    
+    if (selectedCount) {
+        selectedCount.textContent = this.selectedLeads.size;
     }
+}
+
+
+   updateSelectAllButton() {
+    const selectAllBtn = document.getElementById('select-all-btn');
+    if (!selectAllBtn) return;
+    
+    const visibleLeads = this.allLeads.filter(lead => {
+        const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
+        return row && row.style.display !== 'none';
+    });
+    
+    const allSelected = visibleLeads.length > 0 && this.selectedLeads.size === visibleLeads.length;
+    
+    if (allSelected) {
+        selectAllBtn.innerHTML = '☑️ Deselect All';
+    } else {
+        selectAllBtn.innerHTML = '☑️ Select All';
+    }
+}
 
 async bulkDeleteLeads() {
-        const selectedCount = this.selectedLeads.size;
-        
-        if (selectedCount === 0) {
-            window.OsliraApp.showMessage('No leads selected for deletion', 'error');
-            return;
-        }
-        
-        if (!confirm(`Are you sure you want to delete ${selectedCount} lead${selectedCount > 1 ? 's' : ''}? This action cannot be undone.`)) {
-            return;
-        }
-        
+    if (this.selectedLeads.size === 0) {
+        window.OsliraApp.showMessage('No leads selected for deletion', 'warning');
+        return;
+    }
+    
+    const confirmMessage = `Are you sure you want to delete ${this.selectedLeads.size} selected lead${this.selectedLeads.size > 1 ? 's' : ''}? This action cannot be undone.`;
+    
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    if (!bulkDeleteBtn) return;
+    
+    const originalText = bulkDeleteBtn.innerHTML;
+    bulkDeleteBtn.innerHTML = '🔄 Deleting...';
+    bulkDeleteBtn.disabled = true;
+    
+    try {
         const supabase = window.OsliraApp.supabase;
         const user = window.OsliraApp.user;
         
         if (!supabase || !user) {
-            window.OsliraApp.showMessage('Database not available', 'error');
-            return;
+            throw new Error('Database connection not available');
         }
         
-        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
-        const originalText = bulkDeleteBtn.innerHTML;
-        bulkDeleteBtn.innerHTML = '🔄 Deleting...';
-        bulkDeleteBtn.disabled = true;
+        // Convert Set to Array for database query
+        const leadIds = Array.from(this.selectedLeads);
         
-        try {
-            const leadIds = Array.from(this.selectedLeads);
+        // Delete from lead_analyses first (foreign key constraint)
+        const { error: analysisError } = await supabase
+            .from('lead_analyses')
+            .delete()
+            .in('lead_id', leadIds);
             
-            // Delete analyses first
-            await supabase
-                .from('lead_analyses')
-                .delete()
-                .in('lead_id', leadIds)
-                .eq('user_id', user.id);
-            
-            // Delete leads
-            const { error } = await supabase
-                .from('leads')
-                .delete()
-                .in('id', leadIds)
-                .eq('user_id', user.id);
-            
-            if (error) throw error;
-            
-            window.OsliraApp.showMessage(`Successfully deleted ${selectedCount} lead${selectedCount > 1 ? 's' : ''}`, 'success');
-            
-            // Clear selection and refresh
-            this.selectedLeads.clear();
-            await this.loadDashboardData();
-            
-        } catch (error) {
-            console.error('Bulk deletion failed:', error);
-            window.OsliraApp.showMessage(`Deletion failed: ${error.message}`, 'error');
-        } finally {
-            bulkDeleteBtn.innerHTML = originalText;
-            bulkDeleteBtn.disabled = false;
+        if (analysisError) {
+            console.warn('Some analysis records could not be deleted:', analysisError.message);
         }
+        
+        // Delete from leads table
+        const { error: leadsError } = await supabase
+            .from('leads')
+            .delete()
+            .in('id', leadIds)
+            .eq('user_id', user.id); // Security: only delete user's own leads
+            
+        if (leadsError) {
+            throw leadsError;
+        }
+        
+        window.OsliraApp.showMessage(
+            `Successfully deleted ${leadIds.length} lead${leadIds.length > 1 ? 's' : ''}`, 
+            'success'
+        );
+        
+        // Clear selection and refresh
+        this.selectedLeads.clear();
+        await this.loadDashboardData();
+        
+    } catch (error) {
+        console.error('Bulk deletion failed:', error);
+        window.OsliraApp.showMessage(`Deletion failed: ${error.message}`, 'error');
+    } finally {
+        bulkDeleteBtn.innerHTML = originalText;
+        bulkDeleteBtn.disabled = false;
     }
+}
 
 // Fixed viewLead function with correct Supabase query
 
