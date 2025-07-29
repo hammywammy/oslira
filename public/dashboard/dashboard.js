@@ -1716,72 +1716,194 @@ contactSupport(type = 'support') {
     window.location.href = `mailto:${email}?subject=${subject}`;
 }
 
-   buildLeadDetailsHTML(lead) {
-    const analysis = lead.lead_analyses?.[0] || {};
-    const hasAnalysisData = analysis && 
-    typeof analysis === 'object' && 
-    analysis !== null && 
-    Object.keys(analysis).length > 0;
+ // Fixed buildLeadDetailsHTML function that properly handles analysis_type
 
-    const analysisType = lead.type || (hasAnalysisData ? 'deep' : 'light');
-    const score = lead.score || 0;
-    const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
-    const isDeepAnalysis = analysisType === 'deep';
-    const platform = lead.platform || 'Instagram';
+buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass) {
+    // FIXED: Use analysis_type from lead data, not lead.type
+    const actualAnalysisType = lead.analysis_type || analysisType || 'light';
+    const hasOutreachMessage = lead.outreach_message && lead.outreach_message.trim().length > 0;
+    const isDeepAnalysis = actualAnalysisType === 'deep';
     
     console.log('🔍 Building lead details:', { 
-        lead: lead.username, 
-        analysisType, 
-        isDeepAnalysis, 
-        hasAnalysisData, 
-        analysisKeys: analysis && typeof analysis === 'object' && analysis !== null ? Object.keys(analysis) : []
+        username: lead.username,
+        analysis_type_from_db: lead.analysis_type,
+        actual_analysis_type: actualAnalysisType,
+        is_deep_analysis: isDeepAnalysis,
+        has_outreach_message: hasOutreachMessage,
+        engagement_rate: lead.engagement_rate,
+        avg_likes: lead.avg_likes,
+        avg_comments: lead.avg_comments
     });
     
-    // Build profile header with profile picture
-    let html = this.buildProfileHeader(lead, analysisType, scoreClass, platform);
+    const score = lead.score || 0;
+    const finalScoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+    const platform = lead.platform || 'Instagram';
     
-    // Build information sections
-    html += `<div class="detail-grid">`;
-    html += this.buildBasicInfoSection(lead, analysisType, platform, score);
-    html += this.buildAnalysisStatusSection(lead, analysisType);
+    // Build the lead details HTML
+    let html = `
+        <div class="lead-details-container">
+            <!-- Profile Header -->
+            <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 24px; padding: 24px; background: linear-gradient(135deg, var(--bg-light), #f8fafc); border-radius: 16px; border: 1px solid var(--border-light);">
+                <div style="flex: 1;">
+                    <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 24px;">@${lead.username}</h3>
+                    <p style="margin: 0 0 4px 0; color: var(--text-secondary); font-size: 16px;">${lead.full_name || 'Instagram Profile'}</p>
+                    <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">${lead.bio || 'No bio available'}</p>
+                    <div style="margin-top: 12px;">
+                        <span style="background: ${isDeepAnalysis ? 'var(--accent-teal)' : 'var(--primary-blue)'}; color: white; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 600;">
+                            ${isDeepAnalysis ? '🔍 Deep Analysis' : '⚡ Light Analysis'}
+                        </span>
+                    </div>
+                </div>
+                <div style="text-align: center; padding: 20px; background: white; border-radius: 12px; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="font-size: 36px; font-weight: 800; color: var(--primary-blue); line-height: 1; margin-bottom: 4px;">
+                        ${score}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+                        LEAD SCORE
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Basic Information Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
+                <!-- Profile Stats -->
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <h4 style="margin: 0 0 16px 0; color: var(--text-primary); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        📊 Profile Statistics
+                    </h4>
+                    <div style="display: grid; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Followers:</span>
+                            <span style="font-weight: 600; color: var(--text-primary);">${lead.followers_count ? lead.followers_count.toLocaleString() : 'N/A'}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Platform:</span>
+                            <span style="font-weight: 600; color: var(--text-primary);">${platform}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Analysis Date:</span>
+                            <span style="font-weight: 600; color: var(--text-primary);">${new Date(lead.created_at).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Analysis Status -->
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <h4 style="margin: 0 0 16px 0; color: var(--text-primary); font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                        🎯 Analysis Details
+                    </h4>
+                    <div style="display: grid; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Type:</span>
+                            <span style="font-weight: 600; color: ${isDeepAnalysis ? 'var(--accent-teal)' : 'var(--primary-blue)'};">
+                                ${isDeepAnalysis ? 'Deep Analysis' : 'Light Analysis'}
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Status:</span>
+                            <span style="font-weight: 600; color: var(--success);">✓ Complete</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Category:</span>
+                            <span style="font-weight: 600; color: var(--text-primary);">
+                                ${score >= 80 ? 'High Potential' : score >= 60 ? 'Medium Potential' : 'Low Potential'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    `;
     
-    // Add advanced sections for deep analysis
-   if (isDeepAnalysis && analysis && typeof analysis === 'object' && analysis !== null && Object.keys(analysis).length > 0) {
-        console.log('📊 Adding advanced sections for deep analysis');
-        html += this.buildAdvancedMetricsSection(analysis);
-        html += this.buildEngagementSection(analysis);
-        html += this.buildSellingPointsSection(analysis);
-        html += this.buildAIInsightsSection(analysis);
+    // Add Deep Analysis sections if this is a deep analysis
+    if (isDeepAnalysis) {
+        console.log('📊 Adding deep analysis sections');
+        
+        html += `
+            <!-- Engagement Metrics (Deep Analysis Only) -->
+            <div style="background: linear-gradient(135deg, #EBF8FF, #DBEAFE); padding: 24px; border-radius: 16px; border: 1px solid var(--primary-blue); margin-bottom: 24px;">
+                <h4 style="margin: 0 0 20px 0; color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                    🔥 Engagement Analysis
+                    <span style="background: var(--accent-teal); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">Premium</span>
+                </h4>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: 700; color: var(--primary-blue); margin-bottom: 4px;">
+                            ${lead.avg_likes || 'N/A'}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Average Likes</div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: 700; color: var(--primary-blue); margin-bottom: 4px;">
+                            ${lead.avg_comments || 'N/A'}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Average Comments</div>
+                    </div>
+                    
+                    <div style="text-align: center; padding: 16px; background: rgba(255, 255, 255, 0.8); border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: 700; color: var(--primary-blue); margin-bottom: 4px;">
+                            ${lead.engagement_rate ? (lead.engagement_rate * 100).toFixed(1) + '%' : 'N/A'}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Engagement Rate</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add Outreach Message section if available
+        if (hasOutreachMessage) {
+            console.log('💬 Adding outreach message section');
+            html += `
+                <!-- Personalized Outreach Message -->
+                <div style="background: linear-gradient(135deg, #F0FDF9, #ECFDF5); padding: 24px; border-radius: 16px; border: 1px solid var(--accent-teal); margin-bottom: 24px;">
+                    <h4 style="margin: 0 0 16px 0; color: var(--accent-teal); font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                        💬 Personalized Outreach Message
+                        <span style="background: var(--accent-teal); color: white; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">AI Generated</span>
+                    </h4>
+                    
+                    <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 16px; border: 1px solid rgba(6, 182, 212, 0.2);">
+                        <p style="margin: 0; color: var(--text-primary); line-height: 1.6; font-style: italic; font-size: 15px;">
+                            "${lead.outreach_message}"
+                        </p>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px;">
+                        <button onclick="navigator.clipboard.writeText('${lead.outreach_message.replace(/'/g, "\\'")}').then(() => window.OsliraApp.showMessage('Message copied to clipboard!', 'success'))" 
+                                style="background: var(--accent-teal); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; flex: 1;">
+                            📋 Copy Message
+                        </button>
+                        <button onclick="window.open('https://instagram.com/${lead.username}', '_blank')" 
+                                style="background: #E1306C; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                            📱 Open Instagram
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
     } else {
-        console.log('⚠️ Not adding advanced sections:', { isDeepAnalysis, hasAnalysisData });
-    }
-    
-    html += `</div>`; // Close detail-grid
-    
-    // Add outreach message section for deep analysis
-    if (isDeepAnalysis && analysis.outreach_message) {
-        console.log('💬 Adding outreach message section');
-        html += this.buildOutreachMessageSection(analysis.outreach_message);
-    }
-    
-    // Add upgrade prompt for light analysis
-    if (analysisType === 'light') {
+        // Add upgrade prompt for light analysis
         console.log('⬆️ Adding upgrade prompt for light analysis');
-        html += this.buildUpgradePromptSection();
+        html += `
+            <!-- Upgrade Prompt for Light Analysis -->
+            <div style="background: linear-gradient(135deg, #FEF3C7, #FDE68A); padding: 24px; border-radius: 16px; border: 1px solid #F59E0B; margin-bottom: 24px;">
+                <h4 style="margin: 0 0 12px 0; color: #92400E; font-size: 18px;">🚀 Unlock Deep Insights</h4>
+                <p style="margin: 0 0 16px 0; color: #92400E; line-height: 1.5;">
+                    This was a light analysis. Upgrade to deep analysis to get engagement metrics, personalized outreach messages, and detailed audience insights.
+                </p>
+                <button onclick="dashboard.showAnalysisModal()" 
+                        style="background: #F59E0B; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                    🔍 Run Deep Analysis
+                </button>
+            </div>
+        `;
     }
     
-    // FIXED: Return the dynamically built HTML instead of hardcoded HTML
+    // Close container
+    html += `</div>`;
+    
+    console.log('✅ Lead details HTML built successfully');
     return html;
-}
-    parseEngagementData(analysis) {
-    // Extract engagement data from analysis or provide defaults
-    return {
-        avgComments: analysis.avg_comments || '24',
-        avgLikes: analysis.avg_likes || '1.2K',
-        engagementRate: analysis.engagement_rate || '3.8',
-        audienceQuality: analysis.audience_quality || 'High',
-        insights: analysis.engagement_insights || null
-    };
 }
 
 generateQualityAssessment(analysis) {
