@@ -2811,58 +2811,83 @@ async processBulkAnalysis(profiles, analysisType) {
 
     updateCreditsDisplay() {
     const user = window.OsliraApp.user;
-    if (!user) return;
+    if (!user) {
+        console.warn('⚠️ No user data available for credits display');
+        return;
+    }
     
-    // Update credits in the UI
+    const credits = user.credits || 0;
+    console.log('🔄 Updating credits display:', credits);
+    
+    // Update credits in the UI - CHECK IF ELEMENTS EXIST
     const creditsElements = document.querySelectorAll('.credits-display, [data-credits], #credits-count');
-    creditsElements.forEach(element => {
-        if (element) {
-            element.textContent = user.credits || 0;
-        }
-    });
+    if (creditsElements.length > 0) {
+        creditsElements.forEach(element => {
+            if (element) {
+                element.textContent = credits;
+            }
+        });
+        console.log('✅ Updated', creditsElements.length, 'credit elements');
+    }
     
     // Update credits in header/nav if it exists
     const headerCredits = document.querySelector('#header-credits, .header-credits, .nav-credits');
     if (headerCredits) {
-        headerCredits.textContent = `${user.credits || 0} credits`;
+        headerCredits.textContent = `${credits} credits`;
+        console.log('✅ Updated header credits');
     }
     
     // Update any credit badges
     const creditBadges = document.querySelectorAll('.credit-badge, .credits-badge');
-    creditBadges.forEach(badge => {
-        if (badge) {
-            badge.textContent = user.credits || 0;
+    if (creditBadges.length > 0) {
+        creditBadges.forEach(badge => {
+            if (badge) {
+                badge.textContent = credits;
+            }
+        });
+        console.log('✅ Updated', creditBadges.length, 'credit badges');
+    }
+    
+    // Update any elements with specific IDs that might exist
+    const specificElements = [
+        'user-credits',
+        'credits-remaining', 
+        'account-credits',
+        'balance-display'
+    ];
+    
+    specificElements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = credits;
+            console.log('✅ Updated element:', id);
         }
     });
     
-    console.log('✅ Credits display updated:', user.credits);
+    console.log('✅ Credits display update completed');
+}
+
+    async refreshCreditsDisplay() {
+    try {
+        // Check if we have the API function
+        if (!window.OsliraApp || !window.OsliraApp.apiRequest) {
+            console.warn('⚠️ OsliraApp.apiRequest not available');
+            return;
+        }
+        
+        // For now, just update with current user data since we don't have a /v1/user endpoint
+        if (window.OsliraApp.user) {
+            this.updateCreditsDisplay();
+        } else {
+            console.warn('⚠️ No user data available for refresh');
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to refresh credits display:', error);
+        // Don't throw - just log the error
+    }
 }
     
-    async refreshCreditsDisplay() {
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
-        
-        if (!supabase || !user) return;
-        
-        try {
-            const { data: userData, error } = await supabase
-                .from('users')
-                .select('subscription_plan, subscription_status, credits')
-                .eq('id', user.id)
-                .single();
-
-            if (error) {
-                console.warn('Error refreshing credits:', error);
-                return;
-            }
-
-            this.updateSubscriptionUI(userData.subscription_plan, userData.subscription_status, userData.credits);
-            
-        } catch (error) {
-            console.error('Error refreshing credits:', error);
-        }
-    }
-
 async loadBusinessProfiles() {
     try {
         console.log('🔄 Loading business profiles for user:', this.user?.id);
