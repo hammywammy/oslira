@@ -1096,7 +1096,7 @@ app.post('/v1/analyze', async (c) => {
         creditCost,
         userResult.credits - creditCost,
         `${analysis_type} analysis for @${username}`,
-        'analysis',
+        'use', // ✅ FIXED: Use 'use' instead of 'analysis'
         c.env
       )
     ]);
@@ -1215,13 +1215,13 @@ app.post('/v1/bulk-analyze', async (c) => {
     // Update credits
     if (creditsUsed > 0) {
       await updateCreditsAndTransaction(
-        userId,
-        creditsUsed,
-        userResult.credits - creditsUsed,
-        `Bulk ${analysis_type} analysis (${successful} profiles)`,
-        'bulk',
-        c.env
-      );
+  userId,
+  creditsUsed,
+  userResult.credits - creditsUsed,
+  `Bulk ${analysis_type} analysis (${successful} profiles)`,
+  'use',  // ✅ CORRECT - use 'use' for credit deductions
+  c.env
+);
     }
     
     const totalTime = Date.now() - startTime;
