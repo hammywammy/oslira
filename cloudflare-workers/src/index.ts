@@ -78,6 +78,15 @@ interface BusinessProfile {
 
 interface AnalysisResult {
   score: number;
+  
+  // ✅ ADD: Fields needed for database
+  engagement_score: number;
+  niche_fit: number;
+  audience_quality: string;
+  engagement_insights: string;
+  selling_points: string[];
+  
+  // ✅ KEEP: Existing fields
   category: 'high_potential' | 'medium_potential' | 'low_potential' | 'not_suitable';
   reasoning: string;
   deep_research_summary: string;
@@ -327,10 +336,20 @@ async function saveLeadAndAnalysis(
     // STEP 1: Save to leads table (always)
     console.log('💾 Saving to leads table:', leadData.username);
     
+    // Ensure all numeric fields are properly converted
+    const cleanLeadData = {
+      ...leadData,
+      score: Math.round(parseFloat(leadData.score) || 0),
+      followers_count: parseInt(leadData.followers_count) || 0,
+      avg_likes: parseInt(leadData.avg_likes) || 0,
+      avg_comments: parseInt(leadData.avg_comments) || 0,
+      engagement_rate: parseFloat(leadData.engagement_rate) || 0
+    };
+
     const leadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
       headers: { ...headers, Prefer: 'return=representation' },
-      body: JSON.stringify(leadData)
+      body: JSON.stringify(cleanLeadData)
     });
 
     if (!leadResponse.ok) {
@@ -354,15 +373,27 @@ async function saveLeadAndAnalysis(
     if (analysisType === 'deep' && analysisData) {
       console.log('📊 Saving to lead_analyses table for deep analysis');
       
-      const analysisPayload = {
+      // Ensure all required fields have values and proper types
+      const cleanAnalysisData = {
         ...analysisData,
-        lead_id: leadId, // Link to the lead record
+        lead_id: leadId,
+        engagement_score: Math.round(parseFloat(analysisData.engagement_score) || 0),
+        score_niche_fit: Math.round(parseFloat(analysisData.score_niche_fit) || 0),
+        score_total: Math.round(parseFloat(analysisData.score_total) || 0),
+        avg_likes: parseInt(analysisData.avg_likes) || 0,
+        avg_comments: parseInt(analysisData.avg_comments) || 0,
+        engagement_rate: parseFloat(analysisData.engagement_rate) || 0,
+        audience_quality: analysisData.audience_quality || 'Unknown',
+        engagement_insights: analysisData.engagement_insights || 'No insights available',
+        selling_points: analysisData.selling_points || null
       };
+
+      console.log('📊 Analysis payload:', JSON.stringify(cleanAnalysisData, null, 2));
 
       const analysisResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/lead_analyses`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(analysisPayload)
+        body: JSON.stringify(cleanAnalysisData)
       });
 
       if (!analysisResponse.ok) {
@@ -395,7 +426,6 @@ async function saveLeadAndAnalysis(
     throw new Error(`Database save failed: ${error.message}`);
   }
 }
-
 // ALSO: Update your saveAnalysisResults function to properly call saveLeadAndAnalysis
 async function saveAnalysisResults(
   profileData: ProfileData,
@@ -405,28 +435,24 @@ async function saveAnalysisResults(
   analysisType: string,
   outreachMessage: string,
   env: Env
-): Promise<void> {
+): Promise<string> {
   
-  // Prepare data for leads table with ONLY existing columns
+  // Prepare data for leads table
   const leadData = {
-    // Core required fields
     user_id: userId,
     business_id: businessId,
     username: profileData.username,
-    full_name: profileData.displayName || null,
-    bio: profileData.bio || null,
     platform: 'instagram',
+    profile_url: `https://instagram.com/${profileData.username}/`,
     profile_pic_url: profileData.profilePicUrl || null,
-    score: Math.round(parseFloat(analysisResult.score) || 0), // 8.5 -> 9
-    analysis_type: data.analysis_type,
+    score: analysisResult.score || 0, // Will be converted to int in saveLeadAndAnalysis
+    analysis_type: analysisType,
     followers_count: profileData.followersCount || 0,
     avg_likes: profileData.engagement?.avgLikes || 0,
     avg_comments: profileData.engagement?.avgComments || 0,
     engagement_rate: profileData.engagement?.engagementRate || 0,
     outreach_message: outreachMessage || null,
     created_at: new Date().toISOString()
-
-    
   };
 
   // Prepare data for lead_analyses table (deep only)
@@ -436,27 +462,32 @@ async function saveAnalysisResults(
       user_id: userId,
       username: profileData.username,
       analysis_type: 'deep',
-    engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0), // ✅ Fix
-    score_niche_fit: Math.round(parseFloat(analysisResult.niche_fit) || 0), // ✅ Fix
-    score_total: Math.round(parseFloat(analysisResult.score) || 0), // ✅ Fix
+      
+      // AI analysis fields - now properly provided by updated prompts
+      engagement_score: analysisResult.engagement_score || 0,
+      score_niche_fit: analysisResult.niche_fit || 0,
+      score_total: analysisResult.score || 0,
+      audience_quality: analysisResult.audience_quality || 'Unknown',
+      engagement_insights: analysisResult.engagement_insights || 'No insights available',
+      
+      // Message and selling points
       outreach_message: outreachMessage || null,
       selling_points: Array.isArray(analysisResult.selling_points) 
         ? analysisResult.selling_points.join('|') 
         : (analysisResult.selling_points ? String(analysisResult.selling_points) : null),
+      
+      // Profile engagement data
       avg_comments: profileData.engagement?.avgComments || 0,
       avg_likes: profileData.engagement?.avgLikes || 0,
-      engagement_rate: profileData.engagement?.engagementRate || 0,
-      audience_quality: analysisResult.audience_quality || null,
-      engagement_insights: Array.isArray(analysisResult.engagement_insights)
-        ? analysisResult.engagement_insights.join('|')
-        : (analysisResult.engagement_insights ? String(analysisResult.engagement_insights) : null),
-      created_at: new Date().toISOString()
+      engagement_rate: profileData.engagement?.engagementRate || 0
     };
   }
 
-  // Use the saveLeadAndAnalysis function
-  await saveLeadAndAnalysis(leadData, analysisData, analysisType, env);
+  // Use the saveLeadAndAnalysis function and return the leadId
+  const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysisType, env);
+  return leadId;
 }
+
 async function updateCreditsAndTransaction(
   userId: string,
   creditsUsed: number,
@@ -1013,20 +1044,25 @@ Provide a professional assessment with human-like judgment. Score naturally (e.g
 
 Return JSON:
 {
-  "score": number,
-  "category": "high_potential|medium_potential|low_potential|not_suitable", 
+  "score": 75,
+  "engagement_score": 0,
+  "niche_fit": 68,
+  "audience_quality": "Medium",
+  "engagement_insights": "Limited engagement data available for light analysis",
+  "category": "medium_potential", 
   "reasoning": "human-style assessment explanation",
   "deep_research_summary": "brief professional profile summary",
   "personal_brand_themes": ["theme1", "theme2"],
   "engagement_behavior": "brief assessment", 
   "business_signals": ["signal1", "signal2"],
   "risk_factors": ["risk1", "risk2"],
+  "selling_points": [],
   "contact_strategy": {
     "timing": "when to reach out",
     "approach": "how to approach", 
     "talking_points": ["point1", "point2"]
   },
-  "confidence": number
+  "confidence": 75
 }`;
 }
 
@@ -1045,26 +1081,40 @@ Conduct a thorough assessment. Think like a human analyst who carefully reviewed
 
 Return JSON:
 {
-  "score": number,
-  "category": "high_potential|medium_potential|low_potential|not_suitable",
+  "score": 85,
+  "engagement_score": 78,
+  "niche_fit": 92,
+  "audience_quality": "High",
+  "engagement_insights": "Strong authentic engagement with high-value business audience, regular interaction patterns suggest active community",
+  "category": "high_potential",
   "reasoning": "thoughtful human assessment of their business potential", 
   "deep_research_summary": "comprehensive social intelligence dossier",
   "personal_brand_themes": ["theme1", "theme2", "theme3"],
   "engagement_behavior": "detailed engagement and audience analysis",
   "business_signals": ["signal1", "signal2", "signal3"], 
   "risk_factors": ["risk1", "risk2"],
+  "selling_points": ["specific selling point 1", "specific selling point 2", "specific selling point 3"],
   "contact_strategy": {
     "timing": "optimal outreach timing with rationale",
     "approach": "personalized approach strategy",
     "talking_points": ["specific point1", "specific point2", "specific point3"]
   },
-  "confidence": number
+  "confidence": 87
 }`;
 }
 
 function validateAnalysisResult(result: any): AnalysisResult {
   return {
     score: Math.min(Math.max(result.score || 0, 0), 100),
+    
+    // ✅ ADD: New fields that you need for database
+    engagement_score: Math.min(Math.max(result.engagement_score || 0, 0), 100),
+    niche_fit: Math.min(Math.max(result.niche_fit || 0, 0), 100),
+    audience_quality: result.audience_quality || 'Unknown',
+    engagement_insights: result.engagement_insights || 'No insights available',
+    selling_points: Array.isArray(result.selling_points) ? result.selling_points : [],
+    
+    // ✅ KEEP: Existing fields
     category: ['high_potential', 'medium_potential', 'low_potential', 'not_suitable'].includes(result.category) 
       ? result.category : 'low_potential',
     reasoning: result.reasoning || 'No reasoning provided',
@@ -1291,7 +1341,7 @@ app.post('/v1/analyze', async (c) => {
       return c.json(createStandardResponse(false, undefined, 'Invalid token', requestId), 401);
     }
     
-    // ✅ FIX: Use consistent variable naming throughout
+    // Request validation
     const body = await c.req.json();
     const { profile_url, analysis_type = 'light', business_id } = body;
     
@@ -1321,32 +1371,29 @@ app.post('/v1/analyze', async (c) => {
     // Scraping
     const profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
     
-    // AI Analysis  
-    const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env);
+    // AI Analysis with updated prompts that return the fields we need
+    const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
     
     // Message generation (deep only)
     let outreachMessage = '';
     if (analysis_type === 'deep') {
       try {
-        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
+        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
       } catch (messageError: any) {
         console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
       }
     }
     
-    // ✅ FIX: Database save with proper variable names and integer conversion
+    // Prepare lead data for leads table
     const leadData = {
       user_id: userId,
-      business_id: business_id,  // ✅ Use business_id from destructuring
+      business_id: business_id,
       username: profileData.username,
       platform: 'instagram',
-      profile_url: profile_url,  // ✅ Use profile_url from destructuring  
+      profile_url: profile_url,
       profile_pic_url: profileData.profilePicUrl || null,
-      
-      // ✅ FIX: Convert score to integer
-      score: Math.round(parseFloat(analysisResult.score) || 0),
-      
-      analysis_type: analysis_type,  // ✅ Use analysis_type from destructuring
+      score: analysisResult.score || 0, // Will be converted to int in saveLeadAndAnalysis
+      analysis_type: analysis_type,
       followers_count: profileData.followersCount || 0,
       avg_likes: profileData.engagement?.avgLikes || 0,
       avg_comments: profileData.engagement?.avgComments || 0,
@@ -1355,7 +1402,7 @@ app.post('/v1/analyze', async (c) => {
       created_at: new Date().toISOString()
     };
     
-    // Analysis data for deep analysis
+    // Prepare analysis data for lead_analyses table (deep only)
     let analysisData = null;
     if (analysis_type === 'deep') {
       analysisData = {
@@ -1363,18 +1410,23 @@ app.post('/v1/analyze', async (c) => {
         username: profileData.username,
         analysis_type: 'deep',
         
-        // ✅ FIX: Convert all scores to integers
-        engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0),
-        score_niche_fit: Math.round(parseFloat(analysisResult.niche_fit) || 0), 
-        score_total: Math.round(parseFloat(analysisResult.score) || 0),
+        // AI analysis fields - now properly provided by updated prompts
+        engagement_score: analysisResult.engagement_score || 0,
+        score_niche_fit: analysisResult.niche_fit || 0,
+        score_total: analysisResult.score || 0,
+        audience_quality: analysisResult.audience_quality || 'Unknown',
+        engagement_insights: analysisResult.engagement_insights || 'No insights available',
         
+        // Message and selling points
         outreach_message: outreachMessage || null,
-        selling_points: analysisResult.selling_points || null,
+        selling_points: Array.isArray(analysisResult.selling_points) 
+          ? analysisResult.selling_points.join('|') 
+          : null,
+        
+        // Profile engagement data
         avg_comments: profileData.engagement?.avgComments || 0,
         avg_likes: profileData.engagement?.avgLikes || 0,
-        engagement_rate: profileData.engagement?.engagementRate || 0,
-        audience_quality: analysisResult.audience_quality || null,
-        engagement_insights: analysisResult.engagement_insights || null
+        engagement_rate: profileData.engagement?.engagementRate || 0
       };
     }
     
@@ -1382,10 +1434,14 @@ app.post('/v1/analyze', async (c) => {
     const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
     
     // Update credits
-    await Promise.all([
-      updateCreditsAndTransaction(userId, creditCost, userResult.credits - creditCost, 
-        `${analysis_type} analysis for @${profileData.username}`, leadId, c.env)
-    ]);
+    await updateCreditsAndTransaction(
+      userId, 
+      creditCost, 
+      userResult.credits - creditCost, 
+      `${analysis_type} analysis for @${profileData.username}`, 
+      'analysis',
+      c.env
+    );
     
     const totalTime = Date.now() - startTime;
     logger('info', 'Analysis completed', { username, score: analysisResult.score, totalTime, requestId });
@@ -1409,7 +1465,6 @@ app.post('/v1/analyze', async (c) => {
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 });
-
 // ✅ ALSO ADD this helper function to convert scores safely:
 function convertScoreToInteger(score: any): number {
   if (score === null || score === undefined || score === '') return 0;
@@ -1437,7 +1492,7 @@ app.post('/v1/bulk-analyze', async (c) => {
       return c.json(createStandardResponse(false, undefined, 'Invalid token', requestId), 401);
     }
     
-    // Request validation - FIXED: Use consistent variable names  
+    // Request validation
     const body = await c.req.json();
     const { profiles, analysis_type = 'light', business_id } = body;
     
@@ -1480,15 +1535,61 @@ app.post('/v1/bulk-analyze', async (c) => {
         
         let outreachMessage = '';
         if (analysis_type === 'deep') {
-          outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+          try {
+            outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+          } catch (messageError: any) {
+            console.warn(`⚠️ Message generation failed for @${username}:`, messageError.message);
+          }
         }
         
-        // FIXED: Save to database using correct variable names
-        await saveAnalysisResults(profileData, analysisResult, business_id, userId, analysis_type, outreachMessage, c.env);
+        // Prepare lead data
+        const leadData = {
+          user_id: userId,
+          business_id: business_id,
+          username: profileData.username,
+          platform: 'instagram',
+          profile_url: profileUrl,
+          profile_pic_url: profileData.profilePicUrl || null,
+          score: analysisResult.score || 0,
+          analysis_type: analysis_type,
+          followers_count: profileData.followersCount || 0,
+          avg_likes: profileData.engagement?.avgLikes || 0,
+          avg_comments: profileData.engagement?.avgComments || 0,
+          engagement_rate: profileData.engagement?.engagementRate || 0,
+          outreach_message: outreachMessage || null,
+          created_at: new Date().toISOString()
+        };
+        
+        // Prepare analysis data (deep only)
+        let analysisData = null;
+        if (analysis_type === 'deep') {
+          analysisData = {
+            user_id: userId,
+            username: profileData.username,
+            analysis_type: 'deep',
+            engagement_score: analysisResult.engagement_score || 0,
+            score_niche_fit: analysisResult.niche_fit || 0,
+            score_total: analysisResult.score || 0,
+            audience_quality: analysisResult.audience_quality || 'Unknown',
+            engagement_insights: analysisResult.engagement_insights || 'No insights available',
+            outreach_message: outreachMessage || null,
+            selling_points: Array.isArray(analysisResult.selling_points) 
+              ? analysisResult.selling_points.join('|') 
+              : null,
+            avg_comments: profileData.engagement?.avgComments || 0,
+            avg_likes: profileData.engagement?.avgLikes || 0,
+            engagement_rate: profileData.engagement?.engagementRate || 0
+          };
+        }
+        
+        // Save to database
+        const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
         
         results.push({
           username,
           success: true,
+          lead_id: leadId,
+          score: analysisResult.score,
           analysis: analysisResult,
           outreach_message: outreachMessage
         });
@@ -1515,8 +1616,8 @@ app.post('/v1/bulk-analyze', async (c) => {
         userId,
         creditsUsed,
         userResult.credits - creditsUsed,
-        `Bulk ${analysis_type} analysis (${successful} profiles)`, // FIXED: Use analysis_type
-        'use',
+        `Bulk ${analysis_type} analysis (${successful} profiles)`,
+        'bulk_analysis',
         c.env
       );
     }
