@@ -341,6 +341,8 @@ async function saveAnalysisResults(
   console.log('✅ Lead saved successfully:', responseText);
 }
 
+// REPLACE your updateCreditsAndTransaction function with this:
+
 async function updateCreditsAndTransaction(
   userId: string,
   creditsUsed: number,
@@ -369,18 +371,23 @@ async function updateCreditsAndTransaction(
   );
   
   if (!updateResponse.ok) {
-    throw new Error('Failed to update credits');
+    const errorText = await updateResponse.text();
+    console.error('❌ Failed to update user credits:', errorText);
+    throw new Error(`Failed to update credits: ${updateResponse.status} - ${errorText}`);
   }
   
-  // Log transaction (keep this the same)
+  // ✅ FIXED: Log transaction with correct payload structure
   const transactionPayload = {
     user_id: userId,
+    lead_id: null,  // ✅ ADD: Include lead_id (nullable)
     type: transactionType,
-    amount: -creditsUsed,
-    balance_after: newBalance,
+    amount: -creditsUsed,  // Negative for deductions
     description,
-    created_at: new Date().toISOString()
+    // ✅ REMOVE: Don't include balance_after (column doesn't exist)
+    // ✅ REMOVE: Don't include created_at (auto-generated)
   };
+  
+  console.log('💾 Credit transaction payload:', JSON.stringify(transactionPayload, null, 2));
   
   const transactionResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
     method: 'POST',
@@ -389,8 +396,13 @@ async function updateCreditsAndTransaction(
   });
   
   if (!transactionResponse.ok) {
-    throw new Error('Failed to log credit transaction');
+    const errorText = await transactionResponse.text();
+    console.error('❌ Failed to log credit transaction:', errorText);
+    throw new Error(`Failed to log credit transaction: ${transactionResponse.status} - ${errorText}`);
   }
+  
+  const responseText = await transactionResponse.text();
+  console.log('✅ Credit transaction logged successfully:', responseText);
 }
 
 // ===============================================================================
