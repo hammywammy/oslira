@@ -2809,6 +2809,35 @@ async processBulkAnalysis(profiles, analysisType) {
         }
     }
 
+    updateCreditsDisplay() {
+    const user = window.OsliraApp.user;
+    if (!user) return;
+    
+    // Update credits in the UI
+    const creditsElements = document.querySelectorAll('.credits-display, [data-credits], #credits-count');
+    creditsElements.forEach(element => {
+        if (element) {
+            element.textContent = user.credits || 0;
+        }
+    });
+    
+    // Update credits in header/nav if it exists
+    const headerCredits = document.querySelector('#header-credits, .header-credits, .nav-credits');
+    if (headerCredits) {
+        headerCredits.textContent = `${user.credits || 0} credits`;
+    }
+    
+    // Update any credit badges
+    const creditBadges = document.querySelectorAll('.credit-badge, .credits-badge');
+    creditBadges.forEach(badge => {
+        if (badge) {
+            badge.textContent = user.credits || 0;
+        }
+    });
+    
+    console.log('✅ Credits display updated:', user.credits);
+}
+    
     async refreshCreditsDisplay() {
         const supabase = window.OsliraApp.supabase;
         const user = window.OsliraApp.user;
