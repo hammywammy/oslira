@@ -252,6 +252,7 @@ async function fetchBusinessProfile(businessId: string, userId: string, env: Env
   
   return businesses[0];
 }
+
 async function saveAnalysisResults(
   profileData: ProfileData,
   analysisResult: AnalysisResult,
@@ -267,11 +268,14 @@ async function saveAnalysisResults(
     'Content-Type': 'application/json'
   };
   
-  // ✅ DEBUG: Log the input data first
-  console.log('🔍 DEBUG - analysisResult:', JSON.stringify(analysisResult, null, 2));
-  console.log('🔍 DEBUG - profileData.engagement:', JSON.stringify(profileData.engagement, null, 2));
+  // FIX: Convert category strings to numbers for niche_fit field
+  const categoryToScore = {
+    'high_potential': 90,
+    'medium_potential': 70,
+    'low_potential': 40,
+    'not_suitable': 10
+  };
   
-  // ✅ SAFE: Ensure all integer fields are actually integers
   const leadPayload = {
     // Required fields
     user_id: userId,
@@ -289,12 +293,12 @@ async function saveAnalysisResults(
     profile_url: profileData.profilePicUrl || '',
     external_url: profileData.externalUrl || '',
     
-    // Analysis fields - EXTRA SAFE TYPE CONVERSION
+    // Analysis fields - FIXED: Convert to proper types
     platform: 'instagram',
     analysis_type: String(analysisType),
     score: parseInt(analysisResult.score) || 0,
     summary: String(analysisResult.reasoning || ''),
-    niche_fit: String(analysisResult.category || ''),
+    niche_fit: categoryToScore[analysisResult.category] || 50, // FIX: Convert to number
     engagement_score: parseInt(analysisResult.confidence) || 75,
     reason: String(analysisResult.reasoning || ''),
     talking_points: Array.isArray(analysisResult.contact_strategy?.talking_points) 
@@ -319,14 +323,7 @@ async function saveAnalysisResults(
     updated_at: new Date().toISOString()
   };
   
-  // ✅ DEBUG: Log each field type
-  console.log('🔍 DEBUG - Field types:');
-  console.log('score type:', typeof leadPayload.score, 'value:', leadPayload.score);
-  console.log('engagement_score type:', typeof leadPayload.engagement_score, 'value:', leadPayload.engagement_score);
-  console.log('followers_count type:', typeof leadPayload.followers_count, 'value:', leadPayload.followers_count);
-  console.log('avg_likes type:', typeof leadPayload.avg_likes, 'value:', leadPayload.avg_likes);
-  
-  console.log('💾 Final payload:', JSON.stringify(leadPayload, null, 2));
+  console.log('💾 Saving lead payload:', JSON.stringify(leadPayload, null, 2));
   
   const leadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
     method: 'POST',
@@ -400,92 +397,162 @@ async function updateCreditsAndTransaction(
 // INSTAGRAM SCRAPING
 // ===============================================================================
 
+// REPLACE YOUR CURRENT scrapeInstagramProfile FUNCTION WITH THIS:
+
 async function scrapeInstagramProfile(username: string, analysisType: string, env: Env): Promise<ProfileData> {
   if (!env.APIFY_API_TOKEN) throw new Error('Profile scraping service not configured');
   
-  const basicInput = {
-    directUrls: [`https://instagram.com/${username}/`],
-    resultsLimit: 1,
-    addParentData: false,
-    enhanceUserSearchWithFacebookPage: false
-  };
-  
-  const profileResponse = await callWithRetry(
-    `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(basicInput)
-    }
-  );
-  
-  if (!profileResponse || !Array.isArray(profileResponse) || profileResponse.length === 0) {
-    throw new Error('Profile not found or private');
-  }
-  
-  const basicProfile = profileResponse[0];
-  
-  if (analysisType === 'deep') {
-    const postsInput = {
-      directUrls: [`https://instagram.com/${username}/`],
-      resultsLimit: 8,
-      addParentData: false,
-      enhanceUserSearchWithFacebookPage: false
-    };
-    
-    let postsData = [];
-    try {
+  console.log(`🕷️ Scraping @${username} with ${analysisType} analysis`);
+
+  try {
+    if (analysisType === 'light') {
+      // LIGHT ANALYSIS: Use basic profile scraper (cheaper)
+      console.log('Using light scraper: dSCLg0C3YEZ83HzYX');
+      
+      const lightInput = {
+        usernames: [username],
+        resultsType: "details",
+        resultsLimit: 1
+      };
+
+      const profileResponse = await callWithRetry(
+        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lightInput)
+        }
+      );
+
+      if (!profileResponse || !Array.isArray(profileResponse) || profileResponse.length === 0) {
+        throw new Error('Profile not found or private');
+      }
+
+      const profile = profileResponse[0];
+      
+      return {
+        username: profile.username || username,
+        displayName: profile.fullName || profile.displayName || '',
+        bio: profile.biography || profile.bio || '',
+        followersCount: parseInt(profile.followersCount) || 0,
+        followingCount: parseInt(profile.followingCount) || 0,
+        postsCount: parseInt(profile.postsCount) || 0,
+        isVerified: Boolean(profile.verified || profile.isVerified),
+        isPrivate: Boolean(profile.private || profile.isPrivate),
+        profilePicUrl: profile.profilePicUrl || profile.profilePicture || '',
+        externalUrl: profile.externalUrl || profile.website || '',
+        latestPosts: [],
+        engagement: undefined
+      };
+
+    } else {
+      // DEEP ANALYSIS: Use detailed posts scraper
+      console.log('Using deep scraper: shu8hvrXbJbY3Eb9W');
+      
+      const deepInput = {
+        directUrls: [`https://instagram.com/${username}/`],
+        resultsLimit: 12, // Get posts for engagement calculation
+        addParentData: false,
+        enhanceUserSearchWithFacebookPage: false
+      };
+
       const postsResponse = await callWithRetry(
         `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(postsInput)
+          body: JSON.stringify(deepInput)
         }
       );
-      
-      if (postsResponse && Array.isArray(postsResponse)) {
-        postsData = postsResponse;
+
+      if (!postsResponse || !Array.isArray(postsResponse) || postsResponse.length === 0) {
+        throw new Error('Profile not found or private');
       }
-    } catch {
-      // Continue without posts data
-    }
-    
-    if (postsData.length > 0) {
-      const totalLikes = postsData.reduce((sum: number, post: any) => sum + (post.likesCount || 0), 0);
-      const totalComments = postsData.reduce((sum: number, post: any) => sum + (post.commentsCount || 0), 0);
-      const avgLikes = totalLikes / postsData.length;
-      const avgComments = totalComments / postsData.length;
-      const engagementRate = ((avgLikes + avgComments) / basicProfile.followersCount) * 100;
-      
-      basicProfile.engagement = {
-        avgLikes,
-        avgComments,
-        engagementRate,
-        topHashtags: [],
-        postingFrequency: 'regular'
+
+      // EXTRACT PROFILE DATA FROM POSTS RESPONSE
+      const firstPost = postsResponse[0];
+      if (!firstPost.ownerUsername) {
+        throw new Error('Invalid posts data - missing owner info');
+      }
+
+      console.log(`✅ Retrieved ${postsResponse.length} posts for engagement analysis`);
+
+      // CALCULATE ENGAGEMENT METRICS
+      const validPosts = postsResponse.filter(post => 
+        post && 
+        typeof post.likesCount === 'number' && 
+        typeof post.commentsCount === 'number'
+      );
+
+      let engagement: EngagementData | undefined;
+      let estimatedFollowers = 0;
+
+      if (validPosts.length > 0) {
+        const totalLikes = validPosts.reduce((sum, post) => sum + (post.likesCount || 0), 0);
+        const totalComments = validPosts.reduce((sum, post) => sum + (post.commentsCount || 0), 0);
+        const avgLikes = Math.round(totalLikes / validPosts.length);
+        const avgComments = Math.round(totalComments / validPosts.length);
+        
+        // Estimate followers from engagement (typical engagement rate is 1-3%)
+        estimatedFollowers = Math.round(avgLikes / 0.02); // Assume 2% engagement rate
+        
+        const engagementRate = estimatedFollowers > 0 ? 
+          Math.round(((avgLikes + avgComments) / estimatedFollowers) * 100 * 100) / 100 : 0;
+
+        engagement = {
+          avgLikes,
+          avgComments,
+          engagementRate,
+          topHashtags: [],
+          postingFrequency: 'regular'
+        };
+
+        console.log(`📊 Engagement calculated: ${engagementRate}% (${avgLikes} likes, ${avgComments} comments avg)`);
+        console.log(`📈 Estimated followers: ${estimatedFollowers}`);
+      }
+
+      // BUILD PROFILE DATA FROM POSTS RESPONSE
+      return {
+        username: firstPost.ownerUsername || username,
+        displayName: firstPost.ownerFullName || '',
+        bio: '', // Not available from posts scraper
+        followersCount: estimatedFollowers,
+        followingCount: 0, // Not available from posts scraper
+        postsCount: postsResponse.length,
+        isVerified: false, // Not available from posts scraper
+        isPrivate: false,
+        profilePicUrl: firstPost.ownerProfilePicUrl || '',
+        externalUrl: '',
+        latestPosts: postsResponse.map(post => ({
+          id: post.id || '',
+          caption: post.caption || '',
+          likesCount: post.likesCount || 0,
+          commentsCount: post.commentsCount || 0,
+          timestamp: post.timestamp || '',
+          hashtags: [],
+          mentions: []
+        })),
+        engagement
       };
     }
-    
-    basicProfile.latestPosts = postsData;
-  }
-  
-  return {
-    username: basicProfile.username || '',
-    displayName: basicProfile.fullName || basicProfile.displayName || '',
-    bio: basicProfile.biography || basicProfile.bio || '',
-    followersCount: parseInt(basicProfile.followersCount) || 0,
-    followingCount: parseInt(basicProfile.followingCount) || 0,
-    postsCount: parseInt(basicProfile.postsCount) || 0,
-    isVerified: Boolean(basicProfile.verified || basicProfile.isVerified),
-    isPrivate: Boolean(basicProfile.private || basicProfile.isPrivate),
-    profilePicUrl: basicProfile.profilePicUrl || basicProfile.profilePicture || '',
-    externalUrl: basicProfile.externalUrl || basicProfile.website || '',
-    latestPosts: basicProfile.latestPosts || [],
-    engagement: basicProfile.engagement || undefined
-  };
-}
 
+  } catch (error: any) {
+    console.error('❌ Scraping error:', error);
+    
+    // Better error messages
+    if (error.message.includes('404')) {
+      throw new Error('Instagram profile not found');
+    } else if (error.message.includes('403')) {
+      throw new Error('Instagram profile is private');
+    } else if (error.message.includes('429')) {
+      throw new Error('Instagram rate limited - try again in a few minutes');
+    } else if (error.message.includes('timeout')) {
+      throw new Error('Scraping timed out - try again');
+    }
+    
+    throw new Error(`Scraping failed: ${error.message}`);
+  }
+}
 // ===============================================================================
 // AI SUMMARIZATION PIPELINE
 // ===============================================================================
