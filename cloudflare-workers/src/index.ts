@@ -417,14 +417,16 @@ async function saveAnalysisResults(
     bio: profileData.bio || null,
     platform: 'instagram',
     profile_pic_url: profileData.profilePicUrl || null,
-    score: analysisResult.score || 0,
-    analysis_type: analysisType,
+    score: Math.round(parseFloat(analysisResult.score) || 0), // 8.5 -> 9
+    analysis_type: data.analysis_type,
     followers_count: profileData.followersCount || 0,
     avg_likes: profileData.engagement?.avgLikes || 0,
     avg_comments: profileData.engagement?.avgComments || 0,
     engagement_rate: profileData.engagement?.engagementRate || 0,
     outreach_message: outreachMessage || null,
     created_at: new Date().toISOString()
+
+    
   };
 
   // Prepare data for lead_analyses table (deep only)
@@ -433,9 +435,9 @@ async function saveAnalysisResults(
     analysisData = {
       user_id: userId,
       analysis_type: 'deep',
-      engagement_score: analysisResult.engagement_score || null,
-      score_niche_fit: analysisResult.niche_fit || null,
-      score_total: analysisResult.score || 0,
+    engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0), // ✅ Fix
+    score_niche_fit: Math.round(parseFloat(analysisResult.niche_fit) || 0), // ✅ Fix
+    score_total: Math.round(parseFloat(analysisResult.score) || 0), // ✅ Fix
       outreach_message: outreachMessage || null,
       selling_points: Array.isArray(analysisResult.selling_points) 
         ? analysisResult.selling_points.join('|') 
