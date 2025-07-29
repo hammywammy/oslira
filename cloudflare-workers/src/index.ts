@@ -93,6 +93,17 @@ interface AnalysisResult {
   confidence: number;
 }
 
+interface AnalysisRequest {
+  profile_url?: string;
+  username?: string;
+  analysis_type?: AnalysisType;
+  type?: AnalysisType; // Alternative field name
+  business_id?: string;
+  user_id?: string;
+  platform?: string;
+  // REMOVED: timezone, user_local_time, request_timestamp
+}
+
 interface ProfileSummary {
   bio_summary: string;
   post_themes: string;
@@ -355,85 +366,53 @@ async function saveAnalysisResults(
   env: Env
 ): Promise<void> {
   
-  // FIXED: Prepare data for leads table with ONLY existing columns after cleanup
+  // Prepare data for leads table with ONLY existing columns
   const leadData = {
     // Core required fields
     user_id: userId,
     business_id: businessId,
-    
-    // Profile information
     username: profileData.username,
     full_name: profileData.displayName || null,
     bio: profileData.bio || null,
     platform: 'instagram',
     profile_pic_url: profileData.profilePicUrl || null,
-    
-    // Analysis results
     score: analysisResult.score || 0,
-    analysis_type: analysisType, // CRITICAL: This field determines light vs deep
-    
-    // Profile metrics
+    analysis_type: analysisType,
     followers_count: profileData.followersCount || 0,
-    
-    // Engagement data (0 for light, real values for deep)
     avg_likes: profileData.engagement?.avgLikes || 0,
     avg_comments: profileData.engagement?.avgComments || 0,
     engagement_rate: profileData.engagement?.engagementRate || 0,
-    
-    // Outreach message (null for light analysis)
     outreach_message: outreachMessage || null,
-    
-    // Timestamp
     created_at: new Date().toISOString()
-    
-    // REMOVED: All fields that were dropped in cleanup:
-    // - user_local_time, user_timezone, request_timestamp
-    // - analyzed_at, updated_at, business_category, timezone, user_location
-    // - following_count, posts_count, verified, private, external_url
-    // - niche_fit, engagement_score, reason, talking_points
   };
 
-  // Prepare data for lead_analyses table (detailed analysis for deep only)
+  // Prepare data for lead_analyses table (deep only)
   let analysisData = null;
   if (analysisType === 'deep') {
     analysisData = {
-      // Core fields
       user_id: userId,
       analysis_type: 'deep',
-      
-      // Detailed scoring data
       engagement_score: analysisResult.engagement_score || null,
       score_niche_fit: analysisResult.niche_fit || null,
       score_total: analysisResult.score || 0,
-      
-      // Rich analysis content
       outreach_message: outreachMessage || null,
       selling_points: Array.isArray(analysisResult.selling_points) 
         ? analysisResult.selling_points.join('|') 
         : (analysisResult.selling_points ? String(analysisResult.selling_points) : null),
-      
-      // Detailed engagement metrics
       avg_comments: profileData.engagement?.avgComments || 0,
       avg_likes: profileData.engagement?.avgLikes || 0,
       engagement_rate: profileData.engagement?.engagementRate || 0,
-      
-      // Advanced analysis fields
       audience_quality: analysisResult.audience_quality || null,
       engagement_insights: Array.isArray(analysisResult.engagement_insights)
         ? analysisResult.engagement_insights.join('|')
         : (analysisResult.engagement_insights ? String(analysisResult.engagement_insights) : null),
-      
       created_at: new Date().toISOString()
-      
-      // REMOVED: Fields that were dropped:
-      // - ai_version_id, updated_at
     };
   }
 
-  // Use the saveLeadAndAnalysis function to save to both tables
+  // Use the saveLeadAndAnalysis function
   await saveLeadAndAnalysis(leadData, analysisData, analysisType, env);
-}// REPLACE your updateCreditsAndTransaction function with this:
-
+}
 async function updateCreditsAndTransaction(
   userId: string,
   creditsUsed: number,
@@ -1220,26 +1199,24 @@ app.post('/v1/analyze', async (c) => {
     }
     
     // FIXED: Prepare data for dual table saving
-    const leadData = {
-      user_id: userId,
-      business_id: business_id,
-      username: profileData.username,
-      full_name: profileData.displayName || null,
-      bio: profileData.bio || null,
-      platform: 'instagram',
-      profile_url: profile_url,
-      profile_pic_url: profileData.profilePicUrl || null,
-      score: analysisResult.score || 0,
-      analysis_type: analysis_type, // FIXED: Use analysis_type instead of type
-      followers_count: profileData.followersCount || 0,
-      outreach_message: outreachMessage || null,
-      avg_likes: profileData.engagement?.avgLikes || 0,
-      avg_comments: profileData.engagement?.avgComments || 0,
-      engagement_rate: profileData.engagement?.engagementRate || 0,
-      user_timezone: body.timezone || 'UTC',
-      user_local_time: body.user_local_time || new Date().toISOString(),
-      created_at: body.request_timestamp || new Date().toISOString()
-    };
+const leadData = {
+  user_id: userId,
+  business_id: business_id,
+  username: profileData.username,
+  full_name: profileData.displayName || null,
+  bio: profileData.bio || null,
+  platform: 'instagram',
+  profile_pic_url: profileData.profilePicUrl || null,
+  score: analysisResult.score || 0,
+  analysis_type: data.analysis_type, // FIXED: Use analysis_type not type
+  followers_count: profileData.followersCount || 0,
+  avg_likes: profileData.engagement?.avgLikes || 0,
+  avg_comments: profileData.engagement?.avgComments || 0,
+  engagement_rate: profileData.engagement?.engagementRate || 0,
+  outreach_message: outreachMessage || null,
+  created_at: new Date().toISOString()
+  // REMOVED: user_timezone, user_local_time, profile_url, type
+};
 
     // Create analysis data for deep analysis only
     let analysisData = null;
@@ -1380,49 +1357,48 @@ app.post('/v1/bulk-analyze', async (c) => {
         }
         
         // FIXED: Prepare data for dual table saving
-        const leadData = {
-          user_id: userId,
-          business_id: business_id,
-          username: profileData.username,
-          full_name: profileData.displayName || null,
-          bio: profileData.bio || null,
-          platform: 'instagram',
-          profile_url: profileUrl,
-          profile_pic_url: profileData.profilePicUrl || null,
-          score: analysisResult.score || 0,
-          analysis_type: analysis_type, // FIXED: Use analysis_type instead of type
-          followers_count: profileData.followersCount || 0,
-          outreach_message: outreachMessage || null,
-          avg_likes: profileData.engagement?.avgLikes || 0,
-          avg_comments: profileData.engagement?.avgComments || 0,
-          engagement_rate: profileData.engagement?.engagementRate || 0,
-          user_timezone: body.timezone || 'UTC',
-          user_local_time: body.user_local_time || new Date().toISOString(),
-          // Stagger timestamps to avoid conflicts
-          created_at: new Date(new Date(body.request_timestamp || new Date().toISOString()).getTime() + (i * 1000)).toISOString()
-        };
+const leadData = {
+  user_id: userId,
+  business_id: business_id,
+  username: validatedProfile.username,
+  full_name: validatedProfile.displayName || null,
+  bio: validatedProfile.bio || null,
+  platform: 'instagram',
+  profile_pic_url: validatedProfile.profilePicUrl || null,
+  score: analysisResult.score || 0,
+  analysis_type: analysis_type, // FIXED: Use analysis_type not type
+  followers_count: validatedProfile.followersCount || 0,
+  avg_likes: validatedProfile.engagement?.avgLikes || 0,
+  avg_comments: validatedProfile.engagement?.avgComments || 0,
+  engagement_rate: validatedProfile.engagement?.engagementRate || 0,
+  outreach_message: outreachMessage || null,
+  created_at: new Date(new Date().getTime() + (i * 1000)).toISOString() // Stagger timestamps
+  // REMOVED: user_timezone, user_local_time, profile_url, type
+};
 
         // Create analysis data for deep analysis only
         let analysisData = null;
         if (analysis_type === 'deep') {
-          analysisData = {
-            user_id: userId,
-            analysis_type: 'deep',
-            engagement_score: analysisResult.engagement_score || null,
-            score_niche_fit: analysisResult.niche_fit || null,
-            score_total: analysisResult.score || 0,
-            outreach_message: outreachMessage || null,
-            selling_points: Array.isArray(analysisResult.selling_points) 
-              ? analysisResult.selling_points.join('|') 
-              : null,
-            avg_comments: profileData.engagement?.avgComments || 0,
-            avg_likes: profileData.engagement?.avgLikes || 0,
-            engagement_rate: profileData.engagement?.engagementRate || 0,
-            audience_quality: analysisResult.audience_quality || null,
-            engagement_insights: Array.isArray(analysisResult.engagement_insights)
-              ? analysisResult.engagement_insights.join('|')
-              : null
-          };
+const analysisData = {
+  user_id: userId,
+  analysis_type: 'deep',
+  engagement_score: analysisResult.engagement_score || null,
+  score_niche_fit: analysisResult.niche_fit || null,
+  score_total: analysisResult.score || 0,
+  outreach_message: outreachMessage || null,
+  selling_points: Array.isArray(analysisResult.selling_points) 
+    ? analysisResult.selling_points.join('|') 
+    : (analysisResult.selling_points ? String(analysisResult.selling_points) : null),
+  avg_comments: profileData.engagement?.avgComments || 0,
+  avg_likes: profileData.engagement?.avgLikes || 0,
+  engagement_rate: profileData.engagement?.engagementRate || 0,
+  audience_quality: analysisResult.audience_quality || null,
+  engagement_insights: Array.isArray(analysisResult.engagement_insights)
+    ? analysisResult.engagement_insights.join('|')
+    : (analysisResult.engagement_insights ? String(analysisResult.engagement_insights) : null),
+  created_at: new Date().toISOString()
+  // REMOVED: ai_version_id, updated_at
+};
         }
 
         // FIXED: Use saveLeadAndAnalysis for dual table saving
