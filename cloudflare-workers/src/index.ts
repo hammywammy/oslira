@@ -418,7 +418,7 @@ async function scrapeInstagramProfile(username: string, analysisType: string, en
 
   try {
     if (analysisType === 'light') {
-      // LIGHT ANALYSIS: Use basic profile scraper (cheaper)
+      // LIGHT ANALYSIS: Use basic profile scraper
       console.log('Using light scraper: dSCLg0C3YEZ83HzYX');
       
       const lightInput = {
@@ -436,11 +436,24 @@ async function scrapeInstagramProfile(username: string, analysisType: string, en
         }
       );
 
+      // DEBUG: Log the response
+      console.log('🔍 LIGHT - Response type:', typeof profileResponse);
+      console.log('🔍 LIGHT - Is array:', Array.isArray(profileResponse));
+      console.log('🔍 LIGHT - Length:', profileResponse?.length);
+      console.log('🔍 LIGHT - First item:', JSON.stringify(profileResponse?.[0], null, 2));
+
       if (!profileResponse || !Array.isArray(profileResponse) || profileResponse.length === 0) {
-        throw new Error('Profile not found or private');
+        throw new Error('Light scraper: Profile not found or private');
       }
 
       const profile = profileResponse[0];
+      
+      // Check if we have basic required fields
+      if (!profile) {
+        throw new Error('Light scraper: Empty profile data');
+      }
+
+      console.log('🔍 LIGHT - Available fields:', Object.keys(profile));
       
       return {
         username: profile.username || username,
@@ -463,7 +476,7 @@ async function scrapeInstagramProfile(username: string, analysisType: string, en
       
       const deepInput = {
         directUrls: [`https://instagram.com/${username}/`],
-        resultsLimit: 12, // Get posts for engagement calculation
+        resultsLimit: 12,
         addParentData: false,
         enhanceUserSearchWithFacebookPage: false
       };
@@ -477,17 +490,38 @@ async function scrapeInstagramProfile(username: string, analysisType: string, en
         }
       );
 
+      // DEBUG: Log the response
+      console.log('🔍 DEEP - Response type:', typeof postsResponse);
+      console.log('🔍 DEEP - Is array:', Array.isArray(postsResponse));
+      console.log('🔍 DEEP - Length:', postsResponse?.length);
+      console.log('🔍 DEEP - First item keys:', Object.keys(postsResponse?.[0] || {}));
+      console.log('🔍 DEEP - First item sample:', JSON.stringify(postsResponse?.[0], null, 2));
+
       if (!postsResponse || !Array.isArray(postsResponse) || postsResponse.length === 0) {
-        throw new Error('Profile not found or private');
+        throw new Error('Deep scraper: No posts data returned - profile may be private or have no posts');
       }
 
-      // EXTRACT PROFILE DATA FROM POSTS RESPONSE
+      // EXTRACT PROFILE DATA FROM POSTS RESPONSE - MORE FLEXIBLE
       const firstPost = postsResponse[0];
-      if (!firstPost.ownerUsername) {
-        throw new Error('Invalid posts data - missing owner info');
-      }
+      
+      // Try multiple possible username fields
+      const extractedUsername = firstPost.ownerUsername || 
+                               firstPost.owner_username || 
+                               firstPost.username || 
+                               firstPost.user?.username ||
+                               firstPost.author?.username ||
+                               firstPost.accountUsername ||
+                               firstPost.profileUsername ||
+                               username; // fallback
 
-      console.log(`✅ Retrieved ${postsResponse.length} posts for engagement analysis`);
+      console.log('🔍 DEEP - Extracted username:', extractedUsername);
+      console.log('🔍 DEEP - Owner fields check:', {
+        ownerUsername: firstPost.ownerUsername,
+        owner_username: firstPost.owner_username,
+        username: firstPost.username,
+        user: firstPost.user,
+        author: firstPost.author
+      });
 
       // CALCULATE ENGAGEMENT METRICS
       const validPosts = postsResponse.filter(post => 
@@ -505,8 +539,7 @@ async function scrapeInstagramProfile(username: string, analysisType: string, en
         const avgLikes = Math.round(totalLikes / validPosts.length);
         const avgComments = Math.round(totalComments / validPosts.length);
         
-        // Estimate followers from engagement (typical engagement rate is 1-3%)
-        estimatedFollowers = Math.round(avgLikes / 0.02); // Assume 2% engagement rate
+        estimatedFollowers = Math.round(avgLikes / 0.02);
         
         const engagementRate = estimatedFollowers > 0 ? 
           Math.round(((avgLikes + avgComments) / estimatedFollowers) * 100 * 100) / 100 : 0;
@@ -520,20 +553,19 @@ async function scrapeInstagramProfile(username: string, analysisType: string, en
         };
 
         console.log(`📊 Engagement calculated: ${engagementRate}% (${avgLikes} likes, ${avgComments} comments avg)`);
-        console.log(`📈 Estimated followers: ${estimatedFollowers}`);
       }
 
       // BUILD PROFILE DATA FROM POSTS RESPONSE
       return {
-        username: firstPost.ownerUsername || username,
-        displayName: firstPost.ownerFullName || '',
-        bio: '', // Not available from posts scraper
+        username: extractedUsername,
+        displayName: firstPost.ownerFullName || firstPost.owner_full_name || '',
+        bio: '',
         followersCount: estimatedFollowers,
-        followingCount: 0, // Not available from posts scraper
+        followingCount: 0,
         postsCount: postsResponse.length,
-        isVerified: false, // Not available from posts scraper
+        isVerified: false,
         isPrivate: false,
-        profilePicUrl: firstPost.ownerProfilePicUrl || '',
+        profilePicUrl: firstPost.ownerProfilePicUrl || firstPost.owner_profile_pic_url || '',
         externalUrl: '',
         latestPosts: postsResponse.map(post => ({
           id: post.id || '',
@@ -549,9 +581,10 @@ async function scrapeInstagramProfile(username: string, analysisType: string, en
     }
 
   } catch (error: any) {
-    console.error('❌ Scraping error:', error);
+    console.error('❌ Scraping error for @' + username + ':', error);
+    console.error('❌ Error details:', error.message, error.stack);
     
-    // Better error messages
+    // More specific error messages
     if (error.message.includes('404')) {
       throw new Error('Instagram profile not found');
     } else if (error.message.includes('403')) {
