@@ -636,29 +636,41 @@ async submitAnalysis(e) {
     
     try {
         const analysisType = document.getElementById('analysis-type').value;
-        const profileInput = document.getElementById('profile-input').value.trim();
+        const handleInput = document.getElementById('profile-input').value.trim();
         
-        // ✅ DEBUG: Log the exact URL being sent
-        console.log('🔍 Raw profile input:', profileInput);
-        console.log('🔍 Profile input length:', profileInput.length);
-        console.log('🔍 Profile input chars:', [...profileInput]);
+        // ✅ DEBUG: Log what we're getting
+        console.log('🔍 Raw handle input:', handleInput);
+        console.log('🔍 Analysis type:', analysisType);
+        console.log('🔍 Business ID:', this.currentBusinessId);
         
-        if (!profileInput) {
-            throw new Error('Please enter an Instagram profile URL');
+        if (!handleInput) {
+            throw new Error('Please enter an Instagram handle');
         }
         
-        // ✅ VALIDATE URL FORMAT BEFORE SENDING
-        if (!profileInput.includes('instagram.com/')) {
-            throw new Error('Please enter a valid Instagram URL (e.g., https://instagram.com/username)');
+        if (!this.currentBusinessId) {
+            throw new Error('No business profile selected');
         }
+        
+        // ✅ CONVERT HANDLE TO FULL URL
+        let profileUrl;
+        if (handleInput.includes('instagram.com/')) {
+            // Already a full URL
+            profileUrl = handleInput;
+        } else {
+            // Just a handle - convert to full URL
+            const cleanHandle = handleInput.replace('@', ''); // Remove @ if present
+            profileUrl = `https://instagram.com/${cleanHandle}`;
+        }
+        
+        console.log('🔍 Converted to URL:', profileUrl);
         
         const requestBody = {
-            profile_url: profileInput,
+            profile_url: profileUrl,
             analysis_type: analysisType,
             business_id: this.currentBusinessId
         };
         
-        console.log('📤 Sending request:', requestBody);
+        console.log('📤 Final request body:', requestBody);
         
         const response = await apiRequest('/v1/analyze', {
             method: 'POST',
@@ -677,7 +689,6 @@ async submitAnalysis(e) {
         this.displayError(error.message);
     }
 }
-
     // Add this method to your OsliraDashboard class
 displayError(message) {
     // Simple error display - update based on your UI
