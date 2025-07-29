@@ -252,7 +252,6 @@ async function fetchBusinessProfile(businessId: string, userId: string, env: Env
   
   return businesses[0];
 }
-
 async function saveAnalysisResults(
   profileData: ProfileData,
   analysisResult: AnalysisResult,
@@ -268,41 +267,45 @@ async function saveAnalysisResults(
     'Content-Type': 'application/json'
   };
   
-  // ✅ FIXED: Correct data type mapping
+  // ✅ DEBUG: Log the input data first
+  console.log('🔍 DEBUG - analysisResult:', JSON.stringify(analysisResult, null, 2));
+  console.log('🔍 DEBUG - profileData.engagement:', JSON.stringify(profileData.engagement, null, 2));
+  
+  // ✅ SAFE: Ensure all integer fields are actually integers
   const leadPayload = {
     // Required fields
     user_id: userId,
     business_id: businessId,
     
     // Profile data
-    username: profileData.username,
-    full_name: profileData.displayName,
-    bio: profileData.bio,
-    followers_count: profileData.followersCount,
-    following_count: profileData.followingCount,
-    posts_count: profileData.postsCount,
-    verified: profileData.isVerified,
-    private: profileData.isPrivate,
-    profile_url: profileData.profilePicUrl,
-    external_url: profileData.externalUrl,
+    username: profileData.username || '',
+    full_name: profileData.displayName || '',
+    bio: profileData.bio || '',
+    followers_count: parseInt(profileData.followersCount) || 0,
+    following_count: parseInt(profileData.followingCount) || 0,
+    posts_count: parseInt(profileData.postsCount) || 0,
+    verified: Boolean(profileData.isVerified),
+    private: Boolean(profileData.isPrivate),
+    profile_url: profileData.profilePicUrl || '',
+    external_url: profileData.externalUrl || '',
     
-    // Analysis fields - FIXED MAPPING
+    // Analysis fields - EXTRA SAFE TYPE CONVERSION
     platform: 'instagram',
-    analysis_type: analysisType,
-    score: analysisResult.score, // INTEGER - correct
-    summary: analysisResult.reasoning, // TEXT - correct
-    niche_fit: analysisResult.category, // TEXT - put category here instead
-    engagement_score: analysisResult.confidence || 75, // INTEGER - confidence score
-    reason: analysisResult.reasoning, // TEXT - reasoning
+    analysis_type: String(analysisType),
+    score: parseInt(analysisResult.score) || 0,
+    summary: String(analysisResult.reasoning || ''),
+    niche_fit: String(analysisResult.category || ''),
+    engagement_score: parseInt(analysisResult.confidence) || 75,
+    reason: String(analysisResult.reasoning || ''),
     talking_points: Array.isArray(analysisResult.contact_strategy?.talking_points) 
       ? analysisResult.contact_strategy.talking_points.join(', ') 
-      : '', // TEXT - join array to string
-    outreach_message: outreachMessage || '',
+      : '',
+    outreach_message: String(outreachMessage || ''),
     
-    // Engagement metrics (ensure they're numbers)
-    avg_likes: profileData.engagement?.avgLikes || 0,
-    avg_comments: profileData.engagement?.avgComments || 0,
-    engagement_rate: profileData.engagement?.engagementRate || 0,
+    // Engagement metrics - FORCE TO NUMBERS
+    avg_likes: parseInt(profileData.engagement?.avgLikes) || 0,
+    avg_comments: parseInt(profileData.engagement?.avgComments) || 0,
+    engagement_rate: parseFloat(profileData.engagement?.engagementRate) || 0,
     
     // Optional fields
     business_category: null,
@@ -316,7 +319,14 @@ async function saveAnalysisResults(
     updated_at: new Date().toISOString()
   };
   
-  console.log('💾 Saving to leads table:', leadPayload);
+  // ✅ DEBUG: Log each field type
+  console.log('🔍 DEBUG - Field types:');
+  console.log('score type:', typeof leadPayload.score, 'value:', leadPayload.score);
+  console.log('engagement_score type:', typeof leadPayload.engagement_score, 'value:', leadPayload.engagement_score);
+  console.log('followers_count type:', typeof leadPayload.followers_count, 'value:', leadPayload.followers_count);
+  console.log('avg_likes type:', typeof leadPayload.avg_likes, 'value:', leadPayload.avg_likes);
+  
+  console.log('💾 Final payload:', JSON.stringify(leadPayload, null, 2));
   
   const leadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
     method: 'POST',
