@@ -188,8 +188,6 @@ class OsliraDashboard {
         ]);
     }
 
-    // Replace the loadRecentActivity method in dashboard.js (around line 200-280)
-
 async loadRecentActivity() {
     const supabase = window.OsliraApp.supabase;
     const user = window.OsliraApp.user;
@@ -203,22 +201,7 @@ async loadRecentActivity() {
         let query = supabase
             .from('leads')
             .select(`
-                *,
-                profile_pic_url,
-                lead_analyses (
-                    engagement_score,
-                    score_niche_fit,
-                    score_total,
-                    ai_version_id,
-                    outreach_message,
-                    selling_points,
-                    analysis_type,
-                    avg_comments,
-                    avg_likes,
-                    engagement_rate,
-                    audience_quality,
-                    engagement_insights
-                )
+                *
             `)
             .eq('user_id', user.id);
 
@@ -253,8 +236,6 @@ async loadRecentActivity() {
         
         this.allLeads = leads || [];
         this.selectedLeads.clear();
-        
-        // FIX: Call applyActivityFilter instead of this.renderLeads
         this.applyActivityFilter();
         
     } catch (error) {
@@ -262,29 +243,7 @@ async loadRecentActivity() {
         this.displayErrorState('Failed to load leads: ' + error.message);
     }
 }
-    displayDemoLeads() {
-    this.allLeads = [
-        {
-            id: 'demo-1',
-            username: 'demo_user_1',
-            platform: 'Instagram',
-            score: 85,
-            analysis_type: 'deep', // FIXED: Use analysis_type instead of type
-            created_at: new Date().toISOString(),
-            profile_pic_url: null
-        },
-        {
-            id: 'demo-2', 
-            username: 'demo_user_2',
-            platform: 'Instagram',
-            score: 72,
-            analysis_type: 'light', // FIXED: Use analysis_type instead of type
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            profile_pic_url: null
-        }
-    ];
-    this.applyActivityFilter();
-}
+
 
    applyActivityFilter() {
     const filter = document.getElementById('activity-filter')?.value || 'all';
@@ -922,7 +881,7 @@ async viewLead(leadId) {
     modal.style.display = 'flex';
     
     try {
-        // FIXED: Removed 'type' column that doesn't exist in leads table
+        // FIXED: Query only existing columns and use analysis_type
         const { data: lead, error: leadError } = await window.OsliraApp.supabase
             .from('leads')
             .select(`
@@ -930,14 +889,13 @@ async viewLead(leadId) {
                 username,
                 full_name,
                 bio,
-                profile_url,
                 profile_pic_url,
                 platform,
                 score,
-                followers_count,
+                analysis_type,
                 business_id,
                 created_at,
-                analysis_type,
+                followers_count,
                 outreach_message,
                 avg_likes,
                 avg_comments,
@@ -955,31 +913,34 @@ async viewLead(leadId) {
             throw new Error('Lead not found or access denied');
         }
         
-        console.log('📋 Lead data loaded:', lead); // Debug log
+        console.log('📋 Lead data loaded:', lead);
         
-        // Build analysis object from lead data
-        const analysis = {
-            score: lead.score,
-            category: lead.score >= 80 ? 'high_potential' : lead.score >= 60 ? 'medium_potential' : 'low_potential',
-            reasoning: `Lead scored ${lead.score}/100 based on profile analysis.`,
-            engagement_rate: lead.engagement_rate,
-            avg_likes: lead.avg_likes,
-            avg_comments: lead.avg_comments,
-            outreach_message: lead.outreach_message // Include outreach message for deep analysis
-        };
+        // Get additional analysis data for deep analyses only
+        let analysisData = null;
+        if (lead.analysis_type === 'deep') {
+            const { data: deepAnalysis } = await window.OsliraApp.supabase
+                .from('lead_analyses')
+                .select(`
+                    engagement_score,
+                    score_niche_fit,
+                    score_total,
+                    outreach_message,
+                    selling_points,
+                    audience_quality,
+                    engagement_insights
+                `)
+                .eq('lead_id', leadId)
+                .single();
+            
+            analysisData = deepAnalysis;
+        }
         
-        // Get analysis type from lead data - FIXED: Use analysis_type not type
-        const analysisType = lead.analysis_type || 'light';
-        console.log('🔍 Analysis type from database:', lead.analysis_type, '| Determined as:', analysisType);
-        const score = lead.score || 0;
-        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
-        
-        // Build the HTML content using the corrected lead data
-        const detailsHtml = this.buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass);
+        // Build the HTML content using corrected lead data
+        const detailsHtml = this.buildLeadDetailsHTML(lead, analysisData);
         
         detailsContainer.innerHTML = detailsHtml;
         
-        console.log('✅ Lead details rendered successfully'); // Debug log
+        console.log('✅ Lead details rendered successfully');
         
     } catch (error) {
         console.error('❌ Error loading lead details:', error);
@@ -1696,25 +1657,22 @@ contactSupport(type = 'support') {
 
  // Fixed buildLeadDetailsHTML function that properly handles analysis_type
 
-buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass) {
-    // FIXED: Use analysis_type from lead data, not lead.type
-    const actualAnalysisType = lead.analysis_type || analysisType || 'light';
-    const hasOutreachMessage = lead.outreach_message && lead.outreach_message.trim().length > 0;
-    const isDeepAnalysis = actualAnalysisType === 'deep';
+buildLeadDetailsHTML(lead, analysisData = null) {
+    const analysisType = lead.analysis_type || 'light';
+    const isDeepAnalysis = analysisType === 'deep';
+    const score = lead.score || 0;
+    const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
     
     console.log('🔍 Building lead details:', { 
         username: lead.username,
-        analysis_type_from_db: lead.analysis_type,
-        actual_analysis_type: actualAnalysisType,
+        analysis_type: lead.analysis_type,
         is_deep_analysis: isDeepAnalysis,
-        has_outreach_message: hasOutreachMessage,
+        has_analysis_data: !!analysisData,
         engagement_rate: lead.engagement_rate,
         avg_likes: lead.avg_likes,
         avg_comments: lead.avg_comments
     });
     
-    const score = lead.score || 0;
-    const finalScoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
     const platform = lead.platform || 'Instagram';
     
     // Build the lead details HTML
@@ -1796,6 +1754,7 @@ buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass) {
     if (isDeepAnalysis) {
         console.log('📊 Adding deep analysis sections');
         
+        // Show engagement data from leads table (always available for deep analysis)
         html += `
             <!-- Engagement Metrics (Deep Analysis Only) -->
             <div style="background: linear-gradient(135deg, #EBF8FF, #DBEAFE); padding: 24px; border-radius: 16px; border: 1px solid var(--primary-blue); margin-bottom: 24px;">
@@ -1829,8 +1788,9 @@ buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass) {
             </div>
         `;
         
-        // Add Outreach Message section if available
-        if (hasOutreachMessage) {
+        // Add Outreach Message section if available (prefer leads table, fallback to analysis data)
+        const outreachMessage = lead.outreach_message || (analysisData && analysisData.outreach_message);
+        if (outreachMessage) {
             console.log('💬 Adding outreach message section');
             html += `
                 <!-- Personalized Outreach Message -->
@@ -1842,12 +1802,12 @@ buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass) {
                     
                     <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 16px; border: 1px solid rgba(6, 182, 212, 0.2);">
                         <p style="margin: 0; color: var(--text-primary); line-height: 1.6; font-style: italic; font-size: 15px;">
-                            "${lead.outreach_message}"
+                            "${outreachMessage}"
                         </p>
                     </div>
                     
                     <div style="display: flex; gap: 12px;">
-                        <button onclick="navigator.clipboard.writeText('${lead.outreach_message.replace(/'/g, "\\'")}').then(() => window.OsliraApp.showMessage('Message copied to clipboard!', 'success'))" 
+                        <button onclick="navigator.clipboard.writeText('${outreachMessage.replace(/'/g, "\\'")}').then(() => window.OsliraApp.showMessage('Message copied to clipboard!', 'success'))" 
                                 style="background: var(--accent-teal); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; flex: 1;">
                             📋 Copy Message
                         </button>
@@ -1855,6 +1815,30 @@ buildLeadDetailsHTML(lead, analysis, analysisType, scoreClass) {
                                 style="background: #E1306C; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
                             📱 Open Instagram
                         </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add additional analysis data if available from lead_analyses table
+        if (analysisData) {
+            html += `
+                <!-- Additional Analysis Data -->
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light); margin-bottom: 24px;">
+                    <h4 style="margin: 0 0 16px 0; color: var(--text-primary); font-size: 16px;">📋 Detailed Analysis</h4>
+                    <div style="display: grid; gap: 12px;">
+                        ${analysisData.selling_points ? `
+                        <div>
+                            <span style="color: var(--text-secondary); font-weight: 600;">Selling Points:</span>
+                            <p style="margin: 4px 0 0 0; color: var(--text-primary);">${analysisData.selling_points}</p>
+                        </div>
+                        ` : ''}
+                        ${analysisData.audience_quality ? `
+                        <div>
+                            <span style="color: var(--text-secondary); font-weight: 600;">Audience Quality:</span>
+                            <p style="margin: 4px 0 0 0; color: var(--text-primary);">${analysisData.audience_quality}</p>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             `;
