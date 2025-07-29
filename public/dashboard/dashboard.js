@@ -1897,33 +1897,167 @@ editMessage(message) {
     this.closeModal('analysisModal');
 }
 
+// Fixed displayAnalysisResults function for dashboard.js
+
 displayAnalysisResults(analysis, outreachMessage) {
-    // ✅ UPDATED: Handle new analysis structure
+    console.log('🔍 Displaying analysis results:', analysis);
+    
+    // Get the modal and details container
     const modal = document.getElementById('leadModal');
+    const detailsContainer = document.getElementById('leadDetails');
     
-    // Update modal content with new fields
-    modal.querySelector('.lead-score').textContent = analysis.score;
-    modal.querySelector('.lead-category').textContent = analysis.category.replace('_', ' ');
-    modal.querySelector('.lead-reasoning').textContent = analysis.reasoning;
-    modal.querySelector('.research-summary').textContent = analysis.deep_research_summary;
-    
-    // Handle new arrays
-    this.updateArrayDisplay('.brand-themes', analysis.personal_brand_themes);
-    this.updateArrayDisplay('.business-signals', analysis.business_signals);
-    this.updateArrayDisplay('.risk-factors', analysis.risk_factors);
-    
-    // Contact strategy
-    const strategy = analysis.contact_strategy;
-    modal.querySelector('.contact-timing').textContent = strategy.timing;
-    modal.querySelector('.contact-approach').textContent = strategy.approach;
-    this.updateArrayDisplay('.talking-points', strategy.talking_points);
-    
-    // Outreach message
-    if (outreachMessage) {
-        modal.querySelector('.outreach-message').textContent = outreachMessage;
+    if (!modal || !detailsContainer) {
+        console.error('❌ Modal elements not found');
+        return;
     }
     
-    this.showModal('leadModal');
+    // Create the analysis results HTML
+    const analysisHtml = `
+        <div class="lead-analysis-results">
+            <!-- Profile Header -->
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding: 20px; background: var(--bg-light); border-radius: 12px;">
+                <div style="flex: 1;">
+                    <h4 style="margin: 0 0 8px 0; color: var(--text-primary);">Analysis Complete!</h4>
+                    <p style="margin: 0; color: var(--text-secondary);">Lead scoring and analysis finished successfully.</p>
+                </div>
+                <div style="text-align: center; padding: 12px; background: white; border-radius: 8px; min-width: 80px;">
+                    <div style="font-size: 32px; font-weight: 800; color: var(--primary-blue); line-height: 1;">
+                        ${analysis.score || 0}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">
+                        SCORE
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Analysis Details -->
+            <div style="display: grid; gap: 20px;">
+                <!-- Basic Info -->
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <h5 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 16px;">📊 Analysis Summary</h5>
+                    <div style="display: grid; gap: 12px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Category:</span>
+                            <span style="font-weight: 600; color: var(--text-primary);">
+                                ${(analysis.category || 'unclassified').replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-secondary);">Confidence:</span>
+                            <span style="font-weight: 600; color: var(--text-primary);">
+                                ${analysis.confidence || 85}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reasoning -->
+                ${analysis.reasoning ? `
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <h5 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 16px;">💭 Analysis Reasoning</h5>
+                    <p style="margin: 0; color: var(--text-primary); line-height: 1.5;">
+                        ${analysis.reasoning}
+                    </p>
+                </div>
+                ` : ''}
+                
+                <!-- Research Summary -->
+                ${analysis.deep_research_summary ? `
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <h5 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 16px;">🔍 Research Summary</h5>
+                    <p style="margin: 0; color: var(--text-primary); line-height: 1.5;">
+                        ${analysis.deep_research_summary}
+                    </p>
+                </div>
+                ` : ''}
+                
+                <!-- Brand Themes -->
+                ${analysis.personal_brand_themes && analysis.personal_brand_themes.length > 0 ? `
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <h5 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 16px;">🎨 Brand Themes</h5>
+                    <div style="display: flex; flex-wrap: gap; gap: 8px;">
+                        ${analysis.personal_brand_themes.map(theme => `
+                            <span style="background: var(--bg-light); padding: 6px 12px; border-radius: 16px; font-size: 12px; color: var(--text-primary); border: 1px solid var(--border-light);">
+                                ${theme}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Business Signals -->
+                ${analysis.business_signals && analysis.business_signals.length > 0 ? `
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <h5 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 16px;">📈 Business Signals</h5>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        ${analysis.business_signals.map(signal => `<li style="color: var(--text-primary); margin-bottom: 4px;">${signal}</li>`).join('')}
+                    </ul>
+                </div>
+                ` : ''}
+                
+                <!-- Contact Strategy -->
+                ${analysis.contact_strategy ? `
+                <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">
+                    <h5 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 16px;">📞 Contact Strategy</h5>
+                    <div style="display: grid; gap: 12px;">
+                        ${analysis.contact_strategy.timing ? `
+                        <div>
+                            <span style="color: var(--text-secondary); font-weight: 600;">Timing:</span>
+                            <p style="margin: 4px 0 0 0; color: var(--text-primary);">${analysis.contact_strategy.timing}</p>
+                        </div>
+                        ` : ''}
+                        ${analysis.contact_strategy.approach ? `
+                        <div>
+                            <span style="color: var(--text-secondary); font-weight: 600;">Approach:</span>
+                            <p style="margin: 4px 0 0 0; color: var(--text-primary);">${analysis.contact_strategy.approach}</p>
+                        </div>
+                        ` : ''}
+                        ${analysis.contact_strategy.talking_points && analysis.contact_strategy.talking_points.length > 0 ? `
+                        <div>
+                            <span style="color: var(--text-secondary); font-weight: 600;">Talking Points:</span>
+                            <ul style="margin: 4px 0 0 0; padding-left: 20px;">
+                                ${analysis.contact_strategy.talking_points.map(point => `<li style="color: var(--text-primary); margin-bottom: 4px;">${point}</li>`).join('')}
+                            </ul>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                ` : ''}
+                
+                <!-- Outreach Message -->
+                ${outreachMessage ? `
+                <div style="background: linear-gradient(135deg, #EBF8FF, #DBEAFE); padding: 20px; border-radius: 12px; border: 1px solid var(--primary-blue);">
+                    <h5 style="margin: 0 0 12px 0; color: var(--primary-blue); font-size: 16px;">💬 Personalized Outreach Message</h5>
+                    <div style="background: white; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                        <p style="margin: 0; color: var(--text-primary); line-height: 1.6; font-style: italic;">
+                            "${outreachMessage}"
+                        </p>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('${outreachMessage.replace(/'/g, "\\'")}').then(() => window.OsliraApp.showMessage('Message copied!', 'success'))" 
+                            style="background: var(--primary-blue); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                        📋 Copy Message
+                    </button>
+                </div>
+                ` : ''}
+            </div>
+            
+            <!-- Actions -->
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-light); text-align: center;">
+                <button onclick="dashboard.closeModal('leadModal')" 
+                        style="background: var(--primary-blue); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    Close
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Update the modal content
+    detailsContainer.innerHTML = analysisHtml;
+    
+    // Show the modal
+    modal.style.display = 'flex';
+    
+    console.log('✅ Analysis results displayed successfully');
 }
 
 updateArrayDisplay(selector, array) {
