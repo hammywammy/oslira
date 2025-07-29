@@ -2811,16 +2811,24 @@ async processBulkAnalysis(profiles, analysisType) {
 
     // Fixed version of updateCreditsDisplay() function for dashboard.js
 
+// Fixed version of updateCreditsDisplay() function for dashboard.js
+
 updateCreditsDisplay(creditsParam) {
     // Get credits from parameter or user object
     let credits = creditsParam;
-    if (typeof credits === 'undefined') {
-        const user = window.OsliraApp.user;
+    if (typeof credits === 'undefined' || credits === null) {
+        const user = window.OsliraApp?.user;
         if (!user) {
             console.warn('⚠️ No user data available for credits display');
             return;
         }
         credits = user.credits || 0;
+    }
+    
+    // Additional safety check
+    if (typeof credits !== 'number') {
+        console.warn('⚠️ Invalid credits value:', credits);
+        credits = 0;
     }
     
     console.log('🔄 Updating credits display:', credits);
@@ -2829,7 +2837,7 @@ updateCreditsDisplay(creditsParam) {
     const sidebarBilling = document.getElementById('sidebar-billing');
     if (sidebarBilling) {
         // Check if user has a subscription plan
-        const user = window.OsliraApp.user;
+        const user = window.OsliraApp?.user;
         const plan = user?.subscription_plan || 'free';
         
         if (plan === 'free') {
