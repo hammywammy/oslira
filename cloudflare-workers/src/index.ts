@@ -1272,6 +1272,8 @@ app.get('/v1/config', (c) => {
   }));
 });
 
+// FIND this section in your /v1/analyze endpoint and REPLACE:
+
 app.post('/v1/analyze', async (c) => {
   const requestId = generateRequestId();
   const startTime = Date.now();
@@ -1288,11 +1290,13 @@ app.post('/v1/analyze', async (c) => {
       return c.json(createStandardResponse(false, undefined, 'Invalid token', requestId), 401);
     }
     
-    // Request validation - FIXED: Use consistent variable names
+    // ✅ FIX: Use consistent variable naming throughout
     const body = await c.req.json();
     const { profile_url, analysis_type = 'light', business_id } = body;
     
-    if (!profile_url || !business_id) {
+    // Extract username
+    const username = extractUsername(profile_url);
+    if (!username || !business_id) {
       return c.json(createStandardResponse(false, undefined, 'Missing required fields', requestId), 400);
     }
     
@@ -1300,7 +1304,6 @@ app.post('/v1/analyze', async (c) => {
       return c.json(createStandardResponse(false, undefined, 'Invalid analysis_type', requestId), 400);
     }
     
-    const username = extractUsername(profile_url);
     logger('info', 'Analysis request started', { username, analysisType: analysis_type, requestId });
     
     // Fetch user and business data
@@ -1314,32 +1317,72 @@ app.post('/v1/analyze', async (c) => {
       return c.json(createStandardResponse(false, undefined, 'Insufficient credits', requestId), 402);
     }
     
-    logger('info', 'Credit check passed', { credits: userResult.credits, cost: creditCost, requestId });
-    
-    // Profile scraping
+    // Scraping
     const profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-    logger('info', 'Profile scraped', { username, followers: profileData.followersCount, requestId });
     
-    // AI analysis
-    const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
+    // AI Analysis  
+    const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env);
     
-    // Generate outreach message (deep analysis only)
+    // Message generation (deep only)
     let outreachMessage = '';
     if (analysis_type === 'deep') {
-      outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+      try {
+        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env);
+      } catch (messageError: any) {
+        console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
+      }
     }
     
-    // FIXED: Save to database using correct variable names
+    // ✅ FIX: Database save with proper variable names and integer conversion
+    const leadData = {
+      user_id: userId,
+      business_id: business_id,  // ✅ Use business_id from destructuring
+      username: profileData.username,
+      platform: 'instagram',
+      profile_url: profile_url,  // ✅ Use profile_url from destructuring  
+      profile_pic_url: profileData.profilePicUrl || null,
+      
+      // ✅ FIX: Convert score to integer
+      score: Math.round(parseFloat(analysisResult.score) || 0),
+      
+      analysis_type: analysis_type,  // ✅ Use analysis_type from destructuring
+      followers_count: profileData.followersCount || 0,
+      avg_likes: profileData.engagement?.avgLikes || 0,
+      avg_comments: profileData.engagement?.avgComments || 0,
+      engagement_rate: profileData.engagement?.engagementRate || 0,
+      outreach_message: outreachMessage || null,
+      created_at: new Date().toISOString()
+    };
+    
+    // Analysis data for deep analysis
+    let analysisData = null;
+    if (analysis_type === 'deep') {
+      analysisData = {
+        user_id: userId,
+        analysis_type: 'deep',
+        
+        // ✅ FIX: Convert all scores to integers
+        engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0),
+        score_niche_fit: Math.round(parseFloat(analysisResult.niche_fit) || 0), 
+        score_total: Math.round(parseFloat(analysisResult.score) || 0),
+        
+        outreach_message: outreachMessage || null,
+        selling_points: analysisResult.selling_points || null,
+        avg_comments: profileData.engagement?.avgComments || 0,
+        avg_likes: profileData.engagement?.avgLikes || 0,
+        engagement_rate: profileData.engagement?.engagementRate || 0,
+        audience_quality: analysisResult.audience_quality || null,
+        engagement_insights: analysisResult.engagement_insights || null
+      };
+    }
+    
+    // Save to database
+    const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+    
+    // Update credits
     await Promise.all([
-      saveAnalysisResults(profileData, analysisResult, business_id, userId, analysis_type, outreachMessage, c.env),
-      updateCreditsAndTransaction(
-        userId,
-        creditCost,
-        userResult.credits - creditCost,
-        `${analysis_type} analysis for @${username}`, // FIXED: Use analysis_type not data.analysis_type
-        'use',
-        c.env
-      )
+      updateCreditsAndTransaction(userId, creditCost, userResult.credits - creditCost, 
+        `${analysis_type} analysis for @${profileData.username}`, leadId, c.env)
     ]);
     
     const totalTime = Date.now() - startTime;
@@ -1364,6 +1407,13 @@ app.post('/v1/analyze', async (c) => {
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 });
+
+// ✅ ALSO ADD this helper function to convert scores safely:
+function convertScoreToInteger(score: any): number {
+  if (score === null || score === undefined || score === '') return 0;
+  const numScore = parseFloat(String(score));
+  return isNaN(numScore) ? 0 : Math.round(numScore);
+}
 
 // ===============================================================================
 // CORRECTED /v1/bulk-analyze ENDPOINT  
