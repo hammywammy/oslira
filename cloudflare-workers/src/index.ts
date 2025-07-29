@@ -155,7 +155,7 @@ async function callWithRetry(
   init: RequestInit,
   retries = 3,
   baseBackoffMs = 1000,
-  timeoutMs = 30000  // Increase default from 25000 to 30000
+  timeoutMs = 30000
 ): Promise<any> {
   let lastError: Error;
   
@@ -164,6 +164,8 @@ async function callWithRetry(
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
     try {
+      console.log(`🔄 Attempt ${attempt + 1}/${retries} for ${url} (timeout: ${timeoutMs}ms)`);
+      
       const res = await fetch(url, { 
         ...init, 
         signal: controller.signal 
@@ -172,12 +174,15 @@ async function callWithRetry(
       clearTimeout(timeoutId);
       
       if (res.ok) {
-        return await res.json();
+        const data = await res.json();
+        console.log(`✅ Request successful on attempt ${attempt + 1}`);
+        return data;
       }
       
+      // Handle rate limiting with exponential backoff
       if (res.status === 429 && attempt < retries - 1) {
         const delay = Math.min(baseBackoffMs * Math.pow(2, attempt), 10000);
-        console.log(`Rate limited on ${url}, retrying in ${delay}ms`);
+        console.log(`⏳ Rate limited, retrying in ${delay}ms`);
         await new Promise(r => setTimeout(r, delay));
         continue;
       }
@@ -189,21 +194,22 @@ async function callWithRetry(
       clearTimeout(timeoutId);
       
       if (error.name === 'AbortError') {
-        lastError = new Error(`Request timeout after ${timeoutMs}ms - try again or use light analysis for faster results`);
+        lastError = new Error(`Request timeout after ${timeoutMs}ms. The profile may be slow to load.`);
       } else {
         lastError = new Error(`Network error: ${error.message}`);
       }
       
+      // Retry with longer delay on timeout/network errors
       if (attempt < retries - 1) {
         const delay = Math.min(baseBackoffMs * Math.pow(2, attempt), 5000);
-        console.log(`Request failed for ${url}, retrying in ${delay}ms: ${lastError.message}`);
+        console.log(`⚠️ Request failed, retrying in ${delay}ms: ${lastError.message}`);
         await new Promise(r => setTimeout(r, delay));
         continue;
       }
     }
   }
   
-  throw new Error(`Failed after ${retries} attempts to ${url}: ${lastError.message}`);
+  throw new Error(`Failed after ${retries} attempts: ${lastError.message}`);
 }
 
 async function verifyJWT(token: string): Promise<string | null> {
@@ -769,71 +775,7 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
   }
 }
 
-// ===============================================================================
-// ENHANCED RETRY FUNCTION WITH BETTER TIMEOUT HANDLING
-// ===============================================================================
 
-async function callWithRetry(
-  url: string,
-  init: RequestInit,
-  retries = 3,
-  baseBackoffMs = 1000,
-  timeoutMs = 30000
-): Promise<any> {
-  let lastError: Error;
-  
-  for (let attempt = 0; attempt < retries; attempt++) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
-    try {
-      console.log(`🔄 Attempt ${attempt + 1}/${retries} for ${url} (timeout: ${timeoutMs}ms)`);
-      
-      const res = await fetch(url, { 
-        ...init, 
-        signal: controller.signal 
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (res.ok) {
-        const data = await res.json();
-        console.log(`✅ Request successful on attempt ${attempt + 1}`);
-        return data;
-      }
-      
-      // Handle rate limiting with exponential backoff
-      if (res.status === 429 && attempt < retries - 1) {
-        const delay = Math.min(baseBackoffMs * Math.pow(2, attempt), 10000);
-        console.log(`⏳ Rate limited, retrying in ${delay}ms`);
-        await new Promise(r => setTimeout(r, delay));
-        continue;
-      }
-      
-      const text = await res.text();
-      lastError = new Error(`HTTP ${res.status}: ${text}`);
-      
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      
-      if (error.name === 'AbortError') {
-        lastError = new Error(`Request timeout after ${timeoutMs}ms. The profile may be slow to load.`);
-      } else {
-        lastError = new Error(`Network error: ${error.message}`);
-      }
-      
-      // Retry with longer delay on timeout/network errors
-      if (attempt < retries - 1) {
-        const delay = Math.min(baseBackoffMs * Math.pow(2, attempt), 5000);
-        console.log(`⚠️ Request failed, retrying in ${delay}ms: ${lastError.message}`);
-        await new Promise(r => setTimeout(r, delay));
-        continue;
-      }
-    }
-  }
-  
-  throw new Error(`Failed after ${retries} attempts: ${lastError.message}`);
-}
 
 // ===============================================================================
 // INTERFACE DEFINITIONS (Add these to your types)
