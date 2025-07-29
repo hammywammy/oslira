@@ -263,132 +263,143 @@ async loadRecentActivity() {
     }
 }
     displayDemoLeads() {
-        this.allLeads = [
-            {
-                id: 'demo-1',
-                username: 'demo_user_1',
-                platform: 'Instagram',
-                score: 85,
-                type: 'deep',
-                created_at: new Date().toISOString(),
-                profile_pic_url: null
-            },
-            {
-                id: 'demo-2', 
-                username: 'demo_user_2',
-                platform: 'Instagram',
-                score: 72,
-                type: 'light',
-                created_at: new Date(Date.now() - 86400000).toISOString(),
-                profile_pic_url: null
-            }
-        ];
-        this.applyActivityFilter();
-    }
-
-    applyActivityFilter() {
-        const filter = document.getElementById('activity-filter')?.value || 'all';
-        let filteredLeads = [...this.allLeads];
-
-        switch (filter) {
-            case 'light':
-                filteredLeads = filteredLeads.filter(lead => 
-                    lead.type === 'light' || (!lead.type && (!lead.lead_analyses || lead.lead_analyses.length === 0))
-                );
-                break;
-            case 'deep':
-                filteredLeads = filteredLeads.filter(lead => 
-                    lead.type === 'deep' || (!lead.type && lead.lead_analyses && lead.lead_analyses.length > 0)
-                );
-                break;
-            case 'score_high':
-                filteredLeads.sort((a, b) => (b.score || 0) - (a.score || 0));
-                break;
-            case 'score_low':
-                filteredLeads.sort((a, b) => (a.score || 0) - (b.score || 0));
-                break;
-            case 'recent':
-                filteredLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                break;
-            case 'oldest':
-                filteredLeads.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-                break;
+    this.allLeads = [
+        {
+            id: 'demo-1',
+            username: 'demo_user_1',
+            platform: 'Instagram',
+            score: 85,
+            analysis_type: 'deep', // FIXED: Use analysis_type instead of type
+            created_at: new Date().toISOString(),
+            profile_pic_url: null
+        },
+        {
+            id: 'demo-2', 
+            username: 'demo_user_2',
+            platform: 'Instagram',
+            score: 72,
+            analysis_type: 'light', // FIXED: Use analysis_type instead of type
+            created_at: new Date(Date.now() - 86400000).toISOString(),
+            profile_pic_url: null
         }
+    ];
+    this.applyActivityFilter();
+}
 
-        this.displayLeads(filteredLeads);
+   applyActivityFilter() {
+    const filter = document.getElementById('activity-filter')?.value || 'all';
+    let filteredLeads = [...this.allLeads];
+
+    switch (filter) {
+        case 'light':
+            // FIXED: Use analysis_type instead of type
+            filteredLeads = filteredLeads.filter(lead => 
+                lead.analysis_type === 'light' || !lead.analysis_type
+            );
+            break;
+        case 'deep':
+            // FIXED: Use analysis_type instead of type
+            filteredLeads = filteredLeads.filter(lead => 
+                lead.analysis_type === 'deep'
+            );
+            break;
+        case 'score_high':
+            filteredLeads.sort((a, b) => (b.score || 0) - (a.score || 0));
+            break;
+        case 'score_low':
+            filteredLeads.sort((a, b) => (a.score || 0) - (b.score || 0));
+            break;
+        case 'recent':
+            filteredLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            break;
+        case 'oldest':
+            filteredLeads.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            break;
     }
+
+    this.displayLeads(filteredLeads);
+}
 
     displayLeads(leads) {
-        const tableBody = document.getElementById('activity-table');
-        
-        if (!tableBody) return;
-        
-        if (leads && leads.length > 0) {
-            tableBody.innerHTML = leads.map(lead => {
-                const analysisType = lead.type || (lead.lead_analyses && lead.lead_analyses.length > 0 ? 'deep' : 'light');
-                const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
-                
-                const profilePicUrl = lead.profile_pic_url || lead.profile_picture_url || lead.avatar_url;
-                const profilePicHtml = profilePicUrl 
-                    ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=40&h=40&fit=cover&a=attention" 
-                            alt="@${lead.username}" 
-                            style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-light);"
-                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-                    : '';
-                
-                const fallbackAvatar = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; border: 2px solid var(--border-light);">
-                    ${(lead.username || 'U').charAt(0).toUpperCase()}
-                </div>`;
-                
-                const isSelected = this.selectedLeads.has(lead.id);
-                const formattedDate = this.formatDateCached(lead.created_at);
-                
-                return `
-                    <tr class="lead-row ${isSelected ? 'selected' : ''}" data-lead-id="${lead.id}">
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <label class="checkbox-container" style="margin: 0;">
-                                    <input type="checkbox" 
-                                           class="lead-checkbox" 
-                                           data-lead-id="${lead.id}" 
-                                           ${isSelected ? 'checked' : ''}
-                                           onchange="dashboard.toggleLeadSelection('${lead.id}')">
-                                    <span class="checkmark"></span>
-                                </label>
-                                <div style="position: relative; flex-shrink: 0;">
-                                    ${profilePicHtml}
-                                    ${fallbackAvatar}
-                                </div>
-                                <div>
-                                    <div style="font-weight: 600; color: var(--text-primary);">@${lead.username}</div>
-                                    <div style="font-size: 12px; color: var(--border-light);">
-                                        ${lead.platform || 'Instagram'}
-                                    </div>
-                                </div>
+    const tableBody = document.getElementById('activity-table');
+    
+    if (!tableBody) return;
+    
+    if (leads && leads.length > 0) {
+        tableBody.innerHTML = leads.map(lead => {
+            // FIXED: Use analysis_type instead of type
+            const analysisType = lead.analysis_type || 'light';
+            const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
+            
+            const profilePicUrl = lead.profile_pic_url || lead.profile_picture_url || lead.avatar_url;
+            const profilePicHtml = profilePicUrl 
+                ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=40&h=40&fit=cover&a=attention" 
+                        alt="@${lead.username}" 
+                        style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-light);"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                : '';
+            
+            const fallbackAvatar = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
+                ${lead.username ? lead.username.charAt(0).toUpperCase() : '?'}
+            </div>`;
+            
+            return `
+                <tr class="lead-row" data-lead-id="${lead.id}">
+                    <td style="padding: 16px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <label style="display: flex; align-items: center; cursor: pointer;">
+                                <input type="checkbox" class="lead-checkbox" value="${lead.id}" 
+                                       style="margin-right: 8px; cursor: pointer;">
+                            </label>
+                            <div style="position: relative;">
+                                ${profilePicHtml}
+                                ${fallbackAvatar}
                             </div>
-                        </td>
-                        <td>📷 ${lead.platform || 'Instagram'}</td>
-                        <td><span class="score-badge ${scoreClass}">${lead.score || 0}</span></td>
-                        <td><span class="status ${analysisType}">${analysisType}</span></td>
-                        <td title="${window.OsliraApp.formatDate(lead.created_at)}">${formattedDate}</td>
-                        <td style="text-align: center;">
-                            <button class="btn-small" onclick="dashboard.viewLead('${lead.id}')">📝 View</button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        } else {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        No leads found for the selected filters.
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-primary);">@${lead.username}</div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">${lead.full_name || 'Instagram Profile'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="padding: 16px;">
+                        <span style="color: var(--text-primary); font-weight: 500;">${lead.platform || 'Instagram'}</span>
+                    </td>
+                    <td style="padding: 16px;">
+                        <span class="score ${scoreClass}" style="padding: 6px 12px; border-radius: 16px; font-weight: 600; font-size: 14px;">
+                            ${lead.score || 0}
+                        </span>
+                    </td>
+                    <td style="padding: 16px;">
+                        <span class="status ${analysisType}" style="padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
+                            ${analysisType === 'deep' ? '🔍 Deep' : '⚡ Light'}
+                        </span>
+                    </td>
+                    <td style="padding: 16px;">
+                        <span style="color: var(--text-secondary); font-size: 14px;">
+                            ${this.formatDateCached(lead.created_at)}
+                        </span>
+                    </td>
+                    <td style="padding: 16px;">
+                        <button onclick="dashboard.viewLead('${lead.id}')" class="btn-small" 
+                                style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                            View
+                        </button>
                     </td>
                 </tr>
             `;
-        }
-        
-        this.updateBulkActionsVisibility();
+        }).join('');
+    } else {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    No leads found. Start by researching your first lead!
+                </td>
+            </tr>
+        `;
     }
+    
+    this.updateBulkActions();
+}
 
     displayErrorState(message) {
         const tableBody = document.getElementById('activity-table');
