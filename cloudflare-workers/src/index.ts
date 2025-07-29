@@ -268,28 +268,47 @@ async function saveAnalysisResults(
     'Content-Type': 'application/json'
   };
   
-  // ✅ UPDATED: Save to leads table instead of profiles
+  // ✅ FINAL: Using exact columns from your cleaned leads table
   const leadPayload = {
+    // Required fields
+    user_id: userId,
+    business_id: businessId,
+    
+    // Profile data
     username: profileData.username,
-    name: profileData.displayName, // maps to your 'name' column
+    full_name: profileData.displayName,
     bio: profileData.bio,
     followers_count: profileData.followersCount,
     following_count: profileData.followingCount,
     posts_count: profileData.postsCount,
-    verified: profileData.isVerified, // maps to your 'verified' column
-    private: profileData.isPrivate, // maps to your 'private' column
-    profile_pic_url: profileData.profilePicUrl,
+    verified: profileData.isVerified,
+    private: profileData.isPrivate,
+    profile_url: profileData.profilePicUrl,
     external_url: profileData.externalUrl,
-    business_id: businessId,
-    user_id: userId,
-    // Analysis results fields that exist in your leads table
+    
+    // Analysis fields
+    platform: 'instagram',
+    analysis_type: analysisType,
     score: analysisResult.score,
-    summary: analysisResult.reasoning, // maps to your 'summary' column
-    status: analysisResult.category, // maps to your 'status' column
-    message: outreachMessage, // maps to your 'message' column
-    type: analysisType, // maps to your 'type' column
-    engagement: analysisResult.engagement_behavior,
-    // Add other fields that match your leads table structure
+    summary: analysisResult.reasoning,
+    niche_fit: analysisResult.category,
+    engagement_score: analysisResult.confidence,
+    reason: analysisResult.reasoning,
+    talking_points: analysisResult.contact_strategy.talking_points.join(', '),
+    outreach_message: outreachMessage,
+    
+    // Engagement metrics (if available)
+    avg_likes: profileData.engagement?.avgLikes || 0,
+    avg_comments: profileData.engagement?.avgComments || 0,
+    engagement_rate: profileData.engagement?.engagementRate || 0,
+    
+    // Optional fields
+    business_category: null, // Set if you have this data
+    timezone: null, // Set if you have this data
+    user_location: null, // Set if you have this data
+    
+    // Timestamps
+    request_timestamp: new Date().toISOString(),
     analyzed_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -306,7 +325,7 @@ async function saveAnalysisResults(
   if (!leadResponse.ok) {
     const errorText = await leadResponse.text();
     console.error('❌ Failed to save to leads table:', errorText);
-    throw new Error(`Failed to save lead data: ${leadResponse.status}`);
+    throw new Error(`Failed to save lead data: ${leadResponse.status} - ${errorText}`);
   }
   
   const responseText = await leadResponse.text();
