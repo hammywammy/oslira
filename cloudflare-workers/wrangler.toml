@@ -6,6 +6,7 @@ main = "src/index.ts"
 
 [vars]
 SUPABASE_URL = "https://jswzzihuqtjqvobfosks.supabase.co"
+ENVIRONMENT = "production"
 
 # wrangler.toml (wrangler v3.88.0^)
 [observability.logs]
