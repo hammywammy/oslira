@@ -2809,82 +2809,98 @@ async processBulkAnalysis(profiles, analysisType) {
         }
     }
 
-    updateCreditsDisplay() {
-    const user = window.OsliraApp.user;
-    if (!user) {
-        console.warn('⚠️ No user data available for credits display');
-        return;
+    // Fixed version of updateCreditsDisplay() function for dashboard.js
+
+updateCreditsDisplay(creditsParam) {
+    // Get credits from parameter or user object
+    let credits = creditsParam;
+    if (typeof credits === 'undefined') {
+        const user = window.OsliraApp.user;
+        if (!user) {
+            console.warn('⚠️ No user data available for credits display');
+            return;
+        }
+        credits = user.credits || 0;
     }
     
-    const credits = user.credits || 0;
     console.log('🔄 Updating credits display:', credits);
     
-    // Update credits in the UI - CHECK IF ELEMENTS EXIST
-    const creditsElements = document.querySelectorAll('.credits-display, [data-credits], #credits-count');
-    if (creditsElements.length > 0) {
-        creditsElements.forEach(element => {
-            if (element) {
-                element.textContent = credits;
+    // Update the main sidebar billing element (this is what actually exists in the HTML)
+    const sidebarBilling = document.getElementById('sidebar-billing');
+    if (sidebarBilling) {
+        // Check if user has a subscription plan
+        const user = window.OsliraApp.user;
+        const plan = user?.subscription_plan || 'free';
+        
+        if (plan === 'free') {
+            let warningClass = '';
+            let warningText = '';
+            
+            if (credits === 0) {
+                warningClass = 'credits-empty';
+                warningText = '⚠️ No credits left';
+            } else if (credits <= 2) {
+                warningClass = 'credits-low';
+                warningText = '⚠️ Low credits';
             }
-        });
-        console.log('✅ Updated', creditsElements.length, 'credit elements');
+            
+            sidebarBilling.innerHTML = `
+                <div style="text-align: center; margin-top: 8px;" class="${warningClass}">
+                    <div style="font-size: 28px; font-weight: 800; color: ${credits === 0 ? 'var(--error)' : credits <= 2 ? 'var(--warning)' : 'var(--primary-blue)'}; line-height: 1;">
+                        ${credits}
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; font-weight: 600;">
+                        Credits Remaining
+                    </div>
+                    ${warningText ? `<div style="font-size: 10px; color: ${credits === 0 ? 'var(--error)' : 'var(--warning)'}; margin-top: 4px; font-weight: 600;">${warningText}</div>` : ''}
+                </div>
+            `;
+        } else {
+            // For paid plans, show unlimited or subscription-based display
+            sidebarBilling.innerHTML = `
+                <div style="text-align: center; margin-top: 8px;">
+                    <div style="font-size: 28px; font-weight: 800; color: var(--success); line-height: 1;">
+                        ${credits === -1 ? '∞' : credits}
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px; font-weight: 600;">
+                        ${credits === -1 ? 'Unlimited Credits' : 'Credits Remaining'}
+                    </div>
+                </div>
+            `;
+        }
+        console.log('✅ Updated sidebar billing credits display');
+    } else {
+        console.warn('⚠️ sidebar-billing element not found');
     }
     
-    // Update credits in header/nav if it exists
-    const headerCredits = document.querySelector('#header-credits, .header-credits, .nav-credits');
-    if (headerCredits) {
-        headerCredits.textContent = `${credits} credits`;
-        console.log('✅ Updated header credits');
-    }
-    
-    // Update any credit badges
-    const creditBadges = document.querySelectorAll('.credit-badge, .credits-badge');
-    if (creditBadges.length > 0) {
-        creditBadges.forEach(badge => {
-            if (badge) {
-                badge.textContent = credits;
-            }
-        });
-        console.log('✅ Updated', creditBadges.length, 'credit badges');
-    }
-    
-    // Update any elements with specific IDs that might exist
-    const specificElements = [
-        'user-credits',
-        'credits-remaining', 
-        'account-credits',
-        'balance-display'
+    // Safely update any other credit displays that might exist (with null checks)
+    const additionalElements = [
+        '#credits-count',
+        '#header-credits', 
+        '.credits-remaining',
+        '.user-credits',
+        '.nav-credits'
     ];
     
-    specificElements.forEach(id => {
-        const element = document.getElementById(id);
+    additionalElements.forEach(selector => {
+        const element = document.querySelector(selector);
         if (element) {
-            element.textContent = credits;
-            console.log('✅ Updated element:', id);
+            element.textContent = credits === -1 ? '∞' : credits;
+            console.log(`✅ Updated ${selector} credits display`);
         }
     });
     
-    console.log('✅ Credits display update completed');
-}
-
-    async refreshCreditsDisplay() {
-    try {
-        // Check if we have the API function
-        if (!window.OsliraApp || !window.OsliraApp.apiRequest) {
-            console.warn('⚠️ OsliraApp.apiRequest not available');
-            return;
+    // Update any elements with data-credits attribute
+    const dataCreditsElements = document.querySelectorAll('[data-credits]');
+    dataCreditsElements.forEach(element => {
+        if (element) {
+            element.textContent = credits === -1 ? '∞' : credits;
+            element.setAttribute('data-credits', credits);
         }
-        
-        // For now, just update with current user data since we don't have a /v1/user endpoint
-        if (window.OsliraApp.user) {
-            this.updateCreditsDisplay();
-        } else {
-            console.warn('⚠️ No user data available for refresh');
-        }
-        
-    } catch (error) {
-        console.error('❌ Failed to refresh credits display:', error);
-        // Don't throw - just log the error
+    });
+    
+    if (dataCreditsElements.length > 0) {
+        console.log(`✅ Updated ${dataCreditsElements.length} data-credits elements`);
     }
 }
     
