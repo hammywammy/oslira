@@ -1134,7 +1134,6 @@ app.get('/v1/config', (c) => {
   }));
 });
 
-// CORRECTED /v1/analyze endpoint
 app.post('/v1/analyze', async (c) => {
   const requestId = generateRequestId();
   const startTime = Date.now();
@@ -1151,7 +1150,7 @@ app.post('/v1/analyze', async (c) => {
       return c.json(createStandardResponse(false, undefined, 'Invalid token', requestId), 401);
     }
     
-    // Request validation
+    // Request validation - FIXED: Use consistent variable names
     const body = await c.req.json();
     const { profile_url, analysis_type = 'light', business_id } = body;
     
@@ -1189,79 +1188,21 @@ app.post('/v1/analyze', async (c) => {
     // Generate outreach message (deep analysis only)
     let outreachMessage = '';
     if (analysis_type === 'deep') {
-      try {
-        console.log('💬 Generating outreach message...');
-        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-        console.log(`✅ Message generated: ${outreachMessage.length} characters`);
-      } catch (messageError: any) {
-        console.warn('⚠️ Message generation failed (non-fatal):', messageError.message);
-      }
+      outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
     }
     
-    // FIXED: Prepare data for dual table saving
-const leadData = {
-  user_id: userId,
-  business_id: business_id,
-  username: profileData.username,
-  full_name: profileData.displayName || null,
-  bio: profileData.bio || null,
-  platform: 'instagram',
-  profile_pic_url: profileData.profilePicUrl || null,
-  score: analysisResult.score || 0,
-  analysis_type: data.analysis_type, // FIXED: Use analysis_type not type
-  followers_count: profileData.followersCount || 0,
-  avg_likes: profileData.engagement?.avgLikes || 0,
-  avg_comments: profileData.engagement?.avgComments || 0,
-  engagement_rate: profileData.engagement?.engagementRate || 0,
-  outreach_message: outreachMessage || null,
-  created_at: new Date().toISOString()
-  // REMOVED: user_timezone, user_local_time, profile_url, type
-};
-
-    // Create analysis data for deep analysis only
-    let analysisData = null;
-    if (analysis_type === 'deep') {
-      analysisData = {
-        user_id: userId,
-        analysis_type: 'deep',
-        engagement_score: analysisResult.engagement_score || null,
-        score_niche_fit: analysisResult.niche_fit || null,
-        score_total: analysisResult.score || 0,
-        outreach_message: outreachMessage || null,
-        selling_points: Array.isArray(analysisResult.selling_points) 
-          ? analysisResult.selling_points.join('|') 
-          : null,
-        avg_comments: profileData.engagement?.avgComments || 0,
-        avg_likes: profileData.engagement?.avgLikes || 0,
-        engagement_rate: profileData.engagement?.engagementRate || 0,
-        audience_quality: analysisResult.audience_quality || null,
-        engagement_insights: Array.isArray(analysisResult.engagement_insights)
-          ? analysisResult.engagement_insights.join('|')
-          : null
-      };
-    }
-    
-    // Save to database and update credits
-    let leadId;
-    try {
-      console.log('💾 Saving to database...');
-      // FIXED: Use saveLeadAndAnalysis for dual table saving
-      leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
-      console.log(`✅ Saved to database: leadId=${leadId}`);
-    } catch (saveError: any) {
-      console.error('❌ saveLeadAndAnalysis failed:', saveError.message);
-      return c.json(createStandardResponse(false, undefined, `Failed to save analysis results: ${saveError.message}`, requestId), 500);
-    }
-
-    // Update credits
-    await updateCreditsAndTransaction(
-      userId,
-      creditCost,
-      userResult.credits - creditCost,
-      `${analysis_type} analysis for @${username}`,
-      'use',
-      c.env
-    );
+    // FIXED: Save to database using correct variable names
+    await Promise.all([
+      saveAnalysisResults(profileData, analysisResult, business_id, userId, analysis_type, outreachMessage, c.env),
+      updateCreditsAndTransaction(
+        userId,
+        creditCost,
+        userResult.credits - creditCost,
+        `${analysis_type} analysis for @${username}`, // FIXED: Use analysis_type not data.analysis_type
+        'use',
+        c.env
+      )
+    ]);
     
     const totalTime = Date.now() - startTime;
     logger('info', 'Analysis completed', { username, score: analysisResult.score, totalTime, requestId });
@@ -1286,7 +1227,10 @@ const leadData = {
   }
 });
 
-// CORRECTED /v1/bulk-analyze endpoint
+// ===============================================================================
+// CORRECTED /v1/bulk-analyze ENDPOINT  
+// ===============================================================================
+
 app.post('/v1/bulk-analyze', async (c) => {
   const requestId = generateRequestId();
   const startTime = Date.now();
@@ -1303,7 +1247,7 @@ app.post('/v1/bulk-analyze', async (c) => {
       return c.json(createStandardResponse(false, undefined, 'Invalid token', requestId), 401);
     }
     
-    // Request validation
+    // Request validation - FIXED: Use consistent variable names  
     const body = await c.req.json();
     const { profiles, analysis_type = 'light', business_id } = body;
     
@@ -1336,12 +1280,9 @@ app.post('/v1/bulk-analyze', async (c) => {
     let failed = 0;
     let creditsUsed = 0;
     
-    for (let i = 0; i < profiles.length; i++) {
-      const profileUrl = profiles[i];
-      
+    for (const profileUrl of profiles) {
       try {
         const username = extractUsername(profileUrl);
-        console.log(`Processing profile ${i + 1}/${profiles.length}: @${username}`);
         
         // Scrape and analyze
         const profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
@@ -1349,67 +1290,17 @@ app.post('/v1/bulk-analyze', async (c) => {
         
         let outreachMessage = '';
         if (analysis_type === 'deep') {
-          try {
-            outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-          } catch (messageError: any) {
-            console.warn(`⚠️ Message generation failed for @${username}:`, messageError.message);
-          }
+          outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
         }
         
-        // FIXED: Prepare data for dual table saving
-const leadData = {
-  user_id: userId,
-  business_id: business_id,
-  username: validatedProfile.username,
-  full_name: validatedProfile.displayName || null,
-  bio: validatedProfile.bio || null,
-  platform: 'instagram',
-  profile_pic_url: validatedProfile.profilePicUrl || null,
-  score: analysisResult.score || 0,
-  analysis_type: analysis_type, // FIXED: Use analysis_type not type
-  followers_count: validatedProfile.followersCount || 0,
-  avg_likes: validatedProfile.engagement?.avgLikes || 0,
-  avg_comments: validatedProfile.engagement?.avgComments || 0,
-  engagement_rate: validatedProfile.engagement?.engagementRate || 0,
-  outreach_message: outreachMessage || null,
-  created_at: new Date(new Date().getTime() + (i * 1000)).toISOString() // Stagger timestamps
-  // REMOVED: user_timezone, user_local_time, profile_url, type
-};
-
-        // Create analysis data for deep analysis only
-        let analysisData = null;
-        if (analysis_type === 'deep') {
-const analysisData = {
-  user_id: userId,
-  analysis_type: 'deep',
-  engagement_score: analysisResult.engagement_score || null,
-  score_niche_fit: analysisResult.niche_fit || null,
-  score_total: analysisResult.score || 0,
-  outreach_message: outreachMessage || null,
-  selling_points: Array.isArray(analysisResult.selling_points) 
-    ? analysisResult.selling_points.join('|') 
-    : (analysisResult.selling_points ? String(analysisResult.selling_points) : null),
-  avg_comments: profileData.engagement?.avgComments || 0,
-  avg_likes: profileData.engagement?.avgLikes || 0,
-  engagement_rate: profileData.engagement?.engagementRate || 0,
-  audience_quality: analysisResult.audience_quality || null,
-  engagement_insights: Array.isArray(analysisResult.engagement_insights)
-    ? analysisResult.engagement_insights.join('|')
-    : (analysisResult.engagement_insights ? String(analysisResult.engagement_insights) : null),
-  created_at: new Date().toISOString()
-  // REMOVED: ai_version_id, updated_at
-};
-        }
-
-        // FIXED: Use saveLeadAndAnalysis for dual table saving
-        const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+        // FIXED: Save to database using correct variable names
+        await saveAnalysisResults(profileData, analysisResult, business_id, userId, analysis_type, outreachMessage, c.env);
         
         results.push({
           username,
           success: true,
-          lead_id: leadId,
-          score: analysisResult.score,
-          message_generated: !!outreachMessage
+          analysis: analysisResult,
+          outreach_message: outreachMessage
         });
         
         successful++;
@@ -1434,7 +1325,7 @@ const analysisData = {
         userId,
         creditsUsed,
         userResult.credits - creditsUsed,
-        `Bulk ${analysis_type} analysis (${successful} profiles)`,
+        `Bulk ${analysis_type} analysis (${successful} profiles)`, // FIXED: Use analysis_type
         'use',
         c.env
       );
