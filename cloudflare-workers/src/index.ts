@@ -230,64 +230,64 @@ async function fetchBusinessProfile(businessId: string, userId: string, env: Env
   return businesses[0];
 }
 
-async function saveAnalysisResults(profileData: ProfileData, analysisResult: AnalysisResult, businessId: string, userId: string, analysisType: string, outreachMessage: string, env: Env): Promise<void> {
+async function saveAnalysisResults(
+  profileData: ProfileData,
+  analysisResult: AnalysisResult,
+  businessId: string,
+  userId: string,
+  analysisType: string,
+  outreachMessage: string,
+  env: Env
+): Promise<void> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
     'Content-Type': 'application/json'
   };
   
-  const profilePayload = {
+  // ✅ UPDATED: Save to leads table instead of profiles
+  const leadPayload = {
     username: profileData.username,
-    display_name: profileData.displayName,
+    name: profileData.displayName, // maps to your 'name' column
     bio: profileData.bio,
     followers_count: profileData.followersCount,
     following_count: profileData.followingCount,
     posts_count: profileData.postsCount,
-    is_verified: profileData.isVerified,
-    is_private: profileData.isPrivate,
+    verified: profileData.isVerified, // maps to your 'verified' column
+    private: profileData.isPrivate, // maps to your 'private' column
     profile_pic_url: profileData.profilePicUrl,
     external_url: profileData.externalUrl,
     business_id: businessId,
     user_id: userId,
-    scraped_at: new Date().toISOString()
-  };
-  
-  const profileResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/profiles`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(profilePayload)
-  });
-  
-  if (!profileResponse.ok) throw new Error('Failed to save profile data');
-  const savedProfiles = await profileResponse.json();
-  
-  const analysisPayload = {
-    profile_id: savedProfiles[0].id,
-    business_id: businessId,
-    user_id: userId,
-    analysis_type: analysisType,
+    // Analysis results fields that exist in your leads table
     score: analysisResult.score,
-    category: analysisResult.category,
-    reasoning: analysisResult.reasoning,
-    deep_research_summary: analysisResult.deep_research_summary,
-    personal_brand_themes: analysisResult.personal_brand_themes,
-    engagement_behavior: analysisResult.engagement_behavior,
-    business_signals: analysisResult.business_signals,
-    risk_factors: analysisResult.risk_factors,
-    contact_strategy: analysisResult.contact_strategy,
-    confidence: analysisResult.confidence,
-    outreach_message: outreachMessage,
-    analyzed_at: new Date().toISOString()
+    summary: analysisResult.reasoning, // maps to your 'summary' column
+    status: analysisResult.category, // maps to your 'status' column
+    message: outreachMessage, // maps to your 'message' column
+    type: analysisType, // maps to your 'type' column
+    engagement: analysisResult.engagement_behavior,
+    // Add other fields that match your leads table structure
+    analyzed_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
   
-  const analysisResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/analysis_results`, {
+  console.log('💾 Saving to leads table:', leadPayload);
+  
+  const leadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
     method: 'POST',
     headers,
-    body: JSON.stringify(analysisPayload)
+    body: JSON.stringify(leadPayload)
   });
   
-  if (!analysisResponse.ok) throw new Error('Failed to save analysis results');
+  if (!leadResponse.ok) {
+    const errorText = await leadResponse.text();
+    console.error('❌ Failed to save to leads table:', errorText);
+    throw new Error(`Failed to save lead data: ${leadResponse.status}`);
+  }
+  
+  const responseText = await leadResponse.text();
+  console.log('✅ Lead saved successfully:', responseText);
 }
 
 async function updateCreditsAndTransaction(
