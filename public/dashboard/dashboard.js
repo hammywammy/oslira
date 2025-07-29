@@ -986,11 +986,13 @@ async viewLead(leadId) {
             reasoning: `Lead scored ${lead.score}/100 based on profile analysis.`,
             engagement_rate: lead.engagement_rate,
             avg_likes: lead.avg_likes,
-            avg_comments: lead.avg_comments
+            avg_comments: lead.avg_comments,
+            outreach_message: lead.outreach_message // Include outreach message for deep analysis
         };
         
-        // Get analysis type from lead data
+        // Get analysis type from lead data - FIXED: Use analysis_type not type
         const analysisType = lead.analysis_type || 'light';
+        console.log('🔍 Analysis type from database:', lead.analysis_type, '| Determined as:', analysisType);
         const score = lead.score || 0;
         const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
         
