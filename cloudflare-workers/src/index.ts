@@ -340,7 +340,165 @@ async function saveAnalysisResults(
   const responseText = await leadResponse.text();
   console.log('✅ Lead saved successfully:', responseText);
 }
+// Add this function to your Worker index.ts file
+// This is the missing saveLeadAndAnalysis function
 
+async function saveLeadAndAnalysis(
+  leadData: any,
+  analysisData: any | null,
+  analysisType: string,
+  env: Env
+): Promise<string> {
+  const headers = {
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    // STEP 1: Save to leads table (always)
+    console.log('💾 Saving to leads table:', leadData.username);
+    
+    const leadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
+      method: 'POST',
+      headers: { ...headers, Prefer: 'return=representation' },
+      body: JSON.stringify(leadData)
+    });
+
+    if (!leadResponse.ok) {
+      const errorText = await leadResponse.text();
+      throw new Error(`Failed to save to leads table: ${leadResponse.status} - ${errorText}`);
+    }
+
+    const leadResult = await leadResponse.json();
+    if (!leadResult || !leadResult.length) {
+      throw new Error('Failed to create lead record - no data returned');
+    }
+
+    const leadId = leadResult[0].id;
+    if (!leadId) {
+      throw new Error('Failed to get lead ID from database response');
+    }
+
+    console.log(`✅ Lead saved to leads table: ${leadId}`);
+
+    // STEP 2: Save to lead_analyses table (only for deep analysis)
+    if (analysisType === 'deep' && analysisData) {
+      console.log('📊 Saving to lead_analyses table for deep analysis');
+      
+      const analysisPayload = {
+        ...analysisData,
+        lead_id: leadId, // Link to the lead record
+      };
+
+      const analysisResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/lead_analyses`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(analysisPayload)
+      });
+
+      if (!analysisResponse.ok) {
+        const errorText = await analysisResponse.text();
+        console.error('❌ Failed to save to lead_analyses table:', errorText);
+        
+        // ROLLBACK: Delete the lead record if analysis save fails
+        try {
+          await fetch(`${env.SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
+            method: 'DELETE',
+            headers
+          });
+          console.log('🔄 Rolled back lead record due to analysis save failure');
+        } catch (rollbackError) {
+          console.error('❌ Failed to rollback lead record:', rollbackError);
+        }
+        
+        throw new Error(`Failed to save analysis data: ${analysisResponse.status} - ${errorText}`);
+      }
+
+      console.log('✅ Deep analysis data saved to lead_analyses table');
+    } else {
+      console.log('ℹ️ Light analysis - skipping lead_analyses table (as intended)');
+    }
+
+    return leadId;
+
+  } catch (error: any) {
+    console.error('❌ saveLeadAndAnalysis failed:', error.message);
+    throw new Error(`Database save failed: ${error.message}`);
+  }
+}
+
+// ALSO: Update your saveAnalysisResults function to properly call saveLeadAndAnalysis
+async function saveAnalysisResults(
+  profileData: ProfileData,
+  analysisResult: AnalysisResult,
+  businessId: string,
+  userId: string,
+  analysisType: string,
+  outreachMessage: string,
+  env: Env
+): Promise<void> {
+  
+  // Prepare data for leads table (flattened)
+  const leadData = {
+    user_id: userId,
+    business_id: businessId,
+    username: profileData.username,
+    full_name: profileData.displayName || null,
+    bio: profileData.bio || null,
+    platform: 'instagram',
+    profile_pic_url: profileData.profilePicUrl || null,
+    score: analysisResult.score || 0,
+    analysis_type: analysisType, // CRITICAL: This field determines light vs deep
+    followers_count: profileData.followersCount || 0,
+    
+    // Include basic engagement data in leads table for both types
+    avg_likes: profileData.engagement?.avgLikes || 0,
+    avg_comments: profileData.engagement?.avgComments || 0,
+    engagement_rate: profileData.engagement?.engagementRate || 0,
+    
+    // Outreach message (will be null for light analysis)
+    outreach_message: outreachMessage || null,
+    
+    created_at: new Date().toISOString()
+  };
+
+  // Prepare data for lead_analyses table (detailed analysis for deep only)
+  let analysisData = null;
+  if (analysisType === 'deep') {
+    analysisData = {
+      user_id: userId,
+      analysis_type: 'deep',
+      
+      // Detailed scoring data
+      engagement_score: analysisResult.engagement_score || null,
+      score_niche_fit: analysisResult.niche_fit || null,
+      score_total: analysisResult.score || 0,
+      
+      // Rich analysis content
+      outreach_message: outreachMessage || null,
+      selling_points: Array.isArray(analysisResult.selling_points) 
+        ? analysisResult.selling_points.join('|') 
+        : (analysisResult.selling_points ? String(analysisResult.selling_points) : null),
+      
+      // Detailed engagement metrics
+      avg_comments: profileData.engagement?.avgComments || 0,
+      avg_likes: profileData.engagement?.avgLikes || 0,
+      engagement_rate: profileData.engagement?.engagementRate || 0,
+      
+      // Advanced analysis fields (for future use)
+      audience_quality: analysisResult.audience_quality || null,
+      engagement_insights: Array.isArray(analysisResult.engagement_insights)
+        ? analysisResult.engagement_insights.join('|')
+        : (analysisResult.engagement_insights ? String(analysisResult.engagement_insights) : null),
+      
+      created_at: new Date().toISOString()
+    };
+  }
+
+  // Use the saveLeadAndAnalysis function to save to both tables
+  await saveLeadAndAnalysis(leadData, analysisData, analysisType, env);
+}
 // REPLACE your updateCreditsAndTransaction function with this:
 
 async function updateCreditsAndTransaction(
