@@ -473,8 +473,8 @@ async function saveAnalysisResults(
       // Message and selling points
       outreach_message: outreachMessage || null,
       selling_points: Array.isArray(analysisResult.selling_points) 
-        ? analysisResult.selling_points.join('|') 
-        : (analysisResult.selling_points ? String(analysisResult.selling_points) : null),
+  ? analysisResult.selling_points 
+  : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
       
       // Profile engagement data
       avg_comments: profileData.engagement?.avgComments || 0,
@@ -1420,8 +1420,8 @@ app.post('/v1/analyze', async (c) => {
         // Message and selling points
         outreach_message: outreachMessage || null,
         selling_points: Array.isArray(analysisResult.selling_points) 
-          ? analysisResult.selling_points.join('|') 
-          : null,
+  ? analysisResult.selling_points 
+  : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
         
         // Profile engagement data
         avg_comments: profileData.engagement?.avgComments || 0,
@@ -1574,8 +1574,8 @@ app.post('/v1/bulk-analyze', async (c) => {
             engagement_insights: analysisResult.engagement_insights || 'No insights available',
             outreach_message: outreachMessage || null,
             selling_points: Array.isArray(analysisResult.selling_points) 
-              ? analysisResult.selling_points.join('|') 
-              : null,
+  ? analysisResult.selling_points 
+  : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
             avg_comments: profileData.engagement?.avgComments || 0,
             avg_likes: profileData.engagement?.avgLikes || 0,
             engagement_rate: profileData.engagement?.engagementRate || 0
