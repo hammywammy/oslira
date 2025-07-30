@@ -493,7 +493,7 @@ async function updateCreditsAndTransaction(
   creditsUsed: number,
   newBalance: number,
   description: string,
-  transactionType: string,
+  transactionType: string, // This parameter name is misleading - it should be leadId
   env: Env
 ): Promise<void> {
   const headers = {
@@ -502,7 +502,7 @@ async function updateCreditsAndTransaction(
     'Content-Type': 'application/json'
   };
   
-  // ✅ UPDATED: Update credits in users table
+  // ✅ STEP 1: Update credits in users table
   const updateResponse = await fetch(
     `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
     {
@@ -521,15 +521,14 @@ async function updateCreditsAndTransaction(
     throw new Error(`Failed to update credits: ${updateResponse.status} - ${errorText}`);
   }
   
-  // ✅ FIXED: Log transaction with correct payload structure
+  // ✅ STEP 2: Log transaction with correct type value
   const transactionPayload = {
     user_id: userId,
-    lead_id: null,  // ✅ ADD: Include lead_id (nullable)
-    type: transactionType,
-    amount: -creditsUsed,  // Negative for deductions
+    lead_id: null, // Could link to leadId if needed
+    type: 'use', // ✅ FIX: Use 'use' instead of 'analysis'
+    amount: -creditsUsed, // Negative for deductions
     description,
-    // ✅ REMOVE: Don't include balance_after (column doesn't exist)
-    // ✅ REMOVE: Don't include created_at (auto-generated)
+    // Don't include created_at - it's auto-generated
   };
   
   console.log('💾 Credit transaction payload:', JSON.stringify(transactionPayload, null, 2));
@@ -549,6 +548,7 @@ async function updateCreditsAndTransaction(
   const responseText = await transactionResponse.text();
   console.log('✅ Credit transaction logged successfully:', responseText);
 }
+
 
 // ===============================================================================
 // FINAL INSTAGRAM SCRAPING FUNCTION - PRODUCTION READY
@@ -1435,13 +1435,13 @@ app.post('/v1/analyze', async (c) => {
     
     // Update credits
     await updateCreditsAndTransaction(
-      userId, 
-      creditCost, 
-      userResult.credits - creditCost, 
-      `${analysis_type} analysis for @${profileData.username}`, 
-      'analysis',
-      c.env
-    );
+  userId, 
+  creditCost, 
+  userResult.credits - creditCost, 
+  `${analysis_type} analysis for @${profileData.username}`, 
+  'use', // ✅ Correct - matches constraint
+  c.env
+);
     
     const totalTime = Date.now() - startTime;
     logger('info', 'Analysis completed', { username, score: analysisResult.score, totalTime, requestId });
@@ -1613,13 +1613,13 @@ app.post('/v1/bulk-analyze', async (c) => {
     // Update credits
     if (creditsUsed > 0) {
       await updateCreditsAndTransaction(
-        userId,
-        creditsUsed,
-        userResult.credits - creditsUsed,
-        `Bulk ${analysis_type} analysis (${successful} profiles)`,
-        'bulk_analysis',
-        c.env
-      );
+  userId,
+  creditsUsed,
+  userResult.credits - creditsUsed,
+  `Bulk ${analysis_type} analysis (${successful} profiles)`,
+  'use', // ✅ Correct - matches constraint
+  c.env
+);
     }
     
     const totalTime = Date.now() - startTime;
