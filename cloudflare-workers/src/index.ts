@@ -563,9 +563,7 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
 
   try {
     if (analysisType === 'light') {
-      // ==========================================
-      // LIGHT ANALYSIS: Basic profile data only
-      // ==========================================
+      // Light analysis (unchanged)
       console.log('Using light scraper: dSCLg0C3YEZ83HzYX');
       
       const lightInput = {
@@ -581,21 +579,15 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(lightInput)
         },
-        3,      // retries
-        2000,   // base backoff ms
-        30000   // timeout: 30 seconds
+        3, 2000, 30000
       );
-
-      console.log('🔍 LIGHT - Response length:', profileResponse?.length);
 
       if (!profileResponse || !Array.isArray(profileResponse) || profileResponse.length === 0) {
         throw new Error('Profile not found or private');
       }
 
       const profile = profileResponse[0];
-      console.log('🔍 LIGHT - Available fields:', Object.keys(profile));
       
-      // Return standardized ProfileData for light analysis
       return {
         username: profile.username || username,
         displayName: profile.fullName || profile.displayName || '',
@@ -607,31 +599,26 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
         isPrivate: Boolean(profile.private || profile.isPrivate),
         profilePicUrl: profile.profilePicUrl || profile.profilePicture || '',
         externalUrl: profile.externalUrl || profile.website || '',
-        latestPosts: [], // Empty for light analysis
-        engagement: undefined // No engagement data for light
+        latestPosts: [],
+        engagement: undefined
       };
 
     } else {
       // ==========================================
-      // DEEP ANALYSIS: Profile + Posts + Engagement
+      // DEEP ANALYSIS: Fixed for actual response structure
       // ==========================================
-      console.log('Starting deep analysis with correct parameters...');
+      console.log('Starting deep analysis...');
       
       try {
-        // ✅ FIXED: Correct deep scraper input parameters
-        console.log('🔍 Using deep scraper: shu8hvrXbJbY3Eb9W');
-        
         const deepInput = {
           directUrls: [`https://instagram.com/${username}/`],
-          resultsLimit: 8, // Reduced for faster processing
+          resultsLimit: 8,
           addParentData: false,
           enhanceUserSearchWithFacebookPage: false,
-          onlyPostsNewerThan: "2024-01-01", // Recent posts only
-          resultsType: "details", // ✅ CRITICAL: This was missing!
-          searchType: "hashtag" // ✅ CRITICAL: This was missing!
+          onlyPostsNewerThan: "2024-01-01",
+          resultsType: "details",
+          searchType: "hashtag"
         };
-
-        console.log('🔍 DEEP - Input parameters:', JSON.stringify(deepInput, null, 2));
 
         const postsResponse = await callWithRetry(
           `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
@@ -640,39 +627,55 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(deepInput)
           },
-          2,      // Reduced retries
-          3000,   // base backoff ms
-          60000   // timeout: 60 seconds
+          2, 3000, 60000
         );
 
-        console.log('🔍 DEEP - Response length:', postsResponse?.length);
-
         if (postsResponse && Array.isArray(postsResponse) && postsResponse.length > 0) {
-          const firstPost = postsResponse[0];
           
-          console.log('🔍 DEEP - First post fields:', Object.keys(firstPost));
-          console.log('🔍 DEEP - Owner username:', firstPost.ownerUsername);
+          // ✅ STEP 1: Find the profile data (first item should contain profile info)
+          const firstItem = postsResponse[0];
           
-          // ✅ BETTER: Extract username from post data
-          const extractedUsername = firstPost.ownerUsername || username;
+          // ✅ STEP 2: Based on your NASA example, the response structure is different
+          // The profile data might be at the root level, not in individual posts
+          let profileData: any = null;
+          let posts: any[] = [];
           
-          // ✅ VALIDATE: Ensure we got the right profile
-          if (extractedUsername.toLowerCase() !== username.toLowerCase()) {
-            console.warn(`⚠️ Username mismatch: Expected ${username}, got ${extractedUsername}`);
+          // Check if first item has profile-level data
+          if (firstItem.username && firstItem.followersCount) {
+            // Response contains profile data at root level
+            profileData = firstItem;
+            posts = postsResponse;
+          } else if (firstItem.ownerUsername) {
+            // Response contains posts with owner data
+            profileData = {
+              username: firstItem.ownerUsername,
+              fullName: '', // Not available in post data
+              biography: '', // Not available in post data
+              followersCount: 0, // Will estimate from engagement
+              followingCount: 0,
+              postsCount: postsResponse.length,
+              verified: false,
+              private: false,
+              profilePicUrl: '',
+              externalUrl: ''
+            };
+            posts = postsResponse;
+          } else {
+            throw new Error('Unable to extract profile data from response');
           }
 
-          // ✅ IMPROVED: Calculate engagement from actual posts with better validation
-          const validPosts = postsResponse.filter(post => 
+          console.log('🔍 DEEP - Profile data found:', profileData.username);
+          console.log('🔍 DEEP - Posts count:', posts.length);
+
+          // ✅ STEP 3: Calculate engagement from posts
+          const validPosts = posts.filter(post => 
             post && 
-            post.ownerUsername === extractedUsername && // Ensure posts belong to correct user
             typeof post.likesCount === 'number' && 
             typeof post.commentsCount === 'number'
           );
 
-          console.log(`🔍 DEEP - Valid posts for ${extractedUsername}:`, validPosts.length);
-
           let engagement: EngagementData | undefined;
-          let profileFollowersCount = 0;
+          let actualFollowersCount = parseInt(profileData.followersCount) || 0;
 
           if (validPosts.length > 0) {
             const totalLikes = validPosts.reduce((sum, post) => sum + (post.likesCount || 0), 0);
@@ -680,52 +683,38 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
             const avgLikes = Math.round(totalLikes / validPosts.length);
             const avgComments = Math.round(totalComments / validPosts.length);
             
-            // ✅ IMPROVED: Try to get actual follower count from post data first
-            // Some posts might include owner profile data
-            const postWithOwnerData = validPosts.find(post => 
-              post.owner && (post.owner.followersCount || post.owner.followers_count)
-            );
-            
-            if (postWithOwnerData?.owner?.followersCount) {
-              profileFollowersCount = parseInt(postWithOwnerData.owner.followersCount);
-              console.log('🔍 DEEP - Found actual follower count:', profileFollowersCount);
-            } else {
-              // Fallback: Estimate from engagement
-              profileFollowersCount = Math.round(avgLikes / 0.02); // Assume 2% like rate
-              console.log('🔍 DEEP - Estimated follower count:', profileFollowersCount);
+            // If we don't have follower count, estimate from engagement
+            if (actualFollowersCount === 0) {
+              actualFollowersCount = Math.round(avgLikes / 0.02); // Assume 2% like rate
             }
             
-            const engagementRate = profileFollowersCount > 0 ?
-              Math.round(((avgLikes + avgComments) / profileFollowersCount) * 100 * 100) / 100 : 0;
+            const engagementRate = actualFollowersCount > 0 ?
+              Math.round(((avgLikes + avgComments) / actualFollowersCount) * 100 * 100) / 100 : 0;
 
             engagement = {
               avgLikes,
               avgComments,
               engagementRate,
-              topHashtags: [], // Could extract from post captions
+              topHashtags: [],
               postingFrequency: 'regular'
             };
 
-            console.log(`📊 Engagement calculated: ${engagementRate}% (${avgLikes} likes, ${avgComments} comments avg)`);
+            console.log(`📊 Engagement: ${engagementRate}% (${avgLikes} likes, ${avgComments} comments avg)`);
           }
 
-          // ✅ IMPROVED: Try to get more profile data from posts
-          const firstPostOwner = firstPost.owner || {};
-          const ownerData = validPosts[0] || firstPost;
-
-          // Build profile data with better data extraction
-          const profileData: ProfileData = {
-            username: extractedUsername,
-            displayName: firstPostOwner.fullName || firstPostOwner.full_name || ownerData.ownerFullName || '',
-            bio: firstPostOwner.biography || firstPostOwner.bio || '', 
-            followersCount: profileFollowersCount,
-            followingCount: parseInt(firstPostOwner.followingCount || firstPostOwner.following_count) || 0,
-            postsCount: validPosts.length, // Use actual posts we got
-            isVerified: Boolean(firstPostOwner.verified || firstPostOwner.is_verified),
-            isPrivate: Boolean(firstPostOwner.private || firstPostOwner.is_private),
-            profilePicUrl: firstPostOwner.profilePicUrl || firstPostOwner.profile_pic_url || ownerData.ownerProfilePicUrl || '',
-            externalUrl: firstPostOwner.externalUrl || firstPostOwner.external_url || '',
-            latestPosts: validPosts.map(post => ({
+          // ✅ STEP 4: Build final ProfileData object
+          const finalProfileData: ProfileData = {
+            username: profileData.username || username,
+            displayName: profileData.fullName || profileData.full_name || '',
+            bio: profileData.biography || profileData.bio || '',
+            followersCount: actualFollowersCount,
+            followingCount: parseInt(profileData.followingCount || profileData.followsCount) || 0,
+            postsCount: validPosts.length,
+            isVerified: Boolean(profileData.verified),
+            isPrivate: Boolean(profileData.private),
+            profilePicUrl: profileData.profilePicUrl || profileData.profilePicUrlHD || '',
+            externalUrl: profileData.externalUrl || '',
+            latestPosts: validPosts.slice(0, 8).map(post => ({
               id: post.id || post.shortCode || '',
               caption: post.caption || post.title || '',
               likesCount: post.likesCount || 0,
@@ -737,15 +726,22 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
             engagement
           };
 
-          console.log('✅ Deep scraping successful with correct profile data');
-          return profileData;
+          console.log('✅ Deep scraping successful');
+          console.log('📊 Final data:', {
+            username: finalProfileData.username,
+            followers: finalProfileData.followersCount,
+            posts: finalProfileData.latestPosts.length,
+            hasEngagement: !!finalProfileData.engagement
+          });
+
+          return finalProfileData;
           
         } else {
-          throw new Error('Deep scraper returned no posts data');
+          throw new Error('Deep scraper returned no data');
         }
 
       } catch (deepError: any) {
-        // FALLBACK: Use light scraper + estimated engagement
+        // FALLBACK: Use light scraper
         console.warn('⚠️ Deep scraper failed, falling back to light scraper:', deepError.message);
         
         const lightInput = {
@@ -761,28 +757,26 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(lightInput)
           },
-          3,
-          2000,
-          30000
+          3, 2000, 30000
         );
 
         if (!lightResponse || !Array.isArray(lightResponse) || lightResponse.length === 0) {
-          throw new Error('Profile not found on both deep and light scrapers');
+          throw new Error('Profile not found on both scrapers');
         }
 
         const profile = lightResponse[0];
-        
-        // Estimate engagement for deep analysis even without posts
         const followers = parseInt(profile.followersCount) || 0;
+        
+        // Provide estimated engagement for deep analysis
         const estimatedEngagement = followers > 0 ? {
-          avgLikes: Math.round(followers * 0.02), // Estimate 2% like rate
-          avgComments: Math.round(followers * 0.002), // Estimate 0.2% comment rate
-          engagementRate: 2.2, // Default estimate
+          avgLikes: Math.round(followers * 0.02),
+          avgComments: Math.round(followers * 0.002),
+          engagementRate: 2.2,
           topHashtags: [],
           postingFrequency: 'unknown'
         } : undefined;
 
-        const profileData: ProfileData = {
+        return {
           username: profile.username || username,
           displayName: profile.fullName || profile.displayName || '',
           bio: profile.biography || profile.bio || '',
@@ -793,39 +787,17 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
           isPrivate: Boolean(profile.private || profile.isPrivate),
           profilePicUrl: profile.profilePicUrl || profile.profilePicture || '',
           externalUrl: profile.externalUrl || profile.website || '',
-          latestPosts: [], // No posts from fallback
+          latestPosts: [],
           engagement: estimatedEngagement
         };
-
-        console.log('✅ Fallback to light scraper with estimated engagement');
-        return profileData;
       }
     }
 
   } catch (error: any) {
     console.error('❌ Scraping error for @' + username + ':', error);
-    
-    // Enhanced error messages
-    if (error.message.includes('AbortError') || error.message.includes('operation was aborted')) {
-      throw new Error('Profile scraping timed out. This profile may have many posts. Try again or use light analysis for faster results.');
-    } else if (error.message.includes('timeout')) {
-      throw new Error('Request timed out. Please try again in a moment.');
-    } else if (error.message.includes('404')) {
-      throw new Error('Instagram profile not found. Please check the username is correct.');
-    } else if (error.message.includes('403')) {
-      throw new Error('This Instagram profile is private or access is restricted.');
-    } else if (error.message.includes('429')) {
-      throw new Error('Instagram rate limited. Please try again in a few minutes.');
-    } else if (error.message.includes('not found')) {
-      throw new Error('Instagram profile not found or does not exist.');
-    } else if (error.message.includes('private')) {
-      throw new Error('This Instagram profile is private.');
-    }
-    
     throw new Error(`Scraping failed: ${error.message}`);
   }
 }
-
 
 
 // ===============================================================================
@@ -1816,6 +1788,48 @@ app.post('/v1/stripe-webhook', async (c) => {
   } catch (error: any) {
     logger('error', 'Webhook processing failed', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 400);
+  }
+});
+
+app.get('/debug-parsing/:username', async c => {
+  const username = c.req.param('username');
+  
+  try {
+    // Test just the deep scraper call to see raw response
+    const deepInput = {
+      directUrls: [`https://instagram.com/${username}/`],
+      resultsLimit: 3, // Small for debugging
+      addParentData: false,
+      enhanceUserSearchWithFacebookPage: false,
+      onlyPostsNewerThan: "2024-01-01",
+      resultsType: "details",
+      searchType: "hashtag"
+    };
+
+    const rawResponse = await callWithRetry(
+      `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deepInput)
+      },
+      1, 1000, 30000
+    );
+
+    return c.json({
+      success: true,
+      username,
+      rawResponseLength: rawResponse?.length,
+      firstItemKeys: rawResponse?.[0] ? Object.keys(rawResponse[0]) : [],
+      firstItemSample: rawResponse?.[0] || null,
+      hasProfileData: !!(rawResponse?.[0]?.username || rawResponse?.[0]?.ownerUsername)
+    });
+    
+  } catch (error: any) {
+    return c.json({ 
+      success: false, 
+      error: error.message 
+    }, 500);
   }
 });
 
