@@ -125,175 +125,168 @@ class Dashboard {
     // DATA LOADING AND MANAGEMENT
     // ===============================================================================
 
-    async loadDashboardData() {
-        if (this.isLoading) return;
-        this.isLoading = true;
+   async loadDashboardData() {
+    if (this.isLoading) return;
+    this.isLoading = true;
 
-        try {
-            console.log('🔄 Loading dashboard data...');
-            
-            // Show loading state
-            this.showLoadingState();
-            
-            const supabase = window.OsliraApp.supabase;
-            const user = window.OsliraApp.user;
+    try {
+        console.log('🔄 Loading dashboard data...');
+        
+        // Show loading state
+        this.showLoadingState();
+        
+        // ✅ FIXED: Use the shared supabase and user (no auth check)
+        const supabase = window.OsliraApp.supabase;
+        const user = window.OsliraApp.user;
 
-            if (!supabase || !user) {
-                throw new Error('Authentication required');
-            }
+        // ✅ UPDATED: Only get basic fields from leads table (post-migration)
+        const { data: leads, error } = await supabase
+            .from('leads')
+            .select(`
+                id,
+                username,
+                profile_pic_url,
+                platform,
+                score,
+                analysis_type,
+                created_at,
+                followers_count,
+                business_id
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(100);
 
-            // ✅ UPDATED: Only get basic fields from leads table (post-migration)
-            const { data: leads, error } = await supabase
-                .from('leads')
-                .select(`
-                    id,
-                    username,
-                    profile_pic_url,
-                    platform,
-                    score,
-                    analysis_type,
-                    created_at,
-                    followers_count,
-                    business_id
-                `)
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false })
-                .limit(100);
+        if (error) throw error;
 
-            if (error) throw error;
+        this.allLeads = leads || [];
+        this.selectedLeads.clear();
 
-            this.allLeads = leads || [];
-            this.selectedLeads.clear();
+        // Update UI
+        this.displayLeads(this.allLeads);
+        this.updateDashboardStats();
+        this.hideLoadingState();
 
-            // Update UI
-            this.displayLeads(this.allLeads);
-            this.updateDashboardStats();
-            this.hideLoadingState();
+        console.log(`✅ Loaded ${this.allLeads.length} leads`);
 
-            console.log(`✅ Loaded ${this.allLeads.length} leads`);
-
-        } catch (error) {
-            console.error('❌ Error loading dashboard data:', error);
-            this.displayErrorState('Failed to load leads: ' + error.message);
-        } finally {
-            this.isLoading = false;
-        }
+    } catch (error) {
+        console.error('❌ Error loading dashboard data:', error);
+        this.displayErrorState('Failed to load leads: ' + error.message);
+    } finally {
+        this.isLoading = false;
+    }
+}
+   async viewLead(leadId) {
+    if (!leadId) {
+        console.error('viewLead: leadId is required');
+        return;
     }
 
-    async viewLead(leadId) {
-        if (!leadId) {
-            console.error('viewLead: leadId is required');
-            return;
+    const modal = document.getElementById('leadModal');
+    const detailsContainer = document.getElementById('leadDetails');
+
+    if (!modal || !detailsContainer) {
+        console.error('viewLead: Required DOM elements not found');
+        return;
+    }
+
+    // Show loading state
+    detailsContainer.innerHTML = `
+        <div style="text-align: center; padding: 60px;">
+            <div style="font-size: 32px; margin-bottom: 16px;">🔄</div>
+            <h3 style="margin: 0 0 8px 0; color: var(--text-primary);">Loading Lead Details</h3>
+            <p style="margin: 0; color: var(--text-secondary);">Fetching analysis data...</p>
+        </div>
+    `;
+    modal.style.display = 'flex';
+
+    try {
+        // ✅ FIXED: Use shared supabase and user (no auth check)
+        const supabase = window.OsliraApp.supabase;
+        const user = window.OsliraApp.user;
+
+        // ✅ STEP 1: Get basic lead data from leads table
+        const { data: lead, error: leadError } = await supabase
+            .from('leads')
+            .select(`
+                id,
+                username,
+                profile_pic_url,
+                platform,
+                score,
+                analysis_type,
+                business_id,
+                created_at,
+                followers_count
+            `)
+            .eq('id', leadId)
+            .eq('user_id', user.id)
+            .single();
+
+        if (leadError) {
+            throw new Error(`Database error: ${leadError.message}`);
         }
 
-        const modal = document.getElementById('leadModal');
-        const detailsContainer = document.getElementById('leadDetails');
-
-        if (!modal || !detailsContainer) {
-            console.error('viewLead: Required DOM elements not found');
-            return;
+        if (!lead) {
+            throw new Error('Lead not found or access denied');
         }
 
-        // Show loading state
-        detailsContainer.innerHTML = `
-            <div style="text-align: center; padding: 60px;">
-                <div style="font-size: 32px; margin-bottom: 16px;">🔄</div>
-                <h3 style="margin: 0 0 8px 0; color: var(--text-primary);">Loading Lead Details</h3>
-                <p style="margin: 0; color: var(--text-secondary);">Fetching analysis data...</p>
-            </div>
-        `;
-        modal.style.display = 'flex';
+        console.log('📋 Lead data loaded:', lead);
 
-        try {
-            const supabase = window.OsliraApp.supabase;
-            const user = window.OsliraApp.user;
+        // ✅ STEP 2: Get deep analysis data if it's a deep analysis
+        let analysisData = null;
+        if (lead.analysis_type === 'deep') {
+            console.log('🔍 Loading deep analysis data...');
 
-            if (!supabase || !user) {
-                throw new Error('Authentication required');
-            }
-
-            // ✅ STEP 1: Get basic lead data from leads table
-            const { data: lead, error: leadError } = await supabase
-                .from('leads')
+            const { data: deepAnalysis, error: analysisError } = await supabase
+                .from('lead_analyses')
                 .select(`
-                    id,
-                    username,
-                    profile_pic_url,
-                    platform,
-                    score,
-                    analysis_type,
-                    business_id,
-                    created_at,
-                    followers_count
+                    engagement_score,
+                    score_niche_fit,
+                    score_total,
+                    outreach_message,
+                    selling_points,
+                    audience_quality,
+                    engagement_insights,
+                    avg_likes,
+                    avg_comments,
+                    engagement_rate,
+                    latest_posts,
+                    username
                 `)
-                .eq('id', leadId)
-                .eq('user_id', user.id)
+                .eq('lead_id', leadId)
                 .single();
 
-            if (leadError) {
-                throw new Error(`Database error: ${leadError.message}`);
+            if (analysisError) {
+                console.warn('⚠️ Deep analysis data not found:', analysisError.message);
+                // Continue without analysis data - will show error in UI
+            } else {
+                analysisData = deepAnalysis;
+                console.log('📈 Analysis data loaded:', analysisData);
             }
-
-            if (!lead) {
-                throw new Error('Lead not found or access denied');
-            }
-
-            console.log('📋 Lead data loaded:', lead);
-
-            // ✅ STEP 2: Get deep analysis data if it's a deep analysis
-            let analysisData = null;
-            if (lead.analysis_type === 'deep') {
-                console.log('🔍 Loading deep analysis data...');
-
-                const { data: deepAnalysis, error: analysisError } = await supabase
-                    .from('lead_analyses')
-                    .select(`
-                        engagement_score,
-                        score_niche_fit,
-                        score_total,
-                        outreach_message,
-                        selling_points,
-                        audience_quality,
-                        engagement_insights,
-                        avg_likes,
-                        avg_comments,
-                        engagement_rate,
-                        latest_posts,
-                        username
-                    `)
-                    .eq('lead_id', leadId)
-                    .single();
-
-                if (analysisError) {
-                    console.warn('⚠️ Deep analysis data not found:', analysisError.message);
-                    // Continue without analysis data - will show error in UI
-                } else {
-                    analysisData = deepAnalysis;
-                    console.log('📈 Analysis data loaded:', analysisData);
-                }
-            }
-
-            // ✅ STEP 3: Build and display the HTML
-            const detailsHtml = this.buildLeadDetailsHTML(lead, analysisData);
-            detailsContainer.innerHTML = detailsHtml;
-
-            console.log('✅ Lead details rendered successfully');
-
-        } catch (error) {
-            console.error('❌ Error loading lead details:', error);
-            detailsContainer.innerHTML = `
-                <div style="text-align: center; padding: 60px;">
-                    <div style="font-size: 32px; margin-bottom: 16px;">❌</div>
-                    <h3 style="margin: 0 0 8px 0; color: var(--error);">Error Loading Lead</h3>
-                    <p style="margin: 0; color: var(--text-secondary);">${error.message}</p>
-                    <button onclick="dashboard.viewLead('${leadId}')" 
-                            style="margin-top: 16px; background: var(--primary-blue); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
-                        Try Again
-                    </button>
-                </div>
-            `;
         }
+
+        // ✅ STEP 3: Build and display the HTML
+        const detailsHtml = this.buildLeadDetailsHTML(lead, analysisData);
+        detailsContainer.innerHTML = detailsHtml;
+
+        console.log('✅ Lead details rendered successfully');
+
+    } catch (error) {
+        console.error('❌ Error loading lead details:', error);
+        detailsContainer.innerHTML = `
+            <div style="text-align: center; padding: 60px;">
+                <div style="font-size: 32px; margin-bottom: 16px;">❌</div>
+                <h3 style="margin: 0 0 8px 0; color: var(--error);">Error Loading Lead</h3>
+                <p style="margin: 0; color: var(--text-secondary);">${error.message}</p>
+                <button onclick="dashboard.viewLead('${leadId}')" 
+                        style="margin-top: 16px; background: var(--primary-blue); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                    Try Again
+                </button>
+            </div>
+        `;
     }
+}
 
     // ===============================================================================
     // BUILD FUNCTIONS - ENTERPRISE LEAD DETAILS HTML
