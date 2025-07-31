@@ -31,31 +31,9 @@ class Dashboard {
     console.log('🚀 Initializing dashboard...');
     
     try {
-        // Wait for OsliraApp to be ready before checking auth
-        if (!window.OsliraApp) {
-            console.log('⏳ Waiting for OsliraApp to initialize...');
-            setTimeout(() => this.init(), 100);
-            return;
-        }
-
-        // Check authentication with better logic
-        if (!window.OsliraApp.user && window.OsliraApp.session) {
-            console.log('⏳ Session exists but user not loaded, waiting...');
-            setTimeout(() => this.init(), 100);
-            return;
-        }
-
-        if (!window.OsliraApp.user) {
-            console.warn('No authenticated user found, redirecting to auth');
-            window.location.href = '/auth.html';
-            return;
-        }
-
-        console.log('✅ User authenticated:', window.OsliraApp.user.email);
-
-        // Initialize dashboard components
+        // Initialize dashboard components (no auth check - that's handled by shared-code)
         this.setupEventListeners();
-        this.setupFilterHandlers();
+        this.setupFilterHandlers(); 
         this.setupBulkActions();
         
         // Load initial data
