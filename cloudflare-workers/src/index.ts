@@ -437,7 +437,7 @@ async function saveAnalysisResults(
   env: Env
 ): Promise<string> {
   
-  // Prepare data for leads table
+  // ✅ UPDATED: Minimal leadData (basic info only)
   const leadData = {
     user_id: userId,
     business_id: businessId,
@@ -445,17 +445,13 @@ async function saveAnalysisResults(
     platform: 'instagram',
     profile_url: `https://instagram.com/${profileData.username}/`,
     profile_pic_url: profileData.profilePicUrl || null,
-    score: analysisResult.score || 0, // Will be converted to int in saveLeadAndAnalysis
+    score: analysisResult.score || 0,
     analysis_type: analysisType,
     followers_count: profileData.followersCount || 0,
-    avg_likes: profileData.engagement?.avgLikes || 0,
-    avg_comments: profileData.engagement?.avgComments || 0,
-    engagement_rate: profileData.engagement?.engagementRate || 0,
-    outreach_message: outreachMessage || null,
     created_at: new Date().toISOString()
   };
 
-  // Prepare data for lead_analyses table (deep only)
+  // ✅ UPDATED: Complete analysisData (all deep analysis fields)
   let analysisData = null;
   if (analysisType === 'deep') {
     analysisData = {
@@ -463,27 +459,31 @@ async function saveAnalysisResults(
       username: profileData.username,
       analysis_type: 'deep',
       
-      // AI analysis fields - now properly provided by updated prompts
+      // AI analysis scores
       engagement_score: analysisResult.engagement_score || 0,
       score_niche_fit: analysisResult.niche_fit || 0,
       score_total: analysisResult.score || 0,
+      
+      // AI insights
       audience_quality: analysisResult.audience_quality || 'Unknown',
       engagement_insights: analysisResult.engagement_insights || 'No insights available',
-      
-      // Message and selling points
-      outreach_message: outreachMessage || null,
       selling_points: Array.isArray(analysisResult.selling_points) 
-  ? analysisResult.selling_points 
-  : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
+        ? analysisResult.selling_points 
+        : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
       
-      // Profile engagement data
+      // Messages
+      outreach_message: outreachMessage || null,
+      
+      // Profile engagement metrics
       avg_comments: profileData.engagement?.avgComments || 0,
       avg_likes: profileData.engagement?.avgLikes || 0,
-      engagement_rate: profileData.engagement?.engagementRate || 0
+      engagement_rate: profileData.engagement?.engagementRate || 0,
+      
+      // Latest posts data
+      latest_posts: profileData.latestPosts ? JSON.stringify(profileData.latestPosts) : null
     };
   }
 
-  // Use the saveLeadAndAnalysis function and return the leadId
   const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysisType, env);
   return leadId;
 }
@@ -493,7 +493,7 @@ async function updateCreditsAndTransaction(
   creditsUsed: number,
   newBalance: number,
   description: string,
-  transactionType: string, // This parameter name is misleading - it should be leadId
+  leadId: string | null = null,
   env: Env
 ): Promise<void> {
   const headers = {
@@ -502,7 +502,7 @@ async function updateCreditsAndTransaction(
     'Content-Type': 'application/json'
   };
   
-  // ✅ STEP 1: Update credits in users table
+  // Update credits in users table
   const updateResponse = await fetch(
     `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
     {
@@ -517,21 +517,17 @@ async function updateCreditsAndTransaction(
   
   if (!updateResponse.ok) {
     const errorText = await updateResponse.text();
-    console.error('❌ Failed to update user credits:', errorText);
     throw new Error(`Failed to update credits: ${updateResponse.status} - ${errorText}`);
   }
   
-  // ✅ STEP 2: Log transaction with correct type value
+  // Log transaction - always use 'use' for credit spending
   const transactionPayload = {
     user_id: userId,
-    lead_id: null, // Could link to leadId if needed
-    type: 'use', // ✅ FIX: Use 'use' instead of 'analysis'
-    amount: -creditsUsed, // Negative for deductions
-    description,
-    // Don't include created_at - it's auto-generated
+    lead_id: leadId,
+    type: 'use', // ✅ FIXED: Always 'use' for spending credits
+    amount: -creditsUsed,
+    description
   };
-  
-  console.log('💾 Credit transaction payload:', JSON.stringify(transactionPayload, null, 2));
   
   const transactionResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
     method: 'POST',
@@ -541,12 +537,8 @@ async function updateCreditsAndTransaction(
   
   if (!transactionResponse.ok) {
     const errorText = await transactionResponse.text();
-    console.error('❌ Failed to log credit transaction:', errorText);
     throw new Error(`Failed to log credit transaction: ${transactionResponse.status} - ${errorText}`);
   }
-  
-  const responseText = await transactionResponse.text();
-  console.log('✅ Credit transaction logged successfully:', responseText);
 }
 
 
@@ -1334,7 +1326,6 @@ app.post('/v1/analyze', async (c) => {
     const body = await c.req.json();
     const { profile_url, analysis_type = 'light', business_id } = body;
     
-    // Extract username
     const username = extractUsername(profile_url);
     if (!username || !business_id) {
       return c.json(createStandardResponse(false, undefined, 'Missing required fields', requestId), 400);
@@ -1360,7 +1351,7 @@ app.post('/v1/analyze', async (c) => {
     // Scraping
     const profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
     
-    // AI Analysis with updated prompts that return the fields we need
+    // AI Analysis
     const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
     
     // Message generation (deep only)
@@ -1373,7 +1364,7 @@ app.post('/v1/analyze', async (c) => {
       }
     }
     
-    // Prepare lead data for leads table
+    // ✅ UPDATED: Minimal leadData (basic info only)
     const leadData = {
       user_id: userId,
       business_id: business_id,
@@ -1381,17 +1372,14 @@ app.post('/v1/analyze', async (c) => {
       platform: 'instagram',
       profile_url: profile_url,
       profile_pic_url: profileData.profilePicUrl || null,
-      score: analysisResult.score || 0, // Will be converted to int in saveLeadAndAnalysis
+      score: analysisResult.score || 0,
       analysis_type: analysis_type,
       followers_count: profileData.followersCount || 0,
-      avg_likes: profileData.engagement?.avgLikes || 0,
-      avg_comments: profileData.engagement?.avgComments || 0,
-      engagement_rate: profileData.engagement?.engagementRate || 0,
-      outreach_message: outreachMessage || null,
       created_at: new Date().toISOString()
+      // ✅ REMOVED: All engagement fields moved to analysisData
     };
     
-    // Prepare analysis data for lead_analyses table (deep only)
+    // ✅ UPDATED: Complete analysisData (all deep analysis fields)
     let analysisData = null;
     if (analysis_type === 'deep') {
       analysisData = {
@@ -1399,23 +1387,28 @@ app.post('/v1/analyze', async (c) => {
         username: profileData.username,
         analysis_type: 'deep',
         
-        // AI analysis fields - now properly provided by updated prompts
+        // AI analysis scores
         engagement_score: analysisResult.engagement_score || 0,
         score_niche_fit: analysisResult.niche_fit || 0,
         score_total: analysisResult.score || 0,
+        
+        // AI insights
         audience_quality: analysisResult.audience_quality || 'Unknown',
         engagement_insights: analysisResult.engagement_insights || 'No insights available',
-        
-        // Message and selling points
-        outreach_message: outreachMessage || null,
         selling_points: Array.isArray(analysisResult.selling_points) 
-  ? analysisResult.selling_points 
-  : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
+          ? analysisResult.selling_points 
+          : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
         
-        // Profile engagement data
+        // Messages
+        outreach_message: outreachMessage || null,
+        
+        // Profile engagement metrics
         avg_comments: profileData.engagement?.avgComments || 0,
         avg_likes: profileData.engagement?.avgLikes || 0,
-        engagement_rate: profileData.engagement?.engagementRate || 0
+        engagement_rate: profileData.engagement?.engagementRate || 0,
+        
+        // Latest posts data
+        latest_posts: profileData.latestPosts ? JSON.stringify(profileData.latestPosts) : null
       };
     }
     
@@ -1424,13 +1417,13 @@ app.post('/v1/analyze', async (c) => {
     
     // Update credits
     await updateCreditsAndTransaction(
-  userId, 
-  creditCost, 
-  userResult.credits - creditCost, 
-  `${analysis_type} analysis for @${profileData.username}`, 
-  'use', // ✅ Correct - matches constraint
-  c.env
-);
+      userId, 
+      creditCost, 
+      userResult.credits - creditCost, 
+      `${analysis_type} analysis for @${profileData.username}`, 
+      leadId,
+      c.env
+    );
     
     const totalTime = Date.now() - startTime;
     logger('info', 'Analysis completed', { username, score: analysisResult.score, totalTime, requestId });
@@ -1454,15 +1447,9 @@ app.post('/v1/analyze', async (c) => {
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 });
-// ✅ ALSO ADD this helper function to convert scores safely:
-function convertScoreToInteger(score: any): number {
-  if (score === null || score === undefined || score === '') return 0;
-  const numScore = parseFloat(String(score));
-  return isNaN(numScore) ? 0 : Math.round(numScore);
-}
 
 // ===============================================================================
-// CORRECTED /v1/bulk-analyze ENDPOINT  
+// 2B. UPDATED /v1/bulk-analyze endpoint
 // ===============================================================================
 
 app.post('/v1/bulk-analyze', async (c) => {
@@ -1531,7 +1518,7 @@ app.post('/v1/bulk-analyze', async (c) => {
           }
         }
         
-        // Prepare lead data
+        // ✅ UPDATED: Minimal leadData
         const leadData = {
           user_id: userId,
           business_id: business_id,
@@ -1542,14 +1529,10 @@ app.post('/v1/bulk-analyze', async (c) => {
           score: analysisResult.score || 0,
           analysis_type: analysis_type,
           followers_count: profileData.followersCount || 0,
-          avg_likes: profileData.engagement?.avgLikes || 0,
-          avg_comments: profileData.engagement?.avgComments || 0,
-          engagement_rate: profileData.engagement?.engagementRate || 0,
-          outreach_message: outreachMessage || null,
           created_at: new Date().toISOString()
         };
         
-        // Prepare analysis data (deep only)
+        // ✅ UPDATED: Complete analysisData (deep only)
         let analysisData = null;
         if (analysis_type === 'deep') {
           analysisData = {
@@ -1563,11 +1546,12 @@ app.post('/v1/bulk-analyze', async (c) => {
             engagement_insights: analysisResult.engagement_insights || 'No insights available',
             outreach_message: outreachMessage || null,
             selling_points: Array.isArray(analysisResult.selling_points) 
-  ? analysisResult.selling_points 
-  : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
+              ? analysisResult.selling_points 
+              : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
             avg_comments: profileData.engagement?.avgComments || 0,
             avg_likes: profileData.engagement?.avgLikes || 0,
-            engagement_rate: profileData.engagement?.engagementRate || 0
+            engagement_rate: profileData.engagement?.engagementRate || 0,
+            latest_posts: profileData.latestPosts ? JSON.stringify(profileData.latestPosts) : null
           };
         }
         
@@ -1602,13 +1586,13 @@ app.post('/v1/bulk-analyze', async (c) => {
     // Update credits
     if (creditsUsed > 0) {
       await updateCreditsAndTransaction(
-  userId,
-  creditsUsed,
-  userResult.credits - creditsUsed,
-  `Bulk ${analysis_type} analysis (${successful} profiles)`,
-  'use', // ✅ Correct - matches constraint
-  c.env
-);
+        userId,
+        creditsUsed,
+        userResult.credits - creditsUsed,
+        `Bulk ${analysis_type} analysis (${successful} profiles)`,
+        null,
+        c.env
+      );
     }
     
     const totalTime = Date.now() - startTime;
