@@ -28,31 +28,46 @@ class Dashboard {
     // ===============================================================================
 
     async init() {
-        console.log('🚀 Initializing dashboard...');
-        
-        try {
-            // Check authentication
-            if (!window.OsliraApp?.user) {
-                console.warn('No authenticated user found');
-                window.location.href = '/auth.html';
-                return;
-            }
-
-            // Initialize dashboard components
-            this.setupEventListeners();
-            this.setupFilterHandlers();
-            this.setupBulkActions();
-            
-            // Load initial data
-            await this.loadDashboardData();
-            
-            console.log('✅ Dashboard initialized successfully');
-            
-        } catch (error) {
-            console.error('❌ Dashboard initialization failed:', error);
-            this.displayErrorState('Failed to initialize dashboard: ' + error.message);
+    console.log('🚀 Initializing dashboard...');
+    
+    try {
+        // Wait for OsliraApp to be ready before checking auth
+        if (!window.OsliraApp) {
+            console.log('⏳ Waiting for OsliraApp to initialize...');
+            setTimeout(() => this.init(), 100);
+            return;
         }
+
+        // Check authentication with better logic
+        if (!window.OsliraApp.user && window.OsliraApp.session) {
+            console.log('⏳ Session exists but user not loaded, waiting...');
+            setTimeout(() => this.init(), 100);
+            return;
+        }
+
+        if (!window.OsliraApp.user) {
+            console.warn('No authenticated user found, redirecting to auth');
+            window.location.href = '/auth.html';
+            return;
+        }
+
+        console.log('✅ User authenticated:', window.OsliraApp.user.email);
+
+        // Initialize dashboard components
+        this.setupEventListeners();
+        this.setupFilterHandlers();
+        this.setupBulkActions();
+        
+        // Load initial data
+        await this.loadDashboardData();
+        
+        console.log('✅ Dashboard initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ Dashboard initialization failed:', error);
+        this.displayErrorState('Failed to initialize dashboard: ' + error.message);
     }
+}
 
     setupEventListeners() {
         // Modal close handlers
