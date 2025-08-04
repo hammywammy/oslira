@@ -1413,6 +1413,7 @@ function validateAnalysisResult(result: any): AnalysisResult {
     engagement_insights: result.engagement_insights || 'No insights available',
     selling_points: Array.isArray(result.selling_points) ? result.selling_points : []
   };
+}
 
 // ===============================================================================
 // ENHANCED OUTREACH MESSAGE GENERATION
