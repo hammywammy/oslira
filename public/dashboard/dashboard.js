@@ -2134,6 +2134,7 @@ getDefaultBusinessProfile() {
         value_proposition: 'Quality products and services'
     };
 }
+}
 
 // ===============================================================================
 // DASHBOARD INITIALIZATION AND EXPORT
