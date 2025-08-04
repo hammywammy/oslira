@@ -61,6 +61,49 @@ async init() {
     }
 }
 
+    async loadBusinessProfiles() {
+    try {
+        console.log('🏢 Loading user business profiles...');
+        
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
+
+        if (!supabase || !user) {
+            console.log('📋 No auth - skipping business profiles loading');
+            return;
+        }
+
+        const { data: profiles, error } = await supabase
+            .from('business_profiles')
+            .select('id, business_name, is_active')
+            .eq('user_id', user.id)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.warn('⚠️ Business profiles query failed:', error.message);
+            return;
+        }
+
+        // Store in global app state
+        window.OsliraApp.businesses = profiles || [];
+        
+        // Set active business if none selected
+        const savedBusinessId = localStorage.getItem('selectedBusinessId');
+        if (savedBusinessId && profiles.find(b => b.id === savedBusinessId)) {
+            window.OsliraApp.business = profiles.find(b => b.id === savedBusinessId);
+        } else if (profiles.length > 0) {
+            window.OsliraApp.business = profiles[0];
+            localStorage.setItem('selectedBusinessId', profiles[0].id);
+        }
+
+        console.log(`✅ Loaded ${profiles?.length || 0} business profiles`);
+
+    } catch (error) {
+        console.warn('⚠️ Business profiles loading failed:', error);
+    }
+}
+
    setupEventListeners() {
     console.log('🔧 Setting up ALL event listeners...');
     
@@ -2443,9 +2486,9 @@ exportLeads() {
     }
 
     setupRealtimeSubscription() {
-    // Only set up if CSP allows WebSocket connections
+    // Check if WebSocket is available and CSP allows it
     if (!this.canUseRealtime()) {
-        console.log('⚠️ Real-time disabled: WebSocket connections blocked by CSP');
+        console.log('⚠️ Real-time disabled: WebSocket connections not available');
         this.setupPollingFallback();
         return;
     }
@@ -2461,8 +2504,11 @@ exportLeads() {
 
         console.log('🔄 Setting up real-time subscription...');
 
+        // Create a unique channel name for this user
+        const channelName = `dashboard-${user.id}-${Date.now()}`;
+
         this.realtimeSubscription = supabase
-            .channel(`leads-${user.id}`)
+            .channel(channelName)
             .on('postgres_changes', 
                 { 
                     event: '*', 
@@ -2487,11 +2533,13 @@ exportLeads() {
                     this.handleRealtimeUpdate(payload);
                 }
             )
-            .subscribe((status) => {
+            .subscribe((status, err) => {
+                console.log('📡 Real-time subscription status:', status);
+                
                 if (status === 'SUBSCRIBED') {
                     console.log('✅ Real-time subscription active');
-                } else if (status === 'CHANNEL_ERROR') {
-                    console.error('❌ Real-time subscription failed, falling back to polling');
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                    console.error('❌ Real-time subscription failed:', status, err);
                     this.setupPollingFallback();
                 }
             });
@@ -2553,13 +2601,22 @@ exportLeads() {
     }
 
     // ✅ FIXED canUseRealtime() method - Remove external WebSocket test:
-   canUseRealtime() {
-    // ✅ BETTER APPROACH: Test if WebSocket is available without external connection
+  canUseRealtime() {
     try {
-        // Just check if WebSocket constructor exists
-        return typeof WebSocket !== 'undefined' && 
-               typeof window !== 'undefined' && 
-               'WebSocket' in window;
+        // Check if WebSocket is available
+        if (typeof WebSocket === 'undefined') {
+            console.log('WebSocket not available in this environment');
+            return false;
+        }
+
+        // Check if we're in a secure context (required for WSS)
+        if (location.protocol === 'https:' || location.hostname === 'localhost') {
+            return true;
+        }
+
+        console.log('Real-time requires HTTPS or localhost');
+        return false;
+
     } catch (error) {
         console.warn('WebSocket availability check failed:', error);
         return false;
@@ -2880,12 +2937,19 @@ exportLeads() {
 setupPollingFallback() {
     console.log('🔄 Setting up polling fallback for real-time updates');
     
+    // Clear any existing polling
+    if (this.pollingInterval) {
+        clearInterval(this.pollingInterval);
+    }
+    
     // Poll for updates every 30 seconds when tab is visible
     this.pollingInterval = setInterval(() => {
-        if (document.visibilityState === 'visible') {
+        if (document.visibilityState === 'visible' && window.OsliraApp?.user) {
             this.checkForUpdates();
         }
-    }, 30000);
+    }, 30000); // Poll every 30 seconds
+    
+    console.log('✅ Polling fallback active (30s intervals)');
 }
 
 async checkForUpdates() {
@@ -2895,9 +2959,9 @@ async checkForUpdates() {
         
         if (!supabase || !user) return;
 
+        // Check for new leads since last update
         const lastUpdate = this.lastUpdateTimestamp || new Date(Date.now() - 60000).toISOString();
         
-        // ✅ FIXED: Only use created_at (leads table has NO updated_at column)
         const { data: newLeads, error } = await supabase
             .from('leads')
             .select('id, created_at')
@@ -2905,7 +2969,10 @@ async checkForUpdates() {
             .gt('created_at', lastUpdate)
             .limit(1);
 
-        if (error) throw error;
+        if (error) {
+            console.warn('⚠️ Update check failed:', error);
+            return;
+        }
 
         if (newLeads && newLeads.length > 0) {
             console.log('📊 New data detected, refreshing dashboard');
@@ -2917,7 +2984,6 @@ async checkForUpdates() {
         console.warn('⚠️ Polling update check failed:', error);
     }
 }
-
 handleRealtimeUpdate(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
     
@@ -2980,23 +3046,25 @@ handleRealtimeUpdate(payload) {
     // ===============================================================================
 
     async setupDashboard() {
-        // Additional setup that happens after initial load
-        try {
-            // Set up real-time subscriptions
-            this.setupRealtimeSubscription();
-            
-            // Set up visibility change handler
-            document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-            
-            // Load user's business profiles for analysis modal
-            await this.loadBusinessProfiles();
-            
-            console.log('✅ Dashboard setup completed');
-            
-        } catch (error) {
-            console.warn('⚠️ Dashboard setup partially failed:', error);
-        }
+    try {
+        console.log('🔧 Setting up dashboard functionality...');
+        
+        // Set up real-time subscriptions
+        this.setupRealtimeSubscription();
+        
+        // Set up visibility change handler
+        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
+        
+        // ✅ FIXED: Use the correct method name
+        await this.loadBusinessProfiles();
+        
+        console.log('✅ Dashboard setup completed');
+        
+    } catch (error) {
+        console.warn('⚠️ Dashboard setup partially failed:', error);
+        // Don't throw error, just log warning
     }
+}
 
 async loadBusinessProfilesForModal() {
     console.log('🏢 Loading business profiles for modal...');
