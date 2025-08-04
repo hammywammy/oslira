@@ -133,51 +133,88 @@ async function initializeSupabase() {
 
 async function checkAuthentication() {
     try {
-        console.log('🔐 Checking authentication...');
+        console.log('🔐 Checking authentication with enhanced session restoration...');
         
         const supabase = window.OsliraApp.supabase;
         if (!supabase) {
             throw new Error('Supabase not initialized');
         }
-        
+
+        // ✅ STEP 1: Get current session (this will restore from localStorage automatically)
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-            console.error('❌ Session check error:', error);
+            console.error('❌ Session retrieval error:', error);
             throw error;
         }
-        
+
+        // ✅ STEP 2: If no session, check if we're on a protected page
         if (!session) {
             console.log('❌ No active session found');
             return null;
         }
+
+        console.log('🔍 Session found, validating...', {
+            userId: session.user.id,
+            email: session.user.email,
+            expiresAt: new Date(session.expires_at * 1000).toISOString()
+        });
+
+        // ✅ STEP 3: Check if session is close to expiring (refresh if needed)
+        const now = Math.floor(Date.now() / 1000);
+        const expiresAt = session.expires_at;
+        const timeUntilExpiry = expiresAt - now;
         
-        // Store session and user data
-        window.OsliraApp.session = session;
-        window.OsliraApp.user = session.user;
-        
-        console.log('✅ User authenticated:', session.user.email);
-        
-        // Verify session is still valid
-        const isValid = await refreshSessionSync();
-        if (!isValid) {
-            console.log('❌ Session invalid, clearing auth');
-            window.OsliraApp.session = null;
-            window.OsliraApp.user = null;
-            return null;
+        if (timeUntilExpiry < 300) { // Refresh if expires in less than 5 minutes
+            console.log('🔄 Session close to expiry, refreshing...');
+            
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError) {
+                console.error('❌ Session refresh failed:', refreshError);
+                throw refreshError;
+            }
+            
+            if (refreshedSession) {
+                console.log('✅ Session refreshed successfully');
+                window.OsliraApp.session = refreshedSession;
+                window.OsliraApp.user = refreshedSession.user;
+            }
+        } else {
+            // ✅ STEP 4: Session is valid, store in global state
+            window.OsliraApp.session = session;
+            window.OsliraApp.user = session.user;
         }
         
+        // ✅ STEP 5: Verify user email is confirmed
         if (!session.user.email_confirmed_at) {
             console.warn('⚠️ Email not confirmed');
-            throw new Error('Session synchronization failed');
+            // Don't throw error, just warn - some users might not have confirmed email yet
         }
         
+        // ✅ STEP 6: Setup auth state listener for future changes
         setupAuthListener();
+        
+        console.log('✅ Authentication check completed successfully');
+        console.log(`👤 User: ${session.user.email} (${session.user.id})`);
+        
         return session.user;
         
     } catch (error) {
         console.error('❌ Auth check failed:', error);
-        redirectToLogin();
+        
+        // ✅ Clear any stale session data
+        window.OsliraApp.session = null;
+        window.OsliraApp.user = null;
+        
+        // Only redirect to login if we're on a protected page
+        const currentPage = getCurrentPageName();
+        const protectedPages = ['dashboard', 'leads', 'analytics', 'subscription', 'settings', 'admin', 'campaigns'];
+        
+        if (protectedPages.includes(currentPage)) {
+            redirectToLogin();
+        }
+        
         return null;
     }
 }
@@ -201,24 +238,75 @@ function setupAuthListener() {
     const supabase = window.OsliraApp.supabase;
     if (!supabase) return;
     
-    supabase.auth.onAuthStateChange((event, session) => {
-        console.log('🔄 Auth state changed:', event);
+    // Remove any existing listeners first
+    if (window.OsliraApp.authListener) {
+        window.OsliraApp.authListener.subscription.unsubscribe();
+    }
+    
+    window.OsliraApp.authListener = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log(`🔐 Auth state changed: ${event}`, {
+            hasSession: !!session,
+            userId: session?.user?.id,
+            timestamp: new Date().toISOString()
+        });
         
-        if (event === 'SIGNED_OUT' || !session) {
-            window.OsliraApp.user = null;
-            window.OsliraApp.session = null;
-            redirectToLogin();
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-            // 🔧 FIX: Always sync session on auth events
-            window.OsliraApp.session = session;
-            window.OsliraApp.user = session.user;
-            
-            console.log('✅ Session updated in global state');
-            
-            // Emit auth event for pages to listen to
-            window.OsliraApp.events?.dispatchEvent(new CustomEvent('userAuthenticated', {
-                detail: { user: session.user }
-            }));
+        switch (event) {
+            case 'SIGNED_OUT':
+                console.log('👋 User signed out');
+                window.OsliraApp.user = null;
+                window.OsliraApp.session = null;
+                window.OsliraApp.business = null;
+                window.OsliraApp.businesses = [];
+                
+                // Clear any cached data
+                if (window.OsliraApp.cache) {
+                    window.OsliraApp.cache.leads = [];
+                    window.OsliraApp.cache.stats = null;
+                }
+                
+                redirectToLogin();
+                break;
+                
+            case 'SIGNED_IN':
+            case 'TOKEN_REFRESHED':
+                console.log(`✅ Session ${event.toLowerCase()}`);
+                
+                // ✅ Always sync session on auth events
+                window.OsliraApp.session = session;
+                window.OsliraApp.user = session?.user || null;
+                
+                // Emit auth event for pages to listen to
+                window.OsliraApp.events?.dispatchEvent(new CustomEvent('userAuthenticated', {
+                    detail: { 
+                        user: session?.user,
+                        event: event
+                    }
+                }));
+                
+                // ✅ Reload user context after sign in
+                if (event === 'SIGNED_IN') {
+                    try {
+                        await loadBusinesses();
+                        console.log('🏢 Business context reloaded after sign in');
+                    } catch (error) {
+                        console.warn('⚠️ Failed to reload business context:', error);
+                    }
+                }
+                break;
+                
+            case 'PASSWORD_RECOVERY':
+                console.log('🔑 Password recovery event');
+                break;
+                
+            case 'USER_UPDATED':
+                console.log('👤 User updated');
+                if (session?.user) {
+                    window.OsliraApp.user = session.user;
+                }
+                break;
+                
+            default:
+                console.log(`🔄 Unhandled auth event: ${event}`);
         }
     });
 }
@@ -918,6 +1006,62 @@ class OsliraPageInitializer {
         this.setupGlobalUIHandlers();
         this.populateUIElements();
     }
+
+    async function refreshSessionSync() {
+    try {
+        const supabase = window.OsliraApp.supabase;
+        if (!supabase) return false;
+        
+        console.log('🔄 Manually refreshing session...');
+        
+        const { data: { session }, error } = await supabase.auth.refreshSession();
+        
+        if (error || !session) {
+            console.log('⚠️ Session refresh failed:', error?.message);
+            return false;
+        }
+        
+        window.OsliraApp.session = session;
+        window.OsliraApp.user = session.user;
+        
+        console.log('✅ Session manually refreshed and synced');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Session refresh failed:', error);
+        return false;
+    }
+}
+
+// ✅ NEW: Wait for authentication to be ready
+async function waitForAuth(timeoutMs = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeoutMs) {
+        if (window.OsliraApp?.user && window.OsliraApp?.session) {
+            return true;
+        }
+        
+        // Check if we have a valid session but user isn't set
+        const supabase = window.OsliraApp?.supabase;
+        if (supabase) {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    window.OsliraApp.session = session;
+                    window.OsliraApp.user = session.user;
+                    return true;
+                }
+            } catch (error) {
+                console.warn('⚠️ Session check during wait failed:', error);
+            }
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    return false;
+}
 
     setupGlobalUIHandlers() {
         // Logout links
