@@ -280,6 +280,13 @@ async function fetchBusinessProfile(businessId: string, userId: string, env: Env
   return businesses[0];
 }
 
+// =============================================================================
+// 🔧 CLOUDFLARE WORKER COLUMN FIXES
+// Fix credit_transactions table column mismatch
+// =============================================================================
+
+// ❌ CURRENT BROKEN CODE in your worker:
+/*
 async function updateCreditsAndTransaction(
   userId: string,
   creditChange: number,
@@ -288,39 +295,82 @@ async function updateCreditsAndTransaction(
   transactionType: 'use' | 'add',
   env: Env
 ) {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
-  // Update user credits
-  const userUpdateResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify({ credits: newBalance })
-  });
-
-  if (!userUpdateResponse.ok) {
-    throw new Error('Failed to update user credits');
-  }
-
-  // Log transaction
   const transactionResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
       user_id: userId,
       amount: creditChange,
-      balance_after: newBalance,
+      balance_after: newBalance,  // ❌ THIS COLUMN DOESN'T EXIST!
       description,
       type: transactionType,
       created_at: new Date().toISOString()
     })
   });
+}
+*/
 
-  if (!transactionResponse.ok) {
-    throw new Error('Failed to log credit transaction');
+// ✅ FIXED CODE - Replace updateCreditsAndTransaction function in your worker:
+
+async function updateCreditsAndTransaction(
+  userId: string,
+  creditChange: number,
+  newBalance: number,
+  description: string,
+  transactionType: 'use' | 'add',
+  env: Env,
+  leadId?: string  // Optional leadId parameter
+) {
+  const headers = {
+    apikey: env.SUPABASE_SERVICE_ROLE,
+    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    // Update user credits
+    console.log(`Updating user ${userId} credits to ${newBalance}`);
+    const userUpdateResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ credits: newBalance })
+    });
+
+    if (!userUpdateResponse.ok) {
+      const errorText = await userUpdateResponse.text();
+      console.error('❌ User update failed:', errorText);
+      throw new Error('Failed to update user credits');
+    }
+    console.log('✅ User credits updated successfully');
+
+    // ✅ Log transaction with correct columns
+    console.log(`Creating credit transaction for user ${userId}`);
+    const transactionData = {
+      user_id: userId,
+      amount: creditChange,     // The change amount (negative for use, positive for add)
+      type: transactionType,    // 'use' or 'add'
+      description: description,
+      lead_id: leadId || null   // Include leadId if provided, null otherwise
+    };
+
+    console.log('📝 Transaction data:', transactionData);
+
+    const transactionResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(transactionData)
+    });
+
+    if (!transactionResponse.ok) {
+      const errorText = await transactionResponse.text();
+      console.error('❌ Credit transaction failed:', errorText);
+      throw new Error(`Failed to log credit transaction: ${errorText}`);
+    }
+    console.log('✅ Credit transaction logged successfully');
+
+  } catch (error: any) {
+    console.error('❌ updateCreditsAndTransaction error:', error.message);
+    throw new Error(`Failed to update credits: ${error.message}`);
   }
 }
 
@@ -1257,14 +1307,15 @@ app.post('/v1/analyze', async (c) => {
 
     // Update credits
     try {
-      await updateCreditsAndTransaction(
-        user_id, 
-        -creditCost, 
-        userResult.credits - creditCost, 
-        `${analysis_type} analysis for @${profileData.username}`, 
-        'use', 
-        c.env
-      );
+await updateCreditsAndTransaction(
+  userId,
+  -cost,
+  currentCredits - cost,
+  `${analysis_type} analysis for @${profileData.username}`,
+  'use',
+  c.env,
+  leadId  // ✅ Include the leadId for tracking
+);
       logger('info', 'Credits updated successfully', { 
         creditCost, 
         remainingCredits: userResult.credits - creditCost 
@@ -1495,14 +1546,15 @@ app.post('/v1/bulk-analyze', async (c) => {
     // Update credits for successful analyses only
     if (creditsUsed > 0) {
       try {
-        await updateCreditsAndTransaction(
-          user_id,
-          -creditsUsed,
-          userResult.credits - creditsUsed,
-          `Bulk ${analysis_type} analysis (${successful} profiles)`,
-          'use',
-          c.env
-        );
+await updateCreditsAndTransaction(
+  userId,
+  -creditsUsed,
+  currentCredits - creditsUsed,
+  `Bulk ${analysis_type} analysis (${successful} profiles)`,
+  'use',
+  c.env
+  // No leadId for bulk operations
+);
       } catch (creditError: any) {
         logger('error', 'Bulk credit update failed', { error: creditError.message });
         return c.json(createStandardResponse(
