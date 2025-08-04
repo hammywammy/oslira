@@ -206,7 +206,6 @@ async loadDashboardData() {
 
         console.log('🔄 Loading dashboard data...');
 
-        // ✅ CORRECT: Load leads with analysis data using proper JOIN
         const { data: leadsData, error } = await supabase
             .from('leads')
             .select(`
@@ -220,7 +219,7 @@ async loadDashboardData() {
                 profile_pic_url,
                 profile_url,
                 business_id,
-                lead_analyses!inner(
+                lead_analyses!left((
                     engagement_score,
                     selling_points,
                     outreach_message,
