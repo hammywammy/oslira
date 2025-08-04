@@ -16,7 +16,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # ✅ FIXED: Added all necessary CDNs for Supabase and other scripts
+    # ✅ FIXED: Added wss: to connect-src for WebSocket connections
     Content-Security-Policy = """
       default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app;
       script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com;
