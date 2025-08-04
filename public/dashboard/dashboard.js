@@ -206,6 +206,7 @@ async loadDashboardData() {
 
         console.log('🔄 Loading dashboard data...');
 
+        // ✅ FIXED: Correct PostgREST syntax with left join (no double parentheses)
         const { data: leadsData, error } = await supabase
             .from('leads')
             .select(`
@@ -219,7 +220,7 @@ async loadDashboardData() {
                 profile_pic_url,
                 profile_url,
                 business_id,
-                lead_analyses!left((
+                lead_analyses!left(
                     engagement_score,
                     selling_points,
                     outreach_message,
@@ -250,6 +251,7 @@ async loadDashboardData() {
         this.selectedLeads.clear();
         
         console.log(`✅ Loaded ${this.allLeads.length} leads`);
+        console.log('📊 Lead data sample:', this.allLeads[0]); // Debug log
         
         // Update UI
         this.displayLeads(this.allLeads);
@@ -408,132 +410,141 @@ async viewLead(leadId) {
     // BUILD FUNCTIONS - ENTERPRISE LEAD DETAILS HTML
     // ===============================================================================
 
-    buildLeadDetailsHTML(lead, analysisData = null) {
-        const analysisType = lead.analysis_type || 'light';
-        const isDeepAnalysis = analysisType === 'deep';
-        const score = lead.score || 0;
-        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+   buildLeadDetailsHTML(lead, analysisData = null) {
+    const analysisType = lead.analysis_type || 'light';
+    const isDeepAnalysis = analysisType === 'deep';
+    const score = lead.score || 0;
+    const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
 
-        console.log(`🔄 Building lead details for ${lead.username} (${analysisType} analysis)`);
-        console.log('📊 Lead data (basic):', lead);
-        console.log('📈 Analysis data (deep):', analysisData);
+    console.log(`🔄 Building lead details for ${lead.username} (${analysisType} analysis)`);
+    console.log('📊 Lead data (basic):', lead);
+    console.log('📈 Analysis data (deep):', analysisData);
 
-        // Enhanced profile picture with fallback
-        const profilePicUrl = lead.profile_pic_url;
-        const profilePicHtml = profilePicUrl 
-            ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=120&h=120&fit=cover&a=attention" 
-                    alt="@${lead.username}" 
-                    style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary-blue); box-shadow: 0 8px 24px rgba(0,0,0,0.1);"
-                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-            : '';
+    // ✅ NEW: Check if we have analysis data from the join
+    const hasAnalysisData = analysisData && Object.keys(analysisData).length > 0;
+    
+    // ✅ NEW: For deep analysis, try to get data from the joined result
+    if (isDeepAnalysis && !hasAnalysisData && lead.lead_analyses && lead.lead_analyses.length > 0) {
+        analysisData = lead.lead_analyses[0]; // Take first analysis record
+        console.log('📈 Using joined analysis data:', analysisData);
+    }
 
-        const fallbackAvatar = `<div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 700; font-size: 48px; border: 4px solid var(--primary-blue); box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
-            ${lead.username ? lead.username.charAt(0).toUpperCase() : '?'}
-        </div>`;
+    // Enhanced profile picture with fallback
+    const profilePicUrl = lead.profile_pic_url;
+    const profilePicHtml = profilePicUrl 
+        ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=120&h=120&fit=cover&a=attention" 
+                alt="@${lead.username}" 
+                style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary-blue); box-shadow: 0 8px 24px rgba(0,0,0,0.1);"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+        : '';
 
-        // Build complete HTML structure
-        let html = `
-            <div style="padding: 32px; background: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%); min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                
-                <!-- Header Section with Profile -->
-                <div style="background: white; padding: 32px; border-radius: 20px; margin-bottom: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 1px solid var(--border-light);">
-                    <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 24px;">
-                        ${profilePicHtml}
-                        ${fallbackAvatar}
+    const fallbackAvatar = `<div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 700; font-size: 48px; border: 4px solid var(--primary-blue); box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+        ${lead.username ? lead.username.charAt(0).toUpperCase() : '?'}
+    </div>`;
+
+    // Build complete HTML structure
+    let html = `
+        <div style="padding: 32px; background: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%); min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            
+            <!-- Header Section with Profile -->
+            <div style="background: white; padding: 32px; border-radius: 20px; margin-bottom: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 1px solid var(--border-light);">
+                <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 24px;">
+                    ${profilePicHtml}
+                    ${fallbackAvatar}
+                    
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
+                            <h2 style="margin: 0; color: var(--text-primary); font-size: 32px; font-weight: 700;">
+                                @${lead.username}
+                            </h2>
+                            <span class="score-badge ${scoreClass}" style="padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 16px;">
+                                ${score}/100
+                            </span>
+                            <span class="analysis-badge ${analysisType}" style="padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
+                                ${isDeepAnalysis ? '🔥 Deep Analysis' : '⚡ Light Analysis'}
+                            </span>
+                        </div>
                         
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 12px;">
-                                <h2 style="margin: 0; color: var(--text-primary); font-size: 32px; font-weight: 700;">
-                                    @${lead.username}
-                                </h2>
-                                <span class="score-badge ${scoreClass}" style="padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 16px;">
-                                    ${score}/100
-                                </span>
-                                <span class="analysis-badge ${analysisType}" style="padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
-                                    ${isDeepAnalysis ? '🔥 Deep Analysis' : '⚡ Light Analysis'}
-                                </span>
-                            </div>
-                            
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 16px;">
-                                <div style="text-align: center; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 12px;">
-                                    <div style="font-size: 20px; font-weight: 700; color: var(--primary-blue);">
-                                        ${lead.followers_count ? lead.followers_count.toLocaleString() : 'N/A'}
-                                    </div>
-                                    <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Followers</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 16px;">
+                            <div style="text-align: center; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 12px;">
+                                <div style="font-size: 20px; font-weight: 700; color: var(--primary-blue);">
+                                    ${lead.followers_count ? lead.followers_count.toLocaleString() : 'N/A'}
                                 </div>
-                                <div style="text-align: center; padding: 12px; background: rgba(168, 85, 247, 0.1); border-radius: 12px;">
-                                    <div style="font-size: 20px; font-weight: 700; color: var(--secondary-purple);">
-                                        ${lead.platform || 'Instagram'}
-                                    </div>
-                                    <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Platform</div>
-                                </div>
-                                <div style="text-align: center; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 12px;">
-                                    <div style="font-size: 20px; font-weight: 700; color: var(--success);">
-                                        ${new Date(lead.created_at).toLocaleDateString()}
-                                    </div>
-                                    <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Analyzed</div>
-                                </div>
+                                <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Followers</div>
                             </div>
-                            
-                            <div style="display: flex; gap: 12px;">
-                                <button onclick="window.open('https://instagram.com/${lead.username}', '_blank')" 
-                                        style="background: linear-gradient(135deg, #E1306C, #C13584); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                                    📱 View Profile
-                                </button>
-                                <button onclick="dashboard.exportLeadData('${lead.id}')" 
-                                        style="background: var(--primary-blue); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                                    📄 Export Data
-                                </button>
+                            <div style="text-align: center; padding: 12px; background: rgba(168, 85, 247, 0.1); border-radius: 12px;">
+                                <div style="font-size: 20px; font-weight: 700; color: var(--secondary-purple);">
+                                    ${lead.platform || 'Instagram'}
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Platform</div>
                             </div>
+                            <div style="text-align: center; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: 12px;">
+                                <div style="font-size: 20px; font-weight: 700; color: var(--success);">
+                                    ${new Date(lead.created_at).toLocaleDateString()}
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Analyzed</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <button onclick="window.open('https://instagram.com/${lead.username}', '_blank')" 
+                                    style="background: linear-gradient(135deg, #E1306C, #C13584); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
+                                📱 View Profile
+                            </button>
+                            <button onclick="dashboard.exportLeadData('${lead.id}')" 
+                                    style="background: var(--primary-blue); color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                📄 Export Data
+                            </button>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Analysis Status -->
-                ${this.buildAnalysisStatusSection(lead, analysisType)}
+            </div>
+            
+            <!-- Analysis Status -->
+            ${this.buildAnalysisStatusSection(lead, analysisType)}
+    `;
+
+    // ✅ UPDATED: Better logic for handling deep analysis data
+    if (isDeepAnalysis && hasAnalysisData) {
+        html += `
+            <!-- Advanced AI Metrics -->
+            ${this.buildAdvancedMetricsSection(analysisData)}
+            
+            <!-- Engagement Analysis -->
+            ${this.buildEngagementSection(analysisData)}
+            
+            <!-- AI-Generated Selling Points -->
+            ${this.buildSellingPointsSection(analysisData)}
+            
+            <!-- AI Insights Summary -->
+            ${this.buildAIInsightsSection(analysisData)}
+            
+            <!-- Personalized Outreach Message -->
+            ${analysisData.outreach_message ? this.buildOutreachMessageSection(analysisData.outreach_message) : ''}
         `;
-
-        // Deep Analysis: Show rich data from lead_analyses table
-        if (isDeepAnalysis && analysisData) {
-            html += `
-                <!-- Advanced AI Metrics -->
-                ${this.buildAdvancedMetricsSection(analysisData)}
-                
-                <!-- Engagement Analysis -->
-                ${this.buildEngagementSection(analysisData)}
-                
-                <!-- AI-Generated Selling Points -->
-                ${this.buildSellingPointsSection(analysisData)}
-                
-                <!-- AI Insights Summary -->
-                ${this.buildAIInsightsSection(analysisData)}
-                
-                <!-- Personalized Outreach Message -->
-                ${analysisData.outreach_message ? this.buildOutreachMessageSection(analysisData.outreach_message) : ''}
-            `;
-        } else if (isDeepAnalysis && !analysisData) {
-            // Deep analysis but no data found - show error
-            html += `
-                <div style="background: linear-gradient(135deg, #FEF2F2, #FECACA); padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid #F87171; text-align: center;">
-                    <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
-                    <h4 style="color: #DC2626; margin-bottom: 12px;">Deep Analysis Data Missing</h4>
-                    <p style="color: #7F1D1D; margin-bottom: 16px;">
-                        This lead was marked as deep analysis but detailed data couldn't be found. This might be due to a processing error.
-                    </p>
-                    <button onclick="dashboard.rerunAnalysis('${lead.id}')" 
-                            style="background: #DC2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                        🔄 Rerun Analysis
-                    </button>
-                </div>
-            `;
-        } else {
-            // Light Analysis: Show upgrade prompt
-            html += this.buildUpgradePromptSection(lead);
-        }
-
-        html += `</div>`;
-        return html;
+    } else if (isDeepAnalysis && !hasAnalysisData) {
+        // Deep analysis but no data found - show error
+        html += `
+            <div style="background: linear-gradient(135deg, #FEF2F2, #FECACA); padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid #F87171; text-align: center;">
+                <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
+                <h4 style="color: #DC2626; margin-bottom: 12px;">Deep Analysis Data Missing</h4>
+                <p style="color: #7F1D1D; margin-bottom: 16px;">
+                    This lead was marked as deep analysis but detailed data couldn't be found. This might be due to a processing error.
+                </p>
+                <button onclick="dashboard.rerunAnalysis('${lead.id}')" 
+                        style="background: #DC2626; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    🔄 Rerun Analysis
+                </button>
+            </div>
+        `;
+    } else {
+        // Light Analysis: Show upgrade prompt
+        html += this.buildUpgradePromptSection(lead);
     }
+
+    html += `</div>`;
+    return html;
+}
 
     buildAnalysisStatusSection(lead, analysisType) {
         return `
