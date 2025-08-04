@@ -125,7 +125,7 @@ class Dashboard {
     // DATA LOADING AND MANAGEMENT
     // ===============================================================================
 
-   async loadDashboardData() {
+async loadDashboardData() {
     if (this.isLoading) return;
     this.isLoading = true;
 
@@ -135,9 +135,24 @@ class Dashboard {
         // Show loading state
         this.showLoadingState();
         
-        // ✅ FIXED: Use the shared supabase and user (no auth check)
+        // ✅ WAIT for user to be loaded by shared system
+        let retries = 0;
+        const maxRetries = 20; // 10 seconds max wait
+        
+        while ((!window.OsliraApp?.user || !window.OsliraApp?.supabase) && retries < maxRetries) {
+            console.log(`⏳ Waiting for authentication... (${retries + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retries++;
+        }
+        
         const supabase = window.OsliraApp.supabase;
         const user = window.OsliraApp.user;
+        
+        if (!supabase || !user) {
+            throw new Error('Authentication system not ready. Please refresh the page.');
+        }
+
+        console.log('✅ User loaded:', user.email);
 
         // ✅ UPDATED: Only get basic fields from leads table (post-migration)
         const { data: leads, error } = await supabase
@@ -176,7 +191,12 @@ class Dashboard {
         this.isLoading = false;
     }
 }
-   async viewLead(leadId) {
+
+// ===============================================================================
+// ALSO UPDATE viewLead() WITH THE SAME WAIT LOGIC
+// ===============================================================================
+
+async viewLead(leadId) {
     if (!leadId) {
         console.error('viewLead: leadId is required');
         return;
@@ -201,9 +221,22 @@ class Dashboard {
     modal.style.display = 'flex';
 
     try {
-        // ✅ FIXED: Use shared supabase and user (no auth check)
+        // ✅ WAIT for user to be loaded (same logic as loadDashboardData)
+        let retries = 0;
+        const maxRetries = 10;
+        
+        while ((!window.OsliraApp?.user || !window.OsliraApp?.supabase) && retries < maxRetries) {
+            console.log(`⏳ Waiting for authentication for viewLead... (${retries + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retries++;
+        }
+        
         const supabase = window.OsliraApp.supabase;
         const user = window.OsliraApp.user;
+        
+        if (!supabase || !user) {
+            throw new Error('Authentication system not ready');
+        }
 
         // ✅ STEP 1: Get basic lead data from leads table
         const { data: lead, error: leadError } = await supabase
@@ -259,7 +292,6 @@ class Dashboard {
 
             if (analysisError) {
                 console.warn('⚠️ Deep analysis data not found:', analysisError.message);
-                // Continue without analysis data - will show error in UI
             } else {
                 analysisData = deepAnalysis;
                 console.log('📈 Analysis data loaded:', analysisData);
