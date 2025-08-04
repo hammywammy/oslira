@@ -1,14 +1,5 @@
-// ===============================================================================
-// OSLIRA ENTERPRISE CLOUDFLARE WORKER - COMPLETE ORGANIZED VERSION
-// Post-Migration: All engagement data moved to lead_analyses table
-// ===============================================================================
-
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-
-// ===============================================================================
-// TYPE DEFINITIONS
-// ===============================================================================
 
 interface Env {
   SUPABASE_URL: string;
@@ -83,7 +74,7 @@ interface AnalysisRequest {
   profile_url?: string;
   username?: string;
   analysis_type: 'light' | 'deep';
-  type?: 'light' | 'deep'; // Legacy support
+  type?: 'light' | 'deep';
   business_id: string;
   user_id: string;
 }
@@ -95,25 +86,28 @@ interface ProfileSummary {
   business_context: string;
 }
 
-type AnalysisType = 'light' | 'deep';
+interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  credits: number;
+  subscription_status: string;
+  created_at: string;
+  last_login: string;
+  subscription_id: string;
+  stripe_customer_id: string;
+}
 
-// ===============================================================================
-// WORKER INITIALIZATION
-// ===============================================================================
+type AnalysisType = 'light' | 'deep';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// CORS Configuration
 app.use('*', cors({
   origin: ['https://oslira.netlify.app', 'http://localhost:8000', 'https://oslira.com'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
-
-// ===============================================================================
-// UTILITY FUNCTIONS
-// ===============================================================================
 
 function generateRequestId(): string {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -134,6 +128,37 @@ function createStandardResponse(success: boolean, data?: any, error?: string, re
     version: 'v2.0.0',
     requestId
   };
+}
+
+async function fetchJson<T>(url: string, options: RequestInit, timeoutMs: number = 10000): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`HTTP ${response.status}: ${text}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      return {} as T;
+    }
+
+    const responseText = await response.text();
+    if (!responseText.trim()) {
+      return {} as T;
+    }
+
+    return JSON.parse(responseText);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function callWithRetry<T>(
@@ -238,89 +263,56 @@ function normalizeRequest(body: AnalysisRequest) {
   };
 }
 
-// ===============================================================================
-// DATABASE FUNCTIONS
-// ===============================================================================
-
-async function fetchUserAndCredits(userId: string, env: Env) {
+async function fetchUserAndCredits(user_id: string, env: Env): Promise<{ user: User; credits: number }> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
     'Content-Type': 'application/json'
   };
-  
-  const response = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`,
+
+  const usersResponse = await fetchJson<User[]>(
+    `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}&select=*`, 
     { headers }
   );
-  
-  if (!response.ok) throw new Error('Failed to fetch user data');
-  const users = await response.json();
-  if (!users.length) throw new Error('User not found');
-  
-  return users[0];
+
+  if (!usersResponse.length) {
+    throw new Error('User not found');
+  }
+
+  const user = usersResponse[0];
+  const credits = user.credits || 0;
+
+  return { user, credits };
 }
 
-async function fetchBusinessProfile(businessId: string, userId: string, env: Env): Promise<BusinessProfile> {
+async function fetchBusinessProfile(business_id: string, user_id: string, env: Env): Promise<BusinessProfile> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
     'Content-Type': 'application/json'
   };
-  
-  const response = await fetch(
-    `${env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${businessId}&user_id=eq.${userId}&select=*`,
+
+  const businesses = await fetchJson<BusinessProfile[]>(
+    `${env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${business_id}&user_id=eq.${user_id}&select=*`,
     { headers }
   );
-  
-  if (!response.ok) throw new Error('Failed to fetch business profile');
-  const businesses = await response.json();
-  if (!businesses.length) throw new Error('Business profile not found');
-  
+
+  if (!businesses.length) {
+    throw new Error('Business profile not found or access denied');
+  }
+
   return businesses[0];
 }
 
-// =============================================================================
-// 🔧 CLOUDFLARE WORKER COLUMN FIXES
-// Fix credit_transactions table column mismatch
-// =============================================================================
-
-// ❌ CURRENT BROKEN CODE in your worker:
-/*
 async function updateCreditsAndTransaction(
-  userId: string,
-  creditChange: number,
-  newBalance: number,
-  description: string,
-  transactionType: 'use' | 'add',
-  env: Env
-) {
-  const transactionResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      user_id: userId,
-      amount: creditChange,
-      balance_after: newBalance,  // ❌ THIS COLUMN DOESN'T EXIST!
-      description,
-      type: transactionType,
-      created_at: new Date().toISOString()
-    })
-  });
-}
-*/
-
-// ✅ FIXED CODE - Replace updateCreditsAndTransaction function in your worker:
-
-async function updateCreditsAndTransaction(
-  userId: string,
-  creditChange: number,
+  user_id: string,
+  cost: number,
   newBalance: number,
   description: string,
   transactionType: 'use' | 'add',
   env: Env,
-  leadId?: string  // Optional leadId parameter
-) {
+  lead_id?: string
+): Promise<void> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
@@ -328,48 +320,43 @@ async function updateCreditsAndTransaction(
   };
 
   try {
-    // Update user credits
-    console.log(`Updating user ${userId} credits to ${newBalance}`);
-    const userUpdateResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ credits: newBalance })
-    });
+    console.log(`Updating user ${user_id} credits to ${newBalance}`);
+    
+    await fetchJson(
+      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+      {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          credits: newBalance
+        })
+      },
+      10000
+    );
+    console.log('User credits updated successfully');
 
-    if (!userUpdateResponse.ok) {
-      const errorText = await userUpdateResponse.text();
-      console.error('❌ User update failed:', errorText);
-      throw new Error('Failed to update user credits');
-    }
-    console.log('✅ User credits updated successfully');
-
-    // ✅ Log transaction with correct columns
-    console.log(`Creating credit transaction for user ${userId}`);
+    console.log(`Creating credit transaction for user ${user_id}`);
     const transactionData = {
-      user_id: userId,
-      amount: creditChange,     // The change amount (negative for use, positive for add)
-      type: transactionType,    // 'use' or 'add'
+      user_id: user_id,
+      amount: transactionType === 'use' ? -cost : cost,
+      type: transactionType,
       description: description,
-      lead_id: leadId || null   // Include leadId if provided, null otherwise
+      lead_id: lead_id || null
     };
 
-    console.log('📝 Transaction data:', transactionData);
-
-    const transactionResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/credit_transactions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(transactionData)
-    });
-
-    if (!transactionResponse.ok) {
-      const errorText = await transactionResponse.text();
-      console.error('❌ Credit transaction failed:', errorText);
-      throw new Error(`Failed to log credit transaction: ${errorText}`);
-    }
-    console.log('✅ Credit transaction logged successfully');
+    await fetchJson(
+      `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(transactionData)
+      },
+      10000
+    );
+    console.log('Credit transaction logged successfully');
 
   } catch (error: any) {
-    console.error('❌ updateCreditsAndTransaction error:', error.message);
+    console.error('updateCreditsAndTransaction error:', error.message);
     throw new Error(`Failed to update credits: ${error.message}`);
   }
 }
@@ -387,7 +374,6 @@ async function saveLeadAndAnalysis(
   };
 
   try {
-    // STEP 1: Save to leads table (basic profile info only)
     logger('info', 'Saving to leads table', { username: leadData.username });
     
     const cleanLeadData = {
@@ -412,20 +398,19 @@ async function saveLeadAndAnalysis(
       throw new Error('Failed to create lead record - no data returned');
     }
 
-    const leadId = leadResult[0].id;
-    if (!leadId) {
+    const lead_id = leadResult[0].id;
+    if (!lead_id) {
       throw new Error('Failed to get lead ID from database response');
     }
 
-    logger('info', 'Lead saved successfully', { leadId, username: leadData.username });
+    logger('info', 'Lead saved successfully', { lead_id, username: leadData.username });
 
-    // STEP 2: Save to lead_analyses table (deep analysis only)
     if (analysisType === 'deep' && analysisData) {
       logger('info', 'Saving to lead_analyses table for deep analysis');
       
       const cleanAnalysisData = {
         ...analysisData,
-        lead_id: leadId,
+        lead_id: lead_id,
         engagement_score: Math.round(parseFloat(analysisData.engagement_score) || 0),
         score_niche_fit: Math.round(parseFloat(analysisData.score_niche_fit) || 0),
         score_total: Math.round(parseFloat(analysisData.score_total) || 0),
@@ -447,9 +432,8 @@ async function saveLeadAndAnalysis(
         const errorText = await analysisResponse.text();
         logger('error', 'Failed to save analysis data', { error: errorText });
         
-        // ROLLBACK: Delete the lead record
         try {
-          await fetch(`${env.SUPABASE_URL}/rest/v1/leads?id=eq.${leadId}`, {
+          await fetch(`${env.SUPABASE_URL}/rest/v1/leads?id=eq.${lead_id}`, {
             method: 'DELETE',
             headers
           });
@@ -466,17 +450,13 @@ async function saveLeadAndAnalysis(
       logger('info', 'Light analysis - skipping lead_analyses table');
     }
 
-    return leadId;
+    return lead_id;
 
   } catch (error: any) {
     logger('error', 'saveLeadAndAnalysis failed', { error: error.message });
     throw new Error(`Database save failed: ${error.message}`);
   }
 }
-
-// ===============================================================================
-// INSTAGRAM SCRAPING FUNCTIONS
-// ===============================================================================
 
 async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
   if (!env.APIFY_API_TOKEN) {
@@ -487,7 +467,6 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
 
   try {
     if (analysisType === 'light') {
-      // Light analysis: Basic profile data only
       const lightInput = {
         usernames: [username],
         resultsType: "details",
@@ -511,7 +490,6 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
       return validateProfileData(profileResponse[0], 'light');
 
     } else {
-      // Deep analysis: Profile + posts for engagement calculation
       logger('info', 'Deep analysis: Using enhanced scraper with posts data');
       
       const deepInput = {
@@ -542,7 +520,6 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
         }
 
       } catch (deepError: any) {
-        // FALLBACK: Use light scraper with estimated engagement
         logger('warn', 'Deep scraper failed, falling back to light scraper', { error: deepError.message });
         
         const lightInput = {
@@ -568,7 +545,6 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
         const profile = lightResponse[0];
         const followers = parseInt(profile.followersCount) || 0;
         
-        // Provide estimated engagement for deep analysis fallback
         const estimatedEngagement = followers > 0 ? {
           avgLikes: Math.round(followers * 0.03),
           avgComments: Math.round(followers * 0.005),
@@ -619,7 +595,6 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
 function validateProfileData(responseData: any, analysisType?: string): ProfileData {
   try {
     if (analysisType === 'deep' && Array.isArray(responseData)) {
-      // Deep scraper returns array of posts + profile data
       const profileItem = responseData.find(item => item.username || item.ownerUsername);
       const posts = responseData.filter(item => item.shortCode && item.likesCount !== undefined);
       
@@ -627,7 +602,6 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
         throw new Error('No profile data found in deep scraper response');
       }
 
-      // Calculate real engagement from posts
       let engagement: EngagementData | undefined;
       if (posts.length > 0) {
         const totalLikes = posts.reduce((sum, post) => sum + (parseInt(post.likesCount) || 0), 0);
@@ -659,7 +633,6 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
         mentions: Array.isArray(post.mentions) ? post.mentions : []
       }));
 
-      // Validate username match to prevent data pollution
       const extractedUsername = (profileItem.username || profileItem.ownerUsername || '').toLowerCase();
       const expectedUsername = extractedUsername;
       
@@ -686,7 +659,6 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
       };
 
     } else {
-      // Light scraper or single profile object
       const profile = Array.isArray(responseData) ? responseData[0] : responseData;
       
       if (!profile || !profile.username) {
@@ -714,10 +686,6 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
     throw new Error(`Profile validation failed: ${error.message}`);
   }
 }
-
-// ===============================================================================
-// AI ANALYSIS FUNCTIONS
-// ===============================================================================
 
 async function summarizeProfileBioAndStats(profile: ProfileData, env: Env): Promise<string> {
   const prompt = `Summarize this Instagram profile in 2-3 sentences:
@@ -847,10 +815,6 @@ Focus on who they serve and what value they provide.`;
   return response.choices[0].message.content.trim();
 }
 
-// ===============================================================================
-// AI ANALYSIS FUNCTIONS - CONTINUED FROM LIGHT EVALUATOR PROMPT
-// ===============================================================================
-
 function buildLightEvaluatorPrompt(summary: ProfileSummary): string {
   return `You are an expert B2B lead analyst. Analyze this prospect for business potential.
 
@@ -917,7 +881,6 @@ async function performAIAnalysis(
   let profileSummary: ProfileSummary;
   
   if (analysisType === 'light') {
-    // Light analysis: minimal summarization
     profileSummary = {
       bio_summary: `@${profile.username} (${profile.displayName}): ${profile.bio}. ${profile.followersCount} followers, ${profile.postsCount} posts. ${profile.isVerified ? 'Verified.' : ''}`,
       post_themes: 'Light analysis - post themes not analyzed',
@@ -925,7 +888,6 @@ async function performAIAnalysis(
       business_context: `${business.name} in ${business.industry} targeting ${business.target_audience}. Value prop: ${business.value_proposition}`
     };
   } else {
-    // Deep analysis: full summarization pipeline
     const [bioSummary, postThemes, engagementPatterns, businessContext] = await Promise.all([
       summarizeProfileBioAndStats(profile, env),
       summarizePostThemes(profile.latestPosts || [], env),
@@ -943,7 +905,6 @@ async function performAIAnalysis(
   
   logger('info', 'Summarization complete, starting final evaluation', { username: profile.username }, requestId);
   
-  // Final evaluator prompt
   const evaluatorPrompt = analysisType === 'light' ? 
     buildLightEvaluatorPrompt(profileSummary) : 
     buildDeepEvaluatorPrompt(profileSummary);
@@ -973,7 +934,6 @@ async function performAIAnalysis(
 }
 
 function validateAnalysisResult(result: any): AnalysisResult {
-  // Ensure all required fields exist with proper types
   return {
     score: Math.round(parseFloat(result.score) || 0),
     engagement_score: Math.round(parseFloat(result.engagement_score) || 0),
@@ -1088,7 +1048,6 @@ Write a compelling outreach message that would get a response.`;
   } catch (error: any) {
     logger('error', 'Message generation failed', { error: error.message }, requestId);
     
-    // Return a basic template message as fallback
     return `Hi ${profile.displayName || profile.username},
 
 I came across your profile and was impressed by your content and engagement with your ${profile.followersCount.toLocaleString()} followers.
@@ -1101,11 +1060,6 @@ Best regards`;
   }
 }
 
-// ===============================================================================
-// API ENDPOINTS
-// ===============================================================================
-
-// Health check endpoint
 app.get('/', (c) => {
   return c.json({
     status: 'healthy',
@@ -1117,7 +1071,6 @@ app.get('/', (c) => {
 
 app.get('/health', (c) => c.json({ status: 'healthy', timestamp: new Date().toISOString() }));
 
-// Configuration endpoint for frontend
 app.get('/config', (c) => {
   const baseUrl = new URL(c.req.url).origin.replace(/\/$/, '');
   return c.json({
@@ -1127,7 +1080,6 @@ app.get('/config', (c) => {
   });
 });
 
-// Environment debugging
 app.get('/debug-env', (c) => {
   return c.json({
     supabase: c.env.SUPABASE_URL ? 'SET' : 'MISSING',
@@ -1142,15 +1094,10 @@ app.get('/debug-env', (c) => {
   });
 });
 
-// ===============================================================================
-// MAIN ANALYSIS ENDPOINT
-// ===============================================================================
-
 app.post('/v1/analyze', async (c) => {
   const requestId = generateRequestId();
   
   try {
-    // Parse and validate request
     const body = await c.req.json();
     const data = normalizeRequest(body);
     const { username, analysis_type, business_id, user_id, profile_url } = data;
@@ -1161,13 +1108,11 @@ app.post('/v1/analyze', async (c) => {
       requestId 
     });
     
-    // Fetch user and business data
     const [userResult, business] = await Promise.all([
       fetchUserAndCredits(user_id, c.env),
       fetchBusinessProfile(business_id, user_id, c.env)
     ]);
     
-    // Check credits
     const creditCost = analysis_type === 'deep' ? 2 : 1;
     if (userResult.credits < creditCost) {
       return c.json(createStandardResponse(
@@ -1178,7 +1123,6 @@ app.post('/v1/analyze', async (c) => {
       ), 402);
     }
     
-    // Scrape profile
     let profileData: ProfileData;
     try {
       logger('info', 'Starting profile scraping', { username });
@@ -1212,7 +1156,6 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // AI Analysis
     let analysisResult: AnalysisResult;
     try {
       logger('info', 'Starting AI analysis');
@@ -1228,7 +1171,6 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // Generate outreach message (deep analysis only)
     let outreachMessage = '';
     if (analysis_type === 'deep') {
       try {
@@ -1240,7 +1182,6 @@ app.post('/v1/analyze', async (c) => {
       }
     }
 
-    // Prepare data for database save
     const leadData = {
       user_id: user_id,
       business_id: business_id,
@@ -1254,7 +1195,6 @@ app.post('/v1/analyze', async (c) => {
       created_at: new Date().toISOString()
     };
 
-    // Prepare analysis data (deep analysis only)
     let analysisData = null;
     if (analysis_type === 'deep') {
       analysisData = {
@@ -1262,39 +1202,33 @@ app.post('/v1/analyze', async (c) => {
         username: profileData.username,
         analysis_type: 'deep',
         
-        // AI analysis scores
         engagement_score: analysisResult.engagement_score || 0,
         score_niche_fit: analysisResult.niche_fit || 0,
         score_total: analysisResult.score || 0,
         
-        // AI insights
         audience_quality: analysisResult.audience_quality || 'Unknown',
         engagement_insights: analysisResult.engagement_insights || 'No insights available',
         selling_points: Array.isArray(analysisResult.selling_points) 
           ? analysisResult.selling_points 
           : (analysisResult.selling_points ? [analysisResult.selling_points] : null),
         
-        // Outreach message
         outreach_message: outreachMessage || null,
         
-        // Profile engagement metrics
         avg_comments: profileData.engagement?.avgComments || 0,
         avg_likes: profileData.engagement?.avgLikes || 0,
         engagement_rate: profileData.engagement?.engagementRate || 0,
         
-        // Latest posts data
         latest_posts: profileData.latestPosts ? JSON.stringify(profileData.latestPosts) : null,
         
         created_at: new Date().toISOString()
       };
     }
 
-    // Save to database
-    let leadId: string;
+    let lead_id: string;
     try {
       logger('info', 'Saving to database');
-      leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
-      logger('info', 'Database save successful', { leadId });
+      lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+      logger('info', 'Database save successful', { lead_id });
     } catch (saveError: any) {
       logger('error', 'Database save failed', { error: saveError.message });
       return c.json(createStandardResponse(
@@ -1305,17 +1239,16 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // Update credits
     try {
-await updateCreditsAndTransaction(
-  userId,
-  -cost,
-  currentCredits - cost,
-  `${analysis_type} analysis for @${profileData.username}`,
-  'use',
-  c.env,
-  leadId  // ✅ Include the leadId for tracking
-);
+      await updateCreditsAndTransaction(
+        user_id,
+        creditCost,
+        userResult.credits - creditCost,
+        `${analysis_type} analysis for @${profileData.username}`,
+        'use',
+        c.env,
+        lead_id
+      );
       logger('info', 'Credits updated successfully', { 
         creditCost, 
         remainingCredits: userResult.credits - creditCost 
@@ -1330,9 +1263,8 @@ await updateCreditsAndTransaction(
       ), 500);
     }
 
-    // Return success response
     const responseData = {
-      leadId,
+      lead_id,
       profile: {
         username: profileData.username,
         displayName: profileData.displayName,
@@ -1358,7 +1290,7 @@ await updateCreditsAndTransaction(
     };
 
     logger('info', 'Analysis completed successfully', { 
-      leadId, 
+      lead_id, 
       username: profileData.username, 
       score: analysisResult.score 
     });
@@ -1375,10 +1307,6 @@ await updateCreditsAndTransaction(
     ), 500);
   }
 });
-
-// ===============================================================================
-// BULK ANALYSIS ENDPOINT
-// ===============================================================================
 
 app.post('/v1/bulk-analyze', async (c) => {
   const requestId = generateRequestId();
@@ -1411,7 +1339,6 @@ app.post('/v1/bulk-analyze', async (c) => {
       requestId 
     });
 
-    // Validate profiles and extract usernames
     const validatedProfiles = profiles.map(profileUrl => {
       const username = extractUsername(profileUrl);
       if (!username) {
@@ -1420,13 +1347,9 @@ app.post('/v1/bulk-analyze', async (c) => {
       return { username, profileUrl };
     });
 
-    // Fetch user and business data
-    const [userResult, business] = await Promise.all([
-      fetchUserAndCredits(user_id, c.env),
-      fetchBusinessProfile(business_id, user_id, c.env)
-    ]);
+    const userResult = await fetchUserAndCredits(user_id, c.env);
+    const business = await fetchBusinessProfile(business_id, user_id, c.env);
 
-    // Check credits
     const costPerProfile = analysis_type === 'deep' ? 2 : 1;
     const totalCost = validatedProfiles.length * costPerProfile;
     
@@ -1439,7 +1362,6 @@ app.post('/v1/bulk-analyze', async (c) => {
       ), 402);
     }
 
-    // Process profiles sequentially to avoid rate limits
     const results = [];
     let successful = 0;
     let failed = 0;
@@ -1449,13 +1371,10 @@ app.post('/v1/bulk-analyze', async (c) => {
       try {
         logger('info', 'Processing bulk profile', { username: profile.username });
 
-        // Scrape profile
         const profileData = await scrapeInstagramProfile(profile.username, analysis_type, c.env);
         
-        // AI analysis
         const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
         
-        // Generate outreach message (deep only)
         let outreachMessage = '';
         if (analysis_type === 'deep') {
           try {
@@ -1468,7 +1387,6 @@ app.post('/v1/bulk-analyze', async (c) => {
           }
         }
 
-        // Prepare data
         const leadData = {
           user_id: user_id,
           business_id: business_id,
@@ -1505,13 +1423,12 @@ app.post('/v1/bulk-analyze', async (c) => {
           };
         }
 
-        // Save to database
-        const leadId = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+        const lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
 
         results.push({
           username: profile.username,
           success: true,
-          leadId,
+          lead_id,
           score: analysisResult.score,
           ...(analysis_type === 'deep' && {
             engagement_score: analysisResult.engagement_score,
@@ -1543,18 +1460,16 @@ app.post('/v1/bulk-analyze', async (c) => {
       }
     }
 
-    // Update credits for successful analyses only
     if (creditsUsed > 0) {
       try {
-await updateCreditsAndTransaction(
-  userId,
-  -creditsUsed,
-  currentCredits - creditsUsed,
-  `Bulk ${analysis_type} analysis (${successful} profiles)`,
-  'use',
-  c.env
-  // No leadId for bulk operations
-);
+        await updateCreditsAndTransaction(
+          user_id,
+          creditsUsed,
+          userResult.credits - creditsUsed,
+          `Bulk ${analysis_type} analysis (${successful} profiles)`,
+          'use',
+          c.env
+        );
       } catch (creditError: any) {
         logger('error', 'Bulk credit update failed', { error: creditError.message });
         return c.json(createStandardResponse(
@@ -1599,10 +1514,6 @@ await updateCreditsAndTransaction(
   }
 });
 
-// ===============================================================================
-// STRIPE WEBHOOKS
-// ===============================================================================
-
 app.post('/stripe-webhook', async (c) => {
   const requestId = generateRequestId();
   
@@ -1619,9 +1530,6 @@ app.post('/stripe-webhook', async (c) => {
 
     const body = await c.req.text();
     
-    // Verify webhook signature (simplified for demo)
-    // In production, use actual Stripe webhook signature verification
-    
     const event = JSON.parse(body);
     logger('info', 'Stripe webhook received', { eventType: event.type, requestId });
 
@@ -1631,10 +1539,8 @@ app.post('/stripe-webhook', async (c) => {
       'Content-Type': 'application/json'
     };
 
-    // Handle different event types
     switch (event.type) {
       case 'checkout.session.completed':
-        // Handle successful payment
         await fetch(`${c.env.SUPABASE_URL}/rest/v1/users`, {
           method: 'PATCH',
           headers,
@@ -1647,7 +1553,6 @@ app.post('/stripe-webhook', async (c) => {
         break;
         
       case 'customer.subscription.deleted':
-        // Handle subscription cancellation
         await fetch(`${c.env.SUPABASE_URL}/rest/v1/users`, {
           method: 'PATCH',
           headers,
@@ -1680,10 +1585,6 @@ app.post('/stripe-webhook', async (c) => {
   }
 });
 
-// ===============================================================================
-// DEBUG AND TEST ENDPOINTS
-// ===============================================================================
-
 app.get('/debug-scrape/:username', async (c) => {
   const username = c.req.param('username');
   const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
@@ -1712,10 +1613,6 @@ app.get('/debug-scrape/:username', async (c) => {
     }, 500);
   }
 });
-
-// ===============================================================================
-// DEBUG AND TEST ENDPOINTS - CONTINUED
-// ===============================================================================
 
 app.get('/test-supabase', async (c) => {
   try {
@@ -1772,7 +1669,6 @@ app.get('/debug-parsing/:username', async (c) => {
   const username = c.req.param('username');
   
   try {
-    // Test the deep scraper to see raw response structure
     const deepInput = {
       directUrls: [`https://instagram.com/${username}/`],
       resultsLimit: 3,
@@ -1822,15 +1718,8 @@ app.post('/test-post', async (c) => {
   }
 });
 
-// ===============================================================================
-// ANALYTICS ENDPOINTS (Future Enhancement)
-// ===============================================================================
-
 app.get('/analytics/summary', async (c) => {
   try {
-    // Placeholder for analytics summary
-    // In production, this would query Supabase for real metrics
-    
     const summary = {
       totalLeads: 1250,
       conversionRate: 23.5,
@@ -1903,9 +1792,6 @@ app.post('/ai/generate-insights', async (c) => {
       requestData = {};
     }
     
-    // Placeholder AI insights generation
-    // In production, this would use OpenAI/Claude to generate real insights
-    
     const insights = {
       keyTrends: [
         "Response rates are 23% higher when messages reference specific post content",
@@ -1944,11 +1830,6 @@ app.post('/ai/generate-insights', async (c) => {
   }
 });
 
-// ===============================================================================
-// LEGACY ENDPOINTS (For Backward Compatibility)
-// ===============================================================================
-
-// Legacy analyze endpoint - redirects to v1
 app.post('/analyze', async (c) => {
   const requestId = generateRequestId();
   logger('info', 'Legacy analyze endpoint called, redirecting to v1', { requestId });
@@ -1956,20 +1837,17 @@ app.post('/analyze', async (c) => {
   try {
     const body = await c.req.json();
     
-    // Transform legacy request to v1 format
     const normalizedBody = {
       ...body,
       analysis_type: body.analysis_type || body.type || 'light'
     };
     
-    // Create new request with v1 endpoint
     const v1Request = new Request(c.req.url.replace('/analyze', '/v1/analyze'), {
       method: 'POST',
       headers: c.req.header(),
       body: JSON.stringify(normalizedBody)
     });
     
-    // Forward to v1 endpoint
     return app.fetch(v1Request, c.env);
     
   } catch (error: any) {
@@ -1983,7 +1861,6 @@ app.post('/analyze', async (c) => {
   }
 });
 
-// Legacy bulk-analyze endpoint - redirects to v1
 app.post('/bulk-analyze', async (c) => {
   const requestId = generateRequestId();
   logger('info', 'Legacy bulk-analyze endpoint called, redirecting to v1', { requestId });
@@ -1991,14 +1868,12 @@ app.post('/bulk-analyze', async (c) => {
   try {
     const body = await c.req.json();
     
-    // Create new request with v1 endpoint
     const v1Request = new Request(c.req.url.replace('/bulk-analyze', '/v1/bulk-analyze'), {
       method: 'POST',
       headers: c.req.header(),
       body: JSON.stringify(body)
     });
     
-    // Forward to v1 endpoint
     return app.fetch(v1Request, c.env);
     
   } catch (error: any) {
@@ -2012,27 +1887,22 @@ app.post('/bulk-analyze', async (c) => {
   }
 });
 
-// ===============================================================================
-// BILLING ENDPOINTS (Stripe Integration)
-// ===============================================================================
-
 app.post('/billing/create-checkout-session', async (c) => {
   const requestId = generateRequestId();
   
   try {
     const body = await c.req.json();
-    const { priceId, userId, successUrl, cancelUrl } = body;
+    const { priceId, user_id, successUrl, cancelUrl } = body;
     
-    if (!priceId || !userId) {
+    if (!priceId || !user_id) {
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        'priceId and userId are required', 
+        'priceId and user_id are required', 
         requestId
       ), 400);
     }
 
-    // Create Stripe checkout session
     const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
@@ -2044,7 +1914,7 @@ app.post('/billing/create-checkout-session', async (c) => {
         'line_items[0][price]': priceId,
         'line_items[0][quantity]': '1',
         'mode': 'subscription',
-        'client_reference_id': userId,
+        'client_reference_id': user_id,
         'success_url': successUrl || `${c.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
         'cancel_url': cancelUrl || `${c.env.FRONTEND_URL}/pricing`
       })
@@ -2093,7 +1963,6 @@ app.post('/billing/create-portal-session', async (c) => {
       ), 400);
     }
 
-    // Create Stripe customer portal session
     const stripeResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
       method: 'POST',
       headers: {
@@ -2129,10 +1998,6 @@ app.post('/billing/create-portal-session', async (c) => {
     ), 500);
   }
 });
-
-// ===============================================================================
-// ERROR HANDLING AND 404
-// ===============================================================================
 
 app.onError((err, c) => {
   const requestId = generateRequestId();
@@ -2181,9 +2046,5 @@ app.notFound(c => {
     ]
   }, 404);
 });
-
-// ===============================================================================
-// WORKER EXPORT
-// ===============================================================================
 
 export default app;
