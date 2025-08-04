@@ -304,7 +304,7 @@ async loadDashboardData() {
                     selling_points,
                     outreach_message,
                     reasons,
-                    summary,
+                    quick_summary,
                     niche_fit,
                     analyzed_at,
                     avg_likes,
