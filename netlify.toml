@@ -16,15 +16,24 @@
 [[headers]]
   for = "/*"
   [headers.values]
+    # ✅ FIXED: Added all necessary CDNs for Supabase and other scripts
     Content-Security-Policy = """
-      default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://unpkg.com https://cdnjs.cloudflare.com;
+      default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: https: blob: https://images.weserv.nl;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com;
       frame-src https://js.stripe.com;
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self' https://*.stripe.com;
     """
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
 
 # ===========================
 # 🔁 Pretty URL Redirects
