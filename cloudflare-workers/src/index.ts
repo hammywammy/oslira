@@ -830,6 +830,7 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
           });
         }
       }
+    }
 
       // ✅ ENHANCED: Better post data extraction
       const latestPosts: PostData[] = posts.slice(0, 12).map(post => {
