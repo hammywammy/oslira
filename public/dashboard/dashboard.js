@@ -53,41 +53,29 @@ async init() {
     }
 }
 
-    setupEventListeners() {
-    console.log('🔧 Setting up event listeners...');
+   setupEventListeners() {
+    console.log('🔧 Setting up ALL event listeners...');
     
-    // Modal close handlers
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(modal => {
-        const closeBtn = modal.querySelector('.modal-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.closeModal(modal.id));
+    // ✅ CRITICAL: Analysis modal buttons (multiple entry points)
+    const researchBtns = [
+        'research-lead-btn',           // Header button
+        'research-action-card',        // Action card
+        'welcome-cta-btn'              // Welcome insight button
+    ];
+    
+    researchBtns.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                console.log(`🎯 Analysis modal triggered by: ${btnId}`);
+                e.preventDefault();
+                e.stopPropagation();
+                this.showAnalysisModal();
+            });
+            console.log(`✅ Event listener added to: ${btnId}`);
+        } else {
+            console.warn(`⚠️ Button not found: ${btnId}`);
         }
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeModal(modal.id);
-            }
-        });
-    });
-
-    // ✅ CRITICAL: Analysis modal triggers (multiple buttons)
-    document.getElementById('research-lead-btn')?.addEventListener('click', (e) => {
-        console.log('🎯 Research lead button clicked');
-        e.preventDefault();
-        this.showAnalysisModal();
-    });
-    
-    document.getElementById('research-action-card')?.addEventListener('click', (e) => {
-        console.log('🎯 Research action card clicked');
-        e.preventDefault();
-        this.showAnalysisModal();
-    });
-    
-    document.getElementById('welcome-cta-btn')?.addEventListener('click', (e) => {
-        console.log('🎯 Welcome CTA clicked');
-        e.preventDefault();
-        this.showAnalysisModal();
     });
 
     // ✅ CRITICAL: Analysis form handlers
@@ -95,27 +83,82 @@ async init() {
     if (analysisForm) {
         analysisForm.addEventListener('submit', (e) => {
             console.log('📝 Analysis form submitted');
+            e.preventDefault();
             this.submitAnalysis(e);
         });
+        console.log('✅ Analysis form submit listener added');
     }
     
     const analysisTypeSelect = document.getElementById('analysis-type');
     if (analysisTypeSelect) {
         analysisTypeSelect.addEventListener('change', (e) => {
-            console.log('🔄 Analysis type changed:', e.target.value);
+            console.log('🔄 Analysis type changed to:', e.target.value);
             this.updateInputField();
         });
+        console.log('✅ Analysis type change listener added');
     }
     
-    // Modal controls
-    document.getElementById('analysis-modal-close')?.addEventListener('click', () => this.closeModal('analysisModal'));
+    // ✅ Modal close handlers
+    document.getElementById('analysis-modal-close')?.addEventListener('click', () => {
+        console.log('❌ Analysis modal close clicked');
+        this.closeModal('analysisModal');
+    });
+    
+    // ✅ ALL OTHER EVENT LISTENERS (inline to avoid missing method error)
+    
+    // Bulk upload
+    document.getElementById('bulk-upload-btn')?.addEventListener('click', () => this.showBulkUpload());
+    document.getElementById('csv-import-action-card')?.addEventListener('click', () => this.showBulkUpload());
+    
+    // Filters and activity
+    document.getElementById('timeframe-filter')?.addEventListener('change', () => this.loadRecentActivity());
+    document.getElementById('activity-filter')?.addEventListener('change', () => this.applyActivityFilter());
+    document.getElementById('refresh-activity-btn')?.addEventListener('click', () => this.refreshActivity());
+    
+    // Bulk actions
+    document.getElementById('select-all-btn')?.addEventListener('click', () => this.selectAllLeads(true));
+    document.getElementById('bulk-delete-btn')?.addEventListener('click', () => this.bulkDeleteLeads());
+    document.getElementById('clear-selection-btn')?.addEventListener('click', () => this.clearSelection());
+    
+    // Search functionality
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.searchLeads(e.target.value);
+            }, 300);
+        });
+    }
+
+    // Select all checkbox
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', (e) => {
+            this.selectAllLeads(e.target.checked);
+        });
+    }
+
+    // Support and other modals
+    document.getElementById('support-btn')?.addEventListener('click', () => this.showSupportModal());
     document.getElementById('lead-modal-close')?.addEventListener('click', () => this.closeModal('leadModal'));
     document.getElementById('bulk-modal-close')?.addEventListener('click', () => this.closeModal('bulkModal'));
     
-    // Other existing event listeners...
-    this.setupOtherEventListeners();
+    // Export functionality
+    document.getElementById('export-action-card')?.addEventListener('click', () => this.exportLeads());
+    document.getElementById('generate-insights-btn')?.addEventListener('click', () => this.generateInsights());
     
-    console.log('✅ Event listeners setup complete');
+    // Global modal click outside to close
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeModal(modal.id);
+            }
+        });
+    });
+    
+    console.log('✅ All event listeners setup complete');
 }
 
     setupFilterHandlers() {
@@ -1220,6 +1263,248 @@ async viewLead(leadId) {
         return div.innerHTML;
     }
 
+    // Business profile loading
+async loadBusinessProfilesNow() {
+    console.log('🏢 Loading business profiles NOW...');
+    
+    const businessSelect = document.getElementById('business-id');
+    if (!businessSelect) {
+        console.error('❌ Business dropdown not found');
+        return;
+    }
+
+    businessSelect.innerHTML = '<option value="">Loading...</option>';
+    businessSelect.disabled = true;
+
+    try {
+        let retries = 0;
+        const maxRetries = 5;
+        
+        while ((!window.OsliraApp?.user || !window.OsliraApp?.supabase) && retries < maxRetries) {
+            console.log(`⏳ Waiting for auth... (${retries + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retries++;
+        }
+        
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
+
+        if (!supabase || !user) {
+            businessSelect.innerHTML = '<option value="">Please log in first</option>';
+            businessSelect.disabled = false;
+            return;
+        }
+
+        const { data: profiles, error } = await supabase
+            .from('business_profiles')
+            .select('id, business_name, is_active')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('❌ Business profiles error:', error);
+            businessSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
+            businessSelect.disabled = false;
+            return;
+        }
+
+        if (profiles && profiles.length > 0) {
+            const activeProfiles = profiles.filter(p => p.is_active !== false);
+            
+            if (activeProfiles.length > 0) {
+                businessSelect.innerHTML = [
+                    '<option value="">Select business profile...</option>',
+                    ...activeProfiles.map(profile => 
+                        `<option value="${profile.id}">${profile.business_name || 'Unnamed Business'}</option>`
+                    )
+                ].join('');
+                console.log(`✅ Loaded ${activeProfiles.length} business profiles`);
+            } else {
+                businessSelect.innerHTML = '<option value="">No active business profiles</option>';
+            }
+        } else {
+            businessSelect.innerHTML = '<option value="">No business profiles - create one first</option>';
+        }
+
+        businessSelect.disabled = false;
+
+    } catch (error) {
+        console.error('❌ Business profiles loading failed:', error);
+        businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
+        businessSelect.disabled = false;
+    }
+}
+
+// Form submission
+async submitAnalysis(event) {
+    event.preventDefault();
+    console.log('📝 Analysis form submission started');
+    
+    const analysisType = document.getElementById('analysis-type')?.value;
+    const profileInput = document.getElementById('profile-input')?.value?.trim();
+    const businessId = document.getElementById('business-id')?.value;
+    
+    if (!analysisType) {
+        window.OsliraApp?.showMessage('Please select an analysis type', 'error');
+        return;
+    }
+    
+    if (!profileInput) {
+        window.OsliraApp?.showMessage('Please enter an Instagram username', 'error');
+        return;
+    }
+    
+    if (!businessId) {
+        window.OsliraApp?.showMessage('Please select a business profile', 'error');
+        return;
+    }
+    
+    const cleanUsername = profileInput.replace(/^@/, '');
+    
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn?.innerHTML;
+    if (submitBtn) {
+        submitBtn.innerHTML = '🔄 Analyzing...';
+        submitBtn.disabled = true;
+    }
+    
+    try {
+        this.closeModal('analysisModal');
+        window.OsliraApp?.showMessage('Starting analysis... This may take a moment.', 'info');
+        
+        // TODO: Replace with your actual worker URL
+        const response = await fetch(`${window.CONFIG?.workerUrl || 'https://your-worker.workers.dev'}/analytics/profile`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${window.OsliraApp?.user?.access_token}`
+            },
+            body: JSON.stringify({
+                username: cleanUsername,
+                analysis_type: analysisType,
+                business_id: businessId,
+                platform: 'instagram'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            window.OsliraApp?.showMessage('Analysis completed successfully!', 'success');
+            await this.loadDashboardData();
+        } else {
+            throw new Error(result.error || 'Analysis failed');
+        }
+        
+    } catch (error) {
+        console.error('❌ Analysis failed:', error);
+        window.OsliraApp?.showMessage(`Analysis failed: ${error.message}`, 'error');
+    } finally {
+        if (submitBtn && originalText) {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+}
+
+// Missing utility methods
+showBulkUpload() {
+    const modal = document.getElementById('bulkModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    } else {
+        window.OsliraApp?.showMessage('Bulk upload feature coming soon!', 'info');
+    }
+}
+
+async loadRecentActivity() {
+    await this.loadDashboardData();
+}
+
+async refreshActivity() {
+    await this.loadDashboardData();
+    window.OsliraApp?.showMessage('Activity refreshed!', 'success');
+}
+
+selectAllLeads(isChecked) {
+    const visibleLeads = this.allLeads.filter(lead => {
+        const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
+        return row && row.style.display !== 'none';
+    });
+    
+    if (isChecked) {
+        visibleLeads.forEach(lead => this.selectedLeads.add(lead.id));
+    } else {
+        this.selectedLeads.clear();
+    }
+    
+    document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
+        const leadId = checkbox.dataset.leadId;
+        checkbox.checked = this.selectedLeads.has(leadId);
+    });
+    
+    this.updateBulkActionsVisibility();
+}
+
+async bulkDeleteLeads() {
+    if (this.selectedLeads.size === 0) {
+        window.OsliraApp?.showMessage('No leads selected', 'warning');
+        return;
+    }
+    
+    if (!confirm(`Delete ${this.selectedLeads.size} selected leads?`)) {
+        return;
+    }
+    
+    // TODO: Implement bulk delete
+    window.OsliraApp?.showMessage('Bulk delete functionality coming soon!', 'info');
+}
+
+clearSelection() {
+    this.selectedLeads.clear();
+    document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    this.updateBulkActionsVisibility();
+}
+
+updateBulkActionsVisibility() {
+    const bulkActions = document.querySelector('.bulk-actions');
+    const selectedCount = document.getElementById('selected-count');
+    
+    if (bulkActions) {
+        bulkActions.style.display = this.selectedLeads.size > 0 ? 'flex' : 'none';
+    }
+    
+    if (selectedCount) {
+        selectedCount.textContent = this.selectedLeads.size;
+    }
+}
+
+searchLeads(searchTerm) {
+    if (!searchTerm.trim()) {
+        this.displayLeads(this.allLeads);
+        return;
+    }
+    
+    const filteredLeads = this.allLeads.filter(lead => 
+        lead.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    
+    this.displayLeads(filteredLeads);
+}
+
+showSupportModal() {
+    const modal = document.getElementById('supportModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+exportLeads() {
+    window.OsliraApp?.showMessage('Export functionality coming soon!', 'info');
+}
+
     // ===============================================================================
     // INTERACTION METHODS FOR BUTTONS AND ACTIONS
     // ===============================================================================
@@ -1349,8 +1634,8 @@ async viewLead(leadId) {
         }, 100);
     }
 
-    updateInputField() {
-    console.log('📝 Updating input field...');
+   updateInputField() {
+    console.log('📝 Input field update triggered');
     
     const analysisType = document.getElementById('analysis-type');
     const inputContainer = document.getElementById('input-field-container');
@@ -1358,31 +1643,19 @@ async viewLead(leadId) {
     const inputLabel = document.getElementById('input-label');
     const inputHelp = document.getElementById('input-help');
     
-    if (!analysisType) {
-        console.error('❌ Analysis type dropdown not found');
-        return;
-    }
-    
-    if (!inputContainer || !inputField || !inputLabel || !inputHelp) {
-        console.error('❌ Input field elements not found');
-        console.error('Missing elements:', {
-            inputContainer: !!inputContainer,
-            inputField: !!inputField,
-            inputLabel: !!inputLabel,
-            inputHelp: !!inputHelp
-        });
+    if (!analysisType || !inputContainer || !inputField || !inputLabel || !inputHelp) {
+        console.error('❌ Missing form elements for updateInputField');
         return;
     }
     
     const selectedType = analysisType.value;
-    console.log('🎯 Analysis type selected:', selectedType);
+    console.log('🎯 Selected analysis type:', selectedType);
     
-    // Clear previous input
     inputField.value = '';
-    inputField.placeholder = '';
     
-    if (selectedType) {
-        // Show the input container
+    if (selectedType && (selectedType === 'light' || selectedType === 'deep')) {
+        console.log('✅ Showing input container');
+        
         inputContainer.style.display = 'block';
         
         if (selectedType === 'light') {
@@ -1391,23 +1664,20 @@ async viewLead(leadId) {
             inputHelp.innerHTML = 'Enter just the username (without @) - <span style="color: var(--primary-blue); font-weight: 600;">1 credit</span>';
         } else if (selectedType === 'deep') {
             inputLabel.textContent = 'Instagram Username *';
-            inputField.placeholder = 'username';
-            inputHelp.innerHTML = 'Enter just the username (without @) - <span style="color: var(--accent-teal); font-weight: 600;">2 credits - Full deep analysis</span>';
+            inputField.placeholder = 'username';  
+            inputHelp.innerHTML = 'Enter just the username (without @) - <span style="color: var(--accent-teal); font-weight: 600;">2 credits - Full analysis</span>';
         }
         
-        // Focus the input field
         setTimeout(() => {
             inputField.focus();
+            console.log('🎯 Input field focused');
         }, 100);
         
-        console.log('✅ Input field updated and focused');
     } else {
-        // Hide the input container
+        console.log('📋 Hiding input container');
         inputContainer.style.display = 'none';
-        console.log('📋 Input field hidden - no analysis type selected');
     }
 }
-
     saveEditedMessage() {
         const textarea = document.getElementById('edit-message-textarea');
         if (!textarea) return;
@@ -1818,14 +2088,50 @@ async viewLead(leadId) {
 
 
 
-    showAnalysisModal(username) {
-        // This would show the analysis modal for running new analysis
-        console.log(`Opening analysis modal for ${username}`);
-        if (window.OsliraApp && window.OsliraApp.showMessage) {
-            window.OsliraApp.showMessage('Analysis modal coming soon!', 'info');
-        }
+   showAnalysisModal() {
+    console.log('🔍 Opening analysis modal...');
+    
+    const modal = document.getElementById('analysisModal');
+    if (!modal) {
+        console.error('❌ Analysis modal not found in DOM');
+        return;
     }
-
+    
+    // Reset form completely
+    const form = document.getElementById('analysisForm');
+    if (form) {
+        form.reset();
+    }
+    
+    // Reset all form elements
+    const analysisType = document.getElementById('analysis-type');
+    const profileInput = document.getElementById('profile-input');
+    const inputContainer = document.getElementById('input-field-container');
+    
+    if (analysisType) {
+        analysisType.value = '';
+    }
+    if (profileInput) {
+        profileInput.value = '';
+    }
+    if (inputContainer) {
+        inputContainer.style.display = 'none';
+    }
+    
+    // Load business profiles when modal opens
+    this.loadBusinessProfilesNow();
+    
+    // Show the modal
+    modal.style.display = 'flex';
+    console.log('✅ Analysis modal shown');
+    
+    // Focus on analysis type dropdown
+    setTimeout(() => {
+        if (analysisType) {
+            analysisType.focus();
+        }
+    }, 200);
+}
     // ===============================================================================
     // BULK OPERATIONS
     // ===============================================================================
@@ -2055,13 +2361,9 @@ async viewLead(leadId) {
     this.allLeads = [];
     this.selectedLeads.clear();
     
-    // Show empty state in the leads table
+    // Show empty state
     this.displayLeads([]);
-    
-    // Update stats to show zeros
     this.updateDashboardStats();
-    
-    // Generate welcome insights
     this.generateInsights();
     
     console.log('✅ Empty state displayed - ready for first lead research');
@@ -2449,9 +2751,9 @@ async checkForUpdates() {
         // ✅ FIXED: Only use created_at (leads table has NO updated_at column)
         const { data: newLeads, error } = await supabase
             .from('leads')
-            .select('id, created_at')  // ✅ Only existing columns
+            .select('id, created_at')
             .eq('user_id', user.id)
-            .gt('created_at', lastUpdate)  // ✅ Only check created_at
+            .gt('created_at', lastUpdate)
             .limit(1);
 
         if (error) throw error;
