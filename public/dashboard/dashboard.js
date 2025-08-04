@@ -1357,83 +1357,97 @@ async viewLead(leadId) {
     // DASHBOARD DATA MANAGEMENT
     // ===============================================================================
 
-    displayLeads(leads) {
-        const tableBody = document.getElementById('activity-table');
-        
-        if (!tableBody) {
-            console.error('displayLeads: activity-table element not found');
-            return;
-        }
-        
-        if (leads && leads.length > 0) {
-            tableBody.innerHTML = leads.map(lead => {
-                const analysisType = lead.analysis_type || 'light';
-                const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
-                
-                const profilePicUrl = lead.profile_pic_url;
-                const profilePicHtml = profilePicUrl 
-                    ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=40&h=40&fit=cover&a=attention" 
-                            alt="@${lead.username}" 
-                            style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-light);"
-                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-                    : '';
-                
-                const fallbackAvatar = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
-                    ${lead.username ? lead.username.charAt(0).toUpperCase() : '?'}
-                </div>`;
-                
-                return `
-                    <tr class="activity-row" data-lead-id="${lead.id}" ${this.selectedLeads.has(lead.id) ? 'style="background-color: rgba(59, 130, 246, 0.05);"' : ''}>
-                        <td style="padding: 12px; border-bottom: 1px solid var(--border-light);">
+  displayLeads(leads) {
+    const tableBody = document.getElementById('activity-table');
+    
+    if (!tableBody) {
+        console.error('displayLeads: activity-table element not found');
+        return;
+    }
+    
+    if (leads && leads.length > 0) {
+        // Show leads normally
+        tableBody.innerHTML = leads.map(lead => {
+            const analysisType = lead.analysis_type || 'light';
+            const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
+            
+            const profilePicUrl = lead.profile_pic_url;
+            const profilePicHtml = profilePicUrl 
+                ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=40&h=40&fit=cover&a=attention" 
+                        alt="@${lead.username}" 
+                        style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-light);"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+                : '';
+            
+            const fallbackAvatar = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
+                ${lead.username.charAt(0).toUpperCase()}
+            </div>`;
+            
+            return `
+                <tr data-lead-id="${lead.id}" style="border-bottom: 1px solid var(--border-light); transition: all 0.2s ease;">
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border-light);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
                             <input type="checkbox" class="lead-checkbox" data-lead-id="${lead.id}" 
                                    onchange="dashboard.toggleLeadSelection('${lead.id}', this.checked)"
-                                   ${this.selectedLeads.has(lead.id) ? 'checked' : ''}
-                                   style="margin-right: 12px;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
+                                   style="margin: 0;">
+                            <div style="position: relative;">
                                 ${profilePicHtml}
                                 ${fallbackAvatar}
-                                <div>
-                                    <div style="font-weight: 600; color: var(--text-primary);">@${lead.username}</div>
-                                    <div style="font-size: 12px; color: var(--text-secondary);">${lead.platform || 'Instagram'}</div>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 2px;">
+                                    @${lead.username}
+                                </div>
+                                <div style="font-size: 12px; color: var(--text-secondary);">
+                                    ${lead.platform || 'Instagram'}
                                 </div>
                             </div>
-                        </td>
-                        <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
-                            <span class="score-badge ${scoreClass}" style="padding: 4px 8px; border-radius: 12px; font-weight: 600; font-size: 12px;">${lead.score || 0}</span>
-                        </td>
-                        <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
-                            <span class="followers-count">${lead.followers_count ? lead.followers_count.toLocaleString() : 'N/A'}</span>
-                        </td>
-                        <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
-                            <span class="analysis-type-badge ${analysisType}" style="padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
-                                ${analysisType === 'deep' ? 'Deep' : 'Light'}
-                            </span>
-                        </td>
-                        <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
-                            <span style="font-size: 12px; color: var(--text-secondary);">${new Date(lead.created_at).toLocaleDateString()}</span>
-                        </td>
-                        <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
-                            <button onclick="dashboard.viewLead('${lead.id}')" 
-                                    style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
-                                View Details
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        } else {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        <div style="font-size: 32px; margin-bottom: 16px;">📊</div>
-                        <h3 style="margin: 0 0 8px 0;">No leads found</h3>
-                        <p style="margin: 0;">Start analyzing profiles to see them here.</p>
+                        </div>
+                    </td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
+                        <span class="score-badge ${scoreClass}" style="padding: 4px 12px; border-radius: 12px; font-weight: 600; font-size: 14px;">
+                            ${lead.score || 0}
+                        </span>
+                    </td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
+                        <span style="font-size: 14px; color: var(--text-secondary);">${lead.followers_count ? lead.followers_count.toLocaleString() : 'N/A'}</span>
+                    </td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
+                        <span class="analysis-type-badge ${analysisType}" style="padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+                            ${analysisType === 'deep' ? 'Deep' : 'Light'}
+                        </span>
+                    </td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
+                        <span style="font-size: 12px; color: var(--text-secondary);">${new Date(lead.created_at).toLocaleDateString()}</span>
+                    </td>
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
+                        <button onclick="dashboard.viewLead('${lead.id}')" 
+                                style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
+                            View Details
+                        </button>
                     </td>
                 </tr>
             `;
-        }
+        }).join('');
+    } else {
+        // ✅ CLEAN EMPTY STATE - No demo data
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 60px; color: var(--text-secondary);">
+                    <div style="font-size: 48px; margin-bottom: 24px; opacity: 0.6;">🎯</div>
+                    <h3 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 24px;">Ready to Find Your First Lead?</h3>
+                    <p style="margin: 0 0 24px 0; color: var(--text-secondary); font-size: 16px; max-width: 400px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                        Use our AI-powered analysis to discover high-quality prospects and generate personalized outreach messages.
+                    </p>
+                    <button onclick="dashboard.showAnalysisModal()" 
+                            style="background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; border: none; padding: 16px 32px; border-radius: 12px; cursor: pointer; font-size: 16px; font-weight: 600; box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3); transition: all 0.3s ease;">
+                        🚀 Research Your First Lead
+                    </button>
+                </td>
+            </tr>
+        `;
     }
-
+}
     toggleLeadSelection(leadId, isChecked) {
         if (isChecked) {
             this.selectedLeads.add(leadId);
@@ -1550,15 +1564,34 @@ async viewLead(leadId) {
         this.displayLeads(filteredLeads);
     }
 
-    updateDashboardStats() {
+   updateDashboardStats() {
+    try {
         const totalLeads = this.allLeads.length;
         const avgScore = totalLeads > 0 
             ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
             : 0;
-        const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
-        
-        this.updateStatsUI(totalLeads, avgScore, highValueLeads);
+
+        // Update stats in the UI - show zeros when no leads
+        const statsElements = {
+            'total-leads': totalLeads.toLocaleString(),
+            'avg-score': totalLeads > 0 ? avgScore.toString() : '-',
+            'high-quality-leads': totalLeads > 0 ? this.allLeads.filter(lead => (lead.score || 0) >= 80).length.toString() : '-',
+            'this-month': totalLeads > 0 ? totalLeads.toString() : '-'
+        };
+
+        Object.entries(statsElements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        });
+
+        console.log(`📊 Stats updated: ${totalLeads} leads, avg score ${avgScore || 'N/A'}`);
+
+    } catch (error) {
+        console.warn('⚠️ Stats update failed:', error);
     }
+}
 
     updateStatsUI(totalLeads, avgScore, highValueLeads) {
         const totalLeadsEl = document.getElementById('total-leads');
@@ -1871,51 +1904,23 @@ async viewLead(leadId) {
 
     // ✅ ADD THIS MISSING METHOD:
     displayDemoLeads() {
-        console.log('📋 Loading demo data (no auth)');
-        
-        this.allLeads = [
-            {
-                id: 'demo-1',
-                username: 'demo_user_1',
-                platform: 'Instagram',
-                score: 85,
-                analysis_type: 'deep',
-                created_at: new Date().toISOString(),
-                profile_pic_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-                followers_count: 12500,
-                business_id: 'demo-business-1'
-            },
-            {
-                id: 'demo-2', 
-                username: 'demo_user_2',
-                platform: 'Instagram',
-                score: 72,
-                analysis_type: 'light',
-                created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-                profile_pic_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-                followers_count: 8300,
-                business_id: 'demo-business-2'
-            },
-            {
-                id: 'demo-3',
-                username: 'demo_user_3', 
-                platform: 'Instagram',
-                score: 91,
-                analysis_type: 'deep',
-                created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-                profile_pic_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-                followers_count: 25600,
-                business_id: 'demo-business-3'
-            }
-        ];
-
-        this.selectedLeads.clear();
-        this.displayLeads(this.allLeads);
-        this.updateDashboardStats();
-        this.generateInsights();
-        
-        console.log(`✅ Demo: Loaded ${this.allLeads.length} demo leads`);
-    }
+    console.log('📋 No authentication - showing empty state');
+    
+    // Set empty leads array
+    this.allLeads = [];
+    this.selectedLeads.clear();
+    
+    // Show empty state in the leads table
+    this.displayLeads([]);
+    
+    // Update stats to show zeros
+    this.updateDashboardStats();
+    
+    // Generate welcome insights
+    this.generateInsights();
+    
+    console.log('✅ Empty state displayed - ready for first lead research');
+}
 
     // ✅ ADD THIS MISSING METHOD:
     displayErrorState(errorMessage) {
@@ -1994,28 +1999,104 @@ async viewLead(leadId) {
         }
     }
 
+    showGettingStartedGuide() {
+    // Create a simple getting started modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 32px; max-width: 500px; margin: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+                <h2 style="margin: 0 0 8px 0; color: var(--text-primary);">Getting Started with Oslira</h2>
+                <p style="margin: 0; color: var(--text-secondary);">Your AI-powered lead research companion</p>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <div style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <div style="width: 32px; height: 32px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">1</div>
+                        <h4 style="margin: 0; color: var(--text-primary);">Enter Instagram Username</h4>
+                    </div>
+                    <p style="margin: 0; color: var(--text-secondary); margin-left: 44px;">Simply paste an Instagram username or profile URL</p>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <div style="width: 32px; height: 32px; background: var(--secondary-purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">2</div>
+                        <h4 style="margin: 0; color: var(--text-primary);">AI Analysis</h4>
+                    </div>
+                    <p style="margin: 0; color: var(--text-secondary); margin-left: 44px;">Our AI analyzes engagement, audience quality, and business fit</p>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                        <div style="width: 32px; height: 32px; background: var(--accent-teal); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px;">3</div>
+                        <h4 style="margin: 0; color: var(--text-primary);">Personalized Outreach</h4>
+                    </div>
+                    <p style="margin: 0; color: var(--text-secondary); margin-left: 44px;">Get AI-generated, personalized messages ready to send</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button onclick="this.closest('div[style*=\"position: fixed\"]').remove()" 
+                        style="background: var(--border-light); color: var(--text-secondary); border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    Close
+                </button>
+                <button onclick="this.closest('div[style*=\"position: fixed\"]').remove(); dashboard.showAnalysisModal();" 
+                        style="background: var(--primary-blue); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    Start Research
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+
     // ✅ ADD THIS MISSING METHOD:
-    async generateInsights() {
-        const container = document.getElementById('insights-container');
-        const loading = document.getElementById('loading-insights');
+   async generateInsights() {
+    const container = document.getElementById('insights-container');
+    const loading = document.getElementById('loading-insights');
+    
+    if (!container) {
+        console.warn('Insights container not found');
+        return;
+    }
+    
+    if (loading) {
+        loading.style.display = 'block';
+    }
+    
+    try {
+        // Wait a moment to simulate loading
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        if (!container) {
-            console.warn('Insights container not found');
-            return;
-        }
+        let insights = [];
         
-        if (loading) {
-            loading.style.display = 'block';
-        }
-        
-        try {
-            // Wait a moment to simulate loading
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            let insights = [];
-            
-            if (this.allLeads.length === 0) {
-                insights.push({
+        // Always show welcome message when no leads exist
+        if (this.allLeads.length === 0) {
+            insights = [
+                {
                     type: 'welcome',
                     icon: '🚀',
                     title: 'Welcome to Oslira!',
@@ -2023,64 +2104,83 @@ async viewLead(leadId) {
                     cta: 'Research Your First Lead',
                     actionType: 'function',
                     actionValue: 'showAnalysisModal'
-                });
-            } else {
-                // Generate insights based on current leads
-                const avgScore = this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / this.allLeads.length;
-                const highScoreLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
-                
-                insights.push({
-                    type: 'performance',
-                    icon: '📈',
-                    title: 'Lead Quality Analysis',
-                    content: `Your average lead score is ${Math.round(avgScore)}. You have ${highScoreLeads} high-quality leads (80+ score).`,
-                    cta: 'View Top Leads',
-                    actionType: 'filter',
-                    actionValue: 'score_high'
-                });
-
-                if (this.allLeads.length >= 10) {
-                    insights.push({
-                        type: 'optimization',
-                        icon: '🎯',
-                        title: 'Targeting Optimization',
-                        content: 'With 10+ leads analyzed, consider refining your targeting criteria for better results.',
-                        cta: 'Analyze Patterns',
-                        actionType: 'function',
-                        actionValue: 'showPatternAnalysis'
-                    });
+                },
+                {
+                    type: 'getting-started',
+                    icon: '📚',
+                    title: 'Getting Started Guide',
+                    content: 'Learn how to maximize your lead research with our AI-powered analysis tools and outreach generation.',
+                    cta: 'View Guide',
+                    actionType: 'function', 
+                    actionValue: 'showGettingStartedGuide'
+                },
+                {
+                    type: 'features',
+                    icon: '⚡',
+                    title: 'Powerful Features',
+                    content: 'Deep Instagram analysis, AI-generated outreach messages, lead scoring, and audience quality assessment.',
+                    cta: 'Start Analyzing',
+                    actionType: 'function',
+                    actionValue: 'showAnalysisModal'
                 }
-            }
+            ];
+        } else {
+            // Show performance insights when leads exist
+            const avgScore = this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / this.allLeads.length;
+            const highScoreLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
+            
+            insights.push({
+                type: 'performance',
+                icon: '📈',
+                title: 'Lead Quality Analysis',
+                content: `Your average lead score is ${Math.round(avgScore)}. You have ${highScoreLeads} high-quality leads (80+ score).`,
+                cta: 'View Top Leads',
+                actionType: 'filter',
+                actionValue: 'score_high'
+            });
 
-            this.renderInsights(insights);
-            
-            if (loading) {
-                loading.style.display = 'none';
-            }
-            
-            if (container) {
-                container.style.display = 'grid';
-            }
-
-        } catch (error) {
-            console.error('Error generating insights:', error);
-            
-            if (loading) {
-                loading.style.display = 'none';
-            }
-            
-            if (container) {
-                container.innerHTML = `
-                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 24px; text-align: center;">
-                        <div style="font-size: 24px; margin-bottom: 12px;">⚠️</div>
-                        <h4 style="color: var(--error); margin: 0 0 8px 0;">Insights Unavailable</h4>
-                        <p style="color: var(--text-secondary); margin: 0;">Unable to generate insights at this time.</p>
-                    </div>
-                `;
-                container.style.display = 'block';
+            if (this.allLeads.length >= 10) {
+                insights.push({
+                    type: 'optimization',
+                    icon: '🎯',
+                    title: 'Targeting Optimization', 
+                    content: 'With 10+ leads analyzed, consider refining your targeting criteria for better results.',
+                    cta: 'Analyze Patterns',
+                    actionType: 'function',
+                    actionValue: 'showPatternAnalysis'
+                });
             }
         }
+
+        this.renderInsights(insights);
+        
+        if (loading) {
+            loading.style.display = 'none';
+        }
+        
+        if (container) {
+            container.style.display = 'grid';
+        }
+
+    } catch (error) {
+        console.error('Error generating insights:', error);
+        
+        if (loading) {
+            loading.style.display = 'none';
+        }
+        
+        if (container) {
+            container.innerHTML = `
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 24px; text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 12px;">⚠️</div>
+                    <h4 style="color: var(--error); margin: 0 0 8px 0;">Insights Unavailable</h4>
+                    <p style="color: var(--text-secondary); margin: 0;">Unable to generate insights at this time.</p>
+                </div>
+            `;
+            container.style.display = 'block';
+        }
     }
+}
 
     // ✅ ADD THIS MISSING METHOD:
     renderInsights(insights) {
@@ -2106,32 +2206,33 @@ async viewLead(leadId) {
 
     // ✅ ADD THIS MISSING METHOD:
     handleInsightAction(actionType, actionValue) {
-        console.log('🎯 Insight action triggered:', actionType, actionValue);
-        
-        switch (actionType) {
-            case 'function':
-                if (actionValue === 'showAnalysisModal') {
-                    this.showAnalysisModal();
-                } else if (actionValue === 'showPatternAnalysis') {
-                    window.OsliraApp?.showMessage('Pattern analysis coming soon!', 'info');
+    console.log('🎯 Insight action triggered:', actionType, actionValue);
+    
+    switch (actionType) {
+        case 'function':
+            if (actionValue === 'showAnalysisModal') {
+                this.showAnalysisModal();
+            } else if (actionValue === 'showPatternAnalysis') {
+                window.OsliraApp?.showMessage('Pattern analysis coming soon!', 'info');
+            } else if (actionValue === 'showGettingStartedGuide') {
+                this.showGettingStartedGuide();
+            }
+            break;
+            
+        case 'filter':
+            if (actionValue === 'score_high') {
+                const filterSelect = document.getElementById('activity-filter');
+                if (filterSelect) {
+                    filterSelect.value = 'score_high';
+                    this.applyActivityFilter();
                 }
-                break;
-                
-            case 'filter':
-                if (actionValue === 'score_high') {
-                    const filterSelect = document.getElementById('activity-filter');
-                    if (filterSelect) {
-                        filterSelect.value = 'score_high';
-                        this.applyActivityFilter();
-                    }
-                }
-                break;
-                
-            default:
-                console.warn('Unknown insight action:', actionType, actionValue);
-        }
+            }
+            break;
+            
+        default:
+            console.warn('Unknown insight action:', actionType, actionValue);
     }
-
+}
     // ✅ ADD THIS MISSING METHOD:
     showAnalysisModal() {
         const modal = document.getElementById('analysisModal');
