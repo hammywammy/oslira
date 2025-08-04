@@ -34,13 +34,21 @@ async init() {
         // Setup event listeners first
         this.setupEventListeners();
         
+        // ✅ Listen for auth events to reload data
+        if (window.OsliraApp?.events) {
+            window.OsliraApp.events.addEventListener('userAuthenticated', async (event) => {
+                console.log('🔐 User authenticated event received, reloading dashboard data');
+                await this.loadDashboardData();
+            });
+        }
+        
         // Setup dashboard functionality
         await this.setupDashboard();
         
-        // Load dashboard data
+        // Load dashboard data (will wait for auth internally)
         await this.loadDashboardData();
         
-        // ✅ Load business profiles early
+        // Load business profiles early
         setTimeout(() => {
             this.loadBusinessProfilesForModal();
         }, 1000);
@@ -195,18 +203,23 @@ async init() {
 
 async loadDashboardData() {
     try {
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
-
-        if (!supabase || !user) {
-            console.log('📋 Loading demo data (no auth)');
+        console.log('🔄 Loading dashboard data...');
+        
+        // ✅ STEP 1: Wait for authentication to be properly initialized
+        const isAuthReady = await this.waitForAuth(15000); // Wait up to 15 seconds
+        
+        if (!isAuthReady) {
+            console.log('⚠️ Authentication not ready, showing empty state');
             this.displayDemoLeads();
             return;
         }
+        
+        const supabase = window.OsliraApp.supabase;
+        const user = window.OsliraApp.user;
+        
+        console.log('✅ Authentication ready, loading data for user:', user.id);
 
-        console.log('🔄 Loading dashboard data...');
-
-        // ✅ STEP 1: Load all leads first (simple query, no joins)
+        // ✅ STEP 2: Load all leads first (simple query, no joins)
         const { data: leadsData, error: leadsError } = await supabase
             .from('leads')
             .select(`
@@ -232,7 +245,7 @@ async loadDashboardData() {
 
         console.log(`📊 Loaded ${leadsData?.length || 0} leads from database`);
 
-        // ✅ STEP 2: Load analysis data for deep analysis leads
+        // ✅ STEP 3: Load analysis data for deep analysis leads
         const deepAnalysisLeadIds = leadsData
             ?.filter(lead => lead.analysis_type === 'deep')
             ?.map(lead => lead.id) || [];
@@ -273,7 +286,7 @@ async loadDashboardData() {
             }
         }
 
-        // ✅ STEP 3: Combine leads with their analysis data
+        // ✅ STEP 4: Combine leads with their analysis data
         const enrichedLeads = leadsData?.map(lead => ({
             ...lead,
             lead_analyses: lead.analysis_type === 'deep' && analysisDataMap.has(lead.id) 
@@ -281,7 +294,7 @@ async loadDashboardData() {
                 : []
         })) || [];
 
-        // ✅ STEP 4: Store and display
+        // ✅ STEP 5: Store and display
         this.allLeads = enrichedLeads;
         this.selectedLeads.clear();
         
@@ -292,6 +305,12 @@ async loadDashboardData() {
             deep: this.allLeads.filter(l => l.analysis_type === 'deep').length,
             withAnalysis: this.allLeads.filter(l => l.lead_analyses?.length > 0).length
         });
+
+        // ✅ STEP 6: Cache the data with timestamp
+        if (window.OsliraApp.cache) {
+            window.OsliraApp.cache.leads = this.allLeads;
+            window.OsliraApp.cache.lastRefresh = new Date().toISOString();
+        }
         
         // Update UI
         this.displayLeads(this.allLeads);
@@ -304,17 +323,45 @@ async loadDashboardData() {
     }
 }
 
-
+// ✅ NEW: Wait for authentication method for dashboard
 async waitForAuth(timeoutMs = 10000) {
     const startTime = Date.now();
     
     while (Date.now() - startTime < timeoutMs) {
+        // Check if we have both user and supabase client
         if (window.OsliraApp?.user && window.OsliraApp?.supabase) {
+            console.log('✅ Auth ready:', {
+                userId: window.OsliraApp.user.id,
+                email: window.OsliraApp.user.email
+            });
             return true;
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // If we have supabase but no user, try to get session
+        if (window.OsliraApp?.supabase && !window.OsliraApp?.user) {
+            try {
+                const { data: { session } } = await window.OsliraApp.supabase.auth.getSession();
+                if (session?.user) {
+                    window.OsliraApp.session = session;
+                    window.OsliraApp.user = session.user;
+                    console.log('✅ Auth restored from session');
+                    return true;
+                }
+            } catch (error) {
+                console.warn('⚠️ Session restoration failed:', error);
+            }
+        }
+        
+        console.log('⏳ Waiting for auth...', {
+            hasSupabase: !!window.OsliraApp?.supabase,
+            hasUser: !!window.OsliraApp?.user,
+            elapsed: Date.now() - startTime
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 250));
     }
     
+    console.warn('⚠️ Auth wait timeout reached');
     return false;
 }
 
