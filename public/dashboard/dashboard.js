@@ -126,95 +126,75 @@ class Dashboard {
     // ===============================================================================
 
 async loadDashboardData() {
-    if (this.isLoading) return;
-    this.isLoading = true;
-
     try {
-        console.log('🔄 Loading dashboard data...');
-        this.showLoadingState();
-        
-        // Wait for authentication with timeout
-        const authReady = await this.waitForAuth(15000); // 15 second timeout
-        if (!authReady) {
-            throw new Error('Authentication timeout. Please refresh the page.');
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
+
+        if (!supabase || !user) {
+            console.log('📋 Loading demo data (no auth)');
+            this.displayDemoLeads();
+            return;
         }
 
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
+        console.log('🔄 Loading dashboard data...');
 
-        // Add request timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-        const { data: leads, error } = await supabase
+        // ✅ CORRECT: Load leads with analysis data using proper JOIN
+        const { data: leadsData, error } = await supabase
             .from('leads')
             .select(`
                 id,
-                username,
-                profile_pic_url,
-                platform,
+                username, 
                 score,
-                analysis_type,
+                platform,
+                analysis_type, 
                 created_at,
                 followers_count,
-                business_id
+                profile_pic_url,
+                profile_url,
+                business_id,
+                lead_analyses!inner(
+                    engagement_score,
+                    selling_points,
+                    outreach_message,
+                    reasons,
+                    summary,
+                    niche_fit,
+                    analyzed_at,
+                    avg_likes,
+                    avg_comments,
+                    engagement_rate,
+                    audience_quality,
+                    engagement_insights,
+                    analysis_data,
+                    latest_posts,
+                    engagement_data
+                )
             `)
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
-            .limit(100);
-
-        clearTimeout(timeoutId);
+            .limit(50);
 
         if (error) {
-            // Handle specific database errors
-            if (error.code === '42P01') {
-                throw new Error('Database tables not found. Please contact support.');
-            }
-            if (error.code === '42703') {
-                throw new Error('Database schema mismatch. Please refresh the page.');
-            }
-            if (error.message.includes('JWT')) {
-                throw new Error('Session expired. Please log in again.');
-            }
+            console.error('❌ Database error:', error);
             throw error;
         }
 
-        this.allLeads = leads || [];
+        this.allLeads = leadsData || [];
         this.selectedLeads.clear();
-
+        
+        console.log(`✅ Loaded ${this.allLeads.length} leads`);
+        
         // Update UI
         this.displayLeads(this.allLeads);
         this.updateDashboardStats();
-        this.hideLoadingState();
-
-        // Update last successful load timestamp
-        this.lastUpdateTimestamp = new Date().toISOString();
-
-        console.log(`✅ Loaded ${this.allLeads.length} leads`);
-
+        this.generateInsights();
+        
     } catch (error) {
         console.error('❌ Error loading dashboard data:', error);
-        
-        let userMessage = 'Failed to load leads';
-        if (error.name === 'AbortError') {
-            userMessage = 'Request timed out. Please check your connection and try again.';
-        } else if (error.message.includes('Authentication')) {
-            userMessage = error.message;
-        } else if (error.message.includes('network')) {
-            userMessage = 'Network error. Please check your connection.';
-        }
-        
-        this.displayErrorState(userMessage);
-        
-        // Show user-friendly message
-        if (window.OsliraApp?.showMessage) {
-            window.OsliraApp.showMessage(userMessage, 'error');
-        }
-        
-    } finally {
-        this.isLoading = false;
+        this.displayErrorState('Failed to load leads: ' + error.message);
     }
 }
+
 
 async waitForAuth(timeoutMs = 10000) {
     const startTime = Date.now();
@@ -1918,14 +1898,14 @@ async checkForUpdates() {
         
         if (!supabase || !user) return;
 
-        // Check for leads newer than last update
         const lastUpdate = this.lastUpdateTimestamp || new Date(Date.now() - 60000).toISOString();
         
+        // ✅ FIXED: Only use created_at (leads table has NO updated_at column)
         const { data: newLeads, error } = await supabase
             .from('leads')
-            .select('id, created_at, updated_at')
+            .select('id, created_at')  // ✅ Only existing columns
             .eq('user_id', user.id)
-            .or(`created_at.gt.${lastUpdate},updated_at.gt.${lastUpdate}`)
+            .gt('created_at', lastUpdate)  // ✅ Only check created_at
             .limit(1);
 
         if (error) throw error;
@@ -2023,72 +2003,51 @@ handleRealtimeUpdate(payload) {
 
 async loadBusinessProfiles() {
     try {
-        console.log('🏢 Loading business profiles...');
-        
         const supabase = window.OsliraApp?.supabase;
         const user = window.OsliraApp?.user;
-        
+
         if (!supabase || !user) {
-            console.warn('⚠️ Supabase or user not available for business profiles');
-            this.businessProfiles = [];
+            console.log('📋 No auth - skipping business profiles');
             return;
         }
 
-        // Add timeout to prevent hanging requests
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-        const { data: businesses, error } = await supabase
+        const { data: profiles, error } = await supabase
             .from('business_profiles')
-            .select('id, business_name, industry, created_at')
+            .select('id, business_name, is_active')
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
-
-        clearTimeout(timeoutId);
+            .eq('is_active', true);
 
         if (error) {
-            // Check if it's a missing table error
-            if (error.code === '42P01') {
-                console.warn('⚠️ Business profiles table not found, creating default profile');
-                await this.createDefaultBusinessProfile();
-                return;
-            }
+            // ✅ GRACEFUL ERROR HANDLING - Don't break the app
+            console.warn('⚠️ Business profiles load failed (non-critical):', error.message);
             
-            // Check if it's a missing column error  
-            if (error.code === '42703') {
-                console.warn('⚠️ Business profiles table schema mismatch, using fallback');
-                this.businessProfiles = [this.getDefaultBusinessProfile()];
-                return;
+            const businessSelect = document.getElementById('business-id');
+            if (businessSelect) {
+                businessSelect.innerHTML = '<option value="">Create a business profile first</option>';
             }
-            
-            throw error;
+            return; // Don't throw - continue with app functionality
         }
 
-        this.businessProfiles = businesses || [];
-        
-        // If no business profiles exist, create a default one
-        if (this.businessProfiles.length === 0) {
-            await this.createDefaultBusinessProfile();
+        // Populate dropdown
+        const businessSelect = document.getElementById('business-id');
+        if (businessSelect && profiles) {
+            businessSelect.innerHTML = profiles.length > 0 
+                ? profiles.map(profile => 
+                    `<option value="${profile.id}">${profile.business_name}</option>`
+                  ).join('')
+                : '<option value="">No active business profiles</option>';
         }
-
-        console.log(`✅ Loaded ${this.businessProfiles.length} business profiles`);
 
     } catch (error) {
-        console.error('❌ Failed to load business profiles:', error);
+        console.warn('⚠️ Business profiles error (non-critical):', error);
         
-        // Use fallback business profile
-        this.businessProfiles = [this.getDefaultBusinessProfile()];
-        
-        // Show user-friendly message
-        if (window.OsliraApp?.showMessage) {
-            window.OsliraApp.showMessage(
-                'Business profiles unavailable, using default settings', 
-                'warning'
-            );
+        const businessSelect = document.getElementById('business-id');
+        if (businessSelect) {
+            businessSelect.innerHTML = '<option value="">Business profiles unavailable</option>';
         }
     }
 }
-
+    
 async createDefaultBusinessProfile() {
     try {
         const supabase = window.OsliraApp?.supabase;
