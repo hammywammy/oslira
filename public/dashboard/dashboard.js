@@ -206,8 +206,8 @@ async loadDashboardData() {
 
         console.log('🔄 Loading dashboard data...');
 
-        // ✅ FIXED: Correct PostgREST syntax with left join (no double parentheses)
-        const { data: leadsData, error } = await supabase
+        // ✅ STEP 1: Load all leads first (simple query, no joins)
+        const { data: leadsData, error: leadsError } = await supabase
             .from('leads')
             .select(`
                 id,
@@ -219,8 +219,31 @@ async loadDashboardData() {
                 followers_count,
                 profile_pic_url,
                 profile_url,
-                business_id,
-                lead_analyses!left(
+                business_id
+            `)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (leadsError) {
+            console.error('❌ Leads query error:', leadsError);
+            throw leadsError;
+        }
+
+        console.log(`📊 Loaded ${leadsData?.length || 0} leads from database`);
+
+        // ✅ STEP 2: Load analysis data for deep analysis leads
+        const deepAnalysisLeadIds = leadsData
+            ?.filter(lead => lead.analysis_type === 'deep')
+            ?.map(lead => lead.id) || [];
+
+        let analysisDataMap = new Map();
+
+        if (deepAnalysisLeadIds.length > 0) {
+            const { data: analysisData, error: analysisError } = await supabase
+                .from('lead_analyses')
+                .select(`
+                    lead_id,
                     engagement_score,
                     selling_points,
                     outreach_message,
@@ -236,22 +259,39 @@ async loadDashboardData() {
                     analysis_data,
                     latest_posts,
                     engagement_data
-                )
-            `)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(50);
+                `)
+                .in('lead_id', deepAnalysisLeadIds);
 
-        if (error) {
-            console.error('❌ Database error:', error);
-            throw error;
+            if (analysisError) {
+                console.warn('⚠️ Analysis data query error:', analysisError);
+            } else {
+                // Create a map of lead_id -> analysis data
+                analysisData?.forEach(analysis => {
+                    analysisDataMap.set(analysis.lead_id, analysis);
+                });
+                console.log(`📈 Loaded analysis data for ${analysisData?.length || 0} deep analysis leads`);
+            }
         }
 
-        this.allLeads = leadsData || [];
+        // ✅ STEP 3: Combine leads with their analysis data
+        const enrichedLeads = leadsData?.map(lead => ({
+            ...lead,
+            lead_analyses: lead.analysis_type === 'deep' && analysisDataMap.has(lead.id) 
+                ? [analysisDataMap.get(lead.id)] 
+                : []
+        })) || [];
+
+        // ✅ STEP 4: Store and display
+        this.allLeads = enrichedLeads;
         this.selectedLeads.clear();
         
-        console.log(`✅ Loaded ${this.allLeads.length} leads`);
-        console.log('📊 Lead data sample:', this.allLeads[0]); // Debug log
+        console.log(`✅ Final result: ${this.allLeads.length} unique leads`);
+        console.log('📊 Lead breakdown:', {
+            total: this.allLeads.length,
+            light: this.allLeads.filter(l => l.analysis_type === 'light').length,
+            deep: this.allLeads.filter(l => l.analysis_type === 'deep').length,
+            withAnalysis: this.allLeads.filter(l => l.lead_analyses?.length > 0).length
+        });
         
         // Update UI
         this.displayLeads(this.allLeads);
@@ -307,80 +347,81 @@ async viewLead(leadId) {
     modal.style.display = 'flex';
 
     try {
-        // ✅ WAIT for user to be loaded (same logic as loadDashboardData)
-        let retries = 0;
-        const maxRetries = 10;
-        
-        while ((!window.OsliraApp?.user || !window.OsliraApp?.supabase) && retries < maxRetries) {
-            console.log(`⏳ Waiting for authentication for viewLead... (${retries + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            retries++;
-        }
-        
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
-        
-        if (!supabase || !user) {
-            throw new Error('Authentication system not ready');
-        }
-
-        // ✅ STEP 1: Get basic lead data from leads table
-        const { data: lead, error: leadError } = await supabase
-            .from('leads')
-            .select(`
-                id,
-                username,
-                profile_pic_url,
-                platform,
-                score,
-                analysis_type,
-                business_id,
-                created_at,
-                followers_count
-            `)
-            .eq('id', leadId)
-            .eq('user_id', user.id)
-            .single();
-
-        if (leadError) {
-            throw new Error(`Database error: ${leadError.message}`);
-        }
-
-        if (!lead) {
-            throw new Error('Lead not found or access denied');
-        }
-
-        console.log('📋 Lead data loaded:', lead);
-
-        // ✅ STEP 2: Get deep analysis data if it's a deep analysis
+        // ✅ OPTION 1: Try to find lead in already loaded data first
+        let lead = this.allLeads.find(l => l.id === leadId);
         let analysisData = null;
-        if (lead.analysis_type === 'deep') {
-            console.log('🔍 Loading deep analysis data...');
 
-            const { data: deepAnalysis, error: analysisError } = await supabase
-                .from('lead_analyses')
+        if (lead) {
+            console.log('📋 Using cached lead data:', lead);
+            
+            // Get analysis data from cached lead
+            if (lead.lead_analyses && lead.lead_analyses.length > 0) {
+                analysisData = lead.lead_analyses[0];
+            }
+        } else {
+            // ✅ OPTION 2: Lead not in cache, fetch from database
+            console.log('🔍 Lead not in cache, fetching from database...');
+            
+            const supabase = window.OsliraApp.supabase;
+            const user = window.OsliraApp.user;
+            
+            if (!supabase || !user) {
+                throw new Error('Authentication system not ready');
+            }
+
+            // Fetch lead data
+            const { data: leadData, error: leadError } = await supabase
+                .from('leads')
                 .select(`
-                    engagement_score,
-                    score_niche_fit,
-                    score_total,
-                    outreach_message,
-                    selling_points,
-                    audience_quality,
-                    engagement_insights,
-                    avg_likes,
-                    avg_comments,
-                    engagement_rate,
-                    latest_posts,
-                    username
+                    id,
+                    username,
+                    profile_pic_url,
+                    platform,
+                    score,
+                    analysis_type,
+                    business_id,
+                    created_at,
+                    followers_count
                 `)
-                .eq('lead_id', leadId)
+                .eq('id', leadId)
+                .eq('user_id', user.id)
                 .single();
 
-            if (analysisError) {
-                console.warn('⚠️ Deep analysis data not found:', analysisError.message);
-            } else {
-                analysisData = deepAnalysis;
-                console.log('📈 Analysis data loaded:', analysisData);
+            if (leadError || !leadData) {
+                throw new Error('Lead not found or access denied');
+            }
+
+            lead = leadData;
+
+            // Fetch analysis data if it's a deep analysis
+            if (lead.analysis_type === 'deep') {
+                console.log('🔍 Fetching deep analysis data...');
+
+                const { data: deepAnalysis, error: analysisError } = await supabase
+                    .from('lead_analyses')
+                    .select(`
+                        engagement_score,
+                        score_niche_fit,
+                        score_total,
+                        outreach_message,
+                        selling_points,
+                        audience_quality,
+                        engagement_insights,
+                        avg_likes,
+                        avg_comments,
+                        engagement_rate,
+                        latest_posts,
+                        username
+                    `)
+                    .eq('lead_id', leadId)
+                    .single();
+
+                if (analysisError) {
+                    console.warn('⚠️ Deep analysis data not found:', analysisError.message);
+                } else {
+                    analysisData = deepAnalysis;
+                    console.log('📈 Analysis data loaded:', analysisData);
+                }
             }
         }
 
