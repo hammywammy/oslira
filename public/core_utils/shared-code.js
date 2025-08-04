@@ -1006,7 +1006,7 @@ class OsliraPageInitializer {
         this.setupGlobalUIHandlers();
         this.populateUIElements();
     }
-
+}
     async function refreshSessionSync() {
     try {
         const supabase = window.OsliraApp.supabase;
