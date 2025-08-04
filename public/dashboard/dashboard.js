@@ -131,30 +131,21 @@ async loadDashboardData() {
 
     try {
         console.log('🔄 Loading dashboard data...');
-        
-        // Show loading state
         this.showLoadingState();
         
-        // ✅ WAIT for user to be loaded by shared system
-        let retries = 0;
-        const maxRetries = 20; // 10 seconds max wait
-        
-        while ((!window.OsliraApp?.user || !window.OsliraApp?.supabase) && retries < maxRetries) {
-            console.log(`⏳ Waiting for authentication... (${retries + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            retries++;
+        // Wait for authentication with timeout
+        const authReady = await this.waitForAuth(15000); // 15 second timeout
+        if (!authReady) {
+            throw new Error('Authentication timeout. Please refresh the page.');
         }
-        
+
         const supabase = window.OsliraApp.supabase;
         const user = window.OsliraApp.user;
-        
-        if (!supabase || !user) {
-            throw new Error('Authentication system not ready. Please refresh the page.');
-        }
 
-        console.log('✅ User loaded:', user.email);
+        // Add request timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-        // ✅ UPDATED: Only get basic fields from leads table (post-migration)
         const { data: leads, error } = await supabase
             .from('leads')
             .select(`
@@ -172,7 +163,21 @@ async loadDashboardData() {
             .order('created_at', { ascending: false })
             .limit(100);
 
-        if (error) throw error;
+        clearTimeout(timeoutId);
+
+        if (error) {
+            // Handle specific database errors
+            if (error.code === '42P01') {
+                throw new Error('Database tables not found. Please contact support.');
+            }
+            if (error.code === '42703') {
+                throw new Error('Database schema mismatch. Please refresh the page.');
+            }
+            if (error.message.includes('JWT')) {
+                throw new Error('Session expired. Please log in again.');
+            }
+            throw error;
+        }
 
         this.allLeads = leads || [];
         this.selectedLeads.clear();
@@ -182,14 +187,46 @@ async loadDashboardData() {
         this.updateDashboardStats();
         this.hideLoadingState();
 
+        // Update last successful load timestamp
+        this.lastUpdateTimestamp = new Date().toISOString();
+
         console.log(`✅ Loaded ${this.allLeads.length} leads`);
 
     } catch (error) {
         console.error('❌ Error loading dashboard data:', error);
-        this.displayErrorState('Failed to load leads: ' + error.message);
+        
+        let userMessage = 'Failed to load leads';
+        if (error.name === 'AbortError') {
+            userMessage = 'Request timed out. Please check your connection and try again.';
+        } else if (error.message.includes('Authentication')) {
+            userMessage = error.message;
+        } else if (error.message.includes('network')) {
+            userMessage = 'Network error. Please check your connection.';
+        }
+        
+        this.displayErrorState(userMessage);
+        
+        // Show user-friendly message
+        if (window.OsliraApp?.showMessage) {
+            window.OsliraApp.showMessage(userMessage, 'error');
+        }
+        
     } finally {
         this.isLoading = false;
     }
+}
+
+async waitForAuth(timeoutMs = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeoutMs) {
+        if (window.OsliraApp?.user && window.OsliraApp?.supabase) {
+            return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    return false;
 }
 
 // ===============================================================================
@@ -1793,37 +1830,173 @@ async viewLead(leadId) {
     }
 
     setupRealtimeSubscription() {
-        // Set up real-time subscription for lead updates
-        if (window.OsliraApp?.supabase && window.OsliraApp?.user) {
-            const supabase = window.OsliraApp.supabase;
-            
-            this.realtimeSubscription = supabase
-                .channel('leads-updates')
-                .on('postgres_changes', 
-                    { 
-                        event: '*', 
-                        schema: 'public', 
-                        table: 'leads',
-                        filter: `user_id=eq.${window.OsliraApp.user.id}`
-                    },
-                    (payload) => {
-                        console.log('Real-time lead update:', payload);
-                        // Refresh data on changes
-                        this.loadDashboardData();
-                    }
-                )
-                .subscribe();
-        }
+    // Only set up if CSP allows WebSocket connections
+    if (!this.canUseRealtime()) {
+        console.log('⚠️ Real-time disabled: WebSocket connections blocked by CSP');
+        this.setupPollingFallback();
+        return;
     }
 
-    cleanup() {
-        // Clean up subscriptions and event listeners
-        if (this.realtimeSubscription) {
-            this.realtimeSubscription.unsubscribe();
-        }
+    try {
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
         
-        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        if (!supabase || !user) {
+            console.warn('⚠️ Supabase or user not available for real-time subscription');
+            return;
+        }
+
+        console.log('🔄 Setting up real-time subscription...');
+
+        this.realtimeSubscription = supabase
+            .channel(`leads-${user.id}`)
+            .on('postgres_changes', 
+                { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'leads',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    console.log('📡 Real-time lead update:', payload.eventType);
+                    this.handleRealtimeUpdate(payload);
+                }
+            )
+            .on('postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public', 
+                    table: 'lead_analyses',
+                    filter: `user_id=eq.${user.id}`
+                },
+                (payload) => {
+                    console.log('📡 Real-time analysis update:', payload.eventType);
+                    this.handleRealtimeUpdate(payload);
+                }
+            )
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    console.log('✅ Real-time subscription active');
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.error('❌ Real-time subscription failed, falling back to polling');
+                    this.setupPollingFallback();
+                }
+            });
+
+    } catch (error) {
+        console.error('❌ Real-time setup failed:', error);
+        this.setupPollingFallback();
     }
+}
+
+canUseRealtime() {
+    // Test if WebSocket connections are allowed
+    try {
+        const testWs = new WebSocket('wss://echo.websocket.org/');
+        testWs.close();
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+setupPollingFallback() {
+    console.log('🔄 Setting up polling fallback for real-time updates');
+    
+    // Poll for updates every 30 seconds when tab is visible
+    this.pollingInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            this.checkForUpdates();
+        }
+    }, 30000);
+}
+
+async checkForUpdates() {
+    try {
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
+        
+        if (!supabase || !user) return;
+
+        // Check for leads newer than last update
+        const lastUpdate = this.lastUpdateTimestamp || new Date(Date.now() - 60000).toISOString();
+        
+        const { data: newLeads, error } = await supabase
+            .from('leads')
+            .select('id, created_at, updated_at')
+            .eq('user_id', user.id)
+            .or(`created_at.gt.${lastUpdate},updated_at.gt.${lastUpdate}`)
+            .limit(1);
+
+        if (error) throw error;
+
+        if (newLeads && newLeads.length > 0) {
+            console.log('📊 New data detected, refreshing dashboard');
+            await this.loadDashboardData();
+            this.lastUpdateTimestamp = new Date().toISOString();
+        }
+
+    } catch (error) {
+        console.warn('⚠️ Polling update check failed:', error);
+    }
+}
+
+handleRealtimeUpdate(payload) {
+    const { eventType, new: newRecord, old: oldRecord } = payload;
+    
+    switch (eventType) {
+        case 'INSERT':
+            console.log('➕ New lead added');
+            this.addLeadToUI(newRecord);
+            this.updateDashboardStats();
+            break;
+            
+        case 'UPDATE':
+            console.log('✏️ Lead updated');
+            this.updateLeadInUI(newRecord);
+            break;
+            
+        case 'DELETE':
+            console.log('🗑️ Lead deleted');
+            this.removeLeadFromUI(oldRecord);
+            this.updateDashboardStats();
+            break;
+    }
+}
+
+
+   cleanup() {
+    console.log('🧹 Cleaning up dashboard resources...');
+    
+    // Clean up real-time subscription
+    if (this.realtimeSubscription) {
+        try {
+            this.realtimeSubscription.unsubscribe();
+            console.log('✅ Real-time subscription cleaned up');
+        } catch (error) {
+            console.warn('⚠️ Real-time cleanup warning:', error);
+        }
+        this.realtimeSubscription = null;
+    }
+    
+    // Clean up polling interval
+    if (this.pollingInterval) {
+        clearInterval(this.pollingInterval);
+        this.pollingInterval = null;
+        console.log('✅ Polling interval cleaned up');
+    }
+    
+    // Clean up event listeners
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+    
+    // Clear any pending timeouts
+    if (this.refreshTimeout) {
+        clearTimeout(this.refreshTimeout);
+        this.refreshTimeout = null;
+    }
+    
+    console.log('✅ Dashboard cleanup completed');
+}
 
     // ===============================================================================
     // INITIALIZATION COMPLETION
@@ -1848,27 +2021,118 @@ async viewLead(leadId) {
         }
     }
 
-    async loadBusinessProfiles() {
-        try {
-            const supabase = window.OsliraApp.supabase;
-            const user = window.OsliraApp.user;
+async loadBusinessProfiles() {
+    try {
+        console.log('🏢 Loading business profiles...');
+        
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
+        
+        if (!supabase || !user) {
+            console.warn('⚠️ Supabase or user not available for business profiles');
+            this.businessProfiles = [];
+            return;
+        }
+
+        // Add timeout to prevent hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const { data: businesses, error } = await supabase
+            .from('business_profiles')
+            .select('id, business_name, industry, created_at')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+
+        clearTimeout(timeoutId);
+
+        if (error) {
+            // Check if it's a missing table error
+            if (error.code === '42P01') {
+                console.warn('⚠️ Business profiles table not found, creating default profile');
+                await this.createDefaultBusinessProfile();
+                return;
+            }
             
-            if (!supabase || !user) return;
+            // Check if it's a missing column error  
+            if (error.code === '42703') {
+                console.warn('⚠️ Business profiles table schema mismatch, using fallback');
+                this.businessProfiles = [this.getDefaultBusinessProfile()];
+                return;
+            }
             
-            const { data: businesses, error } = await supabase
-                .from('business_profiles')
-                .select('id, business_name, industry')
-                .eq('user_id', user.id);
-            
-            if (error) throw error;
-            
-            // Store business profiles for later use
-            this.businessProfiles = businesses || [];
-            
-        } catch (error) {
-            console.warn('Failed to load business profiles:', error);
+            throw error;
+        }
+
+        this.businessProfiles = businesses || [];
+        
+        // If no business profiles exist, create a default one
+        if (this.businessProfiles.length === 0) {
+            await this.createDefaultBusinessProfile();
+        }
+
+        console.log(`✅ Loaded ${this.businessProfiles.length} business profiles`);
+
+    } catch (error) {
+        console.error('❌ Failed to load business profiles:', error);
+        
+        // Use fallback business profile
+        this.businessProfiles = [this.getDefaultBusinessProfile()];
+        
+        // Show user-friendly message
+        if (window.OsliraApp?.showMessage) {
+            window.OsliraApp.showMessage(
+                'Business profiles unavailable, using default settings', 
+                'warning'
+            );
         }
     }
+}
+
+async createDefaultBusinessProfile() {
+    try {
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
+        
+        if (!supabase || !user) return;
+
+        const defaultProfile = {
+            user_id: user.id,
+            business_name: 'My Business',
+            industry: 'General',
+            target_audience: 'General Audience',
+            value_proposition: 'Quality products and services',
+            created_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase
+            .from('business_profiles')
+            .insert([defaultProfile])
+            .select()
+            .single();
+
+        if (error) {
+            console.warn('⚠️ Could not create default business profile:', error);
+            this.businessProfiles = [this.getDefaultBusinessProfile()];
+        } else {
+            this.businessProfiles = [data];
+            console.log('✅ Created default business profile');
+        }
+
+    } catch (error) {
+        console.warn('⚠️ Default business profile creation failed:', error);
+        this.businessProfiles = [this.getDefaultBusinessProfile()];
+    }
+}
+
+getDefaultBusinessProfile() {
+    return {
+        id: 'default',
+        business_name: 'My Business',
+        industry: 'General',
+        target_audience: 'General Audience',
+        value_proposition: 'Quality products and services'
+    };
 }
 
 // ===============================================================================
