@@ -27,17 +27,23 @@ class Dashboard {
     // INITIALIZATION AND SETUP
     // ===============================================================================
 
-    async init() {
-    console.log('🚀 Initializing dashboard...');
-    
+async init() {
     try {
-        // Initialize dashboard components (no auth check - that's handled by shared-code)
-        this.setupEventListeners();
-        this.setupFilterHandlers(); 
-        this.setupBulkActions();
+        console.log('🚀 Initializing dashboard...');
         
-        // Load initial data
+        // Setup event listeners first
+        this.setupEventListeners();
+        
+        // Setup dashboard functionality
+        await this.setupDashboard();
+        
+        // Load dashboard data
         await this.loadDashboardData();
+        
+        // ✅ Load business profiles early
+        setTimeout(() => {
+            this.loadBusinessProfilesForModal();
+        }, 1000);
         
         console.log('✅ Dashboard initialized successfully');
         
@@ -48,50 +54,69 @@ class Dashboard {
 }
 
     setupEventListeners() {
-        // Modal close handlers
-        const modals = document.querySelectorAll('.modal');
-        modals.forEach(modal => {
-            const closeBtn = modal.querySelector('.modal-close');
-            if (closeBtn) {
-                closeBtn.addEventListener('click', () => this.closeModal(modal.id));
+    console.log('🔧 Setting up event listeners...');
+    
+    // Modal close handlers
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        const closeBtn = modal.querySelector('.modal-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeModal(modal.id));
+        }
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeModal(modal.id);
             }
-            
-            // Close on outside click
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeModal(modal.id);
-                }
-            });
         });
+    });
 
-        // Select all checkbox
-        const selectAllCheckbox = document.getElementById('select-all-checkbox');
-        if (selectAllCheckbox) {
-            selectAllCheckbox.addEventListener('change', (e) => {
-                this.selectAllLeads(e.target.checked);
-            });
-        }
+    // ✅ CRITICAL: Analysis modal triggers (multiple buttons)
+    document.getElementById('research-lead-btn')?.addEventListener('click', (e) => {
+        console.log('🎯 Research lead button clicked');
+        e.preventDefault();
+        this.showAnalysisModal();
+    });
+    
+    document.getElementById('research-action-card')?.addEventListener('click', (e) => {
+        console.log('🎯 Research action card clicked');
+        e.preventDefault();
+        this.showAnalysisModal();
+    });
+    
+    document.getElementById('welcome-cta-btn')?.addEventListener('click', (e) => {
+        console.log('🎯 Welcome CTA clicked');
+        e.preventDefault();
+        this.showAnalysisModal();
+    });
 
-        // Filter dropdown
-        const filterSelect = document.getElementById('activity-filter');
-        if (filterSelect) {
-            filterSelect.addEventListener('change', () => {
-                this.applyActivityFilter();
-            });
-        }
-
-        // Search functionality
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-            let searchTimeout;
-            searchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    this.searchLeads(e.target.value);
-                }, 300);
-            });
-        }
+    // ✅ CRITICAL: Analysis form handlers
+    const analysisForm = document.getElementById('analysisForm');
+    if (analysisForm) {
+        analysisForm.addEventListener('submit', (e) => {
+            console.log('📝 Analysis form submitted');
+            this.submitAnalysis(e);
+        });
     }
+    
+    const analysisTypeSelect = document.getElementById('analysis-type');
+    if (analysisTypeSelect) {
+        analysisTypeSelect.addEventListener('change', (e) => {
+            console.log('🔄 Analysis type changed:', e.target.value);
+            this.updateInputField();
+        });
+    }
+    
+    // Modal controls
+    document.getElementById('analysis-modal-close')?.addEventListener('click', () => this.closeModal('analysisModal'));
+    document.getElementById('lead-modal-close')?.addEventListener('click', () => this.closeModal('leadModal'));
+    document.getElementById('bulk-modal-close')?.addEventListener('click', () => this.closeModal('bulkModal'));
+    
+    // Other existing event listeners...
+    this.setupOtherEventListeners();
+    
+    console.log('✅ Event listeners setup complete');
+}
 
     setupFilterHandlers() {
         // Activity filter handler
@@ -1324,6 +1349,65 @@ async viewLead(leadId) {
         }, 100);
     }
 
+    updateInputField() {
+    console.log('📝 Updating input field...');
+    
+    const analysisType = document.getElementById('analysis-type');
+    const inputContainer = document.getElementById('input-field-container');
+    const inputField = document.getElementById('profile-input');
+    const inputLabel = document.getElementById('input-label');
+    const inputHelp = document.getElementById('input-help');
+    
+    if (!analysisType) {
+        console.error('❌ Analysis type dropdown not found');
+        return;
+    }
+    
+    if (!inputContainer || !inputField || !inputLabel || !inputHelp) {
+        console.error('❌ Input field elements not found');
+        console.error('Missing elements:', {
+            inputContainer: !!inputContainer,
+            inputField: !!inputField,
+            inputLabel: !!inputLabel,
+            inputHelp: !!inputHelp
+        });
+        return;
+    }
+    
+    const selectedType = analysisType.value;
+    console.log('🎯 Analysis type selected:', selectedType);
+    
+    // Clear previous input
+    inputField.value = '';
+    inputField.placeholder = '';
+    
+    if (selectedType) {
+        // Show the input container
+        inputContainer.style.display = 'block';
+        
+        if (selectedType === 'light') {
+            inputLabel.textContent = 'Instagram Username *';
+            inputField.placeholder = 'username';
+            inputHelp.innerHTML = 'Enter just the username (without @) - <span style="color: var(--primary-blue); font-weight: 600;">1 credit</span>';
+        } else if (selectedType === 'deep') {
+            inputLabel.textContent = 'Instagram Username *';
+            inputField.placeholder = 'username';
+            inputHelp.innerHTML = 'Enter just the username (without @) - <span style="color: var(--accent-teal); font-weight: 600;">2 credits - Full deep analysis</span>';
+        }
+        
+        // Focus the input field
+        setTimeout(() => {
+            inputField.focus();
+        }, 100);
+        
+        console.log('✅ Input field updated and focused');
+    } else {
+        // Hide the input container
+        inputContainer.style.display = 'none';
+        console.log('📋 Input field hidden - no analysis type selected');
+    }
+}
+
     saveEditedMessage() {
         const textarea = document.getElementById('edit-message-textarea');
         if (!textarea) return;
@@ -1666,12 +1750,73 @@ async viewLead(leadId) {
     // MODAL AND UI MANAGEMENT
     // ===============================================================================
 
-    closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'none';
+   closeModal(modalId) {
+    console.log('❌ Closing modal:', modalId);
+    
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        
+        // Reset form if it's the analysis modal
+        if (modalId === 'analysisModal') {
+            const form = document.getElementById('analysisForm');
+            if (form) {
+                form.reset();
+            }
+            
+            const inputContainer = document.getElementById('input-field-container');
+            if (inputContainer) {
+                inputContainer.style.display = 'none';
+            }
         }
+        
+        console.log('✅ Modal closed:', modalId);
+    } else {
+        console.error('❌ Modal not found:', modalId);
     }
+}
+
+    async debugBusinessProfiles() {
+    console.log('🔍 DEBUG: Testing business profiles...');
+    
+    const supabase = window.OsliraApp?.supabase;
+    const user = window.OsliraApp?.user;
+    
+    console.log('Auth status:', {
+        hasSupabase: !!supabase,
+        hasUser: !!user,
+        userId: user?.id
+    });
+    
+    if (!supabase || !user) {
+        console.log('❌ No auth available');
+        return;
+    }
+    
+    try {
+        // Test query
+        const { data, error, count } = await supabase
+            .from('business_profiles')
+            .select('*', { count: 'exact' })
+            .eq('user_id', user.id);
+            
+        console.log('📊 Business profiles debug result:', {
+            data,
+            error,
+            count,
+            query: `business_profiles where user_id = ${user.id}`
+        });
+        
+        if (error) {
+            console.error('❌ Query error:', error);
+        }
+        
+    } catch (error) {
+        console.error('❌ Debug failed:', error);
+    }
+}
+
+
 
     showAnalysisModal(username) {
         // This would show the analysis modal for running new analysis
@@ -2235,14 +2380,51 @@ async viewLead(leadId) {
 }
     // ✅ ADD THIS MISSING METHOD:
     showAnalysisModal() {
-        const modal = document.getElementById('analysisModal');
-        if (modal) {
-            modal.style.display = 'flex';
-        } else {
-            console.warn('Analysis modal not found');
-            window.OsliraApp?.showMessage('Analysis modal not available', 'warning');
-        }
+    console.log('🔍 Opening analysis modal...');
+    
+    const modal = document.getElementById('analysisModal');
+    if (!modal) {
+        console.error('❌ Analysis modal not found in DOM');
+        window.OsliraApp?.showMessage('Analysis modal not available', 'error');
+        return;
     }
+    
+    // Reset form
+    const form = document.getElementById('analysisForm');
+    if (form) {
+        form.reset();
+    }
+    
+    // Reset form fields
+    const analysisType = document.getElementById('analysis-type');
+    const profileInput = document.getElementById('profile-input');
+    const inputContainer = document.getElementById('input-field-container');
+    
+    if (analysisType) {
+        analysisType.value = '';
+    }
+    if (profileInput) {
+        profileInput.value = '';
+    }
+    if (inputContainer) {
+        inputContainer.style.display = 'none';
+    }
+    
+    // Load business profiles IMMEDIATELY when modal opens
+    this.loadBusinessProfilesForModal();
+    
+    // Show the modal
+    modal.style.display = 'flex';
+    
+    // Focus on analysis type dropdown
+    setTimeout(() => {
+        if (analysisType) {
+            analysisType.focus();
+        }
+    }, 100);
+    
+    console.log('✅ Analysis modal opened');
+}
 
 setupPollingFallback() {
     console.log('🔄 Setting up polling fallback for real-time updates');
@@ -2365,49 +2547,80 @@ handleRealtimeUpdate(payload) {
         }
     }
 
-async loadBusinessProfiles() {
+async loadBusinessProfilesForModal() {
+    console.log('🏢 Loading business profiles for modal...');
+    
     try {
         const supabase = window.OsliraApp?.supabase;
         const user = window.OsliraApp?.user;
 
-        if (!supabase || !user) {
-            console.log('📋 No auth - skipping business profiles');
+        const businessSelect = document.getElementById('business-id');
+        if (!businessSelect) {
+            console.warn('❌ Business dropdown not found');
             return;
         }
+
+        // Show loading state
+        businessSelect.innerHTML = '<option value="">Loading business profiles...</option>';
+        businessSelect.disabled = true;
+
+        if (!supabase || !user) {
+            console.log('📋 No auth - showing placeholder');
+            businessSelect.innerHTML = '<option value="">Please log in to load business profiles</option>';
+            businessSelect.disabled = false;
+            return;
+        }
+
+        console.log('🔍 Querying business_profiles table...');
 
         const { data: profiles, error } = await supabase
             .from('business_profiles')
             .select('id, business_name, is_active')
             .eq('user_id', user.id)
-            .eq('is_active', true);
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
 
         if (error) {
-            // ✅ GRACEFUL ERROR HANDLING - Don't break the app
-            console.warn('⚠️ Business profiles load failed (non-critical):', error.message);
+            console.warn('⚠️ Business profiles query failed:', error.message);
+            console.warn('Error details:', error);
             
-            const businessSelect = document.getElementById('business-id');
-            if (businessSelect) {
-                businessSelect.innerHTML = '<option value="">Create a business profile first</option>';
+            // Check if it's a permission/RLS issue
+            if (error.code === 'PGRST116' || error.message.includes('permission')) {
+                businessSelect.innerHTML = '<option value="">No access to business profiles</option>';
+            } else {
+                businessSelect.innerHTML = '<option value="">Error loading profiles - check console</option>';
             }
-            return; // Don't throw - continue with app functionality
+            
+            businessSelect.disabled = false;
+            return;
         }
+
+        console.log('📊 Business profiles result:', profiles);
 
         // Populate dropdown
-        const businessSelect = document.getElementById('business-id');
-        if (businessSelect && profiles) {
-            businessSelect.innerHTML = profiles.length > 0 
-                ? profiles.map(profile => 
+        if (profiles && profiles.length > 0) {
+            businessSelect.innerHTML = [
+                '<option value="">Select business profile...</option>',
+                ...profiles.map(profile => 
                     `<option value="${profile.id}">${profile.business_name}</option>`
-                  ).join('')
-                : '<option value="">No active business profiles</option>';
+                )
+            ].join('');
+            
+            console.log(`✅ Loaded ${profiles.length} business profiles`);
+        } else {
+            businessSelect.innerHTML = '<option value="">No business profiles found - create one first</option>';
+            console.log('📋 No business profiles found for user');
         }
 
+        businessSelect.disabled = false;
+
     } catch (error) {
-        console.warn('⚠️ Business profiles error (non-critical):', error);
+        console.error('❌ Business profiles loading failed:', error);
         
         const businessSelect = document.getElementById('business-id');
         if (businessSelect) {
-            businessSelect.innerHTML = '<option value="">Business profiles unavailable</option>';
+            businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
+            businessSelect.disabled = false;
         }
     }
 }
