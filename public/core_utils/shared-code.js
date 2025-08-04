@@ -311,28 +311,60 @@ function setupAuthListener() {
     });
 }
 
-async function refreshSessionSync() {
+    async function refreshSessionSync() {
     try {
         const supabase = window.OsliraApp.supabase;
         if (!supabase) return false;
         
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('🔄 Manually refreshing session...');
+        
+        const { data: { session }, error } = await supabase.auth.refreshSession();
         
         if (error || !session) {
-            console.log('⚠️ No valid session to sync');
+            console.log('⚠️ Session refresh failed:', error?.message);
             return false;
         }
         
         window.OsliraApp.session = session;
         window.OsliraApp.user = session.user;
         
-        console.log('🔄 Session refreshed and synced');
+        console.log('✅ Session manually refreshed and synced');
         return true;
         
     } catch (error) {
         console.error('❌ Session refresh failed:', error);
         return false;
     }
+}
+
+// ✅ NEW: Wait for authentication to be ready
+async function waitForAuth(timeoutMs = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeoutMs) {
+        if (window.OsliraApp?.user && window.OsliraApp?.session) {
+            return true;
+        }
+        
+        // Check if we have a valid session but user isn't set
+        const supabase = window.OsliraApp?.supabase;
+        if (supabase) {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    window.OsliraApp.session = session;
+                    window.OsliraApp.user = session.user;
+                    return true;
+                }
+            } catch (error) {
+                console.warn('⚠️ Session check during wait failed:', error);
+            }
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    return false;
 }
 
 function redirectToLogin() {
@@ -1006,62 +1038,6 @@ class OsliraPageInitializer {
         this.setupGlobalUIHandlers();
         this.populateUIElements();
     }
-}
-    async function refreshSessionSync() {
-    try {
-        const supabase = window.OsliraApp.supabase;
-        if (!supabase) return false;
-        
-        console.log('🔄 Manually refreshing session...');
-        
-        const { data: { session }, error } = await supabase.auth.refreshSession();
-        
-        if (error || !session) {
-            console.log('⚠️ Session refresh failed:', error?.message);
-            return false;
-        }
-        
-        window.OsliraApp.session = session;
-        window.OsliraApp.user = session.user;
-        
-        console.log('✅ Session manually refreshed and synced');
-        return true;
-        
-    } catch (error) {
-        console.error('❌ Session refresh failed:', error);
-        return false;
-    }
-}
-
-// ✅ NEW: Wait for authentication to be ready
-async function waitForAuth(timeoutMs = 10000) {
-    const startTime = Date.now();
-    
-    while (Date.now() - startTime < timeoutMs) {
-        if (window.OsliraApp?.user && window.OsliraApp?.session) {
-            return true;
-        }
-        
-        // Check if we have a valid session but user isn't set
-        const supabase = window.OsliraApp?.supabase;
-        if (supabase) {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                    window.OsliraApp.session = session;
-                    window.OsliraApp.user = session.user;
-                    return true;
-                }
-            } catch (error) {
-                console.warn('⚠️ Session check during wait failed:', error);
-            }
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    return false;
-}
 
     setupGlobalUIHandlers() {
         // Logout links
