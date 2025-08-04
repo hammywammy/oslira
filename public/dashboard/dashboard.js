@@ -2039,8 +2039,7 @@ exportLeads() {
     // ===============================================================================
     // DASHBOARD DATA MANAGEMENT
     // ===============================================================================
-
-  displayLeads(leads) {
+displayLeads(leads) {
     const tableBody = document.getElementById('activity-table');
     
     if (!tableBody) {
@@ -2049,7 +2048,7 @@ exportLeads() {
     }
     
     if (leads && leads.length > 0) {
-        // Show leads normally
+        // ✅ CORRECTED: Each column shows the RIGHT data
         tableBody.innerHTML = leads.map(lead => {
             const analysisType = lead.analysis_type || 'light';
             const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
@@ -2068,6 +2067,7 @@ exportLeads() {
             
             return `
                 <tr data-lead-id="${lead.id}" style="border-bottom: 1px solid var(--border-light); transition: all 0.2s ease;">
+                    <!-- COLUMN 1: Lead (username + avatar) -->
                     <td style="padding: 12px; border-bottom: 1px solid var(--border-light);">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <input type="checkbox" class="lead-checkbox" data-lead-id="${lead.id}" 
@@ -2082,27 +2082,41 @@ exportLeads() {
                                     @${lead.username}
                                 </div>
                                 <div style="font-size: 12px; color: var(--text-secondary);">
-                                    ${lead.platform || 'Instagram'}
+                                    ${lead.followers_count ? lead.followers_count.toLocaleString() + ' followers' : 'No follower data'}
                                 </div>
                             </div>
                         </div>
                     </td>
+                    
+                    <!-- COLUMN 2: Platform (Instagram, etc.) -->
+                    <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
+                        <span style="font-size: 14px; color: var(--text-secondary);">
+                            ${lead.platform || 'Instagram'}
+                        </span>
+                    </td>
+                    
+                    <!-- COLUMN 3: Score (the actual AI score) -->
                     <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
                         <span class="score-badge ${scoreClass}" style="padding: 4px 12px; border-radius: 12px; font-weight: 600; font-size: 14px;">
                             ${lead.score || 0}
                         </span>
                     </td>
-                    <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
-                        <span style="font-size: 14px; color: var(--text-secondary);">${lead.followers_count ? lead.followers_count.toLocaleString() : 'N/A'}</span>
-                    </td>
+                    
+                    <!-- COLUMN 4: Type (Light/Deep analysis) -->
                     <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
                         <span class="analysis-type-badge ${analysisType}" style="padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
                             ${analysisType === 'deep' ? 'Deep' : 'Light'}
                         </span>
                     </td>
+                    
+                    <!-- COLUMN 5: Date (when analyzed) -->
                     <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
-                        <span style="font-size: 12px; color: var(--text-secondary);">${new Date(lead.created_at).toLocaleDateString()}</span>
+                        <span style="font-size: 12px; color: var(--text-secondary);">
+                            ${new Date(lead.created_at).toLocaleDateString()}
+                        </span>
                     </td>
+                    
+                    <!-- COLUMN 6: Actions -->
                     <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
                         <button onclick="dashboard.viewLead('${lead.id}')" 
                                 style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">
@@ -2113,7 +2127,7 @@ exportLeads() {
             `;
         }).join('');
     } else {
-        // ✅ CLEAN EMPTY STATE - No demo data
+        // Empty state
         tableBody.innerHTML = `
             <tr>
                 <td colspan="6" style="text-align: center; padding: 60px; color: var(--text-secondary);">
@@ -2131,6 +2145,7 @@ exportLeads() {
         `;
     }
 }
+  
     toggleLeadSelection(leadId, isChecked) {
         if (isChecked) {
             this.selectedLeads.add(leadId);
