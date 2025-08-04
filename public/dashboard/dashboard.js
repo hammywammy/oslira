@@ -1869,16 +1869,296 @@ async viewLead(leadId) {
     }
 }
 
-canUseRealtime() {
-    // Test if WebSocket connections are allowed
+// =============================================================================
+// 🚨 MISSING METHODS FIX - Add these to your Dashboard class
+// =============================================================================
+
+// Add these methods inside your Dashboard class:
+
+class Dashboard {
+    constructor() {
+        this.allLeads = [];
+        this.selectedLeads = new Set();
+        this.lastUpdateTimestamp = null;
+        this.pollingInterval = null;
+        this.realtimeSubscription = null;
+        this.dateFormatCache = new Map();
+        this.refreshTimeout = null;
+    }
+
+    // ✅ ADD THIS MISSING METHOD:
+    displayDemoLeads() {
+        console.log('📋 Loading demo data (no auth)');
+        
+        this.allLeads = [
+            {
+                id: 'demo-1',
+                username: 'demo_user_1',
+                platform: 'Instagram',
+                score: 85,
+                analysis_type: 'deep',
+                created_at: new Date().toISOString(),
+                profile_pic_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
+                followers_count: 12500,
+                business_id: 'demo-business-1'
+            },
+            {
+                id: 'demo-2', 
+                username: 'demo_user_2',
+                platform: 'Instagram',
+                score: 72,
+                analysis_type: 'light',
+                created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+                profile_pic_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
+                followers_count: 8300,
+                business_id: 'demo-business-2'
+            },
+            {
+                id: 'demo-3',
+                username: 'demo_user_3', 
+                platform: 'Instagram',
+                score: 91,
+                analysis_type: 'deep',
+                created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+                profile_pic_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+                followers_count: 25600,
+                business_id: 'demo-business-3'
+            }
+        ];
+
+        this.selectedLeads.clear();
+        this.displayLeads(this.allLeads);
+        this.updateDashboardStats();
+        this.generateInsights();
+        
+        console.log(`✅ Demo: Loaded ${this.allLeads.length} demo leads`);
+    }
+
+    // ✅ ADD THIS MISSING METHOD:
+    displayErrorState(errorMessage) {
+        console.error('🚨 Dashboard error state:', errorMessage);
+        
+        const tableBody = document.getElementById('activity-table');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 40px; color: var(--error);">
+                        <div style="font-size: 32px; margin-bottom: 16px;">⚠️</div>
+                        <h3 style="margin: 0 0 8px 0; color: var(--error);">Error Loading Data</h3>
+                        <p style="margin: 0 0 16px 0; color: var(--text-secondary);">${errorMessage}</p>
+                        <button onclick="dashboard.loadDashboardData()" 
+                                style="background: var(--primary-blue); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                            🔄 Try Again
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Also show error in insights section
+        const insightsContainer = document.getElementById('insights-container');
+        if (insightsContainer) {
+            insightsContainer.innerHTML = `
+                <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 24px; text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 12px;">⚠️</div>
+                    <h4 style="color: var(--error); margin: 0 0 8px 0;">Unable to load insights</h4>
+                    <p style="color: var(--text-secondary); margin: 0;">${errorMessage}</p>
+                </div>
+            `;
+        }
+    }
+
+    // ✅ FIXED canUseRealtime() method - Remove external WebSocket test:
+   canUseRealtime() {
+    // ✅ BETTER APPROACH: Test if WebSocket is available without external connection
     try {
-        const testWs = new WebSocket('wss://echo.websocket.org/');
-        testWs.close();
-        return true;
+        // Just check if WebSocket constructor exists
+        return typeof WebSocket !== 'undefined' && 
+               typeof window !== 'undefined' && 
+               'WebSocket' in window;
     } catch (error) {
+        console.warn('WebSocket availability check failed:', error);
         return false;
     }
 }
+    // ✅ ADD THIS MISSING METHOD:
+    updateDashboardStats() {
+        try {
+            const totalLeads = this.allLeads.length;
+            const avgScore = totalLeads > 0 
+                ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
+                : 0;
+
+            // Update stats in the UI
+            const statsElements = {
+                'total-leads': totalLeads.toLocaleString(),
+                'avg-score': avgScore.toString(),
+                'active-campaigns': '0', // Placeholder
+                'conversion-rate': '0%'  // Placeholder
+            };
+
+            Object.entries(statsElements).forEach(([id, value]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = value;
+                }
+            });
+
+            console.log(`📊 Stats updated: ${totalLeads} leads, avg score ${avgScore}`);
+
+        } catch (error) {
+            console.warn('⚠️ Stats update failed:', error);
+        }
+    }
+
+    // ✅ ADD THIS MISSING METHOD:
+    async generateInsights() {
+        const container = document.getElementById('insights-container');
+        const loading = document.getElementById('loading-insights');
+        
+        if (!container) {
+            console.warn('Insights container not found');
+            return;
+        }
+        
+        if (loading) {
+            loading.style.display = 'block';
+        }
+        
+        try {
+            // Wait a moment to simulate loading
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            let insights = [];
+            
+            if (this.allLeads.length === 0) {
+                insights.push({
+                    type: 'welcome',
+                    icon: '🚀',
+                    title: 'Welcome to Oslira!',
+                    content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
+                    cta: 'Research Your First Lead',
+                    actionType: 'function',
+                    actionValue: 'showAnalysisModal'
+                });
+            } else {
+                // Generate insights based on current leads
+                const avgScore = this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / this.allLeads.length;
+                const highScoreLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
+                
+                insights.push({
+                    type: 'performance',
+                    icon: '📈',
+                    title: 'Lead Quality Analysis',
+                    content: `Your average lead score is ${Math.round(avgScore)}. You have ${highScoreLeads} high-quality leads (80+ score).`,
+                    cta: 'View Top Leads',
+                    actionType: 'filter',
+                    actionValue: 'score_high'
+                });
+
+                if (this.allLeads.length >= 10) {
+                    insights.push({
+                        type: 'optimization',
+                        icon: '🎯',
+                        title: 'Targeting Optimization',
+                        content: 'With 10+ leads analyzed, consider refining your targeting criteria for better results.',
+                        cta: 'Analyze Patterns',
+                        actionType: 'function',
+                        actionValue: 'showPatternAnalysis'
+                    });
+                }
+            }
+
+            this.renderInsights(insights);
+            
+            if (loading) {
+                loading.style.display = 'none';
+            }
+            
+            if (container) {
+                container.style.display = 'grid';
+            }
+
+        } catch (error) {
+            console.error('Error generating insights:', error);
+            
+            if (loading) {
+                loading.style.display = 'none';
+            }
+            
+            if (container) {
+                container.innerHTML = `
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 24px; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 12px;">⚠️</div>
+                        <h4 style="color: var(--error); margin: 0 0 8px 0;">Insights Unavailable</h4>
+                        <p style="color: var(--text-secondary); margin: 0;">Unable to generate insights at this time.</p>
+                    </div>
+                `;
+                container.style.display = 'block';
+            }
+        }
+    }
+
+    // ✅ ADD THIS MISSING METHOD:
+    renderInsights(insights) {
+        const container = document.getElementById('insights-container');
+        if (!container || !insights.length) return;
+
+        const html = insights.map(insight => `
+            <div class="insight-card" style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+                <div style="font-size: 32px; margin-bottom: 16px;">${insight.icon}</div>
+                <h4 style="color: var(--text-primary); margin: 0 0 12px 0; font-size: 18px;">${insight.title}</h4>
+                <p style="color: var(--text-secondary); margin: 0 0 20px 0; line-height: 1.5;">${insight.content}</p>
+                ${insight.cta ? `
+                    <button onclick="dashboard.handleInsightAction('${insight.actionType}', '${insight.actionValue}')"
+                            style="background: var(--primary-blue); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                        ${insight.cta}
+                    </button>
+                ` : ''}
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+    // ✅ ADD THIS MISSING METHOD:
+    handleInsightAction(actionType, actionValue) {
+        console.log('🎯 Insight action triggered:', actionType, actionValue);
+        
+        switch (actionType) {
+            case 'function':
+                if (actionValue === 'showAnalysisModal') {
+                    this.showAnalysisModal();
+                } else if (actionValue === 'showPatternAnalysis') {
+                    window.OsliraApp?.showMessage('Pattern analysis coming soon!', 'info');
+                }
+                break;
+                
+            case 'filter':
+                if (actionValue === 'score_high') {
+                    const filterSelect = document.getElementById('activity-filter');
+                    if (filterSelect) {
+                        filterSelect.value = 'score_high';
+                        this.applyActivityFilter();
+                    }
+                }
+                break;
+                
+            default:
+                console.warn('Unknown insight action:', actionType, actionValue);
+        }
+    }
+
+    // ✅ ADD THIS MISSING METHOD:
+    showAnalysisModal() {
+        const modal = document.getElementById('analysisModal');
+        if (modal) {
+            modal.style.display = 'flex';
+        } else {
+            console.warn('Analysis modal not found');
+            window.OsliraApp?.showMessage('Analysis modal not available', 'warning');
+        }
+    }
 
 setupPollingFallback() {
     console.log('🔄 Setting up polling fallback for real-time updates');
