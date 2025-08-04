@@ -1599,6 +1599,143 @@ async submitAnalysis(event) {
     }
 }
 
+handleRealtimeAnalysisUpdate(payload) {
+    const { eventType, new: newRecord, old: oldRecord } = payload;
+    
+    console.log('📈 Analysis update received:', eventType, newRecord?.lead_id || oldRecord?.lead_id);
+    
+    // For analysis updates, we should refresh the specific lead's data
+    if (eventType === 'INSERT' || eventType === 'UPDATE') {
+        const leadId = newRecord?.lead_id;
+        if (leadId) {
+            this.refreshLeadData(leadId);
+        }
+    }
+}
+
+// ✅ NEW: Add lead to UI without full refresh
+addLeadToUI(newLead) {
+    try {
+        // Check if lead already exists
+        const existingIndex = this.allLeads.findIndex(lead => lead.id === newLead.id);
+        
+        if (existingIndex === -1) {
+            // Add new lead to the beginning of the array
+            this.allLeads.unshift({
+                ...newLead,
+                lead_analyses: [] // Will be populated separately if needed
+            });
+            
+            // Update display
+            this.displayLeads(this.allLeads);
+            
+            console.log('✅ Lead added to UI:', newLead.username);
+        }
+    } catch (error) {
+        console.error('❌ Failed to add lead to UI:', error);
+        // Fallback to full refresh
+        this.loadDashboardData();
+    }
+}
+
+// ✅ NEW: Update lead in UI
+updateLeadInUI(updatedLead) {
+    try {
+        const existingIndex = this.allLeads.findIndex(lead => lead.id === updatedLead.id);
+        
+        if (existingIndex !== -1) {
+            // Update existing lead while preserving analysis data
+            this.allLeads[existingIndex] = {
+                ...this.allLeads[existingIndex],
+                ...updatedLead
+            };
+            
+            // Update display
+            this.displayLeads(this.allLeads);
+            
+            console.log('✅ Lead updated in UI:', updatedLead.username);
+        }
+    } catch (error) {
+        console.error('❌ Failed to update lead in UI:', error);
+        // Fallback to full refresh
+        this.loadDashboardData();
+    }
+}
+
+// ✅ NEW: Remove lead from UI
+removeLeadFromUI(deletedLead) {
+    try {
+        this.allLeads = this.allLeads.filter(lead => lead.id !== deletedLead.id);
+        
+        // Remove from selection if selected
+        this.selectedLeads.delete(deletedLead.id);
+        
+        // Update display
+        this.displayLeads(this.allLeads);
+        this.updateBulkActionsVisibility();
+        
+        console.log('✅ Lead removed from UI:', deletedLead.username);
+    } catch (error) {
+        console.error('❌ Failed to remove lead from UI:', error);
+        // Fallback to full refresh
+        this.loadDashboardData();
+    }
+}
+
+// ✅ NEW: Refresh specific lead data
+async refreshLeadData(leadId) {
+    try {
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
+        
+        if (!supabase || !user) return;
+        
+        // Get updated lead data
+        const { data: leadData, error: leadError } = await supabase
+            .from('leads')
+            .select('*')
+            .eq('id', leadId)
+            .eq('user_id', user.id)
+            .single();
+            
+        if (leadError || !leadData) {
+            console.warn('⚠️ Failed to refresh lead data:', leadError);
+            return;
+        }
+        
+        // Get analysis data if it's a deep analysis
+        let analysisData = null;
+        if (leadData.analysis_type === 'deep') {
+            const { data: analysis } = await supabase
+                .from('lead_analyses')
+                .select('*')
+                .eq('lead_id', leadId)
+                .single();
+                
+            if (analysis) {
+                analysisData = [analysis];
+            }
+        }
+        
+        // Update the lead in our local data
+        const leadIndex = this.allLeads.findIndex(lead => lead.id === leadId);
+        if (leadIndex !== -1) {
+            this.allLeads[leadIndex] = {
+                ...leadData,
+                lead_analyses: analysisData || []
+            };
+            
+            // Update display
+            this.displayLeads(this.allLeads);
+            
+            console.log('✅ Lead data refreshed:', leadData.username);
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to refresh lead data:', error);
+    }
+}
+
 // Missing utility methods
 showBulkUpload() {
     const modal = document.getElementById('bulkModal');
@@ -2485,8 +2622,8 @@ exportLeads() {
         }
     }
 
-    setupRealtimeSubscription() {
-    // Check if WebSocket is available and CSP allows it
+   setupRealtimeSubscription() {
+    // Check if we can use real-time
     if (!this.canUseRealtime()) {
         console.log('⚠️ Real-time disabled: WebSocket connections not available');
         this.setupPollingFallback();
@@ -2499,17 +2636,32 @@ exportLeads() {
         
         if (!supabase || !user) {
             console.warn('⚠️ Supabase or user not available for real-time subscription');
+            this.setupPollingFallback();
             return;
         }
 
         console.log('🔄 Setting up real-time subscription...');
 
-        // Create a unique channel name for this user
-        const channelName = `dashboard-${user.id}-${Date.now()}`;
+        // ✅ Clean up existing subscription first
+        if (this.realtimeSubscription) {
+            console.log('🧹 Cleaning up existing subscription');
+            this.realtimeSubscription.unsubscribe();
+            this.realtimeSubscription = null;
+        }
 
+        // ✅ Create a simple, unique channel name
+        const channelName = `dashboard_${user.id}`;
+
+        // ✅ FIXED: Proper subscription setup
         this.realtimeSubscription = supabase
-            .channel(channelName)
-            .on('postgres_changes', 
+            .channel(channelName, {
+                config: {
+                    broadcast: { self: false },
+                    presence: { key: user.id }
+                }
+            })
+            .on(
+                'postgres_changes',
                 { 
                     event: '*', 
                     schema: 'public', 
@@ -2517,11 +2669,12 @@ exportLeads() {
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log('📡 Real-time lead update:', payload.eventType);
-                    this.handleRealtimeUpdate(payload);
+                    console.log('📡 Real-time leads update:', payload);
+                    this.handleRealtimeLeadUpdate(payload);
                 }
             )
-            .on('postgres_changes',
+            .on(
+                'postgres_changes',
                 {
                     event: '*',
                     schema: 'public', 
@@ -2529,23 +2682,44 @@ exportLeads() {
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log('📡 Real-time analysis update:', payload.eventType);
-                    this.handleRealtimeUpdate(payload);
+                    console.log('📡 Real-time analysis update:', payload);
+                    this.handleRealtimeAnalysisUpdate(payload);
                 }
             )
             .subscribe((status, err) => {
-                console.log('📡 Real-time subscription status:', status);
+                console.log(`📡 Real-time subscription status: ${status}`);
                 
-                if (status === 'SUBSCRIBED') {
-                    console.log('✅ Real-time subscription active');
-                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-                    console.error('❌ Real-time subscription failed:', status, err);
-                    this.setupPollingFallback();
+                switch (status) {
+                    case 'SUBSCRIBED':
+                        console.log('✅ Real-time subscription active');
+                        this.isRealtimeActive = true;
+                        // Clear any polling fallback
+                        if (this.pollingInterval) {
+                            clearInterval(this.pollingInterval);
+                            this.pollingInterval = null;
+                        }
+                        break;
+                        
+                    case 'CHANNEL_ERROR':
+                    case 'TIMED_OUT':
+                    case 'CLOSED':
+                        console.error(`❌ Real-time subscription failed: ${status}`, err);
+                        this.isRealtimeActive = false;
+                        this.setupPollingFallback();
+                        break;
+                        
+                    case 'CONNECTING':
+                        console.log('🔄 Real-time connecting...');
+                        break;
+                        
+                    default:
+                        console.log(`📡 Real-time status: ${status}`);
                 }
             });
 
     } catch (error) {
         console.error('❌ Real-time setup failed:', error);
+        this.isRealtimeActive = false;
         this.setupPollingFallback();
     }
 }
@@ -2601,24 +2775,28 @@ exportLeads() {
     }
 
     // ✅ FIXED canUseRealtime() method - Remove external WebSocket test:
-  canUseRealtime() {
+ canUseRealtime() {
     try {
         // Check if WebSocket is available
-        if (typeof WebSocket === 'undefined') {
-            console.log('WebSocket not available in this environment');
+        if (typeof WebSocket === 'undefined' || !window.WebSocket) {
+            console.log('📱 WebSocket not available in this environment');
             return false;
         }
 
-        // Check if we're in a secure context (required for WSS)
-        if (location.protocol === 'https:' || location.hostname === 'localhost') {
+        // Check if we're in a secure context (WSS requires HTTPS or localhost)
+        if (location.protocol === 'https:' || 
+            location.hostname === 'localhost' || 
+            location.hostname === '127.0.0.1' ||
+            location.hostname.startsWith('192.168.') ||
+            location.hostname.endsWith('.netlify.app')) {
             return true;
         }
 
-        console.log('Real-time requires HTTPS or localhost');
+        console.log('🔒 Real-time requires HTTPS or localhost environment');
         return false;
 
     } catch (error) {
-        console.warn('WebSocket availability check failed:', error);
+        console.warn('⚠️ WebSocket availability check failed:', error);
         return false;
     }
 }
@@ -2940,16 +3118,20 @@ setupPollingFallback() {
     // Clear any existing polling
     if (this.pollingInterval) {
         clearInterval(this.pollingInterval);
+        this.pollingInterval = null;
     }
     
-    // Poll for updates every 30 seconds when tab is visible
-    this.pollingInterval = setInterval(() => {
-        if (document.visibilityState === 'visible' && window.OsliraApp?.user) {
-            this.checkForUpdates();
-        }
-    }, 30000); // Poll every 30 seconds
-    
-    console.log('✅ Polling fallback active (30s intervals)');
+    // Only set up polling if real-time is not active
+    if (!this.isRealtimeActive) {
+        // Poll for updates every 15 seconds when tab is visible
+        this.pollingInterval = setInterval(() => {
+            if (document.visibilityState === 'visible' && window.OsliraApp?.user) {
+                this.checkForUpdates();
+            }
+        }, 15000); // Poll every 15 seconds
+        
+        console.log('✅ Polling fallback active (15s intervals)');
+    }
 }
 
 async checkForUpdates() {
@@ -2984,31 +3166,47 @@ async checkForUpdates() {
         console.warn('⚠️ Polling update check failed:', error);
     }
 }
-handleRealtimeUpdate(payload) {
+handleRealtimeLeadUpdate(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
+    
+    console.log('📊 Lead update received:', eventType, newRecord?.username || oldRecord?.username);
     
     switch (eventType) {
         case 'INSERT':
-            console.log('➕ New lead added');
-            this.addLeadToUI(newRecord);
-            this.updateDashboardStats();
+            // New lead created
+            if (newRecord) {
+                console.log('➕ New lead added:', newRecord.username);
+                this.addLeadToUI(newRecord);
+                this.updateDashboardStats();
+                
+                // Show notification
+                if (window.OsliraApp?.showMessage) {
+                    window.OsliraApp.showMessage(`New lead analyzed: @${newRecord.username}`, 'success', 3000);
+                }
+            }
             break;
             
         case 'UPDATE':
-            console.log('✏️ Lead updated');
-            this.updateLeadInUI(newRecord);
+            // Lead updated
+            if (newRecord) {
+                console.log('✏️ Lead updated:', newRecord.username);
+                this.updateLeadInUI(newRecord);
+            }
             break;
             
         case 'DELETE':
-            console.log('🗑️ Lead deleted');
-            this.removeLeadFromUI(oldRecord);
-            this.updateDashboardStats();
+            // Lead deleted
+            if (oldRecord) {
+                console.log('🗑️ Lead deleted:', oldRecord.username);
+                this.removeLeadFromUI(oldRecord);
+                this.updateDashboardStats();
+            }
             break;
     }
 }
 
 
-   cleanup() {
+  cleanup() {
     console.log('🧹 Cleaning up dashboard resources...');
     
     // Clean up real-time subscription
@@ -3029,18 +3227,14 @@ handleRealtimeUpdate(payload) {
         console.log('✅ Polling interval cleaned up');
     }
     
+    // Mark real-time as inactive
+    this.isRealtimeActive = false;
+    
     // Clean up event listeners
     document.removeEventListener('visibilitychange', this.handleVisibilityChange);
     
-    // Clear any pending timeouts
-    if (this.refreshTimeout) {
-        clearTimeout(this.refreshTimeout);
-        this.refreshTimeout = null;
-    }
-    
     console.log('✅ Dashboard cleanup completed');
 }
-
     // ===============================================================================
     // INITIALIZATION COMPLETION
     // ===============================================================================
