@@ -1869,23 +1869,6 @@ async viewLead(leadId) {
     }
 }
 
-// =============================================================================
-// 🚨 MISSING METHODS FIX - Add these to your Dashboard class
-// =============================================================================
-
-// Add these methods inside your Dashboard class:
-
-class Dashboard {
-    constructor() {
-        this.allLeads = [];
-        this.selectedLeads = new Set();
-        this.lastUpdateTimestamp = null;
-        this.pollingInterval = null;
-        this.realtimeSubscription = null;
-        this.dateFormatCache = new Map();
-        this.refreshTimeout = null;
-    }
-
     // ✅ ADD THIS MISSING METHOD:
     displayDemoLeads() {
         console.log('📋 Loading demo data (no auth)');
