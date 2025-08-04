@@ -10,6 +10,25 @@
   function = "auth"
   path     = "/api/*"
 
+  # ===========================
+# 🔒 SECURITY HEADERS
+# ===========================
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Content Security Policy - Allow Supabase WebSockets and APIs
+    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://api.stripe.com https://images.weserv.nl; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self';"
+    
+    # Additional Security Headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    
+    # HTTPS and HSTS
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
 # ===========================
 # 🔁 Pretty URL Redirects
 # ===========================
