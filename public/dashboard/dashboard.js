@@ -1360,6 +1360,20 @@ async submitAnalysis(event) {
         return;
     }
     
+    // ✅ CHECK: Make sure we have user authentication
+    const user = window.OsliraApp?.user;
+    const session = window.OsliraApp?.session;
+    
+    if (!user || !user.id) {
+        window.OsliraApp?.showMessage('User not authenticated. Please log in.', 'error');
+        return;
+    }
+    
+    if (!session || !session.access_token) {
+        window.OsliraApp?.showMessage('Session expired. Please log in again.', 'error');
+        return;
+    }
+    
     const cleanUsername = profileInput.replace(/^@/, '');
     
     // Show loading state
@@ -1377,7 +1391,17 @@ async submitAnalysis(event) {
         // Show processing message
         window.OsliraApp?.showMessage('Starting analysis... This may take a moment.', 'info');
         
-        // ✅ CORRECT API CALL to your Cloudflare Worker
+        // ✅ FIXED: Include ALL required fields
+        const requestBody = {
+            username: cleanUsername,
+            analysis_type: analysisType,
+            business_id: businessId,
+            user_id: user.id,  // ✅ REQUIRED: User ID
+            platform: 'instagram'
+        };
+        
+        console.log('📝 Request body:', requestBody);
+        
         const workerUrl = window.CONFIG?.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
         
         console.log('🚀 Calling worker API:', `${workerUrl}/v1/analyze`);
@@ -1386,14 +1410,9 @@ async submitAnalysis(event) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${window.OsliraApp?.session?.access_token}`
+                'Authorization': `Bearer ${session.access_token}`  // ✅ FIXED: Use session token
             },
-            body: JSON.stringify({
-                username: cleanUsername,
-                analysis_type: analysisType,
-                business_id: businessId,
-                platform: 'instagram'
-            })
+            body: JSON.stringify(requestBody)
         });
         
         console.log('📡 API Response status:', response.status);
@@ -1401,14 +1420,25 @@ async submitAnalysis(event) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('❌ API Error:', errorText);
-            throw new Error(`Analysis failed: ${response.status} ${response.statusText}`);
+            
+            // Try to parse error for better user message
+            let errorMessage = `Analysis failed: ${response.status}`;
+            try {
+                const errorObj = JSON.parse(errorText);
+                errorMessage = errorObj.error || errorObj.message || errorMessage;
+            } catch (e) {
+                // Use default message if can't parse
+            }
+            
+            throw new Error(errorMessage);
         }
         
         const result = await response.json();
         console.log('✅ Analysis result:', result);
         
         if (result.success) {
-            window.OsliraApp?.showMessage('Analysis completed successfully!', 'success');
+            const leadUsername = result.profile?.username || cleanUsername;
+            window.OsliraApp?.showMessage(`Analysis completed for @${leadUsername}!`, 'success');
             
             // Refresh dashboard to show new lead
             await this.loadDashboardData();
@@ -1427,6 +1457,7 @@ async submitAnalysis(event) {
         }
     }
 }
+
 // Missing utility methods
 showBulkUpload() {
     const modal = document.getElementById('bulkModal');
