@@ -649,6 +649,10 @@ async viewLead(leadId) {
             
             <!-- AI Insights Summary -->
             ${this.buildAIInsightsSection(analysisData)}
+
+            html += this.buildAnalysisStatusSection(lead, analysisType);
+    
+            html += this.buildSummarySection(lead, analysisData, analysisType);
             
             <!-- Personalized Outreach Message -->
             ${analysisData.outreach_message ? this.buildOutreachMessageSection(analysisData.outreach_message) : ''}
@@ -675,6 +679,58 @@ async viewLead(leadId) {
 
     html += `</div>`;
     return html;
+}
+
+    buildSummarySection(lead, analysisData, analysisType) {
+    // Get the appropriate summary
+    let summaryText = '';
+    let summaryTitle = '';
+    
+    if (analysisType === 'light' && lead.quick_summary) {
+        summaryText = lead.quick_summary;
+        summaryTitle = '⚡ Quick Summary';
+    } else if (analysisType === 'deep' && analysisData?.deep_summary) {
+        summaryText = analysisData.deep_summary;
+        summaryTitle = '🔥 Deep Analysis Summary';
+    }
+    
+    // If no summary available, don't show section
+    if (!summaryText) {
+        return '';
+    }
+    
+    return `
+        <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                ${summaryTitle}
+                <span style="background: var(--accent-teal); color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">
+                    AI Generated
+                </span>
+                <button onclick="dashboard.copyText('${this.escapeHtml(summaryText).replace(/'/g, "\\'")}'); this.innerHTML='✅ Copied!'; setTimeout(() => this.innerHTML='📋 Copy', 2000)" 
+                        style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: auto; font-weight: 600;">
+                    📋 Copy
+                </button>
+            </h4>
+            
+            <div style="background: linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05)); padding: 20px; border-radius: 12px; border-left: 4px solid var(--accent-teal);">
+                <div style="color: var(--text-primary); line-height: 1.7; font-size: 15px; font-weight: 500;">
+                    ${this.escapeHtml(summaryText)}
+                </div>
+            </div>
+            
+            ${analysisType === 'light' ? `
+                <div style="margin-top: 16px; padding: 16px; background: rgba(245, 158, 11, 0.1); border-radius: 8px; text-align: center;">
+                    <p style="margin: 0; font-size: 13px; color: var(--warning); font-weight: 600;">
+                        💡 Want more detailed insights? Upgrade to Deep Analysis for comprehensive engagement data, niche scoring, and personalized outreach messages.
+                    </p>
+                    <button onclick="dashboard.showAnalysisModal('${lead.username}')" 
+                            style="margin-top: 12px; background: var(--warning); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        🔍 Run Deep Analysis
+                    </button>
+                </div>
+            ` : ''}
+        </div>
+    `;
 }
 
     buildAnalysisStatusSection(lead, analysisType) {
