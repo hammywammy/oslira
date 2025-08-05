@@ -1015,20 +1015,6 @@ function extractMentions(text: string): string[] {
   return matches ? matches.map(mention => mention.toLowerCase()) : [];
 }
 
-function calculateEngagementVariance(posts: any[]): number {
-  if (posts.length < 2) return 0;
-  
-  const engagements = posts.map(post => 
-    (parseInt(post.likesCount || post.likes) || 0) + 
-    (parseInt(post.commentsCount || post.comments) || 0)
-  );
-  
-  const mean = engagements.reduce((sum, val) => sum + val, 0) / engagements.length;
-  const variance = engagements.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / engagements.length;
-  
-  return Math.sqrt(variance) / mean; // Coefficient of variation
-}
-
 // ===============================================================================
 // ENHANCED AI SUMMARY GENERATION
 // ===============================================================================
