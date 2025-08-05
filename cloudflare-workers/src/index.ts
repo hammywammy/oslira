@@ -399,13 +399,16 @@ async function saveLeadAndAnalysis(
   try {
     logger('info', 'Saving to leads table with enhanced data', { username: leadData.username });
     
+    // ✅ FIXED: Ensure all data is properly formatted
     const cleanLeadData = {
       ...leadData,
       score: Math.round(parseFloat(leadData.score) || 0),
       followers_count: parseInt(leadData.followers_count) || 0,
-      // ✅ NEW: Add quick_summary to leads table
+      // ✅ ENSURE: quick_summary is included for light analysis
       quick_summary: leadData.quick_summary || null
     };
+
+    logger('info', 'Lead data being saved', cleanLeadData);
 
     const leadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
       method: 'POST',
@@ -430,6 +433,7 @@ async function saveLeadAndAnalysis(
 
     logger('info', 'Lead saved successfully with summary', { lead_id, username: leadData.username });
 
+    // ✅ FIXED: Only save analysis data for deep analysis AND ensure engagement data is included
     if (analysisType === 'deep' && analysisData) {
       logger('info', 'Saving to lead_analyses table for deep analysis with enhanced data');
       
@@ -439,15 +443,28 @@ async function saveLeadAndAnalysis(
         engagement_score: Math.round(parseFloat(analysisData.engagement_score) || 0),
         score_niche_fit: Math.round(parseFloat(analysisData.score_niche_fit) || 0),
         score_total: Math.round(parseFloat(analysisData.score_total) || 0),
+        
+        // ✅ FIXED: Ensure engagement data is properly saved
         avg_likes: parseInt(analysisData.avg_likes) || 0,
         avg_comments: parseInt(analysisData.avg_comments) || 0,
         engagement_rate: parseFloat(analysisData.engagement_rate) || 0,
+        
         audience_quality: analysisData.audience_quality || 'Unknown',
         engagement_insights: analysisData.engagement_insights || 'No insights available',
         selling_points: analysisData.selling_points || null,
-        // ✅ NEW: Add deep_summary to lead_analyses table
+        
+        // ✅ ENSURE: deep_summary is included
         deep_summary: analysisData.deep_summary || null
       };
+
+      logger('info', 'Analysis data being saved', {
+        lead_id,
+        engagement_score: cleanAnalysisData.engagement_score,
+        avg_likes: cleanAnalysisData.avg_likes,
+        avg_comments: cleanAnalysisData.avg_comments,
+        engagement_rate: cleanAnalysisData.engagement_rate,
+        has_deep_summary: !!cleanAnalysisData.deep_summary
+      });
 
       const analysisResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/lead_analyses`, {
         method: 'POST',
@@ -459,6 +476,7 @@ async function saveLeadAndAnalysis(
         const errorText = await analysisResponse.text();
         logger('error', 'Failed to save analysis data', { error: errorText });
         
+        // Rollback lead record
         try {
           await fetch(`${env.SUPABASE_URL}/rest/v1/leads?id=eq.${lead_id}`, {
             method: 'DELETE',
@@ -472,7 +490,7 @@ async function saveLeadAndAnalysis(
         throw new Error(`Failed to save analysis data: ${analysisResponse.status} - ${errorText}`);
       }
 
-      logger('info', 'Deep analysis data saved successfully with summary');
+      logger('info', 'Deep analysis data saved successfully with engagement metrics');
     } else {
       logger('info', 'Light analysis - skipping lead_analyses table');
     }
@@ -484,7 +502,6 @@ async function saveLeadAndAnalysis(
     throw new Error(`Database save failed: ${error.message}`);
   }
 }
-
 // ===============================================================================
 // ENHANCED INSTAGRAM SCRAPING WITH DEBUGGING
 // ===============================================================================
@@ -756,149 +773,228 @@ function generateEstimatedEngagement(followers: number): EngagementData {
 // ===============================================================================
 
 function validateProfileData(responseData: any, analysisType?: string): ProfileData {
-  try {
-    logger('info', 'Validating profile data', { 
-      analysisType, 
-      isArray: Array.isArray(responseData),
-      length: Array.isArray(responseData) ? responseData.length : 'not-array'
-    });
-
-    if (analysisType === 'deep' && Array.isArray(responseData)) {
-      // ✅ ENHANCED: Better profile and post detection
-      const profileItem = responseData.find(item => 
-        item.username || item.ownerUsername || 
-        (item.followersCount !== undefined && item.postsCount !== undefined)
-      );
-      
-      const posts = responseData.filter(item => 
-        item.shortCode && 
-        (item.likesCount !== undefined || item.likes !== undefined) &&
-        item.timestamp
-      );
-      
-      logger('info', 'Deep data validation', {
-        totalItems: responseData.length,
-        profileFound: !!profileItem,
-        postsFound: posts.length,
-        sampleItem: responseData[0] ? Object.keys(responseData[0]).slice(0, 15) : []
-      });
-
-      if (!profileItem) {
-        throw new Error('No profile data found in deep scraper response');
-      }
-
-      let engagement: EngagementData | undefined;
-      if (posts.length > 0) {
-        // ✅ ENHANCED: More robust engagement calculation
-        const validPosts = posts.filter(post => {
-          const likes = parseInt(post.likesCount || post.likes) || 0;
-          const comments = parseInt(post.commentsCount || post.comments) || 0;
-          return likes > 0 || comments > 0; // At least some engagement
+    try {
+        logger('info', 'Validating profile data', { 
+            analysisType, 
+            isArray: Array.isArray(responseData),
+            length: Array.isArray(responseData) ? responseData.length : 'not-array'
         });
 
-        if (validPosts.length > 0) {
-          const totalLikes = validPosts.reduce((sum, post) => 
-            sum + (parseInt(post.likesCount || post.likes) || 0), 0);
-          const totalComments = validPosts.reduce((sum, post) => 
-            sum + (parseInt(post.commentsCount || post.comments) || 0), 0);
-          
-          const avgLikes = Math.round(totalLikes / validPosts.length);
-          const avgComments = Math.round(totalComments / validPosts.length);
-          const totalEngagement = avgLikes + avgComments;
-          const followers = parseInt(profileItem.followersCount) || 0;
-          const engagementRate = followers > 0 ? ((totalEngagement / followers) * 100) : 0;
+        if (analysisType === 'deep' && Array.isArray(responseData)) {
+            // ✅ ENHANCED: Better profile and post detection
+            const profileItem = responseData.find(item => 
+                item.username || item.ownerUsername || 
+                (item.followersCount !== undefined && item.postsCount !== undefined)
+            );
+            
+            const posts = responseData.filter(item => 
+                item.shortCode && 
+                (item.likesCount !== undefined || item.likes !== undefined) &&
+                item.timestamp
+            );
+            
+            logger('info', 'Deep data validation', {
+                totalItems: responseData.length,
+                profileFound: !!profileItem,
+                postsFound: posts.length,
+                samplePost: posts[0] ? {
+                    shortCode: posts[0].shortCode,
+                    likes: posts[0].likesCount || posts[0].likes,
+                    comments: posts[0].commentsCount || posts[0].comments,
+                    timestamp: posts[0].timestamp
+                } : null
+            });
 
-          // ✅ ENHANCED: Calculate quality score based on consistency
-          const engagementVariance = calculateEngagementVariance(validPosts);
-          const qualityScore = calculateQualityScore(engagementRate, engagementVariance, validPosts.length);
+            if (!profileItem) {
+                throw new Error('No profile data found in deep scraper response');
+            }
 
-          engagement = {
-            avgLikes,
-            avgComments,
-            engagementRate: Math.round(engagementRate * 100) / 100,
-            totalEngagement,
-            postsAnalyzed: validPosts.length,
-            qualityScore
-          };
+            let engagement: EngagementData | undefined;
+            if (posts.length > 0) {
+                // ✅ FIXED: More robust engagement calculation with proper data extraction
+                const validPosts = posts.filter(post => {
+                    const likes = parseInt(post.likesCount?.toString() || post.likes?.toString() || '0') || 0;
+                    const comments = parseInt(post.commentsCount?.toString() || post.comments?.toString() || '0') || 0;
+                    return likes > 0 || comments > 0; // At least some engagement
+                });
 
-          logger('info', 'Real engagement calculated', {
-            postsAnalyzed: validPosts.length,
-            avgLikes,
-            avgComments,
-            engagementRate: engagement.engagementRate,
-            qualityScore
-          });
+                logger('info', 'Post validation results', {
+                    totalPosts: posts.length,
+                    validPosts: validPosts.length,
+                    sampleValidPost: validPosts[0] ? {
+                        likes: parseInt(validPosts[0].likesCount?.toString() || validPosts[0].likes?.toString() || '0'),
+                        comments: parseInt(validPosts[0].commentsCount?.toString() || validPosts[0].comments?.toString() || '0')
+                    } : null
+                });
+
+                if (validPosts.length > 0) {
+                    const totalLikes = validPosts.reduce((sum, post) => {
+                        const likes = parseInt(post.likesCount?.toString() || post.likes?.toString() || '0') || 0;
+                        return sum + likes;
+                    }, 0);
+                    
+                    const totalComments = validPosts.reduce((sum, post) => {
+                        const comments = parseInt(post.commentsCount?.toString() || post.comments?.toString() || '0') || 0;
+                        return sum + comments;
+                    }, 0);
+                    
+                    const avgLikes = Math.round(totalLikes / validPosts.length);
+                    const avgComments = Math.round(totalComments / validPosts.length);
+                    const totalEngagement = avgLikes + avgComments;
+                    const followers = parseInt(profileItem.followersCount?.toString() || '0') || 0;
+                    const engagementRate = followers > 0 ? ((totalEngagement / followers) * 100) : 0;
+
+                    // ✅ ENHANCED: Calculate quality score based on consistency
+                    const engagementVariance = calculateEngagementVariance(validPosts);
+                    const qualityScore = calculateQualityScore(engagementRate, engagementVariance, validPosts.length);
+
+                    engagement = {
+                        avgLikes,
+                        avgComments,
+                        engagementRate: Math.round(engagementRate * 100) / 100, // Round to 2 decimal places
+                        totalEngagement,
+                        postsAnalyzed: validPosts.length,
+                        qualityScore
+                    };
+
+                    logger('info', 'Real engagement calculated', {
+                        postsAnalyzed: validPosts.length,
+                        avgLikes,
+                        avgComments,
+                        engagementRate: engagement.engagementRate,
+                        qualityScore,
+                        totalLikes,
+                        totalComments
+                    });
+                } else {
+                    logger('warn', 'No valid posts with engagement found');
+                }
+            } else {
+                logger('warn', 'No posts found in deep scraper response');
+            }
+
+            // ✅ ENHANCED: Better post data extraction
+            const latestPosts: PostData[] = posts.slice(0, 12).map(post => {
+                // Extract hashtags and mentions from caption
+                const caption = post.caption || post.title || '';
+                const hashtags = extractHashtags(caption);
+                const mentions = extractMentions(caption);
+
+                return {
+                    id: post.id || post.shortCode || '',
+                    shortCode: post.shortCode || '',
+                    caption: caption,
+                    likesCount: parseInt(post.likesCount?.toString() || post.likes?.toString() || '0') || 0,
+                    commentsCount: parseInt(post.commentsCount?.toString() || post.comments?.toString() || '0') || 0,
+                    timestamp: post.timestamp || post.created_time || new Date().toISOString(),
+                    url: post.url || `https://instagram.com/p/${post.shortCode}/`,
+                    type: post.type || (post.isVideo ? 'video' : 'photo'),
+                    hashtags,
+                    mentions,
+                    viewCount: parseInt(post.viewCount?.toString() || post.views?.toString() || '0') || undefined,
+                    isVideo: Boolean(post.isVideo || post.type === 'video')
+                };
+            });
+
+            const extractedUsername = (profileItem.username || profileItem.ownerUsername || '').toLowerCase();
+            
+            const result = {
+                username: extractedUsername,
+                displayName: profileItem.fullName || profileItem.displayName || '',
+                bio: profileItem.biography || profileItem.bio || '',
+                followersCount: parseInt(profileItem.followersCount?.toString() || '0') || 0,
+                followingCount: parseInt(profileItem.followingCount?.toString() || '0') || 0,
+                postsCount: parseInt(profileItem.postsCount?.toString() || '0') || latestPosts.length,
+                isVerified: Boolean(profileItem.verified || profileItem.isVerified),
+                isPrivate: Boolean(profileItem.private || profileItem.isPrivate),
+                profilePicUrl: profileItem.profilePicUrl || profileItem.profilePicture || '',
+                externalUrl: profileItem.externalUrl || profileItem.website || '',
+                latestPosts,
+                engagement
+            };
+
+            logger('info', 'Deep profile validation completed', {
+                username: result.username,
+                followers: result.followersCount,
+                postsFound: result.latestPosts.length,
+                hasEngagement: !!result.engagement,
+                avgLikes: result.engagement?.avgLikes || 'N/A',
+                avgComments: result.engagement?.avgComments || 'N/A',
+                engagementRate: result.engagement?.engagementRate || 'N/A'
+            });
+
+            return result;
+
+        } else {
+            // ✅ FIXED: Light analysis handling
+            const profile = Array.isArray(responseData) ? responseData[0] : responseData;
+            
+            if (!profile || !profile.username) {
+                throw new Error('Invalid profile data received');
+            }
+
+            logger('info', 'Light profile validation', {
+                username: profile.username,
+                followers: profile.followersCount,
+                posts: profile.postsCount
+            });
+
+            return {
+                username: profile.username,
+                displayName: profile.fullName || profile.displayName || '',
+                bio: profile.biography || profile.bio || '',
+                followersCount: parseInt(profile.followersCount?.toString() || '0') || 0,
+                followingCount: parseInt(profile.followingCount?.toString() || '0') || 0,
+                postsCount: parseInt(profile.postsCount?.toString() || '0') || 0,
+                isVerified: Boolean(profile.verified || profile.isVerified),
+                isPrivate: Boolean(profile.private || profile.isPrivate),
+                profilePicUrl: profile.profilePicUrl || profile.profilePicture || '',
+                externalUrl: profile.externalUrl || profile.website || '',
+                latestPosts: [],
+                engagement: undefined
+            };
         }
-      }
 
-      // ✅ ENHANCED: Better post data extraction
-      const latestPosts: PostData[] = posts.slice(0, 12).map(post => {
-        // Extract hashtags and mentions from caption
-        const caption = post.caption || post.title || '';
-        const hashtags = extractHashtags(caption);
-        const mentions = extractMentions(caption);
-
-        return {
-          id: post.id || post.shortCode || '',
-          shortCode: post.shortCode || '',
-          caption: caption,
-          likesCount: parseInt(post.likesCount || post.likes) || 0,
-          commentsCount: parseInt(post.commentsCount || post.comments) || 0,
-          timestamp: post.timestamp || post.created_time || new Date().toISOString(),
-          url: post.url || `https://instagram.com/p/${post.shortCode}/`,
-          type: post.type || (post.isVideo ? 'video' : 'photo'),
-          hashtags,
-          mentions,
-          viewCount: parseInt(post.viewCount || post.views) || undefined,
-          isVideo: Boolean(post.isVideo || post.type === 'video')
-        };
-      });
-
-      const extractedUsername = (profileItem.username || profileItem.ownerUsername || '').toLowerCase();
-      
-      return {
-        username: extractedUsername,
-        displayName: profileItem.fullName || profileItem.displayName || '',
-        bio: profileItem.biography || profileItem.bio || '',
-        followersCount: parseInt(profileItem.followersCount) || 0,
-        followingCount: parseInt(profileItem.followingCount) || 0,
-        postsCount: parseInt(profileItem.postsCount) || latestPosts.length,
-        isVerified: Boolean(profileItem.verified || profileItem.isVerified),
-        isPrivate: Boolean(profileItem.private || profileItem.isPrivate),
-        profilePicUrl: profileItem.profilePicUrl || profileItem.profilePicture || '',
-        externalUrl: profileItem.externalUrl || profileItem.website || '',
-        latestPosts,
-        engagement
-      };
-
-    } else {
-      // Light analysis or single profile object
-      const profile = Array.isArray(responseData) ? responseData[0] : responseData;
-      
-      if (!profile || !profile.username) {
-        throw new Error('Invalid profile data received');
-      }
-
-      return {
-        username: profile.username,
-        displayName: profile.fullName || profile.displayName || '',
-        bio: profile.biography || profile.bio || '',
-        followersCount: parseInt(profile.followersCount) || 0,
-        followingCount: parseInt(profile.followingCount) || 0,
-        postsCount: parseInt(profile.postsCount) || 0,
-        isVerified: Boolean(profile.verified || profile.isVerified),
-        isPrivate: Boolean(profile.private || profile.isPrivate),
-        profilePicUrl: profile.profilePicUrl || profile.profilePicture || '',
-        externalUrl: profile.externalUrl || profile.website || '',
-        latestPosts: [],
-        engagement: undefined
-      };
+    } catch (error: any) {
+        logger('error', 'Profile validation failed', { error: error.message, responseData });
+        throw new Error(`Profile validation failed: ${error.message}`);
     }
+}
 
-  } catch (error: any) {
-    logger('error', 'Profile validation failed', { error: error.message, responseData });
-    throw new Error(`Profile validation failed: ${error.message}`);
-  }
+// ✅ MISSING HELPER FUNCTIONS
+function calculateEngagementVariance(posts: any[]): number {
+    if (posts.length < 2) return 0;
+    
+    const engagements = posts.map(post => {
+        const likes = parseInt(post.likesCount?.toString() || post.likes?.toString() || '0') || 0;
+        const comments = parseInt(post.commentsCount?.toString() || post.comments?.toString() || '0') || 0;
+        return likes + comments;
+    });
+    
+    const mean = engagements.reduce((sum, val) => sum + val, 0) / engagements.length;
+    const variance = engagements.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / engagements.length;
+    
+    return Math.sqrt(variance) / mean; // Coefficient of variation
+}
+
+function calculateQualityScore(engagementRate: number, variance: number, postsAnalyzed: number): number {
+    let score = 50; // Base score
+    
+    // Bonus for good engagement rate
+    if (engagementRate > 5) score += 20;
+    else if (engagementRate > 2) score += 10;
+    else if (engagementRate > 1) score += 5;
+    
+    // Bonus for consistency (low variance)
+    if (variance < 0.3) score += 15;
+    else if (variance < 0.5) score += 10;
+    else if (variance < 0.8) score += 5;
+    
+    // Bonus for more posts analyzed
+    if (postsAnalyzed >= 8) score += 10;
+    else if (postsAnalyzed >= 5) score += 5;
+    
+    return Math.min(100, Math.max(0, Math.round(score)));
 }
 
 // ===============================================================================
@@ -931,26 +1027,6 @@ function calculateEngagementVariance(posts: any[]): number {
   const variance = engagements.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / engagements.length;
   
   return Math.sqrt(variance) / mean; // Coefficient of variation
-}
-
-function calculateQualityScore(engagementRate: number, variance: number, postsAnalyzed: number): number {
-  let score = 50; // Base score
-  
-  // Bonus for good engagement rate
-  if (engagementRate > 5) score += 20;
-  else if (engagementRate > 2) score += 10;
-  else if (engagementRate > 1) score += 5;
-  
-  // Bonus for consistency (low variance)
-  if (variance < 0.3) score += 15;
-  else if (variance < 0.5) score += 10;
-  else if (variance < 0.8) score += 5;
-  
-  // Bonus for more posts analyzed
-  if (postsAnalyzed >= 8) score += 10;
-  else if (postsAnalyzed >= 5) score += 5;
-  
-  return Math.min(100, Math.max(0, Math.round(score)));
 }
 
 // ===============================================================================
