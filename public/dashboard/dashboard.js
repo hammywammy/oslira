@@ -688,18 +688,34 @@ buildLeadDetailsHTML(lead, analysisData = null) {
     return html;
 }
 
-// ✅ NEW: Quick Summary Section for ALL analysis types
-radient = 'linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))';
-        summaryBorder = 'var(--accent-teal)';
-    } else if (analysisType === 'light') {
-        // Fallback for light analysis without summary
-        summaryText = `@${lead.username} has been analyzed with basic profile metrics. ${lead.followers_count ? `With ${lead.followers_count.toLocaleString()} followers` : 'Profile data collected'} and a quality score of ${lead.score}/100. This provides a foundational assessment of their potential as a business lead.`;
-        summaryTitle = '⚡ Basic Analysis Complete';
+    buildQuickSummarySection(lead, analysisData, analysisType) {
+    // ✅ FIXED: Only show summary if we actually have one from the database
+    let summaryText = '';
+    let summaryTitle = '';
+    let summaryIcon = '';
+    let summaryGradient = '';
+    let summaryBorder = '';
+    
+    if (analysisType === 'light' && lead.quick_summary) {
+        // ✅ Show actual quick_summary from leads table
+        summaryText = lead.quick_summary;
+        summaryTitle = '⚡ AI Quick Summary';
         summaryIcon = '⚡';
         summaryGradient = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))';
         summaryBorder = 'var(--warning)';
+    } else if (analysisType === 'deep' && analysisData?.deep_summary) {
+        // ✅ Show actual deep_summary from lead_analyses table  
+        summaryText = analysisData.deep_summary;
+        summaryTitle = '🔥 Comprehensive AI Analysis';
+        summaryIcon = '🔥';
+        summaryGradient = 'linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))';
+        summaryBorder = 'var(--accent-teal)';
     } else {
-        // No summary available
+        // ✅ No summary available - don't show section
+        console.log(`No summary available for ${analysisType} analysis:`, {
+            hasQuickSummary: !!lead.quick_summary,
+            hasDeepSummary: !!analysisData?.deep_summary
+        });
         return '';
     }
     
@@ -781,6 +797,7 @@ radient = 'linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0
         </div>
     `;
 }
+
     buildSummarySection(lead, analysisData, analysisType) {
     // Get the appropriate summary
     let summaryText = '';
