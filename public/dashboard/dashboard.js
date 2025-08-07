@@ -662,7 +662,7 @@ buildLeadDetailsHTML(lead, analysisData = null) {
     if (isDeepAnalysis && hasAnalysisData) {
         html += `
             <!-- Advanced AI Metrics -->
-            ${this.buildAdvancedMetricsSection(analysisData)}
+            ${this.buildAdvancedMetricsSection(lead, analysisData)}
             
             <!-- Engagement Analysis -->
             ${this.buildEngagementSection(analysisData)}
@@ -917,17 +917,18 @@ buildLeadDetailsHTML(lead, analysisData = null) {
         `;
     }
 
-  buildAdvancedMetricsSection(analysisData) {
-    // ✅ FIXED: Use correct column names from lead_analyses table
-    const engagementScore = analysisData.engagement_score || 0;
-    const nicheFitScore = analysisData.niche_fit || 0;  // ✅ CHANGED: score_niche_fit → niche_fit
-    const totalScore = analysisData.score || 0;         // ✅ CHANGED: score_total → score
+buildAdvancedMetricsSection(lead, analysisData) {
+    // ✅ Get scores from the correct sources
+    const engagementScore = analysisData?.engagement_score || 0;  // From lead_analyses
+    const nicheFitScore = analysisData?.niche_fit || 0;           // From lead_analyses  
+    const totalScore = lead?.score || 0;                          // ✅ FROM LEADS TABLE (like table display)
 
-    console.log('📊 Advanced metrics data:', {
-        engagement_score: engagementScore,
-        niche_fit: nicheFitScore,
-        score: totalScore,
-        raw_analysisData: analysisData
+    console.log('📊 Advanced metrics sources:', {
+        engagement_score: `${engagementScore} (from lead_analyses.engagement_score)`,
+        niche_fit: `${nicheFitScore} (from lead_analyses.niche_fit)`,
+        composite_score: `${totalScore} (from leads.score)`,  // ✅ This should now work
+        lead_score_raw: lead?.score,
+        analysis_data_available: !!analysisData
     });
 
     return `
@@ -1012,7 +1013,6 @@ buildLeadDetailsHTML(lead, analysisData = null) {
         </div>
     `;
 }
-
 
     buildEngagementSection(analysisData) {
         const avgLikes = analysisData.avg_likes || 0;
