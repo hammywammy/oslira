@@ -781,66 +781,77 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
 
 function validateProfileData(responseData: any, analysisType?: string): ProfileData {
   try {
-    logger('info', 'Starting enhanced profile data validation with engagement calculation debugging', { 
+    logger('info', 'Starting CORRECTED profile data validation for nested posts structure', { 
       analysisType, 
       isArray: Array.isArray(responseData),
       length: Array.isArray(responseData) ? responseData.length : 'not-array',
       dataType: typeof responseData
     });
 
-    if (analysisType === 'deep' && Array.isArray(responseData)) {
-      // Enhanced profile detection with multiple fallback strategies
-      const profileItem = responseData.find(item => 
-        item.username || item.ownerUsername || 
-        (item.followersCount !== undefined && item.postsCount !== undefined) ||
-        (item.followers !== undefined) ||
-        (item.fullName && item.biography)
-      );
-      
-      // Enhanced post detection with multiple data format support
-      const posts = responseData.filter(item => {
-        // Check for various post indicators
-        const hasShortCode = item.shortCode || item.code || item.pk;
-        const hasEngagement = item.likesCount !== undefined || item.likes !== undefined || 
-                             item.like_count !== undefined || item.commentCount !== undefined ||
-                             item.commentsCount !== undefined || item.comments !== undefined ||
-                             item.comment_count !== undefined;
-        const hasTimestamp = item.timestamp || item.taken_at || item.created_time;
+    if (analysisType === 'deep') {
+      let profileItem;
+      let posts = [];
+
+      // Handle different response structures
+      if (Array.isArray(responseData)) {
+        // Find profile item in array
+        profileItem = responseData.find(item => 
+          item.username || item.ownerUsername || 
+          (item.followersCount !== undefined && item.postsCount !== undefined) ||
+          (item.latestPosts !== undefined)
+        );
         
-        return hasShortCode && hasEngagement && hasTimestamp;
-      });
-      
-      logger('info', 'Enhanced deep data validation with comprehensive parsing', {
-        totalItems: responseData.length,
-        profileFound: !!profileItem,
-        postsFound: posts.length,
-        profileItemKeys: profileItem ? Object.keys(profileItem).slice(0, 20) : [],
-        samplePostKeys: posts[0] ? Object.keys(posts[0]).slice(0, 20) : [],
-        samplePostStructure: posts[0] ? {
-          shortCode: posts[0].shortCode || posts[0].code || posts[0].pk,
-          likes: posts[0].likesCount || posts[0].likes || posts[0].like_count,
-          comments: posts[0].commentsCount || posts[0].comments || posts[0].comment_count,
-          timestamp: posts[0].timestamp || posts[0].taken_at || posts[0].created_time
-        } : null
-      });
+        // Also check for posts as separate array items (fallback)
+        const separatePosts = responseData.filter(item => 
+          item.shortCode && (item.likesCount !== undefined || item.likes !== undefined)
+        );
+        
+        if (separatePosts.length > 0) {
+          posts = separatePosts;
+          logger('info', 'Found posts as separate array items', { postsCount: posts.length });
+        }
+      } else {
+        // Single object response
+        profileItem = responseData;
+      }
 
       if (!profileItem) {
-        throw new Error('No profile data found in deep scraper response');
+        throw new Error('No profile data found in scraper response');
       }
+
+      // ✅ CRITICAL FIX: Check for nested posts in latestPosts field
+      if (profileItem.latestPosts && Array.isArray(profileItem.latestPosts) && profileItem.latestPosts.length > 0) {
+        posts = profileItem.latestPosts;
+        logger('info', 'Found posts in nested latestPosts field', { 
+          nestedPostsCount: posts.length,
+          samplePost: posts[0] ? {
+            keys: Object.keys(posts[0]),
+            shortCode: posts[0].shortCode || posts[0].code,
+            likes: posts[0].likesCount || posts[0].likes,
+            comments: posts[0].commentsCount || posts[0].comments
+          } : 'no-sample'
+        });
+      }
+
+      logger('info', 'Profile and posts detection completed', {
+        profileFound: !!profileItem,
+        postsSource: posts.length > 0 ? (profileItem.latestPosts ? 'nested_latestPosts' : 'separate_array_items') : 'none',
+        postsCount: posts.length,
+        profilePostsCount: profileItem.postsCount,
+        latestPostsLength: profileItem.latestPosts?.length || 0
+      });
 
       let engagement: EngagementData | undefined;
       if (posts.length > 0) {
-        logger('info', 'Starting ENHANCED MANUAL ENGAGEMENT CALCULATION with robust data parsing');
+        logger('info', 'Starting MANUAL ENGAGEMENT CALCULATION with nested posts data');
         
-        // ENHANCED STEP 1: Filter valid posts with comprehensive data extraction
+        // Enhanced post validation with multiple field name support
         const validPosts = posts.filter(post => {
-          // Try multiple possible field names for likes
           const likes = parseInt(String(
             post.likesCount || post.likes || post.like_count || 
             post.likeCount || post.likescount || 0
           )) || 0;
           
-          // Try multiple possible field names for comments
           const comments = parseInt(String(
             post.commentsCount || post.comments || post.comment_count || 
             post.commentCount || post.commentscount || post.commentCounts || 0
@@ -850,18 +861,17 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
           
           if (!isValid) {
             logger('warn', 'Post filtered out - no engagement data', {
-              shortCode: post.shortCode || post.code,
-              rawLikesData: {
+              shortCode: post.shortCode || post.code || post.id,
+              availableFields: Object.keys(post),
+              rawLikesFields: {
                 likesCount: post.likesCount,
                 likes: post.likes,
-                like_count: post.like_count,
-                likeCount: post.likeCount
+                like_count: post.like_count
               },
-              rawCommentsData: {
+              rawCommentsFields: {
                 commentsCount: post.commentsCount,
                 comments: post.comments,
-                comment_count: post.comment_count,
-                commentCount: post.commentCount
+                comment_count: post.comment_count
               },
               parsedLikes: likes,
               parsedComments: comments
@@ -871,46 +881,29 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
           return isValid;
         });
 
-        logger('info', 'Enhanced manual calculation - Step 1: Filter valid posts with debugging', {
+        logger('info', 'Manual calculation - Step 1: Filter valid posts from nested data', {
           totalPosts: posts.length,
           validPosts: validPosts.length,
           filteredOut: posts.length - validPosts.length,
-          validPostsPreview: validPosts.slice(0, 3).map(post => ({
-            shortCode: post.shortCode || post.code,
+          validPostsSample: validPosts.slice(0, 3).map(post => ({
+            shortCode: post.shortCode || post.code || post.id,
             likes: parseInt(String(post.likesCount || post.likes || post.like_count || 0)) || 0,
-            comments: parseInt(String(post.commentsCount || post.comments || post.comment_count || 0)) || 0
-          })),
-          invalidPostsPreview: posts.filter(post => {
-            const likes = parseInt(String(post.likesCount || post.likes || post.like_count || 0)) || 0;
-            const comments = parseInt(String(post.commentsCount || post.comments || post.comment_count || 0)) || 0;
-            return !(likes > 0 || comments > 0);
-          }).slice(0, 2).map(post => ({
-            shortCode: post.shortCode || post.code,
-            rawData: {
-              likesCount: post.likesCount,
-              likes: post.likes,
-              commentsCount: post.commentsCount,
-              comments: post.comments,
-              allKeys: Object.keys(post).slice(0, 15)
-            }
+            comments: parseInt(String(post.commentsCount || post.comments || post.comment_count || 0)) || 0,
+            caption: (post.caption || '').substring(0, 50)
           }))
         });
 
         if (validPosts.length > 0) {
-          // ENHANCED STEP 2: Calculate totals with robust data extraction
+          // Calculate totals from valid posts
           let totalLikes = 0;
           let totalComments = 0;
-          const likesBreakdown = [];
-          const commentsBreakdown = [];
 
           for (const post of validPosts) {
-            // Enhanced likes extraction
             const likes = parseInt(String(
               post.likesCount || post.likes || post.like_count || 
               post.likeCount || post.likescount || 0
             )) || 0;
             
-            // Enhanced comments extraction  
             const comments = parseInt(String(
               post.commentsCount || post.comments || post.comment_count || 
               post.commentCount || post.commentscount || post.commentCounts || 0
@@ -918,46 +911,22 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
             
             totalLikes += likes;
             totalComments += comments;
-            
-            likesBreakdown.push({
-              shortCode: post.shortCode || post.code,
-              likes,
-              rawLikesData: {
-                likesCount: post.likesCount,
-                likes: post.likes,
-                like_count: post.like_count
-              }
-            });
-            
-            commentsBreakdown.push({
-              shortCode: post.shortCode || post.code,
-              comments,
-              rawCommentsData: {
-                commentsCount: post.commentsCount,
-                comments: post.comments,
-                comment_count: post.comment_count
-              }
-            });
           }
 
-          logger('info', 'Enhanced manual calculation - Step 2: Calculate totals with detailed breakdown', {
+          logger('info', 'Manual calculation - Step 2: Calculate totals from nested posts', {
             totalLikes,
             totalComments,
             validPostsCount: validPosts.length,
-            averageLikesCalculation: `${totalLikes} / ${validPosts.length} = ${Math.round(totalLikes / validPosts.length)}`,
-            averageCommentsCalculation: `${totalComments} / ${validPosts.length} = ${Math.round(totalComments / validPosts.length)}`,
-            likesBreakdown: likesBreakdown.slice(0, 5), // First 5 posts
-            commentsBreakdown: commentsBreakdown.slice(0, 5) // First 5 posts
+            averageLikesCalc: `${totalLikes} / ${validPosts.length} = ${Math.round(totalLikes / validPosts.length)}`,
+            averageCommentsCalc: `${totalComments} / ${validPosts.length} = ${Math.round(totalComments / validPosts.length)}`
           });
 
-          // ENHANCED STEP 3: Calculate averages manually with validation
+          // Calculate averages
           const avgLikes = validPosts.length > 0 ? Math.round(totalLikes / validPosts.length) : 0;
           const avgComments = validPosts.length > 0 ? Math.round(totalComments / validPosts.length) : 0;
 
-          // ENHANCED STEP 4: Calculate engagement rate with follower count debugging
+          // Calculate engagement rate
           const totalEngagement = avgLikes + avgComments;
-          
-          // Enhanced follower count extraction
           const followers = parseInt(String(
             profileItem.followersCount || profileItem.followers || 
             profileItem.follower_count || profileItem.followerscount || 0
@@ -966,22 +935,17 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
           const engagementRate = followers > 0 ? 
             Math.round((totalEngagement / followers) * 10000) / 100 : 0;
 
-          logger('info', 'Enhanced manual calculation - Steps 3-4: Calculate averages and engagement rate', {
+          logger('info', 'Manual calculation - Steps 3-4: Calculate averages and engagement rate', {
             avgLikes,
             avgComments,
             totalEngagement,
-            followersData: {
-              followersCount: profileItem.followersCount,
-              followers: profileItem.followers,
-              follower_count: profileItem.follower_count,
-              parsedFollowers: followers
-            },
+            followers,
+            followersSource: profileItem.followersCount ? 'followersCount' : profileItem.followers ? 'followers' : 'other',
             engagementRate,
-            engagementCalculation: `(${totalEngagement} / ${followers}) * 100 = ${engagementRate}%`,
-            isValidCalculation: followers > 0 && totalEngagement > 0
+            engagementCalc: `(${totalEngagement} / ${followers}) * 100 = ${engagementRate}%`
           });
 
-          // ENHANCED STEP 5: Create engagement object with validation
+          // Create engagement object
           if (avgLikes > 0 || avgComments > 0) {
             engagement = {
               avgLikes,
@@ -991,60 +955,56 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
               postsAnalyzed: validPosts.length
             };
 
-            logger('info', 'ENHANCED MANUAL ENGAGEMENT CALCULATION COMPLETED SUCCESSFULLY', {
+            logger('info', '✅ MANUAL ENGAGEMENT CALCULATION SUCCESSFUL with nested posts', {
               postsAnalyzed: engagement.postsAnalyzed,
               avgLikes: engagement.avgLikes,
               avgComments: engagement.avgComments,
               engagementRate: engagement.engagementRate,
               totalEngagement: engagement.totalEngagement,
-              dataSource: 'real_scraped_data_enhanced_parsing',
-              dataQuality: validPosts.length >= 5 ? 'high' : validPosts.length >= 2 ? 'medium' : 'low'
+              dataSource: 'nested_latestPosts_field',
+              calculationMethod: 'manual_from_individual_posts'
             });
           } else {
-            logger('error', 'ENGAGEMENT CALCULATION FAILED - All values are zero', {
+            logger('error', '❌ ENGAGEMENT CALCULATION FAILED - All calculated values are zero', {
               avgLikes,
               avgComments,
               totalLikes,
               totalComments,
               validPostsCount: validPosts.length,
               followers,
-              troubleshooting: 'Check data structure and field names'
+              debugInfo: 'Check if posts have valid engagement data'
             });
           }
         } else {
-          logger('error', 'No valid posts with engagement found - DEBUGGING INFO', {
-            totalPosts: posts.length,
-            samplePostStructures: posts.slice(0, 3).map(post => ({
+          logger('error', '❌ No valid posts with engagement found in nested data', {
+            totalPostsInLatestPosts: posts.length,
+            samplePostStructures: posts.slice(0, 2).map(post => ({
               allKeys: Object.keys(post),
-              possibleLikesFields: {
+              shortCode: post.shortCode || post.code,
+              possibleLikesValues: {
                 likesCount: post.likesCount,
                 likes: post.likes,
-                like_count: post.like_count,
-                likeCount: post.likeCount
+                like_count: post.like_count
               },
-              possibleCommentsFields: {
+              possibleCommentsValues: {
                 commentsCount: post.commentsCount,
                 comments: post.comments,
-                comment_count: post.comment_count,
-                commentCount: post.commentCount
+                comment_count: post.comment_count
               }
             }))
           });
         }
       } else {
-        logger('error', 'No posts found in deep scraper response - DEBUGGING INFO', {
-          totalItems: responseData.length,
-          sampleItemStructures: responseData.slice(0, 3).map(item => ({
-            allKeys: Object.keys(item),
-            hasShortCode: !!(item.shortCode || item.code || item.pk),
-            hasEngagement: !!(item.likesCount || item.likes || item.commentsCount || item.comments),
-            hasTimestamp: !!(item.timestamp || item.taken_at || item.created_time),
-            type: item.type || item.__typename || 'unknown'
-          }))
+        logger('error', '❌ No posts found in nested latestPosts field', {
+          profilePostsCount: profileItem.postsCount,
+          latestPostsExists: !!profileItem.latestPosts,
+          latestPostsType: Array.isArray(profileItem.latestPosts) ? 'array' : typeof profileItem.latestPosts,
+          latestPostsLength: profileItem.latestPosts?.length || 0,
+          profileKeys: Object.keys(profileItem).slice(0, 20)
         });
       }
 
-      // Enhanced post data extraction with multiple field name support
+      // Process latestPosts for return (regardless of engagement calculation success)
       const latestPosts: PostData[] = posts.slice(0, 12).map(post => {
         const caption = post.caption || post.edge_media_to_caption?.edges?.[0]?.node?.text || post.title || '';
         const hashtags = extractHashtags(caption);
@@ -1066,34 +1026,14 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
         };
       });
 
-      // Enhanced profile data extraction with multiple field name support
-      const extractedUsername = String(
-        profileItem.username || profileItem.ownerUsername || 
-        profileItem.owner?.username || ''
-      ).toLowerCase();
-
-      const followers = parseInt(String(
-        profileItem.followersCount || profileItem.followers || 
-        profileItem.follower_count || profileItem.followerscount || 0
-      )) || 0;
-
-      const following = parseInt(String(
-        profileItem.followingCount || profileItem.following || 
-        profileItem.following_count || profileItem.followingcount || 0
-      )) || 0;
-
-      const postsCount = parseInt(String(
-        profileItem.postsCount || profileItem.posts || 
-        profileItem.media_count || profileItem.postscount || latestPosts.length
-      )) || 0;
-      
+      // Build final result
       const result = {
-        username: extractedUsername,
+        username: (profileItem.username || profileItem.ownerUsername || '').toLowerCase(),
         displayName: profileItem.fullName || profileItem.displayName || profileItem.full_name || '',
         bio: profileItem.biography || profileItem.bio || '',
-        followersCount: followers,
-        followingCount: following,
-        postsCount: postsCount,
+        followersCount: parseInt(String(profileItem.followersCount || profileItem.followers || 0)) || 0,
+        followingCount: parseInt(String(profileItem.followingCount || profileItem.following || 0)) || 0,
+        postsCount: parseInt(String(profileItem.postsCount || profileItem.posts || latestPosts.length)) || 0,
         isVerified: Boolean(profileItem.verified || profileItem.isVerified || profileItem.is_verified),
         isPrivate: Boolean(profileItem.private || profileItem.isPrivate || profileItem.is_private),
         profilePicUrl: profileItem.profilePicUrl || profileItem.profilePicture || profileItem.profile_pic_url || '',
@@ -1103,7 +1043,7 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
         engagement
       };
 
-      logger('info', 'Enhanced deep profile validation completed', {
+      logger('info', '✅ Profile validation completed with nested posts support', {
         username: result.username,
         followers: result.followersCount,
         postsFound: result.latestPosts.length,
@@ -1113,29 +1053,18 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
           avgComments: result.engagement.avgComments,
           engagementRate: result.engagement.engagementRate,
           postsAnalyzed: result.engagement.postsAnalyzed
-        } : 'NO_REAL_ENGAGEMENT_DATA',
-        dataExtraction: {
-          usernameSource: profileItem.username ? 'username' : profileItem.ownerUsername ? 'ownerUsername' : 'fallback',
-          followersSource: profileItem.followersCount ? 'followersCount' : profileItem.followers ? 'followers' : 'fallback',
-          postsSource: latestPosts.length > 0 ? 'scraped_posts' : 'profile_count'
-        }
+        } : 'NO_ENGAGEMENT_DATA'
       });
 
       return result;
 
     } else {
-      // Light analysis handling remains the same
+      // Light analysis remains the same
       const profile = Array.isArray(responseData) ? responseData[0] : responseData;
       
       if (!profile || !profile.username) {
         throw new Error('Invalid profile data received');
       }
-
-      logger('info', 'Light profile validation - NO engagement calculation', {
-        username: profile.username,
-        followers: profile.followersCount,
-        posts: profile.postsCount
-      });
 
       return {
         username: profile.username,
@@ -1150,23 +1079,20 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
         externalUrl: profile.externalUrl || profile.website || '',
         isBusinessAccount: Boolean(profile.isBusinessAccount),
         latestPosts: [],
-        engagement: undefined // NO FAKE DATA
+        engagement: undefined
       };
     }
 
   } catch (error: any) {
-    logger('error', 'Enhanced profile validation failed', { 
+    logger('error', 'Profile validation failed', { 
       error: error.message, 
       responseDataType: typeof responseData,
-      responseDataLength: Array.isArray(responseData) ? responseData.length : 'not-array',
-      sampleData: Array.isArray(responseData) && responseData.length > 0 ? {
-        firstItemKeys: Object.keys(responseData[0]),
-        firstItemSample: JSON.stringify(responseData[0]).substring(0, 500)
-      } : 'no-sample-available'
+      responseDataKeys: typeof responseData === 'object' && responseData ? Object.keys(responseData).slice(0, 20) : 'not-object'
     });
-    throw new Error(`Enhanced profile validation failed: ${error.message}`);
+    throw new Error(`Profile validation failed: ${error.message}`);
   }
 }
+
 // ===============================================================================
 // AI SUMMARY GENERATION (NO FAKE DATA)
 // ===============================================================================
