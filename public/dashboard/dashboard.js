@@ -1692,7 +1692,7 @@ async submitAnalysis(event) {
         return;
     }
     
-    // ✅ CHECK: Make sure we have user authentication
+    // Check authentication
     const user = window.OsliraApp?.user;
     const session = window.OsliraApp?.session;
     
@@ -1708,7 +1708,13 @@ async submitAnalysis(event) {
     
     const cleanUsername = profileInput.replace(/^@/, '');
     
-    // Show loading state
+    // ✅ STEP 1: Close modal FIRST and show persistent progress
+    this.closeModal('analysisModal');
+    
+    // ✅ STEP 2: Create persistent progress overlay
+    this.showAnalysisProgress(cleanUsername, analysisType);
+    
+    // ✅ STEP 3: Disable button and store reference
     const submitBtn = event.target.querySelector('button[type="submit"]');
     const originalText = submitBtn?.innerHTML;
     if (submitBtn) {
@@ -1717,18 +1723,14 @@ async submitAnalysis(event) {
     }
     
     try {
-        // Close modal first
-        this.closeModal('analysisModal');
+        // ✅ STEP 4: Update progress - Starting analysis
+        this.updateAnalysisProgress('Initializing AI analysis...', 10);
         
-        // Show processing message
-        window.OsliraApp?.showMessage('Starting analysis... This may take a moment.', 'info');
-        
-        // ✅ FIXED: Include ALL required fields
         const requestBody = {
             username: cleanUsername,
             analysis_type: analysisType,
             business_id: businessId,
-            user_id: user.id,  // ✅ REQUIRED: User ID
+            user_id: user.id,
             platform: 'instagram'
         };
         
@@ -1736,24 +1738,29 @@ async submitAnalysis(event) {
         
         const workerUrl = window.CONFIG?.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
         
+        // ✅ STEP 5: Update progress - Making API call
+        this.updateAnalysisProgress('Contacting analysis service...', 20);
+        
         console.log('🚀 Calling worker API:', `${workerUrl}/v1/analyze`);
         
         const response = await fetch(`${workerUrl}/v1/analyze`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`  // ✅ FIXED: Use session token
+                'Authorization': `Bearer ${session.access_token}`
             },
             body: JSON.stringify(requestBody)
         });
         
         console.log('📡 API Response status:', response.status);
         
+        // ✅ STEP 6: Update progress - Processing response
+        this.updateAnalysisProgress('Processing Instagram data...', 40);
+        
         if (!response.ok) {
             const errorText = await response.text();
             console.error('❌ API Error:', errorText);
             
-            // Try to parse error for better user message
             let errorMessage = `Analysis failed: ${response.status}`;
             try {
                 const errorObj = JSON.parse(errorText);
@@ -1765,21 +1772,35 @@ async submitAnalysis(event) {
             throw new Error(errorMessage);
         }
         
+        // ✅ STEP 7: Update progress - Analyzing results
+        this.updateAnalysisProgress('AI analysis in progress...', 70);
+        
         const result = await response.json();
         console.log('✅ Analysis result:', result);
         
+        // ✅ STEP 8: Update progress - Finalizing
+        this.updateAnalysisProgress('Finalizing results...', 90);
+        
         if (result.success) {
-            const leadUsername = result.profile?.username || cleanUsername;
-            window.OsliraApp?.showMessage(`Analysis completed for @${leadUsername}!`, 'success');
+            const leadUsername = result.data?.profile?.username || cleanUsername;
             
-            // Refresh dashboard to show new lead
-            await this.loadDashboardData();
+            // ✅ STEP 9: Update progress - Complete
+            this.updateAnalysisProgress('Analysis completed successfully!', 100);
+            
+            // ✅ STEP 10: Show success and refresh data
+            setTimeout(async () => {
+                this.hideAnalysisProgress();
+                window.OsliraApp?.showMessage(`Analysis completed for @${leadUsername}!`, 'success');
+                await this.loadDashboardData();
+            }, 1000);
+            
         } else {
             throw new Error(result.error || 'Analysis failed');
         }
         
     } catch (error) {
         console.error('❌ Analysis failed:', error);
+        this.hideAnalysisProgress();
         window.OsliraApp?.showMessage(`Analysis failed: ${error.message}`, 'error');
     } finally {
         // Reset submit button
@@ -1788,6 +1809,130 @@ async submitAnalysis(event) {
             submitBtn.disabled = false;
         }
     }
+}
+
+showAnalysisProgress(username, analysisType) {
+    // Remove any existing progress overlay
+    this.hideAnalysisProgress();
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'analysis-progress-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    
+    const expectedTime = analysisType === 'deep' ? '30-60 seconds' : '15-30 seconds';
+    const credits = analysisType === 'deep' ? '2 credits' : '1 credit';
+    
+    overlay.innerHTML = `
+        <div style="background: white; padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            
+            <!-- Header -->
+            <div style="margin-bottom: 24px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🤖</div>
+                <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 24px;">
+                    AI Analysis in Progress
+                </h3>
+                <p style="margin: 0; color: var(--text-secondary); font-size: 16px;">
+                    Analyzing @${username} with ${analysisType} analysis
+                </p>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div style="margin-bottom: 24px;">
+                <div style="background: #e5e7eb; border-radius: 10px; height: 8px; margin-bottom: 12px; overflow: hidden;">
+                    <div id="analysis-progress-bar" style="background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); height: 100%; width: 10%; border-radius: 10px; transition: width 0.5s ease;"></div>
+                </div>
+                <div id="analysis-progress-text" style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">
+                    Starting analysis...
+                </div>
+            </div>
+            
+            <!-- Info Cards -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 16px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <div style="font-size: 20px; margin-bottom: 8px;">⏱️</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">ESTIMATED TIME</div>
+                    <div style="font-size: 14px; font-weight: 600; color: var(--primary-blue);">${expectedTime}</div>
+                </div>
+                <div style="background: rgba(168, 85, 247, 0.1); padding: 16px; border-radius: 10px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                    <div style="font-size: 20px; margin-bottom: 8px;">💳</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">COST</div>
+                    <div style="font-size: 14px; font-weight: 600; color: var(--secondary-purple);">${credits}</div>
+                </div>
+            </div>
+            
+            <!-- What's Happening -->
+            <div style="background: rgba(16, 185, 129, 0.1); padding: 20px; border-radius: 12px; border-left: 4px solid var(--success); text-align: left;">
+                <h4 style="margin: 0 0 12px 0; color: var(--success); font-size: 14px; font-weight: 700;">
+                    🔄 Analysis Steps:
+                </h4>
+                <ul style="margin: 0; padding-left: 16px; color: var(--text-secondary); font-size: 13px; line-height: 1.6;">
+                    <li>Instagram profile data collection</li>
+                    <li>Engagement metrics calculation</li>
+                    <li>AI-powered business fit analysis</li>
+                    ${analysisType === 'deep' ? '<li>Personalized outreach message generation</li>' : ''}
+                    <li>Quality scoring and insights compilation</li>
+                </ul>
+            </div>
+            
+            <!-- Cancel Button -->
+            <div style="margin-top: 24px;">
+                <button onclick="dashboard.cancelAnalysis()" 
+                        style="background: var(--text-secondary); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                    Cancel Analysis
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    
+    // Prevent body scrolling
+    document.body.style.overflow = 'hidden';
+    
+    console.log('✅ Analysis progress overlay shown');
+}
+
+updateAnalysisProgress(message, percentage) {
+    const progressBar = document.getElementById('analysis-progress-bar');
+    const progressText = document.getElementById('analysis-progress-text');
+    
+    if (progressBar) {
+        progressBar.style.width = `${percentage}%`;
+    }
+    
+    if (progressText) {
+        progressText.textContent = message;
+    }
+    
+    console.log(`⏳ Progress: ${percentage}% - ${message}`);
+}
+
+hideAnalysisProgress() {
+    const overlay = document.getElementById('analysis-progress-overlay');
+    if (overlay) {
+        overlay.remove();
+        document.body.style.overflow = ''; // Restore body scrolling
+        console.log('✅ Analysis progress overlay hidden');
+    }
+}
+
+cancelAnalysis() {
+    // Note: This doesn't actually cancel the server request, just hides the UI
+    this.hideAnalysisProgress();
+    window.OsliraApp?.showMessage('Analysis cancelled', 'info');
+    console.log('⚠️ Analysis cancelled by user');
 }
 
 handleRealtimeAnalysisUpdate(payload) {
