@@ -1767,12 +1767,10 @@ app.post('/v1/analyze', async (c) => {
     const data = normalizeRequest(body);
     const { username, analysis_type, business_id, user_id, profile_url } = data;
     
-    logger('info', 'Enterprise PERFECT analysis request started', { 
+    logger('info', 'Enterprise analysis request started', { 
       username, 
       analysisType: analysis_type, 
-      requestId,
-      noFakeDataPolicy: true,
-      allIssuesFixed: true
+      requestId
     });
     
     const [userResult, business] = await Promise.all([
@@ -1790,23 +1788,16 @@ app.post('/v1/analyze', async (c) => {
       ), 402);
     }
     
-    // SCRAPE PROFILE WITH REAL ENGAGEMENT CALCULATION
+    // SCRAPE PROFILE
     let profileData: ProfileData;
     try {
-      logger('info', 'Starting profile scraping with manual engagement calculation', { username });
+      logger('info', 'Starting profile scraping', { username });
       profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-      logger('info', 'Profile scraped successfully with real engagement data', { 
+      logger('info', 'Profile scraped successfully', { 
         username: profileData.username, 
         followers: profileData.followersCount,
         postsFound: profileData.latestPosts?.length || 0,
-        // 🔧 FIX #3: CONSISTENT NULL SAFETY IN LOGGING
         hasRealEngagement: (profileData.engagement?.postsAnalyzed || 0) > 0,
-        realEngagementStats: profileData.engagement ? {
-          avgLikes: profileData.engagement.avgLikes,
-          avgComments: profileData.engagement.avgComments,
-          engagementRate: profileData.engagement.engagementRate,
-          postsAnalyzed: profileData.engagement.postsAnalyzed
-        } : 'no_real_engagement_data',
         dataQuality: profileData.dataQuality,
         scraperUsed: profileData.scraperUsed
       });
@@ -1835,19 +1826,18 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // AI ANALYSIS USING REAL ENGAGEMENT DATA
+    // AI ANALYSIS
     let analysisResult: AnalysisResult;
     try {
-      logger('info', 'Starting AI analysis with real engagement data integration');
+      logger('info', 'Starting AI analysis');
       analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
-      logger('info', 'AI analysis completed using real data', { 
+      logger('info', 'AI analysis completed', { 
         score: analysisResult.score,
         engagementScore: analysisResult.engagement_score,
         nicheFit: analysisResult.niche_fit,
         confidence: analysisResult.confidence_level,
         hasQuickSummary: !!analysisResult.quick_summary,
-        hasDeepSummary: !!analysisResult.deep_summary,
-        usedRealEngagementData: (profileData.engagement?.postsAnalyzed || 0) > 0
+        hasDeepSummary: !!analysisResult.deep_summary
       });
     } catch (aiError: any) {
       logger('error', 'AI analysis failed', { error: aiError.message });
@@ -1871,7 +1861,7 @@ app.post('/v1/analyze', async (c) => {
       }
     }
 
-    // PREPARE LEAD DATA WITH SUMMARIES
+    // PREPARE LEAD DATA
     const leadData = {
       user_id: user_id,
       business_id: business_id,
@@ -1886,40 +1876,30 @@ app.post('/v1/analyze', async (c) => {
       quick_summary: analysisResult.quick_summary || null
     };
 
-    // PREPARE COMPLETE ANALYSIS DATA WITH ALL MISSING FIELDS
+    // PREPARE ANALYSIS DATA FOR DEEP ANALYSIS
     let analysisData = null;
     if (analysis_type === 'deep') {
       analysisData = {
         user_id: user_id,
         username: profileData.username,
         analysis_type: 'deep',
-        
-        // Core Scores
         score: analysisResult.score || 0,
         engagement_score: analysisResult.engagement_score || 0,
         score_niche_fit: analysisResult.niche_fit || 0,
         score_total: analysisResult.score || 0,
-        niche_fit: analysisResult.niche_fit || 0, // Separate field for database
-        
-        // REAL SCRAPED ENGAGEMENT DATA (CRITICAL FIX)
+        niche_fit: analysisResult.niche_fit || 0,
         avg_likes: profileData.engagement?.avgLikes || 0,
         avg_comments: profileData.engagement?.avgComments || 0,
         engagement_rate: profileData.engagement?.engagementRate || 0,
-        
-        // AI Analysis Results
         audience_quality: analysisResult.audience_quality || 'Unknown',
         engagement_insights: analysisResult.engagement_insights || 'No insights available',
         selling_points: Array.isArray(analysisResult.selling_points) ? 
           analysisResult.selling_points : 
           (analysisResult.selling_points ? [analysisResult.selling_points] : null),
-        
-        // MISSING FIELDS (NOW ADDED)
         reasons: Array.isArray(analysisResult.reasons) ? analysisResult.reasons : 
           (Array.isArray(analysisResult.selling_points) ? analysisResult.selling_points : null),
-        
         latest_posts: (profileData.latestPosts?.length || 0) > 0 ? 
           JSON.stringify(profileData.latestPosts.slice(0, 12)) : null,
-        
         engagement_data: profileData.engagement ? JSON.stringify({
           avgLikes: profileData.engagement.avgLikes,
           avgComments: profileData.engagement.avgComments,
@@ -1936,7 +1916,6 @@ app.post('/v1/analyze', async (c) => {
           scraperUsed: profileData.scraperUsed,
           estimatedData: false
         }),
-        
         analysis_data: JSON.stringify({
           confidence_level: analysisResult.confidence_level || calculateConfidenceLevel(profileData, analysis_type),
           scraper_used: profileData.scraperUsed,
@@ -1950,34 +1929,18 @@ app.post('/v1/analyze', async (c) => {
           analysis_timestamp: new Date().toISOString(),
           ai_model_used: 'gpt-4o'
         }),
-        
-        // Messages and summaries
         outreach_message: outreachMessage || null,
         deep_summary: analysisResult.deep_summary || null,
-        
         created_at: new Date().toISOString()
       };
-
-      logger('info', 'Complete analysis data prepared with all missing fields', {
-        hasEngagementData: !!analysisData.engagement_data,
-        hasAnalysisData: !!analysisData.analysis_data,
-        hasLatestPosts: !!analysisData.latest_posts,
-        hasReasons: !!analysisData.reasons,
-        nicheFit: analysisData.niche_fit,
-        realEngagementValues: {
-          avgLikes: analysisData.avg_likes,
-          avgComments: analysisData.avg_comments,
-          engagementRate: analysisData.engagement_rate
-        }
-      });
     }
 
-    // SAVE TO DATABASE WITH COMPLETE FIELD MAPPING
+    // SAVE TO DATABASE
     let lead_id: string;
     try {
-      logger('info', 'Saving complete data to database with all fields');
+      logger('info', 'Saving data to database');
       lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
-      logger('info', 'Database save successful with complete field mapping', { lead_id });
+      logger('info', 'Database save successful', { lead_id });
     } catch (saveError: any) {
       logger('error', 'Database save failed', { error: saveError.message });
       return c.json(createStandardResponse(
@@ -2013,7 +1976,7 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // PREPARE RESPONSE WITH REAL DATA
+    // PREPARE RESPONSE
     const responseData = {
       lead_id,
       profile: {
@@ -2058,21 +2021,18 @@ app.post('/v1/analyze', async (c) => {
       }
     };
 
-    logger('info', 'Enterprise PERFECT analysis completed successfully with real data', { 
+    logger('info', 'Analysis completed successfully', { 
       lead_id, 
       username: profileData.username, 
       score: analysisResult.score,
       confidence: analysisResult.confidence_level,
-      dataQuality: profileData.dataQuality,
-      usedRealEngagementData: (profileData.engagement?.postsAnalyzed || 0) > 0,
-      noFakeData: true,
-      allIssuesFixed: true
+      dataQuality: profileData.dataQuality
     });
 
     return c.json(createStandardResponse(true, responseData, undefined, requestId));
 
   } catch (error: any) {
-    logger('error', 'Enterprise PERFECT analysis request failed', { error: error.message, requestId });
+    logger('error', 'Analysis request failed', { error: error.message, requestId });
     return c.json(createStandardResponse(
       false, 
       undefined, 
@@ -2083,7 +2043,7 @@ app.post('/v1/analyze', async (c) => {
 });
 
 // ===============================================================================
-// BULK ANALYSIS ENDPOINT - ENTERPRISE PERFECT VERSION
+// FINAL BULK ANALYZE ENDPOINT - Replace your existing /v1/bulk-analyze endpoint
 // ===============================================================================
 
 app.post('/v1/bulk-analyze', async (c) => {
@@ -2111,12 +2071,10 @@ app.post('/v1/bulk-analyze', async (c) => {
       ), 400);
     }
 
-    logger('info', 'Enterprise PERFECT bulk analysis started', { 
+    logger('info', 'Bulk analysis started', { 
       profileCount: profiles.length, 
       analysisType: analysis_type, 
-      requestId,
-      noFakeDataPolicy: true,
-      allIssuesFixed: true
+      requestId
     });
 
     const validatedProfiles = profiles.map(profileUrl => {
@@ -2149,7 +2107,7 @@ app.post('/v1/bulk-analyze', async (c) => {
 
     for (const profile of validatedProfiles) {
       try {
-        logger('info', 'Processing bulk profile with real engagement calculation', { username: profile.username });
+        logger('info', 'Processing bulk profile', { username: profile.username });
 
         const profileData = await scrapeInstagramProfile(profile.username, analysis_type, c.env);
         const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
@@ -2240,11 +2198,10 @@ app.post('/v1/bulk-analyze', async (c) => {
         successful++;
         creditsUsed += costPerProfile;
 
-        logger('info', 'Enterprise PERFECT bulk profile processed successfully', { 
+        logger('info', 'Bulk profile processed successfully', { 
           username: profile.username, 
           score: analysisResult.score,
-          dataQuality: profileData.dataQuality,
-          realEngagementUsed: (profileData.engagement?.postsAnalyzed || 0) > 0
+          dataQuality: profileData.dataQuality
         });
 
       } catch (error: any) {
@@ -2269,7 +2226,7 @@ app.post('/v1/bulk-analyze', async (c) => {
           user_id,
           creditsUsed,
           userResult.credits - creditsUsed,
-          `Enterprise PERFECT bulk ${analysis_type} analysis (${successful} profiles)`,
+          `Bulk ${analysis_type} analysis (${successful} profiles)`,
           'use',
           c.env
         );
@@ -2300,18 +2257,17 @@ app.post('/v1/bulk-analyze', async (c) => {
       }
     };
 
-    logger('info', 'Enterprise PERFECT bulk analysis completed', { 
+    logger('info', 'Bulk analysis completed', { 
       total: validatedProfiles.length, 
       successful, 
       failed, 
-      creditsUsed,
-      realEngagementProfiles: responseData.summary.real_engagement_profiles
+      creditsUsed
     });
 
     return c.json(createStandardResponse(true, responseData, undefined, requestId));
 
   } catch (error: any) {
-    logger('error', 'Enterprise PERFECT bulk analysis failed', { error: error.message, requestId });
+    logger('error', 'Bulk analysis failed', { error: error.message, requestId });
     return c.json(createStandardResponse(
       false, 
       undefined, 
