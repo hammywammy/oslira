@@ -3579,10 +3579,65 @@ getDefaultBusinessProfile() {
 
 class UnifiedAnalysisQueue {
     constructor() {
-        this.activeAnalyses = new Map(); // analysisId -> analysisInfo
-        this.maxVisible = 5; // Max items before scrolling
-        this.autoHideDelay = 3000; // 3 seconds
+        this.activeAnalyses = new Map();
+        this.maxVisible = 5;
+        this.autoHideDelay = 3000;
         this.setupQueueContainer();
+    }
+
+    // Enhanced startSingleAnalysis with realistic progress
+    async startSingleAnalysis(username, analysisType, businessId, requestData) {
+        const analysisId = this.addAnalysis(username, analysisType, businessId);
+        
+        try {
+            // Start realistic progress simulation
+            this.simulateProgress(analysisId, analysisType);
+            
+            // Call actual API
+            const result = await this.callAnalysisAPI(requestData);
+            
+            if (result.success) {
+                this.completeAnalysis(analysisId, true, 'Analysis completed!');
+                return { success: true, analysisId, result };
+            } else {
+                this.completeAnalysis(analysisId, false, result.error || 'Analysis failed');
+                return { success: false, analysisId, error: result.error };
+            }
+
+        } catch (error) {
+            this.completeAnalysis(analysisId, false, error.message);
+            return { success: false, analysisId, error: error.message };
+        }
+    }
+
+    // Realistic progress simulation
+    simulateProgress(analysisId, analysisType) {
+        const analysis = this.activeAnalyses.get(analysisId);
+        if (!analysis) return;
+
+        const steps = [
+            { progress: 10, message: 'Connecting to Instagram...', delay: 500 },
+            { progress: 30, message: 'Scraping profile data...', delay: 2000 },
+            { progress: 60, message: 'AI analyzing engagement...', delay: 3000 },
+            { progress: 85, message: analysisType === 'deep' ? 'Generating outreach message...' : 'Finalizing results...', delay: 2000 },
+            { progress: 95, message: 'Saving to database...', delay: 1000 }
+        ];
+
+        let currentStep = 0;
+        const updateProgress = () => {
+            if (currentStep < steps.length && analysis.status === 'analyzing') {
+                const step = steps[currentStep];
+                this.updateAnalysis(analysisId, {
+                    progress: step.progress,
+                    message: step.message
+                });
+                currentStep++;
+                setTimeout(updateProgress, step.delay);
+            }
+        };
+
+        // Start after initial delay
+        setTimeout(updateProgress, 100);
     }
 
     // ===============================================================================
