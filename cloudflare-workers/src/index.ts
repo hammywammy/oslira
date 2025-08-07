@@ -1272,7 +1272,6 @@ Respond with JSON only.`;
 
 function buildDeepEvaluatorPrompt(profile: ProfileData, business: BusinessProfile): string {
   const e = profile.engagement;
-  // 🔧 FIX #3: CONSISTENT NULL SAFETY WITH PROPER OPTIONAL CHAINING
   const hasRealData = (e?.postsAnalyzed || 0) > 0;
   
   const engagementSection = hasRealData ? `
@@ -1284,13 +1283,22 @@ REAL ENGAGEMENT DATA (calculated from ${e?.postsAnalyzed} scraped posts):
 - Calculated Engagement Rate: ${e?.engagementRate}%
 - Total Average Engagement: ${((e?.avgLikes || 0) + (e?.avgComments || 0)).toLocaleString()}
 
-USE THESE ACTUAL CALCULATED NUMBERS when evaluating engagement. Do NOT estimate.` : `
+AUDIENCE QUALITY FACTORS TO EVALUATE:
+- Engagement consistency across posts
+- Comment-to-like ratio (higher ratio = more engaged audience)
+- Engagement rate vs. follower count benchmarks
+- Post frequency and audience retention
+- Authentic vs. bot-like engagement patterns
+
+USE THESE ACTUAL CALCULATED NUMBERS when evaluating engagement.` : `
 NO REAL ENGAGEMENT DATA AVAILABLE:
 - Followers: ${profile.followersCount.toLocaleString()}
 - Posts Analyzed: 0
 - Reason: Profile scraping failed or private account
 
-Engagement analysis must be estimated using follower benchmarks only. Be conservative in scoring and mark confidence as lower.`;
+AUDIENCE QUALITY ASSESSMENT MUST BE CONSERVATIVE:
+- Base rating on verification status, follower count tier, and account indicators
+- Mark confidence as lower due to missing engagement data`;
 
   const recentPosts = profile.latestPosts?.slice(0, 5).map((p, i) => {
     return `Post ${i + 1}: "${p.caption?.slice(0, 120) || 'No caption'}..." (${p.likesCount?.toLocaleString() || 0} likes, ${p.commentsCount?.toLocaleString() || 0} comments)`;
@@ -1312,35 +1320,28 @@ RECENT POST CONTENT SAMPLE:
 ${recentPosts}
 
 BUSINESS CONTEXT:
-${business.name} operates in the ${business.industry} industry. Target audience: ${business.target_audience}. Value proposition: ${business.value_proposition}. Your evaluation should consider alignment with this audience and potential for strategic collaboration.
+${business.name} operates in the ${business.industry} industry. Target audience: ${business.target_audience}. Value proposition: ${business.value_proposition}.
+
+AUDIENCE QUALITY RATING SYSTEM:
+- HIGH (80-100): Engagement rate above industry benchmark, consistent post performance, high comment-to-like ratio, authentic interactions, active community
+- MEDIUM (50-79): Decent engagement rate, moderate consistency, some authentic interactions, growing audience
+- LOW (0-49): Below-average engagement, inconsistent performance, potential bot followers, low authentic interaction
 
 SCORING METHODOLOGY:
-- Use actual calculated engagement rate vs industry benchmarks:
-  • 1K–10K followers: 3–8% = good, >8% = excellent
-  • 10K–100K followers: 2–5% = good, >5% = excellent  
-  • 100K–1M followers: 1–3% = good, >3% = excellent
-  • 1M+ followers: 0.5–2% = good, >2% = excellent
-- engagement_score: Rate the calculated engagement rate against benchmarks for follower tier
+- Use actual calculated engagement rate vs industry benchmarks for follower tier
+- engagement_score: Rate the calculated engagement rate against benchmarks
 - niche_fit: Analyze content themes and audience alignment with business target market
-- audience_quality: Assess based on engagement consistency and authenticity indicators
-- Score range must vary realistically (e.g. 67, 78, 91) - avoid round numbers like 70, 80, 90
-- Lower scores and note reduced confidence if data quality is limited or estimated
-
-EVALUATION WEIGHTS:
-- Business relevance and partnership potential: 40%
-- Audience quality and engagement authenticity: 30%
-- Content alignment with business goals: 20%
-- Influence and reach effectiveness: 10%
+- audience_quality: Rate based on engagement patterns, authenticity indicators, and interaction quality
 
 RETURN ONLY THIS JSON:
 {
   "score": <1–100 overall collaboration potential>,
   "engagement_score": <1–100 based on calculated engagement rate vs benchmarks>,
   "niche_fit": <1–100 content/audience alignment with business>,
-  "audience_quality": "<High/Medium/Low based on engagement patterns>",
-  "engagement_insights": "<When real data: Reference actual avg likes/comments and calculated rate vs benchmark. When estimated: Clearly state 'estimated based on follower count only' and note lower confidence>",
-  "selling_points": ["<specific collaboration advantage>", "<unique value proposition>", "<audience benefit>", "<content synergy>"],
-  "reasons": ["<why this profile is/isn't ideal for collaboration>", "<specific data-driven justification>", "<business alignment assessment>"]
+  "audience_quality": "<High/Medium/Low>",
+  "engagement_insights": "AUDIENCE QUALITY ANALYSIS: [High/Medium/Low] - [Comprehensive explanation of the rating including: engagement rate performance vs industry benchmarks, comment-to-like ratio analysis, consistency across posts, signs of authentic vs artificial engagement, follower quality indicators, and overall audience engagement patterns]. ${hasRealData ? 'REAL DATA ANALYSIS: This assessment uses actual scraped engagement metrics from ' + e?.postsAnalyzed + ' recent posts.' : 'ESTIMATED ANALYSIS: Limited data available - assessment based on profile indicators only with lower confidence.'}",
+  "selling_points": ["<specific collaboration advantage based on audience quality findings>"],
+  "reasons": ["<why this profile is/isn't ideal for collaboration with detailed audience analysis>"]
 }
 
 Respond with JSON only. No explanation.`;
