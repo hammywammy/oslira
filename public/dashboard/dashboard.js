@@ -917,93 +917,102 @@ buildLeadDetailsHTML(lead, analysisData = null) {
         `;
     }
 
-    buildAdvancedMetricsSection(analysisData) {
-        const engagementScore = analysisData.engagement_score || 0;
-        const nicheFitScore = analysisData.score_niche_fit || 0;
-        const totalScore = analysisData.score_total || 0;
+  buildAdvancedMetricsSection(analysisData) {
+    // ✅ FIXED: Use correct column names from lead_analyses table
+    const engagementScore = analysisData.engagement_score || 0;
+    const nicheFitScore = analysisData.niche_fit || 0;  // ✅ CHANGED: score_niche_fit → niche_fit
+    const totalScore = analysisData.score || 0;         // ✅ CHANGED: score_total → score
 
-        return `
-            <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
-                <h4 style="color: var(--text-primary); margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
-                    📊 Advanced AI Scoring
-                    <span style="background: var(--primary-blue); color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">
-                        GPT-4o Powered
-                    </span>
-                </h4>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 24px;">
-                    <!-- Engagement Score -->
-                    <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(34, 197, 94, 0.05)); padding: 20px; border-radius: 12px; border-left: 4px solid var(--success); position: relative; overflow: hidden;">
-                        <div style="position: absolute; top: -10px; right: -10px; font-size: 60px; opacity: 0.1;">📈</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div>
-                                <div style="font-size: 12px; color: var(--success); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
-                                    Engagement Score
-                                </div>
-                                <div style="font-size: 28px; font-weight: 800; color: var(--success);">
-                                    ${engagementScore}
-                                </div>
+    console.log('📊 Advanced metrics data:', {
+        engagement_score: engagementScore,
+        niche_fit: nicheFitScore,
+        score: totalScore,
+        raw_analysisData: analysisData
+    });
+
+    return `
+        <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+            <h4 style="color: var(--text-primary); margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+                📊 Advanced AI Scoring
+                <span style="background: var(--primary-blue); color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">
+                    GPT-4o Powered
+                </span>
+            </h4>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 24px;">
+                <!-- Engagement Score -->
+                <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(34, 197, 94, 0.05)); padding: 20px; border-radius: 12px; border-left: 4px solid var(--success); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -10px; right: -10px; font-size: 60px; opacity: 0.1;">📈</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div>
+                            <div style="font-size: 12px; color: var(--success); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
+                                Engagement Score
                             </div>
-                            <div style="font-size: 24px;">📈</div>
+                            <div style="font-size: 28px; font-weight: 800; color: var(--success);">
+                                ${engagementScore}
+                            </div>
                         </div>
-                        <div style="width: 100%; background: rgba(16, 185, 129, 0.2); border-radius: 10px; height: 8px; margin-bottom: 8px;">
-                            <div style="width: ${engagementScore}%; background: var(--success); border-radius: 10px; height: 100%; transition: width 0.3s ease;"></div>
-                        </div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">
-                            Based on post interactions and audience quality metrics
-                        </div>
+                        <div style="font-size: 24px;">📈</div>
                     </div>
-                    
-                    <!-- Niche Fit Score -->
-                    <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05)); padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-blue); position: relative; overflow: hidden;">
-                        <div style="position: absolute; top: -10px; right: -10px; font-size: 60px; opacity: 0.1;">🎯</div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div>
-                                <div style="font-size: 12px; color: var(--primary-blue); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
-                                    Niche‑Fit Score
-                                </div>
-                                <div style="font-size: 28px; font-weight: 800; color: var(--primary-blue);">
-                                    ${nicheFitScore}
-                                </div>
-                            </div>
-                            <div style="font-size: 24px;">🎯</div>
-                        </div>
-                        <div style="width: 100%; background: rgba(59, 130, 246, 0.2); border-radius: 10px; height: 8px; margin-bottom: 8px;">
-                            <div style="width: ${nicheFitScore}%; background: var(--primary-blue); border-radius: 10px; height: 100%; transition: width 0.3s ease;"></div>
-                        </div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">
-                            How well this lead matches your business profile
-                        </div>
+                    <div style="width: 100%; background: rgba(16, 185, 129, 0.2); border-radius: 10px; height: 8px; margin-bottom: 8px;">
+                        <div style="width: ${engagementScore}%; background: var(--success); border-radius: 10px; height: 100%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                        Based on post interactions and audience quality metrics
                     </div>
                 </div>
                 
-                <!-- AI Composite Score -->
-                <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.05)); padding: 24px; border-radius: 12px; border-left: 4px solid var(--secondary-purple); position: relative; overflow: hidden;">
-                    <div style="position: absolute; top: -10px; right: -10px; font-size: 80px; opacity: 0.1;">🤖</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                <!-- Niche Fit Score -->
+                <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05)); padding: 20px; border-radius: 12px; border-left: 4px solid var(--primary-blue); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -10px; right: -10px; font-size: 60px; opacity: 0.1;">🎯</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <div>
-                            <div style="font-size: 14px; color: var(--secondary-purple); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
-                                AI Composite Score
+                            <div style="font-size: 12px; color: var(--primary-blue); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
+                                Niche‑Fit Score
                             </div>
-                            <div style="font-size: 36px; font-weight: 800; color: var(--secondary-purple); margin-bottom: 8px;">
-                                ${totalScore}/100
-                            </div>
-                            <div style="font-size: 12px; color: var(--text-secondary);">
-                                Overall lead quality combining all AI analysis factors
+                            <div style="font-size: 28px; font-weight: 800; color: var(--primary-blue);">
+                                ${nicheFitScore}
                             </div>
                         </div>
-                        <div style="text-align: center;">
-                            <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(var(--secondary-purple) ${totalScore * 3.6}deg, rgba(168, 85, 247, 0.2) 0deg); display: flex; align-items: center; justify-content: center; position: relative;">
-                                <div style="width: 60px; height: 60px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: var(--secondary-purple);">
-                                    ${totalScore}%
-                                </div>
+                        <div style="font-size: 24px;">🎯</div>
+                    </div>
+                    <div style="width: 100%; background: rgba(59, 130, 246, 0.2); border-radius: 10px; height: 8px; margin-bottom: 8px;">
+                        <div style="width: ${nicheFitScore}%; background: var(--primary-blue); border-radius: 10px; height: 100%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                        How well this lead matches your business profile
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Composite Score -->
+            <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(147, 51, 234, 0.05)); padding: 24px; border-radius: 12px; border-left: 4px solid var(--secondary-purple); position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -10px; right: -10px; font-size: 80px; opacity: 0.1;">🤖</div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 14px; color: var(--secondary-purple); font-weight: 600; text-transform: uppercase; margin-bottom: 4px;">
+                            AI Composite Score
+                        </div>
+                        <div style="font-size: 36px; font-weight: 800; color: var(--secondary-purple); margin-bottom: 8px;">
+                            ${totalScore}/100
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">
+                            Overall lead quality combining all AI analysis factors
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="width: 80px; height: 80px; border-radius: 50%; background: conic-gradient(var(--secondary-purple) ${totalScore * 3.6}deg, rgba(168, 85, 247, 0.2) 0deg); display: flex; align-items: center; justify-content: center; position: relative;">
+                            <div style="width: 60px; height: 60px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; color: var(--secondary-purple);">
+                                ${totalScore}%
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        `;
-    }
+        </div>
+    `;
+}
+
 
     buildEngagementSection(analysisData) {
         const avgLikes = analysisData.avg_likes || 0;
@@ -1444,46 +1453,45 @@ buildLeadDetailsHTML(lead, analysisData = null) {
     }
 
     generateQualityAssessment(analysisData) {
-        const engagementScore = analysisData.engagement_score || 0;
-        const totalScore = analysisData.score_total || 0;
-        
-        if (totalScore >= 80) {
-            return `<strong>Exceptional Lead Quality:</strong> This profile demonstrates outstanding engagement patterns, authentic audience interaction, and strong alignment with business objectives. High conversion probability with immediate outreach recommended.`;
-        } else if (totalScore >= 60) {
-            return `<strong>Good Lead Potential:</strong> Solid engagement metrics and reasonable audience quality indicate good collaboration potential. Consider for priority outreach with personalized approach.`;
-        } else {
-            return `<strong>Moderate Lead Quality:</strong> Basic engagement levels with room for improvement. Suitable for nurturing campaigns or strategic long-term relationship building.`;
-        }
+    const engagementScore = analysisData.engagement_score || 0;
+    const totalScore = analysisData.score || 0;  // ✅ CHANGED: score_total → score
+    
+    if (totalScore >= 80) {
+        return `<strong>Exceptional Lead Quality:</strong> This profile demonstrates outstanding engagement patterns, authentic audience interaction, and strong alignment with business objectives. High conversion probability with immediate outreach recommended.`;
+    } else if (totalScore >= 60) {
+        return `<strong>Good Lead Potential:</strong> Solid engagement metrics and reasonable audience quality indicate good collaboration potential. Consider for priority outreach with personalized approach.`;
+    } else {
+        return `<strong>Moderate Lead Quality:</strong> Basic engagement levels with room for improvement. Suitable for nurturing campaigns or strategic long-term relationship building.`;
     }
+}
 
-    generateRelevanceAssessment(analysisData) {
-        const nicheFitScore = analysisData.score_niche_fit || 0;
-        
-        if (nicheFitScore >= 80) {
-            return `<strong>Perfect Business Fit:</strong> This lead's content, audience, and brand alignment match your business profile exceptionally well. Prime candidate for partnership or collaboration.`;
-        } else if (nicheFitScore >= 60) {
-            return `<strong>Good Business Alignment:</strong> Strong overlap in target audience and content themes. Good potential for mutually beneficial partnerships with proper approach.`;
-        } else {
-            return `<strong>Moderate Business Fit:</strong> Some alignment present but may require more strategic approach to establish relevance and value proposition.`;
-        }
+generateRelevanceAssessment(analysisData) {
+    const nicheFitScore = analysisData.niche_fit || 0;  // ✅ CHANGED: score_niche_fit → niche_fit
+    
+    if (nicheFitScore >= 80) {
+        return `<strong>Perfect Business Fit:</strong> This lead's content, audience, and brand alignment match your business profile exceptionally well. Prime candidate for partnership or collaboration.`;
+    } else if (nicheFitScore >= 60) {
+        return `<strong>Good Business Alignment:</strong> Strong overlap in target audience and content themes. Good potential for mutually beneficial partnerships with proper approach.`;
+    } else {
+        return `<strong>Moderate Business Fit:</strong> Some alignment present but may require more strategic approach to establish relevance and value proposition.`;
     }
+}
 
-    generateAIRecommendation(analysisData) {
-        const totalScore = analysisData.score_total || 0;
-        const engagementScore = analysisData.engagement_score || 0;
-        const nicheFitScore = analysisData.score_niche_fit || 0;
-        
-        if (totalScore >= 80 && engagementScore >= 75) {
-            return `<strong>🚀 Immediate Action Recommended:</strong> This is a high-value lead with excellent engagement and strong business fit. Prioritize outreach within 24-48 hours using the personalized message above. Consider offering premium collaboration opportunities or exclusive partnerships.`;
-        } else if (totalScore >= 60 && nicheFitScore >= 70) {
-            return `<strong>📈 Qualified Lead - Schedule Outreach:</strong> Good potential for conversion with strategic approach. Schedule outreach within the next week. Focus on value proposition and consider starting with smaller collaboration to build relationship and trust.`;
-        } else if (engagementScore >= 60) {
-            return `<strong>💬 Engagement-First Strategy:</strong> Strong audience engagement indicates influence potential. Start with organic engagement on their content, build relationship through comments and interactions before direct outreach.`;
-        } else {
-            return `<strong>🌱 Long-term Nurturing Approach:</strong> Consider adding to nurturing sequence for future opportunities. Monitor their content growth and engagement improvements. Focus on building organic relationship through value-first interactions.`;
-        }
+generateAIRecommendation(analysisData) {
+    const totalScore = analysisData.score || 0;         // ✅ CHANGED: score_total → score
+    const engagementScore = analysisData.engagement_score || 0;
+    const nicheFitScore = analysisData.niche_fit || 0;  // ✅ CHANGED: score_niche_fit → niche_fit
+    
+    if (totalScore >= 80 && engagementScore >= 75) {
+        return `<strong>🚀 Immediate Action Recommended:</strong> This is a high-value lead with excellent engagement and strong business fit. Prioritize outreach within 24-48 hours using the personalized message above. Consider offering premium collaboration opportunities or exclusive partnerships.`;
+    } else if (totalScore >= 60 && nicheFitScore >= 70) {
+        return `<strong>📈 Qualified Lead - Schedule Outreach:</strong> Good potential for conversion with strategic approach. Schedule outreach within the next week. Focus on value proposition and consider starting with smaller collaboration to build relationship and trust.`;
+    } else if (engagementScore >= 60) {
+        return `<strong>💬 Engagement-First Strategy:</strong> Strong audience engagement indicates influence potential. Start with organic engagement on their content, build relationship through comments and interactions before direct outreach.`;
+    } else {
+        return `<strong>🌱 Long-term Nurturing Approach:</strong> Consider adding to nurturing sequence for future opportunities. Monitor their content growth and engagement improvements. Focus on building organic relationship through value-first interactions.`;
     }
-
+}
     calculateMessageLength(message) {
         return message ? message.length : 0;
     }
