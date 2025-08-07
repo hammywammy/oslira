@@ -781,33 +781,46 @@ async function scrapeInstagramProfile(username: string, analysisType: AnalysisTy
 
 function validateProfileData(responseData: any, analysisType?: string): ProfileData {
   try {
-    logger('info', 'Validating profile data with manual engagement calculation', { 
+    logger('info', 'Starting enhanced profile data validation with engagement calculation debugging', { 
       analysisType, 
       isArray: Array.isArray(responseData),
-      length: Array.isArray(responseData) ? responseData.length : 'not-array'
+      length: Array.isArray(responseData) ? responseData.length : 'not-array',
+      dataType: typeof responseData
     });
 
     if (analysisType === 'deep' && Array.isArray(responseData)) {
+      // Enhanced profile detection with multiple fallback strategies
       const profileItem = responseData.find(item => 
         item.username || item.ownerUsername || 
-        (item.followersCount !== undefined && item.postsCount !== undefined)
+        (item.followersCount !== undefined && item.postsCount !== undefined) ||
+        (item.followers !== undefined) ||
+        (item.fullName && item.biography)
       );
       
-      const posts = responseData.filter(item => 
-        item.shortCode && 
-        (item.likesCount !== undefined || item.likes !== undefined) &&
-        item.timestamp
-      );
+      // Enhanced post detection with multiple data format support
+      const posts = responseData.filter(item => {
+        // Check for various post indicators
+        const hasShortCode = item.shortCode || item.code || item.pk;
+        const hasEngagement = item.likesCount !== undefined || item.likes !== undefined || 
+                             item.like_count !== undefined || item.commentCount !== undefined ||
+                             item.commentsCount !== undefined || item.comments !== undefined ||
+                             item.comment_count !== undefined;
+        const hasTimestamp = item.timestamp || item.taken_at || item.created_time;
+        
+        return hasShortCode && hasEngagement && hasTimestamp;
+      });
       
-      logger('info', 'Deep data validation', {
+      logger('info', 'Enhanced deep data validation with comprehensive parsing', {
         totalItems: responseData.length,
         profileFound: !!profileItem,
         postsFound: posts.length,
-        samplePost: posts[0] ? {
-          shortCode: posts[0].shortCode,
-          likes: posts[0].likesCount || posts[0].likes,
-          comments: posts[0].commentsCount || posts[0].comments,
-          timestamp: posts[0].timestamp
+        profileItemKeys: profileItem ? Object.keys(profileItem).slice(0, 20) : [],
+        samplePostKeys: posts[0] ? Object.keys(posts[0]).slice(0, 20) : [],
+        samplePostStructure: posts[0] ? {
+          shortCode: posts[0].shortCode || posts[0].code || posts[0].pk,
+          likes: posts[0].likesCount || posts[0].likes || posts[0].like_count,
+          comments: posts[0].commentsCount || posts[0].comments || posts[0].comment_count,
+          timestamp: posts[0].timestamp || posts[0].taken_at || posts[0].created_time
         } : null
       });
 
@@ -817,136 +830,301 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
 
       let engagement: EngagementData | undefined;
       if (posts.length > 0) {
-        logger('info', 'Starting MANUAL ENGAGEMENT CALCULATION as specified');
+        logger('info', 'Starting ENHANCED MANUAL ENGAGEMENT CALCULATION with robust data parsing');
         
-        // STEP 1: Filter valid posts with engagement data
+        // ENHANCED STEP 1: Filter valid posts with comprehensive data extraction
         const validPosts = posts.filter(post => {
-          const likes = parseInt(post.likesCount?.toString() || post.likes?.toString() || '0') || 0;
-          const comments = parseInt(post.commentsCount?.toString() || post.comments?.toString() || '0') || 0;
-          return likes > 0 || comments > 0;
+          // Try multiple possible field names for likes
+          const likes = parseInt(String(
+            post.likesCount || post.likes || post.like_count || 
+            post.likeCount || post.likescount || 0
+          )) || 0;
+          
+          // Try multiple possible field names for comments
+          const comments = parseInt(String(
+            post.commentsCount || post.comments || post.comment_count || 
+            post.commentCount || post.commentscount || post.commentCounts || 0
+          )) || 0;
+          
+          const isValid = likes > 0 || comments > 0;
+          
+          if (!isValid) {
+            logger('warn', 'Post filtered out - no engagement data', {
+              shortCode: post.shortCode || post.code,
+              rawLikesData: {
+                likesCount: post.likesCount,
+                likes: post.likes,
+                like_count: post.like_count,
+                likeCount: post.likeCount
+              },
+              rawCommentsData: {
+                commentsCount: post.commentsCount,
+                comments: post.comments,
+                comment_count: post.comment_count,
+                commentCount: post.commentCount
+              },
+              parsedLikes: likes,
+              parsedComments: comments
+            });
+          }
+          
+          return isValid;
         });
 
-        logger('info', 'Manual calculation - Step 1: Filter valid posts', {
+        logger('info', 'Enhanced manual calculation - Step 1: Filter valid posts with debugging', {
           totalPosts: posts.length,
           validPosts: validPosts.length,
-          filteredOut: posts.length - validPosts.length
+          filteredOut: posts.length - validPosts.length,
+          validPostsPreview: validPosts.slice(0, 3).map(post => ({
+            shortCode: post.shortCode || post.code,
+            likes: parseInt(String(post.likesCount || post.likes || post.like_count || 0)) || 0,
+            comments: parseInt(String(post.commentsCount || post.comments || post.comment_count || 0)) || 0
+          })),
+          invalidPostsPreview: posts.filter(post => {
+            const likes = parseInt(String(post.likesCount || post.likes || post.like_count || 0)) || 0;
+            const comments = parseInt(String(post.commentsCount || post.comments || post.comment_count || 0)) || 0;
+            return !(likes > 0 || comments > 0);
+          }).slice(0, 2).map(post => ({
+            shortCode: post.shortCode || post.code,
+            rawData: {
+              likesCount: post.likesCount,
+              likes: post.likes,
+              commentsCount: post.commentsCount,
+              comments: post.comments,
+              allKeys: Object.keys(post).slice(0, 15)
+            }
+          }))
         });
 
         if (validPosts.length > 0) {
-          // STEP 2: Calculate totals from individual posts
-          const totalLikes = validPosts.reduce((sum, post) => {
-            const likes = parseInt(post.likesCount?.toString() || post.likes?.toString() || '0') || 0;
-            return sum + likes;
-          }, 0);
-          
-          const totalComments = validPosts.reduce((sum, post) => {
-            const comments = parseInt(post.commentsCount?.toString() || post.comments?.toString() || '0') || 0;
-            return sum + comments;
-          }, 0);
+          // ENHANCED STEP 2: Calculate totals with robust data extraction
+          let totalLikes = 0;
+          let totalComments = 0;
+          const likesBreakdown = [];
+          const commentsBreakdown = [];
 
-          logger('info', 'Manual calculation - Step 2: Calculate totals', {
+          for (const post of validPosts) {
+            // Enhanced likes extraction
+            const likes = parseInt(String(
+              post.likesCount || post.likes || post.like_count || 
+              post.likeCount || post.likescount || 0
+            )) || 0;
+            
+            // Enhanced comments extraction  
+            const comments = parseInt(String(
+              post.commentsCount || post.comments || post.comment_count || 
+              post.commentCount || post.commentscount || post.commentCounts || 0
+            )) || 0;
+            
+            totalLikes += likes;
+            totalComments += comments;
+            
+            likesBreakdown.push({
+              shortCode: post.shortCode || post.code,
+              likes,
+              rawLikesData: {
+                likesCount: post.likesCount,
+                likes: post.likes,
+                like_count: post.like_count
+              }
+            });
+            
+            commentsBreakdown.push({
+              shortCode: post.shortCode || post.code,
+              comments,
+              rawCommentsData: {
+                commentsCount: post.commentsCount,
+                comments: post.comments,
+                comment_count: post.comment_count
+              }
+            });
+          }
+
+          logger('info', 'Enhanced manual calculation - Step 2: Calculate totals with detailed breakdown', {
             totalLikes,
             totalComments,
-            validPosts: validPosts.length
+            validPostsCount: validPosts.length,
+            averageLikesCalculation: `${totalLikes} / ${validPosts.length} = ${Math.round(totalLikes / validPosts.length)}`,
+            averageCommentsCalculation: `${totalComments} / ${validPosts.length} = ${Math.round(totalComments / validPosts.length)}`,
+            likesBreakdown: likesBreakdown.slice(0, 5), // First 5 posts
+            commentsBreakdown: commentsBreakdown.slice(0, 5) // First 5 posts
           });
 
-          // STEP 3: Calculate averages manually
+          // ENHANCED STEP 3: Calculate averages manually with validation
           const avgLikes = validPosts.length > 0 ? Math.round(totalLikes / validPosts.length) : 0;
           const avgComments = validPosts.length > 0 ? Math.round(totalComments / validPosts.length) : 0;
 
-          // STEP 4: Calculate engagement rate manually  
+          // ENHANCED STEP 4: Calculate engagement rate with follower count debugging
           const totalEngagement = avgLikes + avgComments;
-          const followers = parseInt(profileItem.followersCount?.toString() || '0') || 0;
-          const engagementRate = followers > 0 ? Math.round((totalEngagement / followers) * 10000) / 100 : 0;
+          
+          // Enhanced follower count extraction
+          const followers = parseInt(String(
+            profileItem.followersCount || profileItem.followers || 
+            profileItem.follower_count || profileItem.followerscount || 0
+          )) || 0;
+          
+          const engagementRate = followers > 0 ? 
+            Math.round((totalEngagement / followers) * 10000) / 100 : 0;
 
-          logger('info', 'Manual calculation - Steps 3-4: Calculate averages and rate', {
+          logger('info', 'Enhanced manual calculation - Steps 3-4: Calculate averages and engagement rate', {
             avgLikes,
             avgComments,
             totalEngagement,
-            followers,
+            followersData: {
+              followersCount: profileItem.followersCount,
+              followers: profileItem.followers,
+              follower_count: profileItem.follower_count,
+              parsedFollowers: followers
+            },
             engagementRate,
-            calculation: `(${totalEngagement} / ${followers}) * 100 = ${engagementRate}%`
+            engagementCalculation: `(${totalEngagement} / ${followers}) * 100 = ${engagementRate}%`,
+            isValidCalculation: followers > 0 && totalEngagement > 0
           });
 
-          // STEP 5: Create engagement object
-          engagement = {
-            avgLikes,
-            avgComments,
-            engagementRate,
-            totalEngagement,
-            postsAnalyzed: validPosts.length
-          };
+          // ENHANCED STEP 5: Create engagement object with validation
+          if (avgLikes > 0 || avgComments > 0) {
+            engagement = {
+              avgLikes,
+              avgComments,
+              engagementRate,
+              totalEngagement,
+              postsAnalyzed: validPosts.length
+            };
 
-          logger('info', 'MANUAL ENGAGEMENT CALCULATION COMPLETED', {
-            postsAnalyzed: engagement.postsAnalyzed,
-            avgLikes: engagement.avgLikes,
-            avgComments: engagement.avgComments,
-            engagementRate: engagement.engagementRate,
-            totalEngagement: engagement.totalEngagement,
-            dataSource: 'real_scraped_data'
-          });
+            logger('info', 'ENHANCED MANUAL ENGAGEMENT CALCULATION COMPLETED SUCCESSFULLY', {
+              postsAnalyzed: engagement.postsAnalyzed,
+              avgLikes: engagement.avgLikes,
+              avgComments: engagement.avgComments,
+              engagementRate: engagement.engagementRate,
+              totalEngagement: engagement.totalEngagement,
+              dataSource: 'real_scraped_data_enhanced_parsing',
+              dataQuality: validPosts.length >= 5 ? 'high' : validPosts.length >= 2 ? 'medium' : 'low'
+            });
+          } else {
+            logger('error', 'ENGAGEMENT CALCULATION FAILED - All values are zero', {
+              avgLikes,
+              avgComments,
+              totalLikes,
+              totalComments,
+              validPostsCount: validPosts.length,
+              followers,
+              troubleshooting: 'Check data structure and field names'
+            });
+          }
         } else {
-          logger('warn', 'No valid posts with engagement found');
+          logger('error', 'No valid posts with engagement found - DEBUGGING INFO', {
+            totalPosts: posts.length,
+            samplePostStructures: posts.slice(0, 3).map(post => ({
+              allKeys: Object.keys(post),
+              possibleLikesFields: {
+                likesCount: post.likesCount,
+                likes: post.likes,
+                like_count: post.like_count,
+                likeCount: post.likeCount
+              },
+              possibleCommentsFields: {
+                commentsCount: post.commentsCount,
+                comments: post.comments,
+                comment_count: post.comment_count,
+                commentCount: post.commentCount
+              }
+            }))
+          });
         }
       } else {
-        logger('warn', 'No posts found in deep scraper response');
+        logger('error', 'No posts found in deep scraper response - DEBUGGING INFO', {
+          totalItems: responseData.length,
+          sampleItemStructures: responseData.slice(0, 3).map(item => ({
+            allKeys: Object.keys(item),
+            hasShortCode: !!(item.shortCode || item.code || item.pk),
+            hasEngagement: !!(item.likesCount || item.likes || item.commentsCount || item.comments),
+            hasTimestamp: !!(item.timestamp || item.taken_at || item.created_time),
+            type: item.type || item.__typename || 'unknown'
+          }))
+        });
       }
 
-      // Enhanced post data extraction
+      // Enhanced post data extraction with multiple field name support
       const latestPosts: PostData[] = posts.slice(0, 12).map(post => {
-        const caption = post.caption || post.title || '';
+        const caption = post.caption || post.edge_media_to_caption?.edges?.[0]?.node?.text || post.title || '';
         const hashtags = extractHashtags(caption);
         const mentions = extractMentions(caption);
 
         return {
-          id: post.id || post.shortCode || '',
-          shortCode: post.shortCode || '',
+          id: post.id || post.shortCode || post.code || post.pk || '',
+          shortCode: post.shortCode || post.code || post.pk || '',
           caption: caption,
-          likesCount: parseInt(post.likesCount?.toString() || post.likes?.toString() || '0') || 0,
-          commentsCount: parseInt(post.commentsCount?.toString() || post.comments?.toString() || '0') || 0,
-          timestamp: post.timestamp || post.created_time || new Date().toISOString(),
-          url: post.url || `https://instagram.com/p/${post.shortCode}/`,
-          type: post.type || (post.isVideo ? 'video' : 'photo'),
+          likesCount: parseInt(String(post.likesCount || post.likes || post.like_count || 0)) || 0,
+          commentsCount: parseInt(String(post.commentsCount || post.comments || post.comment_count || 0)) || 0,
+          timestamp: post.timestamp || post.taken_at || post.created_time || new Date().toISOString(),
+          url: post.url || `https://instagram.com/p/${post.shortCode || post.code}/`,
+          type: post.type || post.__typename || (post.isVideo ? 'video' : 'photo'),
           hashtags,
           mentions,
-          viewCount: parseInt(post.viewCount?.toString() || post.views?.toString() || '0') || undefined,
-          isVideo: Boolean(post.isVideo || post.type === 'video')
+          viewCount: parseInt(String(post.viewCount || post.views || post.video_view_count || 0)) || undefined,
+          isVideo: Boolean(post.isVideo || post.type === 'video' || post.__typename === 'GraphVideo')
         };
       });
 
-      const extractedUsername = (profileItem.username || profileItem.ownerUsername || '').toLowerCase();
+      // Enhanced profile data extraction with multiple field name support
+      const extractedUsername = String(
+        profileItem.username || profileItem.ownerUsername || 
+        profileItem.owner?.username || ''
+      ).toLowerCase();
+
+      const followers = parseInt(String(
+        profileItem.followersCount || profileItem.followers || 
+        profileItem.follower_count || profileItem.followerscount || 0
+      )) || 0;
+
+      const following = parseInt(String(
+        profileItem.followingCount || profileItem.following || 
+        profileItem.following_count || profileItem.followingcount || 0
+      )) || 0;
+
+      const postsCount = parseInt(String(
+        profileItem.postsCount || profileItem.posts || 
+        profileItem.media_count || profileItem.postscount || latestPosts.length
+      )) || 0;
       
       const result = {
         username: extractedUsername,
-        displayName: profileItem.fullName || profileItem.displayName || '',
+        displayName: profileItem.fullName || profileItem.displayName || profileItem.full_name || '',
         bio: profileItem.biography || profileItem.bio || '',
-        followersCount: parseInt(profileItem.followersCount?.toString() || '0') || 0,
-        followingCount: parseInt(profileItem.followingCount?.toString() || '0') || 0,
-        postsCount: parseInt(profileItem.postsCount?.toString() || '0') || latestPosts.length,
-        isVerified: Boolean(profileItem.verified || profileItem.isVerified),
-        isPrivate: Boolean(profileItem.private || profileItem.isPrivate),
-        profilePicUrl: profileItem.profilePicUrl || profileItem.profilePicture || '',
-        externalUrl: profileItem.externalUrl || profileItem.website || '',
-        isBusinessAccount: Boolean(profileItem.isBusinessAccount),
+        followersCount: followers,
+        followingCount: following,
+        postsCount: postsCount,
+        isVerified: Boolean(profileItem.verified || profileItem.isVerified || profileItem.is_verified),
+        isPrivate: Boolean(profileItem.private || profileItem.isPrivate || profileItem.is_private),
+        profilePicUrl: profileItem.profilePicUrl || profileItem.profilePicture || profileItem.profile_pic_url || '',
+        externalUrl: profileItem.externalUrl || profileItem.website || profileItem.external_url || '',
+        isBusinessAccount: Boolean(profileItem.isBusinessAccount || profileItem.is_business_account),
         latestPosts,
         engagement
       };
 
-      logger('info', 'Deep profile validation completed with manual engagement calculation', {
+      logger('info', 'Enhanced deep profile validation completed', {
         username: result.username,
         followers: result.followersCount,
         postsFound: result.latestPosts.length,
         hasRealEngagement: !!result.engagement,
-        avgLikes: result.engagement?.avgLikes || 'N/A',
-        avgComments: result.engagement?.avgComments || 'N/A',
-        engagementRate: result.engagement?.engagementRate || 'N/A',
-        postsAnalyzed: result.engagement?.postsAnalyzed || 0
+        engagementSummary: result.engagement ? {
+          avgLikes: result.engagement.avgLikes,
+          avgComments: result.engagement.avgComments,
+          engagementRate: result.engagement.engagementRate,
+          postsAnalyzed: result.engagement.postsAnalyzed
+        } : 'NO_REAL_ENGAGEMENT_DATA',
+        dataExtraction: {
+          usernameSource: profileItem.username ? 'username' : profileItem.ownerUsername ? 'ownerUsername' : 'fallback',
+          followersSource: profileItem.followersCount ? 'followersCount' : profileItem.followers ? 'followers' : 'fallback',
+          postsSource: latestPosts.length > 0 ? 'scraped_posts' : 'profile_count'
+        }
       });
 
       return result;
 
     } else {
-      // Light analysis handling
+      // Light analysis handling remains the same
       const profile = Array.isArray(responseData) ? responseData[0] : responseData;
       
       if (!profile || !profile.username) {
@@ -977,11 +1155,18 @@ function validateProfileData(responseData: any, analysisType?: string): ProfileD
     }
 
   } catch (error: any) {
-    logger('error', 'Profile validation failed', { error: error.message, responseData });
-    throw new Error(`Profile validation failed: ${error.message}`);
+    logger('error', 'Enhanced profile validation failed', { 
+      error: error.message, 
+      responseDataType: typeof responseData,
+      responseDataLength: Array.isArray(responseData) ? responseData.length : 'not-array',
+      sampleData: Array.isArray(responseData) && responseData.length > 0 ? {
+        firstItemKeys: Object.keys(responseData[0]),
+        firstItemSample: JSON.stringify(responseData[0]).substring(0, 500)
+      } : 'no-sample-available'
+    });
+    throw new Error(`Enhanced profile validation failed: ${error.message}`);
   }
 }
-
 // ===============================================================================
 // AI SUMMARY GENERATION (NO FAKE DATA)
 // ===============================================================================
@@ -2253,6 +2438,166 @@ app.post('/ai/generate-insights', async (c) => {
 // ===============================================================================
 // DEBUG ENDPOINTS
 // ===============================================================================
+app.get('/debug-engagement/:username', async (c) => {
+  const username = c.req.param('username');
+  
+  try {
+    logger('info', 'Starting engagement calculation debug test', { username });
+    
+    const deepInput = {
+      directUrls: [`https://instagram.com/${username}/`],
+      resultsLimit: 10,
+      addParentData: false,
+      enhanceUserSearchWithFacebookPage: false,
+      onlyPostsNewerThan: "2024-01-01",
+      resultsType: "details",
+      searchType: "hashtag"
+    };
+
+    const rawResponse = await callWithRetry(
+      `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deepInput)
+      },
+      1, 1000, 30000
+    );
+
+    if (!rawResponse || !Array.isArray(rawResponse)) {
+      return c.json({
+        success: false,
+        error: 'No response or invalid response format',
+        username
+      });
+    }
+
+    // Detailed analysis of the raw response
+    const analysisResults = {
+      totalItems: rawResponse.length,
+      itemTypes: {},
+      profileItems: [],
+      postItems: [],
+      fieldAnalysis: {},
+      engagementFieldAnalysis: {}
+    };
+
+    // Analyze each item in the response
+    rawResponse.forEach((item, index) => {
+      const itemType = item.type || item.__typename || 'unknown';
+      analysisResults.itemTypes[itemType] = (analysisResults.itemTypes[itemType] || 0) + 1;
+      
+      // Check if it's a profile item
+      if (item.username || item.ownerUsername || (item.followersCount !== undefined && item.postsCount !== undefined)) {
+        analysisResults.profileItems.push({
+          index,
+          keys: Object.keys(item),
+          username: item.username || item.ownerUsername,
+          followers: item.followersCount || item.followers,
+          posts: item.postsCount || item.posts
+        });
+      }
+      
+      // Check if it's a post item
+      if (item.shortCode || item.code) {
+        const engagementData = {
+          likesCount: item.likesCount,
+          likes: item.likes,
+          like_count: item.like_count,
+          likeCount: item.likeCount,
+          commentsCount: item.commentsCount,
+          comments: item.comments,
+          comment_count: item.comment_count,
+          commentCount: item.commentCount
+        };
+        
+        analysisResults.postItems.push({
+          index,
+          shortCode: item.shortCode || item.code,
+          keys: Object.keys(item),
+          engagementData,
+          parsedLikes: parseInt(String(item.likesCount || item.likes || item.like_count || 0)) || 0,
+          parsedComments: parseInt(String(item.commentsCount || item.comments || item.comment_count || 0)) || 0
+        });
+      }
+      
+      // Analyze common field patterns
+      Object.keys(item).forEach(key => {
+        if (!analysisResults.fieldAnalysis[key]) {
+          analysisResults.fieldAnalysis[key] = 0;
+        }
+        analysisResults.fieldAnalysis[key]++;
+        
+        // Track engagement-related fields
+        if (key.toLowerCase().includes('like') || key.toLowerCase().includes('comment') || key.toLowerCase().includes('engagement')) {
+          if (!analysisResults.engagementFieldAnalysis[key]) {
+            analysisResults.engagementFieldAnalysis[key] = [];
+          }
+          if (analysisResults.engagementFieldAnalysis[key].length < 3) {
+            analysisResults.engagementFieldAnalysis[key].push(item[key]);
+          }
+        }
+      });
+    });
+
+    // Test manual engagement calculation
+    let manualCalculationTest = null;
+    if (analysisResults.postItems.length > 0) {
+      const validPosts = analysisResults.postItems.filter(post => 
+        post.parsedLikes > 0 || post.parsedComments > 0
+      );
+      
+      if (validPosts.length > 0) {
+        const totalLikes = validPosts.reduce((sum, post) => sum + post.parsedLikes, 0);
+        const totalComments = validPosts.reduce((sum, post) => sum + post.parsedComments, 0);
+        const avgLikes = Math.round(totalLikes / validPosts.length);
+        const avgComments = Math.round(totalComments / validPosts.length);
+        
+        manualCalculationTest = {
+          validPostsCount: validPosts.length,
+          totalLikes,
+          totalComments,
+          avgLikes,
+          avgComments,
+          calculationSteps: {
+            step1: `Found ${validPosts.length} valid posts out of ${analysisResults.postItems.length}`,
+            step2: `Total likes: ${totalLikes}, Total comments: ${totalComments}`,
+            step3: `Avg likes: ${totalLikes} / ${validPosts.length} = ${avgLikes}`,
+            step4: `Avg comments: ${totalComments} / ${validPosts.length} = ${avgComments}`
+          }
+        };
+      }
+    }
+
+    return c.json({
+      success: true,
+      username,
+      debug: {
+        rawResponseStructure: analysisResults,
+        manualCalculationTest,
+        recommendations: [
+          analysisResults.postItems.length === 0 ? 'No post items found - check scraper configuration' : 'Post items found ✓',
+          analysisResults.profileItems.length === 0 ? 'No profile items found - check scraper response' : 'Profile items found ✓',
+          !manualCalculationTest ? 'Manual calculation failed - no valid engagement data' : 'Manual calculation successful ✓'
+        ],
+        troubleshooting: {
+          mostCommonFields: Object.entries(analysisResults.fieldAnalysis)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 10),
+          engagementFields: analysisResults.engagementFieldAnalysis,
+          itemTypeDistribution: analysisResults.itemTypes
+        }
+      }
+    });
+    
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message,
+      username
+    }, 500);
+  }
+});
 
 app.get('/debug-scrape/:username', async (c) => {
   const username = c.req.param('username');
