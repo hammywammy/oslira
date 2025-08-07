@@ -1676,7 +1676,7 @@ async submitAnalysis(event) {
     const profileInput = document.getElementById('profile-input')?.value?.trim();
     const businessId = document.getElementById('business-id')?.value;
     
-    // Validation
+    // ✅ STEP 1: Validation
     if (!analysisType) {
         window.OsliraApp?.showMessage('Please select an analysis type', 'error');
         return;
@@ -1692,7 +1692,7 @@ async submitAnalysis(event) {
         return;
     }
     
-    // Check authentication
+    // ✅ STEP 2: Authentication check
     const user = window.OsliraApp?.user;
     const session = window.OsliraApp?.session;
     
@@ -1708,231 +1708,108 @@ async submitAnalysis(event) {
     
     const cleanUsername = profileInput.replace(/^@/, '');
     
-    // ✅ STEP 1: Close modal FIRST and show persistent progress
-    this.closeModal('analysisModal');
-    
-    // ✅ STEP 2: Create persistent progress overlay
-    this.showAnalysisProgress(cleanUsername, analysisType);
-    
-    // ✅ STEP 3: Disable button and store reference
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn?.innerHTML;
-    if (submitBtn) {
-        submitBtn.innerHTML = '🔄 Analyzing...';
-        submitBtn.disabled = true;
+    // ✅ STEP 3: Reset form and close modal
+    const form = document.getElementById('analysisForm');
+    if (form) {
+        form.reset();
     }
     
+    const inputContainer = document.getElementById('input-field-container');
+    if (inputContainer) {
+        inputContainer.style.display = 'none';
+    }
+    
+    this.closeModal('analysisModal');
+    
+    // ✅ STEP 4: Prepare request data
+    const requestData = {
+        username: cleanUsername,
+        analysis_type: analysisType,
+        business_id: businessId,
+        user_id: user.id,
+        platform: 'instagram'
+    };
+    
+    console.log('📤 Starting analysis via queue system:', {
+        username: cleanUsername,
+        type: analysisType,
+        businessId
+    });
+    
     try {
-        // ✅ STEP 4: Update progress - Starting analysis
-        this.updateAnalysisProgress('Initializing AI analysis...', 10);
-        
-        const requestBody = {
-            username: cleanUsername,
-            analysis_type: analysisType,
-            business_id: businessId,
-            user_id: user.id,
-            platform: 'instagram'
-        };
-        
-        console.log('📝 Request body:', requestBody);
-        
-        const workerUrl = window.CONFIG?.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
-        
-        // ✅ STEP 5: Update progress - Making API call
-        this.updateAnalysisProgress('Contacting analysis service...', 20);
-        
-        console.log('🚀 Calling worker API:', `${workerUrl}/v1/analyze`);
-        
-        const response = await fetch(`${workerUrl}/v1/analyze`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        console.log('📡 API Response status:', response.status);
-        
-        // ✅ STEP 6: Update progress - Processing response
-        this.updateAnalysisProgress('Processing Instagram data...', 40);
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ API Error:', errorText);
-            
-            let errorMessage = `Analysis failed: ${response.status}`;
-            try {
-                const errorObj = JSON.parse(errorText);
-                errorMessage = errorObj.error || errorObj.message || errorMessage;
-            } catch (e) {
-                // Use default message if can't parse
-            }
-            
-            throw new Error(errorMessage);
-        }
-        
-        // ✅ STEP 7: Update progress - Analyzing results
-        this.updateAnalysisProgress('AI analysis in progress...', 70);
-        
-        const result = await response.json();
-        console.log('✅ Analysis result:', result);
-        
-        // ✅ STEP 8: Update progress - Finalizing
-        this.updateAnalysisProgress('Finalizing results...', 90);
+        // ✅ STEP 5: Use the unified queue system
+        const result = await window.analysisQueue.startSingleAnalysis(
+            cleanUsername, 
+            analysisType, 
+            businessId, 
+            requestData
+        );
         
         if (result.success) {
-            const leadUsername = result.data?.profile?.username || cleanUsername;
+            console.log('✅ Analysis successfully queued');
+            window.OsliraApp?.showMessage(
+                `Analysis started for @${cleanUsername} (${analysisType})`, 
+                'info', 
+                2000
+            );
             
-            // ✅ STEP 9: Update progress - Complete
-            this.updateAnalysisProgress('Analysis completed successfully!', 100);
-            
-            // ✅ STEP 10: Show success and refresh data
+            // ✅ STEP 6: Schedule dashboard refresh for when analysis completes
             setTimeout(async () => {
-                this.hideAnalysisProgress();
-                window.OsliraApp?.showMessage(`Analysis completed for @${leadUsername}!`, 'success');
+                console.log('🔄 Refreshing dashboard data after analysis');
                 await this.loadDashboardData();
-            }, 1000);
+            }, 3000); // Refresh after 3 seconds to catch completed analysis
             
         } else {
-            throw new Error(result.error || 'Analysis failed');
+            console.error('❌ Analysis failed to start:', result.error);
+            window.OsliraApp?.showMessage(
+                `Failed to start analysis: ${result.error}`, 
+                'error'
+            );
         }
         
     } catch (error) {
-        console.error('❌ Analysis failed:', error);
-        this.hideAnalysisProgress();
-        window.OsliraApp?.showMessage(`Analysis failed: ${error.message}`, 'error');
-    } finally {
-        // Reset submit button
-        if (submitBtn && originalText) {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }
+        console.error('❌ Submit analysis error:', error);
+        window.OsliraApp?.showMessage(
+            `Analysis submission failed: ${error.message}`, 
+            'error'
+        );
     }
 }
 
-showAnalysisProgress(username, analysisType) {
-    // Remove any existing progress overlay
-    this.hideAnalysisProgress();
-    
-    const overlay = document.createElement('div');
-    overlay.id = 'analysis-progress-overlay';
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-    
-    const expectedTime = analysisType === 'deep' ? '30-60 seconds' : '15-30 seconds';
-    const credits = analysisType === 'deep' ? '2 credits' : '1 credit';
-    
-    overlay.innerHTML = `
-        <div style="background: white; padding: 40px; border-radius: 16px; max-width: 500px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            
-            <!-- Header -->
-            <div style="margin-bottom: 24px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">🤖</div>
-                <h3 style="margin: 0 0 8px 0; color: var(--text-primary); font-size: 24px;">
-                    AI Analysis in Progress
-                </h3>
-                <p style="margin: 0; color: var(--text-secondary); font-size: 16px;">
-                    Analyzing @${username} with ${analysisType} analysis
-                </p>
-            </div>
-            
-            <!-- Progress Bar -->
-            <div style="margin-bottom: 24px;">
-                <div style="background: #e5e7eb; border-radius: 10px; height: 8px; margin-bottom: 12px; overflow: hidden;">
-                    <div id="analysis-progress-bar" style="background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); height: 100%; width: 10%; border-radius: 10px; transition: width 0.5s ease;"></div>
-                </div>
-                <div id="analysis-progress-text" style="color: var(--text-secondary); font-size: 14px; font-weight: 500;">
-                    Starting analysis...
-                </div>
-            </div>
-            
-            <!-- Info Cards -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-                <div style="background: rgba(59, 130, 246, 0.1); padding: 16px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.2);">
-                    <div style="font-size: 20px; margin-bottom: 8px;">⏱️</div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">ESTIMATED TIME</div>
-                    <div style="font-size: 14px; font-weight: 600; color: var(--primary-blue);">${expectedTime}</div>
-                </div>
-                <div style="background: rgba(168, 85, 247, 0.1); padding: 16px; border-radius: 10px; border: 1px solid rgba(168, 85, 247, 0.2);">
-                    <div style="font-size: 20px; margin-bottom: 8px;">💳</div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">COST</div>
-                    <div style="font-size: 14px; font-weight: 600; color: var(--secondary-purple);">${credits}</div>
-                </div>
-            </div>
-            
-            <!-- What's Happening -->
-            <div style="background: rgba(16, 185, 129, 0.1); padding: 20px; border-radius: 12px; border-left: 4px solid var(--success); text-align: left;">
-                <h4 style="margin: 0 0 12px 0; color: var(--success); font-size: 14px; font-weight: 700;">
-                    🔄 Analysis Steps:
-                </h4>
-                <ul style="margin: 0; padding-left: 16px; color: var(--text-secondary); font-size: 13px; line-height: 1.6;">
-                    <li>Instagram profile data collection</li>
-                    <li>Engagement metrics calculation</li>
-                    <li>AI-powered business fit analysis</li>
-                    ${analysisType === 'deep' ? '<li>Personalized outreach message generation</li>' : ''}
-                    <li>Quality scoring and insights compilation</li>
-                </ul>
-            </div>
-            
-            <!-- Cancel Button -->
-            <div style="margin-top: 24px;">
-                <button onclick="dashboard.cancelAnalysis()" 
-                        style="background: var(--text-secondary); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">
-                    Cancel Analysis
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(overlay);
-    
-    // Prevent body scrolling
-    document.body.style.overflow = 'hidden';
-    
-    console.log('✅ Analysis progress overlay shown');
-}
+// ===============================================================================
+// ADDITIONAL METHOD: Add this to your Dashboard class for queue integration
+// ===============================================================================
 
-updateAnalysisProgress(message, percentage) {
-    const progressBar = document.getElementById('analysis-progress-bar');
-    const progressText = document.getElementById('analysis-progress-text');
+viewLatestLead(username) {
+    console.log('🔍 Looking for latest lead:', username);
     
-    if (progressBar) {
-        progressBar.style.width = `${percentage}%`;
-    }
+    // Find the most recent lead with this username (case-insensitive)
+    const lead = this.allLeads.find(l => 
+        l.username.toLowerCase() === username.toLowerCase()
+    );
     
-    if (progressText) {
-        progressText.textContent = message;
+    if (lead) {
+        console.log('✅ Found lead, opening details:', lead.id);
+        this.viewLead(lead.id);
+    } else {
+        console.warn('⚠️ Lead not found, refreshing data:', username);
+        window.OsliraApp?.showMessage(`Refreshing data to find @${username}...`, 'info');
+        
+        // Refresh data and try again
+        this.loadDashboardData().then(() => {
+            const refreshedLead = this.allLeads.find(l => 
+                l.username.toLowerCase() === username.toLowerCase()
+            );
+            
+            if (refreshedLead) {
+                console.log('✅ Found lead after refresh:', refreshedLead.id);
+                this.viewLead(refreshedLead.id);
+            } else {
+                console.error('❌ Lead still not found after refresh');
+                window.OsliraApp?.showMessage(`Lead @${username} not found`, 'warning');
+            }
+        });
     }
-    
-    console.log(`⏳ Progress: ${percentage}% - ${message}`);
-}
-
-hideAnalysisProgress() {
-    const overlay = document.getElementById('analysis-progress-overlay');
-    if (overlay) {
-        overlay.remove();
-        document.body.style.overflow = ''; // Restore body scrolling
-        console.log('✅ Analysis progress overlay hidden');
-    }
-}
-
-cancelAnalysis() {
-    // Note: This doesn't actually cancel the server request, just hides the UI
-    this.hideAnalysisProgress();
-    window.OsliraApp?.showMessage('Analysis cancelled', 'info');
-    console.log('⚠️ Analysis cancelled by user');
 }
 
 handleRealtimeAnalysisUpdate(payload) {
@@ -2072,16 +1949,6 @@ async refreshLeadData(leadId) {
     }
 }
 
-// Missing utility methods
-showBulkUpload() {
-    const modal = document.getElementById('bulkModal');
-    if (modal) {
-        modal.style.display = 'flex';
-    } else {
-        window.OsliraApp?.showMessage('Bulk upload feature coming soon!', 'info');
-    }
-}
-
 async loadRecentActivity() {
     await this.loadDashboardData();
 }
@@ -2157,13 +2024,6 @@ searchLeads(searchTerm) {
     );
     
     this.displayLeads(filteredLeads);
-}
-
-showSupportModal() {
-    const modal = document.getElementById('supportModal');
-    if (modal) {
-        modal.style.display = 'flex';
-    }
 }
 
 exportLeads() {
@@ -2656,25 +2516,6 @@ displayLeads(leads) {
             highValueTrend.textContent = `${percentage}% high-value leads`;
             highValueTrend.className = percentage >= 20 ? 'trend up' : 'trend stable';
         }
-    }
-
-    showLoadingState() {
-        const tableBody = document.getElementById('activity-table');
-        if (tableBody) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px;">
-                        <div style="font-size: 32px; margin-bottom: 16px;">🔄</div>
-                        <h3 style="margin: 0 0 8px 0;">Loading Dashboard</h3>
-                        <p style="margin: 0; color: var(--text-secondary);">Fetching your leads...</p>
-                    </td>
-                </tr>
-            `;
-        }
-    }
-
-    hideLoadingState() {
-        // Loading state is automatically replaced by displayLeads()
     }
 
     displayErrorState(message) {
@@ -3736,12 +3577,387 @@ getDefaultBusinessProfile() {
 }
 }
 
+class UnifiedAnalysisQueue {
+    constructor() {
+        this.activeAnalyses = new Map(); // analysisId -> analysisInfo
+        this.maxVisible = 5; // Max items before scrolling
+        this.autoHideDelay = 3000; // 3 seconds
+        this.setupQueueContainer();
+    }
+
+    // ===============================================================================
+    // QUEUE MANAGEMENT
+    // ===============================================================================
+
+    addAnalysis(username, analysisType, businessId) {
+        const analysisId = this.generateId();
+        const analysisInfo = {
+            id: analysisId,
+            username: username.replace('@', ''),
+            analysisType,
+            businessId,
+            status: 'starting', // starting, analyzing, completed, failed
+            progress: 0,
+            startTime: Date.now(),
+            message: 'Initializing analysis...',
+            credits: analysisType === 'deep' ? 2 : 1
+        };
+
+        this.activeAnalyses.set(analysisId, analysisInfo);
+        this.renderQueue();
+        this.showQueue();
+
+        console.log(`✅ Added ${username} to analysis queue (${analysisType})`);
+        return analysisId;
+    }
+
+    updateAnalysis(analysisId, updates) {
+        const analysis = this.activeAnalyses.get(analysisId);
+        if (analysis) {
+            Object.assign(analysis, updates);
+            this.renderQueue();
+            console.log(`🔄 Updated analysis ${analysisId}:`, updates);
+        }
+    }
+
+    completeAnalysis(analysisId, success = true, message = null) {
+        const analysis = this.activeAnalyses.get(analysisId);
+        if (!analysis) return;
+
+        analysis.status = success ? 'completed' : 'failed';
+        analysis.progress = 100;
+        analysis.message = message || (success ? 'Analysis completed!' : 'Analysis failed');
+        analysis.endTime = Date.now();
+        analysis.duration = Math.round((analysis.endTime - analysis.startTime) / 1000);
+
+        this.renderQueue();
+
+        // Auto-remove after delay
+        setTimeout(() => {
+            this.removeAnalysis(analysisId);
+        }, this.autoHideDelay);
+
+        console.log(`${success ? '✅' : '❌'} ${success ? 'Completed' : 'Failed'} analysis for @${analysis.username}`);
+    }
+
+    removeAnalysis(analysisId) {
+        const analysis = this.activeAnalyses.get(analysisId);
+        if (!analysis) return;
+
+        // Add removing class for animation
+        const element = document.getElementById(`queue-item-${analysisId}`);
+        if (element) {
+            element.classList.add('removing');
+            setTimeout(() => {
+                this.activeAnalyses.delete(analysisId);
+                this.renderQueue();
+                this.maybeHideQueue();
+            }, 300); // Match CSS animation duration
+        } else {
+            this.activeAnalyses.delete(analysisId);
+            this.renderQueue();
+            this.maybeHideQueue();
+        }
+
+        console.log(`🗑️ Removed analysis for @${analysis.username}`);
+    }
+
+    clearCompleted() {
+        const completed = Array.from(this.activeAnalyses.entries())
+            .filter(([_, analysis]) => analysis.status === 'completed' || analysis.status === 'failed');
+
+        completed.forEach(([id]) => this.removeAnalysis(id));
+
+        if (completed.length > 0) {
+            window.OsliraApp?.showMessage(`Cleared ${completed.length} completed analyses`, 'success');
+        }
+    }
+
+    // ===============================================================================
+    // UI MANAGEMENT  
+    // ===============================================================================
+
+    setupQueueContainer() {
+        // Remove existing container if it exists
+        const existing = document.getElementById('analysis-queue-container');
+        if (existing) {
+            existing.remove();
+        }
+
+        const container = document.createElement('div');
+        container.id = 'analysis-queue-container';
+        container.className = 'analysis-queue';
+        container.style.display = 'none'; // Hidden by default
+
+        document.body.appendChild(container);
+        console.log('🏗️ Queue container created');
+    }
+
+    renderQueue() {
+        const container = document.getElementById('analysis-queue-container');
+        if (!container) return;
+
+        const analyses = Array.from(this.activeAnalyses.values())
+            .sort((a, b) => b.startTime - a.startTime); // Newest first
+
+        if (analyses.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        // Create scrollable container if needed
+        const needsScroll = analyses.length > this.maxVisible;
+        const visibleAnalyses = needsScroll ? analyses.slice(0, this.maxVisible) : analyses;
+
+        container.innerHTML = `
+            <div style="max-height: ${this.maxVisible * 90}px; overflow-y: ${needsScroll ? 'auto' : 'visible'}; padding-right: 8px;">
+                ${visibleAnalyses.map(analysis => this.renderQueueItem(analysis)).join('')}
+            </div>
+            ${needsScroll ? `
+                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.9); border-radius: 8px; margin-top: 8px;">
+                    <span style="font-size: 12px; color: var(--text-secondary);">
+                        +${analyses.length - this.maxVisible} more items
+                    </span>
+                </div>
+            ` : ''}
+            ${this.hasCompletedItems() ? `
+                <div style="text-align: center; padding: 8px; margin-top: 8px;">
+                    <button onclick="analysisQueue.clearCompleted()" 
+                            class="btn btn-small"
+                            style="font-size: 11px; padding: 6px 12px;">
+                        Clear Completed
+                    </button>
+                </div>
+            ` : ''}
+        `;
+    }
+
+    renderQueueItem(analysis) {
+        const statusConfig = this.getStatusConfig(analysis.status);
+        const elapsed = Math.round((Date.now() - analysis.startTime) / 1000);
+        const timeText = elapsed < 60 ? `${elapsed}s` : `${Math.round(elapsed/60)}m`;
+
+        return `
+            <div id="queue-item-${analysis.id}" 
+                 class="queue-item ${analysis.status}"
+                 style="margin-bottom: 12px;">
+                
+                <!-- Header -->
+                <div class="queue-header">
+                    <div class="queue-username">
+                        <span style="font-size: 16px;">${statusConfig.icon}</span>
+                        <span>@${analysis.username}</span>
+                        <span class="queue-type" style="background: ${statusConfig.color};">
+                            ${analysis.analysisType.toUpperCase()}
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 11px; color: var(--text-secondary);">${timeText}</span>
+                        ${analysis.status === 'starting' || analysis.status === 'analyzing' ? `
+                            <button class="queue-close" 
+                                    onclick="analysisQueue.removeAnalysis('${analysis.id}')"
+                                    title="Cancel analysis">×</button>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="queue-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill ${analysis.status}" 
+                             style="width: ${analysis.progress}%;"></div>
+                    </div>
+                    <div class="queue-message">${analysis.message}</div>
+                </div>
+
+                <!-- Actions for completed -->
+                ${analysis.status === 'completed' ? `
+                    <div class="queue-actions">
+                        <button onclick="dashboard.viewLatestLead('${analysis.username}')" 
+                                class="btn primary-btn">
+                            View Results
+                        </button>
+                        <button onclick="analysisQueue.removeAnalysis('${analysis.id}')" 
+                                class="btn btn-small">
+                            Dismiss
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    getStatusConfig(status) {
+        const configs = {
+            starting: { icon: '⏳', color: '#f59e0b' },
+            analyzing: { icon: '🔄', color: '#3b82f6' },
+            completed: { icon: '✅', color: '#10b981' },
+            failed: { icon: '❌', color: '#ef4444' }
+        };
+        return configs[status] || configs.starting;
+    }
+
+    showQueue() {
+        const container = document.getElementById('analysis-queue-container');
+        if (container) {
+            container.style.display = 'block';
+        }
+    }
+
+    maybeHideQueue() {
+        if (this.activeAnalyses.size === 0) {
+            const container = document.getElementById('analysis-queue-container');
+            if (container) {
+                container.style.display = 'none';
+            }
+        }
+    }
+
+    hasCompletedItems() {
+        return Array.from(this.activeAnalyses.values())
+            .some(analysis => analysis.status === 'completed' || analysis.status === 'failed');
+    }
+
+    generateId() {
+        return 'analysis_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // ===============================================================================
+    // PUBLIC METHODS FOR DASHBOARD INTEGRATION
+    // ===============================================================================
+
+    // Start a single analysis
+    async startSingleAnalysis(username, analysisType, businessId, requestData) {
+        const analysisId = this.addAnalysis(username, analysisType, businessId);
+        
+        try {
+            // Update to analyzing status
+            setTimeout(() => {
+                this.updateAnalysis(analysisId, {
+                    status: 'analyzing',
+                    progress: 20,
+                    message: 'Scraping Instagram profile...'
+                });
+            }, 1000);
+
+            // Simulate progress updates (you can remove these and let worker handle)
+            setTimeout(() => {
+                this.updateAnalysis(analysisId, {
+                    progress: 60,
+                    message: 'AI analysis in progress...'
+                });
+            }, 5000);
+
+            // Call the actual API
+            const result = await this.callAnalysisAPI(requestData);
+            
+            if (result.success) {
+                this.completeAnalysis(analysisId, true, 'Analysis completed successfully!');
+                return { success: true, analysisId, result };
+            } else {
+                this.completeAnalysis(analysisId, false, result.error || 'Analysis failed');
+                return { success: false, analysisId, error: result.error };
+            }
+
+        } catch (error) {
+            this.completeAnalysis(analysisId, false, error.message);
+            return { success: false, analysisId, error: error.message };
+        }
+    }
+
+    // Start bulk analysis
+    async startBulkAnalysis(leads, analysisType, businessId) {
+        const analysisIds = [];
+        const results = [];
+
+        console.log(`🚀 Starting bulk analysis for ${leads.length} leads`);
+
+        // Add all to queue first
+        for (const lead of leads) {
+            const analysisId = this.addAnalysis(lead.username, analysisType, businessId);
+            analysisIds.push(analysisId);
+        }
+
+        // Process all concurrently (since Cloudflare Workers handle concurrency)
+        const promises = leads.map(async (lead, index) => {
+            const analysisId = analysisIds[index];
+            
+            try {
+                const requestData = {
+                    username: lead.username,
+                    analysis_type: analysisType,
+                    business_id: businessId,
+                    user_id: window.OsliraApp?.user?.id,
+                    platform: 'instagram'
+                };
+
+                // Update to analyzing
+                this.updateAnalysis(analysisId, {
+                    status: 'analyzing',
+                    progress: 30,
+                    message: 'Processing...'
+                });
+
+                const result = await this.callAnalysisAPI(requestData);
+                
+                if (result.success) {
+                    this.completeAnalysis(analysisId, true);
+                    return { success: true, username: lead.username, result };
+                } else {
+                    this.completeAnalysis(analysisId, false, result.error);
+                    return { success: false, username: lead.username, error: result.error };
+                }
+
+            } catch (error) {
+                this.completeAnalysis(analysisId, false, error.message);
+                return { success: false, username: lead.username, error: error.message };
+            }
+        });
+
+        // Wait for all to complete
+        const allResults = await Promise.allSettled(promises);
+        
+        return {
+            total: leads.length,
+            successful: allResults.filter(r => r.status === 'fulfilled' && r.value.success).length,
+            failed: allResults.filter(r => r.status === 'rejected' || !r.value?.success).length,
+            results: allResults.map(r => r.status === 'fulfilled' ? r.value : { success: false, error: r.reason })
+        };
+    }
+
+    async callAnalysisAPI(requestData) {
+        const workerUrl = window.CONFIG?.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
+        const session = window.OsliraApp?.session;
+
+        if (!session) {
+            throw new Error('No active session');
+        }
+
+        const response = await fetch(`${workerUrl}/v1/analyze`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.access_token}`
+            },
+            body: JSON.stringify(requestData)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API Error: ${response.status}`);
+        }
+
+        return await response.json();
+    }
+}
+
 // ===============================================================================
 // DASHBOARD INITIALIZATION AND EXPORT
 // ===============================================================================
 
 // Create global dashboard instance
 const dashboard = new Dashboard();
+window.analysisQueue = new UnifiedAnalysisQueue();
 
 // Initialize dashboard when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
