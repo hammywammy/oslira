@@ -741,11 +741,6 @@
             border-color: var(--primary-blue);
         }
 
-        .loading {
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
         .time-filter {
             display: flex;
             gap: 8px;
@@ -877,30 +872,6 @@
         .insight-cta:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
-        }
-
-        .support-widget {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 999;
-        }
-
-        .support-btn {
-            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple));
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(45, 108, 223, 0.3);
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-
-        .support-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
         }
 
         .message {
@@ -1058,6 +1029,59 @@
     align-items: center;
     gap: 12px;
     flex-wrap: wrap;
+}
+
+@keyframes slideInProgress {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes progressPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+#analysis-progress-overlay {
+    animation: slideInProgress 0.3s ease-out;
+}
+
+#analysis-progress-overlay .analysis-icon {
+    animation: progressPulse 2s infinite;
+}
+
+/* Progress Bar Smooth Transition */
+#analysis-progress-bar {
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover Effects for Progress Elements */
+#analysis-progress-overlay button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Mobile Responsiveness for Progress Overlay */
+@media (max-width: 768px) {
+    #analysis-progress-overlay > div {
+        margin: 20px;
+        padding: 24px !important;
+        font-size: 14px;
+    }
+    
+    #analysis-progress-overlay h3 {
+        font-size: 20px !important;
+    }
+    
+    #analysis-progress-overlay .info-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
 }
 
 /* Animation for bulk actions */
