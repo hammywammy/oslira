@@ -545,6 +545,10 @@ async viewLead(leadId) {
 // FIXED buildLeadDetailsHTML - LIGHT ANALYSIS NOW SHOWS QUICK SUMMARY + UPGRADE
 // ===============================================================================
 
+// ===============================================================================
+// FIXED buildLeadDetailsHTML - LIGHT ANALYSIS NOW SHOWS QUICK SUMMARY + UPGRADE
+// ===============================================================================
+
 buildLeadDetailsHTML(lead, analysisData = null) {
     const analysisType = lead.analysis_type || 'light';
     const isDeepAnalysis = analysisType === 'deep';
@@ -685,25 +689,7 @@ buildLeadDetailsHTML(lead, analysisData = null) {
 }
 
 // ✅ NEW: Quick Summary Section for ALL analysis types
-buildQuickSummarySection(lead, analysisData, analysisType) {
-    // Determine which summary to show
-    let summaryText = '';
-    let summaryTitle = '';
-    let summaryIcon = '';
-    let summaryGradient = '';
-    let summaryBorder = '';
-    
-    if (analysisType === 'light' && lead.quick_summary) {
-        summaryText = lead.quick_summary;
-        summaryTitle = '⚡ Quick AI Summary';
-        summaryIcon = '⚡';
-        summaryGradient = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))';
-        summaryBorder = 'var(--warning)';
-    } else if (analysisType === 'deep' && analysisData?.deep_summary) {
-        summaryText = analysisData.deep_summary;
-        summaryTitle = '🔥 Comprehensive AI Analysis';
-        summaryIcon = '🔥';
-        summaryGradient = 'linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))';
+radient = 'linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))';
         summaryBorder = 'var(--accent-teal)';
     } else if (analysisType === 'light') {
         // Fallback for light analysis without summary
@@ -740,10 +726,56 @@ buildQuickSummarySection(lead, analysisData, analysisType) {
             </div>
             
             ${analysisType === 'light' ? `
-                <div style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; text-align: center; border: 1px dashed rgba(59, 130, 246, 0.3);">
-                    <p style="margin: 0; font-size: 13px; color: var(--primary-blue); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                        💡 <span>This is a basic analysis. Upgrade to Deep Analysis for engagement metrics, selling points, and personalized outreach messages.</span>
-                    </p>
+                <div style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05)); border-radius: 12px; border: 2px solid rgba(59, 130, 246, 0.2); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -10px; right: -10px; font-size: 40px; opacity: 0.1;">🚀</div>
+                    
+                    <div style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px;">
+                        <div style="background: var(--primary-blue); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
+                            🔥
+                        </div>
+                        <div style="flex: 1;">
+                            <h5 style="margin: 0 0 8px 0; color: var(--primary-blue); font-size: 16px; font-weight: 700;">
+                                Unlock Full Potential for @${lead.username}
+                            </h5>
+                            <p style="margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.5;">
+                                This basic analysis only scratches the surface. Deep Analysis reveals the complete picture with actionable insights.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px;">
+                        <div style="background: rgba(255, 255, 255, 0.8); padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 16px; margin-bottom: 4px;">📊</div>
+                            <div style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Real Engagement Data</div>
+                            <div style="font-size: 10px; color: var(--text-secondary);">Avg likes, comments, rates</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.8); padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 16px; margin-bottom: 4px;">🎯</div>
+                            <div style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Business Fit Score</div>
+                            <div style="font-size: 10px; color: var(--text-secondary);">AI niche alignment</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.8); padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 16px; margin-bottom: 4px;">💡</div>
+                            <div style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Selling Points</div>
+                            <div style="font-size: 10px; color: var(--text-secondary);">Strategic advantages</div>
+                        </div>
+                        <div style="background: rgba(255, 255, 255, 0.8); padding: 12px; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 16px; margin-bottom: 4px;">💬</div>
+                            <div style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Custom Message</div>
+                            <div style="font-size: 10px; color: var(--text-secondary);">Personalized outreach</div>
+                        </div>
+                    </div>
+                    
+                    <button onclick="dashboard.showAnalysisModal('${lead.username}')" 
+                            style="background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; border: none; padding: 14px 24px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 14px; width: 100%; transition: all 0.3s; box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4); text-transform: uppercase; letter-spacing: 0.5px;"
+                            onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(59, 130, 246, 0.5)'"
+                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 16px rgba(59, 130, 246, 0.4)'">
+                        🔍 Upgrade to Deep Analysis (2 Credits)
+                    </button>
+                    
+                    <div style="margin-top: 12px; text-align: center; font-size: 11px; color: var(--text-secondary);">
+                        ⚡ Get results in 30-60 seconds • 🎯 Detailed insights • 💬 Ready-to-send messages
+                    </div>
                 </div>
             ` : ''}
         </div>
