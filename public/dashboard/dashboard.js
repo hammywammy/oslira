@@ -262,7 +262,7 @@ async loadDashboardData() {
         
         console.log('✅ Authentication ready, loading data for user:', user.id);
 
-        // ✅ STEP 2: Load all leads first (simple query, no joins)
+        // ✅ STEP 2: Load all leads first - NOW INCLUDING quick_summary
         const { data: leadsData, error: leadsError } = await supabase
             .from('leads')
             .select(`
@@ -275,8 +275,9 @@ async loadDashboardData() {
                 followers_count,
                 profile_pic_url,
                 profile_url,
-                business_id
-            `)
+                business_id,
+                quick_summary
+            `)  // ✅ FIXED: Added quick_summary field
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -287,8 +288,18 @@ async loadDashboardData() {
         }
 
         console.log(`📊 Loaded ${leadsData?.length || 0} leads from database`);
+        
+        // ✅ DEBUG: Log to see if quick_summary is now included
+        if (leadsData && leadsData.length > 0) {
+            console.log('🔍 Sample lead data with quick_summary:', {
+                username: leadsData[0].username,
+                analysis_type: leadsData[0].analysis_type,
+                has_quick_summary: !!leadsData[0].quick_summary,
+                quick_summary_preview: leadsData[0].quick_summary?.substring(0, 100) + '...'
+            });
+        }
 
-        // ✅ STEP 3: Load analysis data for deep analysis leads
+        // ✅ STEP 3: Load analysis data for deep analysis leads (unchanged)
         const deepAnalysisLeadIds = leadsData
             ?.filter(lead => lead.analysis_type === 'deep')
             ?.map(lead => lead.id) || [];
@@ -329,7 +340,7 @@ async loadDashboardData() {
             }
         }
 
-        // ✅ STEP 4: Combine leads with their analysis data
+        // ✅ STEP 4: Combine leads with their analysis data (unchanged)
         const enrichedLeads = leadsData?.map(lead => ({
             ...lead,
             lead_analyses: lead.analysis_type === 'deep' && analysisDataMap.has(lead.id) 
@@ -346,7 +357,8 @@ async loadDashboardData() {
             total: this.allLeads.length,
             light: this.allLeads.filter(l => l.analysis_type === 'light').length,
             deep: this.allLeads.filter(l => l.analysis_type === 'deep').length,
-            withAnalysis: this.allLeads.filter(l => l.lead_analyses?.length > 0).length
+            withAnalysis: this.allLeads.filter(l => l.lead_analyses?.length > 0).length,
+            withQuickSummary: this.allLeads.filter(l => l.quick_summary).length  // ✅ NEW: Track quick summaries
         });
 
         // ✅ STEP 6: Cache the data with timestamp
