@@ -541,7 +541,11 @@ async viewLead(leadId) {
     // BUILD FUNCTIONS - ENTERPRISE LEAD DETAILS HTML
     // ===============================================================================
 
-   buildLeadDetailsHTML(lead, analysisData = null) {
+   // ===============================================================================
+// FIXED buildLeadDetailsHTML - LIGHT ANALYSIS NOW SHOWS QUICK SUMMARY + UPGRADE
+// ===============================================================================
+
+buildLeadDetailsHTML(lead, analysisData = null) {
     const analysisType = lead.analysis_type || 'light';
     const isDeepAnalysis = analysisType === 'deep';
     const score = lead.score || 0;
@@ -633,9 +637,12 @@ async viewLead(leadId) {
             
             <!-- Analysis Status -->
             ${this.buildAnalysisStatusSection(lead, analysisType)}
+            
+            <!-- ✅ NEW: Quick Summary Section for ALL analysis types -->
+            ${this.buildQuickSummarySection(lead, analysisData, analysisType)}
     `;
 
-    // ✅ UPDATED: Better logic for handling deep analysis data
+    // ✅ UPDATED: Better logic for handling different analysis types
     if (isDeepAnalysis && hasAnalysisData) {
         html += `
             <!-- Advanced AI Metrics -->
@@ -649,10 +656,6 @@ async viewLead(leadId) {
             
             <!-- AI Insights Summary -->
             ${this.buildAIInsightsSection(analysisData)}
-
-            html += this.buildAnalysisStatusSection(lead, analysisType);
-    
-            html += this.buildSummarySection(lead, analysisData, analysisType);
             
             <!-- Personalized Outreach Message -->
             ${analysisData.outreach_message ? this.buildOutreachMessageSection(analysisData.outreach_message) : ''}
@@ -673,7 +676,7 @@ async viewLead(leadId) {
             </div>
         `;
     } else {
-        // Light Analysis: Show upgrade prompt
+        // ✅ UPDATED: Light Analysis - Show upgrade prompt AFTER the quick summary
         html += this.buildUpgradePromptSection(lead);
     }
 
@@ -681,6 +684,71 @@ async viewLead(leadId) {
     return html;
 }
 
+// ✅ NEW: Quick Summary Section for ALL analysis types
+buildQuickSummarySection(lead, analysisData, analysisType) {
+    // Determine which summary to show
+    let summaryText = '';
+    let summaryTitle = '';
+    let summaryIcon = '';
+    let summaryGradient = '';
+    let summaryBorder = '';
+    
+    if (analysisType === 'light' && lead.quick_summary) {
+        summaryText = lead.quick_summary;
+        summaryTitle = '⚡ Quick AI Summary';
+        summaryIcon = '⚡';
+        summaryGradient = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))';
+        summaryBorder = 'var(--warning)';
+    } else if (analysisType === 'deep' && analysisData?.deep_summary) {
+        summaryText = analysisData.deep_summary;
+        summaryTitle = '🔥 Comprehensive AI Analysis';
+        summaryIcon = '🔥';
+        summaryGradient = 'linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))';
+        summaryBorder = 'var(--accent-teal)';
+    } else if (analysisType === 'light') {
+        // Fallback for light analysis without summary
+        summaryText = `@${lead.username} has been analyzed with basic profile metrics. ${lead.followers_count ? `With ${lead.followers_count.toLocaleString()} followers` : 'Profile data collected'} and a quality score of ${lead.score}/100. This provides a foundational assessment of their potential as a business lead.`;
+        summaryTitle = '⚡ Basic Analysis Complete';
+        summaryIcon = '⚡';
+        summaryGradient = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))';
+        summaryBorder = 'var(--warning)';
+    } else {
+        // No summary available
+        return '';
+    }
+    
+    return `
+        <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
+            <h4 style="color: var(--text-primary); margin-bottom: 16px; font-size: 18px; display: flex; align-items: center; justify-content: space-between;">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    ${summaryTitle}
+                    <span style="background: ${summaryBorder}; color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">
+                        AI Generated
+                    </span>
+                </span>
+                <button onclick="dashboard.copyText('${this.escapeHtml(summaryText).replace(/'/g, "\\'")}'); this.innerHTML='✅ Copied!'; setTimeout(() => this.innerHTML='📋 Copy', 2000)" 
+                        style="background: ${summaryBorder}; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
+                    📋 Copy
+                </button>
+            </h4>
+            
+            <div style="background: ${summaryGradient}; padding: 20px; border-radius: 12px; border-left: 4px solid ${summaryBorder}; position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -10px; right: -10px; font-size: 60px; opacity: 0.1;">${summaryIcon}</div>
+                <div style="color: var(--text-primary); line-height: 1.7; font-size: 15px; font-weight: 500; position: relative; z-index: 1;">
+                    ${this.escapeHtml(summaryText)}
+                </div>
+            </div>
+            
+            ${analysisType === 'light' ? `
+                <div style="margin-top: 16px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; text-align: center; border: 1px dashed rgba(59, 130, 246, 0.3);">
+                    <p style="margin: 0; font-size: 13px; color: var(--primary-blue); font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        💡 <span>This is a basic analysis. Upgrade to Deep Analysis for engagement metrics, selling points, and personalized outreach messages.</span>
+                    </p>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
     buildSummarySection(lead, analysisData, analysisType) {
     // Get the appropriate summary
     let summaryText = '';
