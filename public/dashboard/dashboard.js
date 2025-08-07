@@ -1776,6 +1776,430 @@ async submitAnalysis(event) {
     }
 }
 
+showBulkUpload() {
+    console.log('📤 Opening bulk upload modal...');
+    
+    const modal = document.getElementById('bulkModal');
+    if (!modal) {
+        console.error('❌ Bulk modal not found in DOM');
+        return;
+    }
+    
+    // Reset the modal content to simple username upload
+    const modalContent = modal.querySelector('.modal-content');
+    if (modalContent) {
+        modalContent.innerHTML = `
+            <button class="modal-close" onclick="dashboard.closeModal('bulkModal')">×</button>
+            <h3>📤 Bulk Username Upload</h3>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">
+                Upload a CSV file with Instagram usernames in the first column (Column A)
+            </p>
+            
+            <!-- CSV Format Example -->
+            <div class="form-group">
+                <label>Required CSV Format:</label>
+                <div style="background: var(--bg-light); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 16px; border: 1px solid var(--border-light);">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: var(--primary-blue);">Column A (Required):</div>
+                    noahskipslegday<br>
+                    harveywarnerr<br>
+                    hamzawilk<br>
+                    anotheruser<br>
+                    <span style="color: var(--text-secondary); font-size: 12px;">...and so on</span>
+                </div>
+                <div style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 6px; font-size: 13px; color: var(--primary-blue); border: 1px solid rgba(59, 130, 246, 0.2);">
+                    💡 <strong>Tip:</strong> Only the first column matters. Additional columns are ignored.
+                </div>
+            </div>
+            
+            <!-- File Upload -->
+            <div class="form-group">
+                <label for="csv-file-input">Select CSV File:</label>
+                <input type="file" 
+                       id="csv-file-input" 
+                       accept=".csv,.txt" 
+                       style="width: 100%; padding: 12px; border: 2px solid var(--border-light); border-radius: 8px; margin-bottom: 12px;">
+                
+                <div id="file-preview" style="display: none; background: var(--bg-light); padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid var(--border-light);">
+                    <h4 style="margin: 0 0 8px 0; color: var(--text-primary);">Preview (First 5 usernames):</h4>
+                    <div id="preview-content" style="font-family: monospace; font-size: 14px; color: var(--text-secondary);"></div>
+                    <div id="preview-stats" style="margin-top: 8px; font-size: 12px; color: var(--primary-blue);"></div>
+                </div>
+            </div>
+            
+            <!-- Analysis Type Selection -->
+            <div class="form-group">
+                <label for="bulk-analysis-type">Analysis Type:</label>
+                <select id="bulk-analysis-type" required style="width: 100%; padding: 12px; border: 2px solid var(--border-light); border-radius: 8px;">
+                    <option value="">Select analysis type...</option>
+                    <option value="light">⚡ Light Analysis (1 credit each) - Basic scoring</option>
+                    <option value="deep">🔥 Deep Analysis (2 credits each) - Full insights + messages</option>
+                </select>
+            </div>
+            
+            <!-- Business Profile Selection -->
+            <div class="form-group">
+                <label for="bulk-business-id">Business Profile:</label>
+                <select id="bulk-business-id" required style="width: 100%; padding: 12px; border: 2px solid var(--border-light); border-radius: 8px;">
+                    <option value="">Loading business profiles...</option>
+                </select>
+            </div>
+            
+            <!-- Cost Calculator -->
+            <div id="cost-calculator" style="display: none; background: rgba(245, 158, 11, 0.1); padding: 16px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(245, 158, 11, 0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; color: var(--text-primary);">
+                            <span id="username-count">0</span> usernames × 
+                            <span id="credit-cost">0</span> credits = 
+                            <span id="total-cost">0</span> total credits
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                            Current balance: <span id="current-credits">Loading...</span> credits
+                        </div>
+                    </div>
+                    <div id="cost-status" style="font-weight: 600;"></div>
+                </div>
+            </div>
+            
+            <!-- Submit Button -->
+            <button id="bulk-submit-btn" 
+                    onclick="dashboard.processBulkUpload()" 
+                    disabled
+                    style="background: var(--primary-blue); color: white; border: none; padding: 16px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; opacity: 0.6; transition: all 0.2s;">
+                🚀 Start Bulk Analysis
+            </button>
+            
+            <div style="margin-top: 16px; font-size: 12px; color: var(--text-secondary); text-align: center;">
+                ⚡ Analyses will run concurrently • 📊 Results appear in real-time • 🔄 Can continue browsing
+            </div>
+        `;
+    }
+    
+    // Set up file input listener
+    setTimeout(() => {
+        this.setupBulkUploadListeners();
+        this.loadBusinessProfilesForBulk();
+    }, 100);
+    
+    modal.style.display = 'flex';
+    console.log('✅ Bulk upload modal shown');
+}
+
+// ✅ 2. SETUP EVENT LISTENERS FOR BULK UPLOAD
+setupBulkUploadListeners() {
+    const fileInput = document.getElementById('csv-file-input');
+    const analysisTypeSelect = document.getElementById('bulk-analysis-type');
+    const businessSelect = document.getElementById('bulk-business-id');
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            this.handleBulkFileSelection(e);
+        });
+    }
+    
+    if (analysisTypeSelect) {
+        analysisTypeSelect.addEventListener('change', () => {
+            this.updateBulkCostCalculator();
+        });
+    }
+    
+    if (businessSelect) {
+        businessSelect.addEventListener('change', () => {
+            this.validateBulkForm();
+        });
+    }
+}
+
+// ✅ 3. HANDLE FILE SELECTION AND PARSING
+async handleBulkFileSelection(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    console.log('📁 File selected:', file.name);
+    
+    try {
+        const fileContent = await this.readFileAsText(file);
+        const usernames = this.parseUsernamesFromCSV(fileContent);
+        
+        if (usernames.length === 0) {
+            window.OsliraApp?.showMessage('No valid usernames found in file', 'error');
+            return;
+        }
+        
+        if (usernames.length > 50) {
+            window.OsliraApp?.showMessage('Maximum 50 usernames allowed per upload', 'error');
+            return;
+        }
+        
+        // Store parsed usernames
+        this.bulkUsernames = usernames;
+        
+        // Show preview
+        this.showBulkPreview(usernames);
+        
+        // Update cost calculator
+        this.updateBulkCostCalculator();
+        
+        console.log(`✅ Parsed ${usernames.length} usernames from CSV`);
+        
+    } catch (error) {
+        console.error('❌ File parsing failed:', error);
+        window.OsliraApp?.showMessage('Failed to parse CSV file: ' + error.message, 'error');
+    }
+}
+
+// ✅ 4. PARSE USERNAMES FROM CSV (COLUMN A ONLY)
+parseUsernamesFromCSV(csvContent) {
+    const lines = csvContent.split('\n').filter(line => line.trim());
+    const usernames = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        // Get first column (split by comma, semicolon, or tab)
+        const columns = line.split(/[,;\t]/);
+        const firstColumn = columns[0]?.trim();
+        
+        if (!firstColumn) continue;
+        
+        // Clean and validate username
+        const cleanUsername = this.cleanUsername(firstColumn);
+        
+        if (this.isValidUsername(cleanUsername)) {
+            usernames.push(cleanUsername);
+        } else {
+            console.warn(`⚠️ Invalid username skipped: "${firstColumn}" (line ${i + 1})`);
+        }
+    }
+    
+    // Remove duplicates
+    const uniqueUsernames = [...new Set(usernames)];
+    
+    if (uniqueUsernames.length !== usernames.length) {
+        console.log(`🔄 Removed ${usernames.length - uniqueUsernames.length} duplicate usernames`);
+    }
+    
+    return uniqueUsernames;
+}
+
+// ✅ 5. CLEAN AND VALIDATE USERNAMES
+cleanUsername(input) {
+    if (!input) return '';
+    
+    // Remove quotes, spaces, @ symbols, instagram.com URLs
+    let cleaned = input
+        .replace(/['"]/g, '') // Remove quotes
+        .replace(/\s+/g, '') // Remove spaces
+        .replace(/^@/, '') // Remove leading @
+        .toLowerCase();
+    
+    // Handle Instagram URLs
+    if (cleaned.includes('instagram.com')) {
+        try {
+            const url = new URL(cleaned.startsWith('http') ? cleaned : `https://${cleaned}`);
+            const pathSegments = url.pathname.split('/').filter(Boolean);
+            cleaned = pathSegments[0] || '';
+        } catch {
+            // If URL parsing fails, try to extract username manually
+            const match = cleaned.match(/instagram\.com\/([a-zA-Z0-9._]+)/);
+            cleaned = match ? match[1] : '';
+        }
+    }
+    
+    return cleaned;
+}
+
+isValidUsername(username) {
+    if (!username || username.length === 0) return false;
+    if (username.length > 30) return false;
+    
+    // Instagram username rules
+    const usernameRegex = /^[a-zA-Z0-9._]+$/;
+    if (!usernameRegex.test(username)) return false;
+    
+    // Can't start or end with period
+    if (username.startsWith('.') || username.endsWith('.')) return false;
+    
+    // Can't have consecutive periods
+    if (username.includes('..')) return false;
+    
+    return true;
+}
+
+// ✅ 6. SHOW PREVIEW OF PARSED USERNAMES
+showBulkPreview(usernames) {
+    const previewDiv = document.getElementById('file-preview');
+    const previewContent = document.getElementById('preview-content');
+    const previewStats = document.getElementById('preview-stats');
+    
+    if (!previewDiv || !previewContent || !previewStats) return;
+    
+    // Show first 5 usernames
+    const preview = usernames.slice(0, 5);
+    previewContent.innerHTML = preview.map(username => `@${username}`).join('<br>');
+    
+    // Show stats
+    const hasMore = usernames.length > 5;
+    previewStats.innerHTML = `
+        ✅ ${usernames.length} valid usernames found
+        ${hasMore ? `(showing first 5, +${usernames.length - 5} more)` : ''}
+    `;
+    
+    previewDiv.style.display = 'block';
+}
+
+// ✅ 7. UPDATE COST CALCULATOR
+updateBulkCostCalculator() {
+    const analysisType = document.getElementById('bulk-analysis-type')?.value;
+    const usernameCount = this.bulkUsernames?.length || 0;
+    
+    const costCalculator = document.getElementById('cost-calculator');
+    const usernameCountEl = document.getElementById('username-count');
+    const creditCostEl = document.getElementById('credit-cost');
+    const totalCostEl = document.getElementById('total-cost');
+    const costStatusEl = document.getElementById('cost-status');
+    
+    if (!costCalculator || !usernameCountEl || !creditCostEl || !totalCostEl || !costStatusEl) return;
+    
+    if (usernameCount > 0 && analysisType) {
+        const creditPerAnalysis = analysisType === 'deep' ? 2 : 1;
+        const totalCost = usernameCount * creditPerAnalysis;
+        
+        usernameCountEl.textContent = usernameCount;
+        creditCostEl.textContent = creditPerAnalysis;
+        totalCostEl.textContent = totalCost;
+        
+        // Check if user has enough credits (you'll need to get current credits)
+        const currentCredits = this.getCurrentUserCredits(); // Implement this method
+        
+        if (currentCredits >= totalCost) {
+            costStatusEl.textContent = '✅ Sufficient Credits';
+            costStatusEl.style.color = 'var(--success)';
+        } else {
+            costStatusEl.textContent = '❌ Insufficient Credits';
+            costStatusEl.style.color = 'var(--error)';
+        }
+        
+        costCalculator.style.display = 'block';
+        this.validateBulkForm();
+    } else {
+        costCalculator.style.display = 'none';
+    }
+}
+
+// ✅ 8. VALIDATE BULK FORM
+validateBulkForm() {
+    const submitBtn = document.getElementById('bulk-submit-btn');
+    const analysisType = document.getElementById('bulk-analysis-type')?.value;
+    const businessId = document.getElementById('bulk-business-id')?.value;
+    const hasUsernames = (this.bulkUsernames?.length || 0) > 0;
+    const hasEnoughCredits = this.checkBulkCredits();
+    
+    if (!submitBtn) return;
+    
+    const isValid = hasUsernames && analysisType && businessId && hasEnoughCredits;
+    
+    submitBtn.disabled = !isValid;
+    submitBtn.style.opacity = isValid ? '1' : '0.6';
+    submitBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
+}
+
+// ✅ 9. PROCESS BULK UPLOAD
+async processBulkUpload() {
+    const analysisType = document.getElementById('bulk-analysis-type')?.value;
+    const businessId = document.getElementById('bulk-business-id')?.value;
+    const usernames = this.bulkUsernames || [];
+    
+    if (!analysisType || !businessId || usernames.length === 0) {
+        window.OsliraApp?.showMessage('Please complete all fields', 'error');
+        return;
+    }
+    
+    console.log(`🚀 Starting bulk upload: ${usernames.length} usernames, ${analysisType} analysis`);
+    
+    // Close modal
+    this.closeModal('bulkModal');
+    
+    // Convert usernames to lead objects
+    const leads = usernames.map(username => ({ username }));
+    
+    try {
+        // Use the existing queue system for bulk analysis
+        const result = await window.analysisQueue.startBulkAnalysis(leads, analysisType, businessId);
+        
+        window.OsliraApp?.showMessage(
+            `Bulk analysis started: ${leads.length} profiles queued`, 
+            'success'
+        );
+        
+        console.log('✅ Bulk upload initiated:', result);
+        
+        // Refresh dashboard after some time to show results
+        setTimeout(async () => {
+            await this.loadDashboardData();
+        }, 5000);
+        
+    } catch (error) {
+        console.error('❌ Bulk upload failed:', error);
+        window.OsliraApp?.showMessage(`Bulk upload failed: ${error.message}`, 'error');
+    }
+}
+
+// ✅ 10. HELPER METHODS
+readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(new Error('Failed to read file'));
+        reader.readAsText(file);
+    });
+}
+
+getCurrentUserCredits() {
+    // Get current user credits from your app state
+    return window.OsliraApp?.user?.credits || 0;
+}
+
+checkBulkCredits() {
+    const analysisType = document.getElementById('bulk-analysis-type')?.value;
+    const usernameCount = this.bulkUsernames?.length || 0;
+    const currentCredits = this.getCurrentUserCredits();
+    
+    if (!analysisType || usernameCount === 0) return false;
+    
+    const creditPerAnalysis = analysisType === 'deep' ? 2 : 1;
+    const totalCost = usernameCount * creditPerAnalysis;
+    
+    return currentCredits >= totalCost;
+}
+
+async loadBusinessProfilesForBulk() {
+    const businessSelect = document.getElementById('bulk-business-id');
+    if (!businessSelect) return;
+    
+    try {
+        businessSelect.innerHTML = '<option value="">Loading...</option>';
+        businessSelect.disabled = true;
+        
+        // Use the same method as your analysis modal
+        await this.loadBusinessProfilesForModal();
+        
+        // Copy options to bulk select
+        const mainBusinessSelect = document.getElementById('business-id');
+        if (mainBusinessSelect) {
+            businessSelect.innerHTML = mainBusinessSelect.innerHTML;
+        }
+        
+        businessSelect.disabled = false;
+        
+    } catch (error) {
+        console.error('❌ Failed to load business profiles for bulk:', error);
+        businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
+        businessSelect.disabled = false;
+    }
+}
+
 // ===============================================================================
 // ADDITIONAL METHOD: Add this to your Dashboard class for queue integration
 // ===============================================================================
