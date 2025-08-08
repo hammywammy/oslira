@@ -3602,7 +3602,7 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
 
 
 
-   showAnalysisModal() {
+showAnalysisModal(prefillUsername = '') {
     console.log('🔍 Opening analysis modal...');
     
     const modal = document.getElementById('analysisModal');
@@ -3611,13 +3611,13 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
         return;
     }
     
-    // Reset form completely
+    // Reset form
     const form = document.getElementById('analysisForm');
     if (form) {
         form.reset();
     }
     
-    // Reset all form elements
+    // Reset form fields
     const analysisType = document.getElementById('analysis-type');
     const profileInput = document.getElementById('profile-input');
     const inputContainer = document.getElementById('input-field-container');
@@ -3626,25 +3626,34 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
         analysisType.value = '';
     }
     if (profileInput) {
-        profileInput.value = '';
+        profileInput.value = prefillUsername; // ✅ Allow prefilling username
     }
     if (inputContainer) {
         inputContainer.style.display = 'none';
     }
     
-    // Load business profiles when modal opens
-    this.loadBusinessProfilesNow();
+    // ✅ Load business profiles with auto-selection
+    this.loadBusinessProfilesForModal();
     
     // Show the modal
     modal.style.display = 'flex';
-    console.log('✅ Analysis modal shown');
     
     // Focus on analysis type dropdown
     setTimeout(() => {
         if (analysisType) {
             analysisType.focus();
         }
-    }, 200);
+    }, 100);
+    
+    console.log('✅ Analysis modal opened with auto-selected business profile');
+}
+
+setDefaultBusinessProfile() {
+    const businessSelect = document.getElementById('business-id');
+    if (businessSelect && businessSelect.value) {
+        localStorage.setItem('selectedBusinessId', businessSelect.value);
+        window.OsliraApp?.showMessage('Default business profile saved!', 'success');
+    }
 }
     // ===============================================================================
     // BULK OPERATIONS
@@ -4441,8 +4450,6 @@ async loadBusinessProfilesForModal() {
             return;
         }
 
-        console.log('🔍 Querying business_profiles table...');
-
         const { data: profiles, error } = await supabase
             .from('business_profiles')
             .select('id, business_name, is_active')
@@ -4452,41 +4459,44 @@ async loadBusinessProfilesForModal() {
 
         if (error) {
             console.warn('⚠️ Business profiles query failed:', error.message);
-            console.warn('Error details:', error);
-            
-            // Check if it's a permission/RLS issue
-            if (error.code === 'PGRST116' || error.message.includes('permission')) {
-                businessSelect.innerHTML = '<option value="">No access to business profiles</option>';
-            } else {
-                businessSelect.innerHTML = '<option value="">Error loading profiles - check console</option>';
-            }
-            
+            businessSelect.innerHTML = '<option value="">Error loading profiles</option>';
             businessSelect.disabled = false;
             return;
         }
 
-        console.log('📊 Business profiles result:', profiles);
-
-        // Populate dropdown
+        // ✅ AUTO-SELECT LOGIC
         if (profiles && profiles.length > 0) {
-            businessSelect.innerHTML = [
-                '<option value="">Select business profile...</option>',
-                ...profiles.map(profile => 
-                    `<option value="${profile.id}">${profile.business_name}</option>`
-                )
-            ].join('');
+            // Get saved preference or use first profile
+            const savedBusinessId = localStorage.getItem('selectedBusinessId');
+            const defaultProfile = savedBusinessId 
+                ? profiles.find(p => p.id === savedBusinessId) || profiles[0]
+                : profiles[0];
+
+            // Build options with default selected
+            const options = profiles.map(profile => {
+                const isSelected = profile.id === defaultProfile.id;
+                return `<option value="${profile.id}" ${isSelected ? 'selected' : ''}>${profile.business_name}</option>`;
+            }).join('');
+
+            businessSelect.innerHTML = options;
             
-            console.log(`✅ Loaded ${profiles.length} business profiles`);
+            // ✅ SAVE SELECTION ON CHANGE
+            businessSelect.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    localStorage.setItem('selectedBusinessId', e.target.value);
+                    console.log('💾 Saved business preference:', e.target.value);
+                }
+            });
+            
+            console.log(`✅ Loaded ${profiles.length} profiles, auto-selected: ${defaultProfile.business_name}`);
         } else {
             businessSelect.innerHTML = '<option value="">No business profiles found - create one first</option>';
-            console.log('📋 No business profiles found for user');
         }
 
         businessSelect.disabled = false;
 
     } catch (error) {
         console.error('❌ Business profiles loading failed:', error);
-        
         const businessSelect = document.getElementById('business-id');
         if (businessSelect) {
             businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
