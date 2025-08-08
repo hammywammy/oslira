@@ -396,14 +396,15 @@ async function fetchBusinessProfile(business_id: string, user_id: string, env: E
   return businesses[0];
 }
 
-async function updateCreditsAndTransaction(
-  user_id: string,
-  cost: number,
+async function updateCreditsWithDetailedCostTracking(
+  userId: string,
+  costBreakdown: any,
+  processingTime: number,
+  apiCalls: string[],
   newBalance: number,
   description: string,
-  transactionType: 'use' | 'add',
   env: Env,
-  lead_id?: string
+  leadId?: string
 ): Promise<void> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
@@ -412,26 +413,40 @@ async function updateCreditsAndTransaction(
   };
 
   try {
-    logger('info', `Updating user ${user_id} credits to ${newBalance}`);
-    
+    // Update user credits
     await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
+      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
       {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({
-          credits: newBalance
-        })
+        body: JSON.stringify({ credits: newBalance })
       },
       10000
     );
 
+    // Create detailed transaction record with cost tracking
     const transactionData = {
-      user_id: user_id,
-      amount: transactionType === 'use' ? -cost : cost,
-      type: transactionType,
+      user_id: userId,
+      amount: -costBreakdown.total,
+      type: 'use',
       description: description,
-      lead_id: lead_id || null
+      lead_id: leadId || null,
+      metadata: {
+        cost_breakdown: costBreakdown,
+        performance_metrics: {
+          total_processing_time_ms: processingTime,
+          api_calls: apiCalls,
+          efficiency_score: processingTime > 0 ? Math.round(1000 / processingTime * 100) / 100 : 0
+        },
+        api_usage: {
+          apify_cost: costBreakdown.apify,
+          claude_cost: costBreakdown.claude,
+          openai_cost: costBreakdown.openai,
+          total_usd: costBreakdown.total
+        },
+        timestamp: new Date().toISOString(),
+        version: 'v3.0.0-enterprise-cost-tracking'
+      }
     };
 
     await fetchJson(
@@ -444,10 +459,34 @@ async function updateCreditsAndTransaction(
       10000
     );
 
+    logger('info', 'Credits updated with comprehensive cost tracking', {
+      userId,
+      totalCost: costBreakdown.total,
+      newBalance,
+      breakdown: costBreakdown,
+      processingTime: `${processingTime.toFixed(2)}ms`
+    });
+
   } catch (error: any) {
-    logger('error', 'updateCreditsAndTransaction error:', error.message);
+    logger('error', 'Failed to update credits with cost tracking', { error: error.message });
     throw new Error(`Failed to update credits: ${error.message}`);
   }
+}
+
+// ===============================================================================
+// HELPER FUNCTIONS FOR MESSAGE GENERATION
+// ===============================================================================
+
+function generateFallbackMessage(profile: ProfileData, business: BusinessProfile): string {
+  return `Hi ${profile.displayName || profile.username},
+
+I came across your profile and was impressed by your content and engagement with your ${profile.followersCount.toLocaleString()} followers.
+
+I'm reaching out from ${business.name}, and I think there could be a great opportunity for collaboration given your audience and our ${business.value_proposition.toLowerCase()}.
+
+Would you be interested in exploring a potential partnership? I'd love to share more details about what we have in mind.
+
+Best regards`;
 }
 
 async function saveLeadAndAnalysis(
@@ -2181,16 +2220,28 @@ app.get('/config', (c) => {
 
 app.post('/v1/analyze', async (c) => {
   const requestId = generateRequestId();
+  const totalStartTime = performance.now();
+  
+  // Cost tracking variables
+  let totalCost = 0;
+  let apiCallBreakdown: string[] = [];
+  let costBreakdown = {
+    apify: 0,
+    claude: 0,
+    openai: 0,
+    total: 0
+  };
   
   try {
     const body = await c.req.json();
     const data = normalizeRequest(body);
-    const { analysisResult, costData } = await performAnalysisWithCostTracking(
-  username,
-  analysisType,
-  c.env,
-  requestId
-);
+    const { username, analysis_type, business_id, user_id, profile_url } = data;
+    
+    logger('info', 'Enterprise analysis request started with cost tracking', { 
+      username, 
+      analysisType: analysis_type, 
+      requestId
+    });
     
     const [userResult, business] = await Promise.all([
       fetchUserAndCredits(user_id, c.env),
@@ -2207,18 +2258,39 @@ app.post('/v1/analyze', async (c) => {
       ), 402);
     }
     
-    // SCRAPE PROFILE
+    // ===============================================================================
+    // STEP 1: SCRAPE PROFILE WITH COST & TIME TRACKING
+    // ===============================================================================
+    
     let profileData: ProfileData;
+    let scrapingCost = 0;
+    
     try {
-      logger('info', 'Starting profile scraping', { username });
+      logger('info', 'Starting profile scraping with cost tracking', { username });
+      const scrapingStartTime = performance.now();
+      
       profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-      logger('info', 'Profile scraped successfully', { 
+      
+      const scrapingEndTime = performance.now();
+      const scrapingTime = scrapingEndTime - scrapingStartTime;
+      
+      // Calculate Apify cost (estimate: $0.0001 per result item)
+      const postsScraped = profileData.latestPosts?.length || 1;
+      scrapingCost = postsScraped * 0.0001;
+      costBreakdown.apify = scrapingCost;
+      totalCost += scrapingCost;
+      
+      apiCallBreakdown.push(`Apify Scraping: ${scrapingTime.toFixed(2)}ms ($${scrapingCost.toFixed(6)})`);
+      
+      logger('info', 'Profile scraped successfully with cost tracking', { 
         username: profileData.username, 
         followers: profileData.followersCount,
         postsFound: profileData.latestPosts?.length || 0,
         hasRealEngagement: (profileData.engagement?.postsAnalyzed || 0) > 0,
         dataQuality: profileData.dataQuality,
-        scraperUsed: profileData.scraperUsed
+        scraperUsed: profileData.scraperUsed,
+        scrapingTime: `${scrapingTime.toFixed(2)}ms`,
+        scrapingCost: `$${scrapingCost.toFixed(6)}`
       });
     } catch (scrapeError: any) {
       logger('error', 'Profile scraping failed', { 
@@ -2242,217 +2314,406 @@ app.post('/v1/analyze', async (c) => {
         undefined, 
         errorMessage, 
         requestId
-      ), 500);
+      ), 400);
     }
-
-    // AI ANALYSIS
+    
+    // ===============================================================================
+    // STEP 2: AI ANALYSIS WITH COST & TIME TRACKING
+    // ===============================================================================
+    
     let analysisResult: AnalysisResult;
+    let analysisMessage: string | null = null;
+    let aiAnalysisCost = 0;
+    let messageGenerationCost = 0;
+    
     try {
-      logger('info', 'Starting AI analysis');
-      analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
-      logger('info', 'AI analysis completed', { 
+      logger('info', 'Starting AI analysis with cost tracking', { username, requestId });
+      const analysisStartTime = performance.now();
+      
+      const analysisPrompt = createAnalysisPrompt(profileData, business);
+      let aiResponse: any;
+      let tokensUsed = { input: 0, output: 0, total: 0 };
+      
+      // AI Analysis with cost tracking
+      if (c.env.CLAUDE_KEY) {
+        logger('info', 'Using Claude for analysis with cost tracking', { requestId });
+        
+        const claudeResponse = await callWithRetry(
+          'https://api.anthropic.com/v1/messages',
+          {
+            method: 'POST',
+            headers: {
+              'x-api-key': c.env.CLAUDE_KEY,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'claude-3-5-sonnet-20241022',
+              messages: [{ role: 'user', content: analysisPrompt }],
+              temperature: 0.7,
+              max_tokens: 1000
+            })
+          },
+          3, 1500, 25000
+        );
+        
+        // Extract token usage and calculate cost
+        if (claudeResponse.usage) {
+          tokensUsed.input = claudeResponse.usage.input_tokens || 0;
+          tokensUsed.output = claudeResponse.usage.output_tokens || 0;
+          tokensUsed.total = tokensUsed.input + tokensUsed.output;
+          
+          // Claude 3.5 Sonnet pricing: $3/1M input, $15/1M output
+          const inputCost = (tokensUsed.input / 1000000) * 3.00;
+          const outputCost = (tokensUsed.output / 1000000) * 15.00;
+          aiAnalysisCost = inputCost + outputCost;
+        }
+        
+        aiResponse = claudeResponse.content?.[0]?.text || claudeResponse.completion;
+        costBreakdown.claude += aiAnalysisCost;
+        
+      } else if (c.env.OPENAI_KEY) {
+        logger('info', 'Using OpenAI for analysis with cost tracking', { requestId });
+        
+        const openaiResponse = await callWithRetry(
+          'https://api.openai.com/v1/chat/completions',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${c.env.OPENAI_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: [{ role: 'user', content: analysisPrompt }],
+              temperature: 0.7,
+              max_tokens: 1000
+            })
+          },
+          3, 1500, 25000
+        );
+        
+        // Extract token usage and calculate cost
+        if (openaiResponse.usage) {
+          tokensUsed.input = openaiResponse.usage.prompt_tokens || 0;
+          tokensUsed.output = openaiResponse.usage.completion_tokens || 0;
+          tokensUsed.total = tokensUsed.input + tokensUsed.output;
+          
+          // GPT-4o pricing: $2.50/1M input, $10/1M output
+          const inputCost = (tokensUsed.input / 1000000) * 2.50;
+          const outputCost = (tokensUsed.output / 1000000) * 10.00;
+          aiAnalysisCost = inputCost + outputCost;
+        }
+        
+        aiResponse = openaiResponse.choices[0].message.content;
+        costBreakdown.openai += aiAnalysisCost;
+        
+      } else {
+        throw new Error('No AI service available for analysis');
+      }
+      
+      const analysisEndTime = performance.now();
+      const analysisTime = analysisEndTime - analysisStartTime;
+      totalCost += aiAnalysisCost;
+      
+      apiCallBreakdown.push(`AI Analysis: ${analysisTime.toFixed(2)}ms ($${aiAnalysisCost.toFixed(6)}) - ${tokensUsed.total} tokens`);
+      
+      // Parse AI response
+      let parsedAnalysis: any;
+      try {
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsedAnalysis = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in AI response');
+        }
+      } catch (parseError) {
+        logger('error', 'Failed to parse AI analysis response', { 
+          error: parseError,
+          response: aiResponse?.substring(0, 500)
+        });
+        throw new Error('AI analysis returned invalid format');
+      }
+      
+      analysisResult = validateAnalysisResult(parsedAnalysis);
+      
+      logger('info', 'AI analysis completed with cost tracking', {
+        username,
         score: analysisResult.score,
-        engagementScore: analysisResult.engagement_score,
-        nicheFit: analysisResult.niche_fit,
-        confidence: analysisResult.confidence_level,
-        hasQuickSummary: !!analysisResult.quick_summary,
-        hasDeepSummary: !!analysisResult.deep_summary
+        analysisTime: `${analysisTime.toFixed(2)}ms`,
+        analysisCost: `$${aiAnalysisCost.toFixed(6)}`,
+        tokensUsed: tokensUsed.total
       });
-    } catch (aiError: any) {
-      logger('error', 'AI analysis failed', { error: aiError.message });
-      return c.json(createStandardResponse(
-        false, 
-        undefined, 
-        'AI analysis failed', 
+      
+    } catch (analysisError: any) {
+      logger('error', 'AI analysis failed', { 
+        username, 
+        error: analysisError.message,
         requestId
-      ), 500);
+      });
+      throw new Error(`Analysis failed: ${analysisError.message}`);
     }
-
-    // GENERATE OUTREACH MESSAGE FOR DEEP ANALYSIS
-    let outreachMessage = '';
+    
+    // ===============================================================================
+    // STEP 3: MESSAGE GENERATION (DEEP ANALYSIS ONLY) WITH COST TRACKING
+    // ===============================================================================
+    
     if (analysis_type === 'deep') {
       try {
-        logger('info', 'Generating outreach message');
-        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-        logger('info', 'Outreach message generated', { length: outreachMessage.length });
+        logger('info', 'Starting message generation with cost tracking', { username, requestId });
+        const messageStartTime = performance.now();
+        
+        const messagePrompt = createMessagePrompt(profileData, business, analysisResult);
+        let messageTokensUsed = { input: 0, output: 0, total: 0 };
+        
+        if (c.env.CLAUDE_KEY) {
+          const claudeMessageResponse = await callWithRetry(
+            'https://api.anthropic.com/v1/messages',
+            {
+              method: 'POST',
+              headers: {
+                'x-api-key': c.env.CLAUDE_KEY,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'claude-3-5-sonnet-20241022',
+                messages: [{ role: 'user', content: messagePrompt }],
+                temperature: 0.7,
+                max_tokens: 1000
+              })
+            },
+            3, 1500, 25000
+          );
+          
+          if (claudeMessageResponse.usage) {
+            messageTokensUsed.input = claudeMessageResponse.usage.input_tokens || 0;
+            messageTokensUsed.output = claudeMessageResponse.usage.output_tokens || 0;
+            messageTokensUsed.total = messageTokensUsed.input + messageTokensUsed.output;
+            
+            const inputCost = (messageTokensUsed.input / 1000000) * 3.00;
+            const outputCost = (messageTokensUsed.output / 1000000) * 15.00;
+            messageGenerationCost = inputCost + outputCost;
+          }
+          
+          analysisMessage = claudeMessageResponse.content?.[0]?.text || claudeMessageResponse.completion;
+          costBreakdown.claude += messageGenerationCost;
+          
+        } else if (c.env.OPENAI_KEY) {
+          const openaiMessageResponse = await callWithRetry(
+            'https://api.openai.com/v1/chat/completions',
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${c.env.OPENAI_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o',
+                messages: [{ role: 'user', content: messagePrompt }],
+                temperature: 0.7,
+                max_tokens: 1000
+              })
+            },
+            3, 1500, 25000
+          );
+          
+          if (openaiMessageResponse.usage) {
+            messageTokensUsed.input = openaiMessageResponse.usage.prompt_tokens || 0;
+            messageTokensUsed.output = openaiMessageResponse.usage.completion_tokens || 0;
+            messageTokensUsed.total = messageTokensUsed.input + messageTokensUsed.output;
+            
+            const inputCost = (messageTokensUsed.input / 1000000) * 2.50;
+            const outputCost = (messageTokensUsed.output / 1000000) * 10.00;
+            messageGenerationCost = inputCost + outputCost;
+          }
+          
+          analysisMessage = openaiMessageResponse.choices[0].message.content;
+          costBreakdown.openai += messageGenerationCost;
+        }
+        
+        const messageEndTime = performance.now();
+        const messageTime = messageEndTime - messageStartTime;
+        totalCost += messageGenerationCost;
+        
+        apiCallBreakdown.push(`Message Generation: ${messageTime.toFixed(2)}ms ($${messageGenerationCost.toFixed(6)}) - ${messageTokensUsed.total} tokens`);
+        
+        logger('info', 'Message generated with cost tracking', {
+          username,
+          messageTime: `${messageTime.toFixed(2)}ms`,
+          messageCost: `$${messageGenerationCost.toFixed(6)}`,
+          tokensUsed: messageTokensUsed.total
+        });
+        
       } catch (messageError: any) {
-        logger('warn', 'Message generation failed (non-fatal)', { error: messageError.message });
+        logger('error', 'Message generation failed', { 
+          error: messageError.message, 
+          requestId 
+        });
+        
+        // Continue without message - don't fail the entire analysis
+        analysisMessage = generateFallbackMessage(profileData, business);
       }
     }
-
-    // PREPARE LEAD DATA
+    
+    // ===============================================================================
+    // STEP 4: SAVE TO DATABASE WITH ENHANCED COST TRACKING
+    // ===============================================================================
+    
+    costBreakdown.total = totalCost;
+    const totalEndTime = performance.now();
+    const totalProcessingTime = totalEndTime - totalStartTime;
+    
+    // Prepare lead data with cost tracking
     const leadData = {
+      username: profileData.username,
+      display_name: profileData.displayName,
+      bio: profileData.bio,
+      followers_count: profileData.followersCount,
+      following_count: profileData.followingCount,
+      posts_count: profileData.postsCount,
+      is_verified: profileData.isVerified,
+      is_private: profileData.isPrivate,
+      profile_pic_url: profileData.profilePicUrl,
+      external_url: profileData.externalUrl,
+      is_business_account: profileData.isBusinessAccount || false,
       user_id: user_id,
       business_id: business_id,
-      username: profileData.username,
-      platform: 'instagram',
-      profile_url: profile_url,
-      profile_pic_url: profileData.profilePicUrl || null,
-      score: analysisResult.score || 0,
       analysis_type: analysis_type,
-      followers_count: profileData.followersCount || 0,
-      created_at: new Date().toISOString(),
-      quick_summary: analysisResult.quick_summary || null
+      score: analysisResult.score,
+      profile_url: profile_url,
+      quick_summary: analysis_type === 'light' ? analysisResult.engagement_insights : null,
+      data_quality: profileData.dataQuality || 'medium',
+      scraper_used: profileData.scraperUsed || 'unknown',
+      avg_likes: profileData.engagement?.avgLikes || 0,
+      avg_comments: profileData.engagement?.avgComments || 0,
+      engagement_rate: profileData.engagement?.engagementRate || 0,
+      posts_analyzed: profileData.engagement?.postsAnalyzed || 0,
+      real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0
     };
-
-    // PREPARE ANALYSIS DATA FOR DEEP ANALYSIS
-    let analysisData = null;
-    if (analysis_type === 'deep') {
-      analysisData = {
-        user_id: user_id,
-        username: profileData.username,
-        analysis_type: 'deep',
-        score: analysisResult.score || 0,
-        engagement_score: analysisResult.engagement_score || 0,
-        score_niche_fit: analysisResult.niche_fit || 0,
-        score_total: analysisResult.score || 0,
-        niche_fit: analysisResult.niche_fit || 0,
-        avg_likes: profileData.engagement?.avgLikes || 0,
-        avg_comments: profileData.engagement?.avgComments || 0,
-        engagement_rate: profileData.engagement?.engagementRate || 0,
-        audience_quality: analysisResult.audience_quality || 'Unknown',
-        engagement_insights: analysisResult.engagement_insights || 'No insights available',
-        selling_points: Array.isArray(analysisResult.selling_points) ? 
-          analysisResult.selling_points : 
-          (analysisResult.selling_points ? [analysisResult.selling_points] : null),
-        reasons: Array.isArray(analysisResult.reasons) ? analysisResult.reasons : 
-          (Array.isArray(analysisResult.selling_points) ? analysisResult.selling_points : null),
-        latest_posts: (profileData.latestPosts?.length || 0) > 0 ? 
-          JSON.stringify(profileData.latestPosts.slice(0, 12)) : null,
-        engagement_data: profileData.engagement ? JSON.stringify({
-          avgLikes: profileData.engagement.avgLikes,
-          avgComments: profileData.engagement.avgComments,
-          engagementRate: profileData.engagement.engagementRate,
-          totalEngagement: profileData.engagement.totalEngagement,
-          postsAnalyzed: profileData.engagement.postsAnalyzed,
-          dataQuality: profileData.dataQuality,
-          scraperUsed: profileData.scraperUsed,
-          dataSource: 'real_scraped_data',
-          calculationMethod: 'manual_averaging_from_posts'
-        }) : JSON.stringify({
-          dataSource: 'no_real_data_available',
-          reason: 'scraping_failed_or_private_account',
-          scraperUsed: profileData.scraperUsed,
-          estimatedData: false
-        }),
-        analysis_data: JSON.stringify({
-          confidence_level: analysisResult.confidence_level || calculateConfidenceLevel(profileData, analysis_type),
-          scraper_used: profileData.scraperUsed,
-          data_quality: profileData.dataQuality,
-          posts_found: profileData.latestPosts?.length || 0,
-          posts_with_engagement: profileData.latestPosts?.filter(p => p.likesCount > 0 || p.commentsCount > 0).length || 0,
-          real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0,
-          follower_count: profileData.followersCount,
-          verification_status: profileData.isVerified,
-          account_type: profileData.isPrivate ? 'private' : 'public',
-          analysis_timestamp: new Date().toISOString(),
-          ai_model_used: 'gpt-4o'
-        }),
-        outreach_message: outreachMessage || null,
-        deep_summary: analysisResult.deep_summary || null,
-        created_at: new Date().toISOString()
-      };
-    }
-
-    // SAVE TO DATABASE
-    let lead_id: string;
-    try {
-      logger('info', 'Saving data to database');
-      lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
-      logger('info', 'Database save successful', { lead_id });
-    } catch (saveError: any) {
-      logger('error', 'Database save failed', { error: saveError.message });
-      return c.json(createStandardResponse(
-        false, 
-        undefined, 
-        `Database save failed: ${saveError.message}`, 
-        requestId
-      ), 500);
-    }
-
-    // UPDATE CREDITS
-    try {
-      await updateCreditsWithDetailedCostTracking(
-  userId,
-  costData,
-  userResult.credits - creditsUsed,
-  `${analysisType} analysis of @${username}`,
-  c.env,
-  leadId
-);
-      logger('info', 'Credits updated successfully', { 
-        creditCost, 
-        remainingCredits: userResult.credits - creditCost 
-      });
-    } catch (creditError: any) {
-      logger('error', 'Credit update failed', { error: creditError.message });
-      return c.json(createStandardResponse(true, {
-  ...analysisResult,
-  credits: {
-    used: creditsUsed,
-    remaining: userResult.credits - creditsUsed,
-    costBreakdown: costData
-  }
-}, undefined, requestId));
-    }
-
-    // PREPARE RESPONSE
+    
+    const analysisData = analysis_type === 'deep' ? {
+      engagement_score: analysisResult.engagement_score,
+      niche_fit: analysisResult.niche_fit,
+      audience_quality: analysisResult.audience_quality,
+      engagement_insights: analysisResult.engagement_insights,
+      selling_points: analysisResult.selling_points,
+      reasons: analysisResult.reasons,
+      outreach_message: analysisMessage,
+      confidence_level: analysisResult.confidence_level || 85,
+      deep_summary: analysisResult.engagement_insights
+    } : null;
+    
+    const lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+    
+    // ===============================================================================
+    // STEP 5: UPDATE CREDITS WITH DETAILED COST BREAKDOWN
+    // ===============================================================================
+    
+    await updateCreditsWithDetailedCostTracking(
+      user_id,
+      costBreakdown,
+      totalProcessingTime,
+      apiCallBreakdown,
+      userResult.credits - creditCost,
+      `${analysis_type} analysis of @${username}`,
+      c.env,
+      lead_id
+    );
+    
+    // ===============================================================================
+    // STEP 6: PREPARE ENHANCED RESPONSE WITH COST DATA
+    // ===============================================================================
+    
     const responseData = {
+      success: true,
       lead_id,
       profile: {
         username: profileData.username,
-        displayName: profileData.displayName,
-        followersCount: profileData.followersCount,
-        isVerified: profileData.isVerified,
-        profilePicUrl: profileData.profilePicUrl,
-        dataQuality: profileData.dataQuality,
-        scraperUsed: profileData.scraperUsed
+        display_name: profileData.displayName,
+        followers_count: profileData.followersCount,
+        is_verified: profileData.isVerified,
+        is_business_account: profileData.isBusinessAccount || false,
+        data_quality: profileData.dataQuality,
+        scraper_used: profileData.scraperUsed
       },
       analysis: {
         score: analysisResult.score,
-        type: analysis_type,
-        confidence_level: analysisResult.confidence_level,
-        quick_summary: analysisResult.quick_summary,
-        ...(analysis_type === 'deep' && {
-          engagement_score: analysisResult.engagement_score,
-          niche_fit: analysisResult.niche_fit,
-          audience_quality: analysisResult.audience_quality,
-          selling_points: analysisResult.selling_points,
-          reasons: analysisResult.reasons,
-          outreach_message: outreachMessage,
-          deep_summary: analysisResult.deep_summary,
-          engagement_data: profileData.engagement ? {
-            avg_likes: profileData.engagement.avgLikes,
-            avg_comments: profileData.engagement.avgComments,
-            engagement_rate: profileData.engagement.engagementRate,
-            posts_analyzed: profileData.engagement.postsAnalyzed,
-            data_source: 'real_scraped_calculation'
-          } : {
-            data_source: 'no_real_data_available',
-            avg_likes: 0,
-            avg_comments: 0,
-            engagement_rate: 0
-          }
+        engagement_score: analysisResult.engagement_score,
+        niche_fit: analysisResult.niche_fit,
+        audience_quality: analysisResult.audience_quality,
+        confidence_level: analysisResult.confidence_level || 85,
+        selling_points: analysisResult.selling_points,
+        reasons: analysisResult.reasons,
+        quick_summary: analysisResult.engagement_insights,
+        ...(analysis_type === 'deep' && analysisMessage && {
+          outreach_message: analysisMessage,
+          deep_summary: analysisResult.engagement_insights
+        })
+      },
+      engagement: {
+        real_data_available: (profileData.engagement?.postsAnalyzed || 0) > 0,
+        ...(profileData.engagement ? {
+          avg_likes: profileData.engagement.avgLikes,
+          avg_comments: profileData.engagement.avgComments,
+          engagement_rate: profileData.engagement.engagementRate,
+          posts_analyzed: profileData.engagement.postsAnalyzed,
+          data_source: 'real_scraped_calculation'
+        } : {
+          data_source: 'no_real_data_available',
+          avg_likes: 0,
+          avg_comments: 0,
+          engagement_rate: 0
         })
       },
       credits: {
         used: creditCost,
         remaining: userResult.credits - creditCost
+      },
+      // NEW: Enhanced cost tracking data
+      cost_tracking: {
+        breakdown: costBreakdown,
+        total_cost_usd: totalCost,
+        processing_time_ms: totalProcessingTime,
+        api_calls: apiCallBreakdown,
+        credit_to_usd_rate: "1 credit = ~$0.01",
+        efficiency_metrics: {
+          cost_per_analysis: totalCost,
+          time_per_analysis: totalProcessingTime,
+          tokens_per_dollar: costBreakdown.total > 0 ? Math.round(
+            (apiCallBreakdown.join('').match(/(\d+) tokens/g) || [])
+              .reduce((sum, match) => sum + parseInt(match), 0) / costBreakdown.total
+          ) : 0
+        }
       }
     };
-
-    logger('info', 'Analysis completed successfully', { 
+    
+    logger('info', 'Analysis completed successfully with comprehensive cost tracking', { 
       lead_id, 
       username: profileData.username, 
       score: analysisResult.score,
       confidence: analysisResult.confidence_level,
-      dataQuality: profileData.dataQuality
+      dataQuality: profileData.dataQuality,
+      totalCost: `$${totalCost.toFixed(6)}`,
+      totalTime: `${totalProcessingTime.toFixed(2)}ms`,
+      costBreakdown: costBreakdown,
+      requestId
     });
-
+    
     return c.json(createStandardResponse(true, responseData, undefined, requestId));
-
+    
   } catch (error: any) {
-    logger('error', 'Analysis request failed', { error: error.message, requestId });
+    const totalEndTime = performance.now();
+    const totalProcessingTime = totalEndTime - totalStartTime;
+    
+    logger('error', 'Analysis request failed with cost tracking', { 
+      error: error.message, 
+      requestId,
+      partialCosts: `$${totalCost.toFixed(6)}`,
+      timeSpent: `${totalProcessingTime.toFixed(2)}ms`,
+      costBreakdown
+    });
+    
     return c.json(createStandardResponse(
       false, 
       undefined, 
