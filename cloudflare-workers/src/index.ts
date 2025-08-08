@@ -18,23 +18,6 @@ app.use('*', cors({
   credentials: true
 }));
 
-// ===============================================================================
-// UTILITY FUNCTIONS
-// ===============================================================================
-
-
-
-function createStandardResponse(success: boolean, data?: any, error?: string, requestId?: string) {
-  return {
-    success,
-    data,
-    error,
-    timestamp: new Date().toISOString(),
-    version: 'v3.0.0-enterprise-perfect',
-    requestId
-  };
-}
-
 // 🔧 FIX #1: MOVED validateAnalysisResult FUNCTION TO TOP FOR PROPER ORGANIZATION
 function validateAnalysisResult(result: any): AnalysisResult {
   return {
