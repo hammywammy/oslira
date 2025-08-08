@@ -20,7 +20,12 @@ export async function handleLegacyAnalyze(c: Context): Promise<Response> {
       body: JSON.stringify(normalizedBody)
     });
     
-    return app.fetch(v1Request, c.env);
+    const response = await fetch(v1Request.url, {
+  method: v1Request.method,
+  headers: Object.fromEntries(v1Request.headers.entries()),
+  body: v1Request.body
+});
+return response;
     
   } catch (error: any) {
     logger('error', 'Legacy endpoint forwarding failed', { error: error.message, requestId });
@@ -41,7 +46,12 @@ export async function handleLegacyBulkAnalyze(c: Context): Promise<Response> {
       body: JSON.stringify(body)
     });
     
-    return app.fetch(v1Request, c.env);
+    const response = await fetch(v1Request.url, {
+  method: v1Request.method,
+  headers: Object.fromEntries(v1Request.headers.entries()),
+  body: v1Request.body
+});
+return response;
     
   } catch (error: any) {
     logger('error', 'Legacy bulk endpoint forwarding failed', { error: error.message, requestId });
