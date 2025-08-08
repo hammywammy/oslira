@@ -1,4 +1,10 @@
-app.get('/debug-engagement/:username', async (c) => {
+import type { Context } from 'hono';
+import { generateRequestId, logger } from '../utils/logger.js';
+import { callWithRetry } from '../utils/helpers.js';
+import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
+import { validateProfileData } from '../utils/validation.js';
+
+export async function handleDebugEngagement(c: Context): Promise<Response> {
   const username = c.req.param('username');
   
   try {
@@ -159,7 +165,7 @@ app.get('/debug-engagement/:username', async (c) => {
   }
 });
 
-app.get('/debug-scrape/:username', async (c) => {
+export async function handleDebugScrape(c: Context): Promise<Response> {
   const username = c.req.param('username');
   const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
   
@@ -191,7 +197,7 @@ app.get('/debug-scrape/:username', async (c) => {
   }
 });
 
-app.get('/debug-parsing/:username', async (c) => {
+export async function handleDebugParsing(c: Context): Promise<Response> {
   const username = c.req.param('username');
   
   try {
@@ -272,6 +278,3 @@ app.get('/debug-parsing/:username', async (c) => {
     }, 500);
   }
 });
-export async function handleDebugEngagement(c: Context): Promise<Response>
-export async function handleDebugScrape(c: Context): Promise<Response>
-export async function handleDebugParsing(c: Context): Promise<Response>
