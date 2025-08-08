@@ -289,5 +289,3 @@ export async function handleAnalyze(c: Context): Promise<Response> {
     ), 500);
   }
 });
-
-export async function handleAnalyze(c: Context): Promise<Response>
