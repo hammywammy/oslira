@@ -1,4 +1,8 @@
-app.get('/analytics/summary', async (c) => {
+import type { Context } from 'hono';
+import { logger } from '../utils/logger.js';
+import { getAnalyticsSummary, generateAIInsights } from '../services/analytics.js';
+
+export async function handleAnalyticsSummary(c: Context): Promise<Response> {
   try {
     const summary = await getAnalyticsSummary(c.env);
     return c.json(summary, 200, {
@@ -17,7 +21,7 @@ app.get('/analytics/summary', async (c) => {
   }
 });
 
-app.post('/ai/generate-insights', async (c) => {
+export async function handleGenerateInsights(c: Context): Promise<Response> {
   try {
     logger('info', 'AI insights generation requested - using real data');
     const insights = await generateAIInsights(c.env);
@@ -34,5 +38,3 @@ app.post('/ai/generate-insights', async (c) => {
     }, 500);
   }
 });
-export async function handleAnalyticsSummary(c: Context): Promise<Response>
-export async function handleGenerateInsights(c: Context): Promise<Response>
