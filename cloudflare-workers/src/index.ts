@@ -396,16 +396,17 @@ async function fetchBusinessProfile(business_id: string, user_id: string, env: E
   return businesses[0];
 }
 
-async function updateCreditsWithDetailedCostTracking(
-  userId: string,
-  costBreakdown: any,
-  processingTime: number,
-  apiCalls: string[],
-  newBalance: number,
-  description: string,
-  env: Env,
-  leadId?: string
-): Promise<void> {
+await updateCreditsWithDetailedCostTracking(
+  user_id,                                    // ✅ Correct
+  costBreakdown,                             // ✅ Correct  
+  totalProcessingTime,                       // ✅ Correct
+  apiCallBreakdown,                          // ✅ Correct
+  userResult.credits - creditCost,           // ✅ Correct
+  `${analysis_type} analysis of @${username}`, // ✅ Correct
+  c.env,                                     // ✅ Correct
+  lead_id                                    // ✅ Correct
+);
+
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
