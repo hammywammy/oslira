@@ -248,8 +248,8 @@ async loadDashboardData() {
     try {
         console.log('🔄 Loading dashboard data...');
         
-        // ✅ STEP 1: Wait for authentication to be properly initialized
-        const isAuthReady = await this.waitForAuth(15000); // Wait up to 15 seconds
+        // Wait for authentication to be ready
+        const isAuthReady = await this.waitForAuth(15000);
         
         if (!isAuthReady) {
             console.log('⚠️ Authentication not ready, showing empty state');
@@ -262,7 +262,7 @@ async loadDashboardData() {
         
         console.log('✅ Authentication ready, loading data for user:', user.id);
 
-        // ✅ STEP 2: Load all leads first - NOW INCLUDING quick_summary
+        // ✅ LOAD LEADS WITH SCORE FOR STATS CALCULATION
         const { data: leadsData, error: leadsError } = await supabase
             .from('leads')
             .select(`
@@ -277,7 +277,7 @@ async loadDashboardData() {
                 profile_url,
                 business_id,
                 quick_summary
-            `)  // ✅ FIXED: Added quick_summary field
+            `)
             .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -289,17 +289,16 @@ async loadDashboardData() {
 
         console.log(`📊 Loaded ${leadsData?.length || 0} leads from database`);
         
-        // ✅ DEBUG: Log to see if quick_summary is now included
+        // Debug the first few leads to check scores
         if (leadsData && leadsData.length > 0) {
-            console.log('🔍 Sample lead data with quick_summary:', {
-                username: leadsData[0].username,
-                analysis_type: leadsData[0].analysis_type,
-                has_quick_summary: !!leadsData[0].quick_summary,
-                quick_summary_preview: leadsData[0].quick_summary?.substring(0, 100) + '...'
-            });
+            console.log('🔍 Sample lead scores:', leadsData.slice(0, 5).map(lead => ({
+                username: lead.username,
+                score: lead.score,
+                analysis_type: lead.analysis_type
+            })));
         }
 
-        // ✅ STEP 3: Load analysis data for deep analysis leads (unchanged)
+        // Load analysis data for deep analysis leads (unchanged)
         const deepAnalysisLeadIds = leadsData
             ?.filter(lead => lead.analysis_type === 'deep')
             ?.map(lead => lead.id) || [];
@@ -332,7 +331,6 @@ async loadDashboardData() {
             if (analysisError) {
                 console.warn('⚠️ Analysis data query error:', analysisError);
             } else {
-                // Create a map of lead_id -> analysis data
                 analysisData?.forEach(analysis => {
                     analysisDataMap.set(analysis.lead_id, analysis);
                 });
@@ -340,7 +338,7 @@ async loadDashboardData() {
             }
         }
 
-        // ✅ STEP 4: Combine leads with their analysis data (unchanged)
+        // Combine leads with their analysis data
         const enrichedLeads = leadsData?.map(lead => ({
             ...lead,
             lead_analyses: lead.analysis_type === 'deep' && analysisDataMap.has(lead.id) 
@@ -348,7 +346,7 @@ async loadDashboardData() {
                 : []
         })) || [];
 
-        // ✅ STEP 5: Store and display
+        // Store and display
         this.allLeads = enrichedLeads;
         this.selectedLeads.clear();
         
@@ -358,24 +356,64 @@ async loadDashboardData() {
             light: this.allLeads.filter(l => l.analysis_type === 'light').length,
             deep: this.allLeads.filter(l => l.analysis_type === 'deep').length,
             withAnalysis: this.allLeads.filter(l => l.lead_analyses?.length > 0).length,
-            withQuickSummary: this.allLeads.filter(l => l.quick_summary).length  // ✅ NEW: Track quick summaries
+            withQuickSummary: this.allLeads.filter(l => l.quick_summary).length,
+            scoreRange: {
+                high: this.allLeads.filter(l => (l.score || 0) >= 80).length,
+                medium: this.allLeads.filter(l => (l.score || 0) >= 60 && (l.score || 0) < 80).length,
+                low: this.allLeads.filter(l => (l.score || 0) < 60).length
+            }
         });
 
-        // ✅ STEP 6: Cache the data with timestamp
+        // Cache the data
         if (window.OsliraApp.cache) {
             window.OsliraApp.cache.leads = this.allLeads;
             window.OsliraApp.cache.lastRefresh = new Date().toISOString();
         }
         
-        // Update UI
+        // ✅ UPDATE UI WITH CORRECTED STATS
         this.displayLeads(this.allLeads);
-        this.updateDashboardStats();
+        await this.updateDashboardStats(); // Use await to ensure completion
         this.generateInsights();
         
     } catch (error) {
         console.error('❌ Error loading dashboard data:', error);
         this.displayErrorState('Failed to load leads: ' + error.message);
     }
+}
+
+// ✅ 8. DEBUG METHOD - ADD TO TEST STATS CALCULATION
+debugStats() {
+    console.log('🔍 DEBUG STATS CALCULATION:');
+    
+    const totalLeads = this.allLeads.length;
+    const scoresDebug = this.allLeads.map(lead => ({
+        username: lead.username,
+        score: lead.score,
+        analysisType: lead.analysis_type,
+        isHighValue: (lead.score || 0) >= 80
+    }));
+    
+    const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80);
+    const avgScore = totalLeads > 0 
+        ? this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads
+        : 0;
+    
+    console.log('Leads with scores:', scoresDebug);
+    console.log('High value leads (80+):', highValueLeads.map(l => ({username: l.username, score: l.score})));
+    console.log('Calculations:', {
+        totalLeads,
+        avgScore: Math.round(avgScore),
+        highValueCount: highValueLeads.length,
+        percentage: totalLeads > 0 ? Math.round((highValueLeads.length / totalLeads) * 100) : 0
+    });
+    
+    // Check current UI values
+    console.log('Current UI values:', {
+        totalLeadsUI: document.getElementById('total-leads')?.textContent,
+        avgScoreUI: document.getElementById('avg-score')?.textContent,
+        highValueUI: document.getElementById('high-value-leads')?.textContent,
+        creditsUsedUI: document.getElementById('credits-used')?.textContent
+    });
 }
 
 // ✅ NEW: Wait for authentication method for dashboard
@@ -1800,10 +1838,9 @@ showBulkUpload() {
                 <label>Required CSV Format:</label>
                 <div style="background: var(--bg-light); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 16px; border: 1px solid var(--border-light);">
                     <div style="font-weight: 600; margin-bottom: 8px; color: var(--primary-blue);">Column A (Required):</div>
-                    noahskipslegday<br>
-                    harveywarnerr<br>
-                    hamzawilk<br>
-                    anotheruser<br>
+                    nasa<br>
+                    hormozi<br>
+                    garyvee<br>
                     <span style="color: var(--text-secondary); font-size: 12px;">...and so on</span>
                 </div>
                 <div style="background: rgba(59, 130, 246, 0.1); padding: 12px; border-radius: 6px; font-size: 13px; color: var(--primary-blue); border: 1px solid rgba(59, 130, 246, 0.2);">
@@ -2984,32 +3021,149 @@ displayLeads(leads) {
         this.displayLeads(filteredLeads);
     }
 
-   updateDashboardStats() {
+ async updateDashboardStats() {
     try {
+        console.log('📊 Updating dashboard stats...');
+        
         const totalLeads = this.allLeads.length;
+        
+        // ✅ 1. CALCULATE AVERAGE SCORE FROM leads.score
         const avgScore = totalLeads > 0 
             ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
             : 0;
 
-        // Update stats in the UI - show zeros when no leads
+        // ✅ 2. CALCULATE HIGH-VALUE LEADS FROM leads.score (80+ score)
+        const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
+
+        // ✅ 3. CALCULATE CREDITS USED FROM DATABASE
+        let creditsUsed = 0;
+        try {
+            if (window.OsliraApp?.supabase && window.OsliraApp?.user) {
+                const supabase = window.OsliraApp.supabase;
+                const user = window.OsliraApp.user;
+
+                // Get current month's credit usage
+                const startOfMonth = new Date();
+                startOfMonth.setDate(1);
+                startOfMonth.setHours(0, 0, 0, 0);
+
+                const { data: creditTransactions, error } = await supabase
+                    .from('credit_transactions')
+                    .select('amount, type')
+                    .eq('user_id', user.id)
+                    .eq('type', 'use')
+                    .gte('created_at', startOfMonth.toISOString());
+
+                if (!error && creditTransactions) {
+                    // Sum up all credit usage (amounts are negative for 'use' type)
+                    creditsUsed = Math.abs(creditTransactions.reduce((sum, transaction) => 
+                        sum + Math.abs(transaction.amount), 0));
+                    
+                    console.log(`💳 Credits used this month: ${creditsUsed} (from ${creditTransactions.length} transactions)`);
+                } else {
+                    console.warn('⚠️ Failed to fetch credit transactions:', error);
+                    // Fallback: calculate from leads (light=1, deep=2)
+                    creditsUsed = this.allLeads.reduce((sum, lead) => {
+                        return sum + (lead.analysis_type === 'deep' ? 2 : 1);
+                    }, 0);
+                }
+            } else {
+                // Fallback calculation when no database access
+                creditsUsed = this.allLeads.reduce((sum, lead) => {
+                    return sum + (lead.analysis_type === 'deep' ? 2 : 1);
+                }, 0);
+            }
+        } catch (error) {
+            console.warn('⚠️ Credit calculation failed, using fallback:', error);
+            creditsUsed = this.allLeads.reduce((sum, lead) => {
+                return sum + (lead.analysis_type === 'deep' ? 2 : 1);
+            }, 0);
+        }
+
+        // ✅ 4. UPDATE STATS IN UI WITH CORRECT VALUES
         const statsElements = {
             'total-leads': totalLeads.toLocaleString(),
-            'avg-score': totalLeads > 0 ? avgScore.toString() : '-',
-            'high-quality-leads': totalLeads > 0 ? this.allLeads.filter(lead => (lead.score || 0) >= 80).length.toString() : '-',
-            'this-month': totalLeads > 0 ? totalLeads.toString() : '-'
+            'avg-score': totalLeads > 0 ? avgScore.toString() : '0',
+            'credits-used': creditsUsed.toString(),
+            'high-value-leads': highValueLeads.toString()
         };
 
         Object.entries(statsElements).forEach(([id, value]) => {
             const element = document.getElementById(id);
             if (element) {
                 element.textContent = value;
+                console.log(`📊 Updated ${id}: ${value}`);
+            } else {
+                console.warn(`⚠️ Element not found: ${id}`);
             }
         });
 
-        console.log(`📊 Stats updated: ${totalLeads} leads, avg score ${avgScore || 'N/A'}`);
+        // ✅ 5. UPDATE TREND INDICATORS
+        this.updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed);
+
+        console.log(`📊 Stats updated successfully:`, {
+            totalLeads,
+            avgScore,
+            highValueLeads,
+            creditsUsed
+        });
 
     } catch (error) {
-        console.warn('⚠️ Stats update failed:', error);
+        console.error('❌ Stats update failed:', error);
+    }
+}
+
+// ✅ 6. NEW METHOD - UPDATE TREND INDICATORS
+updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
+    try {
+        // Update trends with meaningful messages
+        const leadsTrend = document.getElementById('leads-trend');
+        const scoreTrend = document.getElementById('score-trend');
+        const highValueTrend = document.getElementById('high-value-trend');
+        const creditsTrend = document.getElementById('credits-trend');
+
+        if (leadsTrend) {
+            if (totalLeads === 0) {
+                leadsTrend.textContent = 'Start analyzing leads';
+                leadsTrend.className = 'trend';
+            } else {
+                leadsTrend.textContent = `${totalLeads} leads analyzed`;
+                leadsTrend.className = 'trend up';
+            }
+        }
+
+        if (scoreTrend) {
+            if (avgScore === 0) {
+                scoreTrend.textContent = 'No scores yet';
+                scoreTrend.className = 'trend';
+            } else {
+                const quality = avgScore >= 70 ? 'High quality leads' : 
+                              avgScore >= 50 ? 'Good quality leads' : 
+                              'Focus on quality';
+                scoreTrend.textContent = quality;
+                scoreTrend.className = avgScore >= 70 ? 'trend up' : 
+                                     avgScore >= 50 ? 'trend' : 'trend down';
+            }
+        }
+
+        if (highValueTrend) {
+            if (highValueLeads === 0) {
+                highValueTrend.textContent = 'Find high-value leads';
+                highValueTrend.className = 'trend';
+            } else {
+                const percentage = totalLeads > 0 ? Math.round((highValueLeads / totalLeads) * 100) : 0;
+                highValueTrend.textContent = `${percentage}% are high-value`;
+                highValueTrend.className = percentage >= 20 ? 'trend up' : 'trend';
+            }
+        }
+
+        if (creditsTrend) {
+            creditsTrend.textContent = 'This month';
+            creditsTrend.className = 'trend';
+        }
+
+    } catch (error) {
+        console.warn('⚠️ Trend indicators update failed:', error);
     }
 }
 
