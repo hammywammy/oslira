@@ -17,6 +17,7 @@ constructor() {
     this.isRealtimeActive = false;
     this.pollingInterval = null;
     this.lastUpdateTimestamp = null;
+    this.dashboardSetupComplete = false;
     
     // Bind methods to maintain context
     this.init = this.init.bind(this);
@@ -39,6 +40,11 @@ async init() {
         
         // Setup event listeners first
         this.setupEventListeners();
+
+        if (!this.dashboardSetupComplete) {
+            await this.setupDashboard();
+            this.dashboardSetupComplete = true;
+        }
         
         // ✅ Listen for auth events to reload data
         if (window.OsliraApp?.events) {
@@ -3802,6 +3808,11 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
     }
 
 setupRealtimeSubscription() {
+        if (this.isRealtimeActive && this.realtimeSubscription) {
+        console.log('✅ Real-time already active, skipping setup');
+        return;
+    }
+
     if (!this.canUseRealtime()) {
         console.log('⚠️ Real-time disabled: WebSocket connections not available');
         this.setupPollingFallback();
