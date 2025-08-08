@@ -1875,14 +1875,77 @@ showBulkUpload() {
         `;
     }
     
-    // Set up file input listener
-    setTimeout(() => {
+    // Set up file input listener AND load user credits
+    setTimeout(async () => {
         this.setupBulkUploadListeners();
-        this.loadBusinessProfilesForBulk();
+        await this.loadBusinessProfilesForBulk();
+        await this.loadUserCredits(); // ✅ ADD THIS
     }, 100);
     
     modal.style.display = 'flex';
     console.log('✅ Bulk upload modal shown');
+}
+
+// ✅ 2. NEW METHOD - LOAD USER CREDITS
+async loadUserCredits() {
+    console.log('💳 Loading user credits...');
+    
+    const currentCreditsEl = document.getElementById('current-credits');
+    if (!currentCreditsEl) return;
+    
+    try {
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
+        
+        if (!supabase || !user) {
+            currentCreditsEl.textContent = 'Not logged in';
+            currentCreditsEl.style.color = 'var(--error)';
+            return;
+        }
+        
+        // ✅ FETCH CURRENT CREDITS FROM DATABASE
+        const { data: userData, error } = await supabase
+            .from('users')
+            .select('credits')
+            .eq('id', user.id)
+            .single();
+            
+        if (error) {
+            console.error('❌ Failed to fetch user credits:', error);
+            currentCreditsEl.textContent = 'Error loading';
+            currentCreditsEl.style.color = 'var(--error)';
+            return;
+        }
+        
+        const credits = userData?.credits || 0;
+        
+        // ✅ UPDATE GLOBAL STATE
+        if (window.OsliraApp.user) {
+            window.OsliraApp.user.credits = credits;
+        }
+        
+        // ✅ UPDATE UI
+        currentCreditsEl.textContent = credits.toLocaleString();
+        currentCreditsEl.style.color = credits > 0 ? 'var(--success)' : 'var(--error)';
+        
+        console.log(`✅ User credits loaded: ${credits}`);
+        
+        // ✅ TRIGGER COST CALCULATOR UPDATE
+        this.updateBulkCostCalculator();
+        
+    } catch (error) {
+        console.error('❌ Error loading user credits:', error);
+        currentCreditsEl.textContent = 'Error';
+        currentCreditsEl.style.color = 'var(--error)';
+    }
+}
+debugCredits() {
+    console.log('🔍 DEBUG CREDITS:', {
+        globalUserCredits: window.OsliraApp?.user?.credits,
+        getCurrentUserCredits: this.getCurrentUserCredits(),
+        uiElement: document.getElementById('current-credits')?.textContent,
+        userObject: window.OsliraApp?.user
+    });
 }
 
 // ✅ 2. SETUP EVENT LISTENERS FOR BULK UPLOAD
@@ -2059,26 +2122,44 @@ updateBulkCostCalculator() {
     const creditCostEl = document.getElementById('credit-cost');
     const totalCostEl = document.getElementById('total-cost');
     const costStatusEl = document.getElementById('cost-status');
+    const currentCreditsEl = document.getElementById('current-credits');
     
     if (!costCalculator || !usernameCountEl || !creditCostEl || !totalCostEl || !costStatusEl) return;
     
     if (usernameCount > 0 && analysisType) {
         const creditPerAnalysis = analysisType === 'deep' ? 2 : 1;
         const totalCost = usernameCount * creditPerAnalysis;
+        const currentCredits = this.getCurrentUserCredits();
         
         usernameCountEl.textContent = usernameCount;
         creditCostEl.textContent = creditPerAnalysis;
         totalCostEl.textContent = totalCost;
         
-        // Check if user has enough credits (you'll need to get current credits)
-        const currentCredits = this.getCurrentUserCredits(); // Implement this method
+        console.log('💰 Cost calculation:', {
+            usernameCount,
+            creditPerAnalysis,
+            totalCost,
+            currentCredits,
+            hasEnough: currentCredits >= totalCost
+        });
         
+        // ✅ BETTER CREDIT STATUS CHECKING
         if (currentCredits >= totalCost) {
             costStatusEl.textContent = '✅ Sufficient Credits';
             costStatusEl.style.color = 'var(--success)';
         } else {
-            costStatusEl.textContent = '❌ Insufficient Credits';
+            const shortfall = totalCost - currentCredits;
+            costStatusEl.textContent = `❌ Need ${shortfall} More Credits`;
             costStatusEl.style.color = 'var(--error)';
+        }
+        
+        // ✅ UPDATE CURRENT CREDITS DISPLAY COLOR
+        if (currentCreditsEl) {
+            const creditsText = currentCredits.toLocaleString();
+            if (currentCreditsEl.textContent !== creditsText) {
+                currentCreditsEl.textContent = creditsText;
+            }
+            currentCreditsEl.style.color = currentCredits >= totalCost ? 'var(--success)' : 'var(--error)';
         }
         
         costCalculator.style.display = 'block';
@@ -2087,7 +2168,6 @@ updateBulkCostCalculator() {
         costCalculator.style.display = 'none';
     }
 }
-
 // ✅ 8. VALIDATE BULK FORM
 validateBulkForm() {
     const submitBtn = document.getElementById('bulk-submit-btn');
@@ -2157,23 +2237,45 @@ readFileAsText(file) {
 }
 
 getCurrentUserCredits() {
-    // Get current user credits from your app state
-    return window.OsliraApp?.user?.credits || 0;
+    // Get current user credits from global state (now updated)
+    const credits = window.OsliraApp?.user?.credits;
+    
+    if (typeof credits === 'number') {
+        return credits;
+    }
+    
+    // Fallback: try to get from UI if available
+    const currentCreditsEl = document.getElementById('current-credits');
+    if (currentCreditsEl && currentCreditsEl.textContent !== 'Loading...') {
+        const uiCredits = parseInt(currentCreditsEl.textContent.replace(/,/g, ''));
+        return isNaN(uiCredits) ? 0 : uiCredits;
+    }
+    
+    return 0;
 }
-
 checkBulkCredits() {
     const analysisType = document.getElementById('bulk-analysis-type')?.value;
     const usernameCount = this.bulkUsernames?.length || 0;
     const currentCredits = this.getCurrentUserCredits();
     
-    if (!analysisType || usernameCount === 0) return false;
+    if (!analysisType || usernameCount === 0) {
+        console.log('🔍 Bulk credits check: Missing analysis type or usernames');
+        return false;
+    }
     
     const creditPerAnalysis = analysisType === 'deep' ? 2 : 1;
     const totalCost = usernameCount * creditPerAnalysis;
+    const hasEnough = currentCredits >= totalCost;
     
-    return currentCredits >= totalCost;
+    console.log('🔍 Bulk credits check:', {
+        currentCredits,
+        totalCost,
+        hasEnough,
+        calculation: `${currentCredits} >= ${totalCost}`
+    });
+    
+    return hasEnough;
 }
-
 async loadBusinessProfilesForBulk() {
     const businessSelect = document.getElementById('bulk-business-id');
     if (!businessSelect) return;
