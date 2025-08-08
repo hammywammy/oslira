@@ -236,4 +236,4 @@ export async function handleBulkAnalyze(c: Context): Promise<Response> {
       requestId
     ), 500);
   }
-});
+}
