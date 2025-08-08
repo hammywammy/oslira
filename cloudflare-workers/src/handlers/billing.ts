@@ -101,7 +101,7 @@ export async function handleCreateCheckoutSession(c: Context): Promise<Response>
     logger('error', 'Checkout session creation failed', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
-});
+}
 
 export async function handleCreatePortalSession(c: Context): Promise<Response> {
   const requestId = generateRequestId();
