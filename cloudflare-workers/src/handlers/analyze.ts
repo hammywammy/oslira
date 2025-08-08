@@ -1,4 +1,13 @@
-app.post('/v1/analyze', async (c) => {
+import type { Context } from 'hono';
+import type { Env, AnalysisRequest, ProfileData, BusinessProfile, AnalysisResult, User } from '../types/interfaces.js';
+import { generateRequestId, logger } from '../utils/logger.js';
+import { createStandardResponse } from '../utils/response.js';
+import { normalizeRequest } from '../utils/validation.js';
+import { fetchUserAndCredits, fetchBusinessProfile, saveLeadAndAnalysis, updateCreditsAndTransaction } from '../services/database.js';
+import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
+import { performAIAnalysis, generateOutreachMessage } from '../services/ai-analysis.js';
+
+export async function handleAnalyze(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
