@@ -1,5 +1,5 @@
 import { logger } from '../utils/logger.js';
-import type { PostData, EngagementData } from '../types/interfaces.js';
+import type { PostData, EngagementData, AnalysisType } from '../types/interfaces.js';
 
 export function validateAnalysisResult(result: any): AnalysisResult {
   return {
