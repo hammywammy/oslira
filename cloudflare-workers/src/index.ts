@@ -2243,7 +2243,7 @@ app.post('/v1/analyze', async (c) => {
     }
     
     // ===============================================================================
-    // STEP 2: AI ANALYSIS WITH COST & TIME TRACKING
+    // STEP 2: AI ANALYSIS WITH COST & TIME TRACKING  
     // ===============================================================================
     
     let analysisResult: AnalysisResult;
@@ -2255,119 +2255,35 @@ app.post('/v1/analyze', async (c) => {
       logger('info', 'Starting AI analysis with cost tracking', { username, requestId });
       const analysisStartTime = performance.now();
       
-      const analysisPrompt = createAnalysisPrompt(profileData, business);
-      let aiResponse: any;
-      let tokensUsed = { input: 0, output: 0, total: 0 };
-      
-      // AI Analysis with cost tracking
-      if (c.env.CLAUDE_KEY) {
-        logger('info', 'Using Claude for analysis with cost tracking', { requestId });
-        
-        const claudeResponse = await callWithRetry(
-          'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'x-api-key': c.env.CLAUDE_KEY,
-              'anthropic-version': '2023-06-01',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: 'claude-3-5-sonnet-20241022',
-              messages: [{ role: 'user', content: analysisPrompt }],
-              temperature: 0.7,
-              max_tokens: 1000
-            })
-          },
-          3, 1500, 25000
-        );
-        
-        // Extract token usage and calculate cost
-        if (claudeResponse.usage) {
-          tokensUsed.input = claudeResponse.usage.input_tokens || 0;
-          tokensUsed.output = claudeResponse.usage.output_tokens || 0;
-          tokensUsed.total = tokensUsed.input + tokensUsed.output;
-          
-          // Claude 3.5 Sonnet pricing: $3/1M input, $15/1M output
-          const inputCost = (tokensUsed.input / 1000000) * 3.00;
-          const outputCost = (tokensUsed.output / 1000000) * 15.00;
-          aiAnalysisCost = inputCost + outputCost;
-        }
-        
-        aiResponse = claudeResponse.content?.[0]?.text || claudeResponse.completion;
-        costBreakdown.claude += aiAnalysisCost;
-        
-      } else if (c.env.OPENAI_KEY) {
-        logger('info', 'Using OpenAI for analysis with cost tracking', { requestId });
-        
-        const openaiResponse = await callWithRetry(
-          'https://api.openai.com/v1/chat/completions',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${c.env.OPENAI_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o',
-              messages: [{ role: 'user', content: analysisPrompt }],
-              temperature: 0.7,
-              max_tokens: 1000
-            })
-          },
-          3, 1500, 25000
-        );
-        
-        // Extract token usage and calculate cost
-        if (openaiResponse.usage) {
-          tokensUsed.input = openaiResponse.usage.prompt_tokens || 0;
-          tokensUsed.output = openaiResponse.usage.completion_tokens || 0;
-          tokensUsed.total = tokensUsed.input + tokensUsed.output;
-          
-          // GPT-4o pricing: $2.50/1M input, $10/1M output
-          const inputCost = (tokensUsed.input / 1000000) * 2.50;
-          const outputCost = (tokensUsed.output / 1000000) * 10.00;
-          aiAnalysisCost = inputCost + outputCost;
-        }
-        
-        aiResponse = openaiResponse.choices[0].message.content;
-        costBreakdown.openai += aiAnalysisCost;
-        
-      } else {
-        throw new Error('No AI service available for analysis');
-      }
+      // Use existing performAIAnalysis function
+      analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
       
       const analysisEndTime = performance.now();
       const analysisTime = analysisEndTime - analysisStartTime;
-      totalCost += aiAnalysisCost;
       
-      apiCallBreakdown.push(`AI Analysis: ${analysisTime.toFixed(2)}ms ($${aiAnalysisCost.toFixed(6)}) - ${tokensUsed.total} tokens`);
-      
-      // Parse AI response
-      let parsedAnalysis: any;
-      try {
-        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          parsedAnalysis = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON found in AI response');
-        }
-      } catch (parseError) {
-        logger('error', 'Failed to parse AI analysis response', { 
-          error: parseError,
-          response: aiResponse?.substring(0, 500)
-        });
-        throw new Error('AI analysis returned invalid format');
+      // Calculate AI cost based on analysis type and estimated tokens
+      if (c.env.CLAUDE_KEY) {
+        // Estimate Claude cost based on content length
+        const estimatedInputTokens = Math.min(2000, profileData.bio?.length * 2 + 1000);
+        const estimatedOutputTokens = 800;
+        aiAnalysisCost = (estimatedInputTokens / 1000000) * 3.00 + (estimatedOutputTokens / 1000000) * 15.00;
+        costBreakdown.claude += aiAnalysisCost;
+      } else if (c.env.OPENAI_KEY) {
+        // Estimate OpenAI cost
+        const estimatedInputTokens = Math.min(2000, profileData.bio?.length * 2 + 1000);
+        const estimatedOutputTokens = 800;
+        aiAnalysisCost = (estimatedInputTokens / 1000000) * 2.50 + (estimatedOutputTokens / 1000000) * 10.00;
+        costBreakdown.openai += aiAnalysisCost;
       }
       
-      analysisResult = validateAnalysisResult(parsedAnalysis);
+      totalCost += aiAnalysisCost;
+      apiCallBreakdown.push(`AI Analysis: ${analysisTime.toFixed(2)}ms ($${aiAnalysisCost.toFixed(6)})`);
       
       logger('info', 'AI analysis completed with cost tracking', {
         username,
         score: analysisResult.score,
         analysisTime: `${analysisTime.toFixed(2)}ms`,
-        analysisCost: `$${aiAnalysisCost.toFixed(6)}`,
-        tokensUsed: tokensUsed.total
+        analysisCost: `$${aiAnalysisCost.toFixed(6)}`
       });
       
     } catch (analysisError: any) {
@@ -2388,86 +2304,32 @@ app.post('/v1/analyze', async (c) => {
         logger('info', 'Starting message generation with cost tracking', { username, requestId });
         const messageStartTime = performance.now();
         
-        const messagePrompt = createMessagePrompt(profileData, business, analysisResult);
-        let messageTokensUsed = { input: 0, output: 0, total: 0 };
-        
-        if (c.env.CLAUDE_KEY) {
-          const claudeMessageResponse = await callWithRetry(
-            'https://api.anthropic.com/v1/messages',
-            {
-              method: 'POST',
-              headers: {
-                'x-api-key': c.env.CLAUDE_KEY,
-                'anthropic-version': '2023-06-01',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                model: 'claude-3-5-sonnet-20241022',
-                messages: [{ role: 'user', content: messagePrompt }],
-                temperature: 0.7,
-                max_tokens: 1000
-              })
-            },
-            3, 1500, 25000
-          );
-          
-          if (claudeMessageResponse.usage) {
-            messageTokensUsed.input = claudeMessageResponse.usage.input_tokens || 0;
-            messageTokensUsed.output = claudeMessageResponse.usage.output_tokens || 0;
-            messageTokensUsed.total = messageTokensUsed.input + messageTokensUsed.output;
-            
-            const inputCost = (messageTokensUsed.input / 1000000) * 3.00;
-            const outputCost = (messageTokensUsed.output / 1000000) * 15.00;
-            messageGenerationCost = inputCost + outputCost;
-          }
-          
-          analysisMessage = claudeMessageResponse.content?.[0]?.text || claudeMessageResponse.completion;
-          costBreakdown.claude += messageGenerationCost;
-          
-        } else if (c.env.OPENAI_KEY) {
-          const openaiMessageResponse = await callWithRetry(
-            'https://api.openai.com/v1/chat/completions',
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${c.env.OPENAI_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                model: 'gpt-4o',
-                messages: [{ role: 'user', content: messagePrompt }],
-                temperature: 0.7,
-                max_tokens: 1000
-              })
-            },
-            3, 1500, 25000
-          );
-          
-          if (openaiMessageResponse.usage) {
-            messageTokensUsed.input = openaiMessageResponse.usage.prompt_tokens || 0;
-            messageTokensUsed.output = openaiMessageResponse.usage.completion_tokens || 0;
-            messageTokensUsed.total = messageTokensUsed.input + messageTokensUsed.output;
-            
-            const inputCost = (messageTokensUsed.input / 1000000) * 2.50;
-            const outputCost = (messageTokensUsed.output / 1000000) * 10.00;
-            messageGenerationCost = inputCost + outputCost;
-          }
-          
-          analysisMessage = openaiMessageResponse.choices[0].message.content;
-          costBreakdown.openai += messageGenerationCost;
-        }
+        // Use existing generateOutreachMessage function
+        analysisMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
         
         const messageEndTime = performance.now();
         const messageTime = messageEndTime - messageStartTime;
-        totalCost += messageGenerationCost;
         
-        apiCallBreakdown.push(`Message Generation: ${messageTime.toFixed(2)}ms ($${messageGenerationCost.toFixed(6)}) - ${messageTokensUsed.total} tokens`);
+        // Calculate message generation cost
+        if (c.env.CLAUDE_KEY) {
+          const estimatedInputTokens = 1500;
+          const estimatedOutputTokens = 400;
+          messageGenerationCost = (estimatedInputTokens / 1000000) * 3.00 + (estimatedOutputTokens / 1000000) * 15.00;
+          costBreakdown.claude += messageGenerationCost;
+        } else if (c.env.OPENAI_KEY) {
+          const estimatedInputTokens = 1500;
+          const estimatedOutputTokens = 400;
+          messageGenerationCost = (estimatedInputTokens / 1000000) * 2.50 + (estimatedOutputTokens / 1000000) * 10.00;
+          costBreakdown.openai += messageGenerationCost;
+        }
+        
+        totalCost += messageGenerationCost;
+        apiCallBreakdown.push(`Message Generation: ${messageTime.toFixed(2)}ms ($${messageGenerationCost.toFixed(6)})`);
         
         logger('info', 'Message generated with cost tracking', {
           username,
           messageTime: `${messageTime.toFixed(2)}ms`,
-          messageCost: `$${messageGenerationCost.toFixed(6)}`,
-          tokensUsed: messageTokensUsed.total
+          messageCost: `$${messageGenerationCost.toFixed(6)}`
         });
         
       } catch (messageError: any) {
@@ -2477,7 +2339,15 @@ app.post('/v1/analyze', async (c) => {
         });
         
         // Continue without message - don't fail the entire analysis
-        analysisMessage = generateFallbackMessage(profileData, business);
+        analysisMessage = `Hi ${profileData.displayName || profileData.username},
+
+I came across your profile and was impressed by your content and engagement with your ${profileData.followersCount.toLocaleString()} followers.
+
+I'm reaching out from ${business.name}, and I think there could be a great opportunity for collaboration given your audience and our ${business.value_proposition.toLowerCase()}.
+
+Would you be interested in exploring a potential partnership? I'd love to share more details about what we have in mind.
+
+Best regards`;
       }
     }
     
@@ -2532,19 +2402,37 @@ app.post('/v1/analyze', async (c) => {
     const lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
     
     // ===============================================================================
-    // STEP 5: UPDATE CREDITS WITH DETAILED COST BREAKDOWN
+    // STEP 5: UPDATE CREDITS WITH ENHANCED COST TRACKING
     // ===============================================================================
     
-    await updateCreditsWithDetailedCostTracking(
+    await updateCreditsAndTransaction(
       user_id,
-      costBreakdown,
-      totalProcessingTime,
-      apiCallBreakdown,
+      creditCost,
       userResult.credits - creditCost,
-      `${analysis_type} analysis of @${username}`,
+      `${analysis_type} analysis of @${username} (Cost: $${totalCost.toFixed(6)})`,
+      'use',
       c.env,
       lead_id
     );
+    
+    // Log detailed cost tracking to console
+    logger('info', 'COST TRACKING SUMMARY', {
+      username,
+      totalCost: `$${totalCost.toFixed(6)}`,
+      breakdown: {
+        apify: `$${costBreakdown.apify.toFixed(6)}`,
+        claude: `$${costBreakdown.claude.toFixed(6)}`,
+        openai: `$${costBreakdown.openai.toFixed(6)}`
+      },
+      processing: {
+        totalTime: `${totalProcessingTime.toFixed(2)}ms`,
+        apiCalls: apiCallBreakdown
+      },
+      efficiency: {
+        costPerSecond: `$${(totalCost / (totalProcessingTime / 1000)).toFixed(8)}`,
+        timePerDollar: `${((totalProcessingTime / 1000) / Math.max(totalCost, 0.000001)).toFixed(2)}s`
+      }
+    });
     
     // ===============================================================================
     // STEP 6: PREPARE ENHANCED RESPONSE WITH COST DATA
@@ -2595,7 +2483,7 @@ app.post('/v1/analyze', async (c) => {
         used: creditCost,
         remaining: userResult.credits - creditCost
       },
-      // NEW: Enhanced cost tracking data
+      // NEW: Cost tracking data
       cost_tracking: {
         breakdown: costBreakdown,
         total_cost_usd: totalCost,
@@ -2605,10 +2493,7 @@ app.post('/v1/analyze', async (c) => {
         efficiency_metrics: {
           cost_per_analysis: totalCost,
           time_per_analysis: totalProcessingTime,
-          tokens_per_dollar: costBreakdown.total > 0 ? Math.round(
-            (apiCallBreakdown.join('').match(/(\d+) tokens/g) || [])
-              .reduce((sum, match) => sum + parseInt(match), 0) / costBreakdown.total
-          ) : 0
+          cost_per_second: totalCost / (totalProcessingTime / 1000)
         }
       }
     };
@@ -2621,7 +2506,6 @@ app.post('/v1/analyze', async (c) => {
       dataQuality: profileData.dataQuality,
       totalCost: `$${totalCost.toFixed(6)}`,
       totalTime: `${totalProcessingTime.toFixed(2)}ms`,
-      costBreakdown: costBreakdown,
       requestId
     });
     
@@ -2646,8 +2530,6 @@ app.post('/v1/analyze', async (c) => {
       requestId
     ), 500);
   }
-});
-
 // ===============================================================================
 // FINAL BULK ANALYZE ENDPOINT - Replace your existing /v1/bulk-analyze endpoint
 // ===============================================================================
