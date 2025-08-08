@@ -396,17 +396,21 @@ async function fetchBusinessProfile(business_id: string, user_id: string, env: E
   return businesses[0];
 }
 
-await updateCreditsWithDetailedCostTracking(
-  user_id,                                    // ✅ Correct
-  costBreakdown,                             // ✅ Correct  
-  totalProcessingTime,                       // ✅ Correct
-  apiCallBreakdown,                          // ✅ Correct
-  userResult.credits - creditCost,           // ✅ Correct
-  `${analysis_type} analysis of @${username}`, // ✅ Correct
-  c.env,                                     // ✅ Correct
-  lead_id                                    // ✅ Correct
-);
-
+async function updateCreditsWithDetailedCostTracking(
+  userId: string,
+  costBreakdown: {
+    apify: number;
+    claude: number;
+    openai: number;
+    total: number;
+  },
+  processingTime: number,
+  apiCalls: string[],
+  newBalance: number,
+  description: string,
+  env: Env,
+  leadId?: string
+): Promise<void> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
@@ -414,43 +418,91 @@ await updateCreditsWithDetailedCostTracking(
   };
 
   try {
-    // Update user credits
-    await fetchJson(
+    logger('info', 'Starting credit update with detailed cost tracking', {
+      userId,
+      newBalance,
+      costBreakdown,
+      processingTime: `${processingTime.toFixed(2)}ms`,
+      leadId,
+      description
+    });
+
+    // STEP 1: Update user credits
+    const creditUpdateResponse = await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
       {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ credits: newBalance })
+        body: JSON.stringify({ 
+          credits: newBalance,
+          updated_at: new Date().toISOString()
+        })
       },
       10000
     );
 
-    // Create detailed transaction record with cost tracking
+    logger('info', 'User credits updated successfully', {
+      userId,
+      newBalance,
+      updateResponse: creditUpdateResponse
+    });
+
+    // STEP 2: Calculate the credit cost (difference from new balance)
+    const creditCost = Math.abs(costBreakdown.total || 0);
+
+    // STEP 3: Create detailed transaction record
     const transactionData = {
       user_id: userId,
-      amount: -costBreakdown.total,
+      amount: -creditCost, // Negative for usage
       type: 'use',
       description: description,
       lead_id: leadId || null,
+      created_at: new Date().toISOString(),
       metadata: {
-        cost_breakdown: costBreakdown,
+        cost_breakdown: {
+          apify_cost_usd: costBreakdown.apify || 0,
+          claude_cost_usd: costBreakdown.claude || 0,
+          openai_cost_usd: costBreakdown.openai || 0,
+          total_cost_usd: costBreakdown.total || 0,
+          credit_conversion_rate: "1 credit = ~$0.01"
+        },
         performance_metrics: {
           total_processing_time_ms: processingTime,
-          api_calls: apiCalls,
-          efficiency_score: processingTime > 0 ? Math.round(1000 / processingTime * 100) / 100 : 0
+          processing_time_seconds: Math.round(processingTime / 1000 * 100) / 100,
+          api_calls: apiCalls || [],
+          api_call_count: (apiCalls || []).length,
+          efficiency_score: processingTime > 0 ? Math.round(1000 / processingTime * 100) / 100 : 0,
+          cost_per_second: processingTime > 0 ? (costBreakdown.total || 0) / (processingTime / 1000) : 0
         },
-        api_usage: {
-          apify_cost: costBreakdown.apify,
-          claude_cost: costBreakdown.claude,
-          openai_cost: costBreakdown.openai,
-          total_usd: costBreakdown.total
+        api_usage_details: {
+          apify_used: (costBreakdown.apify || 0) > 0,
+          claude_used: (costBreakdown.claude || 0) > 0,
+          openai_used: (costBreakdown.openai || 0) > 0,
+          primary_ai_service: (costBreakdown.claude || 0) > (costBreakdown.openai || 0) ? 'claude' : 'openai'
         },
-        timestamp: new Date().toISOString(),
-        version: 'v3.0.0-enterprise-cost-tracking'
+        tracking_metadata: {
+          timestamp: new Date().toISOString(),
+          version: 'v3.0.0-enterprise-cost-tracking',
+          environment: 'production',
+          feature_flags: {
+            real_cost_tracking: true,
+            detailed_metrics: true,
+            performance_monitoring: true
+          }
+        }
       }
     };
 
-    await fetchJson(
+    logger('info', 'Creating credit transaction record', {
+      userId,
+      amount: transactionData.amount,
+      leadId,
+      costBreakdown: transactionData.metadata.cost_breakdown,
+      performanceMetrics: transactionData.metadata.performance_metrics
+    });
+
+    // STEP 4: Save transaction to database
+    const transactionResponse = await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
       {
         method: 'POST',
@@ -460,19 +512,65 @@ await updateCreditsWithDetailedCostTracking(
       10000
     );
 
-    logger('info', 'Credits updated with comprehensive cost tracking', {
+    logger('info', 'Credit transaction saved successfully', {
       userId,
-      totalCost: costBreakdown.total,
-      newBalance,
-      breakdown: costBreakdown,
-      processingTime: `${processingTime.toFixed(2)}ms`
+      transactionId: transactionResponse?.id || 'unknown',
+      amount: transactionData.amount,
+      leadId
+    });
+
+    // STEP 5: Log comprehensive cost summary
+    logger('info', '💰 COMPREHENSIVE COST TRACKING COMPLETE', {
+      userId,
+      leadId,
+      summary: {
+        credits_deducted: Math.abs(transactionData.amount),
+        new_credit_balance: newBalance,
+        cost_breakdown_usd: {
+          apify: `$${(costBreakdown.apify || 0).toFixed(6)}`,
+          claude: `$${(costBreakdown.claude || 0).toFixed(6)}`,
+          openai: `$${(costBreakdown.openai || 0).toFixed(6)}`,
+          total: `$${(costBreakdown.total || 0).toFixed(6)}`
+        },
+        performance: {
+          total_time: `${processingTime.toFixed(2)}ms`,
+          api_calls: apiCalls?.length || 0,
+          efficiency: `${transactionData.metadata.performance_metrics.efficiency_score} ops/sec`,
+          cost_per_second: `$${transactionData.metadata.performance_metrics.cost_per_second.toFixed(8)}/sec`
+        },
+        analysis_details: {
+          description,
+          timestamp: new Date().toISOString()
+        }
+      }
     });
 
   } catch (error: any) {
-    logger('error', 'Failed to update credits with cost tracking', { error: error.message });
-    throw new Error(`Failed to update credits: ${error.message}`);
+    logger('error', '❌ Credit update with cost tracking failed', {
+      userId,
+      leadId,
+      error: error.message,
+      stack: error.stack,
+      costBreakdown,
+      processingTime,
+      description
+    });
+    
+    // Provide detailed error information for debugging
+    if (error.message.includes('duplicate key')) {
+      throw new Error(`Credit transaction already exists for this analysis`);
+    } else if (error.message.includes('foreign key')) {
+      throw new Error(`Invalid user ID or lead ID provided`);
+    } else if (error.message.includes('not found')) {
+      throw new Error(`User ${userId} not found in database`);
+    } else if (error.message.includes('insufficient')) {
+      throw new Error(`Database operation failed due to insufficient permissions`);
+    } else {
+      throw new Error(`Failed to update credits with cost tracking: ${error.message}`);
+    }
   }
 }
+
 
 // ===============================================================================
 // HELPER FUNCTIONS FOR MESSAGE GENERATION
