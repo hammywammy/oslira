@@ -43,12 +43,13 @@ async init() {
         // ✅ Listen for auth events to reload data
         if (window.OsliraApp?.events) {
             window.OsliraApp.events.addEventListener('userAuthenticated', async (event) => {
-                console.log('🔐 User authenticated event received, reloading dashboard data');
+                console.log('🔐 User authenticated event received');
+                await this.setupDashboard(); // ✅ Setup real-time AFTER auth
                 await this.loadDashboardData();
             });
         }
         
-        // Setup dashboard functionality
+        // Setup dashboard functionality (this will wait for auth)
         await this.setupDashboard();
         
         // Load dashboard data (will wait for auth internally)
@@ -4418,20 +4419,28 @@ handleRealtimeLeadUpdate(payload) {
     try {
         console.log('🔧 Setting up dashboard functionality...');
         
-        // Set up real-time subscriptions
-        this.setupRealtimeSubscription();
+        // ✅ WAIT for authentication before setting up real-time
+        const isAuthReady = await this.waitForAuth(10000);
+        
+        if (isAuthReady) {
+            console.log('✅ Auth ready, setting up real-time subscription');
+            this.setupRealtimeSubscription();
+        } else {
+            console.warn('⚠️ Auth not ready, using polling fallback');
+            this.setupPollingFallback();
+        }
         
         // Set up visibility change handler
         document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
         
-        // ✅ FIXED: Use the correct method name
+        // Load business profiles
         await this.loadBusinessProfiles();
         
         console.log('✅ Dashboard setup completed');
         
     } catch (error) {
         console.warn('⚠️ Dashboard setup partially failed:', error);
-        // Don't throw error, just log warning
+        this.setupPollingFallback();
     }
 }
 
