@@ -2241,27 +2241,16 @@ app.get('/config', (c) => {
 // ===============================================================================
 // MAIN ANALYSIS ENDPOINT - ENTERPRISE PERFECT VERSION
 // ===============================================================================
-
 app.post('/v1/analyze', async (c) => {
   const requestId = generateRequestId();
-  const totalStartTime = performance.now();
-  
-  // Cost tracking variables
-  let totalCost = 0;
-  let apiCallBreakdown: string[] = [];
-  let costBreakdown = {
-    apify: 0,
-    claude: 0,
-    openai: 0,
-    total: 0
-  };
+  const totalStartTime = performance.now(); // Cost tracking: start time
   
   try {
     const body = await c.req.json();
     const data = normalizeRequest(body);
     const { username, analysis_type, business_id, user_id, profile_url } = data;
     
-    logger('info', 'Enterprise analysis request started with cost tracking', { 
+    logger('info', 'Enterprise analysis request started', { 
       username, 
       analysisType: analysis_type, 
       requestId
@@ -2283,38 +2272,27 @@ app.post('/v1/analyze', async (c) => {
     }
     
     // ===============================================================================
-    // STEP 1: SCRAPE PROFILE WITH COST & TIME TRACKING
+    // SCRAPE PROFILE (with timing)
     // ===============================================================================
-    
     let profileData: ProfileData;
-    let scrapingCost = 0;
-    
+    let scrapingTime = 0;
     try {
-      logger('info', 'Starting profile scraping with cost tracking', { username });
+      logger('info', 'Starting profile scraping', { username });
       const scrapingStartTime = performance.now();
       
       profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
       
       const scrapingEndTime = performance.now();
-      const scrapingTime = scrapingEndTime - scrapingStartTime;
+      scrapingTime = scrapingEndTime - scrapingStartTime;
       
-      // Calculate Apify cost (estimate: $0.0001 per result item)
-      const postsScraped = profileData.latestPosts?.length || 1;
-      scrapingCost = postsScraped * 0.0001;
-      costBreakdown.apify = scrapingCost;
-      totalCost += scrapingCost;
-      
-      apiCallBreakdown.push(`Apify Scraping: ${scrapingTime.toFixed(2)}ms ($${scrapingCost.toFixed(6)})`);
-      
-      logger('info', 'Profile scraped successfully with cost tracking', { 
+      logger('info', 'Profile scraped successfully', { 
         username: profileData.username, 
         followers: profileData.followersCount,
         postsFound: profileData.latestPosts?.length || 0,
         hasRealEngagement: (profileData.engagement?.postsAnalyzed || 0) > 0,
         dataQuality: profileData.dataQuality,
         scraperUsed: profileData.scraperUsed,
-        scrapingTime: `${scrapingTime.toFixed(2)}ms`,
-        scrapingCost: `$${scrapingCost.toFixed(6)}`
+        scrapingTime: `${scrapingTime.toFixed(2)}ms`
       });
     } catch (scrapeError: any) {
       logger('error', 'Profile scraping failed', { 
@@ -2338,289 +2316,299 @@ app.post('/v1/analyze', async (c) => {
         undefined, 
         errorMessage, 
         requestId
-      ), 400);
+      ), 500);
     }
-    
+
     // ===============================================================================
-    // STEP 2: AI ANALYSIS WITH COST & TIME TRACKING  
+    // AI ANALYSIS (with timing)
     // ===============================================================================
-    
     let analysisResult: AnalysisResult;
-    let analysisMessage: string | null = null;
-    let aiAnalysisCost = 0;
-    let messageGenerationCost = 0;
-    
+    let analysisTime = 0;
     try {
-      logger('info', 'Starting AI analysis with cost tracking', { username, requestId });
+      logger('info', 'Starting AI analysis');
       const analysisStartTime = performance.now();
       
-      // Use existing performAIAnalysis function
       analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
       
       const analysisEndTime = performance.now();
-      const analysisTime = analysisEndTime - analysisStartTime;
+      analysisTime = analysisEndTime - analysisStartTime;
       
-      // Calculate AI cost based on analysis type and estimated tokens
-      if (c.env.CLAUDE_KEY) {
-        // Estimate Claude cost based on content length
-        const estimatedInputTokens = Math.min(2000, profileData.bio?.length * 2 + 1000);
-        const estimatedOutputTokens = 800;
-        aiAnalysisCost = (estimatedInputTokens / 1000000) * 3.00 + (estimatedOutputTokens / 1000000) * 15.00;
-        costBreakdown.claude += aiAnalysisCost;
-      } else if (c.env.OPENAI_KEY) {
-        // Estimate OpenAI cost
-        const estimatedInputTokens = Math.min(2000, profileData.bio?.length * 2 + 1000);
-        const estimatedOutputTokens = 800;
-        aiAnalysisCost = (estimatedInputTokens / 1000000) * 2.50 + (estimatedOutputTokens / 1000000) * 10.00;
-        costBreakdown.openai += aiAnalysisCost;
-      }
-      
-      totalCost += aiAnalysisCost;
-      apiCallBreakdown.push(`AI Analysis: ${analysisTime.toFixed(2)}ms ($${aiAnalysisCost.toFixed(6)})`);
-      
-      logger('info', 'AI analysis completed with cost tracking', {
-        username,
+      logger('info', 'AI analysis completed', { 
         score: analysisResult.score,
-        analysisTime: `${analysisTime.toFixed(2)}ms`,
-        analysisCost: `$${aiAnalysisCost.toFixed(6)}`
+        engagementScore: analysisResult.engagement_score,
+        nicheFit: analysisResult.niche_fit,
+        confidence: analysisResult.confidence_level,
+        hasQuickSummary: !!analysisResult.quick_summary,
+        hasDeepSummary: !!analysisResult.deep_summary,
+        analysisTime: `${analysisTime.toFixed(2)}ms`
       });
-      
-    } catch (analysisError: any) {
-      logger('error', 'AI analysis failed', { 
-        username, 
-        error: analysisError.message,
+    } catch (aiError: any) {
+      logger('error', 'AI analysis failed', { error: aiError.message });
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        'AI analysis failed', 
         requestId
-      });
-      throw new Error(`Analysis failed: ${analysisError.message}`);
+      ), 500);
     }
-    
+
     // ===============================================================================
-    // STEP 3: MESSAGE GENERATION (DEEP ANALYSIS ONLY) WITH COST TRACKING
+    // GENERATE OUTREACH MESSAGE FOR DEEP ANALYSIS (with timing)
     // ===============================================================================
-    
+    let outreachMessage = '';
+    let messageTime = 0;
     if (analysis_type === 'deep') {
       try {
-        logger('info', 'Starting message generation with cost tracking', { username, requestId });
+        logger('info', 'Generating outreach message');
         const messageStartTime = performance.now();
         
-        // Use existing generateOutreachMessage function
-        analysisMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
         
         const messageEndTime = performance.now();
-        const messageTime = messageEndTime - messageStartTime;
+        messageTime = messageEndTime - messageStartTime;
         
-        // Calculate message generation cost
-        if (c.env.CLAUDE_KEY) {
-          const estimatedInputTokens = 1500;
-          const estimatedOutputTokens = 400;
-          messageGenerationCost = (estimatedInputTokens / 1000000) * 3.00 + (estimatedOutputTokens / 1000000) * 15.00;
-          costBreakdown.claude += messageGenerationCost;
-        } else if (c.env.OPENAI_KEY) {
-          const estimatedInputTokens = 1500;
-          const estimatedOutputTokens = 400;
-          messageGenerationCost = (estimatedInputTokens / 1000000) * 2.50 + (estimatedOutputTokens / 1000000) * 10.00;
-          costBreakdown.openai += messageGenerationCost;
-        }
-        
-        totalCost += messageGenerationCost;
-        apiCallBreakdown.push(`Message Generation: ${messageTime.toFixed(2)}ms ($${messageGenerationCost.toFixed(6)})`);
-        
-        logger('info', 'Message generated with cost tracking', {
-          username,
-          messageTime: `${messageTime.toFixed(2)}ms`,
-          messageCost: `$${messageGenerationCost.toFixed(6)}`
+        logger('info', 'Outreach message generated', { 
+          length: outreachMessage.length,
+          messageTime: `${messageTime.toFixed(2)}ms`
         });
-        
       } catch (messageError: any) {
-        logger('error', 'Message generation failed', { 
-          error: messageError.message, 
-          requestId 
-        });
-        
-        // Continue without message - don't fail the entire analysis
-        analysisMessage = `Hi ${profileData.displayName || profileData.username},
-
-I came across your profile and was impressed by your content and engagement with your ${profileData.followersCount.toLocaleString()} followers.
-
-I'm reaching out from ${business.name}, and I think there could be a great opportunity for collaboration given your audience and our ${business.value_proposition.toLowerCase()}.
-
-Would you be interested in exploring a potential partnership? I'd love to share more details about what we have in mind.
-
-Best regards`;
+        logger('warn', 'Message generation failed (non-fatal)', { error: messageError.message });
       }
     }
-    
+
     // ===============================================================================
-    // STEP 4: SAVE TO DATABASE WITH ENHANCED COST TRACKING
+    // PREPARE LEAD DATA (same as your working code)
     // ===============================================================================
-    
-    costBreakdown.total = totalCost;
+    const leadData = {
+      user_id: user_id,
+      business_id: business_id,
+      username: profileData.username,
+      platform: 'instagram',
+      profile_url: profile_url,
+      profile_pic_url: profileData.profilePicUrl || null,
+      score: analysisResult.score || 0,
+      analysis_type: analysis_type,
+      followers_count: profileData.followersCount || 0,
+      created_at: new Date().toISOString(),
+      quick_summary: analysisResult.quick_summary || null
+    };
+
+    // ===============================================================================
+    // PREPARE ANALYSIS DATA FOR DEEP ANALYSIS (same as your working code)
+    // ===============================================================================
+    let analysisData = null;
+    if (analysis_type === 'deep') {
+      analysisData = {
+        user_id: user_id,
+        username: profileData.username,
+        analysis_type: 'deep',
+        score: analysisResult.score || 0,
+        engagement_score: analysisResult.engagement_score || 0,
+        score_niche_fit: analysisResult.niche_fit || 0,
+        score_total: analysisResult.score || 0,
+        niche_fit: analysisResult.niche_fit || 0,
+        avg_likes: profileData.engagement?.avgLikes || 0,
+        avg_comments: profileData.engagement?.avgComments || 0,
+        engagement_rate: profileData.engagement?.engagementRate || 0,
+        audience_quality: analysisResult.audience_quality || 'Unknown',
+        engagement_insights: analysisResult.engagement_insights || 'No insights available',
+        selling_points: Array.isArray(analysisResult.selling_points) ? 
+          analysisResult.selling_points : 
+          (analysisResult.selling_points ? [analysisResult.selling_points] : null),
+        reasons: Array.isArray(analysisResult.reasons) ? analysisResult.reasons : 
+          (Array.isArray(analysisResult.selling_points) ? analysisResult.selling_points : null),
+        latest_posts: (profileData.latestPosts?.length || 0) > 0 ? 
+          JSON.stringify(profileData.latestPosts.slice(0, 12)) : null,
+        engagement_data: profileData.engagement ? JSON.stringify({
+          avgLikes: profileData.engagement.avgLikes,
+          avgComments: profileData.engagement.avgComments,
+          engagementRate: profileData.engagement.engagementRate,
+          totalEngagement: profileData.engagement.totalEngagement,
+          postsAnalyzed: profileData.engagement.postsAnalyzed,
+          dataQuality: profileData.dataQuality,
+          scraperUsed: profileData.scraperUsed,
+          dataSource: 'real_scraped_data',
+          calculationMethod: 'manual_averaging_from_posts'
+        }) : JSON.stringify({
+          dataSource: 'no_real_data_available',
+          reason: 'scraping_failed_or_private_account',
+          scraperUsed: profileData.scraperUsed,
+          estimatedData: false
+        }),
+        analysis_data: JSON.stringify({
+          confidence_level: analysisResult.confidence_level || calculateConfidenceLevel(profileData, analysis_type),
+          scraper_used: profileData.scraperUsed,
+          data_quality: profileData.dataQuality,
+          posts_found: profileData.latestPosts?.length || 0,
+          posts_with_engagement: profileData.latestPosts?.filter(p => p.likesCount > 0 || p.commentsCount > 0).length || 0,
+          real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0,
+          follower_count: profileData.followersCount,
+          verification_status: profileData.isVerified,
+          account_type: profileData.isPrivate ? 'private' : 'public',
+          analysis_timestamp: new Date().toISOString(),
+          ai_model_used: 'gpt-4o'
+        }),
+        outreach_message: outreachMessage || null,
+        deep_summary: analysisResult.deep_summary || null,
+        created_at: new Date().toISOString()
+      };
+    }
+
+    // ===============================================================================
+    // SAVE TO DATABASE (same as your working code)
+    // ===============================================================================
+    let lead_id: string;
+    try {
+      logger('info', 'Saving data to database');
+      lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+      logger('info', 'Database save successful', { lead_id });
+    } catch (saveError: any) {
+      logger('error', 'Database save failed', { error: saveError.message });
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        `Database save failed: ${saveError.message}`, 
+        requestId
+      ), 500);
+    }
+
+    // ===============================================================================
+    // UPDATE CREDITS (using your existing working function)
+    // ===============================================================================
     const totalEndTime = performance.now();
     const totalProcessingTime = totalEndTime - totalStartTime;
     
-    // Prepare lead data with cost tracking
-    const leadData = {
-      username: profileData.username,
-      display_name: profileData.displayName,
-      bio: profileData.bio,
-      followers_count: profileData.followersCount,
-      following_count: profileData.followingCount,
-      posts_count: profileData.postsCount,
-      is_verified: profileData.isVerified,
-      is_private: profileData.isPrivate,
-      profile_pic_url: profileData.profilePicUrl,
-      external_url: profileData.externalUrl,
-      is_business_account: profileData.isBusinessAccount || false,
-      user_id: user_id,
-      business_id: business_id,
-      analysis_type: analysis_type,
-      score: analysisResult.score,
-      profile_url: profile_url,
-      quick_summary: analysis_type === 'light' ? analysisResult.engagement_insights : null,
-      data_quality: profileData.dataQuality || 'medium',
-      scraper_used: profileData.scraperUsed || 'unknown',
-      avg_likes: profileData.engagement?.avgLikes || 0,
-      avg_comments: profileData.engagement?.avgComments || 0,
-      engagement_rate: profileData.engagement?.engagementRate || 0,
-      posts_analyzed: profileData.engagement?.postsAnalyzed || 0,
-      real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0
+    // Calculate estimated costs for logging
+    const estimatedCosts = {
+      apify: (profileData.latestPosts?.length || 1) * 0.0001,
+      ai: analysis_type === 'deep' ? 0.005 : 0.003,
+      message: analysis_type === 'deep' && outreachMessage ? 0.002 : 0,
+      total: 0
     };
+    estimatedCosts.total = estimatedCosts.apify + estimatedCosts.ai + estimatedCosts.message;
     
-    const analysisData = analysis_type === 'deep' ? {
-      engagement_score: analysisResult.engagement_score,
-      niche_fit: analysisResult.niche_fit,
-      audience_quality: analysisResult.audience_quality,
-      engagement_insights: analysisResult.engagement_insights,
-      selling_points: analysisResult.selling_points,
-      reasons: analysisResult.reasons,
-      outreach_message: analysisMessage,
-      confidence_level: analysisResult.confidence_level || 85,
-      deep_summary: analysisResult.engagement_insights
-    } : null;
-    
-    const lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
-    
+    try {
+      // Use your existing working function with enhanced description
+      await updateCreditsAndTransaction(
+        user_id,
+        creditCost,
+        userResult.credits - creditCost,
+        `${analysis_type} analysis for @${profileData.username} | Processing: ${totalProcessingTime.toFixed(2)}ms | Est. cost: $${estimatedCosts.total.toFixed(6)}`,
+        'use',
+        c.env,
+        lead_id
+      );
+      
+      // Log comprehensive cost tracking summary
+      logger('info', '💰 COST TRACKING SUMMARY', {
+        username: profileData.username,
+        totalProcessingTime: `${totalProcessingTime.toFixed(2)}ms`,
+        breakdown: {
+          scraping: `${scrapingTime.toFixed(2)}ms`,
+          analysis: `${analysisTime.toFixed(2)}ms`,
+          message: analysis_type === 'deep' ? `${messageTime.toFixed(2)}ms` : 'N/A'
+        },
+        estimatedCosts: {
+          apify: `$${estimatedCosts.apify.toFixed(6)}`,
+          ai: `$${estimatedCosts.ai.toFixed(6)}`,
+          message: `$${estimatedCosts.message.toFixed(6)}`,
+          total: `$${estimatedCosts.total.toFixed(6)}`
+        },
+        creditsUsed: creditCost,
+        remainingCredits: userResult.credits - creditCost
+      });
+      
+      logger('info', 'Credits updated successfully', { 
+        creditCost, 
+        remainingCredits: userResult.credits - creditCost 
+      });
+    } catch (creditError: any) {
+      logger('error', 'Credit update failed', { error: creditError.message });
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        `Failed to log credit transaction: ${creditError.message}`, 
+        requestId
+      ), 500);
+    }
+
     // ===============================================================================
-    // STEP 5: UPDATE CREDITS WITH ENHANCED COST TRACKING
+    // PREPARE RESPONSE (enhanced with cost tracking data)
     // ===============================================================================
-    
-    await updateCreditsWithDetailedCostTracking(
-  user_id,
-  costBreakdown,
-  totalProcessingTime,
-  apiCallBreakdown,
-  userResult.credits - creditCost,
-  `${analysis_type} analysis of @${username}`,
-  c.env,
-  lead_id
-);
-    
-    // Log detailed cost tracking to console
-    logger('info', 'COST TRACKING SUMMARY', {
-      username,
-      totalCost: `$${totalCost.toFixed(6)}`,
-      breakdown: {
-        apify: `$${costBreakdown.apify.toFixed(6)}`,
-        claude: `$${costBreakdown.claude.toFixed(6)}`,
-        openai: `$${costBreakdown.openai.toFixed(6)}`
-      },
-      processing: {
-        totalTime: `${totalProcessingTime.toFixed(2)}ms`,
-        apiCalls: apiCallBreakdown
-      },
-      efficiency: {
-        costPerSecond: `$${(totalCost / (totalProcessingTime / 1000)).toFixed(8)}`,
-        timePerDollar: `${((totalProcessingTime / 1000) / Math.max(totalCost, 0.000001)).toFixed(2)}s`
-      }
-    });
-    
-    // ===============================================================================
-    // STEP 6: PREPARE ENHANCED RESPONSE WITH COST DATA
-    // ===============================================================================
-    
     const responseData = {
-      success: true,
       lead_id,
       profile: {
         username: profileData.username,
-        display_name: profileData.displayName,
-        followers_count: profileData.followersCount,
-        is_verified: profileData.isVerified,
-        is_business_account: profileData.isBusinessAccount || false,
-        data_quality: profileData.dataQuality,
-        scraper_used: profileData.scraperUsed
+        displayName: profileData.displayName,
+        followersCount: profileData.followersCount,
+        isVerified: profileData.isVerified,
+        profilePicUrl: profileData.profilePicUrl,
+        dataQuality: profileData.dataQuality,
+        scraperUsed: profileData.scraperUsed
       },
       analysis: {
         score: analysisResult.score,
-        engagement_score: analysisResult.engagement_score,
-        niche_fit: analysisResult.niche_fit,
-        audience_quality: analysisResult.audience_quality,
-        confidence_level: analysisResult.confidence_level || 85,
-        selling_points: analysisResult.selling_points,
-        reasons: analysisResult.reasons,
-        quick_summary: analysisResult.engagement_insights,
-        ...(analysis_type === 'deep' && analysisMessage && {
-          outreach_message: analysisMessage,
-          deep_summary: analysisResult.engagement_insights
-        })
-      },
-      engagement: {
-        real_data_available: (profileData.engagement?.postsAnalyzed || 0) > 0,
-        ...(profileData.engagement ? {
-          avg_likes: profileData.engagement.avgLikes,
-          avg_comments: profileData.engagement.avgComments,
-          engagement_rate: profileData.engagement.engagementRate,
-          posts_analyzed: profileData.engagement.postsAnalyzed,
-          data_source: 'real_scraped_calculation'
-        } : {
-          data_source: 'no_real_data_available',
-          avg_likes: 0,
-          avg_comments: 0,
-          engagement_rate: 0
+        type: analysis_type,
+        confidence_level: analysisResult.confidence_level,
+        quick_summary: analysisResult.quick_summary,
+        ...(analysis_type === 'deep' && {
+          engagement_score: analysisResult.engagement_score,
+          niche_fit: analysisResult.niche_fit,
+          audience_quality: analysisResult.audience_quality,
+          selling_points: analysisResult.selling_points,
+          reasons: analysisResult.reasons,
+          outreach_message: outreachMessage,
+          deep_summary: analysisResult.deep_summary,
+          engagement_data: profileData.engagement ? {
+            avg_likes: profileData.engagement.avgLikes,
+            avg_comments: profileData.engagement.avgComments,
+            engagement_rate: profileData.engagement.engagementRate,
+            posts_analyzed: profileData.engagement.postsAnalyzed,
+            data_source: 'real_scraped_calculation'
+          } : {
+            data_source: 'no_real_data_available',
+            avg_likes: 0,
+            avg_comments: 0,
+            engagement_rate: 0
+          }
         })
       },
       credits: {
         used: creditCost,
         remaining: userResult.credits - creditCost
       },
-      // NEW: Cost tracking data
-      cost_tracking: {
-        breakdown: costBreakdown,
-        total_cost_usd: totalCost,
-        processing_time_ms: totalProcessingTime,
-        api_calls: apiCallBreakdown,
-        credit_to_usd_rate: "1 credit = ~$0.01",
-        efficiency_metrics: {
-          cost_per_analysis: totalCost,
-          time_per_analysis: totalProcessingTime,
-          cost_per_second: totalCost / (totalProcessingTime / 1000)
+      // NEW: Cost tracking information (non-intrusive)
+      performance: {
+        total_time_ms: Math.round(totalProcessingTime),
+        estimated_cost_usd: estimatedCosts.total,
+        api_breakdown: {
+          scraping_ms: Math.round(scrapingTime),
+          analysis_ms: Math.round(analysisTime),
+          message_ms: analysis_type === 'deep' ? Math.round(messageTime) : 0
         }
       }
     };
-    
-    logger('info', 'Analysis completed successfully with comprehensive cost tracking', { 
+
+    logger('info', 'Analysis completed successfully', { 
       lead_id, 
       username: profileData.username, 
       score: analysisResult.score,
       confidence: analysisResult.confidence_level,
       dataQuality: profileData.dataQuality,
-      totalCost: `$${totalCost.toFixed(6)}`,
       totalTime: `${totalProcessingTime.toFixed(2)}ms`,
-      requestId
+      estimatedCost: `$${estimatedCosts.total.toFixed(6)}`
     });
-    
+
     return c.json(createStandardResponse(true, responseData, undefined, requestId));
-    
+
   } catch (error: any) {
     const totalEndTime = performance.now();
     const totalProcessingTime = totalEndTime - totalStartTime;
     
-    logger('error', 'Analysis request failed with cost tracking', { 
+    logger('error', 'Analysis request failed', { 
       error: error.message, 
       requestId,
-      partialCosts: `$${totalCost.toFixed(6)}`,
-      timeSpent: `${totalProcessingTime.toFixed(2)}ms`,
-      costBreakdown
+      processingTime: `${totalProcessingTime.toFixed(2)}ms`
     });
     
     return c.json(createStandardResponse(
@@ -2630,7 +2618,7 @@ Best regards`;
       requestId
     ), 500);
   }
-  });
+});
 // ===============================================================================
 // FINAL BULK ANALYZE ENDPOINT - Replace your existing /v1/bulk-analyze endpoint
 // ===============================================================================
