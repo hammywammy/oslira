@@ -1,4 +1,4 @@
-function validateAnalysisResult(result: any): AnalysisResult {
+export function validateAnalysisResult(result: any): AnalysisResult {
   return {
     score: Math.round(parseFloat(result.score) || 0),
     engagement_score: Math.round(parseFloat(result.engagement_score) || 0),
@@ -10,7 +10,7 @@ function validateAnalysisResult(result: any): AnalysisResult {
   };
 }
 
-function calculateConfidenceLevel(profile: ProfileData, analysisType: string): number {
+export function calculateConfidenceLevel(profile: ProfileData, analysisType: string): number {
   let confidence = 50; // Base confidence
   
   // Boost confidence based on data quality
@@ -37,7 +37,7 @@ function calculateConfidenceLevel(profile: ProfileData, analysisType: string): n
   return Math.min(95, Math.max(20, confidence));
 }
 
-function extractUsername(input: string): string {
+export function extractUsername(input: string): string {
   try {
     const cleaned = input.trim().replace(/^@/, '').toLowerCase();
     if (cleaned.includes('instagram.com')) {
@@ -51,21 +51,21 @@ function extractUsername(input: string): string {
   }
 }
 
-function extractHashtags(text: string): string[] {
+export function extractHashtags(text: string): string[] {
   if (!text) return [];
   const hashtagRegex = /#[\w\u0590-\u05ff]+/g;
   const matches = text.match(hashtagRegex);
   return matches ? matches.map(tag => tag.toLowerCase()) : [];
 }
 
-function extractMentions(text: string): string[] {
+export function extractMentions(text: string): string[] {
   if (!text) return [];
   const mentionRegex = /@[\w.]+/g;
   const matches = text.match(mentionRegex);
   return matches ? matches.map(mention => mention.toLowerCase()) : [];
 }
 
-function normalizeRequest(body: AnalysisRequest) {
+export function normalizeRequest(body: AnalysisRequest) {
   const errors: string[] = [];
   
   let profile_url = body.profile_url;
@@ -97,7 +97,7 @@ function normalizeRequest(body: AnalysisRequest) {
     user_id
   };
 }
-function validateProfileData(responseData: any, analysisType?: string): ProfileData {
+export function validateProfileData(responseData: any, analysisType?: string): ProfileData {
   try {
     logger('info', 'Starting CORRECTED profile data validation for nested posts structure', { 
       analysisType, 
