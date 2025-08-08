@@ -1,4 +1,4 @@
-interface Env {
+export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE: string;
   SUPABASE_ANON_KEY: string;
@@ -10,7 +10,7 @@ interface Env {
   FRONTEND_URL: string;
 }
 
-interface ProfileData {
+export interface ProfileData {
   username: string;
   displayName: string;
   bio: string;
@@ -28,7 +28,7 @@ interface ProfileData {
   dataQuality?: 'high' | 'medium' | 'low';
 }
 
-interface PostData {
+export interface PostData {
   id: string;
   shortCode: string;
   caption: string;
@@ -43,7 +43,7 @@ interface PostData {
   isVideo?: boolean;
 }
 
-interface EngagementData {
+export interface EngagementData {
   avgLikes: number;
   avgComments: number;
   engagementRate: number;
@@ -52,7 +52,7 @@ interface EngagementData {
   qualityScore?: number;
 }
 
-interface BusinessProfile {
+export interface BusinessProfile {
   id: string;
   user_id: string;
   name: string;
@@ -65,7 +65,7 @@ interface BusinessProfile {
   created_at: string;
 }
 
-interface AnalysisResult {
+export interface AnalysisResult {
   score: number;
   engagement_score: number;
   niche_fit: number;
@@ -78,7 +78,7 @@ interface AnalysisResult {
   confidence_level?: number;
 }
 
-interface AnalysisRequest {
+export interface AnalysisRequest {
   profile_url?: string;
   username?: string;
   analysis_type: 'light' | 'deep';
@@ -87,7 +87,7 @@ interface AnalysisRequest {
   user_id: string;
 }
 
-interface User {
+export interface User {
   id: string;
   email: string;
   full_name: string;
@@ -98,4 +98,5 @@ interface User {
   subscription_id: string;
   stripe_customer_id: string;
 }
-type AnalysisType = 'light' | 'deep';
+
+export type AnalysisType = 'light' | 'deep';
