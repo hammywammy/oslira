@@ -6,6 +6,7 @@ import { normalizeRequest } from '../utils/validation.js';
 import { fetchUserAndCredits, fetchBusinessProfile, saveLeadAndAnalysis, updateCreditsAndTransaction } from '../services/database.js';
 import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
 import { performAIAnalysis, generateOutreachMessage } from '../services/ai-analysis.js';
+import { calculateConfidenceLevel } from '../utils/validation.js';
 
 export async function handleAnalyze(c: Context): Promise<Response> {
   const requestId = generateRequestId();
