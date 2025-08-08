@@ -20,7 +20,7 @@ export async function handleAnalyticsSummary(c: Context): Promise<Response> {
       timestamp: new Date().toISOString()
     }, 500);
   }
-});
+}
 
 export async function handleGenerateInsights(c: Context): Promise<Response> {
   try {
@@ -38,4 +38,4 @@ export async function handleGenerateInsights(c: Context): Promise<Response> {
       error: error.message
     }, 500);
   }
-});
+}
