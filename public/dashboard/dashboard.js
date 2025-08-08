@@ -3968,36 +3968,7 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
         console.warn('⚠️ WebSocket availability check failed:', error);
         return false;
     }
-}
-    // ✅ ADD THIS MISSING METHOD:
-    updateDashboardStats() {
-        try {
-            const totalLeads = this.allLeads.length;
-            const avgScore = totalLeads > 0 
-                ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
-                : 0;
-
-            // Update stats in the UI
-            const statsElements = {
-                'total-leads': totalLeads.toLocaleString(),
-                'avg-score': avgScore.toString(),
-                'active-campaigns': '0', // Placeholder
-                'conversion-rate': '0%'  // Placeholder
-            };
-
-            Object.entries(statsElements).forEach(([id, value]) => {
-                const element = document.getElementById(id);
-                if (element) {
-                    element.textContent = value;
-                }
-            });
-
-            console.log(`📊 Stats updated: ${totalLeads} leads, avg score ${avgScore}`);
-
-        } catch (error) {
-            console.warn('⚠️ Stats update failed:', error);
-        }
-    }
+ }
 
     showGettingStartedGuide() {
     // Create a simple getting started modal
