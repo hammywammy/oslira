@@ -3073,7 +3073,6 @@ async updateDashboardStats() {
         this.updateStatsFromCachedData();
     }
 }
-
 debugElements() {
     console.log('🔍 === ELEMENT DEBUG ===');
     
@@ -4968,6 +4967,19 @@ class UnifiedAnalysisQueue {
 
         return await response.json();
     }
+    // Test method - run this in console to verify
+async testStatsUpdate() {
+    console.log('🧪 Testing stats update...');
+    
+    // Force update with real data
+    await this.updateDashboardStats();
+    
+    // Debug elements
+    this.debugElements();
+    
+    // Force update with test data
+    this.forceUpdateAllStats();
+}
 }
 
 // ===============================================================================
