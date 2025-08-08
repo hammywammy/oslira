@@ -1,4 +1,4 @@
-function createStandardResponse(success: boolean, data?: any, error?: string, requestId?: string) {
+export function createStandardResponse(success: boolean, data?: any, error?: string, requestId?: string) {
   return {
     success,
     data,
