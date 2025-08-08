@@ -163,8 +163,7 @@ export async function handleDebugEngagement(c: Context): Promise<Response> {
       username
     }, 500);
   }
-});
-
+}
 export async function handleDebugScrape(c: Context): Promise<Response> {
   const username = c.req.param('username');
   const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
@@ -195,7 +194,7 @@ export async function handleDebugScrape(c: Context): Promise<Response> {
       analysisType
     }, 500);
   }
-});
+}
 
 export async function handleDebugParsing(c: Context): Promise<Response> {
   const username = c.req.param('username');
@@ -277,4 +276,4 @@ export async function handleDebugParsing(c: Context): Promise<Response> {
       enterprise: true
     }, 500);
   }
-});
+}
