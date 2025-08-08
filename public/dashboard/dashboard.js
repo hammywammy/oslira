@@ -3021,98 +3021,290 @@ displayLeads(leads) {
         this.displayLeads(filteredLeads);
     }
 
- async updateDashboardStats() {
+async updateDashboardStats() {
     try {
-        console.log('📊 Updating dashboard stats...');
+        console.log('📊 Updating dashboard stats with database queries...');
         
-        const totalLeads = this.allLeads.length;
+        const supabase = window.OsliraApp?.supabase;
+        const user = window.OsliraApp?.user;
         
-        // ✅ 1. CALCULATE AVERAGE SCORE FROM leads.score
-        const avgScore = totalLeads > 0 
-            ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
-            : 0;
+        if (!supabase || !user) {
+            console.warn('⚠️ No database connection available, using cached data');
+            this.updateStatsFromCachedData();
+            return;
+        }
 
-        // ✅ 2. CALCULATE HIGH-VALUE LEADS FROM leads.score (80+ score)
-        const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
+        // ✅ 1. TOTAL LEADS - Count from leads table
+        const { count: totalLeads, error: leadsCountError } = await supabase
+            .from('leads')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
 
-        // ✅ 3. CALCULATE CREDITS USED FROM DATABASE
+        if (leadsCountError) {
+            console.error('❌ Failed to count leads:', leadsCountError);
+        }
+
+        // ✅ 2. AVERAGE SCORE - Calculate from leads.score column
+        const { data: scoreData, error: scoreError } = await supabase
+            .from('leads')
+            .select('score')
+            .eq('user_id', user.id)
+            .not('score', 'is', null);
+
+        let avgScore = 0;
+        if (!scoreError && scoreData && scoreData.length > 0) {
+            const totalScore = scoreData.reduce((sum, lead) => sum + (lead.score || 0), 0);
+            avgScore = Math.round(totalScore / scoreData.length);
+        }
+
+        // ✅ 3. HIGH-VALUE LEADS - Count leads with score >= 80
+        const { count: highValueLeads, error: highValueError } = await supabase
+            .from('leads')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .gte('score', 80);
+
+        if (highValueError) {
+            console.error('❌ Failed to count high-value leads:', highValueError);
+        }
+
+        // ✅ 4. CREDITS USED - Sum from credit_transactions table
+        const { data: creditTransactions, error: creditError } = await supabase
+            .from('credit_transactions')
+            .select('amount')
+            .eq('user_id', user.id)
+            .eq('type', 'use');
+
         let creditsUsed = 0;
-        try {
-            if (window.OsliraApp?.supabase && window.OsliraApp?.user) {
-                const supabase = window.OsliraApp.supabase;
-                const user = window.OsliraApp.user;
-
-                // Get current month's credit usage
-                const startOfMonth = new Date();
-                startOfMonth.setDate(1);
-                startOfMonth.setHours(0, 0, 0, 0);
-
-                const { data: creditTransactions, error } = await supabase
-                    .from('credit_transactions')
-                    .select('amount, type')
-                    .eq('user_id', user.id)
-                    .eq('type', 'use')
-                    .gte('created_at', startOfMonth.toISOString());
-
-                if (!error && creditTransactions) {
-                    // Sum up all credit usage (amounts are negative for 'use' type)
-                    creditsUsed = Math.abs(creditTransactions.reduce((sum, transaction) => 
-                        sum + Math.abs(transaction.amount), 0));
-                    
-                    console.log(`💳 Credits used this month: ${creditsUsed} (from ${creditTransactions.length} transactions)`);
-                } else {
-                    console.warn('⚠️ Failed to fetch credit transactions:', error);
-                    // Fallback: calculate from leads (light=1, deep=2)
-                    creditsUsed = this.allLeads.reduce((sum, lead) => {
-                        return sum + (lead.analysis_type === 'deep' ? 2 : 1);
-                    }, 0);
-                }
-            } else {
-                // Fallback calculation when no database access
-                creditsUsed = this.allLeads.reduce((sum, lead) => {
-                    return sum + (lead.analysis_type === 'deep' ? 2 : 1);
-                }, 0);
-            }
-        } catch (error) {
-            console.warn('⚠️ Credit calculation failed, using fallback:', error);
-            creditsUsed = this.allLeads.reduce((sum, lead) => {
-                return sum + (lead.analysis_type === 'deep' ? 2 : 1);
+        if (!creditError && creditTransactions) {
+            // Sum absolute values (amounts are negative for 'use' type)
+            creditsUsed = creditTransactions.reduce((sum, transaction) => {
+                return sum + Math.abs(transaction.amount || 0);
             }, 0);
         }
 
-        // ✅ 4. UPDATE STATS IN UI WITH CORRECT VALUES
-        const statsElements = {
-            'total-leads': totalLeads.toLocaleString(),
-            'avg-score': totalLeads > 0 ? avgScore.toString() : '0',
-            'credits-used': creditsUsed.toString(),
-            'high-value-leads': highValueLeads.toString()
+        // ✅ 5. UPDATE UI ELEMENTS
+        const statsData = {
+            totalLeads: totalLeads || 0,
+            avgScore: avgScore,
+            highValueLeads: highValueLeads || 0,
+            creditsUsed: creditsUsed
         };
 
-        Object.entries(statsElements).forEach(([id, value]) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = value;
-                console.log(`📊 Updated ${id}: ${value}`);
-            } else {
-                console.warn(`⚠️ Element not found: ${id}`);
-            }
-        });
+        console.log('📊 Database query results:', statsData);
 
-        // ✅ 5. UPDATE TREND INDICATORS
-        this.updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed);
+        // Update all possible element IDs and classes
+        this.updateStatElements(statsData);
 
-        console.log(`📊 Stats updated successfully:`, {
-            totalLeads,
-            avgScore,
-            highValueLeads,
-            creditsUsed
-        });
+        // Update trend indicators
+        this.updateTrendIndicators(statsData.totalLeads, statsData.avgScore, statsData.highValueLeads, statsData.creditsUsed);
+
+        console.log('✅ Dashboard stats updated successfully from database');
 
     } catch (error) {
-        console.error('❌ Stats update failed:', error);
+        console.error('❌ Database stats update failed:', error);
+        // Fallback to cached data
+        this.updateStatsFromCachedData();
     }
 }
 
+// ✅ HELPER METHOD - UPDATE STAT ELEMENTS
+updateStatElements(statsData) {
+    const { totalLeads, avgScore, highValueLeads, creditsUsed } = statsData;
+
+    // Define all possible element mappings
+    const elementMappings = [
+        {
+            value: totalLeads.toLocaleString(),
+            possibleIds: ['total-leads', 'leads-researched', 'total_leads'],
+            description: 'Total Leads'
+        },
+        {
+            value: avgScore.toString(),
+            possibleIds: ['avg-score', 'average-score', 'avg_score'],
+            description: 'Average Score'
+        },
+        {
+            value: creditsUsed.toString(),
+            possibleIds: ['credits-used', 'credits_used', 'total-credits'],
+            description: 'Credits Used'
+        },
+        {
+            value: highValueLeads.toString(),
+            possibleIds: ['high-value-leads', 'high_value_leads', 'quality-leads'],
+            description: 'High-Value Leads'
+        }
+    ];
+
+    // Update by ID
+    elementMappings.forEach(({ value, possibleIds, description }) => {
+        let updated = false;
+        
+        possibleIds.forEach(id => {
+            const element = document.getElementById(id);
+            if (element && !updated) {
+                element.textContent = value;
+                console.log(`✅ Updated ${description} (${id}): ${value}`);
+                updated = true;
+            }
+        });
+        
+        if (!updated) {
+            console.warn(`⚠️ Could not find element for ${description}. Tried: ${possibleIds.join(', ')}`);
+        }
+    });
+
+    // Fallback: Update by .big-number class position
+    const bigNumbers = document.querySelectorAll('.big-number');
+    if (bigNumbers.length >= 4) {
+        const values = [totalLeads.toLocaleString(), avgScore.toString(), creditsUsed.toString(), highValueLeads.toString()];
+        bigNumbers.forEach((element, index) => {
+            if (values[index]) {
+                element.textContent = values[index];
+                console.log(`✅ Updated .big-number[${index}]: ${values[index]}`);
+            }
+        });
+    }
+
+    // Additional fallback: Update by parent text content
+    document.querySelectorAll('.stat-card').forEach(card => {
+        const bigNumber = card.querySelector('.big-number');
+        const heading = card.querySelector('h3');
+        
+        if (bigNumber && heading) {
+            const headingText = heading.textContent.toLowerCase();
+            
+            if (headingText.includes('leads researched') || headingText.includes('total')) {
+                bigNumber.textContent = totalLeads.toLocaleString();
+            } else if (headingText.includes('average score')) {
+                bigNumber.textContent = avgScore.toString();
+            } else if (headingText.includes('credits used')) {
+                bigNumber.textContent = creditsUsed.toString();
+            } else if (headingText.includes('high-value') || headingText.includes('quality')) {
+                bigNumber.textContent = highValueLeads.toString();
+            }
+        }
+    });
+}
+
+// ✅ FALLBACK METHOD - USE CACHED DATA IF DATABASE FAILS
+updateStatsFromCachedData() {
+    console.log('📊 Updating stats from cached lead data...');
+    
+    const totalLeads = this.allLeads.length;
+    const avgScore = totalLeads > 0 
+        ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
+        : 0;
+    const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
+    const creditsUsed = this.allLeads.reduce((sum, lead) => {
+        return sum + (lead.analysis_type === 'deep' ? 2 : 1);
+    }, 0);
+
+    const statsData = { totalLeads, avgScore, highValueLeads, creditsUsed };
+    
+    console.log('📊 Cached data results:', statsData);
+    this.updateStatElements(statsData);
+    this.updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed);
+}
+
+// ✅ ENHANCED TREND INDICATORS
+updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
+    try {
+        const updates = [
+            {
+                id: 'leads-trend',
+                text: totalLeads === 0 ? 'Start analyzing leads' : `${totalLeads} leads analyzed`,
+                className: totalLeads > 0 ? 'trend up' : 'trend'
+            },
+            {
+                id: 'score-trend', 
+                text: avgScore === 0 ? 'No scores yet' : 
+                      avgScore >= 70 ? 'High quality leads' : 
+                      avgScore >= 50 ? 'Good quality leads' : 'Focus on quality',
+                className: avgScore >= 70 ? 'trend up' : 
+                          avgScore >= 50 ? 'trend' : 'trend down'
+            },
+            {
+                id: 'credits-trend',
+                text: 'This month',
+                className: 'trend'
+            },
+            {
+                id: 'high-value-trend',
+                text: highValueLeads === 0 ? 'Find high-value leads' : 
+                      totalLeads > 0 ? `${Math.round((highValueLeads / totalLeads) * 100)}% are high-value` : 'Score 80+',
+                className: highValueLeads > 0 && totalLeads > 0 && (highValueLeads / totalLeads) >= 0.2 ? 'trend up' : 'trend'
+            }
+        ];
+
+        updates.forEach(({ id, text, className }) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = text;
+                element.className = className;
+            }
+        });
+
+    } catch (error) {
+        console.warn('⚠️ Trend indicators update failed:', error);
+    }
+}
+
+// ✅ DEBUG METHOD - TEST DATABASE QUERIES
+async debugDatabaseStats() {
+    console.log('🔍 === DATABASE STATS DEBUG ===');
+    
+    const supabase = window.OsliraApp?.supabase;
+    const user = window.OsliraApp?.user;
+    
+    if (!supabase || !user) {
+        console.error('❌ No database connection');
+        return;
+    }
+
+    try {
+        // Test each query individually
+        console.log('1. Testing total leads count...');
+        const { count: totalLeads, error: e1 } = await supabase
+            .from('leads')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+        console.log('Total leads:', totalLeads, e1 ? 'ERROR: ' + e1.message : '✅');
+
+        console.log('2. Testing score data...');
+        const { data: scoreData, error: e2 } = await supabase
+            .from('leads')
+            .select('score')
+            .eq('user_id', user.id);
+        console.log('Score data:', scoreData?.length, 'records', e2 ? 'ERROR: ' + e2.message : '✅');
+        console.log('Sample scores:', scoreData?.slice(0, 5));
+
+        console.log('3. Testing high-value leads count...');
+        const { count: highValueLeads, error: e3 } = await supabase
+            .from('leads')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .gte('score', 80);
+        console.log('High-value leads:', highValueLeads, e3 ? 'ERROR: ' + e3.message : '✅');
+
+        console.log('4. Testing credit transactions...');
+        const { data: creditData, error: e4 } = await supabase
+            .from('credit_transactions')
+            .select('amount, type')
+            .eq('user_id', user.id)
+            .eq('type', 'use');
+        console.log('Credit transactions:', creditData?.length, 'records', e4 ? 'ERROR: ' + e4.message : '✅');
+        console.log('Sample transactions:', creditData?.slice(0, 5));
+        
+        if (creditData) {
+            const totalUsed = creditData.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+            console.log('Total credits used:', totalUsed);
+        }
+
+    } catch (error) {
+        console.error('❌ Debug failed:', error);
+    }
+}
 // ✅ 6. NEW METHOD - UPDATE TREND INDICATORS
 updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
     try {
