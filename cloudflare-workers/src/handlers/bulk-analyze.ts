@@ -1,4 +1,13 @@
-app.post('/v1/bulk-analyze', async (c) => {
+import type { Context } from 'hono';
+import type { AnalysisRequest, ProfileData, BusinessProfile } from '../types/interfaces.js';
+import { generateRequestId, logger } from '../utils/logger.js';
+import { createStandardResponse } from '../utils/response.js';
+import { extractUsername } from '../utils/validation.js';
+import { fetchUserAndCredits, fetchBusinessProfile, saveLeadAndAnalysis, updateCreditsAndTransaction } from '../services/database.js';
+import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
+import { performAIAnalysis, generateOutreachMessage } from '../services/ai-analysis.js';
+
+export async function handleBulkAnalyze(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
@@ -228,5 +237,3 @@ app.post('/v1/bulk-analyze', async (c) => {
     ), 500);
   }
 });
-
-export async function handleBulkAnalyze(c: Context): Promise<Response>
