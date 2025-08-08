@@ -1,3 +1,5 @@
+import type { AnalysisResult, ProfileData, AnalysisRequest } from '../types/interfaces.js';
+
 export function validateAnalysisResult(result: any): AnalysisResult {
   return {
     score: Math.round(parseFloat(result.score) || 0),
