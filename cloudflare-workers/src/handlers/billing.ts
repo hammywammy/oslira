@@ -57,8 +57,7 @@ export async function handleStripeWebhook(c: Context): Promise<Response> {
     logger('error', 'Webhook processing failed', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 400);
   }
-});
-
+}
 export async function handleCreateCheckoutSession(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
@@ -139,4 +138,4 @@ export async function handleCreatePortalSession(c: Context): Promise<Response> {
     logger('error', 'Portal session creation failed', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
-});
+}
