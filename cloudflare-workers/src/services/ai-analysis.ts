@@ -1,4 +1,4 @@
-async function performAIAnalysis(
+export async function performAIAnalysis(
   profile: ProfileData, 
   business: BusinessProfile, 
   analysisType: 'light' | 'deep', 
@@ -91,7 +91,7 @@ async function performAIAnalysis(
 // OUTREACH MESSAGE GENERATION
 // ===============================================================================
 
-async function generateOutreachMessage(
+export async function generateOutreachMessage(
   profile: ProfileData,
   business: BusinessProfile,
   analysis: AnalysisResult,
@@ -220,7 +220,7 @@ Would you be interested in exploring a potential partnership? I'd love to share 
 Best regards`;
   }
 }
-async function generateQuickSummary(profile: ProfileData, env: Env): Promise<string> {
+export async function generateQuickSummary(profile: ProfileData, env: Env): Promise<string> {
   const prompt = `Generate a brief 2-3 sentence summary for this Instagram profile:
 
 Username: @${profile.username}
@@ -258,7 +258,7 @@ Focus on who they are, what they do, and their influence level. Keep it professi
   }
 }
 
-async function generateDeepSummary(
+export async function generateDeepSummary(
   profile: ProfileData, 
   business: BusinessProfile, 
   analysisResult: AnalysisResult,
@@ -330,7 +330,7 @@ Create a detailed summary covering their profile strength, content quality, enga
 // FINAL AI PROMPTS (DO NOT MODIFY - AS PROVIDED)
 // ===============================================================================
 
-function buildLightEvaluatorPrompt(profile: ProfileData, business: BusinessProfile): string {
+export function buildLightEvaluatorPrompt(profile: ProfileData, business: BusinessProfile): string {
   return `You are a B2B lead analyst. Perform a quick evaluation of this Instagram profile using only basic profile data. No post content or engagement metrics available — estimate conservatively based on profile indicators.
 
 PROFILE DATA AVAILABLE:
@@ -376,7 +376,7 @@ RETURN JSON ONLY:
 Respond with JSON only.`;
 }
 
-function buildDeepEvaluatorPrompt(profile: ProfileData, business: BusinessProfile): string {
+export function buildDeepEvaluatorPrompt(profile: ProfileData, business: BusinessProfile): string {
   const e = profile.engagement;
   const hasRealData = (e?.postsAnalyzed || 0) > 0;
   
