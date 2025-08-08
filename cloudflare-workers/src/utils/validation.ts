@@ -1,4 +1,5 @@
-import type { AnalysisResult, ProfileData, AnalysisRequest } from '../types/interfaces.js';
+import { logger } from '../utils/logger.js';
+import type { PostData, EngagementData } from '../types/interfaces.js';
 
 export function validateAnalysisResult(result: any): AnalysisResult {
   return {
