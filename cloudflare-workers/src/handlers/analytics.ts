@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { logger } from '../utils/logger.js';
 import { getAnalyticsSummary, generateAIInsights } from '../services/analytics.js';
+import { callWithRetry } from '../utils/helpers.js';
 
 export async function handleAnalyticsSummary(c: Context): Promise<Response> {
   try {
