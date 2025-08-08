@@ -289,4 +289,4 @@ export async function handleAnalyze(c: Context): Promise<Response> {
       requestId
     ), 500);
   }
-});
+}
