@@ -248,7 +248,7 @@ async loadDashboardData() {
     try {
         console.log('🔄 Loading dashboard data...');
         
-        // Wait for authentication to be ready
+        // Wait for authentication
         const isAuthReady = await this.waitForAuth(15000);
         
         if (!isAuthReady) {
@@ -262,7 +262,7 @@ async loadDashboardData() {
         
         console.log('✅ Authentication ready, loading data for user:', user.id);
 
-        // ✅ LOAD LEADS WITH SCORE FOR STATS CALCULATION
+        // Load leads data (existing code)
         const { data: leadsData, error: leadsError } = await supabase
             .from('leads')
             .select(`
@@ -288,17 +288,8 @@ async loadDashboardData() {
         }
 
         console.log(`📊 Loaded ${leadsData?.length || 0} leads from database`);
-        
-        // Debug the first few leads to check scores
-        if (leadsData && leadsData.length > 0) {
-            console.log('🔍 Sample lead scores:', leadsData.slice(0, 5).map(lead => ({
-                username: lead.username,
-                score: lead.score,
-                analysis_type: lead.analysis_type
-            })));
-        }
 
-        // Load analysis data for deep analysis leads (unchanged)
+        // Load analysis data for deep analysis leads (existing code)
         const deepAnalysisLeadIds = leadsData
             ?.filter(lead => lead.analysis_type === 'deep')
             ?.map(lead => lead.id) || [];
@@ -351,18 +342,6 @@ async loadDashboardData() {
         this.selectedLeads.clear();
         
         console.log(`✅ Final result: ${this.allLeads.length} unique leads`);
-        console.log('📊 Lead breakdown:', {
-            total: this.allLeads.length,
-            light: this.allLeads.filter(l => l.analysis_type === 'light').length,
-            deep: this.allLeads.filter(l => l.analysis_type === 'deep').length,
-            withAnalysis: this.allLeads.filter(l => l.lead_analyses?.length > 0).length,
-            withQuickSummary: this.allLeads.filter(l => l.quick_summary).length,
-            scoreRange: {
-                high: this.allLeads.filter(l => (l.score || 0) >= 80).length,
-                medium: this.allLeads.filter(l => (l.score || 0) >= 60 && (l.score || 0) < 80).length,
-                low: this.allLeads.filter(l => (l.score || 0) < 60).length
-            }
-        });
 
         // Cache the data
         if (window.OsliraApp.cache) {
@@ -370,9 +349,9 @@ async loadDashboardData() {
             window.OsliraApp.cache.lastRefresh = new Date().toISOString();
         }
         
-        // ✅ UPDATE UI WITH CORRECTED STATS
+        // ✅ UPDATE UI - THIS IS THE KEY CALL
         this.displayLeads(this.allLeads);
-        await this.updateDashboardStats(); // Use await to ensure completion
+        await this.updateDashboardStats(); // ✅ MAKE SURE THIS RUNS
         this.generateInsights();
         
     } catch (error) {
@@ -380,7 +359,6 @@ async loadDashboardData() {
         this.displayErrorState('Failed to load leads: ' + error.message);
     }
 }
-
 // ✅ 8. DEBUG METHOD - ADD TO TEST STATS CALCULATION
 debugStats() {
     console.log('🔍 DEBUG STATS CALCULATION:');
@@ -3034,17 +3012,13 @@ async updateDashboardStats() {
             return;
         }
 
-        // ✅ 1. TOTAL LEADS - Count from leads table
+        // ✅ QUERY 1: Total leads count
         const { count: totalLeads, error: leadsCountError } = await supabase
             .from('leads')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id);
 
-        if (leadsCountError) {
-            console.error('❌ Failed to count leads:', leadsCountError);
-        }
-
-        // ✅ 2. AVERAGE SCORE - Calculate from leads.score column
+        // ✅ QUERY 2: Average score calculation
         const { data: scoreData, error: scoreError } = await supabase
             .from('leads')
             .select('score')
@@ -3057,18 +3031,14 @@ async updateDashboardStats() {
             avgScore = Math.round(totalScore / scoreData.length);
         }
 
-        // ✅ 3. HIGH-VALUE LEADS - Count leads with score >= 80
+        // ✅ QUERY 3: High-value leads count (score >= 80)
         const { count: highValueLeads, error: highValueError } = await supabase
             .from('leads')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
             .gte('score', 80);
 
-        if (highValueError) {
-            console.error('❌ Failed to count high-value leads:', highValueError);
-        }
-
-        // ✅ 4. CREDITS USED - Sum from credit_transactions table
+        // ✅ QUERY 4: Credits used from transactions
         const { data: creditTransactions, error: creditError } = await supabase
             .from('credit_transactions')
             .select('amount')
@@ -3077,13 +3047,12 @@ async updateDashboardStats() {
 
         let creditsUsed = 0;
         if (!creditError && creditTransactions) {
-            // Sum absolute values (amounts are negative for 'use' type)
             creditsUsed = creditTransactions.reduce((sum, transaction) => {
                 return sum + Math.abs(transaction.amount || 0);
             }, 0);
         }
 
-        // ✅ 5. UPDATE UI ELEMENTS
+        // ✅ PREPARE DATA
         const statsData = {
             totalLeads: totalLeads || 0,
             avgScore: avgScore,
@@ -3093,17 +3062,14 @@ async updateDashboardStats() {
 
         console.log('📊 Database query results:', statsData);
 
-        // Update all possible element IDs and classes
+        // ✅ UPDATE UI
         this.updateStatElements(statsData);
-
-        // Update trend indicators
         this.updateTrendIndicators(statsData.totalLeads, statsData.avgScore, statsData.highValueLeads, statsData.creditsUsed);
 
         console.log('✅ Dashboard stats updated successfully from database');
 
     } catch (error) {
         console.error('❌ Database stats update failed:', error);
-        // Fallback to cached data
         this.updateStatsFromCachedData();
     }
 }
@@ -3151,23 +3117,23 @@ debugElements() {
 updateStatElements(statsData) {
     const { totalLeads, avgScore, highValueLeads, creditsUsed } = statsData;
     
-    console.log('📊 Updating elements with values:', {
+    console.log('📊 Updating UI elements with:', {
         totalLeads: totalLeads.toLocaleString(),
         avgScore: avgScore.toString(),
         creditsUsed: creditsUsed.toString(),
         highValueLeads: highValueLeads.toString()
     });
 
-    // ✅ METHOD 1: Update by .big-number position (most reliable)
+    // ✅ PRIMARY METHOD: Update by .big-number position
     const bigNumbers = document.querySelectorAll('.big-number');
     console.log(`Found ${bigNumbers.length} .big-number elements`);
     
     if (bigNumbers.length >= 4) {
         const values = [
-            totalLeads.toLocaleString(), // Position 0
-            avgScore.toString(),          // Position 1  
-            creditsUsed.toString(),       // Position 2
-            highValueLeads.toString()     // Position 3
+            totalLeads.toLocaleString(), // Position 0 - Total Leads
+            avgScore.toString(),          // Position 1 - Average Score
+            creditsUsed.toString(),       // Position 2 - Credits Used
+            highValueLeads.toString()     // Position 3 - High-Value Leads
         ];
         
         bigNumbers.forEach((element, index) => {
@@ -3179,11 +3145,9 @@ updateStatElements(statsData) {
         });
     }
 
-    // ✅ METHOD 2: Update by stat-card heading text (backup method)
+    // ✅ BACKUP METHOD: Update by stat-card heading text
     const statCards = document.querySelectorAll('.stat-card');
-    console.log(`Found ${statCards.length} .stat-card elements`);
-    
-    statCards.forEach((card, index) => {
+    statCards.forEach((card) => {
         const heading = card.querySelector('h3');
         const bigNumber = card.querySelector('.big-number');
         
@@ -3201,7 +3165,7 @@ updateStatElements(statsData) {
                 newValue = highValueLeads.toString();
             }
             
-            if (newValue) {
+            if (newValue && bigNumber.textContent !== newValue) {
                 const oldValue = bigNumber.textContent;
                 bigNumber.textContent = newValue;
                 console.log(`✅ Updated "${headingText}": "${oldValue}" → "${newValue}"`);
@@ -3209,28 +3173,7 @@ updateStatElements(statsData) {
         }
     });
 
-    // ✅ METHOD 3: Try specific IDs (if they exist)
-    const idMappings = [
-        { ids: ['total-leads', 'leads-researched'], value: totalLeads.toLocaleString(), name: 'Total Leads' },
-        { ids: ['avg-score', 'average-score'], value: avgScore.toString(), name: 'Average Score' },
-        { ids: ['credits-used', 'total-credits'], value: creditsUsed.toString(), name: 'Credits Used' },
-        { ids: ['high-value-leads', 'high-quality-leads'], value: highValueLeads.toString(), name: 'High-Value Leads' }
-    ];
-
-    idMappings.forEach(({ ids, value, name }) => {
-        let updated = false;
-        ids.forEach(id => {
-            const element = document.getElementById(id);
-            if (element && !updated) {
-                const oldValue = element.textContent;
-                element.textContent = value;
-                console.log(`✅ Updated ${name} (${id}): "${oldValue}" → "${value}"`);
-                updated = true;
-            }
-        });
-    });
-
-    console.log('📊 Element update completed');
+    console.log('📊 UI element update completed');
 }
 
 // ✅ 3. SIMPLE FORCE UPDATE METHOD - USE THIS TO TEST
@@ -3282,7 +3225,26 @@ updateStatsFromCachedData() {
     this.updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed);
 }
 
-// ✅ ENHANCED TREND INDICATORS
+updateStatsFromCachedData() {
+    console.log('📊 Updating stats from cached lead data...');
+    
+    const totalLeads = this.allLeads.length;
+    const avgScore = totalLeads > 0 
+        ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
+        : 0;
+    const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
+    const creditsUsed = this.allLeads.reduce((sum, lead) => {
+        return sum + (lead.analysis_type === 'deep' ? 2 : 1);
+    }, 0);
+
+    const statsData = { totalLeads, avgScore, highValueLeads, creditsUsed };
+    
+    console.log('📊 Cached data results:', statsData);
+    this.updateStatElements(statsData);
+    this.updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed);
+}
+
+// ✅ 4. TREND INDICATORS - updateTrendIndicators()
 updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
     try {
         const updates = [
@@ -3324,7 +3286,6 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
         console.warn('⚠️ Trend indicators update failed:', error);
     }
 }
-
 // ✅ DEBUG METHOD - TEST DATABASE QUERIES
 async debugDatabaseStats() {
     console.log('🔍 === DATABASE STATS DEBUG ===');
