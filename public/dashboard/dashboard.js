@@ -3175,7 +3175,6 @@ updateStatElements(statsData) {
 
     console.log('📊 UI element update completed');
 }
-
 // ✅ 3. SIMPLE FORCE UPDATE METHOD - USE THIS TO TEST
 forceUpdateAllStats() {
     console.log('🔄 FORCE UPDATING ALL STATS...');
@@ -3205,7 +3204,6 @@ forceUpdateAllStats() {
     }
 }
 
-// ✅ FALLBACK METHOD - USE CACHED DATA IF DATABASE FAILS
 updateStatsFromCachedData() {
     console.log('📊 Updating stats from cached lead data...');
     
@@ -3225,23 +3223,81 @@ updateStatsFromCachedData() {
     this.updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed);
 }
 
-updateStatsFromCachedData() {
-    console.log('📊 Updating stats from cached lead data...');
+async updateStatsFromDatabase() {
+    console.log('📊 Updating dashboard stats from database...');
     
-    const totalLeads = this.allLeads.length;
-    const avgScore = totalLeads > 0 
-        ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
-        : 0;
-    const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
-    const creditsUsed = this.allLeads.reduce((sum, lead) => {
-        return sum + (lead.analysis_type === 'deep' ? 2 : 1);
-    }, 0);
+    try {
+        const user = window.OsliraApp?.user;
+        const supabase = window.OsliraApp?.supabase;
+        
+        if (!user || !supabase) {
+            console.warn('⚠️ Missing user or supabase client, using cached data');
+            this.updateStatsFromCachedData();
+            return;
+        }
 
-    const statsData = { totalLeads, avgScore, highValueLeads, creditsUsed };
-    
-    console.log('📊 Cached data results:', statsData);
-    this.updateStatElements(statsData);
-    this.updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed);
+        // ✅ QUERY 1: Total leads count
+        const { count: totalLeads, error: leadsError } = await supabase
+            .from('leads')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+
+        // ✅ QUERY 2: Average score calculation
+        const { data: scoresData, error: scoresError } = await supabase
+            .from('leads')
+            .select('score')
+            .eq('user_id', user.id);
+
+        let avgScore = 0;
+        if (!scoresError && scoresData && scoresData.length > 0) {
+            const validScores = scoresData.filter(item => item.score != null && item.score > 0);
+            if (validScores.length > 0) {
+                const totalScore = validScores.reduce((sum, item) => sum + item.score, 0);
+                avgScore = Math.round(totalScore / validScores.length);
+            }
+        }
+
+        // ✅ QUERY 3: High-value leads count (score >= 80)
+        const { count: highValueLeads, error: highValueError } = await supabase
+            .from('leads')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .gte('score', 80);
+
+        // ✅ QUERY 4: Credits used from transactions
+        const { data: creditTransactions, error: creditError } = await supabase
+            .from('credit_transactions')
+            .select('amount')
+            .eq('user_id', user.id)
+            .eq('type', 'use');
+
+        let creditsUsed = 0;
+        if (!creditError && creditTransactions) {
+            creditsUsed = creditTransactions.reduce((sum, transaction) => {
+                return sum + Math.abs(transaction.amount || 0);
+            }, 0);
+        }
+
+        // ✅ PREPARE DATA
+        const statsData = {
+            totalLeads: totalLeads || 0,
+            avgScore: avgScore,
+            highValueLeads: highValueLeads || 0,
+            creditsUsed: creditsUsed
+        };
+
+        console.log('📊 Database query results:', statsData);
+
+        // ✅ UPDATE UI
+        this.updateStatElements(statsData);
+        this.updateTrendIndicators(statsData.totalLeads, statsData.avgScore, statsData.highValueLeads, statsData.creditsUsed);
+
+        console.log('✅ Dashboard stats updated successfully from database');
+
+    } catch (error) {
+        console.error('❌ Database stats update failed:', error);
+        this.updateStatsFromCachedData();
+    }
 }
 
 // ✅ 4. TREND INDICATORS - updateTrendIndicators()
