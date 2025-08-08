@@ -22,7 +22,7 @@ export async function handleTestSupabase(c: Context): Promise<Response> {
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
-});
+}
 
 export async function handleTestApify(c: Context): Promise<Response> {
   try {
@@ -35,7 +35,7 @@ export async function handleTestApify(c: Context): Promise<Response> {
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
-});
+}
 
 export async function handleTestOpenAI(c: Context): Promise<Response> {
   try {
@@ -50,7 +50,7 @@ export async function handleTestOpenAI(c: Context): Promise<Response> {
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
-});
+}
 
 export async function handleTestPost(c: Context): Promise<Response> {
   try {
@@ -63,7 +63,7 @@ export async function handleTestPost(c: Context): Promise<Response> {
   } catch (error: any) {
     return c.json({ error: error.message }, 500);
   }
-});
+}
 
 export async function handleDebugEnv(c: Context): Promise<Response> {
   return c.json({
@@ -79,4 +79,4 @@ export async function handleDebugEnv(c: Context): Promise<Response> {
     enterprise: true,
     version: 'v3.0.0-enterprise-perfect'
   });
-});
+}
