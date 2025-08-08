@@ -1,4 +1,4 @@
-async function fetchJson<T>(url: string, options: RequestInit, timeoutMs: number = 10000): Promise<T> {
+export async function fetchJson<T>(url: string, options: RequestInit, timeoutMs: number = 10000): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -29,7 +29,7 @@ async function fetchJson<T>(url: string, options: RequestInit, timeoutMs: number
   }
 }
 
-async function callWithRetry<T>(
+export async function callWithRetry<T>(
   url: string,
   options: RequestInit,
   retries: number = 3,
@@ -79,7 +79,7 @@ async function callWithRetry<T>(
   throw new Error(`All ${retries} attempts failed for ${url}`);
 }
 
-function extractPostThemes(posts: PostData[]): string {
+export function extractPostThemes(posts: PostData[]): string {
   if (!posts || posts.length === 0) return 'content themes not available';
   
   const allHashtags = posts.flatMap(post => post.hashtags || []);
