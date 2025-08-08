@@ -1,4 +1,7 @@
-app.get('/test-supabase', async (c) => {
+import type { Context } from 'hono';
+import { fetchJson } from '../utils/helpers.js';
+
+export async function handleTestSupabase(c: Context): Promise<Response> {
   try {
     const headers = {
       apikey: c.env.SUPABASE_SERVICE_ROLE,
@@ -21,7 +24,7 @@ app.get('/test-supabase', async (c) => {
   }
 });
 
-app.get('/test-apify', async (c) => {
+export async function handleTestApify(c: Context): Promise<Response> {
   try {
     const response = await fetch(`https://api.apify.com/v2/key-value-stores?token=${c.env.APIFY_API_TOKEN}&limit=1`);
     return c.json({
@@ -34,7 +37,7 @@ app.get('/test-apify', async (c) => {
   }
 });
 
-app.get('/test-openai', async (c) => {
+export async function handleTestOpenAI(c: Context): Promise<Response> {
   try {
     const response = await fetch('https://api.openai.com/v1/models', {
       headers: { Authorization: `Bearer ${c.env.OPENAI_KEY}` }
@@ -49,7 +52,7 @@ app.get('/test-openai', async (c) => {
   }
 });
 
-app.post('/test-post', async (c) => {
+export async function handleTestPost(c: Context): Promise<Response> {
   try {
     const body = await c.req.json();
     return c.json({ 
@@ -62,7 +65,7 @@ app.post('/test-post', async (c) => {
   }
 });
 
-app.get('/debug-env', (c) => {
+export async function handleDebugEnv(c: Context): Promise<Response> {
   return c.json({
     supabase: c.env.SUPABASE_URL ? 'SET' : 'MISSING',
     serviceRole: c.env.SUPABASE_SERVICE_ROLE ? 'SET' : 'MISSING',
@@ -77,9 +80,3 @@ app.get('/debug-env', (c) => {
     version: 'v3.0.0-enterprise-perfect'
   });
 });
-
-export async function handleTestSupabase(c: Context): Promise<Response>
-export async function handleTestApify(c: Context): Promise<Response>
-export async function handleTestOpenAI(c: Context): Promise<Response>
-export async function handleTestPost(c: Context): Promise<Response>
-export async function handleDebugEnv(c: Context): Promise<Response>
