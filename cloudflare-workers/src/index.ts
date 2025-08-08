@@ -112,27 +112,6 @@ interface User {
   stripe_customer_id: string;
 }
 
-interface CostTrackingData {
-  gptCost?: number;
-  claudeCost?: number;
-  apifyCost?: number;
-  totalCost: number;
-  timeTaken: number;
-  apiCalls: string[];
-}
-
-interface APICallResult {
-  data: any;
-  cost: number;
-  timeTaken: number;
-  apiName: string;
-  tokensUsed?: {
-    input: number;
-    output: number;
-    total: number;
-  };
-}
-
 type AnalysisType = 'light' | 'deep';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -396,20 +375,14 @@ async function fetchBusinessProfile(business_id: string, user_id: string, env: E
   return businesses[0];
 }
 
-async function updateCreditsWithDetailedCostTracking(
-  userId: string,
-  costBreakdown: {
-    apify: number;
-    claude: number;
-    openai: number;
-    total: number;
-  },
-  processingTime: number,
-  apiCalls: string[],
+async function updateCreditsAndTransaction(
+  user_id: string,
+  cost: number,
   newBalance: number,
   description: string,
+  transactionType: 'use' | 'add',
   env: Env,
-  leadId?: string
+  lead_id?: string
 ): Promise<void> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
@@ -418,91 +391,29 @@ async function updateCreditsWithDetailedCostTracking(
   };
 
   try {
-    logger('info', 'Starting credit update with detailed cost tracking', {
-      userId,
-      newBalance,
-      costBreakdown,
-      processingTime: `${processingTime.toFixed(2)}ms`,
-      leadId,
-      description
-    });
-
-    // STEP 1: Update user credits
-    const creditUpdateResponse = await fetchJson(
-      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${userId}`,
+    logger('info', `Updating user ${user_id} credits to ${newBalance}`);
+    
+    await fetchJson(
+      `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
       {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ 
-          credits: newBalance,
-          updated_at: new Date().toISOString()
+        body: JSON.stringify({
+          credits: newBalance
         })
       },
       10000
     );
 
-    logger('info', 'User credits updated successfully', {
-      userId,
-      newBalance,
-      updateResponse: creditUpdateResponse
-    });
-
-    // STEP 2: Calculate the credit cost (difference from new balance)
-    const creditCost = Math.abs(costBreakdown.total || 0);
-
-    // STEP 3: Create detailed transaction record
     const transactionData = {
-      user_id: userId,
-      amount: -creditCost, // Negative for usage
-      type: 'use',
+      user_id: user_id,
+      amount: transactionType === 'use' ? -cost : cost,
+      type: transactionType,
       description: description,
-      lead_id: leadId || null,
-      created_at: new Date().toISOString(),
-      metadata: {
-        cost_breakdown: {
-          apify_cost_usd: costBreakdown.apify || 0,
-          claude_cost_usd: costBreakdown.claude || 0,
-          openai_cost_usd: costBreakdown.openai || 0,
-          total_cost_usd: costBreakdown.total || 0,
-          credit_conversion_rate: "1 credit = ~$0.01"
-        },
-        performance_metrics: {
-          total_processing_time_ms: processingTime,
-          processing_time_seconds: Math.round(processingTime / 1000 * 100) / 100,
-          api_calls: apiCalls || [],
-          api_call_count: (apiCalls || []).length,
-          efficiency_score: processingTime > 0 ? Math.round(1000 / processingTime * 100) / 100 : 0,
-          cost_per_second: processingTime > 0 ? (costBreakdown.total || 0) / (processingTime / 1000) : 0
-        },
-        api_usage_details: {
-          apify_used: (costBreakdown.apify || 0) > 0,
-          claude_used: (costBreakdown.claude || 0) > 0,
-          openai_used: (costBreakdown.openai || 0) > 0,
-          primary_ai_service: (costBreakdown.claude || 0) > (costBreakdown.openai || 0) ? 'claude' : 'openai'
-        },
-        tracking_metadata: {
-          timestamp: new Date().toISOString(),
-          version: 'v3.0.0-enterprise-cost-tracking',
-          environment: 'production',
-          feature_flags: {
-            real_cost_tracking: true,
-            detailed_metrics: true,
-            performance_monitoring: true
-          }
-        }
-      }
+      lead_id: lead_id || null
     };
 
-    logger('info', 'Creating credit transaction record', {
-      userId,
-      amount: transactionData.amount,
-      leadId,
-      costBreakdown: transactionData.metadata.cost_breakdown,
-      performanceMetrics: transactionData.metadata.performance_metrics
-    });
-
-    // STEP 4: Save transaction to database
-    const transactionResponse = await fetchJson(
+    await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
       {
         method: 'POST',
@@ -512,80 +423,10 @@ async function updateCreditsWithDetailedCostTracking(
       10000
     );
 
-    logger('info', 'Credit transaction saved successfully', {
-      userId,
-      transactionId: transactionResponse?.id || 'unknown',
-      amount: transactionData.amount,
-      leadId
-    });
-
-    // STEP 5: Log comprehensive cost summary
-    logger('info', '💰 COMPREHENSIVE COST TRACKING COMPLETE', {
-      userId,
-      leadId,
-      summary: {
-        credits_deducted: Math.abs(transactionData.amount),
-        new_credit_balance: newBalance,
-        cost_breakdown_usd: {
-          apify: `$${(costBreakdown.apify || 0).toFixed(6)}`,
-          claude: `$${(costBreakdown.claude || 0).toFixed(6)}`,
-          openai: `$${(costBreakdown.openai || 0).toFixed(6)}`,
-          total: `$${(costBreakdown.total || 0).toFixed(6)}`
-        },
-        performance: {
-          total_time: `${processingTime.toFixed(2)}ms`,
-          api_calls: apiCalls?.length || 0,
-          efficiency: `${transactionData.metadata.performance_metrics.efficiency_score} ops/sec`,
-          cost_per_second: `$${transactionData.metadata.performance_metrics.cost_per_second.toFixed(8)}/sec`
-        },
-        analysis_details: {
-          description,
-          timestamp: new Date().toISOString()
-        }
-      }
-    });
-
   } catch (error: any) {
-    logger('error', '❌ Credit update with cost tracking failed', {
-      userId,
-      leadId,
-      error: error.message,
-      stack: error.stack,
-      costBreakdown,
-      processingTime,
-      description
-    });
-    
-    // Provide detailed error information for debugging
-    if (error.message.includes('duplicate key')) {
-      throw new Error(`Credit transaction already exists for this analysis`);
-    } else if (error.message.includes('foreign key')) {
-      throw new Error(`Invalid user ID or lead ID provided`);
-    } else if (error.message.includes('not found')) {
-      throw new Error(`User ${userId} not found in database`);
-    } else if (error.message.includes('insufficient')) {
-      throw new Error(`Database operation failed due to insufficient permissions`);
-    } else {
-      throw new Error(`Failed to update credits with cost tracking: ${error.message}`);
-    }
+    logger('error', 'updateCreditsAndTransaction error:', error.message);
+    throw new Error(`Failed to update credits: ${error.message}`);
   }
-}
-
-
-// ===============================================================================
-// HELPER FUNCTIONS FOR MESSAGE GENERATION
-// ===============================================================================
-
-function generateFallbackMessage(profile: ProfileData, business: BusinessProfile): string {
-  return `Hi ${profile.displayName || profile.username},
-
-I came across your profile and was impressed by your content and engagement with your ${profile.followersCount.toLocaleString()} followers.
-
-I'm reaching out from ${business.name}, and I think there could be a great opportunity for collaboration given your audience and our ${business.value_proposition.toLowerCase()}.
-
-Would you be interested in exploring a potential partnership? I'd love to share more details about what we have in mind.
-
-Best regards`;
 }
 
 async function saveLeadAndAnalysis(
@@ -728,330 +569,6 @@ async function saveLeadAndAnalysis(
   } catch (error: any) {
     logger('error', 'saveLeadAndAnalysis failed', { error: error.message });
     throw new Error(`Database save failed: ${error.message}`);
-  }
-}
-
-// ===============================================================================
-// GENERIC TIME & COST TRACKER
-// ===============================================================================
-
-async function trackAPICallCostAndTime<T>(
-  apiName: string,
-  apiCall: () => Promise<T>,
-  costCalculator: (result: T) => number
-): Promise<APICallResult> {
-  const startTime = performance.now();
-  
-  try {
-    const data = await apiCall();
-    const endTime = performance.now();
-    const timeTaken = endTime - startTime;
-    const cost = costCalculator(data);
-    
-    logger('info', `${apiName} API call completed`, {
-      timeTaken: `${timeTaken.toFixed(2)}ms`,
-      cost: `$${cost.toFixed(6)}`
-    });
-    
-    return {
-      data,
-      cost,
-      timeTaken,
-      apiName,
-      tokensUsed: extractTokenUsage(data, apiName)
-    };
-  } catch (error) {
-    const endTime = performance.now();
-    const timeTaken = endTime - startTime;
-    
-    logger('error', `${apiName} API call failed`, {
-      timeTaken: `${timeTaken.toFixed(2)}ms`,
-      error: error
-    });
-    
-    throw error;
-  }
-}
-
-// ===============================================================================
-// TOKEN EXTRACTION UTILITY
-// ===============================================================================
-
-function extractTokenUsage(response: any, apiName: string): { input: number; output: number; total: number } | undefined {
-  try {
-    let input = 0, output = 0;
-    
-    if (apiName === 'OpenAI' && response?.usage) {
-      input = response.usage.prompt_tokens || 0;
-      output = response.usage.completion_tokens || 0;
-    } else if (apiName === 'Claude' && response?.usage) {
-      input = response.usage.input_tokens || 0;
-      output = response.usage.output_tokens || 0;
-    }
-    
-    return input > 0 || output > 0 ? { input, output, total: input + output } : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-// ===============================================================================
-// COST CALCULATION FUNCTIONS
-// ===============================================================================
-
-// Real OpenAI pricing (as of 2024)
-function calculateOpenAICost(response: any, model: string): number {
-  if (!response?.usage) return 0;
-  
-  const inputTokens = response.usage.prompt_tokens || 0;
-  const outputTokens = response.usage.completion_tokens || 0;
-  
-  // Updated pricing per 1M tokens
-  const pricing: Record<string, { input: number; output: number }> = {
-    'gpt-4o': { input: 2.50, output: 10.00 },
-    'gpt-4': { input: 30.00, output: 60.00 },
-    'gpt-3.5-turbo': { input: 0.50, output: 1.50 }
-  };
-  
-  const modelPricing = pricing[model] || pricing['gpt-4o'];
-  
-  const inputCost = (inputTokens / 1000000) * modelPricing.input;
-  const outputCost = (outputTokens / 1000000) * modelPricing.output;
-  
-  return inputCost + outputCost;
-}
-
-// Real Claude pricing (as of 2024)
-function calculateClaudeCost(response: any): number {
-  if (!response?.usage) return 0;
-  
-  const inputTokens = response.usage.input_tokens || 0;
-  const outputTokens = response.usage.output_tokens || 0;
-  
-  // Claude 3.5 Sonnet pricing per 1M tokens
-  const inputCost = (inputTokens / 1000000) * 3.00;
-  const outputCost = (outputTokens / 1000000) * 15.00;
-  
-  return inputCost + outputCost;
-}
-
-// Apify cost estimation (based on compute units)
-function calculateApifyCost(response: any): number {
-  if (!response || !Array.isArray(response)) return 0;
-  
-  // Estimate: $0.0001 per result item
-  const baseRate = 0.0001;
-  const resultCount = response.length;
-  
-  return resultCount * baseRate;
-}
-
-// ===============================================================================
-// ENHANCED API CALL FUNCTIONS
-// ===============================================================================
-
-async function callOpenAIWithTracking(
-  prompt: string,
-  model: string = 'gpt-4o',
-  env: Env
-): Promise<APICallResult> {
-  return trackAPICallCostAndTime(
-    'OpenAI',
-    async () => {
-      const response = await callWithRetry(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${env.OPENAI_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.7,
-            max_tokens: 1000
-          })
-        },
-        3, 1500, 25000
-      );
-      return response;
-    },
-    (response) => calculateOpenAICost(response, model)
-  );
-}
-
-async function callClaudeWithTracking(
-  prompt: string,
-  env: Env
-): Promise<APICallResult> {
-  return trackAPICallCostAndTime(
-    'Claude',
-    async () => {
-      const response = await callWithRetry(
-        'https://api.anthropic.com/v1/messages',
-        {
-          method: 'POST',
-          headers: {
-            'x-api-key': env.CLAUDE_KEY,
-            'anthropic-version': '2023-06-01',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.7,
-            max_tokens: 1000
-          })
-        },
-        3, 1500, 25000
-      );
-      return response;
-    },
-    (response) => calculateClaudeCost(response)
-  );
-}
-
-async function callApifyWithTracking(
-  username: string,
-  env: Env
-): Promise<APICallResult> {
-  return trackAPICallCostAndTime(
-    'Apify',
-    async () => {
-      const response = await callWithRetry(
-        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            usernames: [username], 
-            resultsType: 'details', 
-            resultsLimit: 1 
-          })
-        },
-        3, 1500, 30000
-      );
-      return response;
-    },
-    (response) => calculateApifyCost(response)
-  );
-}
-
-// ===============================================================================
-// INTEGRATED ANALYSIS WITH COST TRACKING
-// ===============================================================================
-
-async function performAnalysisWithCostTracking(
-  username: string,
-  analysisType: 'light' | 'deep',
-  env: Env,
-  requestId: string
-): Promise<{ analysisResult: any; costData: CostTrackingData }> {
-  const startTime = performance.now();
-  const apiCalls: string[] = [];
-  let totalCost = 0;
-  
-  try {
-    // 1. Apify scraping with cost tracking
-    logger('info', 'Starting Apify scraping with cost tracking', { username, requestId });
-    const apifyResult = await callApifyWithTracking(username, env);
-    apiCalls.push(`Apify: ${apifyResult.timeTaken.toFixed(2)}ms`);
-    totalCost += apifyResult.cost;
-    
-    // 2. AI Analysis with cost tracking
-    let aiResult: APICallResult;
-    const analysisPrompt = `Analyze Instagram profile @${username} for business collaboration...`; // Your existing prompt
-    
-    if (env.CLAUDE_KEY) {
-      logger('info', 'Using Claude for analysis with cost tracking', { requestId });
-      aiResult = await callClaudeWithTracking(analysisPrompt, env);
-    } else if (env.OPENAI_KEY) {
-      logger('info', 'Using OpenAI for analysis with cost tracking', { requestId });
-      aiResult = await callOpenAIWithTracking(analysisPrompt, 'gpt-4o', env);
-    } else {
-      throw new Error('No AI service available');
-    }
-    
-    apiCalls.push(`${aiResult.apiName}: ${aiResult.timeTaken.toFixed(2)}ms`);
-    totalCost += aiResult.cost;
-    
-    // 3. Message generation for deep analysis
-    let messageResult: APICallResult | null = null;
-    if (analysisType === 'deep') {
-      const messagePrompt = `Generate personalized outreach message for @${username}...`; // Your existing prompt
-      
-      if (env.CLAUDE_KEY) {
-        messageResult = await callClaudeWithTracking(messagePrompt, env);
-      } else if (env.OPENAI_KEY) {
-        messageResult = await callOpenAIWithTracking(messagePrompt, 'gpt-4o', env);
-      }
-      
-      if (messageResult) {
-        apiCalls.push(`${messageResult.apiName} (Message): ${messageResult.timeTaken.toFixed(2)}ms`);
-        totalCost += messageResult.cost;
-      }
-    }
-    
-    const endTime = performance.now();
-    const totalTime = endTime - startTime;
-    
-    // Prepare cost tracking data
-    const costData: CostTrackingData = {
-      gptCost: aiResult.apiName === 'OpenAI' ? aiResult.cost : (messageResult?.apiName === 'OpenAI' ? messageResult.cost : 0),
-      claudeCost: aiResult.apiName === 'Claude' ? aiResult.cost : (messageResult?.apiName === 'Claude' ? messageResult.cost : 0),
-      apifyCost: apifyResult.cost,
-      totalCost,
-      timeTaken: totalTime,
-      apiCalls
-    };
-    
-    // Log comprehensive cost breakdown
-    logger('info', 'Analysis completed with cost tracking', {
-      username,
-      requestId,
-      costBreakdown: {
-        apify: `$${apifyResult.cost.toFixed(6)}`,
-        ai: `$${aiResult.cost.toFixed(6)}`,
-        message: messageResult ? `$${messageResult.cost.toFixed(6)}` : '$0.000000',
-        total: `$${totalCost.toFixed(6)}`
-      },
-      timeBreakdown: {
-        apify: `${apifyResult.timeTaken.toFixed(2)}ms`,
-        ai: `${aiResult.timeTaken.toFixed(2)}ms`,
-        message: messageResult ? `${messageResult.timeTaken.toFixed(2)}ms` : '0ms',
-        total: `${totalTime.toFixed(2)}ms`
-      },
-      tokensUsed: {
-        ai: aiResult.tokensUsed,
-        message: messageResult?.tokensUsed
-      }
-    });
-    
-    // Your existing analysis logic here...
-    const analysisResult = {
-      success: true,
-      profile: apifyResult.data,
-      analysis: aiResult.data,
-      message: messageResult?.data,
-      costTracking: costData
-    };
-    
-    return { analysisResult, costData };
-    
-  } catch (error: any) {
-    const endTime = performance.now();
-    const totalTime = endTime - startTime;
-    
-    logger('error', 'Analysis failed with cost tracking', {
-      username,
-      requestId,
-      error: error.message,
-      partialCosts: `$${totalCost.toFixed(6)}`,
-      timeSpent: `${totalTime.toFixed(2)}ms`
-    });
-    
-    throw error;
   }
 }
 
@@ -2241,9 +1758,9 @@ app.get('/config', (c) => {
 // ===============================================================================
 // MAIN ANALYSIS ENDPOINT - ENTERPRISE PERFECT VERSION
 // ===============================================================================
+
 app.post('/v1/analyze', async (c) => {
   const requestId = generateRequestId();
-  const totalStartTime = performance.now(); // Cost tracking: start time
   
   try {
     const body = await c.req.json();
@@ -2271,28 +1788,18 @@ app.post('/v1/analyze', async (c) => {
       ), 402);
     }
     
-    // ===============================================================================
-    // SCRAPE PROFILE (with timing)
-    // ===============================================================================
+    // SCRAPE PROFILE
     let profileData: ProfileData;
-    let scrapingTime = 0;
     try {
       logger('info', 'Starting profile scraping', { username });
-      const scrapingStartTime = performance.now();
-      
       profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-      
-      const scrapingEndTime = performance.now();
-      scrapingTime = scrapingEndTime - scrapingStartTime;
-      
       logger('info', 'Profile scraped successfully', { 
         username: profileData.username, 
         followers: profileData.followersCount,
         postsFound: profileData.latestPosts?.length || 0,
         hasRealEngagement: (profileData.engagement?.postsAnalyzed || 0) > 0,
         dataQuality: profileData.dataQuality,
-        scraperUsed: profileData.scraperUsed,
-        scrapingTime: `${scrapingTime.toFixed(2)}ms`
+        scraperUsed: profileData.scraperUsed
       });
     } catch (scrapeError: any) {
       logger('error', 'Profile scraping failed', { 
@@ -2319,28 +1826,18 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // ===============================================================================
-    // AI ANALYSIS (with timing)
-    // ===============================================================================
+    // AI ANALYSIS
     let analysisResult: AnalysisResult;
-    let analysisTime = 0;
     try {
       logger('info', 'Starting AI analysis');
-      const analysisStartTime = performance.now();
-      
       analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
-      
-      const analysisEndTime = performance.now();
-      analysisTime = analysisEndTime - analysisStartTime;
-      
       logger('info', 'AI analysis completed', { 
         score: analysisResult.score,
         engagementScore: analysisResult.engagement_score,
         nicheFit: analysisResult.niche_fit,
         confidence: analysisResult.confidence_level,
         hasQuickSummary: !!analysisResult.quick_summary,
-        hasDeepSummary: !!analysisResult.deep_summary,
-        analysisTime: `${analysisTime.toFixed(2)}ms`
+        hasDeepSummary: !!analysisResult.deep_summary
       });
     } catch (aiError: any) {
       logger('error', 'AI analysis failed', { error: aiError.message });
@@ -2352,33 +1849,19 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // ===============================================================================
-    // GENERATE OUTREACH MESSAGE FOR DEEP ANALYSIS (with timing)
-    // ===============================================================================
+    // GENERATE OUTREACH MESSAGE FOR DEEP ANALYSIS
     let outreachMessage = '';
-    let messageTime = 0;
     if (analysis_type === 'deep') {
       try {
         logger('info', 'Generating outreach message');
-        const messageStartTime = performance.now();
-        
         outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-        
-        const messageEndTime = performance.now();
-        messageTime = messageEndTime - messageStartTime;
-        
-        logger('info', 'Outreach message generated', { 
-          length: outreachMessage.length,
-          messageTime: `${messageTime.toFixed(2)}ms`
-        });
+        logger('info', 'Outreach message generated', { length: outreachMessage.length });
       } catch (messageError: any) {
         logger('warn', 'Message generation failed (non-fatal)', { error: messageError.message });
       }
     }
 
-    // ===============================================================================
-    // PREPARE LEAD DATA (same as your working code)
-    // ===============================================================================
+    // PREPARE LEAD DATA
     const leadData = {
       user_id: user_id,
       business_id: business_id,
@@ -2393,9 +1876,7 @@ app.post('/v1/analyze', async (c) => {
       quick_summary: analysisResult.quick_summary || null
     };
 
-    // ===============================================================================
-    // PREPARE ANALYSIS DATA FOR DEEP ANALYSIS (same as your working code)
-    // ===============================================================================
+    // PREPARE ANALYSIS DATA FOR DEEP ANALYSIS
     let analysisData = null;
     if (analysis_type === 'deep') {
       analysisData = {
@@ -2454,9 +1935,7 @@ app.post('/v1/analyze', async (c) => {
       };
     }
 
-    // ===============================================================================
-    // SAVE TO DATABASE (same as your working code)
-    // ===============================================================================
+    // SAVE TO DATABASE
     let lead_id: string;
     try {
       logger('info', 'Saving data to database');
@@ -2472,52 +1951,17 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // ===============================================================================
-    // UPDATE CREDITS (using your existing working function)
-    // ===============================================================================
-    const totalEndTime = performance.now();
-    const totalProcessingTime = totalEndTime - totalStartTime;
-    
-    // Calculate estimated costs for logging
-    const estimatedCosts = {
-      apify: (profileData.latestPosts?.length || 1) * 0.0001,
-      ai: analysis_type === 'deep' ? 0.005 : 0.003,
-      message: analysis_type === 'deep' && outreachMessage ? 0.002 : 0,
-      total: 0
-    };
-    estimatedCosts.total = estimatedCosts.apify + estimatedCosts.ai + estimatedCosts.message;
-    
+    // UPDATE CREDITS
     try {
-      // Use your existing working function with enhanced description
       await updateCreditsAndTransaction(
         user_id,
         creditCost,
         userResult.credits - creditCost,
-        `${analysis_type} analysis for @${profileData.username} | Processing: ${totalProcessingTime.toFixed(2)}ms | Est. cost: $${estimatedCosts.total.toFixed(6)}`,
+        `${analysis_type} analysis for @${profileData.username}`,
         'use',
         c.env,
         lead_id
       );
-      
-      // Log comprehensive cost tracking summary
-      logger('info', '💰 COST TRACKING SUMMARY', {
-        username: profileData.username,
-        totalProcessingTime: `${totalProcessingTime.toFixed(2)}ms`,
-        breakdown: {
-          scraping: `${scrapingTime.toFixed(2)}ms`,
-          analysis: `${analysisTime.toFixed(2)}ms`,
-          message: analysis_type === 'deep' ? `${messageTime.toFixed(2)}ms` : 'N/A'
-        },
-        estimatedCosts: {
-          apify: `$${estimatedCosts.apify.toFixed(6)}`,
-          ai: `$${estimatedCosts.ai.toFixed(6)}`,
-          message: `$${estimatedCosts.message.toFixed(6)}`,
-          total: `$${estimatedCosts.total.toFixed(6)}`
-        },
-        creditsUsed: creditCost,
-        remainingCredits: userResult.credits - creditCost
-      });
-      
       logger('info', 'Credits updated successfully', { 
         creditCost, 
         remainingCredits: userResult.credits - creditCost 
@@ -2532,9 +1976,7 @@ app.post('/v1/analyze', async (c) => {
       ), 500);
     }
 
-    // ===============================================================================
-    // PREPARE RESPONSE (enhanced with cost tracking data)
-    // ===============================================================================
+    // PREPARE RESPONSE
     const responseData = {
       lead_id,
       profile: {
@@ -2576,16 +2018,6 @@ app.post('/v1/analyze', async (c) => {
       credits: {
         used: creditCost,
         remaining: userResult.credits - creditCost
-      },
-      // NEW: Cost tracking information (non-intrusive)
-      performance: {
-        total_time_ms: Math.round(totalProcessingTime),
-        estimated_cost_usd: estimatedCosts.total,
-        api_breakdown: {
-          scraping_ms: Math.round(scrapingTime),
-          analysis_ms: Math.round(analysisTime),
-          message_ms: analysis_type === 'deep' ? Math.round(messageTime) : 0
-        }
       }
     };
 
@@ -2594,23 +2026,13 @@ app.post('/v1/analyze', async (c) => {
       username: profileData.username, 
       score: analysisResult.score,
       confidence: analysisResult.confidence_level,
-      dataQuality: profileData.dataQuality,
-      totalTime: `${totalProcessingTime.toFixed(2)}ms`,
-      estimatedCost: `$${estimatedCosts.total.toFixed(6)}`
+      dataQuality: profileData.dataQuality
     });
 
     return c.json(createStandardResponse(true, responseData, undefined, requestId));
 
   } catch (error: any) {
-    const totalEndTime = performance.now();
-    const totalProcessingTime = totalEndTime - totalStartTime;
-    
-    logger('error', 'Analysis request failed', { 
-      error: error.message, 
-      requestId,
-      processingTime: `${totalProcessingTime.toFixed(2)}ms`
-    });
-    
+    logger('error', 'Analysis request failed', { error: error.message, requestId });
     return c.json(createStandardResponse(
       false, 
       undefined, 
@@ -2619,6 +2041,7 @@ app.post('/v1/analyze', async (c) => {
     ), 500);
   }
 });
+
 // ===============================================================================
 // FINAL BULK ANALYZE ENDPOINT - Replace your existing /v1/bulk-analyze endpoint
 // ===============================================================================
@@ -3535,5 +2958,4 @@ app.notFound(c => {
 // ===============================================================================
 // EXPORT ENTERPRISE PERFECT WORKER
 // ===============================================================================
-
 export default app;
