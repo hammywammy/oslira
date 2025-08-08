@@ -1,3 +1,7 @@
+import type { Env, User, BusinessProfile } from '../types/interfaces.js';
+import { fetchJson } from '../utils/helpers.js';
+import { logger } from '../utils/logger.js';
+
 export async function fetchUserAndCredits(user_id: string, env: Env): Promise<{ user: User; credits: number }> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
