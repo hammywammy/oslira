@@ -3108,83 +3108,158 @@ async updateDashboardStats() {
     }
 }
 
-// ✅ HELPER METHOD - UPDATE STAT ELEMENTS
-updateStatElements(statsData) {
-    const { totalLeads, avgScore, highValueLeads, creditsUsed } = statsData;
-
-    // Define all possible element mappings
-    const elementMappings = [
-        {
-            value: totalLeads.toLocaleString(),
-            possibleIds: ['total-leads', 'leads-researched', 'total_leads'],
-            description: 'Total Leads'
-        },
-        {
-            value: avgScore.toString(),
-            possibleIds: ['avg-score', 'average-score', 'avg_score'],
-            description: 'Average Score'
-        },
-        {
-            value: creditsUsed.toString(),
-            possibleIds: ['credits-used', 'credits_used', 'total-credits'],
-            description: 'Credits Used'
-        },
-        {
-            value: highValueLeads.toString(),
-            possibleIds: ['high-value-leads', 'high_value_leads', 'quality-leads'],
-            description: 'High-Value Leads'
-        }
+debugElements() {
+    console.log('🔍 === ELEMENT DEBUG ===');
+    
+    // Find all elements that might contain stats
+    const possibleElements = [
+        'total-leads', 'avg-score', 'credits-used', 'high-value-leads',
+        'leads-researched', 'average-score', 'high-quality-leads',
+        'total_leads', 'avg_score', 'credits_used', 'high_value_leads'
     ];
-
-    // Update by ID
-    elementMappings.forEach(({ value, possibleIds, description }) => {
-        let updated = false;
-        
-        possibleIds.forEach(id => {
-            const element = document.getElementById(id);
-            if (element && !updated) {
-                element.textContent = value;
-                console.log(`✅ Updated ${description} (${id}): ${value}`);
-                updated = true;
-            }
-        });
-        
-        if (!updated) {
-            console.warn(`⚠️ Could not find element for ${description}. Tried: ${possibleIds.join(', ')}`);
+    
+    console.log('📊 Checking possible element IDs:');
+    possibleElements.forEach(id => {
+        const element = document.getElementById(id);
+        console.log(`${id}: ${element ? '✅ EXISTS' : '❌ NOT FOUND'}`);
+        if (element) {
+            console.log(`  Current value: "${element.textContent}"`);
         }
     });
-
-    // Fallback: Update by .big-number class position
+    
+    // Check all .big-number elements
     const bigNumbers = document.querySelectorAll('.big-number');
+    console.log(`\n📊 Found ${bigNumbers.length} .big-number elements:`);
+    bigNumbers.forEach((el, index) => {
+        const parent = el.closest('.stat-card');
+        const heading = parent ? parent.querySelector('h3')?.textContent : 'No heading';
+        console.log(`  [${index}] "${el.textContent}" - ${heading}`);
+    });
+    
+    // Check all stat cards
+    const statCards = document.querySelectorAll('.stat-card');
+    console.log(`\n📊 Found ${statCards.length} .stat-card elements:`);
+    statCards.forEach((card, index) => {
+        const heading = card.querySelector('h3')?.textContent || 'No heading';
+        const bigNumber = card.querySelector('.big-number');
+        const currentValue = bigNumber ? bigNumber.textContent : 'No big-number';
+        console.log(`  [${index}] "${heading}": "${currentValue}"`);
+    });
+}
+
+// ✅ 2. REPLACE updateStatElements() WITH THIS ENHANCED VERSION
+updateStatElements(statsData) {
+    const { totalLeads, avgScore, highValueLeads, creditsUsed } = statsData;
+    
+    console.log('📊 Updating elements with values:', {
+        totalLeads: totalLeads.toLocaleString(),
+        avgScore: avgScore.toString(),
+        creditsUsed: creditsUsed.toString(),
+        highValueLeads: highValueLeads.toString()
+    });
+
+    // ✅ METHOD 1: Update by .big-number position (most reliable)
+    const bigNumbers = document.querySelectorAll('.big-number');
+    console.log(`Found ${bigNumbers.length} .big-number elements`);
+    
     if (bigNumbers.length >= 4) {
-        const values = [totalLeads.toLocaleString(), avgScore.toString(), creditsUsed.toString(), highValueLeads.toString()];
+        const values = [
+            totalLeads.toLocaleString(), // Position 0
+            avgScore.toString(),          // Position 1  
+            creditsUsed.toString(),       // Position 2
+            highValueLeads.toString()     // Position 3
+        ];
+        
         bigNumbers.forEach((element, index) => {
             if (values[index]) {
+                const oldValue = element.textContent;
                 element.textContent = values[index];
-                console.log(`✅ Updated .big-number[${index}]: ${values[index]}`);
+                console.log(`✅ Updated .big-number[${index}]: "${oldValue}" → "${values[index]}"`);
             }
         });
     }
 
-    // Additional fallback: Update by parent text content
-    document.querySelectorAll('.stat-card').forEach(card => {
-        const bigNumber = card.querySelector('.big-number');
+    // ✅ METHOD 2: Update by stat-card heading text (backup method)
+    const statCards = document.querySelectorAll('.stat-card');
+    console.log(`Found ${statCards.length} .stat-card elements`);
+    
+    statCards.forEach((card, index) => {
         const heading = card.querySelector('h3');
+        const bigNumber = card.querySelector('.big-number');
         
-        if (bigNumber && heading) {
+        if (heading && bigNumber) {
             const headingText = heading.textContent.toLowerCase();
+            let newValue = null;
             
             if (headingText.includes('leads researched') || headingText.includes('total')) {
-                bigNumber.textContent = totalLeads.toLocaleString();
+                newValue = totalLeads.toLocaleString();
             } else if (headingText.includes('average score')) {
-                bigNumber.textContent = avgScore.toString();
+                newValue = avgScore.toString();
             } else if (headingText.includes('credits used')) {
-                bigNumber.textContent = creditsUsed.toString();
+                newValue = creditsUsed.toString();
             } else if (headingText.includes('high-value') || headingText.includes('quality')) {
-                bigNumber.textContent = highValueLeads.toString();
+                newValue = highValueLeads.toString();
+            }
+            
+            if (newValue) {
+                const oldValue = bigNumber.textContent;
+                bigNumber.textContent = newValue;
+                console.log(`✅ Updated "${headingText}": "${oldValue}" → "${newValue}"`);
             }
         }
     });
+
+    // ✅ METHOD 3: Try specific IDs (if they exist)
+    const idMappings = [
+        { ids: ['total-leads', 'leads-researched'], value: totalLeads.toLocaleString(), name: 'Total Leads' },
+        { ids: ['avg-score', 'average-score'], value: avgScore.toString(), name: 'Average Score' },
+        { ids: ['credits-used', 'total-credits'], value: creditsUsed.toString(), name: 'Credits Used' },
+        { ids: ['high-value-leads', 'high-quality-leads'], value: highValueLeads.toString(), name: 'High-Value Leads' }
+    ];
+
+    idMappings.forEach(({ ids, value, name }) => {
+        let updated = false;
+        ids.forEach(id => {
+            const element = document.getElementById(id);
+            if (element && !updated) {
+                const oldValue = element.textContent;
+                element.textContent = value;
+                console.log(`✅ Updated ${name} (${id}): "${oldValue}" → "${value}"`);
+                updated = true;
+            }
+        });
+    });
+
+    console.log('📊 Element update completed');
+}
+
+// ✅ 3. SIMPLE FORCE UPDATE METHOD - USE THIS TO TEST
+forceUpdateAllStats() {
+    console.log('🔄 FORCE UPDATING ALL STATS...');
+    
+    // Use the values from your debug output
+    const statsData = {
+        totalLeads: 28,
+        avgScore: 50, 
+        creditsUsed: 39,
+        highValueLeads: 1
+    };
+    
+    console.log('📊 Using values:', statsData);
+    
+    // Update elements
+    this.updateStatElements(statsData);
+    
+    // Also try direct .big-number update
+    const bigNumbers = document.querySelectorAll('.big-number');
+    if (bigNumbers.length >= 4) {
+        bigNumbers[0].textContent = '28';  // Total leads
+        bigNumbers[1].textContent = '50';  // Average score
+        bigNumbers[2].textContent = '39';  // Credits used
+        bigNumbers[3].textContent = '1';   // High-value leads
+        
+        console.log('✅ Direct .big-number update completed');
+    }
 }
 
 // ✅ FALLBACK METHOD - USE CACHED DATA IF DATABASE FAILS
