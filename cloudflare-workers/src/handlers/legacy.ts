@@ -1,4 +1,8 @@
-app.post('/analyze', async (c) => {
+import type { Context } from 'hono';
+import { generateRequestId, logger } from '../utils/logger.js';
+import { createStandardResponse } from '../utils/response.js';
+
+export async function handleLegacyAnalyze(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   logger('info', 'Legacy analyze endpoint called, redirecting to v1', { requestId });
   
@@ -24,7 +28,7 @@ app.post('/analyze', async (c) => {
   }
 });
 
-app.post('/bulk-analyze', async (c) => {
+export async function handleLegacyBulkAnalyze(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   logger('info', 'Legacy bulk-analyze endpoint called, redirecting to v1', { requestId });
   
@@ -44,5 +48,3 @@ app.post('/bulk-analyze', async (c) => {
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 });
-export async function handleLegacyAnalyze(c: Context): Promise<Response>
-export async function handleLegacyBulkAnalyze(c: Context): Promise<Response>
