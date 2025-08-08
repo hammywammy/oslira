@@ -1,4 +1,9 @@
-app.post('/stripe-webhook', async (c) => {
+import type { Context } from 'hono';
+import { generateRequestId, logger } from '../utils/logger.js';
+import { createStandardResponse } from '../utils/response.js';
+import { fetchJson } from '../utils/helpers.js';
+
+export async function handleStripeWebhook(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
@@ -54,7 +59,7 @@ app.post('/stripe-webhook', async (c) => {
   }
 });
 
-app.post('/billing/create-checkout-session', async (c) => {
+export async function handleCreateCheckoutSession(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
@@ -99,7 +104,7 @@ app.post('/billing/create-checkout-session', async (c) => {
   }
 });
 
-app.post('/billing/create-portal-session', async (c) => {
+export async function handleCreatePortalSession(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
