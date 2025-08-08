@@ -31,7 +31,7 @@ return response;
     logger('error', 'Legacy endpoint forwarding failed', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
-});
+}
 
 export async function handleLegacyBulkAnalyze(c: Context): Promise<Response> {
   const requestId = generateRequestId();
@@ -57,4 +57,4 @@ return response;
     logger('error', 'Legacy bulk endpoint forwarding failed', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
-});
+}
