@@ -5,23 +5,29 @@
 // ===============================================================================
 
 class Dashboard {
-    constructor() {
-        this.allLeads = [];
-        this.selectedLeads = new Set();
-        this.currentFilter = 'all';
-        this.isLoading = false;
-        this.dateFormatCache = new Map();
-        
-        // Bind methods to maintain context
-        this.init = this.init.bind(this);
-        this.loadDashboardData = this.loadDashboardData.bind(this);
-        this.viewLead = this.viewLead.bind(this);
-        this.displayLeads = this.displayLeads.bind(this);
-        this.toggleLeadSelection = this.toggleLeadSelection.bind(this);
-        this.copyText = this.copyText.bind(this);
-        this.editMessage = this.editMessage.bind(this);
-        this.saveEditedMessage = this.saveEditedMessage.bind(this);
-    }
+constructor() {
+    this.allLeads = [];
+    this.selectedLeads = new Set();
+    this.currentFilter = 'all';
+    this.isLoading = false;
+    this.dateFormatCache = new Map();
+    
+    // ✅ ADD THESE REAL-TIME PROPERTIES
+    this.realtimeSubscription = null;
+    this.isRealtimeActive = false;
+    this.pollingInterval = null;
+    this.lastUpdateTimestamp = null;
+    
+    // Bind methods to maintain context
+    this.init = this.init.bind(this);
+    this.loadDashboardData = this.loadDashboardData.bind(this);
+    this.viewLead = this.viewLead.bind(this);
+    this.displayLeads = this.displayLeads.bind(this);
+    this.toggleLeadSelection = this.toggleLeadSelection.bind(this);
+    this.copyText = this.copyText.bind(this);
+    this.editMessage = this.editMessage.bind(this);
+    this.saveEditedMessage = this.saveEditedMessage.bind(this);
+}
 
     // ===============================================================================
     // INITIALIZATION AND SETUP
@@ -2356,13 +2362,16 @@ viewLatestLead(username) {
 handleRealtimeAnalysisUpdate(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
     
-    console.log('📈 Analysis update received:', eventType, newRecord?.lead_id || oldRecord?.lead_id);
+    console.log('📈 Processing analysis update:', eventType, newRecord?.lead_id || oldRecord?.lead_id);
     
-    // For analysis updates, we should refresh the specific lead's data
     if (eventType === 'INSERT' || eventType === 'UPDATE') {
         const leadId = newRecord?.lead_id;
         if (leadId) {
-            this.refreshLeadData(leadId);
+            console.log('🔄 Analysis data updated for lead:', leadId);
+            // Refresh dashboard to show updated analysis
+            setTimeout(() => {
+                this.loadDashboardData();
+            }, 1000);
         }
     }
 }
@@ -3791,7 +3800,7 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
         }
     }
 
-   setupRealtimeSubscription() {
+ setupRealtimeSubscription() {
     // Check if we can use real-time
     if (!this.canUseRealtime()) {
         console.log('⚠️ Real-time disabled: WebSocket connections not available');
@@ -3809,17 +3818,22 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
             return;
         }
 
-        console.log('🔄 Setting up real-time subscription...');
+        console.log('🔄 Setting up real-time subscription for user:', user.id);
 
         // ✅ Clean up existing subscription first
         if (this.realtimeSubscription) {
             console.log('🧹 Cleaning up existing subscription');
-            this.realtimeSubscription.unsubscribe();
+            try {
+                supabase.removeChannel(this.realtimeSubscription);
+            } catch (cleanupError) {
+                console.warn('⚠️ Cleanup warning:', cleanupError);
+            }
             this.realtimeSubscription = null;
         }
 
-        // ✅ Create a simple, unique channel name
-        const channelName = `dashboard_${user.id}`;
+        // ✅ Create unique channel name
+        const channelName = `dashboard-updates-${user.id}-${Date.now()}`;
+        console.log('📡 Creating channel:', channelName);
 
         // ✅ FIXED: Proper subscription setup
         this.realtimeSubscription = supabase
@@ -3838,7 +3852,7 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log('📡 Real-time leads update:', payload);
+                    console.log('📊 Real-time LEADS update received:', payload.eventType, payload.new?.username || payload.old?.username);
                     this.handleRealtimeLeadUpdate(payload);
                 }
             )
@@ -3847,11 +3861,10 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
                 {
                     event: '*',
                     schema: 'public', 
-                    table: 'lead_analyses',
-                    filter: `user_id=eq.${user.id}`
+                    table: 'lead_analyses'
                 },
                 (payload) => {
-                    console.log('📡 Real-time analysis update:', payload);
+                    console.log('📈 Real-time ANALYSIS update received:', payload.eventType, payload.new?.lead_id || payload.old?.lead_id);
                     this.handleRealtimeAnalysisUpdate(payload);
                 }
             )
@@ -3860,21 +3873,39 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
                 
                 switch (status) {
                     case 'SUBSCRIBED':
-                        console.log('✅ Real-time subscription active');
+                        console.log('✅ Real-time subscription ACTIVE');
                         this.isRealtimeActive = true;
+                        
                         // Clear any polling fallback
                         if (this.pollingInterval) {
                             clearInterval(this.pollingInterval);
                             this.pollingInterval = null;
+                            console.log('🔄 Polling fallback disabled (real-time active)');
                         }
                         break;
                         
                     case 'CHANNEL_ERROR':
-                    case 'TIMED_OUT':
-                    case 'CLOSED':
-                        console.error(`❌ Real-time subscription failed: ${status}`, err);
+                        console.error('❌ Real-time CHANNEL_ERROR:', err);
                         this.isRealtimeActive = false;
                         this.setupPollingFallback();
+                        break;
+                        
+                    case 'TIMED_OUT':
+                        console.error('❌ Real-time TIMED_OUT:', err);
+                        this.isRealtimeActive = false;
+                        this.setupPollingFallback();
+                        break;
+                        
+                    case 'CLOSED':
+                        console.warn('⚠️ Real-time connection CLOSED:', err);
+                        this.isRealtimeActive = false;
+                        // Try to reconnect after delay
+                        setTimeout(() => {
+                            if (!this.isRealtimeActive) {
+                                console.log('🔄 Attempting to reconnect real-time...');
+                                this.setupRealtimeSubscription();
+                            }
+                        }, 5000);
                         break;
                         
                     case 'CONNECTING':
@@ -4309,15 +4340,16 @@ async checkForUpdates() {
 handleRealtimeLeadUpdate(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
     
-    console.log('📊 Lead update received:', eventType, newRecord?.username || oldRecord?.username);
+    console.log('📊 Processing lead update:', eventType, newRecord?.username || oldRecord?.username);
     
     switch (eventType) {
         case 'INSERT':
-            // New lead created
             if (newRecord) {
-                console.log('➕ New lead added:', newRecord.username);
-                this.addLeadToUI(newRecord);
-                this.updateDashboardStats();
+                console.log('➕ New lead detected:', newRecord.username);
+                // Refresh dashboard data to show new lead
+                setTimeout(() => {
+                    this.loadDashboardData();
+                }, 1000);
                 
                 // Show notification
                 if (window.OsliraApp?.showMessage) {
@@ -4327,19 +4359,22 @@ handleRealtimeLeadUpdate(payload) {
             break;
             
         case 'UPDATE':
-            // Lead updated
             if (newRecord) {
                 console.log('✏️ Lead updated:', newRecord.username);
-                this.updateLeadInUI(newRecord);
+                // Refresh to show updated data
+                setTimeout(() => {
+                    this.loadDashboardData();
+                }, 500);
             }
             break;
             
         case 'DELETE':
-            // Lead deleted
             if (oldRecord) {
                 console.log('🗑️ Lead deleted:', oldRecord.username);
-                this.removeLeadFromUI(oldRecord);
-                this.updateDashboardStats();
+                // Refresh to remove deleted lead
+                setTimeout(() => {
+                    this.loadDashboardData();
+                }, 500);
             }
             break;
     }
