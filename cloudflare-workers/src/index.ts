@@ -2405,15 +2405,16 @@ Best regards`;
     // STEP 5: UPDATE CREDITS WITH ENHANCED COST TRACKING
     // ===============================================================================
     
-    await updateCreditsAndTransaction(
-      user_id,
-      creditCost,
-      userResult.credits - creditCost,
-      `${analysis_type} analysis of @${username} (Cost: $${totalCost.toFixed(6)})`,
-      'use',
-      c.env,
-      lead_id
-    );
+    await updateCreditsWithDetailedCostTracking(
+  user_id,
+  costBreakdown,
+  totalProcessingTime,
+  apiCallBreakdown,
+  userResult.credits - creditCost,
+  `${analysis_type} analysis of @${username}`,
+  c.env,
+  lead_id
+);
     
     // Log detailed cost tracking to console
     logger('info', 'COST TRACKING SUMMARY', {
