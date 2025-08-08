@@ -3801,8 +3801,7 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
         }
     }
 
- setupRealtimeSubscription() {
-    // Check if we can use real-time
+setupRealtimeSubscription() {
     if (!this.canUseRealtime()) {
         console.log('⚠️ Real-time disabled: WebSocket connections not available');
         this.setupPollingFallback();
@@ -3821,7 +3820,7 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
 
         console.log('🔄 Setting up real-time subscription for user:', user.id);
 
-        // ✅ Clean up existing subscription first
+        // Clean up existing subscription
         if (this.realtimeSubscription) {
             console.log('🧹 Cleaning up existing subscription');
             try {
@@ -3832,18 +3831,12 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
             this.realtimeSubscription = null;
         }
 
-        // ✅ Create unique channel name
-        const channelName = `dashboard-updates-${user.id}-${Date.now()}`;
-        console.log('📡 Creating channel:', channelName);
+        // ✅ SIMPLIFIED APPROACH - Just listen to leads table
+        const channelName = `dashboard-${user.id}`;
+        console.log('📡 Creating simplified channel:', channelName);
 
-        // ✅ FIXED: Proper subscription setup
         this.realtimeSubscription = supabase
-            .channel(channelName, {
-                config: {
-                    broadcast: { self: false },
-                    presence: { key: user.id }
-                }
-            })
+            .channel(channelName)
             .on(
                 'postgres_changes',
                 { 
@@ -3853,70 +3846,40 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log('📊 Real-time LEADS update received:', payload.eventType, payload.new?.username || payload.old?.username);
-                    this.handleRealtimeLeadUpdate(payload);
-                }
-            )
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public', 
-                    table: 'lead_analyses'
-                },
-                (payload) => {
-                    console.log('📈 Real-time ANALYSIS update received:', payload.eventType, payload.new?.lead_id || payload.old?.lead_id);
-                    this.handleRealtimeAnalysisUpdate(payload);
+                    console.log('📊 Lead change detected:', payload.eventType, payload.new?.username);
+                    // Simple refresh instead of complex handling
+                    setTimeout(() => this.loadDashboardData(), 1000);
                 }
             )
             .subscribe((status, err) => {
-                console.log(`📡 Real-time subscription status: ${status}`);
+                console.log(`📡 Subscription status: ${status}`, err || '');
                 
                 switch (status) {
                     case 'SUBSCRIBED':
-                        console.log('✅ Real-time subscription ACTIVE');
+                        console.log('✅ Real-time ACTIVE');
                         this.isRealtimeActive = true;
-                        
-                        // Clear any polling fallback
-                        if (this.pollingInterval) {
-                            clearInterval(this.pollingInterval);
-                            this.pollingInterval = null;
-                            console.log('🔄 Polling fallback disabled (real-time active)');
-                        }
-                        break;
-                        
-                    case 'CHANNEL_ERROR':
-                        console.error('❌ Real-time CHANNEL_ERROR:', err);
-                        this.isRealtimeActive = false;
-                        this.setupPollingFallback();
-                        break;
-                        
-                    case 'TIMED_OUT':
-                        console.error('❌ Real-time TIMED_OUT:', err);
-                        this.isRealtimeActive = false;
-                        this.setupPollingFallback();
                         break;
                         
                     case 'CLOSED':
-                        console.warn('⚠️ Real-time connection CLOSED:', err);
+                    case 'CHANNEL_ERROR':
+                    case 'TIMED_OUT':
+                        console.warn(`❌ Real-time failed (${status}):`, err);
                         this.isRealtimeActive = false;
-                        // Try to reconnect after delay
-                        setTimeout(() => {
-                            if (!this.isRealtimeActive) {
-                                console.log('🔄 Attempting to reconnect real-time...');
-                                this.setupRealtimeSubscription();
-                            }
-                        }, 5000);
-                        break;
                         
-                    case 'CONNECTING':
-                        console.log('🔄 Real-time connecting...');
+                        // Don't retry immediately - use polling instead
+                        console.log('🔄 Falling back to polling updates');
+                        this.setupPollingFallback();
                         break;
-                        
-                    default:
-                        console.log(`📡 Real-time status: ${status}`);
                 }
             });
+
+        // ✅ ADD TIMEOUT FALLBACK
+        setTimeout(() => {
+            if (!this.isRealtimeActive) {
+                console.warn('⚠️ Real-time subscription timeout - using polling');
+                this.setupPollingFallback();
+            }
+        }, 5000);
 
     } catch (error) {
         console.error('❌ Real-time setup failed:', error);
@@ -3924,7 +3887,6 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
         this.setupPollingFallback();
     }
 }
-
     // ✅ ADD THIS MISSING METHOD:
     displayDemoLeads() {
     console.log('📋 No authentication - showing empty state');
