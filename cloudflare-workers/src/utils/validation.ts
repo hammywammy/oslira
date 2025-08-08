@@ -12,33 +12,6 @@ export function validateAnalysisResult(result: any): AnalysisResult {
   };
 }
 
-export function calculateConfidenceLevel(profile: ProfileData, analysisType: string): number {
-  let confidence = 50; // Base confidence
-  
-  // Boost confidence based on data quality
-  if (profile.dataQuality === 'high') confidence += 30;
-  else if (profile.dataQuality === 'medium') confidence += 15;
-  
-  // Boost for verified profiles
-  if (profile.isVerified) confidence += 10;
-  
-  // 🔧 FIX #3: CONSISTENT NULL SAFETY WITH PROPER OPTIONAL CHAINING
-  // Boost for real engagement data
-  if ((profile.engagement?.postsAnalyzed || 0) > 0) {
-    confidence += 20; // Increased boost for real data
-    if ((profile.engagement?.postsAnalyzed || 0) >= 5) confidence += 5;
-    if ((profile.engagement?.postsAnalyzed || 0) >= 10) confidence += 5;
-  }
-  
-  // Boost for deep analysis
-  if (analysisType === 'deep') confidence += 10;
-  
-  // Penalty for private profiles
-  if (profile.isPrivate) confidence -= 15;
-  
-  return Math.min(95, Math.max(20, confidence));
-}
-
 export function extractUsername(input: string): string {
   try {
     const cleaned = input.trim().replace(/^@/, '').toLowerCase();
@@ -411,4 +384,32 @@ export function validateProfileData(responseData: any, analysisType?: string): P
     });
     throw new Error(`Profile validation failed: ${error.message}`);
   }
+}
+export function calculateConfidenceLevel(profile: ProfileData, analysisType: string): number {
+  let confidence = 50;
+  if (profile.dataQuality === 'high') confidence += 30;
+  else if (profile.dataQuality === 'medium') confidence += 15;
+  if (profile.isVerified) confidence += 10;
+  if ((profile.engagement?.postsAnalyzed || 0) > 0) {
+    confidence += 20;
+    if ((profile.engagement?.postsAnalyzed || 0) >= 5) confidence += 5;
+    if ((profile.engagement?.postsAnalyzed || 0) >= 10) confidence += 5;
+  }
+  if (analysisType === 'deep') confidence += 10;
+  if (profile.isPrivate) confidence -= 15;
+  return Math.min(95, Math.max(20, confidence));
+}
+
+export function extractPostThemes(posts: PostData[]): string {
+  if (!posts || posts.length === 0) return 'content themes not available';
+  const allHashtags = posts.flatMap(post => post.hashtags || []);
+  const hashtagCounts = allHashtags.reduce((acc, tag) => {
+    acc[tag] = (acc[tag] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const topHashtags = Object.entries(hashtagCounts)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 3)
+    .map(([tag]) => tag.replace('#', ''));
+  return topHashtags.length > 0 ? topHashtags.join(', ') : 'content themes not available';
 }
