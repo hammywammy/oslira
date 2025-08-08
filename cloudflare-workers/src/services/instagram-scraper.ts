@@ -1,4 +1,4 @@
-async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
+export async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
   if (!env.APIFY_API_TOKEN) {
     throw new Error('Profile scraping service not configured');
   }
