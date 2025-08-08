@@ -3341,6 +3341,20 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
         console.warn('⚠️ Trend indicators update failed:', error);
     }
 }
+
+    // Test method - run this in console to verify
+async testStatsUpdate() {
+    console.log('🧪 Testing stats update...');
+    
+    // Force update with real data
+    await this.updateDashboardStats();
+    
+    // Debug elements
+    this.debugElements();
+    
+    // Force update with test data
+    this.forceUpdateAllStats();
+}
 // ✅ DEBUG METHOD - TEST DATABASE QUERIES
 async debugDatabaseStats() {
     console.log('🔍 === DATABASE STATS DEBUG ===');
@@ -4967,19 +4981,6 @@ class UnifiedAnalysisQueue {
 
         return await response.json();
     }
-    // Test method - run this in console to verify
-async testStatsUpdate() {
-    console.log('🧪 Testing stats update...');
-    
-    // Force update with real data
-    await this.updateDashboardStats();
-    
-    // Debug elements
-    this.debugElements();
-    
-    // Force update with test data
-    this.forceUpdateAllStats();
-}
 }
 
 // ===============================================================================
