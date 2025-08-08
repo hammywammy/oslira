@@ -1,3 +1,8 @@
+import type { ProfileData, AnalysisType, Env, PostData, EngagementData } from '../types/interfaces.js';
+import { logger } from '../utils/logger.js';
+import { callWithRetry } from '../utils/helpers.js';
+import { validateProfileData, extractHashtags, extractMentions } from '../utils/validation.js';
+
 export async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
   if (!env.APIFY_API_TOKEN) {
     throw new Error('Profile scraping service not configured');
