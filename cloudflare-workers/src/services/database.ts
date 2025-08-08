@@ -1,4 +1,4 @@
-async function fetchUserAndCredits(user_id: string, env: Env): Promise<{ user: User; credits: number }> {
+export async function fetchUserAndCredits(user_id: string, env: Env): Promise<{ user: User; credits: number }> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
@@ -20,7 +20,7 @@ async function fetchUserAndCredits(user_id: string, env: Env): Promise<{ user: U
   return { user, credits };
 }
 
-async function fetchBusinessProfile(business_id: string, user_id: string, env: Env): Promise<BusinessProfile> {
+export async function fetchBusinessProfile(business_id: string, user_id: string, env: Env): Promise<BusinessProfile> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
@@ -39,7 +39,7 @@ async function fetchBusinessProfile(business_id: string, user_id: string, env: E
   return businesses[0];
 }
 
-async function updateCreditsAndTransaction(
+export async function updateCreditsAndTransaction(
   user_id: string,
   cost: number,
   newBalance: number,
@@ -93,7 +93,7 @@ async function updateCreditsAndTransaction(
   }
 }
 
-async function saveLeadAndAnalysis(
+export async function saveLeadAndAnalysis(
   leadData: any,
   analysisData: any | null,
   analysisType: string,
