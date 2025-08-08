@@ -1,4 +1,4 @@
-async function getAnalyticsSummary(env: Env): Promise<any> {
+export async function getAnalyticsSummary(env: Env): Promise<any> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
@@ -55,7 +55,7 @@ async function getAnalyticsSummary(env: Env): Promise<any> {
   }
 }
 
-async function generateAIInsights(env: Env): Promise<any> {
+export async function generateAIInsights(env: Env): Promise<any> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
     Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
