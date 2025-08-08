@@ -22,15 +22,7 @@ app.use('*', cors({
 // UTILITY FUNCTIONS
 // ===============================================================================
 
-function generateRequestId(): string {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-}
 
-function logger(level: 'info' | 'warn' | 'error', message: string, data?: any, requestId?: string) {
-  const timestamp = new Date().toISOString();
-  const logData = { timestamp, level, message, requestId, ...data };
-  console.log(JSON.stringify(logData));
-}
 
 function createStandardResponse(success: boolean, data?: any, error?: string, requestId?: string) {
   return {
