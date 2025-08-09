@@ -1,13 +1,19 @@
+
 {
   "name": "oslira-frontend",
   "version": "1.0.0",
   "description": "AI-powered lead generation platform frontend",
   "type": "module",
   "scripts": {
-    "build": "node inject-env.js", 
-    "dev": "npm run build && python -m http.server 8000", 
+    "build": "node build-with-supabase-config.js",
+    "build:migrate": "node build-with-supabase-config.js migrate",
+    "build:legacy": "node inject-env.js",
+    "dev": "npm run build && python -m http.server 8000",
     "start": "npm run dev",
-    "clean": "node -e \"const fs = require('fs'); try { fs.unlinkSync('public/pages/env-config.js'); console.log('✅ Cleaned env-config.js'); } catch(e) { console.log('ℹ️  No file to clean'); }\""
+    "clean": "node -e \"const fs = require('fs'); try { fs.unlinkSync('public/env-config.js'); console.log('✅ Cleaned env-config.js'); } catch(e) { console.log('ℹ️  No file to clean'); }\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0"
   },
   "keywords": ["lead-generation", "ai", "supabase", "frontend"],
   "author": "Hamza Williams",
