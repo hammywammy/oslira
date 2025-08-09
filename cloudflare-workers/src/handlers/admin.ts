@@ -95,7 +95,7 @@ export async function handleUpdateApiKey(c: Context): Promise<Response> {
     const userEmail = c.req.header('X-User-Email') || 'admin-panel';
     
     // Update configuration
-    const configManager = getConfigManager(c.env);
+    const configManager = getEnhancedConfigManager(c.env);
     await configManager.updateConfig(keyName, newValue, userEmail);
     
     // Trigger auto-sync to other services
