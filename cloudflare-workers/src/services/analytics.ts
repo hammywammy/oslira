@@ -119,7 +119,7 @@ Return JSON: {"keyTrends": ["trend1", "trend2", "trend3"], "recommendations": ["
       headers: {
       Authorization: `Bearer ${openaiKey}`, // ✅ CORRECT
       'Content-Type': 'application/json'
-      }
+      }}
         body: JSON.stringify({
           model: 'gpt-5-mini',
           messages: [{ role: 'user', content: analysisPrompt }],
