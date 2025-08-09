@@ -2,9 +2,13 @@ import type { ProfileData, AnalysisType, Env, PostData, EngagementData } from '.
 import { logger } from '../utils/logger.js';
 import { callWithRetry } from '../utils/helpers.js';
 import { validateProfileData, extractHashtags, extractMentions } from '../utils/validation.js';
+import { getApiKey } from './config-manager.js';
 
 export async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
-  if (!env.APIFY_API_TOKEN) {
+  // Get Apify API token from centralized config
+  const apifyToken = await getApiKey('APIFY_API_TOKEN', env);
+  
+  if (!apifyToken) {
     throw new Error('Profile scraping service not configured');
   }
 
@@ -21,7 +25,7 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
       };
 
       const profileResponse = await callWithRetry(
-        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
+        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${apifyToken}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -76,7 +80,7 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
           logger('info', `Trying deep scraper config: ${config.name}`, { username });
           
           const deepResponse = await callWithRetry(
-            `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
+            `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${apifyToken}`,
             {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -142,7 +146,7 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
       };
 
       const lightResponse = await callWithRetry(
-        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`,
+        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${apifyToken}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
