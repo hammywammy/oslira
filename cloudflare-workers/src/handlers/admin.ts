@@ -40,6 +40,22 @@ function verifyAdminAccess(c: Context): boolean {
 
 export async function handleUpdateApiKey(c: Context): Promise<Response> {
   const requestId = generateRequestId();
+
+    const sensitiveKeys = ['OPENAI_API_KEY', 'CLAUDE_API_KEY', 'APIFY_API_TOKEN', 'STRIPE_SECRET_KEY'];
+  
+  if (sensitiveKeys.includes(keyName)) {
+    // Store in AWS Secrets Manager
+    const awsSecrets = new AWSSecretsManager(c.env);
+    await awsSecrets.putSecret(keyName, newValue);
+    
+    // Also update Supabase as backup
+    const configManager = getConfigManager(c.env);
+    await configManager.updateConfig(keyName, newValue, userEmail);
+  } else {
+    // Non-sensitive keys only go to Supabase
+    const configManager = getConfigManager(c.env);
+    await configManager.updateConfig(keyName, newValue, userEmail);
+  }
   
   try {
     // Verify admin access
