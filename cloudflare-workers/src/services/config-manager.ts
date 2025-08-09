@@ -1,4 +1,3 @@
-// File: src/services/config-manager.ts
 import type { Env } from '../types/interfaces.js';
 import { fetchJson } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
