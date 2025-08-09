@@ -144,25 +144,36 @@ app.post('/admin/update-key', async (c) => {
   return handleUpdateApiKey(c);
 });
 
+// Add these enhanced admin endpoints to your existing routes
+app.post('/admin/migrate-to-aws', async (c) => {
+  const { handleMigrateToAWS } = await import('./handlers/enhanced-admin.js');
+  return handleMigrateToAWS(c);
+});
+
+app.post('/admin/trigger-rotation', async (c) => {
+  const { handleTriggerRotation } = await import('./handlers/enhanced-admin.js');
+  return handleTriggerRotation(c);
+});
+
+// Replace existing admin routes with enhanced versions
+app.post('/admin/update-key', async (c) => {
+  const { handleUpdateApiKey } = await import('./handlers/enhanced-admin.js');
+  return handleUpdateApiKey(c);
+});
+
 app.get('/admin/config-status', async (c) => {
-  const { handleGetConfigStatus } = await import('./handlers/admin.js');
+  const { handleGetConfigStatus } = await import('./handlers/enhanced-admin.js');
   return handleGetConfigStatus(c);
 });
 
-app.post('/admin/test-key', async (c) => {
-  const { handleTestApiKey } = await import('./handlers/admin.js');
-  return handleTestApiKey(c);
-});
-
 app.get('/admin/audit-log', async (c) => {
-  const { handleGetAuditLog } = await import('./handlers/admin.js');
+  const { handleGetAuditLog } = await import('./handlers/enhanced-admin.js');
   return handleGetAuditLog(c);
 });
 
-// Internal webhook for config changes (auto-triggered)
-app.post('/internal/config-changed', async (c) => {
-  const { handleConfigChanged } = await import('./handlers/netlify-sync.js');
-  return handleConfigChanged(c);
+app.post('/admin/test-key', async (c) => {
+  const { handleTestApiKey } = await import('./handlers/enhanced-admin.js');
+  return handleTestApiKey(c);
 });
 
 // Updated config endpoint that reads from Supabase
