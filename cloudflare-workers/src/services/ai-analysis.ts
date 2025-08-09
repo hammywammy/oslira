@@ -28,7 +28,7 @@ export async function performAIAnalysis(
       username: profile.username,
       summaryLength: quickSummary.length
     });
-  }
+  } 
   
   logger('info', 'Starting final AI evaluation with real engagement data', { 
     username: profile.username,
@@ -54,7 +54,7 @@ export async function performAIAnalysis(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-5',
         messages: [{ role: 'user', content: evaluatorPrompt }],
         temperature: 0.4,
         max_tokens: analysisType === 'deep' ? 1500 : 1000,
@@ -195,7 +195,7 @@ Write a compelling outreach message that would get a response.`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: 'gpt-5',
             messages: [{ role: 'user', content: messagePrompt }],
             temperature: 0.7,
             max_tokens: 1000
@@ -247,7 +247,7 @@ Focus on who they are, what they do, and their influence level. Keep it professi
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'gpt-5-nano',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.3,
           max_tokens: 200
@@ -315,7 +315,7 @@ Create a detailed summary covering their profile strength, content quality, enga
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-5-mini',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.4,
           max_tokens: 600
