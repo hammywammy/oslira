@@ -118,7 +118,7 @@ Return JSON: {"keyTrends": ["trend1", "trend2", "trend3"], "recommendations": ["
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-5-mini',
           messages: [{ role: 'user', content: analysisPrompt }],
           temperature: 0.3,
           response_format: { type: 'json_object' }
