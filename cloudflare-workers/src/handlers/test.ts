@@ -67,6 +67,7 @@ export async function handleTestPost(c: Context): Promise<Response> {
 
 export async function handleDebugEnv(c: Context): Promise<Response> {
   return c.json({
+    // Existing checks
     supabase: c.env.SUPABASE_URL ? 'SET' : 'MISSING',
     serviceRole: c.env.SUPABASE_SERVICE_ROLE ? 'SET' : 'MISSING',
     anonKey: c.env.SUPABASE_ANON_KEY ? 'SET' : 'MISSING',
@@ -74,8 +75,12 @@ export async function handleDebugEnv(c: Context): Promise<Response> {
     claude: c.env.CLAUDE_KEY ? 'SET' : 'MISSING',
     apify: c.env.APIFY_API_TOKEN ? 'SET' : 'MISSING',
     stripe: c.env.STRIPE_SECRET_KEY ? 'SET' : 'MISSING',
-    webhookSecret: c.env.STRIPE_WEBHOOK_SECRET ? 'SET' : 'MISSING',
-    frontend: c.env.FRONTEND_URL ? 'SET' : 'MISSING',
+    
+    // Add AWS checks
+    awsAccessKey: c.env.AWS_ACCESS_KEY_ID ? 'SET' : 'MISSING',
+    awsSecretKey: c.env.AWS_SECRET_ACCESS_KEY ? 'SET' : 'MISSING',
+    awsRegion: c.env.AWS_REGION ? 'SET' : 'MISSING',
+    
     enterprise: true,
     version: 'v3.0.0-enterprise-perfect'
   });
