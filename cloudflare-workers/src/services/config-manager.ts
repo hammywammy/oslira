@@ -15,6 +15,23 @@ class ConfigManager {
   
   constructor(private env: Env) {}
 
+  async getConfigWithAWS(keyName: string): Promise<string> {
+  // For sensitive keys, check AWS first
+  const sensitiveKeys = ['OPENAI_API_KEY', 'CLAUDE_API_KEY', 'APIFY_API_TOKEN', 'STRIPE_SECRET_KEY'];
+  
+  if (sensitiveKeys.includes(keyName)) {
+    try {
+      return await this.getFromAWS(keyName);
+    } catch (error) {
+      logger('warn', `AWS fallback failed for ${keyName}, using Supabase`);
+      return await this.getConfig(keyName); // Your existing method
+    }
+  }
+  
+  // Non-sensitive keys still use Supabase
+  return await this.getConfig(keyName);
+}
+  
   async getConfig(keyName: string): Promise<string> {
     // Check cache first
     const cached = this.cache.get(keyName);
