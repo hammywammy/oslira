@@ -90,6 +90,15 @@ class EnhancedConfigManager {
       });
 
       logger('info', `Config retrieved successfully`, { keyName, source });
+
+      logger('info', 'Config retrieved with details', { 
+  keyName, 
+  source,
+  hasValue: !!value,
+  valueLength: value?.length || 0,
+  valuePrefix: value?.substring(0, 10) || 'NONE',
+  isValidOpenAIFormat: value?.startsWith('sk-') || false
+});
       return value;
 
     } catch (error: any) {
