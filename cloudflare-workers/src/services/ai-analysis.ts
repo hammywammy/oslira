@@ -47,6 +47,15 @@ export async function performAIAnalysis(
   
   // Get OpenAI API key from centralized config
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+
+logger('info', 'OpenAI Key Debug Info', {
+  hasKey: !!openaiKey,
+  keyLength: openaiKey?.length || 0,
+  keyPrefix: openaiKey?.substring(0, 10) || 'NONE',
+  keySuffix: openaiKey?.substring(-10) || 'NONE',
+  keyFormat: openaiKey?.startsWith('sk-') ? 'valid_format' : 'invalid_format'
+});
+
   
   const response = await callWithRetry(
     'https://api.openai.com/v1/chat/completions',
