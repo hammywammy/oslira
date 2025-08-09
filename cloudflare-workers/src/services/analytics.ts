@@ -1,6 +1,7 @@
 import type { Env } from '../types/interfaces.js';
 import { fetchJson } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
+import { getApiKey } from './enhanced-config-manager.js';
 
 export async function getAnalyticsSummary(env: Env): Promise<any> {
   const headers = {
@@ -113,10 +114,12 @@ Return JSON: {"keyTrends": ["trend1", "trend2", "trend3"], "recommendations": ["
       'https://api.openai.com/v1/chat/completions',
       {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.OPENAI_KEY}`,
-          'Content-Type': 'application/json'
-        },
+        const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+
+      headers: {
+      Authorization: `Bearer ${openaiKey}`, // ✅ CORRECT
+      'Content-Type': 'application/json'
+      }
         body: JSON.stringify({
           model: 'gpt-5-mini',
           messages: [{ role: 'user', content: analysisPrompt }],
