@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { fetchJson } from '../utils/helpers.js';
+import { getApiKey } from '../services/config-manager.js';
 
 export async function handleStripeWebhook(c: Context): Promise<Response> {
   const requestId = generateRequestId();
@@ -24,7 +25,6 @@ export async function handleStripeWebhook(c: Context): Promise<Response> {
 
     switch (event.type) {
       case 'checkout.session.completed':
-        // 🔧 FIX #2: PROPER JSON.stringify FORMATTING (no line break)
         await fetch(`${c.env.SUPABASE_URL}/rest/v1/users`, {
           method: 'PATCH',
           headers,
@@ -58,6 +58,7 @@ export async function handleStripeWebhook(c: Context): Promise<Response> {
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 400);
   }
 }
+
 export async function handleCreateCheckoutSession(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
@@ -69,10 +70,13 @@ export async function handleCreateCheckoutSession(c: Context): Promise<Response>
       return c.json(createStandardResponse(false, undefined, 'priceId and user_id are required', requestId), 400);
     }
 
+    // Get Stripe secret key from centralized config
+    const stripeSecretKey = await getApiKey('STRIPE_SECRET_KEY', c.env);
+
     const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+        'Authorization': `Bearer ${stripeSecretKey}`,
         'Content-Type': 'application/x-www-form-urlencoded'
       },
       body: new URLSearchParams({
@@ -114,10 +118,13 @@ export async function handleCreatePortalSession(c: Context): Promise<Response> {
       return c.json(createStandardResponse(false, undefined, 'customerId is required', requestId), 400);
     }
 
+    // Get Stripe secret key from centralized config
+    const stripeSecretKey = await getApiKey('STRIPE_SECRET_KEY', c.env);
+
     const stripeResponse = await fetch('https://api.stripe.com/v1/billing_portal/sessions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${c.env.STRIPE_SECRET_KEY}`,
+        'Authorization': `Bearer ${stripeSecretKey}`,
         'Content-Type': 'application/x-www-form-urlencoded'
       },
       body: new URLSearchParams({
