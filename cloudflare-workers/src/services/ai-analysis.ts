@@ -2,6 +2,7 @@ import type { ProfileData, BusinessProfile, AnalysisResult, Env } from '../types
 import { logger } from '../utils/logger.js';
 import { callWithRetry } from '../utils/helpers.js';
 import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } from '../utils/validation.js';
+import { getApiKey } from './config-manager.js';
 
 export async function performAIAnalysis(
   profile: ProfileData, 
@@ -14,7 +15,6 @@ export async function performAIAnalysis(
     username: profile.username,
     dataQuality: profile.dataQuality,
     scraperUsed: profile.scraperUsed,
-    // 🔧 FIX #3: CONSISTENT NULL SAFETY WITH PROPER OPTIONAL CHAINING
     hasRealEngagement: (profile.engagement?.postsAnalyzed || 0) > 0,
     analysisType
   }, requestId);
@@ -28,7 +28,7 @@ export async function performAIAnalysis(
       username: profile.username,
       summaryLength: quickSummary.length
     });
-  } 
+  }
   
   logger('info', 'Starting final AI evaluation with real engagement data', { 
     username: profile.username,
@@ -45,16 +45,19 @@ export async function performAIAnalysis(
     buildLightEvaluatorPrompt(profile, business) : 
     buildDeepEvaluatorPrompt(profile, business);
   
+  // Get OpenAI API key from centralized config
+  const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+  
   const response = await callWithRetry(
     'https://api.openai.com/v1/chat/completions',
     {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${env.OPENAI_KEY}`,
+        Authorization: `Bearer ${openaiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-5',
+        model: 'gpt-5-mini',
         messages: [{ role: 'user', content: evaluatorPrompt }],
         temperature: 0.4,
         max_tokens: analysisType === 'deep' ? 1500 : 1000,
@@ -105,7 +108,6 @@ export async function generateOutreachMessage(
 ): Promise<string> {
   logger('info', 'Generating outreach message', { username: profile.username }, requestId);
 
-  // 🔧 FIX #3: CONSISTENT NULL SAFETY WITH PROPER OPTIONAL CHAINING
   const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 ? 
     `with authentic engagement averaging ${profile.engagement?.avgLikes} likes per post` :
     `with ${profile.followersCount.toLocaleString()} followers`;
@@ -154,13 +156,17 @@ REQUIREMENTS:
 Write a compelling outreach message that would get a response.`;
 
   try {
-    if (env.CLAUDE_KEY) {
+    // Get API keys from centralized config
+    const claudeKey = await getApiKey('CLAUDE_API_KEY', env);
+    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+
+    if (claudeKey) {
       const claudeResponse = await callWithRetry(
         'https://api.anthropic.com/v1/messages',
         {
           method: 'POST',
           headers: {
-            'x-api-key': env.CLAUDE_KEY,
+            'x-api-key': claudeKey,
             'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json'
           },
@@ -185,17 +191,17 @@ Write a compelling outreach message that would get a response.`;
 
       return messageText.trim();
 
-    } else if (env.OPENAI_KEY) {
+    } else if (openaiKey) {
       const openaiResponse = await callWithRetry(
         'https://api.openai.com/v1/chat/completions',
         {
           method: 'POST',
           headers: {
-            Authorization: `Bearer ${env.OPENAI_KEY}`,
+            Authorization: `Bearer ${openaiKey}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'gpt-5',
+            model: 'gpt-5-mini',
             messages: [{ role: 'user', content: messagePrompt }],
             temperature: 0.7,
             max_tokens: 1000
@@ -225,6 +231,7 @@ Would you be interested in exploring a potential partnership? I'd love to share 
 Best regards`;
   }
 }
+
 export async function generateQuickSummary(profile: ProfileData, env: Env): Promise<string> {
   const prompt = `Generate a brief 2-3 sentence summary for this Instagram profile:
 
@@ -238,12 +245,14 @@ Verified: ${profile.isVerified ? 'Yes' : 'No'}
 Focus on who they are, what they do, and their influence level. Keep it professional and concise.`;
 
   try {
+    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+    
     const response = await callWithRetry(
       'https://api.openai.com/v1/chat/completions',
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${env.OPENAI_KEY}`,
+          Authorization: `Bearer ${openaiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -269,7 +278,6 @@ export async function generateDeepSummary(
   analysisResult: AnalysisResult,
   env: Env
 ): Promise<string> {
-  // 🔧 FIX #3: CONSISTENT NULL SAFETY WITH PROPER OPTIONAL CHAINING
   const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 ? 
     `Real engagement data: ${profile.engagement?.avgLikes} avg likes, ${profile.engagement?.avgComments} avg comments per post (${profile.engagement?.engagementRate}% rate) based on ${profile.engagement?.postsAnalyzed} posts` : 
     'No real engagement data available - profile could not be fully scraped';
@@ -306,12 +314,14 @@ Analyzing for ${business.name} (${business.industry}) targeting ${business.targe
 Create a detailed summary covering their profile strength, content quality, engagement patterns, business relevance, and collaboration potential. Be specific and actionable.`;
 
   try {
+    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+    
     const response = await callWithRetry(
       'https://api.openai.com/v1/chat/completions',
       {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${env.OPENAI_KEY}`,
+          Authorization: `Bearer ${openaiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
