@@ -1,5 +1,5 @@
 import type { Context } from 'hono';
-import { getConfigManager } from '../services/config-manager.js';
+import { getEnhancedConfigManager } from '../services/enhanced-config-manager.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { fetchJson } from '../utils/helpers.js';
