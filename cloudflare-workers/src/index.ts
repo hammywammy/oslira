@@ -138,6 +138,44 @@ app.post('/test-post', async (c) => {
   return handleTestPost(c);
 });
 
+//admin
+app.post('/admin/update-key', async (c) => {
+  const { handleUpdateApiKey } = await import('./handlers/admin.js');
+  return handleUpdateApiKey(c);
+});
+
+app.get('/admin/config-status', async (c) => {
+  const { handleGetConfigStatus } = await import('./handlers/admin.js');
+  return handleGetConfigStatus(c);
+});
+
+app.post('/admin/test-key', async (c) => {
+  const { handleTestApiKey } = await import('./handlers/admin.js');
+  return handleTestApiKey(c);
+});
+
+app.get('/admin/audit-log', async (c) => {
+  const { handleGetAuditLog } = await import('./handlers/admin.js');
+  return handleGetAuditLog(c);
+});
+
+// Internal webhook for config changes (auto-triggered)
+app.post('/internal/config-changed', async (c) => {
+  const { handleConfigChanged } = await import('./handlers/netlify-sync.js');
+  return handleConfigChanged(c);
+});
+
+// Updated config endpoint that reads from Supabase
+app.get('/config', (c) => {
+  return c.json({
+    supabaseUrl: c.env.SUPABASE_URL,
+    supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
+    workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
+    configSource: 'supabase_app_config_table',
+    message: 'Frontend should load additional config from Supabase'
+  });
+});
+
 // ===============================================================================
 // ERROR HANDLING
 // ===============================================================================
