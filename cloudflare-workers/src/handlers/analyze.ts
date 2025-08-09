@@ -176,7 +176,7 @@ export async function handleAnalyze(c: Context): Promise<Response> {
           verification_status: profileData.isVerified,
           account_type: profileData.isPrivate ? 'private' : 'public',
           analysis_timestamp: new Date().toISOString(),
-          ai_model_used: 'gpt-4o'
+          ai_model_used: 'gpt-5'
         }),
         outreach_message: outreachMessage || null,
         deep_summary: analysisResult.deep_summary || null,
