@@ -138,12 +138,6 @@ app.post('/test-post', async (c) => {
   return handleTestPost(c);
 });
 
-//admin
-app.post('/admin/update-key', async (c) => {
-  const { handleUpdateApiKey } = await import('./handlers/admin.js');
-  return handleUpdateApiKey(c);
-});
-
 // Add these enhanced admin endpoints to your existing routes
 app.post('/admin/migrate-to-aws', async (c) => {
   const { handleMigrateToAWS } = await import('./handlers/enhanced-admin.js');
