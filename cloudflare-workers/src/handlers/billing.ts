@@ -2,7 +2,7 @@ import type { Context } from 'hono';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { fetchJson } from '../utils/helpers.js';
-import { getApiKey } from '../services/config-manager.js';
+import { getApiKey } from '../services/enhanced-config-manager.js';
 
 export async function handleStripeWebhook(c: Context): Promise<Response> {
   const requestId = generateRequestId();
