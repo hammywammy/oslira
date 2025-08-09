@@ -110,12 +110,12 @@ REAL DATA FROM LAST 30 DAYS:
 Based on this REAL data, generate 3 data-driven insights and 3 actionable recommendations. 
 Return JSON: {"keyTrends": ["trend1", "trend2", "trend3"], "recommendations": ["rec1", "rec2", "rec3"], "predictions": {"nextMonth": "prediction", "trendDirection": "positive/neutral/negative", "confidence": 0.75}}`;
 
+    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
     const aiResponse = await callWithRetry(
       'https://api.openai.com/v1/chat/completions',
       {
         method: 'POST',
-        const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-
+      
       headers: {
       Authorization: `Bearer ${openaiKey}`, // ✅ CORRECT
       'Content-Type': 'application/json'
