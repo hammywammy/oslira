@@ -2,7 +2,7 @@ import type { ProfileData, AnalysisType, Env, PostData, EngagementData } from '.
 import { logger } from '../utils/logger.js';
 import { callWithRetry } from '../utils/helpers.js';
 import { validateProfileData, extractHashtags, extractMentions } from '../utils/validation.js';
-import { getApiKey } from './config-manager.js';
+import { getApiKey } from './enhanced-config-manager.js';
 
 export async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
   // Get Apify API token from centralized config
