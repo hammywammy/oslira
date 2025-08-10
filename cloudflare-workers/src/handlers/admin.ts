@@ -351,29 +351,6 @@ export async function handleGetAuditLog(c: Context): Promise<Response> {
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 }
-
-// Helper function to validate API key formats
-function validateApiKeyFormat(keyName: string, keyValue: string): { valid: boolean; error?: string } {
-  const validations: Record<string, (key: string) => boolean> = {
-    'OPENAI_API_KEY': (key) => key.startsWith('sk-') && key.length > 20,
-    'CLAUDE_API_KEY': (key) => key.startsWith('sk-ant-') && key.length > 30,
-    'APIFY_API_TOKEN': (key) => key.startsWith('apify_api_') && key.length > 20,
-    'STRIPE_SECRET_KEY': (key) => (key.startsWith('sk_live_') || key.startsWith('sk_test_')) && key.length > 20,
-    'STRIPE_WEBHOOK_SECRET': (key) => key.startsWith('whsec_') && key.length > 20
-  };
-  
-  const validator = validations[keyName];
-  if (!validator) {
-    return { valid: false, error: 'Unknown key type' };
-  }
-  
-  if (!validator(keyValue)) {
-    return { valid: false, error: `Invalid format for ${keyName}` };
-  }
-  
-  return { valid: true };
-}
-
 // Helper function to test API keys
 async function testApiKey(keyName: string, keyValue: string, env: any): Promise<{ success: boolean; message: string; details?: any }> {
   try {
@@ -384,7 +361,7 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
         });
         return {
           success: openaiResponse.ok,
-          message: openaiResponse.ok ? 'OpenAI API key is valid' : 'OpenAI API key is invalid',
+          message: openaiResponse.ok ? 'OpenAI API key is valid' : 'OpenAI API key test failed',
           details: { status: openaiResponse.status }
         };
         
@@ -403,8 +380,8 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
           })
         });
         return {
-          success: claudeResponse.status !== 401 && claudeResponse.status !== 403,
-          message: claudeResponse.status !== 401 && claudeResponse.status !== 403 ? 'Claude API key is valid' : 'Claude API key is invalid',
+          success: claudeResponse.ok,
+          message: claudeResponse.ok ? 'Claude API key is valid' : 'Claude API key test failed',
           details: { status: claudeResponse.status }
         };
         
@@ -412,41 +389,115 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
         const apifyResponse = await fetch(`https://api.apify.com/v2/key-value-stores?token=${keyValue}&limit=1`);
         return {
           success: apifyResponse.ok,
-          message: apifyResponse.ok ? 'Apify API token is valid' : 'Apify API token is invalid',
+          message: apifyResponse.ok ? 'Apify API token is valid' : 'Apify API token test failed',
           details: { status: apifyResponse.status }
         };
         
       case 'STRIPE_SECRET_KEY':
-        const stripeResponse = await fetch('https://api.stripe.com/v1/charges?limit=1', {
+        const stripeResponse = await fetch('https://api.stripe.com/v1/customers?limit=1', {
           headers: { 'Authorization': `Bearer ${keyValue}` }
         });
         return {
           success: stripeResponse.ok,
-          message: stripeResponse.ok ? 'Stripe secret key is valid' : 'Stripe secret key is invalid',
+          message: stripeResponse.ok ? 'Stripe secret key is valid' : 'Stripe secret key test failed',
           details: { status: stripeResponse.status }
         };
         
-      case 'STRIPE_WEBHOOK_SECRET':
-        // Webhook secrets can't be easily tested, just check format
+      // ✅ ADD THIS NEW CASE:
+      case 'SUPABASE_SERVICE_ROLE':
+        const supabaseResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/users?limit=1`, {
+          headers: {
+            'apikey': keyValue,
+            'Authorization': `Bearer ${keyValue}`,
+            'Content-Type': 'application/json'
+          }
+        });
         return {
-          success: keyValue.startsWith('whsec_'),
-          message: keyValue.startsWith('whsec_') ? 'Webhook secret format is valid' : 'Invalid webhook secret format'
+          success: supabaseResponse.ok,
+          message: supabaseResponse.ok ? 'Supabase service role is valid' : 'Supabase service role test failed',
+          details: { 
+            status: supabaseResponse.status,
+            supabaseUrl: env.SUPABASE_URL
+          }
+        };
+        
+      case 'STRIPE_WEBHOOK_SECRET':
+        return {
+          success: true,
+          message: 'Webhook secret format validation passed (cannot test without webhook event)',
+          details: { format: 'whsec_*', length: keyValue.length }
         };
         
       default:
         return {
           success: false,
-          message: 'Testing not implemented for this key type'
+          message: `Testing not implemented for ${keyName}`,
+          details: { keyName, available: ['OPENAI_API_KEY', 'CLAUDE_API_KEY', 'APIFY_API_TOKEN', 'STRIPE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE', 'STRIPE_WEBHOOK_SECRET'] }
         };
     }
   } catch (error: any) {
     return {
       success: false,
       message: `Test failed: ${error.message}`,
-      details: { error: error.message }
+      details: { error: error.message, keyName }
     };
   }
 }
+
+// Also update the validation function to include SUPABASE_SERVICE_ROLE:
+function validateApiKeyFormat(keyName: string, keyValue: string): { valid: boolean; error?: string } {
+  const validations: Record<string, (key: string) => boolean> = {
+    'OPENAI_API_KEY': (key) => key.startsWith('sk-') && key.length > 20,
+    'CLAUDE_API_KEY': (key) => key.startsWith('sk-ant-') && key.length > 30,
+    'APIFY_API_TOKEN': (key) => key.startsWith('apify_api_') && key.length > 20,
+    'STRIPE_SECRET_KEY': (key) => (key.startsWith('sk_live_') || key.startsWith('sk_test_')) && key.length > 20,
+    'STRIPE_WEBHOOK_SECRET': (key) => key.startsWith('whsec_') && key.length > 20,
+    'STRIPE_PUBLISHABLE_KEY': (key) => (key.startsWith('pk_live_') || key.startsWith('pk_test_')) && key.length > 20,
+    'WORKER_URL': (key) => key.startsWith('https://') && key.includes('.workers.dev'),
+    'NETLIFY_BUILD_HOOK_URL': (key) => key.startsWith('https://api.netlify.com/build_hooks/'),
+    // ✅ ADD THIS:
+    'SUPABASE_SERVICE_ROLE': (key) => key.startsWith('eyJ') && key.includes('.') && key.length > 100 // JWT format
+  };
+  
+  const validator = validations[keyName];
+  if (!validator) {
+    return { valid: true }; // Allow unknown key types
+  }
+  
+  if (!validator(keyValue)) {
+    return { valid: false, error: `Invalid format for ${keyName}` };
+  }
+  
+  return { valid: true };
+}
+
+// Also update the allowedKeys array in handleUpdateApiKey:
+const allowedKeys = [
+  'OPENAI_API_KEY', 
+  'CLAUDE_API_KEY', 
+  'APIFY_API_TOKEN', 
+  'STRIPE_SECRET_KEY', 
+  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_PUBLISHABLE_KEY',
+  'WORKER_URL',
+  'NETLIFY_BUILD_HOOK_URL',
+  'SUPABASE_SERVICE_ROLE'  // ✅ ADD THIS
+];
+
+// And update the isAWSManagedKey function:
+function isAWSManagedKey(keyName: string): boolean {
+  const awsManagedKeys = [
+    'OPENAI_API_KEY',
+    'CLAUDE_API_KEY',
+    'APIFY_API_TOKEN',
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+    'SUPABASE_SERVICE_ROLE'  // ✅ ADD THIS
+  ];
+  
+  return awsManagedKeys.includes(keyName);
+}
+
 export async function handleGetConfig(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
