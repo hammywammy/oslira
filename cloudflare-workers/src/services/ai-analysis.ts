@@ -4,9 +4,30 @@ import { callWithRetry } from '../utils/helpers.js';
 import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } from '../utils/validation.js';
 import { getApiKey } from './enhanced-config-manager.js';
 
-export async function performAIAnalysis(...): Promise<{ reply: string }> {
+export async function performAIAnalysis(
+  profile: ProfileData,
+  business: BusinessProfile,
+  analysisType: 'light' | 'deep',
+  env: Env,
+  requestId: string
+): Promise<AnalysisResult> {
+  logger('info', 'SMOKE TEST: starting GPT-5 hello check', {
+    analysisType,
+    username: profile?.username
+  }, requestId);
+
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-  const response = await callWithRetry(
+
+  // quick sanity: log key meta safely
+  logger('info', 'OpenAI key sanity', {
+    hasKey: !!openaiKey,
+    len: openaiKey?.length || 0,
+    prefix: openaiKey?.slice(0, 10) || 'NONE',
+    suffix: openaiKey?.slice(-10) || 'NONE'
+  }, requestId);
+
+  // --- Minimal GPT-5 call: say "Hello!" and capture the reply ---
+  const resp = await callWithRetry(
     'https://api.openai.com/v1/chat/completions',
     {
       method: 'POST',
@@ -18,13 +39,41 @@ export async function performAIAnalysis(...): Promise<{ reply: string }> {
         model: 'gpt-5',
         messages: [{ role: 'user', content: 'Hello!' }],
         temperature: 0,
-        max_completion_tokens: 5
+        // Important for GPT-5:
+        max_completion_tokens: 8
+        // Keep it bare for the smoke test (no response_format/schema)
       })
     }
   );
 
-  const content = response.choices?.[0]?.message?.content;
-  return { reply: content?.trim() ?? '' };
+  const choice = resp?.choices?.[0]?.message;
+  const helloText =
+    (choice as any)?.parsed // if a client inserts parsed
+    ?? (typeof choice?.content === 'string' ? choice.content : JSON.stringify(choice?.content || ''))
+    ?? '';
+
+  logger('info', 'SMOKE TEST: GPT-5 hello reply', { hello: String(helloText).slice(0, 200) }, requestId);
+
+  // --- Return a minimal, valid AnalysisResult so the rest of your app stays happy ---
+  const result: AnalysisResult = {
+    score: 0,
+    engagement_score: 0,
+    niche_fit: 0,
+    audience_quality: 'Low',
+    engagement_insights: `Hello test reply: ${String(helloText).trim() || 'NO_REPLY'}`,
+    selling_points: [],
+    reasons: ['hello-smoke-test'],
+    // if your type includes these optional fields, set them:
+    quick_summary: `Model said: ${String(helloText).trim() || 'NO_REPLY'}`,
+    deep_summary: undefined,
+    confidence_level: 0
+  };
+
+  // If you keep validateAnalysisResult, this should still pass.
+  const final = validateAnalysisResult ? validateAnalysisResult(result) : result;
+
+  logger('info', 'SMOKE TEST: completed', { ok: true }, requestId);
+  return final;
 }
 
 // ===============================================================================
