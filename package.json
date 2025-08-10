@@ -7,7 +7,6 @@
   "scripts": {
     "build": "node build-with-aws-config.js",
     "build:legacy": "node inject-env.js",
-    "build:supabase": "node build-with-supabase-config.js"
     "build:migrate": "node build-with-supabase-config.js migrate",
     "dev": "npm run build && python -m http.server 8000",
     "start": "npm run dev",
