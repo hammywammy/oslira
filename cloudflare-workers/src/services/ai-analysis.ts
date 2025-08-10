@@ -5,83 +5,82 @@ import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } f
 import { getApiKey } from './enhanced-config-manager.js';
 
 export async function performAIAnalysis(
-  profile: ProfileData,
-  business: BusinessProfile,
+  profile: any,
+  business: any,
   analysisType: 'light' | 'deep',
-  env: Env,
+  env: { OPENAI_API_KEY?: string },
   requestId: string
 ): Promise<AnalysisResult> {
+  // Minimal, always-return implementation
   let hello = 'NO_REPLY';
   let note = 'HELLO_OK';
-  let status = '';
+  let httpStatus = 'n/a';
   let raw = '';
 
   try {
-    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-    if (!openaiKey) {
-      note = 'NO_OPENAI_KEY';
+    const key = env?.OPENAI_API_KEY || (globalThis as any)?.OPENAI_API_KEY;
+    if (!key) {
+      note = 'NO_OPENAI_KEY_IN_ENV';
     } else {
-      const r = await callWithRetry(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${openaiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'gpt-5',
-            messages: [{ role: 'user', content: 'Hello!' }],
-            temperature: 0,
-            max_completion_tokens: 8
-          })
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-5',
+          messages: [{ role: 'user', content: 'Hello!' }],
+          temperature: 0,
+          max_completion_tokens: 8
+        })
+      });
+
+      httpStatus = String(res.status);
+      const text = await res.text();               // <- always get the raw body
+      raw = text.slice(0, 500);                    // <- keep short for DB
+      let data: any = undefined;
+      try { data = JSON.parse(text); } catch { /* leave as text */ }
+
+      // Surface OpenAI error object if present
+      if (!res.ok) {
+        if (data?.error) {
+          note = `OPENAI_ERROR: ${data.error.type ?? ''} ${data.error.code ?? ''} ${data.error.message ?? ''}`.trim();
+        } else {
+          note = `HTTP_${httpStatus}_NO_ERROR_BODY`;
         }
-      );
-
-      let data: any = r;
-      if (typeof r === 'string') {
-        data = JSON.parse(r);
-      } else if (r && typeof (r as any).json === 'function') {
-        status = String((r as any).status || '');
-        data = await (r as any).json();
-      }
-
-      raw = (() => {
-        try { return typeof data === 'string' ? data : JSON.stringify(data); }
-        catch { return '[raw-serialize-failed]'; }
-      })();
-
-      if (data?.error) {
-        note = `OPENAI_ERROR: ${data.error.type || ''} ${data.error.message || ''}`.trim();
-      } else if (!data?.choices?.[0]?.message) {
-        note = `NO_CHOICES_RETURNED${status ? ` (HTTP ${status})` : ''}`;
       } else {
-        const msg = data.choices[0].message as any;
-        const content =
-          msg?.parsed ??
-          (typeof msg?.content === 'string'
-            ? msg.content
-            : JSON.stringify(msg?.content || ''));
-        hello = (content || '').toString().trim() || 'EMPTY_REPLY';
+        const msg = data?.choices?.[0]?.message;
+        let content: string = '';
+        if (msg?.parsed) {
+          content = String(msg.parsed);
+        } else if (typeof msg?.content === 'string') {
+          content = msg.content;
+        } else if (Array.isArray(msg?.content)) {
+          content = msg.content.map((c: any) => c?.text ?? '').join(' ').trim();
+        }
+        hello = content || 'EMPTY_REPLY';
       }
     }
   } catch (e: any) {
-    note = `OPENAI_THROW: ${e?.status ?? ''} ${e?.message ?? ''}`.trim();
+    note = `FETCH_THROW: ${e?.message ?? 'unknown'}`;
   }
 
+  // Always return a valid AnalysisResult so your route won’t 500
   return {
     score: 1,
     engagement_score: 1,
     niche_fit: 1,
     audience_quality: 'Low',
-    engagement_insights: `HELLO_TEST: ${hello} | ${note} | STATUS:${status || 'n/a'}`,
+    engagement_insights: `HELLO_TEST: ${hello} | NOTE:${note} | STATUS:${httpStatus}`,
     selling_points: ['hello-smoke-test'],
     reasons: ['hello-smoke-test'],
-    quick_summary: `Hello: ${hello} | ${note} | ${raw.slice(0, 300)}`,
+    quick_summary: `RAW:${raw}`,           // <- first 500 chars of OpenAI response/error
     deep_summary: analysisType === 'deep' ? `Hello: ${hello}` : undefined,
     confidence_level: 1
   };
 }
+
 
 
 
