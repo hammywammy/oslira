@@ -4,6 +4,17 @@ import { callWithRetry } from '../utils/helpers.js';
 import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } from '../utils/validation.js';
 import { getApiKey } from './enhanced-config-manager.js';
 
+function parseMessageContent(choice: any): string {
+  const msg = choice?.message;
+  if (!msg) return '';
+  if (typeof msg.content === 'string') return msg.content;
+  if (Array.isArray(msg.content)) {
+    // Some SDKs return content as an array of content parts; join any text parts.
+    return msg.content.map((c: any) => (typeof c === 'string' ? c : (c?.text ?? ''))).join(' ').trim();
+  }
+  return '';
+}
+
 export async function performAIAnalysis(
   profile: ProfileData, 
   business: BusinessProfile, 
@@ -27,7 +38,7 @@ export async function performAIAnalysis(
     logger('info', 'Quick summary generated for light analysis', { 
       username: profile.username,
       summaryLength: quickSummary.length
-    });
+    }, requestId);
   }
   
   logger('info', 'Starting final AI evaluation with real engagement data', { 
@@ -48,15 +59,16 @@ export async function performAIAnalysis(
   // Get OpenAI API key from centralized config
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
 
-logger('info', 'OpenAI Key Debug Info', {
-  hasKey: !!openaiKey,
-  keyLength: openaiKey?.length || 0,
-  keyPrefix: openaiKey?.substring(0, 10) || 'NONE',
-  keySuffix: openaiKey?.substring(-10) || 'NONE',
-  keyFormat: openaiKey?.startsWith('sk-') ? 'valid_format' : 'invalid_format'
-});
+  logger('info', 'OpenAI Key Debug Info', {
+    hasKey: !!openaiKey,
+    keyLength: openaiKey?.length || 0,
+    keyPrefix: openaiKey?.substring(0, 10) || 'NONE',
+    // fix: substring(-10) → slice(-10)
+    keySuffix: openaiKey?.slice(-10) || 'NONE',
+    keyFormat: openaiKey?.startsWith('sk-') ? 'valid_format' : 'invalid_format'
+  }, requestId);
 
-  
+  // Use GPT-5 family with structured outputs (strict schema)
   const response = await callWithRetry(
     'https://api.openai.com/v1/chat/completions',
     {
@@ -67,14 +79,49 @@ logger('info', 'OpenAI Key Debug Info', {
       },
       body: JSON.stringify({
         model: 'gpt-5-mini',
-        messages: [{ role: 'user', content: evaluatorPrompt }],
+        messages: [
+          { role: 'system', content: 'You are an analysis engine. Return STRICT JSON that matches the provided schema. No prose, no markdown, no extra keys.' },
+          { role: 'user', content: evaluatorPrompt + '\n\nReturn JSON only.' }
+        ],
+        // Enough headroom for reasoning + visible JSON
         max_completion_tokens: analysisType === 'deep' ? 1500 : 1000,
-        response_format: { type: 'json_object' }
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'AnalysisResult',
+            strict: true,
+            schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                score: { type: 'integer', minimum: 0, maximum: 100 },
+                engagement_score: { type: 'integer', minimum: 0, maximum: 100 },
+                niche_fit: { type: 'integer', minimum: 0, maximum: 100 },
+                audience_quality: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+                engagement_insights: { type: 'string' },
+                selling_points: { type: 'array', items: { type: 'string' } },
+                reasons: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['score', 'engagement_score', 'niche_fit', 'audience_quality', 'engagement_insights', 'selling_points', 'reasons']
+            }
+          }
+        }
       })
     }
   );
-  
-  const result = JSON.parse(response.choices[0].message.content);
+
+  const content = parseMessageContent(response?.choices?.[0]);
+  if (!content) {
+    const fr = response?.choices?.[0]?.finish_reason || 'unknown';
+    throw new Error(`Model returned empty content (finish_reason=${fr})`);
+  }
+
+  let result: AnalysisResult;
+  try {
+    result = JSON.parse(content);
+  } catch (e: any) {
+    throw new Error(`JSON.parse failed: ${e?.message || e}. Raw: ${String(content).slice(0, 300)}`);
+  }
   
   // Generate deep summary after analysis for deep analysis
   if (analysisType === 'deep') {
@@ -83,7 +130,7 @@ logger('info', 'OpenAI Key Debug Info', {
     logger('info', 'Deep summary generated', { 
       username: profile.username,
       summaryLength: deepSummary.length
-    });
+    }, requestId);
   }
   
   const finalResult = validateAnalysisResult(result);
@@ -189,8 +236,8 @@ Write a compelling outreach message that would get a response.`;
       );
 
       let messageText = '';
-      if (claudeResponse.completion) {
-        messageText = claudeResponse.completion;
+      if ((claudeResponse as any).completion) {
+        messageText = (claudeResponse as any).completion;
       } else if (claudeResponse.content?.[0]?.text) {
         messageText = claudeResponse.content[0].text;
       } else {
@@ -210,14 +257,23 @@ Write a compelling outreach message that would get a response.`;
           },
           body: JSON.stringify({
             model: 'gpt-5-mini',
-            messages: [{ role: 'user', content: messagePrompt }],
-            max_completion_tokens: 1000
+            messages: [
+              { role: 'system', content: 'Write a single outreach message. No preface, no markdown.' },
+              { role: 'user', content: messagePrompt }
+            ],
+            // give enough headroom for visible text
+            max_completion_tokens: 512
           })
         },
         3, 1500, 25000
       );
 
-      return openaiResponse.choices[0].message.content.trim();
+      const text = parseMessageContent(openaiResponse?.choices?.[0]);
+      if (!text) {
+        const fr = openaiResponse?.choices?.[0]?.finish_reason || 'unknown';
+        throw new Error(`Empty message content (finish_reason=${fr})`);
+      }
+      return text.trim();
 
     } else {
       throw new Error('No AI service available for message generation');
@@ -264,15 +320,18 @@ Focus on who they are, what they do, and their influence level. Keep it professi
         },
         body: JSON.stringify({
           model: 'gpt-5-nano',
-          messages: [{ role: 'user', content: prompt }],
+          messages: [{ role: 'system', content: 'Write a concise professional summary in 2-3 sentences.' }, { role: 'user', content: prompt }],
           max_completion_tokens: 200
         })
       }
     );
-    
-    return response.choices[0].message.content.trim();
+
+    const text = parseMessageContent(response?.choices?.[0]);
+    if (!text) throw new Error('Empty model response');
+    return text.trim();
+
   } catch (error) {
-    logger('warn', 'Quick summary generation failed', { error });
+    logger('warn', 'Quick summary generation failed', { error }, undefined);
     // NO FAKE DATA - return clear "not available" message
     return `@${profile.username} is ${profile.isVerified ? 'a verified' : 'an'} Instagram ${profile.followersCount > 100000 ? 'influencer' : 'user'} with ${profile.followersCount.toLocaleString()} followers. ${profile.bio || 'Bio not available'}.`;
   }
@@ -332,15 +391,21 @@ Create a detailed summary covering their profile strength, content quality, enga
         },
         body: JSON.stringify({
           model: 'gpt-5-mini',
-          messages: [{ role: 'user', content: prompt }],
+          messages: [
+            { role: 'system', content: 'Write a 5–7 sentence executive analysis summary. No preface.' },
+            { role: 'user', content: prompt }
+          ],
           max_completion_tokens: 600
         })
       }
     );
-    
-    return response.choices[0].message.content.trim();
+
+    const text = parseMessageContent(response?.choices?.[0]);
+    if (!text) throw new Error('Empty model response');
+    return text.trim();
+
   } catch (error) {
-    logger('warn', 'Deep summary generation failed', { error });
+    logger('warn', 'Deep summary generation failed', { error }, undefined);
     // NO FAKE DATA - return clear analysis based on available data
     return `Comprehensive analysis of @${profile.username}: ${profile.isVerified ? 'Verified' : 'Unverified'} profile with ${profile.followersCount.toLocaleString()} followers and ${analysisResult.score}/100 business compatibility score. Engagement rate of ${profile.engagement?.engagementRate || 'unknown'}% indicates ${analysisResult.audience_quality.toLowerCase()} audience quality. Content alignment and partnership potential require further evaluation based on specific business objectives and campaign requirements.`;
   }
@@ -465,7 +530,7 @@ RETURN ONLY THIS JSON:
   "engagement_score": <1–100 based on calculated engagement rate vs benchmarks>,
   "niche_fit": <1–100 content/audience alignment with business>,
   "audience_quality": "<High/Medium/Low>",
-  "engagement_insights": "AUDIENCE QUALITY ANALYSIS: [High/Medium/Low] – [Explanation includes: engagement rate vs industry benchmarks, comment-to-like ratio, post consistency, authenticity signals, follower quality, and overall audience behavior]. ${hasRealData ? 'REAL DATA ANALYSIS: Based on actual engagement metrics from ' + e?.postsAnalyzed + ' recent posts.' : e?.postsAnalyzed === 0 ? 'This user has no public posts or their account is private. Engagement data is unavailable.' : 'ESTIMATED ANALYSIS: Limited data available – analysis based on profile signals only with reduced confidence.'}"
+  "engagement_insights": "AUDIENCE QUALITY ANALYSIS: [High/Medium/Low] – [Explanation includes: engagement rate vs industry benchmarks, comment-to-like ratio, post consistency, authenticity signals, follower quality, and overall audience behavior]. ${hasRealData ? 'REAL DATA ANALYSIS: Based on actual engagement metrics from ' + e?.postsAnalyzed + ' recent posts.' : e?.postsAnalyzed === 0 ? 'This user has no public posts or their account is private. Engagement data is unavailable.' : 'ESTIMATED ANALYSIS: Limited data available – analysis based on profile signals only with reduced confidence.'}",
   "selling_points": ["<specific collaboration advantage based on audience quality findings>"],
   "reasons": ["<why this profile is/isn't ideal for collaboration with detailed audience analysis>"]
 }
