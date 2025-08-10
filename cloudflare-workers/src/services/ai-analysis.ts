@@ -69,7 +69,7 @@ logger('info', 'OpenAI Key Debug Info', {
         model: 'gpt-5',
         messages: [{ role: 'user', content: evaluatorPrompt }],
         temperature: 0.4,
-        max_tokens: analysisType === 'deep' ? 1500 : 1000,
+        max_completion_tokens: analysisType === 'deep' ? 1500 : 1000,
         response_format: { type: 'json_object' }
       })
     }
