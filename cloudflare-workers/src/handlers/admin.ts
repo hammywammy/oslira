@@ -447,3 +447,39 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
     };
   }
 }
+export async function handleGetConfig(c: Context): Promise<Response> {
+  const requestId = generateRequestId();
+  
+  try {
+    // Verify admin access
+    if (!verifyAdminAccess(c)) {
+      return c.json(createStandardResponse(false, undefined, 'Unauthorized access', requestId), 401);
+    }
+    
+    const { keyName } = await c.req.json();
+    
+    if (!keyName) {
+      return c.json(createStandardResponse(false, undefined, 'keyName is required', requestId), 400);
+    }
+    
+    // Get value using enhanced config manager
+    const configManager = getEnhancedConfigManager(c.env);
+    const value = await configManager.getConfig(keyName);
+    
+    if (!value) {
+      return c.json(createStandardResponse(false, undefined, `${keyName} not found`, requestId), 404);
+    }
+    
+    logger('info', 'Config value retrieved via admin API', { keyName, requestId });
+    
+    return c.json(createStandardResponse(true, {
+      keyName,
+      value,
+      source: isAWSManagedKey(keyName) ? 'aws' : 'supabase'
+    }, undefined, requestId));
+    
+  } catch (error: any) {
+    logger('error', 'Failed to get config value', { error: error.message, requestId });
+    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
+  }
+}
