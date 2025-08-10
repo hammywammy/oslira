@@ -34,13 +34,50 @@ app.get('/', (c) => {
 
 app.get('/health', (c) => c.json({ status: 'healthy', timestamp: new Date().toISOString() }));
 
-app.get('/config', (c) => {
-  const baseUrl = new URL(c.req.url).origin.replace(/\/$/, '');
-  return c.json({
-    supabaseUrl: c.env.SUPABASE_URL,
-    supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
-    workerUrl: baseUrl
-  });
+app.get('/config', async (c) => {
+  try {
+    const { getEnhancedConfigManager } = await import('./services/enhanced-config-manager.js');
+    const configManager = getEnhancedConfigManager(c.env);
+    
+    // Get SUPABASE_ANON_KEY from AWS/Supabase instead of environment
+    const supabaseAnonKey = await configManager.getConfig('SUPABASE_ANON_KEY');
+    
+    if (!supabaseAnonKey) {
+      // Fallback to environment variable if not found in AWS/Supabase
+      const fallbackKey = c.env.SUPABASE_ANON_KEY;
+      if (!fallbackKey) {
+        logger('error', 'SUPABASE_ANON_KEY not found in any source');
+        return c.json({ error: 'Configuration incomplete' }, 500);
+      }
+      return c.json({
+        supabaseUrl: c.env.SUPABASE_URL,
+        supabaseAnonKey: fallbackKey,
+        workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
+        configSource: 'environment_fallback',
+        message: 'Using fallback configuration'
+      });
+    }
+
+    return c.json({
+      supabaseUrl: c.env.SUPABASE_URL,
+      supabaseAnonKey: supabaseAnonKey,
+      workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
+      configSource: 'enhanced_config_manager',
+      message: 'Configuration loaded from AWS/Supabase'
+    });
+    
+  } catch (error: any) {
+    logger('error', 'Config endpoint error', { error: error.message });
+    
+    // Final fallback to environment variables
+    return c.json({
+      supabaseUrl: c.env.SUPABASE_URL,
+      supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
+      workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
+      configSource: 'environment_emergency_fallback',
+      message: 'Using emergency fallback configuration'
+    });
+  }
 });
 
 // ===============================================================================
