@@ -8,50 +8,37 @@ export async function performAIAnalysis(
   profile: any,
   business: any,
   analysisType: 'light' | 'deep',
-  env: { OPENAI_API_KEY?: string },
+  env: Env,
   requestId: string
 ): Promise<AnalysisResult> {
-  const key = env?.OPENAI_API_KEY || (globalThis as any)?.OPENAI_API_KEY;
-  const keyInfo = key ? `KEY_OK:${key.slice(0,6)}...${key.slice(-4)}` : 'NO_KEY';
-
   let status = 'n/a';
-  let headersOut = '';
   let bodyOut = '';
   let note = 'HELLO_OK';
 
   try {
+    // ← use your standard secret path
+    const key = await getApiKey('OPENAI_API_KEY', env);
     if (!key) {
-      note = 'NO_OPENAI_KEY_IN_ENV';
+      note = 'NO_OPENAI_KEY_FROM_getApiKey';
     } else {
-      const reqBody = {
-        model: 'gpt-5',
-        messages: [{ role: 'user', content: 'Hello!' }],
-        temperature: 0,
-        max_completion_tokens: 8
-      };
-
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${key}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(reqBody)
+        body: JSON.stringify({
+          model: 'gpt-5',
+          messages: [{ role: 'user', content: 'Hello!' }],
+          temperature: 0,
+          max_completion_tokens: 8
+        })
       });
 
       status = String(res.status);
-
-      // capture headers (a few useful ones)
-      const wanted = ['content-type','x-request-id','openai-processing-ms','openai-model','www-authenticate'];
-      headersOut = wanted
-        .map(h => `${h}:${res.headers.get(h) ?? ''}`)
-        .join(' | ');
-
-      // read body as text ALWAYS
       const txt = await res.text();
       bodyOut = (txt || '').slice(0, 800);
 
-      // try to extract the message if OK
       if (res.ok) {
         try {
           const data = JSON.parse(txt);
@@ -61,18 +48,22 @@ export async function performAIAnalysis(
             : Array.isArray(msg?.content)
               ? msg.content.map((c: any) => c?.text ?? '').join(' ').trim()
               : '';
-          if (!content) note = 'OK_BUT_EMPTY_CONTENT';
-          else note = 'OK_WITH_CONTENT';
-          bodyOut = content || bodyOut; // prefer content
+          bodyOut = content || bodyOut;
+          note = content ? 'OK_WITH_CONTENT' : 'OK_BUT_EMPTY_CONTENT';
         } catch {
           note = 'OK_BUT_JSON_PARSE_FAILED';
         }
       } else {
-        // Non-OK: try to parse error for clarity
         try {
           const err = JSON.parse(bodyOut);
-          if (err?.error?.message) note = `OPENAI_ERROR: ${err.error.type || ''} ${err.error.code || ''} ${err.error.message}`;
-        } catch { /* leave note */ }
+          if (err?.error?.message) {
+            note = `OPENAI_ERROR: ${err.error.type || ''} ${err.error.code || ''} ${err.error.message}`;
+          } else if (!bodyOut) {
+            note = `HTTP_${status}_EMPTY_BODY`;
+          }
+        } catch {
+          if (!bodyOut) note = `HTTP_${status}_EMPTY_BODY`;
+        }
       }
     }
   } catch (e: any) {
@@ -84,17 +75,14 @@ export async function performAIAnalysis(
     engagement_score: 1,
     niche_fit: 1,
     audience_quality: 'Low',
-    engagement_insights: `STATUS:${status} | ${note} | ${keyInfo} | H:${headersOut}`,
+    engagement_insights: `STATUS:${status} | ${note}`,
     selling_points: ['hello-smoke-test'],
     reasons: ['hello-smoke-test'],
-    quick_summary: `RAW:${bodyOut}`, // <- show either content or raw error JSON/text
-    deep_summary: analysisType === 'deep' ? undefined : undefined,
+    quick_summary: `RAW:${bodyOut}`,
+    deep_summary: undefined,
     confidence_level: 1
   };
 }
-
-
-
 
 // ===============================================================================
 // OUTREACH MESSAGE GENERATION
