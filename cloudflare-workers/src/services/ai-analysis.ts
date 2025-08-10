@@ -30,7 +30,7 @@ export async function performAIAnalysis(
         body: JSON.stringify({
           model: 'gpt-5',
           messages: [{ role: 'user', content: 'Hello!' }],
-          max_completion_tokens: 8
+          max_completion_tokens: 800
         })
       });
 
