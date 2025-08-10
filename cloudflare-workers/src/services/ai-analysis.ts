@@ -11,20 +11,56 @@ export async function performAIAnalysis(
   env: Env,
   requestId: string
 ): Promise<AnalysisResult> {
-  // Do not touch env, do not import anything, do not throw.
+  let hello = 'NO_REPLY';
+  let note = 'HELLO_OK';
+
+  try {
+    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+    if (!openaiKey) {
+      note = 'NO_OPENAI_KEY';
+    } else {
+      const resp = await callWithRetry(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'gpt-5',
+            messages: [{ role: 'user', content: 'Hello!' }],
+            temperature: 0,
+            max_completion_tokens: 8
+          })
+        }
+      );
+
+      const msg = resp?.choices?.[0]?.message as any;
+      hello =
+        msg?.parsed ??
+        (typeof msg?.content === 'string' ? msg.content : JSON.stringify(msg?.content || ''));
+      hello = (hello || '').toString().trim() || 'EMPTY_REPLY';
+    }
+  } catch (e: any) {
+    // capture the upstream error text/status instead of throwing
+    note = `OPENAI_ERROR: ${e?.status ?? ''} ${e?.message ?? ''}`.trim();
+  }
+
   return {
     score: 1,
     engagement_score: 1,
     niche_fit: 1,
     audience_quality: 'Low',
-    engagement_insights: 'HELLO_OK',
+    engagement_insights: `HELLO_TEST: ${hello} | ${note}`,
     selling_points: ['hello-smoke-test'],
     reasons: ['hello-smoke-test'],
-    quick_summary: 'Hello smoke test',
-    deep_summary: analysisType === 'deep' ? 'Hello deep smoke test' : undefined,
+    quick_summary: `Hello: ${hello}`,
+    deep_summary: analysisType === 'deep' ? `Hello: ${hello}` : undefined,
     confidence_level: 1
   };
 }
+
 
 // ===============================================================================
 // OUTREACH MESSAGE GENERATION
