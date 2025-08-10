@@ -11,72 +11,84 @@ export async function performAIAnalysis(
   env: { OPENAI_API_KEY?: string },
   requestId: string
 ): Promise<AnalysisResult> {
-  // Minimal, always-return implementation
-  let hello = 'NO_REPLY';
+  const key = env?.OPENAI_API_KEY || (globalThis as any)?.OPENAI_API_KEY;
+  const keyInfo = key ? `KEY_OK:${key.slice(0,6)}...${key.slice(-4)}` : 'NO_KEY';
+
+  let status = 'n/a';
+  let headersOut = '';
+  let bodyOut = '';
   let note = 'HELLO_OK';
-  let httpStatus = 'n/a';
-  let raw = '';
 
   try {
-    const key = env?.OPENAI_API_KEY || (globalThis as any)?.OPENAI_API_KEY;
     if (!key) {
       note = 'NO_OPENAI_KEY_IN_ENV';
     } else {
+      const reqBody = {
+        model: 'gpt-5',
+        messages: [{ role: 'user', content: 'Hello!' }],
+        temperature: 0,
+        max_completion_tokens: 8
+      };
+
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${key}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model: 'gpt-5',
-          messages: [{ role: 'user', content: 'Hello!' }],
-          temperature: 0,
-          max_completion_tokens: 8
-        })
+        body: JSON.stringify(reqBody)
       });
 
-      httpStatus = String(res.status);
-      const text = await res.text();               // <- always get the raw body
-      raw = text.slice(0, 500);                    // <- keep short for DB
-      let data: any = undefined;
-      try { data = JSON.parse(text); } catch { /* leave as text */ }
+      status = String(res.status);
 
-      // Surface OpenAI error object if present
-      if (!res.ok) {
-        if (data?.error) {
-          note = `OPENAI_ERROR: ${data.error.type ?? ''} ${data.error.code ?? ''} ${data.error.message ?? ''}`.trim();
-        } else {
-          note = `HTTP_${httpStatus}_NO_ERROR_BODY`;
+      // capture headers (a few useful ones)
+      const wanted = ['content-type','x-request-id','openai-processing-ms','openai-model','www-authenticate'];
+      headersOut = wanted
+        .map(h => `${h}:${res.headers.get(h) ?? ''}`)
+        .join(' | ');
+
+      // read body as text ALWAYS
+      const txt = await res.text();
+      bodyOut = (txt || '').slice(0, 800);
+
+      // try to extract the message if OK
+      if (res.ok) {
+        try {
+          const data = JSON.parse(txt);
+          const msg = data?.choices?.[0]?.message;
+          const content = typeof msg?.content === 'string'
+            ? msg.content
+            : Array.isArray(msg?.content)
+              ? msg.content.map((c: any) => c?.text ?? '').join(' ').trim()
+              : '';
+          if (!content) note = 'OK_BUT_EMPTY_CONTENT';
+          else note = 'OK_WITH_CONTENT';
+          bodyOut = content || bodyOut; // prefer content
+        } catch {
+          note = 'OK_BUT_JSON_PARSE_FAILED';
         }
       } else {
-        const msg = data?.choices?.[0]?.message;
-        let content: string = '';
-        if (msg?.parsed) {
-          content = String(msg.parsed);
-        } else if (typeof msg?.content === 'string') {
-          content = msg.content;
-        } else if (Array.isArray(msg?.content)) {
-          content = msg.content.map((c: any) => c?.text ?? '').join(' ').trim();
-        }
-        hello = content || 'EMPTY_REPLY';
+        // Non-OK: try to parse error for clarity
+        try {
+          const err = JSON.parse(bodyOut);
+          if (err?.error?.message) note = `OPENAI_ERROR: ${err.error.type || ''} ${err.error.code || ''} ${err.error.message}`;
+        } catch { /* leave note */ }
       }
     }
   } catch (e: any) {
     note = `FETCH_THROW: ${e?.message ?? 'unknown'}`;
   }
 
-  // Always return a valid AnalysisResult so your route won’t 500
   return {
     score: 1,
     engagement_score: 1,
     niche_fit: 1,
     audience_quality: 'Low',
-    engagement_insights: `HELLO_TEST: ${hello} | NOTE:${note} | STATUS:${httpStatus}`,
+    engagement_insights: `STATUS:${status} | ${note} | ${keyInfo} | H:${headersOut}`,
     selling_points: ['hello-smoke-test'],
     reasons: ['hello-smoke-test'],
-    quick_summary: `RAW:${raw}`,           // <- first 500 chars of OpenAI response/error
-    deep_summary: analysisType === 'deep' ? `Hello: ${hello}` : undefined,
+    quick_summary: `RAW:${bodyOut}`, // <- show either content or raw error JSON/text
+    deep_summary: analysisType === 'deep' ? undefined : undefined,
     confidence_level: 1
   };
 }
