@@ -19,7 +19,7 @@ export async function performAIAnalysis(
     analysisType
   }, requestId);
   
-  let quickSummary: string | undefined;F
+  let quickSummary: string | undefined;
   let deepSummary: string | undefined;
   
   if (analysisType === 'light') {
