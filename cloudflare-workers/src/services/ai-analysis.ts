@@ -38,17 +38,12 @@ export async function performAIAnalysis(
         }
       );
 
-      // Normalize to JSON
       let data: any = r;
-      try {
-        if (r && typeof r === 'object' && typeof (r as any).json === 'function') {
-          status = String((r as any).status || '');
-          data = await (r as any).json();
-        } else if (typeof r === 'string') {
-          data = JSON.parse(r);
-        }
-      } catch (e: any) {
-        note = `PARSE_ERROR: ${e?.message || 'unknown'}`;
+      if (typeof r === 'string') {
+        data = JSON.parse(r);
+      } else if (r && typeof (r as any).json === 'function') {
+        status = String((r as any).status || '');
+        data = await (r as any).json();
       }
 
       raw = (() => {
@@ -56,9 +51,8 @@ export async function performAIAnalysis(
         catch { return '[raw-serialize-failed]'; }
       })();
 
-      // Surface OpenAI-style errors explicitly
       if (data?.error) {
-        note = `OPENAI_ERROR: ${data.error.type || ''} ${data.error.code || ''} ${data.error.message || ''}`.trim();
+        note = `OPENAI_ERROR: ${data.error.type || ''} ${data.error.message || ''}`.trim();
       } else if (!data?.choices?.[0]?.message) {
         note = `NO_CHOICES_RETURNED${status ? ` (HTTP ${status})` : ''}`;
       } else {
@@ -67,10 +61,7 @@ export async function performAIAnalysis(
           msg?.parsed ??
           (typeof msg?.content === 'string'
             ? msg.content
-            : (Array.isArray(msg?.content)
-                ? msg.content.map((c: any) => c?.text ?? '').join(' ')
-                : JSON.stringify(msg?.content || '')));
-
+            : JSON.stringify(msg?.content || ''));
         hello = (content || '').toString().trim() || 'EMPTY_REPLY';
       }
     }
