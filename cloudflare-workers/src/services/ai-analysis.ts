@@ -210,10 +210,10 @@ Write a compelling outreach message that would get a response.`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'gpt-4o',
+            model: 'gpt-5',
             messages: [{ role: 'user', content: messagePrompt }],
             temperature: 0.7,
-            max_tokens: 1000
+            max_completion_tokens: 1000
           })
         },
         3, 1500, 25000
@@ -265,10 +265,10 @@ Focus on who they are, what they do, and their influence level. Keep it professi
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-5',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.3,
-          max_tokens: 200
+          max_completion_tokens: 200
         })
       }
     );
@@ -334,10 +334,10 @@ Create a detailed summary covering their profile strength, content quality, enga
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-5',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.4,
-          max_tokens: 600
+          max_completion_tokens: 600
         })
       }
     );
