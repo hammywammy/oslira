@@ -1,7 +1,7 @@
 import type { ProfileData, BusinessProfile, AnalysisResult, Env } from '../types/interfaces.js';
 import { logger } from '../utils/logger.js';
 import { callWithRetry } from '../utils/helpers.js';
-import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } from '../utils/validation.js';
+import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } from '../utils/validation.js'; 
 import { getApiKey } from './enhanced-config-manager.js';
 
 function parseMessageContent(choice: any): string {
