@@ -19,7 +19,7 @@ export async function performAIAnalysis(
     analysisType
   }, requestId);
   
-  let quickSummary: string | undefined;
+  let quickSummary: string | undefined;F
   let deepSummary: string | undefined;
   
   if (analysisType === 'light') {
@@ -66,7 +66,7 @@ logger('info', 'OpenAI Key Debug Info', {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-5',
         messages: [{ role: 'user', content: evaluatorPrompt }],
         temperature: 0.4,
         max_tokens: analysisType === 'deep' ? 1500 : 1000,
