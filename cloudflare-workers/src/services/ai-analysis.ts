@@ -4,59 +4,8 @@ import { callWithRetry } from '../utils/helpers.js';
 import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } from '../utils/validation.js';
 import { getApiKey } from './enhanced-config-manager.js';
 
-export async function performAIAnalysis(
-  profile: ProfileData, 
-  business: BusinessProfile, 
-  analysisType: 'light' | 'deep', 
-  env: Env, 
-  requestId: string
-): Promise<AnalysisResult> {
-  logger('info', `Starting AI analysis using real engagement data`, { 
-    username: profile.username,
-    dataQuality: profile.dataQuality,
-    scraperUsed: profile.scraperUsed,
-    hasRealEngagement: (profile.engagement?.postsAnalyzed || 0) > 0,
-    analysisType
-  }, requestId);
-  
-  let quickSummary: string | undefined;
-  let deepSummary: string | undefined;
-  
-  if (analysisType === 'light') {
-    quickSummary = await generateQuickSummary(profile, env);
-    logger('info', 'Quick summary generated for light analysis', { 
-      username: profile.username,
-      summaryLength: quickSummary.length
-    });
-  }
-  
-  logger('info', 'Starting final AI evaluation with real engagement data', { 
-    username: profile.username,
-    hasRealEngagement: (profile.engagement?.postsAnalyzed || 0) > 0,
-    realDataStats: profile.engagement ? {
-      avgLikes: profile.engagement.avgLikes,
-      avgComments: profile.engagement.avgComments,
-      engagementRate: profile.engagement.engagementRate,
-      postsAnalyzed: profile.engagement.postsAnalyzed
-    } : 'no_real_data'
-  }, requestId);
-  
-  const evaluatorPrompt = analysisType === 'light' ? 
-    buildLightEvaluatorPrompt(profile, business) : 
-    buildDeepEvaluatorPrompt(profile, business);
-  
-  // Get OpenAI API key from centralized config
+export async function performAIAnalysis(...): Promise<{ reply: string }> {
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-
-logger('info', 'OpenAI Key Debug Info', {
-  hasKey: !!openaiKey,
-  keyLength: openaiKey?.length || 0,
-  keyPrefix: openaiKey?.substring(0, 10) || 'NONE',
-  keySuffix: openaiKey?.substring(-10) || 'NONE',
-  keyFormat: openaiKey?.startsWith('sk-') ? 'valid_format' : 'invalid_format'
-});
-
-  
   const response = await callWithRetry(
     'https://api.openai.com/v1/chat/completions',
     {
@@ -67,46 +16,15 @@ logger('info', 'OpenAI Key Debug Info', {
       },
       body: JSON.stringify({
         model: 'gpt-5',
-        messages: [{ role: 'user', content: evaluatorPrompt }],
-        temperature: 0.4,
-        max_completion_tokens: analysisType === 'deep' ? 1500 : 1000,
-        response_format: { type: 'json_object' }
+        messages: [{ role: 'user', content: 'Hello!' }],
+        temperature: 0,
+        max_completion_tokens: 5
       })
     }
   );
-  
-  const choice = response.choices?.[0]?.message;
-  const parsed = (choice as any)?.parsed;
-  const content = choice?.content;
-  const result = parsed ?? JSON.parse(
-  typeof content === 'string' ? content : JSON.stringify(content)
-  );
- 
-  // Generate deep summary after analysis for deep analysis
-  if (analysisType === 'deep') {
-    const preliminaryResult = validateAnalysisResult(result);
-    deepSummary = await generateDeepSummary(profile, business, preliminaryResult, env);
-    logger('info', 'Deep summary generated', { 
-      username: profile.username,
-      summaryLength: deepSummary.length
-    });
-  }
-  
-  const finalResult = validateAnalysisResult(result);
-  finalResult.quick_summary = quickSummary;
-  finalResult.deep_summary = deepSummary;
-  finalResult.confidence_level = calculateConfidenceLevel(profile, analysisType);
-  
-  logger('info', `AI analysis completed using real engagement data`, { 
-    username: profile.username, 
-    score: finalResult.score,
-    engagementScore: finalResult.engagement_score,
-    nicheFit: finalResult.niche_fit,
-    confidence: finalResult.confidence_level,
-    usedRealData: (profile.engagement?.postsAnalyzed || 0) > 0
-  }, requestId);
-  
-  return finalResult;
+
+  const content = response.choices?.[0]?.message?.content;
+  return { reply: content?.trim() ?? '' };
 }
 
 // ===============================================================================
