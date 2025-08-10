@@ -92,8 +92,7 @@ async function buildWithAWSConfig() {
 window.CONFIG = ${JSON.stringify(config, null, 2)};
 
 console.log('✅ Configuration loaded from AWS + Supabase');
-console.log('🔧 Available services:', Object.keys(window.CONFIG));
-console.log('🔐 SUPABASE_SERVICE_ROLE source: AWS Secrets Manager');`;
+`;
 
     // Write to public directory
     const fs = await import('fs');
