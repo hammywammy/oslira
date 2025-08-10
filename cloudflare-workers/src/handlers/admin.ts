@@ -5,7 +5,7 @@ import { createStandardResponse } from '../utils/response.js';
 import { fetchJson } from '../utils/helpers.js';
  
 interface ConfigUpdateRequest {
-  keyName: string;
+  keyName: string; 
   newValue: string;
   adminToken?: string;
 }
