@@ -13,6 +13,7 @@ export async function performAIAnalysis(
 ): Promise<AnalysisResult> {
   let hello = 'NO_REPLY';
   let note = 'HELLO_OK';
+  let status = '';
   let raw = '';
 
   try {
@@ -37,41 +38,44 @@ export async function performAIAnalysis(
         }
       );
 
-      // --- Normalize to JSON regardless of what callWithRetry returns ---
+      // Normalize to JSON
       let data: any = r;
       try {
-        if (r && typeof r === 'object') {
-          // If it's a fetch Response-like object
-          if (typeof (r as any).json === 'function') {
-            data = await (r as any).json();
-          } else {
-            data = r; // already JSON-like
-          }
+        if (r && typeof r === 'object' && typeof (r as any).json === 'function') {
+          status = String((r as any).status || '');
+          data = await (r as any).json();
         } else if (typeof r === 'string') {
-          try { data = JSON.parse(r); } catch { data = r; }
+          data = JSON.parse(r);
         }
-      } catch (e) {
-        note = `PARSE_STAGE_ERROR: ${(e as any)?.message || 'unknown'}`;
+      } catch (e: any) {
+        note = `PARSE_ERROR: ${e?.message || 'unknown'}`;
       }
 
       raw = (() => {
         try { return typeof data === 'string' ? data : JSON.stringify(data); }
-        catch { return '[raw-body-serialize-failed]'; }
+        catch { return '[raw-serialize-failed]'; }
       })();
 
-      const choice = data?.choices?.[0]?.message as any;
-      const content =
-        choice?.parsed ??
-        (typeof choice?.content === 'string'
-          ? choice.content
-          : (Array.isArray(choice?.content)
-              ? choice.content.map((c: any) => c?.text ?? '').join(' ')
-              : JSON.stringify(choice?.content || '')));
+      // Surface OpenAI-style errors explicitly
+      if (data?.error) {
+        note = `OPENAI_ERROR: ${data.error.type || ''} ${data.error.code || ''} ${data.error.message || ''}`.trim();
+      } else if (!data?.choices?.[0]?.message) {
+        note = `NO_CHOICES_RETURNED${status ? ` (HTTP ${status})` : ''}`;
+      } else {
+        const msg = data.choices[0].message as any;
+        const content =
+          msg?.parsed ??
+          (typeof msg?.content === 'string'
+            ? msg.content
+            : (Array.isArray(msg?.content)
+                ? msg.content.map((c: any) => c?.text ?? '').join(' ')
+                : JSON.stringify(msg?.content || '')));
 
-      hello = (content || '').toString().trim() || 'EMPTY_REPLY';
+        hello = (content || '').toString().trim() || 'EMPTY_REPLY';
+      }
     }
   } catch (e: any) {
-    note = `OPENAI_ERROR: ${e?.status ?? ''} ${e?.message ?? ''}`.trim();
+    note = `OPENAI_THROW: ${e?.status ?? ''} ${e?.message ?? ''}`.trim();
   }
 
   return {
@@ -79,10 +83,10 @@ export async function performAIAnalysis(
     engagement_score: 1,
     niche_fit: 1,
     audience_quality: 'Low',
-    engagement_insights: `HELLO_TEST: ${hello} | ${note} | RAW:${raw.slice(0,500)}`,
+    engagement_insights: `HELLO_TEST: ${hello} | ${note} | STATUS:${status || 'n/a'}`,
     selling_points: ['hello-smoke-test'],
     reasons: ['hello-smoke-test'],
-    quick_summary: `Hello: ${hello}`,
+    quick_summary: `Hello: ${hello} | ${note} | ${raw.slice(0, 300)}`,
     deep_summary: analysisType === 'deep' ? `Hello: ${hello}` : undefined,
     confidence_level: 1
   };
