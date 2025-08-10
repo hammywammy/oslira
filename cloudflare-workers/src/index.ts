@@ -170,6 +170,11 @@ app.post('/admin/test-key', async (c) => {
   return handleTestApiKey(c);
 });
 
+app.post('/admin/get-config', async (c) => {
+  const { handleGetConfig } = await import('./handlers/admin.js');
+  return handleGetConfig(c);
+});
+
 // Updated config endpoint that reads from Supabase
 app.get('/config', (c) => {
   return c.json({
