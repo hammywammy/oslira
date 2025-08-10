@@ -5,82 +5,102 @@ import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } f
 import { getApiKey } from './enhanced-config-manager.js';
 
 export async function performAIAnalysis(
-  profile: any,
-  business: any,
-  analysisType: 'light' | 'deep',
-  env: Env,
+  profile: ProfileData, 
+  business: BusinessProfile, 
+  analysisType: 'light' | 'deep', 
+  env: Env, 
   requestId: string
 ): Promise<AnalysisResult> {
-  let status = 'n/a';
-  let bodyOut = '';
-  let note = 'HELLO_OK';
-
-  try {
-    // ← use your standard secret path
-    const key = await getApiKey('OPENAI_API_KEY', env);
-    if (!key) {
-      note = 'NO_OPENAI_KEY_FROM_getApiKey';
-    } else {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${key}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'gpt-5',
-          messages: [{ role: 'user', content: 'Hello!' }],
-          max_completion_tokens: 800
-        })
-      });
-
-      status = String(res.status);
-      const txt = await res.text();
-      bodyOut = (txt || '').slice(0, 800);
-
-      if (res.ok) {
-        try {
-          const data = JSON.parse(txt);
-          const msg = data?.choices?.[0]?.message;
-          const content = typeof msg?.content === 'string'
-            ? msg.content
-            : Array.isArray(msg?.content)
-              ? msg.content.map((c: any) => c?.text ?? '').join(' ').trim()
-              : '';
-          bodyOut = content || bodyOut;
-          note = content ? 'OK_WITH_CONTENT' : 'OK_BUT_EMPTY_CONTENT';
-        } catch {
-          note = 'OK_BUT_JSON_PARSE_FAILED';
-        }
-      } else {
-        try {
-          const err = JSON.parse(bodyOut);
-          if (err?.error?.message) {
-            note = `OPENAI_ERROR: ${err.error.type || ''} ${err.error.code || ''} ${err.error.message}`;
-          } else if (!bodyOut) {
-            note = `HTTP_${status}_EMPTY_BODY`;
-          }
-        } catch {
-          if (!bodyOut) note = `HTTP_${status}_EMPTY_BODY`;
-        }
-      }
-    }
-  } catch (e: any) {
-    note = `FETCH_THROW: ${e?.message ?? 'unknown'}`;
+  logger('info', `Starting AI analysis using real engagement data`, { 
+    username: profile.username,
+    dataQuality: profile.dataQuality,
+    scraperUsed: profile.scraperUsed,
+    hasRealEngagement: (profile.engagement?.postsAnalyzed || 0) > 0,
+    analysisType
+  }, requestId);
+  
+  let quickSummary: string | undefined;
+  let deepSummary: string | undefined;
+  
+  if (analysisType === 'light') {
+    quickSummary = await generateQuickSummary(profile, env);
+    logger('info', 'Quick summary generated for light analysis', { 
+      username: profile.username,
+      summaryLength: quickSummary.length
+    });
   }
+  
+  logger('info', 'Starting final AI evaluation with real engagement data', { 
+    username: profile.username,
+    hasRealEngagement: (profile.engagement?.postsAnalyzed || 0) > 0,
+    realDataStats: profile.engagement ? {
+      avgLikes: profile.engagement.avgLikes,
+      avgComments: profile.engagement.avgComments,
+      engagementRate: profile.engagement.engagementRate,
+      postsAnalyzed: profile.engagement.postsAnalyzed
+    } : 'no_real_data'
+  }, requestId);
+  
+  const evaluatorPrompt = analysisType === 'light' ? 
+    buildLightEvaluatorPrompt(profile, business) : 
+    buildDeepEvaluatorPrompt(profile, business);
+  
+  // Get OpenAI API key from centralized config
+  const openaiKey = await getApiKey('OPENAI_API_KEY', env);
 
-  return {
-    score: 1,
-    engagement_score: 1,
-    niche_fit: 1,
-    audience_quality: 'Low',
-    engagement_insights: `STATUS:${status} | ${note}`,
-    selling_points: ['hello-smoke-test'],
-    reasons: ['hello-smoke-test'],
-    quick_summary: `RAW:${bodyOut}`,
-    deep_summary: undefined,
-    confidence_level: 1
-  };
+logger('info', 'OpenAI Key Debug Info', {
+  hasKey: !!openaiKey,
+  keyLength: openaiKey?.length || 0,
+  keyPrefix: openaiKey?.substring(0, 10) || 'NONE',
+  keySuffix: openaiKey?.substring(-10) || 'NONE',
+  keyFormat: openaiKey?.startsWith('sk-') ? 'valid_format' : 'invalid_format'
+});
+
+  
+  const response = await callWithRetry(
+    'https://api.openai.com/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-5-mini',
+        messages: [{ role: 'user', content: evaluatorPrompt }],
+        max_completion_tokens: analysisType === 'deep' ? 1500 : 1000,
+        response_format: { type: 'json_object' }
+      })
+    }
+  );
+  
+  const result = JSON.parse(response.choices[0].message.content);
+  
+  // Generate deep summary after analysis for deep analysis
+  if (analysisType === 'deep') {
+    const preliminaryResult = validateAnalysisResult(result);
+    deepSummary = await generateDeepSummary(profile, business, preliminaryResult, env);
+    logger('info', 'Deep summary generated', { 
+      username: profile.username,
+      summaryLength: deepSummary.length
+    });
+  }
+  
+  const finalResult = validateAnalysisResult(result);
+  finalResult.quick_summary = quickSummary;
+  finalResult.deep_summary = deepSummary;
+  finalResult.confidence_level = calculateConfidenceLevel(profile, analysisType);
+  
+  logger('info', `AI analysis completed using real engagement data`, { 
+    username: profile.username, 
+    score: finalResult.score,
+    engagementScore: finalResult.engagement_score,
+    nicheFit: finalResult.niche_fit,
+    confidence: finalResult.confidence_level,
+    usedRealData: (profile.engagement?.postsAnalyzed || 0) > 0
+  }, requestId);
+  
+  return finalResult;
 }
 
 // ===============================================================================
@@ -189,9 +209,8 @@ Write a compelling outreach message that would get a response.`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'gpt-5',
+            model: 'gpt-5-mini',
             messages: [{ role: 'user', content: messagePrompt }],
-            temperature: 0.7,
             max_completion_tokens: 1000
           })
         },
@@ -244,9 +263,8 @@ Focus on who they are, what they do, and their influence level. Keep it professi
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-5',
+          model: 'gpt-5-nano',
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.3,
           max_completion_tokens: 200
         })
       }
@@ -313,9 +331,8 @@ Create a detailed summary covering their profile strength, content quality, enga
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-5',
+          model: 'gpt-5-mini',
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.4,
           max_completion_tokens: 600
         })
       }
@@ -448,34 +465,10 @@ RETURN ONLY THIS JSON:
   "engagement_score": <1–100 based on calculated engagement rate vs benchmarks>,
   "niche_fit": <1–100 content/audience alignment with business>,
   "audience_quality": "<High/Medium/Low>",
-  "engagement_insights": "AUDIENCE QUALITY ANALYSIS: [High/Medium/Low] – [Explanation includes: engagement rate vs industry benchmarks, comment-to-like ratio, post consistency, authenticity signals, follower quality, and overall audience behavior]. ${hasRealData ? 'REAL DATA ANALYSIS: Based on actual engagement metrics from ' + e?.postsAnalyzed + ' recent posts.' : e?.postsAnalyzed === 0 ? 'This user has no public posts or their account is private. Engagement data is unavailable.' : 'ESTIMATED ANALYSIS: Limited data available – analysis based on profile signals only with reduced confidence.'}",
+  "engagement_insights": "AUDIENCE QUALITY ANALYSIS: [High/Medium/Low] – [Explanation includes: engagement rate vs industry benchmarks, comment-to-like ratio, post consistency, authenticity signals, follower quality, and overall audience behavior]. ${hasRealData ? 'REAL DATA ANALYSIS: Based on actual engagement metrics from ' + e?.postsAnalyzed + ' recent posts.' : e?.postsAnalyzed === 0 ? 'This user has no public posts or their account is private. Engagement data is unavailable.' : 'ESTIMATED ANALYSIS: Limited data available – analysis based on profile signals only with reduced confidence.'}"
   "selling_points": ["<specific collaboration advantage based on audience quality findings>"],
   "reasons": ["<why this profile is/isn't ideal for collaboration with detailed audience analysis>"]
 }
 
 Respond with JSON only. No explanation.`;
-}
-
-async function basicHelloCheck(env: Env): Promise<string> {
-  const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-
-  const resp = await callWithRetry(
-    'https://api.openai.com/v1/chat/completions',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-5',
-        messages: [{ role: 'user', content: 'Hello!' }],
-        temperature: 0,
-        max_completion_tokens: 50
-      })
-    }
-  );
-
-  const msg = resp.choices?.[0]?.message?.content;
-  return msg ? msg.trim() : 'No reply';
 }
