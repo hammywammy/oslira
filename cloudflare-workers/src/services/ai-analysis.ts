@@ -30,7 +30,6 @@ export async function performAIAnalysis(
         body: JSON.stringify({
           model: 'gpt-5',
           messages: [{ role: 'user', content: 'Hello!' }],
-          temperature: 0,
           max_completion_tokens: 8
         })
       });
