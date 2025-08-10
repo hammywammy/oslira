@@ -1,6 +1,5 @@
-
-#!/usr/bin/env node
 // build-with-supabase-config.js - Replaces inject-env.js
+// ⚠️ REMOVED SHEBANG - Node.js ESM doesn't handle shebangs well
 
 import { configLoader, generateConfigFile } from './config-loader.js';
 
