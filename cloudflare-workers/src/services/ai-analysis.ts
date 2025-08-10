@@ -75,8 +75,13 @@ logger('info', 'OpenAI Key Debug Info', {
     }
   );
   
-  const result = JSON.parse(response.choices[0].message.content);
-  
+  const choice = response.choices?.[0]?.message;
+  const parsed = (choice as any)?.parsed;
+  const content = choice?.content;
+  const result = parsed ?? JSON.parse(
+  typeof content === 'string' ? content : JSON.stringify(content)
+  );
+ 
   // Generate deep summary after analysis for deep analysis
   if (analysisType === 'deep') {
     const preliminaryResult = validateAnalysisResult(result);
@@ -469,10 +474,34 @@ RETURN ONLY THIS JSON:
   "engagement_score": <1–100 based on calculated engagement rate vs benchmarks>,
   "niche_fit": <1–100 content/audience alignment with business>,
   "audience_quality": "<High/Medium/Low>",
-  "engagement_insights": "AUDIENCE QUALITY ANALYSIS: [High/Medium/Low] – [Explanation includes: engagement rate vs industry benchmarks, comment-to-like ratio, post consistency, authenticity signals, follower quality, and overall audience behavior]. ${hasRealData ? 'REAL DATA ANALYSIS: Based on actual engagement metrics from ' + e?.postsAnalyzed + ' recent posts.' : e?.postsAnalyzed === 0 ? 'This user has no public posts or their account is private. Engagement data is unavailable.' : 'ESTIMATED ANALYSIS: Limited data available – analysis based on profile signals only with reduced confidence.'}"
+  "engagement_insights": "AUDIENCE QUALITY ANALYSIS: [High/Medium/Low] – [Explanation includes: engagement rate vs industry benchmarks, comment-to-like ratio, post consistency, authenticity signals, follower quality, and overall audience behavior]. ${hasRealData ? 'REAL DATA ANALYSIS: Based on actual engagement metrics from ' + e?.postsAnalyzed + ' recent posts.' : e?.postsAnalyzed === 0 ? 'This user has no public posts or their account is private. Engagement data is unavailable.' : 'ESTIMATED ANALYSIS: Limited data available – analysis based on profile signals only with reduced confidence.'}",
   "selling_points": ["<specific collaboration advantage based on audience quality findings>"],
   "reasons": ["<why this profile is/isn't ideal for collaboration with detailed audience analysis>"]
 }
 
 Respond with JSON only. No explanation.`;
+}
+
+async function basicHelloCheck(env: Env): Promise<string> {
+  const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+
+  const resp = await callWithRetry(
+    'https://api.openai.com/v1/chat/completions',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-5',
+        messages: [{ role: 'user', content: 'Hello!' }],
+        temperature: 0,
+        max_completion_tokens: 50
+      })
+    }
+  );
+
+  const msg = resp.choices?.[0]?.message?.content;
+  return msg ? msg.trim() : 'No reply';
 }
