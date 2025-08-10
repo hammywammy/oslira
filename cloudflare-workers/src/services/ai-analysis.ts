@@ -13,13 +13,14 @@ export async function performAIAnalysis(
 ): Promise<AnalysisResult> {
   let hello = 'NO_REPLY';
   let note = 'HELLO_OK';
+  let raw = '';
 
   try {
     const openaiKey = await getApiKey('OPENAI_API_KEY', env);
     if (!openaiKey) {
       note = 'NO_OPENAI_KEY';
     } else {
-      const resp = await callWithRetry(
+      const r = await callWithRetry(
         'https://api.openai.com/v1/chat/completions',
         {
           method: 'POST',
@@ -36,14 +37,40 @@ export async function performAIAnalysis(
         }
       );
 
-      const msg = resp?.choices?.[0]?.message as any;
-      hello =
-        msg?.parsed ??
-        (typeof msg?.content === 'string' ? msg.content : JSON.stringify(msg?.content || ''));
-      hello = (hello || '').toString().trim() || 'EMPTY_REPLY';
+      // --- Normalize to JSON regardless of what callWithRetry returns ---
+      let data: any = r;
+      try {
+        if (r && typeof r === 'object') {
+          // If it's a fetch Response-like object
+          if (typeof (r as any).json === 'function') {
+            data = await (r as any).json();
+          } else {
+            data = r; // already JSON-like
+          }
+        } else if (typeof r === 'string') {
+          try { data = JSON.parse(r); } catch { data = r; }
+        }
+      } catch (e) {
+        note = `PARSE_STAGE_ERROR: ${(e as any)?.message || 'unknown'}`;
+      }
+
+      raw = (() => {
+        try { return typeof data === 'string' ? data : JSON.stringify(data); }
+        catch { return '[raw-body-serialize-failed]'; }
+      })();
+
+      const choice = data?.choices?.[0]?.message as any;
+      const content =
+        choice?.parsed ??
+        (typeof choice?.content === 'string'
+          ? choice.content
+          : (Array.isArray(choice?.content)
+              ? choice.content.map((c: any) => c?.text ?? '').join(' ')
+              : JSON.stringify(choice?.content || '')));
+
+      hello = (content || '').toString().trim() || 'EMPTY_REPLY';
     }
   } catch (e: any) {
-    // capture the upstream error text/status instead of throwing
     note = `OPENAI_ERROR: ${e?.status ?? ''} ${e?.message ?? ''}`.trim();
   }
 
@@ -52,7 +79,7 @@ export async function performAIAnalysis(
     engagement_score: 1,
     niche_fit: 1,
     audience_quality: 'Low',
-    engagement_insights: `HELLO_TEST: ${hello} | ${note}`,
+    engagement_insights: `HELLO_TEST: ${hello} | ${note} | RAW:${raw.slice(0,500)}`,
     selling_points: ['hello-smoke-test'],
     reasons: ['hello-smoke-test'],
     quick_summary: `Hello: ${hello}`,
@@ -60,6 +87,7 @@ export async function performAIAnalysis(
     confidence_level: 1
   };
 }
+
 
 
 // ===============================================================================
