@@ -23,7 +23,8 @@ class EnhancedConfigManager {
     'APIFY_API_TOKEN',
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
-    'SUPABASE_SERVICE_ROLE'
+    'SUPABASE_SERVICE_ROLE',
+    'SUPABASE_ANON_KEY'
   ];
 
   constructor(private env: Env) {
