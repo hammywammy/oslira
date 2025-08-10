@@ -74,12 +74,17 @@ export async function handleUpdateApiKey(c: Context): Promise<Response> {
     
     // Validate keyName against allowed keys
     const allowedKeys = [
-      'OPENAI_API_KEY', 
-      'CLAUDE_API_KEY', 
-      'APIFY_API_TOKEN', 
-      'STRIPE_SECRET_KEY', 
-      'STRIPE_WEBHOOK_SECRET'
-    ];
+  'OPENAI_API_KEY', 
+  'CLAUDE_API_KEY', 
+  'APIFY_API_TOKEN', 
+  'STRIPE_SECRET_KEY', 
+  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_PUBLISHABLE_KEY',
+  'WORKER_URL',
+  'NETLIFY_BUILD_HOOK_URL',
+  'SUPABASE_SERVICE_ROLE',
+  'SUPABASE_ANON_KEY'  // ✅ ADD THIS
+];
     
     if (!allowedKeys.includes(keyName)) {
       return c.json(createStandardResponse(false, undefined, 'Invalid key name', requestId), 400);
@@ -455,8 +460,8 @@ function validateApiKeyFormat(keyName: string, keyValue: string): { valid: boole
     'STRIPE_PUBLISHABLE_KEY': (key) => (key.startsWith('pk_live_') || key.startsWith('pk_test_')) && key.length > 20,
     'WORKER_URL': (key) => key.startsWith('https://') && key.includes('.workers.dev'),
     'NETLIFY_BUILD_HOOK_URL': (key) => key.startsWith('https://api.netlify.com/build_hooks/'),
-    // ✅ ADD THIS:
-    'SUPABASE_SERVICE_ROLE': (key) => key.startsWith('eyJ') && key.includes('.') && key.length > 100 // JWT format
+    'SUPABASE_SERVICE_ROLE': (key) => key.startsWith('eyJ') && key.includes('.') && key.length > 100, // JWT format
+    'SUPABASE_ANON_KEY': (key) => key.startsWith('eyJ') && key.includes('.') && key.length > 100  // ✅ ADD THIS - JWT format
   };
   
   const validator = validations[keyName];
@@ -492,7 +497,8 @@ function isAWSManagedKey(keyName: string): boolean {
     'APIFY_API_TOKEN',
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
-    'SUPABASE_SERVICE_ROLE'  // ✅ ADD THIS
+    'SUPABASE_SERVICE_ROLE',
+    'SUPABASE_ANON_KEY'  // ✅ ADD THIS
   ];
   
   return awsManagedKeys.includes(keyName);
