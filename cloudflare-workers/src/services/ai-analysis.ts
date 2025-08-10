@@ -77,36 +77,36 @@ export async function performAIAnalysis(
         Authorization: `Bearer ${openaiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: 'gpt-5-mini',
-        messages: [
-          { role: 'system', content: 'You are an analysis engine. Return STRICT JSON that matches the provided schema. No prose, no markdown, no extra keys.' },
-          { role: 'user', content: evaluatorPrompt + '\n\nReturn JSON only.' }
-        ],
-        // Enough headroom for reasoning + visible JSON
-        max_completion_tokens: analysisType === 'deep' ? 1500 : 1000,
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'AnalysisResult',
-            strict: true,
-            schema: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                score: { type: 'integer', minimum: 0, maximum: 100 },
-                engagement_score: { type: 'integer', minimum: 0, maximum: 100 },
-                niche_fit: { type: 'integer', minimum: 0, maximum: 100 },
-                audience_quality: { type: 'string', enum: ['High', 'Medium', 'Low'] },
-                engagement_insights: { type: 'string' },
-                selling_points: { type: 'array', items: { type: 'string' } },
-                reasons: { type: 'array', items: { type: 'string' } }
-              },
-              required: ['score', 'engagement_score', 'niche_fit', 'audience_quality', 'engagement_insights', 'selling_points', 'reasons']
-            }
-          }
-        }
-      })
+body: JSON.stringify({
+  model: 'gpt-5-mini',
+  messages: [
+    { role: 'system', content: 'You are an analysis engine. Return STRICT JSON that matches the provided schema. No prose, no markdown, no extra keys. Keep text fields concise and factual.' },
+    { role: 'user', content: evaluatorPrompt + '\n\nReturn JSON only.' }
+  ],
+  // DEEP needs more headroom because GPT-5 spends tokens on reasoning
+  max_completion_tokens: analysisType === 'deep' ? 2200 : 1000,
+  response_format: {
+    type: 'json_schema',
+    json_schema: {
+      name: 'AnalysisResult',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          score: { type: 'integer', minimum: 0, maximum: 100 },
+          engagement_score: { type: 'integer', minimum: 0, maximum: 100 },
+          niche_fit: { type: 'integer', minimum: 0, maximum: 100 },
+          audience_quality: { type: 'string', enum: ['High', 'Medium', 'Low'] },
+          engagement_insights: { type: 'string', maxLength: 1200 },
+          selling_points: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 8 },
+          reasons: { type: 'array', items: { type: 'string' }, minItems: 1, maxItems: 10 }
+        },
+        required: ['score','engagement_score','niche_fit','audience_quality','engagement_insights','selling_points','reasons']
+      }
+    }
+  }
+})
     }
   );
 
