@@ -41,9 +41,9 @@ Create a `config.js` file with your credentials:
 
 ```javascript
 const CONFIG = {
-    supabaseUrl: 'https://jswzzihuqtjqvobfosks.supabase.co',
+    supabaseUrl: 'https://your-project.supabase.co',
     supabaseKey: 'your-supabase-anon-key-here'
-};
+}
 ```
 
 ### Database Setup
