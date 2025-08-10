@@ -11,69 +11,19 @@ export async function performAIAnalysis(
   env: Env,
   requestId: string
 ): Promise<AnalysisResult> {
-  logger('info', 'SMOKE TEST: starting GPT-5 hello check', {
-    analysisType,
-    username: profile?.username
-  }, requestId);
-
-  const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-
-  // quick sanity: log key meta safely
-  logger('info', 'OpenAI key sanity', {
-    hasKey: !!openaiKey,
-    len: openaiKey?.length || 0,
-    prefix: openaiKey?.slice(0, 10) || 'NONE',
-    suffix: openaiKey?.slice(-10) || 'NONE'
-  }, requestId);
-
-  // --- Minimal GPT-5 call: say "Hello!" and capture the reply ---
-  const resp = await callWithRetry(
-    'https://api.openai.com/v1/chat/completions',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-5',
-        messages: [{ role: 'user', content: 'Hello!' }],
-        temperature: 0,
-        // Important for GPT-5:
-        max_completion_tokens: 8
-        // Keep it bare for the smoke test (no response_format/schema)
-      })
-    }
-  );
-
-  const choice = resp?.choices?.[0]?.message;
-  const helloText =
-    (choice as any)?.parsed // if a client inserts parsed
-    ?? (typeof choice?.content === 'string' ? choice.content : JSON.stringify(choice?.content || ''))
-    ?? '';
-
-  logger('info', 'SMOKE TEST: GPT-5 hello reply', { hello: String(helloText).slice(0, 200) }, requestId);
-
-  // --- Return a minimal, valid AnalysisResult so the rest of your app stays happy ---
-  const result: AnalysisResult = {
-    score: 0,
-    engagement_score: 0,
-    niche_fit: 0,
+  // Do not touch env, do not import anything, do not throw.
+  return {
+    score: 1,
+    engagement_score: 1,
+    niche_fit: 1,
     audience_quality: 'Low',
-    engagement_insights: `Hello test reply: ${String(helloText).trim() || 'NO_REPLY'}`,
-    selling_points: [],
+    engagement_insights: 'HELLO_OK',
+    selling_points: ['hello-smoke-test'],
     reasons: ['hello-smoke-test'],
-    // if your type includes these optional fields, set them:
-    quick_summary: `Model said: ${String(helloText).trim() || 'NO_REPLY'}`,
-    deep_summary: undefined,
-    confidence_level: 0
+    quick_summary: 'Hello smoke test',
+    deep_summary: analysisType === 'deep' ? 'Hello deep smoke test' : undefined,
+    confidence_level: 1
   };
-
-  // If you keep validateAnalysisResult, this should still pass.
-  const final = validateAnalysisResult ? validateAnalysisResult(result) : result;
-
-  logger('info', 'SMOKE TEST: completed', { ok: true }, requestId);
-  return final;
 }
 
 // ===============================================================================
