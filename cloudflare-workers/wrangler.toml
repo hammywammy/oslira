@@ -1,5 +1,4 @@
 name = "ai-outreach-api"
-account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 workers_dev = true
 compatibility_date = "2025-07-09"
 main = "src/index.ts"
