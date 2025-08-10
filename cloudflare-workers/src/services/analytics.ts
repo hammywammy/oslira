@@ -229,9 +229,8 @@ Return JSON: {"keyTrends": ["insight1", "insight2", "insight3"], "recommendation
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: 'gpt-5',
           messages: [{ role: 'user', content: analysisPrompt }],
-          temperature: 0.3,
           response_format: { type: 'json_object' }
         })
       }
@@ -260,7 +259,7 @@ Return JSON: {"keyTrends": ["insight1", "insight2", "insight3"], "recommendation
       },
       dataSource: "real_database_analysis_with_ai",
       generated_at: new Date().toISOString(),
-      model: "gpt-4o",
+      model: "gpt-5",
       confidence: insights.predictions?.confidence || 0.75
     };
 
