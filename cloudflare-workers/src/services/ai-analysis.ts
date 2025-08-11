@@ -217,23 +217,22 @@ Write a compelling outreach message that would get a response.`;
 
     if (claudeKey) {
       const claudeResponse = await callWithRetry(
-        'https://api.anthropic.com/v1/messages',
-        {
-          method: 'POST',
-          headers: {
-            'x-api-key': claudeKey,
-            'anthropic-version': '2023-06-01',
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: 'claude-4-20250110',
-            messages: [{ role: 'user', content: messagePrompt }],
-            temperature: 0.7,
-            max_tokens: 1000
-          })
-        },
-        3, 1500, 25000
-      );
+'https://api.anthropic.com/v1/messages',
+{
+  method: 'POST',
+  headers: {
+    'x-api-key': claudeKey,
+    'anthropic-version': '2023-06-01',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    model: 'claude-sonnet-4-20250514',  // ✅ Fixed: Valid Claude 4 model name
+    messages: [{ role: 'user', content: messagePrompt }],
+    temperature: 0.7,
+    max_tokens: 2500  // ✅ Fixed: Increased for longer responses
+  })
+},
+3, 1500, 25000 );
 
       let messageText = '';
       if ((claudeResponse as any).completion) {
