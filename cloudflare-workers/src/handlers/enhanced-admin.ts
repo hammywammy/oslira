@@ -501,7 +501,7 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
 
 function getLambdaArnForKey(keyName: string, env: any): string | null {
   const lambdaArns: Record<string, string> = {
-    'OPENAI_API_KEY': env.OPENAI_ROTATOR_LAMBDA_ARN,
+    // 'OPENAI_API_KEY': env.OPENAI_ROTATOR_LAMBDA_ARN,  // Removed - Lambda deleted
     'CLAUDE_API_KEY': env.CLAUDE_ROTATOR_LAMBDA_ARN,
     'APIFY_API_TOKEN': env.APIFY_ROTATOR_LAMBDA_ARN,
     'STRIPE_SECRET_KEY': env.STRIPE_ROTATOR_LAMBDA_ARN,
