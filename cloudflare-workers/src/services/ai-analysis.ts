@@ -226,7 +226,7 @@ Write a compelling outreach message that would get a response.`;
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
+            model: 'claude-4-20250110',
             messages: [{ role: 'user', content: messagePrompt }],
             temperature: 0.7,
             max_tokens: 1000
