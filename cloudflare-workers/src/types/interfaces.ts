@@ -1,3 +1,34 @@
+export interface ProfileIntelligence {
+  dataRichness: number;
+  analysisValue: number;
+  complexityLevel: 'basic' | 'moderate' | 'advanced' | 'executive';
+  recommendedModel: string;
+  speedTarget: number;
+  promptStrategy: 'screening' | 'standard' | 'strategic' | 'executive';
+}
+
+export interface AnalysisTier {
+  tier: number;
+  model: string;
+  maxTokens: number;
+  targetSpeed: number;
+  minDataRichness: number;
+  minAnalysisValue: number;
+}
+
+// UPDATE Env interface - CHANGE OPENAI_KEY to OPENAI_API_KEY:
+export interface Env {
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_ROLE: string;
+  SUPABASE_ANON_KEY: string;
+  OPENAI_API_KEY: string;  // CHANGED FROM OPENAI_KEY
+  CLAUDE_API_KEY: string;  // NEW - Add this
+  APIFY_API_TOKEN: string;
+  STRIPE_SECRET_KEY: string;
+  STRIPE_WEBHOOK_SECRET: string;
+  FRONTEND_URL: string;
+}
+
 export interface Env {
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE: string;
