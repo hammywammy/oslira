@@ -278,52 +278,24 @@ EOF
 
 # Enable rotation for secrets
 enable_rotation() {
-    print_status "Enabling automatic rotation..."
+    print_status "Skipping automatic rotation setup - OpenAI rotator disabled..."
     
-    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-    LAMBDA_ARN="arn:aws:lambda:${AWS_REGION}:${ACCOUNT_ID}:function:oslira-openai-rotator"
+    # Note: OpenAI rotator Lambda has been removed
+    # Automatic rotation is disabled to prevent AWS errors
     
-    # Enable rotation for OpenAI secret (every 7 days)
-    aws secretsmanager rotate-secret \
-        --secret-id "${SECRETS_PREFIX}/OPENAI_API_KEY" \
-        --rotation-lambda-arn $LAMBDA_ARN \
-        --rotation-rules ScheduleExpression="rate(7 days)",Duration="PT30M" \
-        --region $AWS_REGION 2>/dev/null || print_warning "Rotation might already be enabled"
-    
-    print_success "Automatic rotation enabled (weekly)"
+    print_warning "Automatic OpenAI key rotation is disabled"
+    print_warning "Keys must be rotated manually via admin panel"
 }
 
 # Create CloudWatch schedule for manual triggering
 create_schedule() {
-    print_status "Creating CloudWatch schedule for weekly rotation..."
+    print_status "Skipping CloudWatch schedule creation - OpenAI rotator disabled..."
     
-    # Create EventBridge rule for Sunday rotation
-    aws events put-rule \
-        --name oslira-weekly-rotation \
-        --schedule-expression "cron(0 6 ? * SUN *)" \
-        --description "Trigger Oslira key rotation every Sunday at 6 AM UTC" \
-        --state ENABLED \
-        --region $AWS_REGION
+    # Note: OpenAI rotator Lambda has been removed
+    # CloudWatch schedule creation is disabled to prevent errors
     
-    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-    LAMBDA_ARN="arn:aws:lambda:${AWS_REGION}:${ACCOUNT_ID}:function:oslira-openai-rotator"
-    
-    # Add target to the rule
-    aws events put-targets \
-        --rule oslira-weekly-rotation \
-        --targets "Id"="1","Arn"="$LAMBDA_ARN" \
-        --region $AWS_REGION
-    
-    # Grant permission for EventBridge to invoke Lambda
-    aws lambda add-permission \
-        --function-name oslira-openai-rotator \
-        --statement-id weekly-rotation-permission \
-        --action lambda:InvokeFunction \
-        --principal events.amazonaws.com \
-        --source-arn "arn:aws:events:${AWS_REGION}:${ACCOUNT_ID}:rule/oslira-weekly-rotation" \
-        --region $AWS_REGION 2>/dev/null || print_warning "Permission might already exist"
-    
-    print_success "Weekly rotation schedule created (Sundays at 6 AM UTC)"
+    print_warning "Automatic OpenAI key rotation is disabled"
+    print_warning "Use manual key management via admin panel or wrangler secrets"
 }
 
 # Test the setup
@@ -343,27 +315,16 @@ test_setup() {
         print_error "Secret retrieval test failed"
     fi
     
-    # Test Lambda function
-    LAMBDA_RESULT=$(aws lambda invoke \
-        --function-name oslira-openai-rotator \
-        --payload '{"SecretId":"Oslira/OPENAI_API_KEY"}' \
-        lambda-test-output.json \
-        --region $AWS_REGION 2>/dev/null)
-    
-    if [ $? -eq 0 ]; then
-        print_success "Lambda function test passed"
-        cat lambda-test-output.json
-        rm -f lambda-test-output.json
-    else
-        print_error "Lambda function test failed"
-    fi
+# Test Lambda function - DISABLED
+print_warning "Lambda function test skipped - OpenAI rotator has been removed"
+print_success "Secret retrieval works, Lambda rotation disabled"
 }
 
 # Generate environment variables for Cloudflare Worker
 generate_env_vars() {
     print_status "Generating environment variables for Cloudflare Worker..."
     
-    cat > cloudflare-env-vars.txt << EOF
+cat > cloudflare-env-vars.txt << EOF
 # Add these environment variables to your Cloudflare Worker:
 
 AWS_ACCESS_KEY_ID=your-aws-access-key-id
@@ -371,7 +332,7 @@ AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
 AWS_REGION=${AWS_REGION}
 
 # Lambda function ARNs for manual rotation triggers:
-OPENAI_ROTATOR_LAMBDA_ARN=arn:aws:lambda:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):function:oslira-openai-rotator
+# OPENAI_ROTATOR_LAMBDA_ARN - REMOVED (Lambda function deleted)
 CLAUDE_ROTATOR_LAMBDA_ARN=arn:aws:lambda:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):function:oslira-claude-rotator
 APIFY_ROTATOR_LAMBDA_ARN=arn:aws:lambda:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):function:oslira-apify-rotator
 STRIPE_ROTATOR_LAMBDA_ARN=arn:aws:lambda:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):function:oslira-stripe-rotator
@@ -379,6 +340,7 @@ STRIPE_ROTATOR_LAMBDA_ARN=arn:aws:lambda:${AWS_REGION}:$(aws sts get-caller-iden
 # Optional: Slack webhook for notifications
 SLACK_WEBHOOK_URL=your-slack-webhook-url
 
+EOF
 EOF
     
     print_success "Environment variables saved to cloudflare-env-vars.txt"
