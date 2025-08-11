@@ -1,25 +1,11 @@
-// ===============================================================================
-// ULTIMATE AI ANALYSIS SYSTEM (Full-scale, legacy models preserved)
-// - Uses your old, working model choices + syntax
-//   • GPT-5 family => max_completion_tokens (never set temperature)
-//   • Claude outreach => claude-sonnet-4-20250514 (Anthropic messages API)
-//   • Quick summary => gpt-5-nano
-//   • Deep summary => gpt-5-mini
-// - Upgraded with:
-//   • Adaptive intelligence tiers & prompt strategies
-//   • Parallel processing for competitor/trend insights
-//   • Intelligent caching with adaptive TTL
-//   • Robust JSON repair + validation
-//   • System metrics & monitoring
-//   • Executive/strategic/standard/screening prompt modes
-// - Keeps your original final evaluator prompts verbatim
-// ===============================================================================
-
 import type { ProfileData, BusinessProfile, AnalysisResult, Env } from '../types/interfaces.js';
 import { logger } from '../utils/logger.js';
 import { callWithRetry } from '../utils/helpers.js';
 import { validateAnalysisResult, calculateConfidenceLevel, extractPostThemes } from '../utils/validation.js';
 import { getApiKey } from './enhanced-config-manager.js';
+
+const safeLower = (v?: string) => (typeof v === 'string' ? v.toLowerCase() : '');
+const safeStr  = (v: unknown, fallback = '') => (typeof v === 'string' ? v : fallback);
 
 // ===============================================================================
 // CORE HELPERS (Preserve legacy parameter shapes & parsing)
@@ -142,17 +128,18 @@ function assessProfileIntelligence(profile: ProfileData, business: BusinessProfi
   analysisValue += (profile.engagement?.engagementRate || 0) > 3 ? 20 :
                    (profile.engagement?.engagementRate || 0) > 1 ? 10 : 0;
 
-  // Industry complexity factor
-  const complexIndustries = ['technology', 'finance', 'healthcare', 'b2b', 'enterprise'];
-  if (complexIndustries.some(ind => business.industry.toLowerCase().includes(ind))) {
-    analysisValue += 15;
-  }
+const industryLC = safeLower(business.industry);
+const complexIndustries = ['technology', 'finance', 'healthcare', 'b2b', 'enterprise'];
+if (complexIndustries.some(ind => industryLC.includes(ind))) {
+  analysisValue += 15;
+}
 
-  // Target audience sophistication
-  const sophisticatedAudiences = ['executive', 'professional', 'enterprise', 'b2b', 'decision maker'];
-  if (sophisticatedAudiences.some(aud => business.target_audience.toLowerCase().includes(aud))) {
-    analysisValue += 15;
-  }
+// Target audience sophistication
+const audienceLC = safeLower(business.target_audience);
+const sophisticatedAudiences = ['executive', 'professional', 'enterprise', 'b2b', 'decision maker'];
+if (sophisticatedAudiences.some(aud => audienceLC.includes(aud))) {
+  analysisValue += 15;
+}
 
   // Determine complexity level and optimal tier
   const complexityLevel =
@@ -838,7 +825,7 @@ async function fetchCompetitorInsights(
   }
 }
 
-async function fetchMarketTrends(industry: string, env: Env): Promise<string> {
+async function fetchMarketTrends(industry?: string, env?: Env): Promise<string> {
   try {
     const trendingTopics = {
       'technology': 'AI integration, sustainability, remote collaboration',
@@ -847,14 +834,17 @@ async function fetchMarketTrends(industry: string, env: Env): Promise<string> {
       'food': 'Plant-based, local sourcing, ghost kitchens',
       'beauty': 'Clean beauty, personalization, virtual try-ons',
       'default': 'Digital transformation, sustainability, personalization'
-    };
-    const key = Object.keys(trendingTopics).find(k => industry.toLowerCase().includes(k)) || 'default';
+    } as const;
+
+    const ind = safeLower(industry);
+    const key = Object.keys(trendingTopics).find(k => ind.includes(k)) || 'default';
     // @ts-ignore
     return trendingTopics[key];
-  } catch (_err) {
+  } catch {
     return 'Market trend analysis unavailable';
   }
 }
+
 
 // ===============================================================================
 // RESULT ENHANCEMENT & POST-PROCESSING
@@ -1315,7 +1305,8 @@ Write a compelling outreach message that would get a response.`;
 
 I came across your profile and was impressed by your content and engagement with your ${profile.followersCount.toLocaleString()} followers.
 
-I'm reaching out from ${business.name}, and I think there could be a great opportunity for collaboration given your audience and our ${business.value_proposition.toLowerCase()}.
+I'm reaching out from ${business.name}, and I think there could be a great opportunity for collaboration given your audience and our${safeLower(business.value_proposition) || 'our offering'}
+.
 
 Would you be interested in exploring a potential partnership? I'd love to share more details about what we have in mind.
 
