@@ -1435,7 +1435,7 @@ Create a detailed summary covering their profile strength, content quality, enga
 
   } catch (error) {
     logger('warn', 'Deep summary generation failed', { error }, undefined);
-    return `Comprehensive analysis of @${profile.username}: ${profile.isVerified ? 'Verified' : 'Unverified'} profile with ${profile.followersCount.toLocaleString()} followers and ${analysisResult.score}/100 business compatibility score. Engagement rate of ${profile.engagement?.engagementRate || 'unknown'}% indicates ${analysisResult.audience_quality.toLowerCase()} audience quality. Content alignment and partnership potential require further evaluation based on specific business objectives and campaign requirements.`;
+    return `Comprehensive analysis of @${profile.username}: ${profile.isVerified ? 'Verified' : 'Unverified'} profile with ${profile.followersCount.toLocaleString()} followers and ${analysisResult.score}/100 business compatibility score. Engagement rate of ${profile.engagement?.engagementRate || 'unknown'}% indicates ${analysisResult.audience_quality ? String(analysisResult.audience_quality).toLowerCase() : 'unknown'} audience quality. Content alignment and partnership potential require further evaluation based on specific business objectives and campaign requirements.`;
   }
 }
 
