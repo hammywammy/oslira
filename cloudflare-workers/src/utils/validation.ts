@@ -412,5 +412,6 @@ export function extractPostThemes(posts: PostData[]): string {
     .sort(([,a], [,b]) => b - a)
     .slice(0, 3)
     .map(([tag]) => tag.replace('#', ''));
-  return topHashtags.length > 0 ? topHashtags.join(', ') : 'content themes not available';
+  return topHashtags.length > 0 ? 
+    topHashtags.join(', ') : 'content themes not available';
 }
