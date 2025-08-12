@@ -7,6 +7,7 @@ import { fetchUserAndCredits, fetchBusinessProfile, saveLeadAndAnalysis, updateC
 import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
 import { performAIAnalysis, generateOutreachMessage } from '../services/ai-analysis.js';
 import { calculateConfidenceLevel } from '../utils/validation.js';
+import { getEnvironment } from '../utils/env.js';
 
 export async function handleAnalyze(c: Context): Promise<Response> {
   const requestId = generateRequestId();
@@ -122,7 +123,8 @@ export async function handleAnalyze(c: Context): Promise<Response> {
       analysis_type: analysis_type,
       followers_count: profileData.followersCount || 0,
       created_at: new Date().toISOString(),
-      quick_summary: analysisResult.quick_summary || null
+      quick_summary: analysisResult.quick_summary || null,
+      env: getEnvironment(c.env)
     };
 
     // PREPARE ANALYSIS DATA FOR DEEP ANALYSIS
@@ -180,6 +182,7 @@ export async function handleAnalyze(c: Context): Promise<Response> {
         }),
         outreach_message: outreachMessage || null,
         deep_summary: analysisResult.deep_summary || null,
+        env: getEnvironment(c.env),
         created_at: new Date().toISOString()
       };
     }
