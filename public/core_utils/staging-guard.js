@@ -2,7 +2,8 @@
 // SECURE STAGING GUARD - RATE LIMITED & TAMPER-RESISTANT
 // Prevents console manipulation and limits attempts
 // =============================================================================
-
+<script src="/core_utils/shared-code.js"></script>
+    
 (function() {
     'use strict';
     
