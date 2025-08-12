@@ -59,20 +59,20 @@ async function handleConfig(request) {
   }
 
   // Return public configuration
-  const config = {
-    supabaseUrl,
-    supabaseAnonKey: supabaseKey,
-    workerUrl: workerUrl || null
-  };
+const config = {
+  supabaseUrl,
+  supabaseAnonKey: supabaseKey,
+  workerUrl: workerUrl || null,
+  stagingPassword: stagingPassword || null  // Add this line
+};
 
-  return new Response(JSON.stringify(config), {
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=300'
-    }
-  });
-}
+return new Response(JSON.stringify(config), {
+  headers: {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'public, max-age=300'
+  }
+});
 
 async function requireAuth(request) {
   const authHeader = request.headers.get("authorization") || "";
