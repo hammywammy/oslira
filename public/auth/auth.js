@@ -322,13 +322,21 @@ async function handleFormSubmission(event) {
     console.log('🔍 AUTH: Sending magic link...');
 
     try {
-        const { error } = await supabase.auth.signInWithOtp({
-            email: email,
-            options: {
-                emailRedirectTo: window.location.origin + '/auth.html',
-                shouldCreateUser: true
-            }
-        });
+        const isStaging = window.location.hostname.includes('test') || 
+                 window.location.hostname.includes('staging') ||
+                 window.location.hostname.includes('prototype');
+
+const redirectTo = isStaging 
+    ? 'https://osliratest.netlify.app/auth.html'    // Your staging URL
+    : window.location.origin + '/auth.html';       // Production URL
+
+const { error } = await supabase.auth.signInWithOtp({
+    email: email,
+    options: {
+        emailRedirectTo: redirectTo,  // 🔥 DYNAMIC REDIRECT
+        shouldCreateUser: true
+    }
+});
 
         if (error) {
             console.log('🔍 AUTH: Supabase error:', error.message);
@@ -445,6 +453,8 @@ function showSuccess(email) {
     document.getElementById('main-card').style.display = 'none';
     document.getElementById('success-card').style.display = 'block';
 }
+
+
 
 // =============================================================================
 // AUTH STATE LISTENERS (Original Functionality)
