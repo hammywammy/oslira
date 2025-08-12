@@ -1339,7 +1339,7 @@ Focus on who they are, what they do, and their influence level. Keep it professi
         { role: 'system', content: 'Write a concise professional summary in 2-3 sentences.' },
         { role: 'user', content: prompt }
       ],
-      maxTokens: 200 // GPT-5 => max_completion_tokens
+      maxTokens: 1000 // GPT-5 => max_completion_tokens
     });
 
     const response = await callWithRetry(
