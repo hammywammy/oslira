@@ -29,6 +29,7 @@ async function handleConfig(request) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
   const workerUrl = Deno.env.get('WORKER_URL');
+  const stagingPassword = Deno.env.get('STAGING_PASSWORD');
 
   // Check if required variables are present
   if (!supabaseUrl || !supabaseKey) {
