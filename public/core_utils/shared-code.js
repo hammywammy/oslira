@@ -42,6 +42,24 @@ window.OsliraApp = {
     events: new EventTarget()
 };
 
+// Add this to your shared-code.js:
+window.OsliraApp.logger = {
+    debug: (message, data) => {
+        if (window.location.hostname.includes('localhost') || 
+            window.location.hostname.includes('osliratest')) {
+            console.log(message, data);
+        }
+    },
+    info: (message) => {
+        // Always show basic info
+        console.log(message);
+    },
+    error: (message, error) => {
+        // Always show errors
+        console.error(message, error);
+    }
+};
+
 // =============================================================================
 // 2. CONFIGURATION LOADER - SIMPLIFIED
 // =============================================================================
