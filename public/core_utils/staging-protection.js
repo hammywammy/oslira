@@ -18,8 +18,27 @@
     
     console.log('🔒 Staging environment detected - checking password protection');
     
-    // Configuration
-    const STAGING_PASSWORD = 'oslira2024staging'; // Change this to your preferred password
+    // Configuration - get password from environment config
+    let STAGING_PASSWORD = null;
+    
+    // Get password from environment config
+    try {
+        const envConfig = window.getEnvConfig ? window.getEnvConfig() : null;
+        STAGING_PASSWORD = envConfig?.STAGING_PASSWORD || null;
+    } catch (error) {
+        console.warn('Could not load staging password from config');
+    }
+    
+    // Fallback: try to get from a global config
+    if (!STAGING_PASSWORD && window.CONFIG?.STAGING_PASSWORD) {
+        STAGING_PASSWORD = window.CONFIG.STAGING_PASSWORD;
+    }
+    
+    // If no password configured, skip protection
+    if (!STAGING_PASSWORD) {
+        console.log('🔓 No staging password configured - skipping protection');
+        return;
+    }
     const SESSION_KEY = 'staging_auth_verified';
     const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
     
