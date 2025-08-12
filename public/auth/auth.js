@@ -7,10 +7,10 @@ if (typeof Sentry !== 'undefined') {
     Sentry.init({
         environment: 'production',
         beforeSend(event) {
-            if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
+            if (event.exception?.values?.[0]?.value?.includes('NetworkError')) { 
                 return null;
             }
-            return event;
+            return event; 
         }
     });
 }
