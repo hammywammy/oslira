@@ -127,3 +127,5 @@ window.getEnvConfig = () => window.EnvConfig.getConfig();
 window.loadEnvConfig = () => window.EnvConfig.loadConfig();
 
 console.log('🔧 [EnvConfig] Environment configuration system loaded');
+
+<script src="/core_utils/shared-code.js"></script>
