@@ -6,6 +6,18 @@
 // =============================================================================
 // 1. GLOBAL STATE & CONFIGURATION
 // =============================================================================
+const DISABLE_LOGS_IN_PRODUCTION = true; // Change to false to re-enable
+const DISABLE_LOGS_IN_STAGING  = true; 
+
+if (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') {
+    console.log = console.warn = console.info = () => {};
+    console.debug = () => {};
+}
+
+if (DISABLE_LOGS_IN_STAGING && window.location.hostname === 'osliratest.netlify.app') {
+    console.log = console.warn = console.info = () => {};
+    console.debug = () => {};
+}
 
 window.OsliraApp = {
     // Core state
