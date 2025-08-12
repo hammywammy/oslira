@@ -105,10 +105,10 @@ interface AnalysisTier {
 
 // Tiers use ONLY your old working OpenAI models to keep behavior stable
 const ANALYSIS_TIERS: AnalysisTier[] = [
-  { tier: 1, model: 'gpt-5-nano', maxTokens: 1200,  targetSpeed: 5000,  minDataRichness: 0,  minAnalysisValue: 0  },
-  { tier: 2, model: 'gpt-5-mini', maxTokens: 2400, targetSpeed: 8000,  minDataRichness: 25, minAnalysisValue: 30 },
-  { tier: 3, model: 'gpt-5-mini', maxTokens: 3200, targetSpeed: 12000, minDataRichness: 50, minAnalysisValue: 60 },
-  { tier: 4, model: 'gpt-5-mini', maxTokens: 4000, targetSpeed: 16000, minDataRichness: 75, minAnalysisValue: 80 }
+  { tier: 1, model: 'gpt-5-nano', maxTokens: 2000,  targetSpeed: 5000,  minDataRichness: 0,  minAnalysisValue: 0  },
+  { tier: 2, model: 'gpt-5-mini', maxTokens: 3500, targetSpeed: 8000,  minDataRichness: 25, minAnalysisValue: 30 },
+  { tier: 3, model: 'gpt-5-mini', maxTokens: 4500, targetSpeed: 12000, minDataRichness: 50, minAnalysisValue: 60 },
+  { tier: 4, model: 'gpt-5-mini', maxTokens: 6000, targetSpeed: 16000, minDataRichness: 75, minAnalysisValue: 80 }
 ];
 
 function assessProfileIntelligence(profile: ProfileData, business: BusinessProfile): ProfileIntelligence {
@@ -718,7 +718,7 @@ async function executeOpenAIAnalysisOptimized(
       { role: 'system', content: systemPrompt },
       { role: 'user', content: prompt + '\n\nReturn JSON only.' }
     ],
-    maxTokens: (() => {
+    max_completion_tokens: (() => {
       // If the caller plans a deep analysis later, allow more headroom
       // or use tier limits (already scaled by tiers).
       return tier.maxTokens;
@@ -1268,7 +1268,7 @@ Write a compelling outreach message that would get a response.`;
           { role: 'system', content: 'Write a single outreach message. No preface, no markdown.' },
           { role: 'user', content: messagePrompt }
         ],
-        maxTokens: 512 // visible text headroom
+        max_completion_tokens: 1000 // visible text headroom
         // DO NOT add temperature for GPT-5
       });
 
@@ -1339,7 +1339,7 @@ Focus on who they are, what they do, and their influence level. Keep it professi
         { role: 'system', content: 'Write a concise professional summary in 2-3 sentences.' },
         { role: 'user', content: prompt }
       ],
-      maxTokens: 1000 // GPT-5 => max_completion_tokens
+      max_completion_tokens: 2000 // GPT-5 => max_completion_tokens
     });
 
     const response = await callWithRetry(
@@ -1414,7 +1414,7 @@ Create a detailed summary covering their profile strength, content quality, enga
         { role: 'system', content: 'Write a 5–7 sentence executive analysis summary. No preface.' },
         { role: 'user', content: prompt }
       ],
-      maxTokens: 600 // GPT-5 => max_completion_tokens
+      max_completion_tokens: 600 // GPT-5 => max_completion_tokens
     });
 
     const response = await callWithRetry(
@@ -1490,93 +1490,106 @@ Respond with JSON only.`;
 }
 
 export function buildDeepEvaluatorPrompt(profile: ProfileData, business: BusinessProfile): string {
-  const e = profile.engagement;
-  const hasRealData = (e?.postsAnalyzed || 0) > 0;
+  const engagementData = profile.engagement ? `
+REAL ENGAGEMENT METRICS:
+- Average Likes: ${profile.engagement.avgLikes}
+- Average Comments: ${profile.engagement.avgComments}
+- Engagement Rate: ${profile.engagement.engagementRate}%
+- Posts Analyzed: ${profile.engagement.postsAnalyzed}
+- Data Quality: ${profile.dataQuality || 'medium'}` : `
+ENGAGEMENT METRICS: Not available - using profile indicators only`;
 
-  const engagementSection = hasRealData ? `
-REAL ENGAGEMENT DATA (calculated from ${e?.postsAnalyzed} scraped posts):
-- Followers: ${profile.followersCount.toLocaleString()}
-- Posts Analyzed: ${e?.postsAnalyzed}
-- Average Likes per Post: ${e?.avgLikes?.toLocaleString()}
-- Average Comments per Post: ${e?.avgComments?.toLocaleString()}
-- Calculated Engagement Rate: ${e?.engagementRate}%
-- Total Average Engagement: ${((e?.avgLikes || 0) + (e?.avgComments || 0)).toLocaleString()}
+  const postAnalysis = profile.latestPosts?.length ? `
+CONTENT ANALYSIS:
+Recent Posts: ${profile.latestPosts.length} analyzed
+Content Themes: ${extractPostThemes(profile.latestPosts)}
+Post Quality: Available for analysis` : `
+CONTENT ANALYSIS: No recent posts available for analysis`;
 
-AUDIENCE QUALITY FACTORS TO EVALUATE:
-- Engagement consistency across posts
-- Comment-to-like ratio (higher ratio = more engaged audience)
-- Engagement rate vs. follower count benchmarks
-- Post frequency and audience retention
-- Authentic vs. bot-like engagement patterns
+  return `You are a senior business analyst conducting a comprehensive Instagram influencer evaluation. Use all available data for precise scoring.
 
-USE THESE ACTUAL CALCULATED NUMBERS when evaluating engagement.` : `
-NO REAL ENGAGEMENT DATA AVAILABLE:
-- Followers: ${profile.followersCount.toLocaleString()}
-- Posts Analyzed: 0
-- Reason: Profile scraping failed or private account
-
-AUDIENCE QUALITY ASSESSMENT MUST BE CONSERVATIVE:
-- Base rating on verification status, follower count tier, and account indicators
-- Mark confidence as lower due to missing engagement data`;
-
-  const recentPosts = profile.latestPosts?.slice(0, 5).map((p, i) => {
-    return `Post ${i + 1}: "${p.caption?.slice(0, 120) || 'No caption'}..." (${p.likesCount?.toLocaleString() || 0} likes, ${p.commentsCount?.toLocaleString() || 0} comments)`;
-  }).join('\n') || 'No post content available.';
-
-  return `You are an expert B2B lead evaluator. Analyze this Instagram profile to assess business collaboration potential using real calculated data where available.
-
-PROFILE:
+PROFILE OVERVIEW:
 Username: @${profile.username}
-Full Name: ${profile.displayName || 'Not provided'}
+Full Name: ${profile.displayName}
+Bio: "${profile.bio}"
+Followers: ${profile.followersCount.toLocaleString()}
+Following: ${profile.followingCount.toLocaleString()}
+Posts: ${profile.postsCount.toLocaleString()}
 Verified: ${profile.isVerified ? 'Yes' : 'No'}
-Bio: "${profile.bio || 'No bio available'}"
 Business Account: ${profile.isBusinessAccount ? 'Yes' : 'No'}
-Posts Count: ${profile.postsCount?.toLocaleString() || 'Unknown'}
+Account Type: ${profile.isPrivate ? 'Private' : 'Public'}
 
-${engagementSection}
+${engagementData}
 
-RECENT POST CONTENT SAMPLE:
-${recentPosts}
+${postAnalysis}
 
 BUSINESS CONTEXT:
-${business.name} operates in the ${business.industry} industry. Target audience: ${business.target_audience}. Value proposition: ${business.value_proposition}.
+Company: ${business.name}
+Industry: ${business.industry}
+Target Audience: ${business.target_audience}
+Value Proposition: ${business.value_proposition}
 
-AUDIENCE QUALITY RATING SYSTEM:
-- HIGH (80-100): Engagement rate above industry benchmark, consistent post performance, high comment-to-like ratio, authentic interactions, active community
-- MEDIUM (50-79): Decent engagement rate, moderate consistency, some authentic interactions, growing audience
-- LOW (0-49): Below-average engagement, inconsistent performance, potential bot followers, low authentic interaction
+COMPREHENSIVE EVALUATION CRITERIA:
+1. Engagement Quality & Authenticity (30 points)
+   - Real engagement rate vs followers
+   - Comment quality and interaction depth
+   - Audience authenticity indicators
+   - Consistent engagement patterns
 
-SCORING METHODOLOGY:
-- Use actual calculated engagement rate vs industry benchmarks for follower tier
-- engagement_score: Rate the calculated engagement rate against benchmarks
-- niche_fit: Analyze content themes and audience alignment with business target market
-- audience_quality: Rate based on engagement patterns, authenticity indicators, and interaction quality
+2. Audience Relevance & Demographics (25 points)
+   - Target audience alignment
+   - Geographic and demographic match
+   - Interest and behavior compatibility
+   - Purchasing power indicators
 
-RETURN ONLY THIS JSON:
+3. Content Quality & Brand Alignment (25 points)
+   - Content production quality
+   - Brand safety and reputation
+   - Message consistency and professionalism
+   - Visual aesthetics and storytelling
+
+4. Collaboration Potential & ROI (20 points)
+   - Partnership readiness and professionalism
+   - Previous brand collaboration history
+   - Conversion potential and influence
+   - Long-term relationship viability
+
+ANALYSIS REQUIREMENTS:
+- Use real engagement data when available
+- Factor in verification status and business account setup
+- Consider industry-specific relevance
+- Evaluate authentic vs artificial engagement patterns
+- Assess content consistency and brand safety
+- Provide actionable insights for collaboration decisions
+
+SCORING GUIDELINES:
+- 90-100: Exceptional partnership opportunity with high ROI potential
+- 75-89: Strong candidate with good alignment and engagement
+- 60-74: Moderate potential, may require closer evaluation
+- 40-59: Limited alignment, proceed with caution
+- Below 40: Poor fit for collaboration
+
+Return JSON with exact format:
 {
-  "score": <1–100 overall collaboration potential>,
-  "engagement_score": <1–100 based on calculated engagement rate vs benchmarks>,
-  "niche_fit": <1–100 content/audience alignment with business>,
-  "audience_quality": "<High/Medium/Low>",
-    "engagement_insights": "AUDIENCE QUALITY ANALYSIS: [High/Medium/Low] — justify using: (1) calculated engagement rate vs follower-tier benchmark; (2) comment-to-like ratio; (3) consistency across recent posts; (4) authenticity indicators (spammy patterns, bot signals, real discussions). Include specific numbers, e.g., 'Observed: X% vs Benchmark: Y%'; state 'Using real scraped data' or 'Estimated due to missing post data.' Keep under 1200 characters.",
+  "score": 85,
+  "engagement_score": 78,
+  "niche_fit": 92,
+  "audience_quality": "High",
+  "engagement_insights": "Detailed analysis of engagement patterns, audience quality, and interaction authenticity. Include specific metrics and observations about comment quality, response rates, and engagement consistency.",
   "selling_points": [
-    "<data-backed strength #1 (e.g., 'Verified profile; trust signals for B2B buyers')>",
-    "<data-backed strength #2 (e.g., 'Engagement rate X% vs benchmark Y%')>",
-    "<data-backed strength #3 (e.g., 'High comment depth; quality interactions')>",
-    "<data-backed strength #4 (e.g., 'Content themes align with TARGET audience')>",
-    "<data-backed strength #5 (e.g., 'Posting consistency; stable reach')>"
+    "Strong engagement rate above industry average",
+    "Highly relevant audience demographics",
+    "Consistent high-quality content production",
+    "Professional brand collaboration history",
+    "Verified account with business setup"
   ],
   "reasons": [
-    "<Reason 1: Numeric justification tied to business outcome>",
-    "<Reason 2: Engagement pattern explanation with figures>",
-    "<Reason 3: Audience/industry alignment with examples>",
-    "<Reason 4: Risk/brand safety notes if any>",
-    "<Reason 5: Growth trajectory or momentum indicators>",
-    "<Reason 6: Conversion relevance for ${business.target_audience}>",
-    "<Reason 7: (optional) Collaboration format fit>",
-    "<Reason 8: (optional) Competitive differentiation>"
+    "Engagement rate of X% significantly above industry benchmark",
+    "Audience demographics show 80% alignment with target market",
+    "Content quality demonstrates professional production values",
+    "Bio and recent posts indicate collaboration readiness",
+    "Follower growth pattern suggests authentic audience building",
+    "Comment sentiment analysis shows positive brand association potential"
   ]
-}
-
-Respond with JSON only. Strictly valid JSON. No code fences, no extra text.`;
+}`;
 }
