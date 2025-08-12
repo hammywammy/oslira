@@ -10,7 +10,7 @@ routes = [
 APP_ENV = "production"
 
 [env.staging]
-name = "oslira-api-stg"
+name = "oslira-api-stg" 
 workers_dev = true
 
 [env.staging.vars]
