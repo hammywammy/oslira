@@ -2,10 +2,7 @@
 // SHARED-CORE.JS - Universal app foundation
 // Include this FIRST in every page: <script src="/core_utils/shared-code.js"></script>
 // ==========================================
-//Hide console logging
-if (shouldDisableLogs) {
-    console.log = console.warn = console.info = console.debug = () => {};
-}
+
 // =============================================================================
 // 1. GLOBAL STATE & CONFIGURATION
 // =============================================================================
