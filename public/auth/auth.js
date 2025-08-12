@@ -23,6 +23,17 @@ let isInitialized = false;
 // Initialize application when DOM loads
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔐 Oslira auth loaded');
+    
+    // Load environment config first
+    if (typeof loadEnvConfig !== 'undefined') {
+        try {
+            await loadEnvConfig();
+            console.log('🔧 Environment configuration loaded');
+        } catch (error) {
+            console.warn('⚠️ Environment config failed, using fallback:', error);
+        }
+    }
+    
     await initializeAuth();
 });
 
@@ -45,20 +56,29 @@ async function initializeAuth() {
             throw new Error('Supabase library not available');
         }
 
-        // Get configuration (modern + fallback)
-        const config = window.CONFIG || await loadConfigFromAPI();
-        
-        // Initialize Supabase client
-        supabase = window.supabase.createClient(
-            config.supabaseUrl, 
-            config.supabaseAnonKey,
-            {
-                auth: {
-                    autoRefreshToken: true,
-                    persistSession: true
-                }
-            }
-        );
+// Load environment configuration first
+if (!window.EnvConfig || !window.EnvConfig.isLoaded) {
+    await loadEnvConfig();
+}
+const envConfig = getEnvConfig();
+
+// Get Supabase configuration
+const supabaseConfig = envConfig.getSupabaseConfig ? envConfig.getSupabaseConfig() : {
+    url: envConfig.SUPABASE_URL,
+    anonKey: envConfig.SUPABASE_ANON_KEY
+};
+
+// Initialize Supabase client
+supabase = window.supabase.createClient(
+    supabaseConfig.url, 
+    supabaseConfig.anonKey,
+    {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true
+        }
+    }
+);
         
         // Check for existing session or magic link
         await handleExistingAuth();
@@ -326,14 +346,15 @@ async function handleFormSubmission(event) {
                  window.location.hostname.includes('staging') ||
                  window.location.hostname.includes('prototype');
 
-const redirectTo = isStaging 
-    ? 'https://osliratest.netlify.app/auth.html'    // Your staging URL
-    : window.location.origin + '/auth.html';       // Production URL
+const envConfig = window.getEnvConfig ? window.getEnvConfig() : null;
+const callbackUrl = envConfig ? envConfig.AUTH_CALLBACK_URL : `${window.location.origin}/auth/callback`;
+
+console.log(`🔐 [Auth] Using callback URL: ${callbackUrl}`);
 
 const { error } = await supabase.auth.signInWithOtp({
     email: email,
     options: {
-        emailRedirectTo: redirectTo,  // 🔥 DYNAMIC REDIRECT
+        emailRedirectTo: callbackUrl,
         shouldCreateUser: true
     }
 });
