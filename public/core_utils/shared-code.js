@@ -58,6 +58,16 @@ window.OsliraApp.logger = {
         // Always show errors
         console.error(message, error);
     }
+
+    if (!window.location.hostname.includes('localhost') && 
+    !window.location.hostname.includes('osliratest')) {
+    
+    // Override console methods for production
+    console.log = () => {};
+    console.warn = () => {};
+    console.info = () => {};
+    // Keep console.error for debugging
+}
 };
 
 // =============================================================================
