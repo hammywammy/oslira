@@ -509,21 +509,32 @@ async function apiRequest(endpoint, options = {}) {
         }
     };
     
-    // ✅ UPDATED: New endpoint routing
+    // Get worker URL from environment configuration
+    let workerUrl;
+    try {
+        const envConfig = window.getEnvConfig ? window.getEnvConfig() : null;
+        workerUrl = envConfig ? envConfig.WORKER_URL : config.workerUrl;
+    } catch (error) {
+        // Fallback to legacy config
+        workerUrl = config.workerUrl;
+    }
+    
+    // Fallback URL if still not found
+    if (!workerUrl) {
+        workerUrl = 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
+        console.warn('⚠️ No worker URL found, using fallback:', workerUrl);
+    }
+    
+    // Build URL based on endpoint
     let url;
     if (endpoint.startsWith('http')) {
         url = endpoint;
     } else if (endpoint.startsWith('/v1/')) {
-        // NEW: v1 endpoints go to worker
-        const workerUrl = config.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
         url = `${workerUrl}${endpoint}`;
     } else if (endpoint.startsWith('/analyze') || endpoint.startsWith('/bulk-analyze')) {
-        // OLD: Convert old endpoints to new v1 format
-        const workerUrl = config.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
+        // Convert legacy endpoints to v1 format
         url = `${workerUrl}/v1${endpoint}`;
     } else {
-        // Default to worker
-        const workerUrl = config.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
         url = `${workerUrl}${endpoint}`;
     }
     

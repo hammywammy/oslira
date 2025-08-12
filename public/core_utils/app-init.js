@@ -136,37 +136,50 @@ class OsliraAppInit {
         console.log('🏗️ [AppInit] Global namespace initialized');
     }
     
-    static async _loadConfig() {
-        try {
-            console.log('🔧 [AppInit] Loading configuration...');
-            
-            // Primary: Use window.CONFIG from env-config.js
-            if (window.CONFIG) {
-                Object.assign(window.OsliraApp.config, window.CONFIG);
-                console.log('✅ [AppInit] Configuration loaded from window.CONFIG');
-                return window.CONFIG;
+static async _loadConfig() {
+    try {
+        console.log('🔧 [AppInit] Loading configuration...');
+        
+        // Primary: Load environment configuration first
+        if (typeof loadEnvConfig !== 'undefined') {
+            try {
+                await loadEnvConfig();
+                const envConfig = getEnvConfig();
+                Object.assign(window.OsliraApp.config, envConfig);
+                console.log('✅ [AppInit] Configuration loaded from environment config');
+                return envConfig;
+            } catch (error) {
+                console.warn('⚠️ [AppInit] Environment config failed, trying fallbacks:', error);
             }
-            
-            // Fallback: Use API endpoint
-            const response = await fetch('/api/config');
-            if (!response.ok) {
-                throw new Error(`Config API returned ${response.status}`);
-            }
-            
-            const config = await response.json();
-            if (config.error) {
-                throw new Error(config.error);
-            }
-            
-            Object.assign(window.OsliraApp.config, config);
-            console.log('✅ [AppInit] Configuration loaded from API');
-            return config;
-            
-        } catch (error) {
-            console.error('❌ [AppInit] Configuration failed:', error);
-            throw new Error(`Configuration loading failed: ${error.message}`);
         }
+        
+        // Fallback 1: Use window.CONFIG from env-config.js
+        if (window.CONFIG) {
+            Object.assign(window.OsliraApp.config, window.CONFIG);
+            console.log('✅ [AppInit] Configuration loaded from window.CONFIG');
+            return window.CONFIG;
+        }
+        
+        // Fallback 2: Use API endpoint
+        const response = await fetch('/api/config');
+        if (!response.ok) {
+            throw new Error(`Config API returned ${response.status}`);
+        }
+        
+        const config = await response.json();
+        if (config.error) {
+            throw new Error(config.error);
+        }
+        
+        Object.assign(window.OsliraApp.config, config);
+        console.log('✅ [AppInit] Configuration loaded from API fallback');
+        return config;
+        
+    } catch (error) {
+        console.error('❌ [AppInit] Configuration failed:', error);
+        throw new Error(`Configuration loading failed: ${error.message}`);
     }
+}
     
     static async _initializeSupabase() {
         try {

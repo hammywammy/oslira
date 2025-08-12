@@ -1,8 +1,7 @@
 name = "oslira-api"
 main = "src/index.ts"
 compatibility_date = "2025-08-01"
-
-# Production routes (your existing domain)
+ 
 routes = [
   { pattern = "api.oslira.com/*", zone_name = "oslira.com" }
 ]
@@ -10,10 +9,9 @@ routes = [
 [vars]
 APP_ENV = "production"
 
-# Staging environment (completely separate)
 [env.staging]
-name = "oslira-api-stg"
-workers_dev = true  # Uses workers.dev subdomain
+name = "oslira-api-stg" 
+workers_dev = true
 
 [env.staging.vars]
 APP_ENV = "staging"

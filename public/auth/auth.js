@@ -7,10 +7,10 @@ if (typeof Sentry !== 'undefined') {
     Sentry.init({
         environment: 'production',
         beforeSend(event) {
-            if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
+            if (event.exception?.values?.[0]?.value?.includes('NetworkError')) { 
                 return null;
             }
-            return event;
+            return event; 
         }
     });
 }
@@ -23,6 +23,17 @@ let isInitialized = false;
 // Initialize application when DOM loads
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🔐 Oslira auth loaded');
+    
+    // Load environment config first
+    if (typeof loadEnvConfig !== 'undefined') {
+        try {
+            await loadEnvConfig();
+            console.log('🔧 Environment configuration loaded');
+        } catch (error) {
+            console.warn('⚠️ Environment config failed, using fallback:', error);
+        }
+    }
+    
     await initializeAuth();
 });
 
@@ -45,20 +56,29 @@ async function initializeAuth() {
             throw new Error('Supabase library not available');
         }
 
-        // Get configuration (modern + fallback)
-        const config = window.CONFIG || await loadConfigFromAPI();
-        
-        // Initialize Supabase client
-        supabase = window.supabase.createClient(
-            config.supabaseUrl, 
-            config.supabaseAnonKey,
-            {
-                auth: {
-                    autoRefreshToken: true,
-                    persistSession: true
-                }
-            }
-        );
+// Load environment configuration first
+if (!window.EnvConfig || !window.EnvConfig.isLoaded) {
+    await loadEnvConfig();
+}
+const envConfig = getEnvConfig();
+
+// Get Supabase configuration
+const supabaseConfig = envConfig.getSupabaseConfig ? envConfig.getSupabaseConfig() : {
+    url: envConfig.SUPABASE_URL,
+    anonKey: envConfig.SUPABASE_ANON_KEY
+};
+
+// Initialize Supabase client
+supabase = window.supabase.createClient(
+    supabaseConfig.url, 
+    supabaseConfig.anonKey,
+    {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true
+        }
+    }
+);
         
         // Check for existing session or magic link
         await handleExistingAuth();
@@ -322,13 +342,22 @@ async function handleFormSubmission(event) {
     console.log('🔍 AUTH: Sending magic link...');
 
     try {
-        const { error } = await supabase.auth.signInWithOtp({
-            email: email,
-            options: {
-                emailRedirectTo: window.location.origin + '/auth.html',
-                shouldCreateUser: true
-            }
-        });
+        const isStaging = window.location.hostname.includes('test') || 
+                 window.location.hostname.includes('staging') ||
+                 window.location.hostname.includes('prototype');
+
+const envConfig = window.getEnvConfig ? window.getEnvConfig() : null;
+const callbackUrl = envConfig ? envConfig.AUTH_CALLBACK_URL : `${window.location.origin}/auth/callback`;
+
+console.log(`🔐 [Auth] Using callback URL: ${callbackUrl}`);
+
+const { error } = await supabase.auth.signInWithOtp({
+    email: email,
+    options: {
+        emailRedirectTo: callbackUrl,
+        shouldCreateUser: true
+    }
+});
 
         if (error) {
             console.log('🔍 AUTH: Supabase error:', error.message);
@@ -415,6 +444,33 @@ async function redirectToDashboard() {
     }
 }
 
+async function checkForProductionSession() {
+    // Check if we're on staging
+    const isStaging = window.location.hostname.includes('test') || 
+                     window.location.hostname.includes('staging');
+    
+    if (!isStaging) return;
+    
+    // Try to get session from current domain first
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (!session) {
+        // If no session, offer to redirect to production for login
+        const loginViaProduction = confirm(
+            'No session found. Would you like to log in via the main site and return here?'
+        );
+        
+        if (loginViaProduction) {
+            // Redirect to production with return URL
+            const returnUrl = encodeURIComponent(window.location.href);
+            window.location.href = `https://oslira.com/auth.html?return=${returnUrl}`;
+        }
+    }
+}
+
+// Call this on page load
+document.addEventListener('DOMContentLoaded', checkForProductionSession);
+
 // =============================================================================
 // UI FUNCTIONS (Original Styling & Behavior)
 // =============================================================================
@@ -445,6 +501,8 @@ function showSuccess(email) {
     document.getElementById('main-card').style.display = 'none';
     document.getElementById('success-card').style.display = 'block';
 }
+
+
 
 // =============================================================================
 // AUTH STATE LISTENERS (Original Functionality)

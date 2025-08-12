@@ -252,12 +252,15 @@ class EnhancedConfigManager {
     return status;
   }
 
-  private async getFromSupabase(keyName: string): Promise<string> {
-    const headers = {
-      apikey: this.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
-    };
+private async getFromSupabase(keyName: string): Promise<string> {
+  // Get the service role key from AWS first
+  const serviceRoleKey = await this.getConfig('SUPABASE_SERVICE_ROLE');
+  
+  const headers = {
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    'Content-Type': 'application/json'
+  };
 
     const response = await fetchJson<ConfigItem[]>(
       `${this.env.SUPABASE_URL}/rest/v1/app_config?key_name=eq.${keyName}&environment=eq.production&select=key_value`,
