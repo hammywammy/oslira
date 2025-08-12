@@ -1,7 +1,7 @@
 name = "oslira-api"
 main = "src/index.ts"
 compatibility_date = "2025-08-01"
-
+ 
 routes = [
   { pattern = "api.oslira.com/*", zone_name = "oslira.com" }
 ]
