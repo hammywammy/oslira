@@ -3,14 +3,6 @@
 // Include this FIRST in every page: <script src="/core_utils/shared-code.js"></script>
 // ==========================================
 //Hide console logging
-const DISABLE_LOGS_IN_PRODUCTION = true;
-const DISABLE_LOGS_IN_STAGING = true;
-
-const shouldDisableLogs = (
-    (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') ||
-    (DISABLE_LOGS_IN_STAGING && window.location.hostname === 'osliratest.netlify.app')
-);
-
 if (shouldDisableLogs) {
     console.log = console.warn = console.info = console.debug = () => {};
 }
