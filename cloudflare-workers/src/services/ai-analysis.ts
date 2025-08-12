@@ -105,10 +105,10 @@ interface AnalysisTier {
 
 // Tiers use ONLY your old working OpenAI models to keep behavior stable
 const ANALYSIS_TIERS: AnalysisTier[] = [
-  { tier: 1, model: 'gpt-5-nano', maxTokens: 2000,  targetSpeed: 5000,  minDataRichness: 0,  minAnalysisValue: 0  },
-  { tier: 2, model: 'gpt-5-mini', maxTokens: 3500, targetSpeed: 8000,  minDataRichness: 25, minAnalysisValue: 30 },
-  { tier: 3, model: 'gpt-5-mini', maxTokens: 4500, targetSpeed: 12000, minDataRichness: 50, minAnalysisValue: 60 },
-  { tier: 4, model: 'gpt-5-mini', maxTokens: 6000, targetSpeed: 16000, minDataRichness: 75, minAnalysisValue: 80 }
+  { tier: 1, model: 'gpt-5-nano', maxTokens: 2500,  targetSpeed: 45000,  minDataRichness: 0,  minAnalysisValue: 0  },
+  { tier: 2, model: 'gpt-5-mini', maxTokens: 4000,  targetSpeed: 60000,  minDataRichness: 25, minAnalysisValue: 30 },
+  { tier: 3, model: 'gpt-5-mini', maxTokens: 5500,  targetSpeed: 75000,  minDataRichness: 50, minAnalysisValue: 60 },
+  { tier: 4, model: 'gpt-5-mini', maxTokens: 7000,  targetSpeed: 90000,  minDataRichness: 75, minAnalysisValue: 80 }
 ];
 
 function assessProfileIntelligence(profile: ProfileData, business: BusinessProfile): ProfileIntelligence {
@@ -728,20 +728,20 @@ async function executeOpenAIAnalysisOptimized(
     jsonSchema: isGPT5(model) ? getAnalysisJsonSchema() : undefined
   });
 
-  const response = await callWithRetry(
-    'https://api.openai.com/v1/chat/completions',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
+const response = await callWithRetry(
+  'https://api.openai.com/v1/chat/completions',
+  {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${openaiKey}`,
+      'Content-Type': 'application/json'
     },
-    2,
-    1000,
-    intelligence.speedTarget
-  );
+    body: JSON.stringify(body)
+  },
+  3,           // Increased to 3 retries
+  2000,        // 2 seconds between retries
+  intelligence.speedTarget || 60000  // Default to 60 seconds if no target
+);
 
   const content = parseChoiceSafe(response?.choices?.[0]);
   if (!content) {
