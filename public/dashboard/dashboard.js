@@ -4955,30 +4955,46 @@ class UnifiedAnalysisQueue {
         };
     }
 
-    async callAnalysisAPI(requestData) {
-        const workerUrl = window.CONFIG?.workerUrl || 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
-        const session = window.OsliraApp?.session;
-
-        if (!session) {
-            throw new Error('No active session');
-        }
-
-        const response = await fetch(`${workerUrl}/v1/analyze`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.access_token}`
-            },
-            body: JSON.stringify(requestData)
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API Error: ${response.status}`);
-        }
-
-        return await response.json();
+async callAnalysisAPI(requestData) {
+    // Get worker URL from environment configuration
+    let workerUrl;
+    try {
+        const envConfig = window.getEnvConfig ? window.getEnvConfig() : null;
+        workerUrl = envConfig ? envConfig.WORKER_URL : window.CONFIG?.workerUrl;
+    } catch (error) {
+        // Fallback to legacy config
+        workerUrl = window.CONFIG?.workerUrl;
     }
+    
+    // Final fallback
+    if (!workerUrl) {
+        workerUrl = 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
+        console.warn('⚠️ No worker URL found, using fallback:', workerUrl);
+    }
+
+    const session = window.OsliraApp?.session;
+    if (!session) {
+        throw new Error('No active session');
+    }
+
+    console.log(`🌐 [Dashboard] Making API call to: ${workerUrl}/v1/analyze`);
+
+    const response = await fetch(`${workerUrl}/v1/analyze`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(requestData)
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API Error: ${response.status}`);
+    }
+
+    return await response.json();
+}
 }
 
 // ===============================================================================
