@@ -2,7 +2,13 @@
 // SECURE STAGING GUARD - RATE LIMITED & TAMPER-RESISTANT
 // Prevents console manipulation and limits attempts
 // =============================================================================
+const DISABLE_LOGS_IN_PRODUCTION = true;
+const DISABLE_LOGS_IN_STAGING = true;
 
+const shouldDisableLogs = (
+    (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') ||
+    (DISABLE_LOGS_IN_STAGING && window.location.hostname === 'osliratest.netlify.app')
+);
     
 (function() {
     'use strict';
