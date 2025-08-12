@@ -105,10 +105,10 @@ interface AnalysisTier {
 
 // Tiers use ONLY your old working OpenAI models to keep behavior stable
 const ANALYSIS_TIERS: AnalysisTier[] = [
-  { tier: 1, model: 'gpt-5-nano', maxTokens: 600,  targetSpeed: 5000,  minDataRichness: 0,  minAnalysisValue: 0  },
-  { tier: 2, model: 'gpt-5-mini', maxTokens: 1200, targetSpeed: 8000,  minDataRichness: 25, minAnalysisValue: 30 },
-  { tier: 3, model: 'gpt-5-mini', maxTokens: 2000, targetSpeed: 12000, minDataRichness: 50, minAnalysisValue: 60 },
-  { tier: 4, model: 'gpt-5-mini', maxTokens: 2600, targetSpeed: 16000, minDataRichness: 75, minAnalysisValue: 80 }
+  { tier: 1, model: 'gpt-5-nano', maxTokens: 1200,  targetSpeed: 5000,  minDataRichness: 0,  minAnalysisValue: 0  },
+  { tier: 2, model: 'gpt-5-mini', maxTokens: 2400, targetSpeed: 8000,  minDataRichness: 25, minAnalysisValue: 30 },
+  { tier: 3, model: 'gpt-5-mini', maxTokens: 3200, targetSpeed: 12000, minDataRichness: 50, minAnalysisValue: 60 },
+  { tier: 4, model: 'gpt-5-mini', maxTokens: 4000, targetSpeed: 16000, minDataRichness: 75, minAnalysisValue: 80 }
 ];
 
 function assessProfileIntelligence(profile: ProfileData, business: BusinessProfile): ProfileIntelligence {
