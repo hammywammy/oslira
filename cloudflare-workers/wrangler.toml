@@ -1,22 +1,19 @@
-name = "ai-outreach-api"
-workers_dev = true
-compatibility_date = "2025-07-09"
+name = "oslira-api"
 main = "src/index.ts"
+compatibility_date = "2025-08-01"
+
+# Production routes (your existing domain)
+routes = [
+  { pattern = "api.oslira.com/*", zone_name = "oslira.com" }
+]
 
 [vars]
-SUPABASE_URL = "https://jswzzihuqtjqvobfosks.supabase.co"
-ENVIRONMENT = "production"
+APP_ENV = "production"
 
-# wrangler.toml (wrangler v3.88.0^)
-[observability.logs]
-enabled = true
+# Staging environment (completely separate)
+[env.staging]
+name = "oslira-api-stg"
+workers_dev = true  # Uses workers.dev subdomain
 
-
-
-
-
-# Secrets are set via 'wrangler secret put' command
-# SUPABASE_SERVICE_ROLE - set as secret
-# OPENAI_KEY - set as secret  
-# CLAUDE_KEY - set as secret
-# APIFY_API_TOKEN - set as secret
+[env.staging.vars]
+APP_ENV = "staging"
