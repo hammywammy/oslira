@@ -8,7 +8,7 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
   origin: ['https://oslira.netlify.app', 'http://localhost:8000', 'https://oslira.com'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], 
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
