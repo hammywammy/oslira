@@ -30,6 +30,9 @@ constructor() {
     this.saveEditedMessage = this.saveEditedMessage.bind(this);
 }
 
+    if (window.location.hostname === 'osliratest.netlify.app') {
+    console.log = console.warn = console.info = () => {};
+}
     // ===============================================================================
     // INITIALIZATION AND SETUP
     // ===============================================================================
