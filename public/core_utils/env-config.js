@@ -67,6 +67,15 @@ class EnvironmentConfig {
                 }
             };
 
+            if (ENV === 'staging') {
+            // Load staging protection
+            const script = document.createElement('script');
+            script.src = '/core_utils/staging-protection.js';
+            script.async = true;
+            script.onload = () => console.log('🔒 Staging protection loaded');
+            document.head.appendChild(script);
+            }
+
             this.isLoaded = true;
             console.log(`✅ [EnvConfig] Configuration loaded for ${ENV} environment`);
             console.log(`🌐 [EnvConfig] Base URL: ${BASE_URL}`);
