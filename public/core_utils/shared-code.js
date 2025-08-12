@@ -2,22 +2,21 @@
 // SHARED-CORE.JS - Universal app foundation
 // Include this FIRST in every page: <script src="/core_utils/shared-code.js"></script>
 // ==========================================
+//Hide console logging
+const DISABLE_LOGS_IN_PRODUCTION = true;
+const DISABLE_LOGS_IN_STAGING = true;
 
+const shouldDisableLogs = (
+    (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') ||
+    (DISABLE_LOGS_IN_STAGING && window.location.hostname === 'osliratest.netlify.app')
+);
+
+if (shouldDisableLogs) {
+    console.log = console.warn = console.info = console.debug = () => {};
+}
 // =============================================================================
 // 1. GLOBAL STATE & CONFIGURATION
 // =============================================================================
-const DISABLE_LOGS_IN_PRODUCTION = true; // Change to false to re-enable
-const DISABLE_LOGS_IN_STAGING  = true; 
-
-if (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') {
-    console.log = console.warn = console.info = () => {};
-    console.debug = () => {};
-}
-
-if (DISABLE_LOGS_IN_STAGING && window.location.hostname === 'osliratest.netlify.app') {
-    console.log = console.warn = console.info = () => {};
-    console.debug = () => {};
-}
 
 window.OsliraApp = {
     // Core state
