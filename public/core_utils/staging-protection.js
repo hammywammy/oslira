@@ -11,7 +11,7 @@
                      window.location.hostname.includes('staging') ||
                      window.location.hostname.includes('osliratest');
     
-    if (!isStaging) {
+    if (!isStaging) { 
         console.log('🔓 Production environment - no password protection needed');
         return;
     }
