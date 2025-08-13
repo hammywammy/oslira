@@ -1865,7 +1865,7 @@ class Dashboard {
       if (result.success) {
         console.log("✅ Analysis successfully queued");
         Alert.success({
-          message: `Analysis started for @${cleanUsername}`,
+          message: `Analysis finished for @${cleanUsername}`,
           timeoutMs: 3000,
         });
 
