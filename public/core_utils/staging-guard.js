@@ -63,7 +63,7 @@ if (shouldDisableLogs) {
         configurable: false
     });
 }
-    
+
 (function() {
     'use strict';
     
