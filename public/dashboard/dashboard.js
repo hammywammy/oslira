@@ -4,20 +4,20 @@
 // lead_analyses table: ALL engagement data, insights, outreach, selling points
 // ===============================================================================
 class Dashboard {
-constructor() {
+  constructor() {
     this.allLeads = [];
     this.selectedLeads = new Set();
-    this.currentFilter = 'all';
+    this.currentFilter = "all";
     this.isLoading = false;
     this.dateFormatCache = new Map();
-    
+
     // ✅ ADD THESE REAL-TIME PROPERTIES
     this.realtimeSubscription = null;
     this.isRealtimeActive = false;
     this.pollingInterval = null;
     this.lastUpdateTimestamp = null;
     this.dashboardSetupComplete = false;
-    
+
     // Bind methods to maintain context
     this.init = this.init.bind(this);
     this.loadDashboardData = this.loadDashboardData.bind(this);
@@ -27,257 +27,288 @@ constructor() {
     this.copyText = this.copyText.bind(this);
     this.editMessage = this.editMessage.bind(this);
     this.saveEditedMessage = this.saveEditedMessage.bind(this);
-}
+  }
 
-    // ===============================================================================
-    // INITIALIZATION AND SETUP
-    // ===============================================================================
+  // ===============================================================================
+  // INITIALIZATION AND SETUP
+  // ===============================================================================
 
-async init() {
+  async init() {
     try {
-        console.log('🚀 Initializing dashboard...');
-        
-        // Setup event listeners first
-        this.setupEventListeners();
+      console.log("🚀 Initializing dashboard...");
 
-        if (!this.dashboardSetupComplete) {
-            await this.setupDashboard();
-            this.dashboardSetupComplete = true;
-        }
-        
-        // ✅ Listen for auth events to reload data
-        if (window.OsliraApp?.events) {
-            window.OsliraApp.events.addEventListener('userAuthenticated', async (event) => {
-                console.log('🔐 User authenticated event received');
-                await this.setupDashboard(); // ✅ Setup real-time AFTER auth
-                await this.loadDashboardData();
-            });
-        }
-        
-        // Setup dashboard functionality (this will wait for auth)
+      // Setup event listeners first
+      this.setupEventListeners();
+
+      if (!this.dashboardSetupComplete) {
         await this.setupDashboard();
-        
-        // Load dashboard data (will wait for auth internally)
-        await this.loadDashboardData();
-        
-        // Load business profiles early
-        setTimeout(() => {
-            this.loadBusinessProfilesForModal();
-        }, 1000);
-        
-        console.log('✅ Dashboard initialized successfully');
-        
-    } catch (error) {
-        console.error('❌ Dashboard initialization failed:', error);
-        this.displayErrorState('Failed to initialize dashboard: ' + error.message);
-    }
-}
+        this.dashboardSetupComplete = true;
+      }
 
-    async loadBusinessProfiles() {
+      // ✅ Listen for auth events to reload data
+      if (window.OsliraApp?.events) {
+        window.OsliraApp.events.addEventListener("userAuthenticated", async (event) => {
+          console.log("🔐 User authenticated event received");
+          await this.setupDashboard(); // ✅ Setup real-time AFTER auth
+          await this.loadDashboardData();
+        });
+      }
+
+      // Setup dashboard functionality (this will wait for auth)
+      await this.setupDashboard();
+
+      // Load dashboard data (will wait for auth internally)
+      await this.loadDashboardData();
+
+      // Load business profiles early
+      setTimeout(() => {
+        this.loadBusinessProfilesForModal();
+      }, 1000);
+
+      console.log("✅ Dashboard initialized successfully");
+    } catch (error) {
+      Alert.error("Dashboard failed to load", {
+        details: error.message,
+        actions: [{ label: "Refresh Page", action: "reload" }],
+        sticky: true,
+      });
+    }
+  }
+
+  async loadBusinessProfiles() {
     try {
-        console.log('🏢 Loading user business profiles...');
-        
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
+      console.log("🏢 Loading user business profiles...");
 
-        if (!supabase || !user) {
-            console.log('📋 No auth - skipping business profiles loading');
-            return;
-        }
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
 
-        const { data: profiles, error } = await supabase
-            .from('business_profiles')
-            .select('id, business_name, is_active')
-            .eq('user_id', user.id)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
+      if (!supabase || !user) {
+        Alert.warning({
+          message: "Please log in to view your data",
+          actions: [{ label: "Go to Login", action: "redirect:/auth.html" }],
+        });
+        return;
+      }
 
-        if (error) {
-            console.warn('⚠️ Business profiles query failed:', error.message);
-            return;
-        }
+      const { data: profiles, error } = await supabase
+        .from("business_profiles")
+        .select("id, business_name, is_active")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
 
-        // Store in global app state
-        window.OsliraApp.businesses = profiles || [];
-        
-        // Set active business if none selected
-        const savedBusinessId = localStorage.getItem('selectedBusinessId');
-        if (savedBusinessId && profiles.find(b => b.id === savedBusinessId)) {
-            window.OsliraApp.business = profiles.find(b => b.id === savedBusinessId);
-        } else if (profiles.length > 0) {
-            window.OsliraApp.business = profiles[0];
-            localStorage.setItem('selectedBusinessId', profiles[0].id);
-        }
+      if (error) {
+        console.warn("⚠️ Business profiles query failed:", error.message);
+        return;
+      }
 
-        console.log(`✅ Loaded ${profiles?.length || 0} business profiles`);
+      // Store in global app state
+      window.OsliraApp.businesses = profiles || [];
 
+      // Set active business if none selected
+      const savedBusinessId = localStorage.getItem("selectedBusinessId");
+      if (savedBusinessId && profiles.find((b) => b.id === savedBusinessId)) {
+        window.OsliraApp.business = profiles.find((b) => b.id === savedBusinessId);
+      } else if (profiles.length > 0) {
+        window.OsliraApp.business = profiles[0];
+        localStorage.setItem("selectedBusinessId", profiles[0].id);
+      }
+
+      console.log(`✅ Loaded ${profiles?.length || 0} business profiles`);
     } catch (error) {
-        console.warn('⚠️ Business profiles loading failed:', error);
+      console.warn("⚠️ Business profiles loading failed:", error);
     }
-}
+  }
 
-   setupEventListeners() {
-    console.log('🔧 Setting up ALL event listeners...');
-    
+  setupEventListeners() {
+    console.log("🔧 Setting up ALL event listeners...");
+
     // ✅ CRITICAL: Analysis modal buttons (multiple entry points)
     const researchBtns = [
-        'research-lead-btn',           // Header button
-        'research-action-card',        // Action card
-        'welcome-cta-btn'              // Welcome insight button
+      "research-lead-btn", // Header button
+      "research-action-card", // Action card
+      "welcome-cta-btn", // Welcome insight button
     ];
-    
-    researchBtns.forEach(btnId => {
-        const btn = document.getElementById(btnId);
-        if (btn) {
-            btn.addEventListener('click', (e) => {
-                console.log(`🎯 Analysis modal triggered by: ${btnId}`);
-                e.preventDefault();
-                e.stopPropagation();
-                this.showAnalysisModal();
-            });
-            console.log(`✅ Event listener added to: ${btnId}`);
-        } else {
-            console.warn(`⚠️ Button not found: ${btnId}`);
-        }
+
+    researchBtns.forEach((btnId) => {
+      const btn = document.getElementById(btnId);
+      if (btn) {
+        btn.addEventListener("click", (e) => {
+          console.log(`🎯 Analysis modal triggered by: ${btnId}`);
+          e.preventDefault();
+          e.stopPropagation();
+          this.showAnalysisModal();
+        });
+        console.log(`✅ Event listener added to: ${btnId}`);
+      } else {
+        console.warn(`⚠️ Button not found: ${btnId}`);
+      }
     });
 
     // ✅ CRITICAL: Analysis form handlers
-    const analysisForm = document.getElementById('analysisForm');
+    const analysisForm = document.getElementById("analysisForm");
     if (analysisForm) {
-        analysisForm.addEventListener('submit', (e) => {
-            console.log('📝 Analysis form submitted');
-            e.preventDefault();
-            this.submitAnalysis(e);
-        });
-        console.log('✅ Analysis form submit listener added');
+      analysisForm.addEventListener("submit", (e) => {
+        console.log("📝 Analysis form submitted");
+        e.preventDefault();
+        this.submitAnalysis(e);
+      });
+      console.log("✅ Analysis form submit listener added");
     }
-    
-    const analysisTypeSelect = document.getElementById('analysis-type');
+
+    const analysisTypeSelect = document.getElementById("analysis-type");
     if (analysisTypeSelect) {
-        analysisTypeSelect.addEventListener('change', (e) => {
-            console.log('🔄 Analysis type changed to:', e.target.value);
-            this.updateInputField();
-        });
-        console.log('✅ Analysis type change listener added');
+      analysisTypeSelect.addEventListener("change", (e) => {
+        console.log("🔄 Analysis type changed to:", e.target.value);
+        this.updateInputField();
+      });
+      console.log("✅ Analysis type change listener added");
     }
-    
+
     // ✅ Modal close handlers
-    document.getElementById('analysis-modal-close')?.addEventListener('click', () => {
-        console.log('❌ Analysis modal close clicked');
-        this.closeModal('analysisModal');
+    document.getElementById("analysis-modal-close")?.addEventListener("click", () => {
+      console.log("❌ Analysis modal close clicked");
+      this.closeModal("analysisModal");
     });
-    
+
     // ✅ ALL OTHER EVENT LISTENERS (inline to avoid missing method error)
-    
+
     // Bulk upload
-    document.getElementById('bulk-upload-btn')?.addEventListener('click', () => this.showBulkUpload());
-    document.getElementById('csv-import-action-card')?.addEventListener('click', () => this.showBulkUpload());
-    
+    document
+      .getElementById("bulk-upload-btn")
+      ?.addEventListener("click", () => this.showBulkUpload());
+    document
+      .getElementById("csv-import-action-card")
+      ?.addEventListener("click", () => this.showBulkUpload());
+
     // Filters and activity
-    document.getElementById('timeframe-filter')?.addEventListener('change', () => this.loadRecentActivity());
-    document.getElementById('activity-filter')?.addEventListener('change', () => this.applyActivityFilter());
-    document.getElementById('refresh-activity-btn')?.addEventListener('click', () => this.refreshActivity());
-    
+    document
+      .getElementById("timeframe-filter")
+      ?.addEventListener("change", () => this.loadRecentActivity());
+    document
+      .getElementById("activity-filter")
+      ?.addEventListener("change", () => this.applyActivityFilter());
+    document
+      .getElementById("refresh-activity-btn")
+      ?.addEventListener("click", () => this.refreshActivity());
+
     // Bulk actions
-    document.getElementById('select-all-btn')?.addEventListener('click', () => this.selectAllLeads(true));
-    document.getElementById('bulk-delete-btn')?.addEventListener('click', () => this.bulkDeleteLeads());
-    document.getElementById('clear-selection-btn')?.addEventListener('click', () => this.clearSelection());
-    
+    document
+      .getElementById("select-all-btn")
+      ?.addEventListener("click", () => this.selectAllLeads(true));
+    document
+      .getElementById("bulk-delete-btn")
+      ?.addEventListener("click", () => this.bulkDeleteLeads());
+    document
+      .getElementById("clear-selection-btn")
+      ?.addEventListener("click", () => this.clearSelection());
+
     // Search functionality
-    const searchInput = document.getElementById('search-input');
+    const searchInput = document.getElementById("search-input");
     if (searchInput) {
-        let searchTimeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                this.searchLeads(e.target.value);
-            }, 300);
-        });
+      let searchTimeout;
+      searchInput.addEventListener("input", (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          this.searchLeads(e.target.value);
+        }, 300);
+      });
     }
 
     // Select all checkbox
-    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const selectAllCheckbox = document.getElementById("select-all-checkbox");
     if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', (e) => {
-            this.selectAllLeads(e.target.checked);
-        });
+      selectAllCheckbox.addEventListener("change", (e) => {
+        this.selectAllLeads(e.target.checked);
+      });
     }
 
     // Support and other modals
-    document.getElementById('support-btn')?.addEventListener('click', () => this.showSupportModal());
-    document.getElementById('lead-modal-close')?.addEventListener('click', () => this.closeModal('leadModal'));
-    document.getElementById('bulk-modal-close')?.addEventListener('click', () => this.closeModal('bulkModal'));
-    
+    document
+      .getElementById("support-btn")
+      ?.addEventListener("click", () => this.showSupportModal());
+    document
+      .getElementById("lead-modal-close")
+      ?.addEventListener("click", () => this.closeModal("leadModal"));
+    document
+      .getElementById("bulk-modal-close")
+      ?.addEventListener("click", () => this.closeModal("bulkModal"));
+
     // Export functionality
-    document.getElementById('export-action-card')?.addEventListener('click', () => this.exportLeads());
-    document.getElementById('generate-insights-btn')?.addEventListener('click', () => this.generateInsights());
-    
+    document
+      .getElementById("export-action-card")
+      ?.addEventListener("click", () => this.exportLeads());
+    document
+      .getElementById("generate-insights-btn")
+      ?.addEventListener("click", () => this.generateInsights());
+
     // Global modal click outside to close
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeModal(modal.id);
-            }
-        });
+    document.querySelectorAll(".modal").forEach((modal) => {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          this.closeModal(modal.id);
+        }
+      });
     });
-    
-    console.log('✅ All event listeners setup complete');
-}
 
-    setupFilterHandlers() {
-        // Activity filter handler
-        const activityFilter = document.getElementById('activity-filter');
-        if (activityFilter) {
-            activityFilter.addEventListener('change', () => {
-                this.applyActivityFilter();
-            });
-        }
+    console.log("✅ All event listeners setup complete");
+  }
+
+  setupFilterHandlers() {
+    // Activity filter handler
+    const activityFilter = document.getElementById("activity-filter");
+    if (activityFilter) {
+      activityFilter.addEventListener("change", () => {
+        this.applyActivityFilter();
+      });
+    }
+  }
+
+  setupBulkActions() {
+    // Bulk delete button
+    const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+    if (bulkDeleteBtn) {
+      bulkDeleteBtn.addEventListener("click", () => {
+        this.bulkDeleteLeads();
+      });
     }
 
-    setupBulkActions() {
-        // Bulk delete button
-        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
-        if (bulkDeleteBtn) {
-            bulkDeleteBtn.addEventListener('click', () => {
-                this.bulkDeleteLeads();
-            });
-        }
-
-        // Bulk export button
-        const bulkExportBtn = document.getElementById('bulk-export-btn');
-        if (bulkExportBtn) {
-            bulkExportBtn.addEventListener('click', () => {
-                this.bulkExportLeads();
-            });
-        }
+    // Bulk export button
+    const bulkExportBtn = document.getElementById("bulk-export-btn");
+    if (bulkExportBtn) {
+      bulkExportBtn.addEventListener("click", () => {
+        this.bulkExportLeads();
+      });
     }
+  }
 
-    // ===============================================================================
-    // DATA LOADING AND MANAGEMENT
-    // ===============================================================================
+  // ===============================================================================
+  // DATA LOADING AND MANAGEMENT
+  // ===============================================================================
 
-async loadDashboardData() {
+  async loadDashboardData() {
     try {
-        console.log('🔄 Loading dashboard data...');
-        
-        // Wait for authentication
-        const isAuthReady = await this.waitForAuth(15000);
-        
-        if (!isAuthReady) {
-            console.log('⚠️ Authentication not ready, showing empty state');
-            this.displayDemoLeads();
-            return;
-        }
-        
-        const supabase = window.OsliraApp.supabase;
-        const user = window.OsliraApp.user;
-        
-        console.log('✅ Authentication ready, loading data for user:', user.id);
+      console.log("🔄 Loading dashboard data...");
 
-        // Load leads data (existing code)
-        const { data: leadsData, error: leadsError } = await supabase
-            .from('leads')
-            .select(`
+      // Wait for authentication
+      const isAuthReady = await this.waitForAuth(15000);
+
+      if (!isAuthReady) {
+        console.log("⚠️ Authentication not ready, showing empty state");
+        this.displayDemoLeads();
+        return;
+      }
+
+      const supabase = window.OsliraApp.supabase;
+      const user = window.OsliraApp.user;
+
+      console.log("✅ Authentication ready, loading data for user:", user.id);
+
+      // Load leads data (existing code)
+      const { data: leadsData, error: leadsError } = await supabase
+        .from("leads")
+        .select(
+          `
                 id,
                 username, 
                 score,
@@ -289,29 +320,30 @@ async loadDashboardData() {
                 profile_url,
                 business_id,
                 quick_summary
-            `)
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(50);
+            `
+        )
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-        if (leadsError) {
-            console.error('❌ Leads query error:', leadsError);
-            throw leadsError;
-        }
+      if (leadsError) {
+        console.error("❌ Leads query error:", leadsError);
+        throw leadsError;
+      }
 
-        console.log(`📊 Loaded ${leadsData?.length || 0} leads from database`);
+      console.log(`📊 Loaded ${leadsData?.length || 0} leads from database`);
 
-        // Load analysis data for deep analysis leads (existing code)
-        const deepAnalysisLeadIds = leadsData
-            ?.filter(lead => lead.analysis_type === 'deep')
-            ?.map(lead => lead.id) || [];
+      // Load analysis data for deep analysis leads (existing code)
+      const deepAnalysisLeadIds =
+        leadsData?.filter((lead) => lead.analysis_type === "deep")?.map((lead) => lead.id) || [];
 
-        let analysisDataMap = new Map();
+      let analysisDataMap = new Map();
 
-        if (deepAnalysisLeadIds.length > 0) {
-            const { data: analysisData, error: analysisError } = await supabase
-                .from('lead_analyses')
-                .select(`
+      if (deepAnalysisLeadIds.length > 0) {
+        const { data: analysisData, error: analysisError } = await supabase
+          .from("lead_analyses")
+          .select(
+            `
                     lead_id,
                     engagement_score,
                     selling_points,
@@ -328,142 +360,154 @@ async loadDashboardData() {
                     analysis_data,
                     latest_posts,
                     engagement_data
-                `)
-                .in('lead_id', deepAnalysisLeadIds);
+                `
+          )
+          .in("lead_id", deepAnalysisLeadIds);
 
-            if (analysisError) {
-                console.warn('⚠️ Analysis data query error:', analysisError);
-            } else {
-                analysisData?.forEach(analysis => {
-                    analysisDataMap.set(analysis.lead_id, analysis);
-                });
-                console.log(`📈 Loaded analysis data for ${analysisData?.length || 0} deep analysis leads`);
-            }
+        if (analysisError) {
+          console.warn("⚠️ Analysis data query error:", analysisError);
+        } else {
+          analysisData?.forEach((analysis) => {
+            analysisDataMap.set(analysis.lead_id, analysis);
+          });
+          console.log(
+            `📈 Loaded analysis data for ${analysisData?.length || 0} deep analysis leads`
+          );
         }
+      }
 
-        // Combine leads with their analysis data
-        const enrichedLeads = leadsData?.map(lead => ({
-            ...lead,
-            lead_analyses: lead.analysis_type === 'deep' && analysisDataMap.has(lead.id) 
-                ? [analysisDataMap.get(lead.id)] 
-                : []
+      // Combine leads with their analysis data
+      const enrichedLeads =
+        leadsData?.map((lead) => ({
+          ...lead,
+          lead_analyses:
+            lead.analysis_type === "deep" && analysisDataMap.has(lead.id)
+              ? [analysisDataMap.get(lead.id)]
+              : [],
         })) || [];
 
-        // Store and display
-        this.allLeads = enrichedLeads;
-        this.selectedLeads.clear();
-        
-        console.log(`✅ Final result: ${this.allLeads.length} unique leads`);
+      // Store and display
+      this.allLeads = enrichedLeads;
+      this.selectedLeads.clear();
 
-        // Cache the data
-        if (window.OsliraApp.cache) {
-            window.OsliraApp.cache.leads = this.allLeads;
-            window.OsliraApp.cache.lastRefresh = new Date().toISOString();
-        }
-        
-        // ✅ UPDATE UI - THIS IS THE KEY CALL
-        this.displayLeads(this.allLeads);
-        await this.updateDashboardStats(); // ✅ MAKE SURE THIS RUNS
-        this.generateInsights();
-        
+      console.log(`✅ Final result: ${this.allLeads.length} unique leads`);
+
+      // Cache the data
+      if (window.OsliraApp.cache) {
+        window.OsliraApp.cache.leads = this.allLeads;
+        window.OsliraApp.cache.lastRefresh = new Date().toISOString();
+      }
+
+      // ✅ UPDATE UI - THIS IS THE KEY CALL
+      this.displayLeads(this.allLeads);
+      await this.updateDashboardStats(); // ✅ MAKE SURE THIS RUNS
+      this.generateInsights();
     } catch (error) {
-        console.error('❌ Error loading dashboard data:', error);
-        this.displayErrorState('Failed to load leads: ' + error.message);
+      Alert.error("Failed to load dashboard data", {
+        details: error.message,
+        actions: [{ label: "Try Again", action: "retry" }],
+      });
     }
-}
-// ✅ 8. DEBUG METHOD - ADD TO TEST STATS CALCULATION
-debugStats() {
-    console.log('🔍 DEBUG STATS CALCULATION:');
-    
+  }
+  // ✅ 8. DEBUG METHOD - ADD TO TEST STATS CALCULATION
+  debugStats() {
+    console.log("🔍 DEBUG STATS CALCULATION:");
+
     const totalLeads = this.allLeads.length;
-    const scoresDebug = this.allLeads.map(lead => ({
-        username: lead.username,
-        score: lead.score,
-        analysisType: lead.analysis_type,
-        isHighValue: (lead.score || 0) >= 80
+    const scoresDebug = this.allLeads.map((lead) => ({
+      username: lead.username,
+      score: lead.score,
+      analysisType: lead.analysis_type,
+      isHighValue: (lead.score || 0) >= 80,
     }));
-    
-    const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80);
-    const avgScore = totalLeads > 0 
+
+    const highValueLeads = this.allLeads.filter((lead) => (lead.score || 0) >= 80);
+    const avgScore =
+      totalLeads > 0
         ? this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads
         : 0;
-    
-    console.log('Leads with scores:', scoresDebug);
-    console.log('High value leads (80+):', highValueLeads.map(l => ({username: l.username, score: l.score})));
-    console.log('Calculations:', {
-        totalLeads,
-        avgScore: Math.round(avgScore),
-        highValueCount: highValueLeads.length,
-        percentage: totalLeads > 0 ? Math.round((highValueLeads.length / totalLeads) * 100) : 0
+
+    console.log("Leads with scores:", scoresDebug);
+    console.log(
+      "High value leads (80+):",
+      highValueLeads.map((l) => ({ username: l.username, score: l.score }))
+    );
+    console.log("Calculations:", {
+      totalLeads,
+      avgScore: Math.round(avgScore),
+      highValueCount: highValueLeads.length,
+      percentage: totalLeads > 0 ? Math.round((highValueLeads.length / totalLeads) * 100) : 0,
     });
-    
+
     // Check current UI values
-    console.log('Current UI values:', {
-        totalLeadsUI: document.getElementById('total-leads')?.textContent,
-        avgScoreUI: document.getElementById('avg-score')?.textContent,
-        highValueUI: document.getElementById('high-value-leads')?.textContent,
-        creditsUsedUI: document.getElementById('credits-used')?.textContent
+    console.log("Current UI values:", {
+      totalLeadsUI: document.getElementById("total-leads")?.textContent,
+      avgScoreUI: document.getElementById("avg-score")?.textContent,
+      highValueUI: document.getElementById("high-value-leads")?.textContent,
+      creditsUsedUI: document.getElementById("credits-used")?.textContent,
     });
-}
+  }
 
-// ✅ NEW: Wait for authentication method for dashboard
-async waitForAuth(timeoutMs = 10000) {
+  // ✅ NEW: Wait for authentication method for dashboard
+  async waitForAuth(timeoutMs = 10000) {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < timeoutMs) {
-        // Check if we have both user and supabase client
-        if (window.OsliraApp?.user && window.OsliraApp?.supabase) {
-            console.log('✅ Auth ready:', {
-                userId: window.OsliraApp.user.id,
-                email: window.OsliraApp.user.email
-            });
-            return true;
-        }
-        
-        // If we have supabase but no user, try to get session
-        if (window.OsliraApp?.supabase && !window.OsliraApp?.user) {
-            try {
-                const { data: { session } } = await window.OsliraApp.supabase.auth.getSession();
-                if (session?.user) {
-                    window.OsliraApp.session = session;
-                    window.OsliraApp.user = session.user;
-                    console.log('✅ Auth restored from session');
-                    return true;
-                }
-            } catch (error) {
-                console.warn('⚠️ Session restoration failed:', error);
-            }
-        }
-        
-        console.log('⏳ Waiting for auth...', {
-            hasSupabase: !!window.OsliraApp?.supabase,
-            hasUser: !!window.OsliraApp?.user,
-            elapsed: Date.now() - startTime
+      // Check if we have both user and supabase client
+      if (window.OsliraApp?.user && window.OsliraApp?.supabase) {
+        console.log("✅ Auth ready:", {
+          userId: window.OsliraApp.user.id,
+          email: window.OsliraApp.user.email,
         });
-        
-        await new Promise(resolve => setTimeout(resolve, 250));
+        return true;
+      }
+
+      // If we have supabase but no user, try to get session
+      if (window.OsliraApp?.supabase && !window.OsliraApp?.user) {
+        try {
+          const {
+            data: { session },
+          } = await window.OsliraApp.supabase.auth.getSession();
+          if (session?.user) {
+            window.OsliraApp.session = session;
+            window.OsliraApp.user = session.user;
+            console.log("✅ Auth restored from session");
+            return true;
+          }
+        } catch (error) {
+          console.warn("⚠️ Session restoration failed:", error);
+        }
+      }
+
+      console.log("⏳ Waiting for auth...", {
+        hasSupabase: !!window.OsliraApp?.supabase,
+        hasUser: !!window.OsliraApp?.user,
+        elapsed: Date.now() - startTime,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
     }
-    
-    console.warn('⚠️ Auth wait timeout reached');
+
+    console.warn("⚠️ Auth wait timeout reached");
     return false;
-}
+  }
 
-// ===============================================================================
-// ALSO UPDATE viewLead() WITH THE SAME WAIT LOGIC
-// ===============================================================================
+  // ===============================================================================
+  // ALSO UPDATE viewLead() WITH THE SAME WAIT LOGIC
+  // ===============================================================================
 
-async viewLead(leadId) {
+  async viewLead(leadId) {
     if (!leadId) {
-        console.error('viewLead: leadId is required');
-        return;
+      console.error("viewLead: leadId is required");
+      return;
     }
 
-    const modal = document.getElementById('leadModal');
-    const detailsContainer = document.getElementById('leadDetails');
+    const modal = document.getElementById("leadModal");
+    const detailsContainer = document.getElementById("leadDetails");
 
     if (!modal || !detailsContainer) {
-        console.error('viewLead: Required DOM elements not found');
-        return;
+      console.error("viewLead: Required DOM elements not found");
+      return;
     }
 
     // Show loading state
@@ -474,35 +518,36 @@ async viewLead(leadId) {
             <p style="margin: 0; color: var(--text-secondary);">Fetching analysis data...</p>
         </div>
     `;
-    modal.style.display = 'flex';
+    modal.style.display = "flex";
 
     try {
-        // ✅ OPTION 1: Try to find lead in already loaded data first
-        let lead = this.allLeads.find(l => l.id === leadId);
-        let analysisData = null;
+      // ✅ OPTION 1: Try to find lead in already loaded data first
+      let lead = this.allLeads.find((l) => l.id === leadId);
+      let analysisData = null;
 
-        if (lead) {
-            console.log('📋 Using cached lead data:', lead);
-            
-            // Get analysis data from cached lead
-            if (lead.lead_analyses && lead.lead_analyses.length > 0) {
-                analysisData = lead.lead_analyses[0];
-            }
-        } else {
-            // ✅ OPTION 2: Lead not in cache, fetch from database
-            console.log('🔍 Lead not in cache, fetching from database...');
-            
-            const supabase = window.OsliraApp.supabase;
-            const user = window.OsliraApp.user;
-            
-            if (!supabase || !user) {
-                throw new Error('Authentication system not ready');
-            }
+      if (lead) {
+        console.log("📋 Using cached lead data:", lead);
 
-            // Fetch lead data
-            const { data: leadData, error: leadError } = await supabase
-                .from('leads')
-                .select(`
+        // Get analysis data from cached lead
+        if (lead.lead_analyses && lead.lead_analyses.length > 0) {
+          analysisData = lead.lead_analyses[0];
+        }
+      } else {
+        // ✅ OPTION 2: Lead not in cache, fetch from database
+        console.log("🔍 Lead not in cache, fetching from database...");
+
+        const supabase = window.OsliraApp.supabase;
+        const user = window.OsliraApp.user;
+
+        if (!supabase || !user) {
+          throw new Error("Authentication system not ready");
+        }
+
+        // Fetch lead data
+        const { data: leadData, error: leadError } = await supabase
+          .from("leads")
+          .select(
+            `
                     id,
                     username,
                     profile_pic_url,
@@ -512,24 +557,26 @@ async viewLead(leadId) {
                     business_id,
                     created_at,
                     followers_count
-                `)
-                .eq('id', leadId)
-                .eq('user_id', user.id)
-                .single();
+                `
+          )
+          .eq("id", leadId)
+          .eq("user_id", user.id)
+          .single();
 
-            if (leadError || !leadData) {
-                throw new Error('Lead not found or access denied');
-            }
+        if (leadError || !leadData) {
+          throw new Error("Lead not found or access denied");
+        }
 
-            lead = leadData;
+        lead = leadData;
 
-            // Fetch analysis data if it's a deep analysis
-            if (lead.analysis_type === 'deep') {
-                console.log('🔍 Fetching deep analysis data...');
+        // Fetch analysis data if it's a deep analysis
+        if (lead.analysis_type === "deep") {
+          console.log("🔍 Fetching deep analysis data...");
 
-                const { data: deepAnalysis, error: analysisError } = await supabase
-                    .from('lead_analyses')
-                    .select(`
+          const { data: deepAnalysis, error: analysisError } = await supabase
+            .from("lead_analyses")
+            .select(
+              `
                         engagement_score,
                         score_niche_fit,
                         score_total,
@@ -542,28 +589,28 @@ async viewLead(leadId) {
                         engagement_rate,
                         latest_posts,
                         username
-                    `)
-                    .eq('lead_id', leadId)
-                    .single();
+                    `
+            )
+            .eq("lead_id", leadId)
+            .single();
 
-                if (analysisError) {
-                    console.warn('⚠️ Deep analysis data not found:', analysisError.message);
-                } else {
-                    analysisData = deepAnalysis;
-                    console.log('📈 Analysis data loaded:', analysisData);
-                }
-            }
+          if (analysisError) {
+            console.warn("⚠️ Deep analysis data not found:", analysisError.message);
+          } else {
+            analysisData = deepAnalysis;
+            console.log("📈 Analysis data loaded:", analysisData);
+          }
         }
+      }
 
-        // ✅ STEP 3: Build and display the HTML
-        const detailsHtml = this.buildLeadDetailsHTML(lead, analysisData);
-        detailsContainer.innerHTML = detailsHtml;
+      // ✅ STEP 3: Build and display the HTML
+      const detailsHtml = this.buildLeadDetailsHTML(lead, analysisData);
+      detailsContainer.innerHTML = detailsHtml;
 
-        console.log('✅ Lead details rendered successfully');
-
+      console.log("✅ Lead details rendered successfully");
     } catch (error) {
-        console.error('❌ Error loading lead details:', error);
-        detailsContainer.innerHTML = `
+      console.error("❌ Error loading lead details:", error);
+      detailsContainer.innerHTML = `
             <div style="text-align: center; padding: 60px;">
                 <div style="font-size: 32px; margin-bottom: 16px;">❌</div>
                 <h3 style="margin: 0 0 8px 0; color: var(--error);">Error Loading Lead</h3>
@@ -575,50 +622,50 @@ async viewLead(leadId) {
             </div>
         `;
     }
-}
+  }
 
-    // ===============================================================================
-    // BUILD FUNCTIONS - ENTERPRISE LEAD DETAILS HTML
-    // ===============================================================================
+  // ===============================================================================
+  // BUILD FUNCTIONS - ENTERPRISE LEAD DETAILS HTML
+  // ===============================================================================
 
-   // ===============================================================================
-// FIXED buildLeadDetailsHTML - LIGHT ANALYSIS NOW SHOWS QUICK SUMMARY + UPGRADE
-// ===============================================================================
+  // ===============================================================================
+  // FIXED buildLeadDetailsHTML - LIGHT ANALYSIS NOW SHOWS QUICK SUMMARY + UPGRADE
+  // ===============================================================================
 
-// ===============================================================================
-// FIXED buildLeadDetailsHTML - LIGHT ANALYSIS NOW SHOWS QUICK SUMMARY + UPGRADE
-// ===============================================================================
+  // ===============================================================================
+  // FIXED buildLeadDetailsHTML - LIGHT ANALYSIS NOW SHOWS QUICK SUMMARY + UPGRADE
+  // ===============================================================================
 
-buildLeadDetailsHTML(lead, analysisData = null) {
-    const analysisType = lead.analysis_type || 'light';
-    const isDeepAnalysis = analysisType === 'deep';
+  buildLeadDetailsHTML(lead, analysisData = null) {
+    const analysisType = lead.analysis_type || "light";
+    const isDeepAnalysis = analysisType === "deep";
     const score = lead.score || 0;
-    const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
+    const scoreClass = score >= 80 ? "score-high" : score >= 60 ? "score-medium" : "score-low";
 
     console.log(`🔄 Building lead details for ${lead.username} (${analysisType} analysis)`);
-    console.log('📊 Lead data (basic):', lead);
-    console.log('📈 Analysis data (deep):', analysisData);
+    console.log("📊 Lead data (basic):", lead);
+    console.log("📈 Analysis data (deep):", analysisData);
 
     // ✅ NEW: Check if we have analysis data from the join
     const hasAnalysisData = analysisData && Object.keys(analysisData).length > 0;
-    
+
     // ✅ NEW: For deep analysis, try to get data from the joined result
     if (isDeepAnalysis && !hasAnalysisData && lead.lead_analyses && lead.lead_analyses.length > 0) {
-        analysisData = lead.lead_analyses[0]; // Take first analysis record
-        console.log('📈 Using joined analysis data:', analysisData);
+      analysisData = lead.lead_analyses[0]; // Take first analysis record
+      console.log("📈 Using joined analysis data:", analysisData);
     }
 
     // Enhanced profile picture with fallback
     const profilePicUrl = lead.profile_pic_url;
-    const profilePicHtml = profilePicUrl 
-        ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=120&h=120&fit=cover&a=attention" 
+    const profilePicHtml = profilePicUrl
+      ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=120&h=120&fit=cover&a=attention" 
                 alt="@${lead.username}" 
                 style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary-blue); box-shadow: 0 8px 24px rgba(0,0,0,0.1);"
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-        : '';
+      : "";
 
-    const fallbackAvatar = `<div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 700; font-size: 48px; border: 4px solid var(--primary-blue); box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
-        ${lead.username ? lead.username.charAt(0).toUpperCase() : '?'}
+    const fallbackAvatar = `<div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? "none" : "flex"}; align-items: center; justify-content: center; font-weight: 700; font-size: 48px; border: 4px solid var(--primary-blue); box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+        ${lead.username ? lead.username.charAt(0).toUpperCase() : "?"}
     </div>`;
 
     // Build complete HTML structure
@@ -640,20 +687,20 @@ buildLeadDetailsHTML(lead, analysisData = null) {
                                 ${score}/100
                             </span>
                             <span class="analysis-badge ${analysisType}" style="padding: 6px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase;">
-                                ${isDeepAnalysis ? '🔥 Deep Analysis' : '⚡ Light Analysis'}
+                                ${isDeepAnalysis ? "🔥 Deep Analysis" : "⚡ Light Analysis"}
                             </span>
                         </div>
                         
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 16px;">
                             <div style="text-align: center; padding: 12px; background: rgba(59, 130, 246, 0.1); border-radius: 12px;">
                                 <div style="font-size: 20px; font-weight: 700; color: var(--primary-blue);">
-                                    ${lead.followers_count ? lead.followers_count.toLocaleString() : 'N/A'}
+                                    ${lead.followers_count ? lead.followers_count.toLocaleString() : "N/A"}
                                 </div>
                                 <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Followers</div>
                             </div>
                             <div style="text-align: center; padding: 12px; background: rgba(168, 85, 247, 0.1); border-radius: 12px;">
                                 <div style="font-size: 20px; font-weight: 700; color: var(--secondary-purple);">
-                                    ${lead.platform || 'Instagram'}
+                                    ${lead.platform || "Instagram"}
                                 </div>
                                 <div style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Platform</div>
                             </div>
@@ -688,7 +735,7 @@ buildLeadDetailsHTML(lead, analysisData = null) {
 
     // ✅ UPDATED: Better logic for handling different analysis types
     if (isDeepAnalysis && hasAnalysisData) {
-        html += `
+      html += `
             <!-- Advanced AI Metrics -->
             ${this.buildAdvancedMetricsSection(lead, analysisData)}
             
@@ -702,11 +749,11 @@ buildLeadDetailsHTML(lead, analysisData = null) {
             ${this.buildAIInsightsSection(analysisData)}
             
             <!-- Personalized Outreach Message -->
-            ${analysisData.outreach_message ? this.buildOutreachMessageSection(analysisData.outreach_message) : ''}
+            ${analysisData.outreach_message ? this.buildOutreachMessageSection(analysisData.outreach_message) : ""}
         `;
     } else if (isDeepAnalysis && !hasAnalysisData) {
-        // Deep analysis but no data found - show error
-        html += `
+      // Deep analysis but no data found - show error
+      html += `
             <div style="background: linear-gradient(135deg, #FEF2F2, #FECACA); padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid #F87171; text-align: center;">
                 <div style="font-size: 32px; margin-bottom: 12px;">⚠️</div>
                 <h4 style="color: #DC2626; margin-bottom: 12px;">Deep Analysis Data Missing</h4>
@@ -720,45 +767,46 @@ buildLeadDetailsHTML(lead, analysisData = null) {
             </div>
         `;
     } else {
-        // ✅ UPDATED: Light Analysis - Show upgrade prompt AFTER the quick summary
-        html += this.buildUpgradePromptSection(lead);
+      // ✅ UPDATED: Light Analysis - Show upgrade prompt AFTER the quick summary
+      html += this.buildUpgradePromptSection(lead);
     }
 
     html += `</div>`;
     return html;
-}
+  }
 
-    buildQuickSummarySection(lead, analysisData, analysisType) {
+  buildQuickSummarySection(lead, analysisData, analysisType) {
     // ✅ FIXED: Only show summary if we actually have one from the database
-    let summaryText = '';
-    let summaryTitle = '';
-    let summaryIcon = '';
-    let summaryGradient = '';
-    let summaryBorder = '';
-    
-    if (analysisType === 'light' && lead.quick_summary) {
-        // ✅ Show actual quick_summary from leads table
-        summaryText = lead.quick_summary;
-        summaryTitle = '⚡ AI Quick Summary';
-        summaryIcon = '⚡';
-        summaryGradient = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))';
-        summaryBorder = 'var(--warning)';
-    } else if (analysisType === 'deep' && analysisData?.deep_summary) {
-        // ✅ Show actual deep_summary from lead_analyses table  
-        summaryText = analysisData.deep_summary;
-        summaryTitle = '🔥 Comprehensive AI Analysis';
-        summaryIcon = '🔥';
-        summaryGradient = 'linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))';
-        summaryBorder = 'var(--accent-teal)';
+    let summaryText = "";
+    let summaryTitle = "";
+    let summaryIcon = "";
+    let summaryGradient = "";
+    let summaryBorder = "";
+
+    if (analysisType === "light" && lead.quick_summary) {
+      // ✅ Show actual quick_summary from leads table
+      summaryText = lead.quick_summary;
+      summaryTitle = "⚡ AI Quick Summary";
+      summaryIcon = "⚡";
+      summaryGradient = "linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))";
+      summaryBorder = "var(--warning)";
+    } else if (analysisType === "deep" && analysisData?.deep_summary) {
+      // ✅ Show actual deep_summary from lead_analyses table
+      summaryText = analysisData.deep_summary;
+      summaryTitle = "🔥 Comprehensive AI Analysis";
+      summaryIcon = "🔥";
+      summaryGradient =
+        "linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))";
+      summaryBorder = "var(--accent-teal)";
     } else {
-        // ✅ No summary available - don't show section
-        console.log(`No summary available for ${analysisType} analysis:`, {
-            hasQuickSummary: !!lead.quick_summary,
-            hasDeepSummary: !!analysisData?.deep_summary
-        });
-        return '';
+      // ✅ No summary available - don't show section
+      console.log(`No summary available for ${analysisType} analysis:`, {
+        hasQuickSummary: !!lead.quick_summary,
+        hasDeepSummary: !!analysisData?.deep_summary,
+      });
+      return "";
     }
-    
+
     return `
         <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
             <h4 style="color: var(--text-primary); margin-bottom: 16px; font-size: 18px; display: flex; align-items: center; justify-content: space-between;">
@@ -781,7 +829,9 @@ buildLeadDetailsHTML(lead, analysisData = null) {
                 </div>
             </div>
             
-            ${analysisType === 'light' ? `
+            ${
+              analysisType === "light"
+                ? `
                 <div style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05)); border-radius: 12px; border: 2px solid rgba(59, 130, 246, 0.2); position: relative; overflow: hidden;">
                     <div style="position: absolute; top: -10px; right: -10px; font-size: 40px; opacity: 0.1;">🚀</div>
                     
@@ -833,42 +883,45 @@ buildLeadDetailsHTML(lead, analysisData = null) {
                         ⚡ Get results in 30-60 seconds • 🎯 Detailed insights • 💬 Ready-to-send messages
                     </div>
                 </div>
-            ` : ''}
+            `
+                : ""
+            }
         </div>
     `;
-}
+  }
 
-   buildQuickSummarySection(lead, analysisData, analysisType) {
+  buildQuickSummarySection(lead, analysisData, analysisType) {
     // Only show summary if we actually have one from the database
-    let summaryText = '';
-    let summaryTitle = '';
-    let summaryIcon = '';
-    let summaryGradient = '';
-    let summaryBorder = '';
-    
-    if (analysisType === 'light' && lead.quick_summary) {
-        // Show actual quick_summary from leads table
-        summaryText = lead.quick_summary;
-        summaryTitle = '⚡ AI Quick Summary';
-        summaryIcon = '⚡';
-        summaryGradient = 'linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))';
-        summaryBorder = 'var(--warning)';
-    } else if (analysisType === 'deep' && analysisData?.deep_summary) {
-        // Show actual deep_summary from lead_analyses table  
-        summaryText = analysisData.deep_summary;
-        summaryTitle = '🔥 Comprehensive AI Analysis';
-        summaryIcon = '🔥';
-        summaryGradient = 'linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))';
-        summaryBorder = 'var(--accent-teal)';
+    let summaryText = "";
+    let summaryTitle = "";
+    let summaryIcon = "";
+    let summaryGradient = "";
+    let summaryBorder = "";
+
+    if (analysisType === "light" && lead.quick_summary) {
+      // Show actual quick_summary from leads table
+      summaryText = lead.quick_summary;
+      summaryTitle = "⚡ AI Quick Summary";
+      summaryIcon = "⚡";
+      summaryGradient = "linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05))";
+      summaryBorder = "var(--warning)";
+    } else if (analysisType === "deep" && analysisData?.deep_summary) {
+      // Show actual deep_summary from lead_analyses table
+      summaryText = analysisData.deep_summary;
+      summaryTitle = "🔥 Comprehensive AI Analysis";
+      summaryIcon = "🔥";
+      summaryGradient =
+        "linear-gradient(135deg, rgba(83, 225, 197, 0.1), rgba(83, 225, 197, 0.05))";
+      summaryBorder = "var(--accent-teal)";
     } else {
-        // No summary available - don't show section
-        console.log(`No summary available for ${analysisType} analysis:`, {
-            hasQuickSummary: !!lead.quick_summary,
-            hasDeepSummary: !!analysisData?.deep_summary
-        });
-        return '';
+      // No summary available - don't show section
+      console.log(`No summary available for ${analysisType} analysis:`, {
+        hasQuickSummary: !!lead.quick_summary,
+        hasDeepSummary: !!analysisData?.deep_summary,
+      });
+      return "";
     }
-    
+
     return `
         <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
             <h4 style="color: var(--text-primary); margin-bottom: 16px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
@@ -886,10 +939,10 @@ buildLeadDetailsHTML(lead, analysisData = null) {
             </div>
         </div>
     `;
-}
+  }
 
-    buildAnalysisStatusSection(lead, analysisType) {
-        return `
+  buildAnalysisStatusSection(lead, analysisType) {
+    return `
             <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
                 <h4 style="color: var(--text-primary); margin-bottom: 16px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
                     🎯 Analysis Status & Details
@@ -910,7 +963,7 @@ buildLeadDetailsHTML(lead, analysisData = null) {
                             Analysis Type
                         </div>
                         <div style="font-size: 16px; font-weight: 700; color: var(--primary-blue);">
-                            ${analysisType === 'deep' ? '🔥 Deep Analysis' : '⚡ Light Analysis'}
+                            ${analysisType === "deep" ? "🔥 Deep Analysis" : "⚡ Light Analysis"}
                         </div>
                     </div>
                     
@@ -919,7 +972,7 @@ buildLeadDetailsHTML(lead, analysisData = null) {
                             Business Profile
                         </div>
                         <div style="font-size: 16px; font-weight: 700; color: var(--secondary-purple);">
-                            ${lead.business_id || 'Default'}
+                            ${lead.business_id || "Default"}
                         </div>
                     </div>
                     
@@ -933,30 +986,34 @@ buildLeadDetailsHTML(lead, analysisData = null) {
                     </div>
                 </div>
                 
-                ${analysisType === 'light' ? `
+                ${
+                  analysisType === "light"
+                    ? `
                     <div style="margin-top: 16px; padding: 16px; background: rgba(245, 158, 11, 0.1); border-radius: 12px; border: 1px dashed var(--warning);">
                         <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.5;">
                             💡 <strong>Light Analysis includes:</strong> Basic profile scoring and core metrics. 
                             Upgrade to Deep Analysis for engagement insights, personalized outreach messages, and detailed selling points.
                         </p>
                     </div>
-                ` : ''}
+                `
+                    : ""
+                }
             </div>
         `;
-    }
+  }
 
-buildAdvancedMetricsSection(lead, analysisData) {
+  buildAdvancedMetricsSection(lead, analysisData) {
     // ✅ Get scores from the correct sources
-    const engagementScore = analysisData?.engagement_score || 0;  // From lead_analyses
-    const nicheFitScore = analysisData?.niche_fit || 0;           // From lead_analyses  
-    const totalScore = lead?.score || 0;                          // ✅ FROM LEADS TABLE (like table display)
+    const engagementScore = analysisData?.engagement_score || 0; // From lead_analyses
+    const nicheFitScore = analysisData?.niche_fit || 0; // From lead_analyses
+    const totalScore = lead?.score || 0; // ✅ FROM LEADS TABLE (like table display)
 
-    console.log('📊 Advanced metrics sources:', {
-        engagement_score: `${engagementScore} (from lead_analyses.engagement_score)`,
-        niche_fit: `${nicheFitScore} (from lead_analyses.niche_fit)`,
-        composite_score: `${totalScore} (from leads.score)`,  // ✅ This should now work
-        lead_score_raw: lead?.score,
-        analysis_data_available: !!analysisData
+    console.log("📊 Advanced metrics sources:", {
+      engagement_score: `${engagementScore} (from lead_analyses.engagement_score)`,
+      niche_fit: `${nicheFitScore} (from lead_analyses.niche_fit)`,
+      composite_score: `${totalScore} (from leads.score)`, // ✅ This should now work
+      lead_score_raw: lead?.score,
+      analysis_data_available: !!analysisData,
     });
 
     return `
@@ -1040,18 +1097,22 @@ buildAdvancedMetricsSection(lead, analysisData) {
             </div>
         </div>
     `;
-}
+  }
 
-    buildEngagementSection(analysisData) {
-        const avgLikes = analysisData.avg_likes || 0;
-        const avgComments = analysisData.avg_comments || 0;
-        const engagementRate = analysisData.engagement_rate || 0;
-        const audienceQuality = analysisData.audience_quality || 'Unknown';
-        
-        // Parse engagement insights
-        const engagementInsights = this.parseEngagementInsights(analysisData);
-        
-        const insightsHtml = engagementInsights.length > 0 ? engagementInsights.map((insight, index) => `
+  buildEngagementSection(analysisData) {
+    const avgLikes = analysisData.avg_likes || 0;
+    const avgComments = analysisData.avg_comments || 0;
+    const engagementRate = analysisData.engagement_rate || 0;
+    const audienceQuality = analysisData.audience_quality || "Unknown";
+
+    // Parse engagement insights
+    const engagementInsights = this.parseEngagementInsights(analysisData);
+
+    const insightsHtml =
+      engagementInsights.length > 0
+        ? engagementInsights
+            .map(
+              (insight, index) => `
             <div style="margin-bottom: 12px; padding: 16px; background: rgba(6, 182, 212, 0.05); border-radius: 10px; border: 1px solid rgba(6, 182, 212, 0.15); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(6, 182, 212, 0.2)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
                 <div style="display: flex; align-items: flex-start; gap: 12px;">
                     <div style="background: var(--accent-teal); color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0;">
@@ -1070,7 +1131,10 @@ buildAdvancedMetricsSection(lead, analysisData) {
                     </button>
                 </div>
             </div>
-        `).join('') : `
+        `
+            )
+            .join("")
+        : `
             <div style="padding: 20px; background: rgba(6, 182, 212, 0.05); border-radius: 10px; border: 1px solid rgba(6, 182, 212, 0.15); text-align: center; color: var(--text-secondary);">
                 <div style="font-size: 28px; margin-bottom: 12px;">🔍</div>
                 <div style="font-size: 14px; line-height: 1.5;">
@@ -1079,19 +1143,23 @@ buildAdvancedMetricsSection(lead, analysisData) {
             </div>
         `;
 
-        return `
+    return `
             <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
                 <h4 style="color: var(--text-primary); margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
                     🔥 Engagement Analysis
                     <span style="background: var(--accent-teal); color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">
                         ${engagementInsights.length} insights
                     </span>
-                    ${engagementInsights.length > 0 ? `
-                    <button onclick="dashboard.copyAllInsights(${JSON.stringify(engagementInsights).replace(/"/g, '&quot;')})"
+                    ${
+                      engagementInsights.length > 0
+                        ? `
+                    <button onclick="dashboard.copyAllInsights(${JSON.stringify(engagementInsights).replace(/"/g, "&quot;")})"
                             style="background: var(--accent-teal); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: auto; font-weight: 600;">
                         📋 Copy All
                     </button>
-                    ` : ''}
+                    `
+                        : ""
+                    }
                 </h4>
                 
                 <!-- Engagement Metrics Grid -->
@@ -1146,29 +1214,31 @@ buildAdvancedMetricsSection(lead, analysisData) {
                 </div>
             </div>
         `;
+  }
+
+  buildSellingPointsSection(analysisData) {
+    if (!analysisData || !analysisData.selling_points) return "";
+
+    let sellingPoints = [];
+    if (Array.isArray(analysisData.selling_points)) {
+      sellingPoints = analysisData.selling_points;
+    } else if (typeof analysisData.selling_points === "string") {
+      try {
+        sellingPoints = JSON.parse(analysisData.selling_points);
+      } catch (e) {
+        sellingPoints = analysisData.selling_points.includes("|")
+          ? analysisData.selling_points.split("|")
+          : [analysisData.selling_points];
+      }
     }
 
-    buildSellingPointsSection(analysisData) {
-        if (!analysisData || !analysisData.selling_points) return '';
-        
-        let sellingPoints = [];
-        if (Array.isArray(analysisData.selling_points)) {
-            sellingPoints = analysisData.selling_points;
-        } else if (typeof analysisData.selling_points === 'string') {
-            try {
-                sellingPoints = JSON.parse(analysisData.selling_points);
-            } catch (e) {
-                sellingPoints = analysisData.selling_points.includes('|') 
-                    ? analysisData.selling_points.split('|') 
-                    : [analysisData.selling_points];
-            }
-        }
-        
-        sellingPoints = sellingPoints.filter(point => point && point.trim());
-        
-        if (sellingPoints.length === 0) return '';
-        
-        const sellingPointsHtml = sellingPoints.map((point, index) => `
+    sellingPoints = sellingPoints.filter((point) => point && point.trim());
+
+    if (sellingPoints.length === 0) return "";
+
+    const sellingPointsHtml = sellingPoints
+      .map(
+        (point, index) => `
             <div style="margin-bottom: 14px; padding: 18px; background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(99, 102, 241, 0.04)); border-radius: 12px; border-left: 4px solid var(--primary-blue); box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: all 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(59, 130, 246, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.04)'">
                 <div style="display: flex; align-items: flex-start; gap: 14px;">
                     <div style="background: var(--primary-blue); color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);">
@@ -1187,16 +1257,18 @@ buildAdvancedMetricsSection(lead, analysisData) {
                     </button>
                 </div>
             </div>
-        `).join('');
-        
-        return `
+        `
+      )
+      .join("");
+
+    return `
             <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
                 <h4 style="color: var(--text-primary); margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
                     💡 AI-Generated Selling Points
                     <span style="background: var(--primary-blue); color: white; font-size: 11px; padding: 3px 8px; border-radius: 12px; font-weight: 600;">
                         ${sellingPoints.length} insights
                     </span>
-                    <button onclick="dashboard.copyAllSellingPoints(${JSON.stringify(sellingPoints).replace(/"/g, '&quot;')})"
+                    <button onclick="dashboard.copyAllSellingPoints(${JSON.stringify(sellingPoints).replace(/"/g, "&quot;")})"
                             style="background: var(--success); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-left: auto; font-weight: 600; transition: all 0.2s;">
                         📋 Copy All
                     </button>
@@ -1228,12 +1300,12 @@ buildAdvancedMetricsSection(lead, analysisData) {
                 </div>
             </div>
         `;
-    }
+  }
 
-    buildAIInsightsSection(analysisData) {
-        if (!analysisData) return '';
-        
-        return `
+  buildAIInsightsSection(analysisData) {
+    if (!analysisData) return "";
+
+    return `
             <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
                 <h4 style="color: var(--text-primary); margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
                     🤖 AI Analysis Summary
@@ -1280,9 +1352,13 @@ buildAdvancedMetricsSection(lead, analysisData) {
                     </div>
                     
                     <!-- Additional Insights -->
-                    ${analysisData.audience_quality || analysisData.latest_posts ? `
+                    ${
+                      analysisData.audience_quality || analysisData.latest_posts
+                        ? `
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 20px;">
-                        ${analysisData.audience_quality ? `
+                        ${
+                          analysisData.audience_quality
+                            ? `
                         <div style="background: rgba(255, 255, 255, 0.7); padding: 16px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 24px; margin-bottom: 8px;">👥</div>
                             <div style="font-weight: 700; color: var(--secondary-purple); margin-bottom: 4px;">
@@ -1292,9 +1368,13 @@ buildAdvancedMetricsSection(lead, analysisData) {
                                 Audience Quality
                             </div>
                         </div>
-                        ` : ''}
+                        `
+                            : ""
+                        }
                         
-                        ${analysisData.latest_posts ? `
+                        ${
+                          analysisData.latest_posts
+                            ? `
                         <div style="background: rgba(255, 255, 255, 0.7); padding: 16px; border-radius: 10px; text-align: center;">
                             <div style="font-size: 24px; margin-bottom: 8px;">📱</div>
                             <div style="font-weight: 700; color: var(--secondary-purple); margin-bottom: 4px;">
@@ -1304,20 +1384,24 @@ buildAdvancedMetricsSection(lead, analysisData) {
                                 Analyzed
                             </div>
                         </div>
-                        ` : ''}
+                        `
+                            : ""
+                        }
                     </div>
-                    ` : ''}
+                    `
+                        : ""
+                    }
                 </div>
             </div>
         `;
-    }
+  }
 
-    buildOutreachMessageSection(outreachMessage) {
-        if (!outreachMessage) return '';
-        
-        const escapedMessage = this.escapeHtml(outreachMessage);
-        
-        return `
+  buildOutreachMessageSection(outreachMessage) {
+    if (!outreachMessage) return "";
+
+    const escapedMessage = this.escapeHtml(outreachMessage);
+
+    return `
             <div style="background: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
                 <h4 style="color: var(--text-primary); margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; justify-content: space-between;">
                     💬 AI-Crafted Outreach Message
@@ -1397,10 +1481,10 @@ buildAdvancedMetricsSection(lead, analysisData) {
                 </div>
             </div>
         `;
-    }
+  }
 
-    buildUpgradePromptSection(lead) {
-        return `
+  buildUpgradePromptSection(lead) {
+    return `
             <div style="background: linear-gradient(135deg, #FFF7ED, #FED7AA); padding: 32px; border-radius: 16px; margin-bottom: 24px; text-align: center; box-shadow: 0 6px 24px rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3);">
                 <div style="font-size: 48px; margin-bottom: 16px;">🚀</div>
                 <h4 style="color: var(--text-primary); margin-bottom: 16px; font-size: 24px; font-weight: 700;">
@@ -1446,377 +1530,379 @@ buildAdvancedMetricsSection(lead, analysisData) {
                 </div>
             </div>
         `;
-    }
+  }
 
-    // ===============================================================================
-    // HELPER FUNCTIONS AND UTILITIES
-    // ===============================================================================
+  // ===============================================================================
+  // HELPER FUNCTIONS AND UTILITIES
+  // ===============================================================================
 
-    parseEngagementInsights(analysisData) {
-        let insights = [];
-        
-        if (analysisData.engagement_insights) {
-            try {
-                if (typeof analysisData.engagement_insights === 'string') {
-                    if (analysisData.engagement_insights.startsWith('[')) {
-                        insights = JSON.parse(analysisData.engagement_insights);
-                    } else if (analysisData.engagement_insights.includes('|')) {
-                        insights = analysisData.engagement_insights.split('|').map(s => s.trim());
-                    } else {
-                        insights = analysisData.engagement_insights
-                            .split(/[.!]\s+/)
-                            .filter(s => s.trim().length > 10)
-                            .map(s => s.trim());
-                    }
-                } else if (Array.isArray(analysisData.engagement_insights)) {
-                    insights = analysisData.engagement_insights;
-                }
-            } catch (e) {
-                console.warn('Failed to parse engagement insights:', e);
-                insights = [analysisData.engagement_insights];
-            }
+  parseEngagementInsights(analysisData) {
+    let insights = [];
+
+    if (analysisData.engagement_insights) {
+      try {
+        if (typeof analysisData.engagement_insights === "string") {
+          if (analysisData.engagement_insights.startsWith("[")) {
+            insights = JSON.parse(analysisData.engagement_insights);
+          } else if (analysisData.engagement_insights.includes("|")) {
+            insights = analysisData.engagement_insights.split("|").map((s) => s.trim());
+          } else {
+            insights = analysisData.engagement_insights
+              .split(/[.!]\s+/)
+              .filter((s) => s.trim().length > 10)
+              .map((s) => s.trim());
+          }
+        } else if (Array.isArray(analysisData.engagement_insights)) {
+          insights = analysisData.engagement_insights;
         }
-        
-        return insights.filter(insight => insight && insight.length > 5);
+      } catch (e) {
+        console.warn("Failed to parse engagement insights:", e);
+        insights = [analysisData.engagement_insights];
+      }
     }
 
-    generateQualityAssessment(analysisData) {
+    return insights.filter((insight) => insight && insight.length > 5);
+  }
+
+  generateQualityAssessment(analysisData) {
     const engagementScore = analysisData.engagement_score || 0;
-    const totalScore = analysisData.score || 0;  // ✅ CHANGED: score_total → score
-    
+    const totalScore = analysisData.score || 0; // ✅ CHANGED: score_total → score
+
     if (totalScore >= 80) {
-        return `<strong>Exceptional Lead Quality:</strong> This profile demonstrates outstanding engagement patterns, authentic audience interaction, and strong alignment with business objectives. High conversion probability with immediate outreach recommended.`;
+      return `<strong>Exceptional Lead Quality:</strong> This profile demonstrates outstanding engagement patterns, authentic audience interaction, and strong alignment with business objectives. High conversion probability with immediate outreach recommended.`;
     } else if (totalScore >= 60) {
-        return `<strong>Good Lead Potential:</strong> Solid engagement metrics and reasonable audience quality indicate good collaboration potential. Consider for priority outreach with personalized approach.`;
+      return `<strong>Good Lead Potential:</strong> Solid engagement metrics and reasonable audience quality indicate good collaboration potential. Consider for priority outreach with personalized approach.`;
     } else {
-        return `<strong>Moderate Lead Quality:</strong> Basic engagement levels with room for improvement. Suitable for nurturing campaigns or strategic long-term relationship building.`;
+      return `<strong>Moderate Lead Quality:</strong> Basic engagement levels with room for improvement. Suitable for nurturing campaigns or strategic long-term relationship building.`;
     }
-}
+  }
 
-generateRelevanceAssessment(analysisData) {
-    const nicheFitScore = analysisData.niche_fit || 0;  // ✅ CHANGED: score_niche_fit → niche_fit
-    
+  generateRelevanceAssessment(analysisData) {
+    const nicheFitScore = analysisData.niche_fit || 0; // ✅ CHANGED: score_niche_fit → niche_fit
+
     if (nicheFitScore >= 80) {
-        return `<strong>Perfect Business Fit:</strong> This lead's content, audience, and brand alignment match your business profile exceptionally well. Prime candidate for partnership or collaboration.`;
+      return `<strong>Perfect Business Fit:</strong> This lead's content, audience, and brand alignment match your business profile exceptionally well. Prime candidate for partnership or collaboration.`;
     } else if (nicheFitScore >= 60) {
-        return `<strong>Good Business Alignment:</strong> Strong overlap in target audience and content themes. Good potential for mutually beneficial partnerships with proper approach.`;
+      return `<strong>Good Business Alignment:</strong> Strong overlap in target audience and content themes. Good potential for mutually beneficial partnerships with proper approach.`;
     } else {
-        return `<strong>Moderate Business Fit:</strong> Some alignment present but may require more strategic approach to establish relevance and value proposition.`;
+      return `<strong>Moderate Business Fit:</strong> Some alignment present but may require more strategic approach to establish relevance and value proposition.`;
     }
-}
+  }
 
-generateAIRecommendation(analysisData) {
-    const totalScore = analysisData.score || 0;         // ✅ CHANGED: score_total → score
+  generateAIRecommendation(analysisData) {
+    const totalScore = analysisData.score || 0; // ✅ CHANGED: score_total → score
     const engagementScore = analysisData.engagement_score || 0;
-    const nicheFitScore = analysisData.niche_fit || 0;  // ✅ CHANGED: score_niche_fit → niche_fit
-    
+    const nicheFitScore = analysisData.niche_fit || 0; // ✅ CHANGED: score_niche_fit → niche_fit
+
     if (totalScore >= 80 && engagementScore >= 75) {
-        return `<strong>🚀 Immediate Action Recommended:</strong> This is a high-value lead with excellent engagement and strong business fit. Prioritize outreach within 24-48 hours using the personalized message above. Consider offering premium collaboration opportunities or exclusive partnerships.`;
+      return `<strong>🚀 Immediate Action Recommended:</strong> This is a high-value lead with excellent engagement and strong business fit. Prioritize outreach within 24-48 hours using the personalized message above. Consider offering premium collaboration opportunities or exclusive partnerships.`;
     } else if (totalScore >= 60 && nicheFitScore >= 70) {
-        return `<strong>📈 Qualified Lead - Schedule Outreach:</strong> Good potential for conversion with strategic approach. Schedule outreach within the next week. Focus on value proposition and consider starting with smaller collaboration to build relationship and trust.`;
+      return `<strong>📈 Qualified Lead - Schedule Outreach:</strong> Good potential for conversion with strategic approach. Schedule outreach within the next week. Focus on value proposition and consider starting with smaller collaboration to build relationship and trust.`;
     } else if (engagementScore >= 60) {
-        return `<strong>💬 Engagement-First Strategy:</strong> Strong audience engagement indicates influence potential. Start with organic engagement on their content, build relationship through comments and interactions before direct outreach.`;
+      return `<strong>💬 Engagement-First Strategy:</strong> Strong audience engagement indicates influence potential. Start with organic engagement on their content, build relationship through comments and interactions before direct outreach.`;
     } else {
-        return `<strong>🌱 Long-term Nurturing Approach:</strong> Consider adding to nurturing sequence for future opportunities. Monitor their content growth and engagement improvements. Focus on building organic relationship through value-first interactions.`;
+      return `<strong>🌱 Long-term Nurturing Approach:</strong> Consider adding to nurturing sequence for future opportunities. Monitor their content growth and engagement improvements. Focus on building organic relationship through value-first interactions.`;
     }
-}
-    calculateMessageLength(message) {
-        return message ? message.length : 0;
+  }
+  calculateMessageLength(message) {
+    return message ? message.length : 0;
+  }
+
+  calculatePersonalizationScore(message) {
+    if (!message) return 0;
+
+    let score = 40; // Base score
+
+    // Check for personal elements
+    if (message.includes("your") || message.includes("you")) score += 15;
+    if (message.includes("content") || message.includes("posts")) score += 10;
+    if (message.includes("audience") || message.includes("followers")) score += 10;
+    if (message.includes("brand") || message.includes("business")) score += 8;
+    if (/\b(love|enjoy|appreciate|impressed)\b/i.test(message)) score += 7;
+    if (message.length > 100 && message.length < 250) score += 5;
+    if (message.length > 250 && message.length < 400) score += 3;
+
+    return Math.min(score, 95);
+  }
+
+  calculateReadabilityScore(message) {
+    if (!message) return 0;
+
+    const sentences = message.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+    const words = message.split(/\s+/).filter((w) => w.length > 0);
+    const avgWordsPerSentence = words.length / sentences.length;
+
+    let score = 50; // Base readability score
+
+    // Optimal sentence length (10-20 words)
+    if (avgWordsPerSentence >= 10 && avgWordsPerSentence <= 20) {
+      score += 20;
+    } else if (avgWordsPerSentence >= 8 && avgWordsPerSentence <= 25) {
+      score += 10;
+    } else {
+      score -= 10;
     }
 
-    calculatePersonalizationScore(message) {
-        if (!message) return 0;
-        
-        let score = 40; // Base score
-        
-        // Check for personal elements
-        if (message.includes('your') || message.includes('you')) score += 15;
-        if (message.includes('content') || message.includes('posts')) score += 10;
-        if (message.includes('audience') || message.includes('followers')) score += 10;
-        if (message.includes('brand') || message.includes('business')) score += 8;
-        if (/\b(love|enjoy|appreciate|impressed)\b/i.test(message)) score += 7;
-        if (message.length > 100 && message.length < 250) score += 5;
-        if (message.length > 250 && message.length < 400) score += 3;
-        
-        return Math.min(score, 95);
+    // Check for complex words (3+ syllables)
+    const complexWords = words.filter((word) => this.countSyllables(word) >= 3);
+    const complexWordRatio = complexWords.length / words.length;
+
+    if (complexWordRatio < 0.1) score += 15;
+    else if (complexWordRatio < 0.2) score += 5;
+    else score -= 10;
+
+    // Sentence variety bonus
+    if (sentences.length >= 3) score += 10;
+
+    // Conversational tone indicators
+    if (/\b(you|your|we|our|let's)\b/i.test(message)) score += 5;
+
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  countSyllables(word) {
+    if (!word) return 0;
+    word = word.toLowerCase();
+    if (word.length <= 3) return 1;
+
+    const vowels = "aeiouy";
+    let syllableCount = 0;
+    let previousWasVowel = false;
+
+    for (let i = 0; i < word.length; i++) {
+      const isVowel = vowels.includes(word[i]);
+      if (isVowel && !previousWasVowel) {
+        syllableCount++;
+      }
+      previousWasVowel = isVowel;
     }
 
-    calculateReadabilityScore(message) {
-        if (!message) return 0;
-        
-        const sentences = message.split(/[.!?]+/).filter(s => s.trim().length > 0);
-        const words = message.split(/\s+/).filter(w => w.length > 0);
-        const avgWordsPerSentence = words.length / sentences.length;
-        
-        let score = 50; // Base readability score
-        
-        // Optimal sentence length (10-20 words)
-        if (avgWordsPerSentence >= 10 && avgWordsPerSentence <= 20) {
-            score += 20;
-        } else if (avgWordsPerSentence >= 8 && avgWordsPerSentence <= 25) {
-            score += 10;
-        } else {
-            score -= 10;
-        }
-        
-        // Check for complex words (3+ syllables)
-        const complexWords = words.filter(word => this.countSyllables(word) >= 3);
-        const complexWordRatio = complexWords.length / words.length;
-        
-        if (complexWordRatio < 0.1) score += 15;
-        else if (complexWordRatio < 0.2) score += 5;
-        else score -= 10;
-        
-        // Sentence variety bonus
-        if (sentences.length >= 3) score += 10;
-        
-        // Conversational tone indicators
-        if (/\b(you|your|we|our|let's)\b/i.test(message)) score += 5;
-        
-        return Math.max(0, Math.min(100, Math.round(score)));
+    // Handle silent 'e'
+    if (word.endsWith("e")) syllableCount--;
+
+    return Math.max(1, syllableCount);
+  }
+
+  getPostsCount(latestPosts) {
+    if (!latestPosts) return 0;
+
+    try {
+      if (typeof latestPosts === "string") {
+        const parsed = JSON.parse(latestPosts);
+        return Array.isArray(parsed) ? parsed.length : 0;
+      } else if (Array.isArray(latestPosts)) {
+        return latestPosts.length;
+      }
+    } catch (error) {
+      console.warn("Could not parse latest_posts:", error);
     }
 
-    countSyllables(word) {
-        if (!word) return 0;
-        word = word.toLowerCase();
-        if (word.length <= 3) return 1;
-        
-        const vowels = 'aeiouy';
-        let syllableCount = 0;
-        let previousWasVowel = false;
-        
-        for (let i = 0; i < word.length; i++) {
-            const isVowel = vowels.includes(word[i]);
-            if (isVowel && !previousWasVowel) {
-                syllableCount++;
-            }
-            previousWasVowel = isVowel;
-        }
-        
-        // Handle silent 'e'
-        if (word.endsWith('e')) syllableCount--;
-        
-        return Math.max(1, syllableCount);
-    }
+    return 0;
+  }
 
-    getPostsCount(latestPosts) {
-        if (!latestPosts) return 0;
-        
-        try {
-            if (typeof latestPosts === 'string') {
-                const parsed = JSON.parse(latestPosts);
-                return Array.isArray(parsed) ? parsed.length : 0;
-            } else if (Array.isArray(latestPosts)) {
-                return latestPosts.length;
-            }
-        } catch (error) {
-            console.warn('Could not parse latest_posts:', error);
-        }
-        
-        return 0;
-    }
+  escapeHtml(text) {
+    if (!text) return "";
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
-    escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+  // Business profile loading
+  async loadBusinessProfilesNow() {
+    console.log("🏢 Loading business profiles NOW...");
 
-    // Business profile loading
-async loadBusinessProfilesNow() {
-    console.log('🏢 Loading business profiles NOW...');
-    
-    const businessSelect = document.getElementById('business-id');
+    const businessSelect = document.getElementById("business-id");
     if (!businessSelect) {
-        console.error('❌ Business dropdown not found');
-        return;
+      console.error("❌ Business dropdown not found");
+      return;
     }
 
     businessSelect.innerHTML = '<option value="">Loading...</option>';
     businessSelect.disabled = true;
 
     try {
-        let retries = 0;
-        const maxRetries = 5;
-        
-        while ((!window.OsliraApp?.user || !window.OsliraApp?.supabase) && retries < maxRetries) {
-            console.log(`⏳ Waiting for auth... (${retries + 1}/${maxRetries})`);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            retries++;
-        }
-        
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
+      let retries = 0;
+      const maxRetries = 5;
 
-        if (!supabase || !user) {
-            businessSelect.innerHTML = '<option value="">Please log in first</option>';
-            businessSelect.disabled = false;
-            return;
-        }
+      while ((!window.OsliraApp?.user || !window.OsliraApp?.supabase) && retries < maxRetries) {
+        console.log(`⏳ Waiting for auth... (${retries + 1}/${maxRetries})`);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        retries++;
+      }
 
-        const { data: profiles, error } = await supabase
-            .from('business_profiles')
-            .select('id, business_name, is_active')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false });
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
 
-        if (error) {
-            console.error('❌ Business profiles error:', error);
-            businessSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
-            businessSelect.disabled = false;
-            return;
-        }
+      if (!supabase || !user) {
+        businessSelect.innerHTML = '<option value="">Please log in first</option>';
+        businessSelect.disabled = false;
+        return;
+      }
 
-        if (profiles && profiles.length > 0) {
-            const activeProfiles = profiles.filter(p => p.is_active !== false);
-            
-            if (activeProfiles.length > 0) {
-                businessSelect.innerHTML = [
-                    '<option value="">Select business profile...</option>',
-                    ...activeProfiles.map(profile => 
-                        `<option value="${profile.id}">${profile.business_name || 'Unnamed Business'}</option>`
-                    )
-                ].join('');
-                console.log(`✅ Loaded ${activeProfiles.length} business profiles`);
-            } else {
-                businessSelect.innerHTML = '<option value="">No active business profiles</option>';
-            }
+      const { data: profiles, error } = await supabase
+        .from("business_profiles")
+        .select("id, business_name, is_active")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("❌ Business profiles error:", error);
+        businessSelect.innerHTML = `<option value="">Error: ${error.message}</option>`;
+        businessSelect.disabled = false;
+        return;
+      }
+
+      if (profiles && profiles.length > 0) {
+        const activeProfiles = profiles.filter((p) => p.is_active !== false);
+
+        if (activeProfiles.length > 0) {
+          businessSelect.innerHTML = [
+            '<option value="">Select business profile...</option>',
+            ...activeProfiles.map(
+              (profile) =>
+                `<option value="${profile.id}">${profile.business_name || "Unnamed Business"}</option>`
+            ),
+          ].join("");
+          console.log(`✅ Loaded ${activeProfiles.length} business profiles`);
         } else {
-            businessSelect.innerHTML = '<option value="">No business profiles - create one first</option>';
+          businessSelect.innerHTML = '<option value="">No active business profiles</option>';
         }
+      } else {
+        businessSelect.innerHTML =
+          '<option value="">No business profiles - create one first</option>';
+      }
 
-        businessSelect.disabled = false;
-
+      businessSelect.disabled = false;
     } catch (error) {
-        console.error('❌ Business profiles loading failed:', error);
-        businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
-        businessSelect.disabled = false;
+      console.error("❌ Business profiles loading failed:", error);
+      businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
+      businessSelect.disabled = false;
     }
-}
+  }
 
-// Form submission
-async submitAnalysis(event) {
+  // Form submission
+  async submitAnalysis(event) {
     event.preventDefault();
-    console.log('📝 Analysis form submission started');
-    
-    const analysisType = document.getElementById('analysis-type')?.value;
-    const profileInput = document.getElementById('profile-input')?.value?.trim();
-    const businessId = document.getElementById('business-id')?.value;
-    
+    console.log("📝 Analysis form submission started");
+
+    const analysisType = document.getElementById("analysis-type")?.value;
+    const profileInput = document.getElementById("profile-input")?.value?.trim();
+    const businessId = document.getElementById("business-id")?.value;
+
     // ✅ STEP 1: Validation
     if (!analysisType) {
-        window.OsliraApp?.showMessage('Please select an analysis type', 'error');
-        return;
+      Alert.error("Please select an analysis type");
+      return;
     }
-    
+
     if (!profileInput) {
-        window.OsliraApp?.showMessage('Please enter an Instagram username', 'error');
-        return;
+      Alert.error("Please enter an Instagram username");
+      return;
     }
-    
+
     if (!businessId) {
-        window.OsliraApp?.showMessage('Please select a business profile', 'error');
-        return;
+      Alert.error("Please select a business profile");
+      return;
     }
-    
+
     // ✅ STEP 2: Authentication check
     const user = window.OsliraApp?.user;
     const session = window.OsliraApp?.session;
-    
+
     if (!user || !user.id) {
-        window.OsliraApp?.showMessage('User not authenticated. Please log in.', 'error');
-        return;
+      Alert.error("User not authenticated", {
+        actions: [{ label: "Go to Login", action: "redirect:/auth.html" }],
+      });
+      return;
     }
-    
+
     if (!session || !session.access_token) {
-        window.OsliraApp?.showMessage('Session expired. Please log in again.', 'error');
-        return;
+      Alert.error("Session expired", {
+        actions: [{ label: "Login Again", action: "redirect:/auth.html" }],
+      });
+      return;
     }
-    
-    const cleanUsername = profileInput.replace(/^@/, '');
-    
+
+    const cleanUsername = profileInput.replace(/^@/, "");
+
     // ✅ STEP 3: Reset form and close modal
-    const form = document.getElementById('analysisForm');
+    const form = document.getElementById("analysisForm");
     if (form) {
-        form.reset();
+      form.reset();
     }
-    
-    const inputContainer = document.getElementById('input-field-container');
+
+    const inputContainer = document.getElementById("input-field-container");
     if (inputContainer) {
-        inputContainer.style.display = 'none';
+      inputContainer.style.display = "none";
     }
-    
-    this.closeModal('analysisModal');
-    
+
+    this.closeModal("analysisModal");
+
     // ✅ STEP 4: Prepare request data
     const requestData = {
-        username: cleanUsername,
-        analysis_type: analysisType,
-        business_id: businessId,
-        user_id: user.id,
-        platform: 'instagram'
+      username: cleanUsername,
+      analysis_type: analysisType,
+      business_id: businessId,
+      user_id: user.id,
+      platform: "instagram",
     };
-    
-    console.log('📤 Starting analysis via queue system:', {
-        username: cleanUsername,
-        type: analysisType,
-        businessId
-    });
-    
-    try {
-        // ✅ STEP 5: Use the unified queue system
-        const result = await window.analysisQueue.startSingleAnalysis(
-            cleanUsername, 
-            analysisType, 
-            businessId, 
-            requestData
-        );
-        
-        if (result.success) {
-            console.log('✅ Analysis successfully queued');
-            window.OsliraApp?.showMessage(
-                `Analysis started for @${cleanUsername} (${analysisType})`, 
-                'info', 
-                2000
-            );
-            
-            // ✅ STEP 6: Schedule dashboard refresh for when analysis completes
-            setTimeout(async () => {
-                console.log('🔄 Refreshing dashboard data after analysis');
-                await this.loadDashboardData();
-            }, 3000); // Refresh after 3 seconds to catch completed analysis
-            
-        } else {
-            console.error('❌ Analysis failed to start:', result.error);
-            window.OsliraApp?.showMessage(
-                `Failed to start analysis: ${result.error}`, 
-                'error'
-            );
-        }
-        
-    } catch (error) {
-        console.error('❌ Submit analysis error:', error);
-        window.OsliraApp?.showMessage(
-            `Analysis submission failed: ${error.message}`, 
-            'error'
-        );
-    }
-}
 
-showBulkUpload() {
-    console.log('📤 Opening bulk upload modal...');
-    
-    const modal = document.getElementById('bulkModal');
-    if (!modal) {
-        console.error('❌ Bulk modal not found in DOM');
-        return;
+    console.log("📤 Starting analysis via queue system:", {
+      username: cleanUsername,
+      type: analysisType,
+      businessId,
+    });
+
+    try {
+      // ✅ STEP 5: Use the unified queue system
+      const result = await window.analysisQueue.startSingleAnalysis(
+        cleanUsername,
+        analysisType,
+        businessId,
+        requestData
+      );
+
+      if (result.success) {
+        console.log("✅ Analysis successfully queued");
+        Alert.success({
+          message: `Analysis started for @${cleanUsername}`,
+          timeoutMs: 3000,
+        });
+
+        // ✅ STEP 6: Schedule dashboard refresh for when analysis completes
+        setTimeout(async () => {
+          console.log("🔄 Refreshing dashboard data after analysis");
+          await this.loadDashboardData();
+        }, 3000); // Refresh after 3 seconds to catch completed analysis
+      } else {
+        console.error("❌ Analysis failed to start:", result.error);
+        Alert.error("Analysis failed to start", {
+          details: result.error,
+          actions: [{ label: "Retry", action: "retry" }],
+        });
+      }
+    } catch (error) {
+      console.error("❌ Submit analysis error:", error);
+      Alert.error("Analysis submission failed", {
+        details: error.message,
+        actions: [{ label: "Try Again", action: "retry" }],
+      });
     }
-    
+  }
+
+  showBulkUpload() {
+    console.log("📤 Opening bulk upload modal...");
+
+    const modal = document.getElementById("bulkModal");
+    if (!modal) {
+      console.error("❌ Bulk modal not found in DOM");
+      return;
+    }
+
     // Reset the modal content to simple username upload
-    const modalContent = modal.querySelector('.modal-content');
+    const modalContent = modal.querySelector(".modal-content");
     if (modalContent) {
-        modalContent.innerHTML = `
+      modalContent.innerHTML = `
             <button class="modal-close" onclick="dashboard.closeModal('bulkModal')">×</button>
             <h3>📤 Bulk Username Upload</h3>
             <p style="margin-bottom: 20px; color: var(--text-secondary);">
@@ -1901,768 +1987,804 @@ showBulkUpload() {
             </div>
         `;
     }
-    
+
     // Set up file input listener AND load user credits
     setTimeout(async () => {
-        this.setupBulkUploadListeners();
-        await this.loadBusinessProfilesForBulk();
-        await this.loadUserCredits(); // ✅ ADD THIS
+      this.setupBulkUploadListeners();
+      await this.loadBusinessProfilesForBulk();
+      await this.loadUserCredits(); // ✅ ADD THIS
     }, 100);
-    
-    modal.style.display = 'flex';
-    console.log('✅ Bulk upload modal shown');
-}
 
-// ✅ 2. NEW METHOD - LOAD USER CREDITS
-async loadUserCredits() {
-    console.log('💳 Loading user credits...');
-    
-    const currentCreditsEl = document.getElementById('current-credits');
+    modal.style.display = "flex";
+    console.log("✅ Bulk upload modal shown");
+  }
+
+  // ✅ 2. NEW METHOD - LOAD USER CREDITS
+  async loadUserCredits() {
+    console.log("💳 Loading user credits...");
+
+    const currentCreditsEl = document.getElementById("current-credits");
     if (!currentCreditsEl) return;
-    
+
     try {
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
-        
-        if (!supabase || !user) {
-            currentCreditsEl.textContent = 'Not logged in';
-            currentCreditsEl.style.color = 'var(--error)';
-            return;
-        }
-        
-        // ✅ FETCH CURRENT CREDITS FROM DATABASE
-        const { data: userData, error } = await supabase
-            .from('users')
-            .select('credits')
-            .eq('id', user.id)
-            .single();
-            
-        if (error) {
-            console.error('❌ Failed to fetch user credits:', error);
-            currentCreditsEl.textContent = 'Error loading';
-            currentCreditsEl.style.color = 'var(--error)';
-            return;
-        }
-        
-        const credits = userData?.credits || 0;
-        
-        // ✅ UPDATE GLOBAL STATE
-        if (window.OsliraApp.user) {
-            window.OsliraApp.user.credits = credits;
-        }
-        
-        // ✅ UPDATE UI
-        currentCreditsEl.textContent = credits.toLocaleString();
-        currentCreditsEl.style.color = credits > 0 ? 'var(--success)' : 'var(--error)';
-        
-        console.log(`✅ User credits loaded: ${credits}`);
-        
-        // ✅ TRIGGER COST CALCULATOR UPDATE
-        this.updateBulkCostCalculator();
-        
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
+
+      if (!supabase || !user) {
+        currentCreditsEl.textContent = "Not logged in";
+        currentCreditsEl.style.color = "var(--error)";
+        return;
+      }
+
+      // ✅ FETCH CURRENT CREDITS FROM DATABASE
+      const { data: userData, error } = await supabase
+        .from("users")
+        .select("credits")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        Alert.error("Unable to load credit balance", {
+          suggestions: ["Refresh the page", "Check your internet connection"],
+        });
+        currentCreditsEl.textContent = "Error loading";
+        currentCreditsEl.style.color = "var(--error)";
+        return;
+      }
+
+      const credits = userData?.credits || 0;
+
+      // ✅ UPDATE GLOBAL STATE
+      if (window.OsliraApp.user) {
+        window.OsliraApp.user.credits = credits;
+      }
+
+      // ✅ UPDATE UI
+      currentCreditsEl.textContent = credits.toLocaleString();
+      currentCreditsEl.style.color = credits > 0 ? "var(--success)" : "var(--error)";
+
+      console.log(`✅ User credits loaded: ${credits}`);
+
+      // ✅ TRIGGER COST CALCULATOR UPDATE
+      this.updateBulkCostCalculator();
     } catch (error) {
-        console.error('❌ Error loading user credits:', error);
-        currentCreditsEl.textContent = 'Error';
-        currentCreditsEl.style.color = 'var(--error)';
+      console.error("❌ Error loading user credits:", error);
+      currentCreditsEl.textContent = "Error";
+      currentCreditsEl.style.color = "var(--error)";
     }
-}
-debugCredits() {
-    console.log('🔍 DEBUG CREDITS:', {
-        globalUserCredits: window.OsliraApp?.user?.credits,
-        getCurrentUserCredits: this.getCurrentUserCredits(),
-        uiElement: document.getElementById('current-credits')?.textContent,
-        userObject: window.OsliraApp?.user
+  }
+  debugCredits() {
+    console.log("🔍 DEBUG CREDITS:", {
+      globalUserCredits: window.OsliraApp?.user?.credits,
+      getCurrentUserCredits: this.getCurrentUserCredits(),
+      uiElement: document.getElementById("current-credits")?.textContent,
+      userObject: window.OsliraApp?.user,
     });
-}
+  }
 
-// ✅ 2. SETUP EVENT LISTENERS FOR BULK UPLOAD
-setupBulkUploadListeners() {
-    const fileInput = document.getElementById('csv-file-input');
-    const analysisTypeSelect = document.getElementById('bulk-analysis-type');
-    const businessSelect = document.getElementById('bulk-business-id');
-    
+  // ✅ 2. SETUP EVENT LISTENERS FOR BULK UPLOAD
+  setupBulkUploadListeners() {
+    const fileInput = document.getElementById("csv-file-input");
+    const analysisTypeSelect = document.getElementById("bulk-analysis-type");
+    const businessSelect = document.getElementById("bulk-business-id");
+
     if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            this.handleBulkFileSelection(e);
-        });
+      fileInput.addEventListener("change", (e) => {
+        this.handleBulkFileSelection(e);
+      });
     }
-    
-    if (analysisTypeSelect) {
-        analysisTypeSelect.addEventListener('change', () => {
-            this.updateBulkCostCalculator();
-        });
-    }
-    
-    if (businessSelect) {
-        businessSelect.addEventListener('change', () => {
-            this.validateBulkForm();
-        });
-    }
-}
 
-// ✅ 3. HANDLE FILE SELECTION AND PARSING
-async handleBulkFileSelection(event) {
+    if (analysisTypeSelect) {
+      analysisTypeSelect.addEventListener("change", () => {
+        this.updateBulkCostCalculator();
+      });
+    }
+
+    if (businessSelect) {
+      businessSelect.addEventListener("change", () => {
+        this.validateBulkForm();
+      });
+    }
+  }
+
+  // ✅ 3. HANDLE FILE SELECTION AND PARSING
+  async handleBulkFileSelection(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
-    console.log('📁 File selected:', file.name);
-    
-    try {
-        const fileContent = await this.readFileAsText(file);
-        const usernames = this.parseUsernamesFromCSV(fileContent);
-        
-        if (usernames.length === 0) {
-            window.OsliraApp?.showMessage('No valid usernames found in file', 'error');
-            return;
-        }
-        
-        if (usernames.length > 50) {
-            window.OsliraApp?.showMessage('Maximum 50 usernames allowed per upload', 'error');
-            return;
-        }
-        
-        // Store parsed usernames
-        this.bulkUsernames = usernames;
-        
-        // Show preview
-        this.showBulkPreview(usernames);
-        
-        // Update cost calculator
-        this.updateBulkCostCalculator();
-        
-        console.log(`✅ Parsed ${usernames.length} usernames from CSV`);
-        
-    } catch (error) {
-        console.error('❌ File parsing failed:', error);
-        window.OsliraApp?.showMessage('Failed to parse CSV file: ' + error.message, 'error');
-    }
-}
 
-// ✅ 4. PARSE USERNAMES FROM CSV (COLUMN A ONLY)
-parseUsernamesFromCSV(csvContent) {
-    const lines = csvContent.split('\n').filter(line => line.trim());
-    const usernames = [];
-    
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        
-        // Get first column (split by comma, semicolon, or tab)
-        const columns = line.split(/[,;\t]/);
-        const firstColumn = columns[0]?.trim();
-        
-        if (!firstColumn) continue;
-        
-        // Clean and validate username
-        const cleanUsername = this.cleanUsername(firstColumn);
-        
-        if (this.isValidUsername(cleanUsername)) {
-            usernames.push(cleanUsername);
-        } else {
-            console.warn(`⚠️ Invalid username skipped: "${firstColumn}" (line ${i + 1})`);
-        }
+    console.log("📁 File selected:", file.name);
+
+    try {
+      const fileContent = await this.readFileAsText(file);
+
+      // Validate CSV format
+      if (!fileContent.trim()) {
+        Alert.error("Invalid CSV format", {
+          suggestions: [
+            "Ensure file is CSV format",
+            "Check that usernames are in first column",
+            "Remove any special characters",
+          ],
+        });
+        return;
+      }
+
+      const usernames = this.parseUsernamesFromCSV(fileContent);
+
+      if (usernames.length === 0) {
+        Alert.error("No valid usernames found in file", {
+          suggestions: [
+            "Check file format (CSV)",
+            "Ensure usernames are in first column",
+            "Remove @ symbols from usernames",
+          ],
+        });
+        return;
+      }
+
+      if (usernames.length > 50) {
+        window.OsliraApp?.showMessage("Maximum 50 usernames allowed per upload", "error");
+        return;
+      }
+
+      // Store parsed usernames
+      this.bulkUsernames = usernames;
+
+      // Show preview
+      this.showBulkPreview(usernames);
+
+      // Update cost calculator
+      this.updateBulkCostCalculator();
+
+      console.log(`✅ Parsed ${usernames.length} usernames from CSV`);
+    } catch (error) {
+      console.error("❌ File parsing failed:", error);
+      Alert.error("Failed to parse CSV file", {
+        details: error.message,
+        suggestions: ["Check file format", "Try a different file"],
+      });
     }
-    
+  }
+
+  // ✅ 4. PARSE USERNAMES FROM CSV (COLUMN A ONLY)
+  parseUsernamesFromCSV(csvContent) {
+    const lines = csvContent.split("\n").filter((line) => line.trim());
+    const usernames = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      // Get first column (split by comma, semicolon, or tab)
+      const columns = line.split(/[,;\t]/);
+      const firstColumn = columns[0]?.trim();
+
+      if (!firstColumn) continue;
+
+      // Clean and validate username
+      const cleanUsername = this.cleanUsername(firstColumn);
+
+      if (this.isValidUsername(cleanUsername)) {
+        usernames.push(cleanUsername);
+      } else {
+        console.warn(`⚠️ Invalid username skipped: "${firstColumn}" (line ${i + 1})`);
+      }
+    }
+
     // Remove duplicates
     const uniqueUsernames = [...new Set(usernames)];
-    
-    if (uniqueUsernames.length !== usernames.length) {
-        console.log(`🔄 Removed ${usernames.length - uniqueUsernames.length} duplicate usernames`);
-    }
-    
-    return uniqueUsernames;
-}
 
-// ✅ 5. CLEAN AND VALIDATE USERNAMES
-cleanUsername(input) {
-    if (!input) return '';
-    
+    if (uniqueUsernames.length !== usernames.length) {
+      console.log(`🔄 Removed ${usernames.length - uniqueUsernames.length} duplicate usernames`);
+    }
+
+    return uniqueUsernames;
+  }
+
+  // ✅ 5. CLEAN AND VALIDATE USERNAMES
+  cleanUsername(input) {
+    if (!input) return "";
+
     // Remove quotes, spaces, @ symbols, instagram.com URLs
     let cleaned = input
-        .replace(/['"]/g, '') // Remove quotes
-        .replace(/\s+/g, '') // Remove spaces
-        .replace(/^@/, '') // Remove leading @
-        .toLowerCase();
-    
-    // Handle Instagram URLs
-    if (cleaned.includes('instagram.com')) {
-        try {
-            const url = new URL(cleaned.startsWith('http') ? cleaned : `https://${cleaned}`);
-            const pathSegments = url.pathname.split('/').filter(Boolean);
-            cleaned = pathSegments[0] || '';
-        } catch {
-            // If URL parsing fails, try to extract username manually
-            const match = cleaned.match(/instagram\.com\/([a-zA-Z0-9._]+)/);
-            cleaned = match ? match[1] : '';
-        }
-    }
-    
-    return cleaned;
-}
+      .replace(/['"]/g, "") // Remove quotes
+      .replace(/\s+/g, "") // Remove spaces
+      .replace(/^@/, "") // Remove leading @
+      .toLowerCase();
 
-isValidUsername(username) {
+    // Handle Instagram URLs
+    if (cleaned.includes("instagram.com")) {
+      try {
+        const url = new URL(cleaned.startsWith("http") ? cleaned : `https://${cleaned}`);
+        const pathSegments = url.pathname.split("/").filter(Boolean);
+        cleaned = pathSegments[0] || "";
+      } catch {
+        // If URL parsing fails, try to extract username manually
+        const match = cleaned.match(/instagram\.com\/([a-zA-Z0-9._]+)/);
+        cleaned = match ? match[1] : "";
+      }
+    }
+
+    return cleaned;
+  }
+
+  isValidUsername(username) {
     if (!username || username.length === 0) return false;
     if (username.length > 30) return false;
-    
+
     // Instagram username rules
     const usernameRegex = /^[a-zA-Z0-9._]+$/;
     if (!usernameRegex.test(username)) return false;
-    
-    // Can't start or end with period
-    if (username.startsWith('.') || username.endsWith('.')) return false;
-    
-    // Can't have consecutive periods
-    if (username.includes('..')) return false;
-    
-    return true;
-}
 
-// ✅ 6. SHOW PREVIEW OF PARSED USERNAMES
-showBulkPreview(usernames) {
-    const previewDiv = document.getElementById('file-preview');
-    const previewContent = document.getElementById('preview-content');
-    const previewStats = document.getElementById('preview-stats');
-    
+    // Can't start or end with period
+    if (username.startsWith(".") || username.endsWith(".")) return false;
+
+    // Can't have consecutive periods
+    if (username.includes("..")) return false;
+
+    return true;
+  }
+
+  // ✅ 6. SHOW PREVIEW OF PARSED USERNAMES
+  showBulkPreview(usernames) {
+    const previewDiv = document.getElementById("file-preview");
+    const previewContent = document.getElementById("preview-content");
+    const previewStats = document.getElementById("preview-stats");
+
     if (!previewDiv || !previewContent || !previewStats) return;
-    
+
     // Show first 5 usernames
     const preview = usernames.slice(0, 5);
-    previewContent.innerHTML = preview.map(username => `@${username}`).join('<br>');
-    
+    previewContent.innerHTML = preview.map((username) => `@${username}`).join("<br>");
+
     // Show stats
     const hasMore = usernames.length > 5;
     previewStats.innerHTML = `
         ✅ ${usernames.length} valid usernames found
-        ${hasMore ? `(showing first 5, +${usernames.length - 5} more)` : ''}
+        ${hasMore ? `(showing first 5, +${usernames.length - 5} more)` : ""}
     `;
-    
-    previewDiv.style.display = 'block';
-}
 
-// ✅ 7. UPDATE COST CALCULATOR
-updateBulkCostCalculator() {
-    const analysisType = document.getElementById('bulk-analysis-type')?.value;
+    previewDiv.style.display = "block";
+  }
+
+  // ✅ 7. UPDATE COST CALCULATOR
+  updateBulkCostCalculator() {
+    const analysisType = document.getElementById("bulk-analysis-type")?.value;
     const usernameCount = this.bulkUsernames?.length || 0;
-    
-    const costCalculator = document.getElementById('cost-calculator');
-    const usernameCountEl = document.getElementById('username-count');
-    const creditCostEl = document.getElementById('credit-cost');
-    const totalCostEl = document.getElementById('total-cost');
-    const costStatusEl = document.getElementById('cost-status');
-    const currentCreditsEl = document.getElementById('current-credits');
-    
-    if (!costCalculator || !usernameCountEl || !creditCostEl || !totalCostEl || !costStatusEl) return;
-    
+
+    const costCalculator = document.getElementById("cost-calculator");
+    const usernameCountEl = document.getElementById("username-count");
+    const creditCostEl = document.getElementById("credit-cost");
+    const totalCostEl = document.getElementById("total-cost");
+    const costStatusEl = document.getElementById("cost-status");
+    const currentCreditsEl = document.getElementById("current-credits");
+
+    if (!costCalculator || !usernameCountEl || !creditCostEl || !totalCostEl || !costStatusEl)
+      return;
+
     if (usernameCount > 0 && analysisType) {
-        const creditPerAnalysis = analysisType === 'deep' ? 2 : 1;
-        const totalCost = usernameCount * creditPerAnalysis;
-        const currentCredits = this.getCurrentUserCredits();
-        
-        usernameCountEl.textContent = usernameCount;
-        creditCostEl.textContent = creditPerAnalysis;
-        totalCostEl.textContent = totalCost;
-        
-        console.log('💰 Cost calculation:', {
-            usernameCount,
-            creditPerAnalysis,
-            totalCost,
-            currentCredits,
-            hasEnough: currentCredits >= totalCost
-        });
-        
-        // ✅ BETTER CREDIT STATUS CHECKING
-        if (currentCredits >= totalCost) {
-            costStatusEl.textContent = '✅ Sufficient Credits';
-            costStatusEl.style.color = 'var(--success)';
-        } else {
-            const shortfall = totalCost - currentCredits;
-            costStatusEl.textContent = `❌ Need ${shortfall} More Credits`;
-            costStatusEl.style.color = 'var(--error)';
+      const creditPerAnalysis = analysisType === "deep" ? 2 : 1;
+      const totalCost = usernameCount * creditPerAnalysis;
+      const currentCredits = this.getCurrentUserCredits();
+
+      usernameCountEl.textContent = usernameCount;
+      creditCostEl.textContent = creditPerAnalysis;
+      totalCostEl.textContent = totalCost;
+
+      console.log("💰 Cost calculation:", {
+        usernameCount,
+        creditPerAnalysis,
+        totalCost,
+        currentCredits,
+        hasEnough: currentCredits >= totalCost,
+      });
+
+      // ✅ BETTER CREDIT STATUS CHECKING
+      if (currentCredits >= totalCost) {
+        costStatusEl.textContent = "✅ Sufficient Credits";
+        costStatusEl.style.color = "var(--success)";
+      } else {
+        const shortfall = totalCost - currentCredits;
+        costStatusEl.textContent = `❌ Need ${shortfall} More Credits`;
+        costStatusEl.style.color = "var(--error)";
+      }
+
+      // ✅ UPDATE CURRENT CREDITS DISPLAY COLOR
+      if (currentCreditsEl) {
+        const creditsText = currentCredits.toLocaleString();
+        if (currentCreditsEl.textContent !== creditsText) {
+          currentCreditsEl.textContent = creditsText;
         }
-        
-        // ✅ UPDATE CURRENT CREDITS DISPLAY COLOR
-        if (currentCreditsEl) {
-            const creditsText = currentCredits.toLocaleString();
-            if (currentCreditsEl.textContent !== creditsText) {
-                currentCreditsEl.textContent = creditsText;
-            }
-            currentCreditsEl.style.color = currentCredits >= totalCost ? 'var(--success)' : 'var(--error)';
-        }
-        
-        costCalculator.style.display = 'block';
-        this.validateBulkForm();
+        currentCreditsEl.style.color =
+          currentCredits >= totalCost ? "var(--success)" : "var(--error)";
+      }
+
+      costCalculator.style.display = "block";
+      this.validateBulkForm();
     } else {
-        costCalculator.style.display = 'none';
+      costCalculator.style.display = "none";
     }
-}
-// ✅ 8. VALIDATE BULK FORM
-validateBulkForm() {
-    const submitBtn = document.getElementById('bulk-submit-btn');
-    const analysisType = document.getElementById('bulk-analysis-type')?.value;
-    const businessId = document.getElementById('bulk-business-id')?.value;
+  }
+  // ✅ 8. VALIDATE BULK FORM
+  validateBulkForm() {
+    const submitBtn = document.getElementById("bulk-submit-btn");
+    const analysisType = document.getElementById("bulk-analysis-type")?.value;
+    const businessId = document.getElementById("bulk-business-id")?.value;
     const hasUsernames = (this.bulkUsernames?.length || 0) > 0;
     const hasEnoughCredits = this.checkBulkCredits();
-    
+
     if (!submitBtn) return;
-    
+
     const isValid = hasUsernames && analysisType && businessId && hasEnoughCredits;
-    
+
     submitBtn.disabled = !isValid;
-    submitBtn.style.opacity = isValid ? '1' : '0.6';
-    submitBtn.style.cursor = isValid ? 'pointer' : 'not-allowed';
-}
+    submitBtn.style.opacity = isValid ? "1" : "0.6";
+    submitBtn.style.cursor = isValid ? "pointer" : "not-allowed";
+  }
 
-// ✅ 9. PROCESS BULK UPLOAD
-async processBulkUpload() {
-    const analysisType = document.getElementById('bulk-analysis-type')?.value;
-    const businessId = document.getElementById('bulk-business-id')?.value;
+  // ✅ 9. PROCESS BULK UPLOAD
+  async processBulkUpload() {
+    const analysisType = document.getElementById("bulk-analysis-type")?.value;
+    const businessId = document.getElementById("bulk-business-id")?.value;
     const usernames = this.bulkUsernames || [];
-    
+
     if (!analysisType || !businessId || usernames.length === 0) {
-        window.OsliraApp?.showMessage('Please complete all fields', 'error');
-        return;
+      Alert.error("Please complete all required fields");
+      return;
     }
-    
+
     console.log(`🚀 Starting bulk upload: ${usernames.length} usernames, ${analysisType} analysis`);
-    
+
     // Close modal
-    this.closeModal('bulkModal');
-    
+    this.closeModal("bulkModal");
+
     // Convert usernames to lead objects
-    const leads = usernames.map(username => ({ username }));
-    
+    const leads = usernames.map((username) => ({ username }));
+
     try {
-        // Use the existing queue system for bulk analysis
-        const result = await window.analysisQueue.startBulkAnalysis(leads, analysisType, businessId);
-        
-        window.OsliraApp?.showMessage(
-            `Bulk analysis started: ${leads.length} profiles queued`, 
-            'success'
-        );
-        
-        console.log('✅ Bulk upload initiated:', result);
-        
-        // Refresh dashboard after some time to show results
-        setTimeout(async () => {
-            await this.loadDashboardData();
-        }, 5000);
-        
+      // Use the existing queue system for bulk analysis
+      const result = await window.analysisQueue.startBulkAnalysis(leads, analysisType, businessId);
+
+      Alert.success({
+        message: `Bulk analysis started: ${leads.length} profiles queued`,
+        timeoutMs: 4000,
+      });
+
+      console.log("✅ Bulk upload initiated:", result);
+
+      // Refresh dashboard after some time to show results
+      setTimeout(async () => {
+        await this.loadDashboardData();
+      }, 5000);
     } catch (error) {
-        console.error('❌ Bulk upload failed:', error);
-        window.OsliraApp?.showMessage(`Bulk upload failed: ${error.message}`, 'error');
+      console.error("❌ Bulk upload failed:", error);
+      Alert.error("Bulk upload failed", {
+        details: error.message,
+        actions: [{ label: "Try Again", action: "retry" }],
+      });
     }
-}
+  }
 
-// ✅ 10. HELPER METHODS
-readFileAsText(file) {
+  // ✅ 10. HELPER METHODS
+  readFileAsText(file) {
     return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = (e) => reject(new Error('Failed to read file'));
-        reader.readAsText(file);
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => {
+        Alert.error("Failed to read file", {
+          suggestions: ["Check file format", "Try a different file", "Ensure file is valid CSV"],
+        });
+        reject(new Error("Failed to read file"));
+      };
+      reader.readAsText(file);
     });
-}
+  }
 
-getCurrentUserCredits() {
+  getCurrentUserCredits() {
     // Get current user credits from global state (now updated)
     const credits = window.OsliraApp?.user?.credits;
-    
-    if (typeof credits === 'number') {
-        return credits;
+
+    if (typeof credits === "number") {
+      return credits;
     }
-    
+
     // Fallback: try to get from UI if available
-    const currentCreditsEl = document.getElementById('current-credits');
-    if (currentCreditsEl && currentCreditsEl.textContent !== 'Loading...') {
-        const uiCredits = parseInt(currentCreditsEl.textContent.replace(/,/g, ''));
-        return isNaN(uiCredits) ? 0 : uiCredits;
+    const currentCreditsEl = document.getElementById("current-credits");
+    if (currentCreditsEl && currentCreditsEl.textContent !== "Loading...") {
+      const uiCredits = parseInt(currentCreditsEl.textContent.replace(/,/g, ""));
+      return isNaN(uiCredits) ? 0 : uiCredits;
     }
-    
+
     return 0;
-}
-checkBulkCredits() {
-    const analysisType = document.getElementById('bulk-analysis-type')?.value;
+  }
+  checkBulkCredits() {
+    const analysisType = document.getElementById("bulk-analysis-type")?.value;
     const usernameCount = this.bulkUsernames?.length || 0;
     const currentCredits = this.getCurrentUserCredits();
-    
+
     if (!analysisType || usernameCount === 0) {
-        console.log('🔍 Bulk credits check: Missing analysis type or usernames');
-        return false;
+      console.log("🔍 Bulk credits check: Missing analysis type or usernames");
+      return false;
     }
-    
-    const creditPerAnalysis = analysisType === 'deep' ? 2 : 1;
+
+    const creditPerAnalysis = analysisType === "deep" ? 2 : 1;
     const totalCost = usernameCount * creditPerAnalysis;
     const hasEnough = currentCredits >= totalCost;
-    
-    console.log('🔍 Bulk credits check:', {
-        currentCredits,
-        totalCost,
-        hasEnough,
-        calculation: `${currentCredits} >= ${totalCost}`
+
+    console.log("🔍 Bulk credits check:", {
+      currentCredits,
+      totalCost,
+      hasEnough,
+      calculation: `${currentCredits} >= ${totalCost}`,
     });
-    
+
     return hasEnough;
-}
-async loadBusinessProfilesForBulk() {
-    const businessSelect = document.getElementById('bulk-business-id');
+  }
+  async loadBusinessProfilesForBulk() {
+    const businessSelect = document.getElementById("bulk-business-id");
     if (!businessSelect) return;
-    
+
     try {
-        businessSelect.innerHTML = '<option value="">Loading...</option>';
-        businessSelect.disabled = true;
-        
-        // Use the same method as your analysis modal
-        await this.loadBusinessProfilesForModal();
-        
-        // Copy options to bulk select
-        const mainBusinessSelect = document.getElementById('business-id');
-        if (mainBusinessSelect) {
-            businessSelect.innerHTML = mainBusinessSelect.innerHTML;
-        }
-        
-        businessSelect.disabled = false;
-        
+      businessSelect.innerHTML = '<option value="">Loading...</option>';
+      businessSelect.disabled = true;
+
+      // Use the same method as your analysis modal
+      await this.loadBusinessProfilesForModal();
+
+      // Copy options to bulk select
+      const mainBusinessSelect = document.getElementById("business-id");
+      if (mainBusinessSelect) {
+        businessSelect.innerHTML = mainBusinessSelect.innerHTML;
+      }
+
+      businessSelect.disabled = false;
     } catch (error) {
-        console.error('❌ Failed to load business profiles for bulk:', error);
-        businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
-        businessSelect.disabled = false;
+      console.error("❌ Failed to load business profiles for bulk:", error);
+      businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
+      businessSelect.disabled = false;
     }
-}
+  }
 
-// ===============================================================================
-// ADDITIONAL METHOD: Add this to your Dashboard class for queue integration
-// ===============================================================================
+  // ===============================================================================
+  // ADDITIONAL METHOD: Add this to your Dashboard class for queue integration
+  // ===============================================================================
 
-viewLatestLead(username) {
-    console.log('🔍 Looking for latest lead:', username);
-    
+  viewLatestLead(username) {
+    console.log("🔍 Looking for latest lead:", username);
+
     // Find the most recent lead with this username (case-insensitive)
-    const lead = this.allLeads.find(l => 
-        l.username.toLowerCase() === username.toLowerCase()
-    );
-    
+    const lead = this.allLeads.find((l) => l.username.toLowerCase() === username.toLowerCase());
+
     if (lead) {
-        console.log('✅ Found lead, opening details:', lead.id);
-        this.viewLead(lead.id);
+      console.log("✅ Found lead, opening details:", lead.id);
+      this.viewLead(lead.id);
     } else {
-        console.warn('⚠️ Lead not found, refreshing data:', username);
-        window.OsliraApp?.showMessage(`Refreshing data to find @${username}...`, 'info');
-        
-        // Refresh data and try again
-        this.loadDashboardData().then(() => {
-            const refreshedLead = this.allLeads.find(l => 
-                l.username.toLowerCase() === username.toLowerCase()
-            );
-            
-            if (refreshedLead) {
-                console.log('✅ Found lead after refresh:', refreshedLead.id);
-                this.viewLead(refreshedLead.id);
-            } else {
-                console.error('❌ Lead still not found after refresh');
-                window.OsliraApp?.showMessage(`Lead @${username} not found`, 'warning');
-            }
-        });
-    }
-}
+      console.warn("⚠️ Lead not found, refreshing data:", username);
+      window.OsliraApp?.showMessage(`Refreshing data to find @${username}...`, "info");
 
-handleRealtimeAnalysisUpdate(payload) {
+      // Refresh data and try again
+      this.loadDashboardData().then(() => {
+        const refreshedLead = this.allLeads.find(
+          (l) => l.username.toLowerCase() === username.toLowerCase()
+        );
+
+        if (refreshedLead) {
+          console.log("✅ Found lead after refresh:", refreshedLead.id);
+          this.viewLead(refreshedLead.id);
+        } else {
+          console.error("❌ Lead still not found after refresh");
+          window.OsliraApp?.showMessage(`Lead @${username} not found`, "warning");
+        }
+      });
+    }
+  }
+
+  handleRealtimeAnalysisUpdate(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
-    
-    console.log('📈 Processing analysis update:', eventType, newRecord?.lead_id || oldRecord?.lead_id);
-    
-    if (eventType === 'INSERT' || eventType === 'UPDATE') {
-        const leadId = newRecord?.lead_id;
-        if (leadId) {
-            console.log('🔄 Analysis data updated for lead:', leadId);
-            // Refresh dashboard to show updated analysis
-            setTimeout(() => {
-                this.loadDashboardData();
-            }, 1000);
-        }
-    }
-}
 
-// ✅ NEW: Add lead to UI without full refresh
-addLeadToUI(newLead) {
-    try {
-        // Check if lead already exists
-        const existingIndex = this.allLeads.findIndex(lead => lead.id === newLead.id);
-        
-        if (existingIndex === -1) {
-            // Add new lead to the beginning of the array
-            this.allLeads.unshift({
-                ...newLead,
-                lead_analyses: [] // Will be populated separately if needed
-            });
-            
-            // Update display
-            this.displayLeads(this.allLeads);
-            
-            console.log('✅ Lead added to UI:', newLead.username);
-        }
-    } catch (error) {
-        console.error('❌ Failed to add lead to UI:', error);
-        // Fallback to full refresh
-        this.loadDashboardData();
-    }
-}
+    console.log(
+      "📈 Processing analysis update:",
+      eventType,
+      newRecord?.lead_id || oldRecord?.lead_id
+    );
 
-// ✅ NEW: Update lead in UI
-updateLeadInUI(updatedLead) {
-    try {
-        const existingIndex = this.allLeads.findIndex(lead => lead.id === updatedLead.id);
-        
-        if (existingIndex !== -1) {
-            // Update existing lead while preserving analysis data
-            this.allLeads[existingIndex] = {
-                ...this.allLeads[existingIndex],
-                ...updatedLead
-            };
-            
-            // Update display
-            this.displayLeads(this.allLeads);
-            
-            console.log('✅ Lead updated in UI:', updatedLead.username);
-        }
-    } catch (error) {
-        console.error('❌ Failed to update lead in UI:', error);
-        // Fallback to full refresh
-        this.loadDashboardData();
+    if (eventType === "INSERT" || eventType === "UPDATE") {
+      const leadId = newRecord?.lead_id;
+      if (leadId) {
+        console.log("🔄 Analysis data updated for lead:", leadId);
+        // Refresh dashboard to show updated analysis
+        setTimeout(() => {
+          this.loadDashboardData();
+        }, 1000);
+      }
     }
-}
+  }
 
-// ✅ NEW: Remove lead from UI
-removeLeadFromUI(deletedLead) {
+  // ✅ NEW: Add lead to UI without full refresh
+  addLeadToUI(newLead) {
     try {
-        this.allLeads = this.allLeads.filter(lead => lead.id !== deletedLead.id);
-        
-        // Remove from selection if selected
-        this.selectedLeads.delete(deletedLead.id);
-        
+      // Check if lead already exists
+      const existingIndex = this.allLeads.findIndex((lead) => lead.id === newLead.id);
+
+      if (existingIndex === -1) {
+        // Add new lead to the beginning of the array
+        this.allLeads.unshift({
+          ...newLead,
+          lead_analyses: [], // Will be populated separately if needed
+        });
+
         // Update display
         this.displayLeads(this.allLeads);
-        this.updateBulkActionsVisibility();
-        
-        console.log('✅ Lead removed from UI:', deletedLead.username);
-    } catch (error) {
-        console.error('❌ Failed to remove lead from UI:', error);
-        // Fallback to full refresh
-        this.loadDashboardData();
-    }
-}
 
-// ✅ NEW: Refresh specific lead data
-async refreshLeadData(leadId) {
+        console.log("✅ Lead added to UI:", newLead.username);
+      }
+    } catch (error) {
+      console.error("❌ Failed to add lead to UI:", error);
+      // Fallback to full refresh
+      this.loadDashboardData();
+    }
+  }
+
+  // ✅ NEW: Update lead in UI
+  updateLeadInUI(updatedLead) {
     try {
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
-        
-        if (!supabase || !user) return;
-        
-        // Get updated lead data
-        const { data: leadData, error: leadError } = await supabase
-            .from('leads')
-            .select('*')
-            .eq('id', leadId)
-            .eq('user_id', user.id)
-            .single();
-            
-        if (leadError || !leadData) {
-            console.warn('⚠️ Failed to refresh lead data:', leadError);
-            return;
-        }
-        
-        // Get analysis data if it's a deep analysis
-        let analysisData = null;
-        if (leadData.analysis_type === 'deep') {
-            const { data: analysis } = await supabase
-                .from('lead_analyses')
-                .select('*')
-                .eq('lead_id', leadId)
-                .single();
-                
-            if (analysis) {
-                analysisData = [analysis];
-            }
-        }
-        
-        // Update the lead in our local data
-        const leadIndex = this.allLeads.findIndex(lead => lead.id === leadId);
-        if (leadIndex !== -1) {
-            this.allLeads[leadIndex] = {
-                ...leadData,
-                lead_analyses: analysisData || []
-            };
-            
-            // Update display
-            this.displayLeads(this.allLeads);
-            
-            console.log('✅ Lead data refreshed:', leadData.username);
-        }
-        
-    } catch (error) {
-        console.error('❌ Failed to refresh lead data:', error);
-    }
-}
+      const existingIndex = this.allLeads.findIndex((lead) => lead.id === updatedLead.id);
 
-async loadRecentActivity() {
-    await this.loadDashboardData();
-}
+      if (existingIndex !== -1) {
+        // Update existing lead while preserving analysis data
+        this.allLeads[existingIndex] = {
+          ...this.allLeads[existingIndex],
+          ...updatedLead,
+        };
 
-async refreshActivity() {
-    await this.loadDashboardData();
-    window.OsliraApp?.showMessage('Activity refreshed!', 'success');
-}
-
-selectAllLeads(isChecked) {
-    const visibleLeads = this.allLeads.filter(lead => {
-        const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
-        return row && row.style.display !== 'none';
-    });
-    
-    if (isChecked) {
-        visibleLeads.forEach(lead => this.selectedLeads.add(lead.id));
-    } else {
-        this.selectedLeads.clear();
-    }
-    
-    document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
-        const leadId = checkbox.dataset.leadId;
-        checkbox.checked = this.selectedLeads.has(leadId);
-    });
-    
-    this.updateBulkActionsVisibility();
-}
-
-async bulkDeleteLeads() {
-    if (this.selectedLeads.size === 0) {
-        window.OsliraApp?.showMessage('No leads selected', 'warning');
-        return;
-    }
-    
-    if (!confirm(`Delete ${this.selectedLeads.size} selected leads?`)) {
-        return;
-    }
-    
-    // TODO: Implement bulk delete
-    window.OsliraApp?.showMessage('Bulk delete functionality coming soon!', 'info');
-}
-
-clearSelection() {
-    this.selectedLeads.clear();
-    document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    this.updateBulkActionsVisibility();
-}
-
-updateBulkActionsVisibility() {
-    const bulkActions = document.querySelector('.bulk-actions');
-    const selectedCount = document.getElementById('selected-count');
-    
-    if (bulkActions) {
-        bulkActions.style.display = this.selectedLeads.size > 0 ? 'flex' : 'none';
-    }
-    
-    if (selectedCount) {
-        selectedCount.textContent = this.selectedLeads.size;
-    }
-}
-
-searchLeads(searchTerm) {
-    if (!searchTerm.trim()) {
+        // Update display
         this.displayLeads(this.allLeads);
+
+        console.log("✅ Lead updated in UI:", updatedLead.username);
+      }
+    } catch (error) {
+      console.error("❌ Failed to update lead in UI:", error);
+      // Fallback to full refresh
+      this.loadDashboardData();
+    }
+  }
+
+  // ✅ NEW: Remove lead from UI
+  removeLeadFromUI(deletedLead) {
+    try {
+      this.allLeads = this.allLeads.filter((lead) => lead.id !== deletedLead.id);
+
+      // Remove from selection if selected
+      this.selectedLeads.delete(deletedLead.id);
+
+      // Update display
+      this.displayLeads(this.allLeads);
+      this.updateBulkActionsVisibility();
+
+      console.log("✅ Lead removed from UI:", deletedLead.username);
+    } catch (error) {
+      console.error("❌ Failed to remove lead from UI:", error);
+      // Fallback to full refresh
+      this.loadDashboardData();
+    }
+  }
+
+  // ✅ NEW: Refresh specific lead data
+  async refreshLeadData(leadId) {
+    try {
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
+
+      if (!supabase || !user) return;
+
+      // Get updated lead data
+      const { data: leadData, error: leadError } = await supabase
+        .from("leads")
+        .select("*")
+        .eq("id", leadId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (leadError || !leadData) {
+        console.warn("⚠️ Failed to refresh lead data:", leadError);
         return;
+      }
+
+      // Get analysis data if it's a deep analysis
+      let analysisData = null;
+      if (leadData.analysis_type === "deep") {
+        const { data: analysis } = await supabase
+          .from("lead_analyses")
+          .select("*")
+          .eq("lead_id", leadId)
+          .single();
+
+        if (analysis) {
+          analysisData = [analysis];
+        }
+      }
+
+      // Update the lead in our local data
+      const leadIndex = this.allLeads.findIndex((lead) => lead.id === leadId);
+      if (leadIndex !== -1) {
+        this.allLeads[leadIndex] = {
+          ...leadData,
+          lead_analyses: analysisData || [],
+        };
+
+        // Update display
+        this.displayLeads(this.allLeads);
+
+        console.log("✅ Lead data refreshed:", leadData.username);
+      }
+    } catch (error) {
+      console.error("❌ Failed to refresh lead data:", error);
     }
-    
-    const filteredLeads = this.allLeads.filter(lead => 
-        lead.username.toLowerCase().includes(searchTerm.toLowerCase())
+  }
+
+  async loadRecentActivity() {
+    await this.loadDashboardData();
+  }
+
+  async refreshActivity() {
+    await this.loadDashboardData();
+    Alert.success({ message: "Activity refreshed" });
+  }
+
+  selectAllLeads(isChecked) {
+    const visibleLeads = this.allLeads.filter((lead) => {
+      const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
+      return row && row.style.display !== "none";
+    });
+
+    if (isChecked) {
+      visibleLeads.forEach((lead) => this.selectedLeads.add(lead.id));
+    } else {
+      this.selectedLeads.clear();
+    }
+
+    document.querySelectorAll(".lead-checkbox").forEach((checkbox) => {
+      const leadId = checkbox.dataset.leadId;
+      checkbox.checked = this.selectedLeads.has(leadId);
+    });
+
+    this.updateBulkActionsVisibility();
+  }
+
+  async bulkDeleteLeads() {
+    if (this.selectedLeads.size === 0) {
+      Alert.warning({ message: "No leads selected for deletion" });
+      return;
+    }
+
+    if (!confirm(`Delete ${this.selectedLeads.size} selected leads?`)) {
+      return;
+    }
+
+    // TODO: Implement bulk delete
+    Alert.info({ message: "Bulk delete functionality coming soon!" });
+  }
+
+  clearSelection() {
+    this.selectedLeads.clear();
+    document.querySelectorAll(".lead-checkbox").forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+    this.updateBulkActionsVisibility();
+  }
+
+  updateBulkActionsVisibility() {
+    const bulkActions = document.querySelector(".bulk-actions");
+    const selectedCount = document.getElementById("selected-count");
+
+    if (bulkActions) {
+      bulkActions.style.display = this.selectedLeads.size > 0 ? "flex" : "none";
+    }
+
+    if (selectedCount) {
+      selectedCount.textContent = this.selectedLeads.size;
+    }
+  }
+
+  searchLeads(searchTerm) {
+    if (!searchTerm.trim()) {
+      this.displayLeads(this.allLeads);
+      return;
+    }
+
+    const filteredLeads = this.allLeads.filter((lead) =>
+      lead.username.toLowerCase().includes(searchTerm.toLowerCase())
     );
-    
+
     this.displayLeads(filteredLeads);
-}
+  }
 
-exportLeads() {
-    window.OsliraApp?.showMessage('Export functionality coming soon!', 'info');
-}
+  exportLeads() {
+    Alert.info({ message: "Export functionality coming soon!" });
+  }
 
-    // ===============================================================================
-    // INTERACTION METHODS FOR BUTTONS AND ACTIONS
-    // ===============================================================================
+  // ===============================================================================
+  // INTERACTION METHODS FOR BUTTONS AND ACTIONS
+  // ===============================================================================
 
-    copyText(text) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(() => {
-                if (window.OsliraApp && window.OsliraApp.showMessage) {
-                    window.OsliraApp.showMessage('Copied to clipboard!', 'success');
-                }
-            }).catch(err => {
-                console.error('Failed to copy text:', err);
-                this.fallbackCopyText(text);
-            });
-        } else {
-            this.fallbackCopyText(text);
-        }
+  copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard
+        .writeText(text)
+        .then(() => {
+          if (window.OsliraApp && window.OsliraApp.showMessage) {
+            Alert.success({ message: "Copied to clipboard!" });
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to copy text:", err);
+          this.fallbackCopyText(text);
+        });
+    } else {
+      this.fallbackCopyText(text);
+    }
+  }
+
+  fallbackCopyText(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+      document.execCommand("copy");
+      if (window.OsliraApp && window.OsliraApp.showMessage) {
+        window.OsliraApp.showMessage("Copied to clipboard!", "success");
+      }
+    } catch (err) {
+      console.error("Fallback copy failed:", err);
+      if (window.OsliraApp && window.OsliraApp.showMessage) {
+        Alert.error("Copy failed", {
+          suggestions: ["Select and copy manually", "Try again"],
+        });
+      }
     }
 
-    fallbackCopyText(text) {
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        
-        try {
-            document.execCommand('copy');
-            if (window.OsliraApp && window.OsliraApp.showMessage) {
-                window.OsliraApp.showMessage('Copied to clipboard!', 'success');
-            }
-        } catch (err) {
-            console.error('Fallback copy failed:', err);
-            if (window.OsliraApp && window.OsliraApp.showMessage) {
-                window.OsliraApp.showMessage('Copy failed. Please select and copy manually.', 'error');
-            }
-        }
-        
-        document.body.removeChild(textArea);
-    }
+    document.body.removeChild(textArea);
+  }
 
-    copyAllInsights(insights) {
-        const formattedText = insights.map((insight, index) => `${index + 1}. ${insight}`).join('\n\n');
-        this.copyText(formattedText);
-    }
+  copyAllInsights(insights) {
+    const formattedText = insights.map((insight, index) => `${index + 1}. ${insight}`).join("\n\n");
+    this.copyText(formattedText);
+  }
 
-    copyAllSellingPoints(points) {
-        const formattedText = points.map((point, index) => `${index + 1}. ${point}`).join('\n\n');
-        this.copyText(formattedText);
-    }
+  copyAllSellingPoints(points) {
+    const formattedText = points.map((point, index) => `${index + 1}. ${point}`).join("\n\n");
+    this.copyText(formattedText);
+  }
 
-    copyOutreachMessage(message, button) {
-        this.copyText(message);
-        
-        if (button) {
-            const originalText = button.innerHTML;
-            const originalBackground = button.style.background;
-            
-            button.innerHTML = '✅ Copied!';
-            button.style.background = 'var(--success)';
-            button.disabled = true;
-            
-            setTimeout(() => {
-                button.innerHTML = originalText;
-                button.style.background = originalBackground;
-                button.disabled = false;
-            }, 2500);
-        }
-    }
+  copyOutreachMessage(message, button) {
+    this.copyText(message);
 
-    editMessage(originalMessage) {
-        // Create a modal for editing the message
-        const modal = document.createElement('div');
-        modal.style.cssText = `
+    if (button) {
+      const originalText = button.innerHTML;
+      const originalBackground = button.style.background;
+
+      button.innerHTML = "✅ Copied!";
+      button.style.background = "var(--success)";
+      button.disabled = true;
+
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.style.background = originalBackground;
+        button.disabled = false;
+      }, 2500);
+    }
+  }
+
+  editMessage(originalMessage) {
+    // Create a modal for editing the message
+    const modal = document.createElement("div");
+    modal.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
@@ -2675,8 +2797,8 @@ exportLeads() {
             z-index: 10000;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         `;
-        
-        modal.innerHTML = `
+
+    modal.innerHTML = `
             <div style="background: white; padding: 32px; border-radius: 16px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
                 <h3 style="margin: 0 0 20px 0; color: var(--text-primary); font-size: 20px;">
                     ✏️ Edit Outreach Message
@@ -2702,122 +2824,125 @@ exportLeads() {
                 </div>
             </div>
         `;
-        
-        document.body.appendChild(modal);
-        
-        // Focus the textarea
-        setTimeout(() => {
-            const textarea = document.getElementById('edit-message-textarea');
-            if (textarea) {
-                textarea.focus();
-                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-            }
-        }, 100);
-    }
 
-   updateInputField() {
-    console.log('📝 Input field update triggered');
-    
-    const analysisType = document.getElementById('analysis-type');
-    const inputContainer = document.getElementById('input-field-container');
-    const inputField = document.getElementById('profile-input');
-    const inputLabel = document.getElementById('input-label');
-    const inputHelp = document.getElementById('input-help');
-    
+    document.body.appendChild(modal);
+
+    // Focus the textarea
+    setTimeout(() => {
+      const textarea = document.getElementById("edit-message-textarea");
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+      }
+    }, 100);
+  }
+
+  updateInputField() {
+    console.log("📝 Input field update triggered");
+
+    const analysisType = document.getElementById("analysis-type");
+    const inputContainer = document.getElementById("input-field-container");
+    const inputField = document.getElementById("profile-input");
+    const inputLabel = document.getElementById("input-label");
+    const inputHelp = document.getElementById("input-help");
+
     if (!analysisType || !inputContainer || !inputField || !inputLabel || !inputHelp) {
-        console.error('❌ Missing form elements for updateInputField');
-        return;
-    }
-    
-    const selectedType = analysisType.value;
-    console.log('🎯 Selected analysis type:', selectedType);
-    
-    inputField.value = '';
-    
-    if (selectedType && (selectedType === 'light' || selectedType === 'deep')) {
-        console.log('✅ Showing input container');
-        
-        inputContainer.style.display = 'block';
-        
-        if (selectedType === 'light') {
-            inputLabel.textContent = 'Instagram Username *';
-            inputField.placeholder = 'username';
-            inputHelp.innerHTML = 'Enter just the username (without @) - <span style="color: var(--primary-blue); font-weight: 600;">1 credit</span>';
-        } else if (selectedType === 'deep') {
-            inputLabel.textContent = 'Instagram Username *';
-            inputField.placeholder = 'username';  
-            inputHelp.innerHTML = 'Enter just the username (without @) - <span style="color: var(--accent-teal); font-weight: 600;">2 credits - Full analysis</span>';
-        }
-        
-        setTimeout(() => {
-            inputField.focus();
-            console.log('🎯 Input field focused');
-        }, 100);
-        
-    } else {
-        console.log('📋 Hiding input container');
-        inputContainer.style.display = 'none';
-    }
-}
-    saveEditedMessage() {
-        const textarea = document.getElementById('edit-message-textarea');
-        if (!textarea) return;
-        
-        const newMessage = textarea.value.trim();
-        if (!newMessage) {
-            if (window.OsliraApp && window.OsliraApp.showMessage) {
-                window.OsliraApp.showMessage('Message cannot be empty', 'error');
-            }
-            return;
-        }
-        
-        // Update the message content in the DOM
-        const messageContent = document.getElementById('message-content');
-        if (messageContent) {
-            messageContent.innerHTML = `"${this.escapeHtml(newMessage)}"`;
-        }
-        
-        // Remove the modal
-        const modal = textarea.closest('div[style*="position: fixed"]');
-        if (modal) {
-            modal.remove();
-        }
-        
-        if (window.OsliraApp && window.OsliraApp.showMessage) {
-            window.OsliraApp.showMessage('Message updated successfully!', 'success');
-        }
+      console.error("❌ Missing form elements for updateInputField");
+      return;
     }
 
-    // ===============================================================================
-    // DASHBOARD DATA MANAGEMENT
-    // ===============================================================================
-displayLeads(leads) {
-    const tableBody = document.getElementById('activity-table');
-    
-    if (!tableBody) {
-        console.error('displayLeads: activity-table element not found');
-        return;
+    const selectedType = analysisType.value;
+    console.log("🎯 Selected analysis type:", selectedType);
+
+    inputField.value = "";
+
+    if (selectedType && (selectedType === "light" || selectedType === "deep")) {
+      console.log("✅ Showing input container");
+
+      inputContainer.style.display = "block";
+
+      if (selectedType === "light") {
+        inputLabel.textContent = "Instagram Username *";
+        inputField.placeholder = "username";
+        inputHelp.innerHTML =
+          'Enter just the username (without @) - <span style="color: var(--primary-blue); font-weight: 600;">1 credit</span>';
+      } else if (selectedType === "deep") {
+        inputLabel.textContent = "Instagram Username *";
+        inputField.placeholder = "username";
+        inputHelp.innerHTML =
+          'Enter just the username (without @) - <span style="color: var(--accent-teal); font-weight: 600;">2 credits - Full analysis</span>';
+      }
+
+      setTimeout(() => {
+        inputField.focus();
+        console.log("🎯 Input field focused");
+      }, 100);
+    } else {
+      console.log("📋 Hiding input container");
+      inputContainer.style.display = "none";
     }
-    
+  }
+  saveEditedMessage() {
+    const textarea = document.getElementById("edit-message-textarea");
+    if (!textarea) return;
+
+    const newMessage = textarea.value.trim();
+    if (!newMessage) {
+      if (window.OsliraApp && window.OsliraApp.showMessage) {
+        Alert.error("Message cannot be empty");
+      }
+      return;
+    }
+
+    // Update the message content in the DOM
+    const messageContent = document.getElementById("message-content");
+    if (messageContent) {
+      messageContent.innerHTML = `"${this.escapeHtml(newMessage)}"`;
+    }
+
+    // Remove the modal
+    const modal = textarea.closest('div[style*="position: fixed"]');
+    if (modal) {
+      modal.remove();
+    }
+
+    if (window.OsliraApp && window.OsliraApp.showMessage) {
+      Alert.success({ message: "Message updated successfully!" });
+    }
+  }
+
+  // ===============================================================================
+  // DASHBOARD DATA MANAGEMENT
+  // ===============================================================================
+  displayLeads(leads) {
+    const tableBody = document.getElementById("activity-table");
+
+    if (!tableBody) {
+      console.error("displayLeads: activity-table element not found");
+      return;
+    }
+
     if (leads && leads.length > 0) {
-        // ✅ CORRECTED: Each column shows the RIGHT data
-        tableBody.innerHTML = leads.map(lead => {
-            const analysisType = lead.analysis_type || 'light';
-            const scoreClass = lead.score >= 80 ? 'score-high' : lead.score >= 60 ? 'score-medium' : 'score-low';
-            
-            const profilePicUrl = lead.profile_pic_url;
-            const profilePicHtml = profilePicUrl 
-                ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=40&h=40&fit=cover&a=attention" 
+      // ✅ CORRECTED: Each column shows the RIGHT data
+      tableBody.innerHTML = leads
+        .map((lead) => {
+          const analysisType = lead.analysis_type || "light";
+          const scoreClass =
+            lead.score >= 80 ? "score-high" : lead.score >= 60 ? "score-medium" : "score-low";
+
+          const profilePicUrl = lead.profile_pic_url;
+          const profilePicHtml = profilePicUrl
+            ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=40&h=40&fit=cover&a=attention" 
                         alt="@${lead.username}" 
                         style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-light);"
                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-                : '';
-            
-            const fallbackAvatar = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
+            : "";
+
+          const fallbackAvatar = `<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)); color: white; display: ${profilePicUrl ? "none" : "flex"}; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
                 ${lead.username.charAt(0).toUpperCase()}
             </div>`;
-            
-            return `
+
+          return `
                 <tr data-lead-id="${lead.id}" style="border-bottom: 1px solid var(--border-light); transition: all 0.2s ease;">
                     <!-- COLUMN 1: Lead (username + avatar) -->
                     <td style="padding: 12px; border-bottom: 1px solid var(--border-light);">
@@ -2834,7 +2959,7 @@ displayLeads(leads) {
                                     @${lead.username}
                                 </div>
                                 <div style="font-size: 12px; color: var(--text-secondary);">
-                                    ${lead.followers_count ? lead.followers_count.toLocaleString() + ' followers' : 'No follower data'}
+                                    ${lead.followers_count ? lead.followers_count.toLocaleString() + " followers" : "No follower data"}
                                 </div>
                             </div>
                         </div>
@@ -2843,7 +2968,7 @@ displayLeads(leads) {
                     <!-- COLUMN 2: Platform (Instagram, etc.) -->
                     <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
                         <span style="font-size: 14px; color: var(--text-secondary);">
-                            ${lead.platform || 'Instagram'}
+                            ${lead.platform || "Instagram"}
                         </span>
                     </td>
                     
@@ -2857,7 +2982,7 @@ displayLeads(leads) {
                     <!-- COLUMN 4: Type (Light/Deep analysis) -->
                     <td style="padding: 12px; border-bottom: 1px solid var(--border-light); text-align: center;">
                         <span class="analysis-type-badge ${analysisType}" style="padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
-                            ${analysisType === 'deep' ? 'Deep' : 'Light'}
+                            ${analysisType === "deep" ? "Deep" : "Light"}
                         </span>
                     </td>
                     
@@ -2877,10 +3002,11 @@ displayLeads(leads) {
                     </td>
                 </tr>
             `;
-        }).join('');
+        })
+        .join("");
     } else {
-        // Empty state
-        tableBody.innerHTML = `
+      // Empty state
+      tableBody.innerHTML = `
             <tr>
                 <td colspan="6" style="text-align: center; padding: 60px; color: var(--text-secondary);">
                     <div style="font-size: 48px; margin-bottom: 24px; opacity: 0.6;">🎯</div>
@@ -2896,624 +3022,657 @@ displayLeads(leads) {
             </tr>
         `;
     }
-}
-  
-    toggleLeadSelection(leadId, isChecked) {
-        if (isChecked) {
-            this.selectedLeads.add(leadId);
-        } else {
-            this.selectedLeads.delete(leadId);
-        }
-        
-        this.updateBulkActionsVisibility();
-        this.updateSelectAllButton();
-        
-        const row = document.querySelector(`tr[data-lead-id="${leadId}"]`);
-        if (row) {
-            row.classList.toggle('selected', isChecked);
-        }
+  }
+
+  toggleLeadSelection(leadId, isChecked) {
+    if (isChecked) {
+      this.selectedLeads.add(leadId);
+    } else {
+      this.selectedLeads.delete(leadId);
     }
 
-    selectAllLeads(isChecked) {
-        const visibleLeads = this.allLeads.filter(lead => {
-            const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
-            return row && row.style.display !== 'none';
-        });
-        
-        if (isChecked) {
-            visibleLeads.forEach(lead => this.selectedLeads.add(lead.id));
-        } else {
-            this.selectedLeads.clear();
-        }
-        
-        document.querySelectorAll('.lead-checkbox').forEach(checkbox => {
-            const leadId = checkbox.dataset.leadId;
-            checkbox.checked = this.selectedLeads.has(leadId);
-        });
-        
-        this.updateBulkActionsVisibility();
+    this.updateBulkActionsVisibility();
+    this.updateSelectAllButton();
+
+    const row = document.querySelector(`tr[data-lead-id="${leadId}"]`);
+    if (row) {
+      row.classList.toggle("selected", isChecked);
+    }
+  }
+
+  selectAllLeads(isChecked) {
+    const visibleLeads = this.allLeads.filter((lead) => {
+      const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
+      return row && row.style.display !== "none";
+    });
+
+    if (isChecked) {
+      visibleLeads.forEach((lead) => this.selectedLeads.add(lead.id));
+    } else {
+      this.selectedLeads.clear();
     }
 
-    updateBulkActionsVisibility() {
-        const bulkActions = document.querySelector('.bulk-actions');
-        const selectedCount = document.getElementById('selected-count');
-        
-        if (bulkActions) {
-            bulkActions.style.display = this.selectedLeads.size > 0 ? 'flex' : 'none';
-        }
-        
-        if (selectedCount) {
-            selectedCount.textContent = this.selectedLeads.size;
-        }
+    document.querySelectorAll(".lead-checkbox").forEach((checkbox) => {
+      const leadId = checkbox.dataset.leadId;
+      checkbox.checked = this.selectedLeads.has(leadId);
+    });
+
+    this.updateBulkActionsVisibility();
+  }
+
+  updateBulkActionsVisibility() {
+    const bulkActions = document.querySelector(".bulk-actions");
+    const selectedCount = document.getElementById("selected-count");
+
+    if (bulkActions) {
+      bulkActions.style.display = this.selectedLeads.size > 0 ? "flex" : "none";
     }
 
-    updateSelectAllButton() {
-        const selectAllCheckbox = document.getElementById('select-all-checkbox');
-        if (!selectAllCheckbox) return;
-        
-        const visibleLeads = this.allLeads.filter(lead => {
-            const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
-            return row && row.style.display !== 'none';
-        });
-        
-        const allSelected = visibleLeads.length > 0 && visibleLeads.every(lead => this.selectedLeads.has(lead.id));
-        const someSelected = visibleLeads.some(lead => this.selectedLeads.has(lead.id));
-        
-        selectAllCheckbox.checked = allSelected;
-        selectAllCheckbox.indeterminate = someSelected && !allSelected;
+    if (selectedCount) {
+      selectedCount.textContent = this.selectedLeads.size;
     }
+  }
 
-    applyActivityFilter() {
-        const filter = document.getElementById('activity-filter')?.value || 'all';
-        let filteredLeads = [...this.allLeads];
+  updateSelectAllButton() {
+    const selectAllCheckbox = document.getElementById("select-all-checkbox");
+    if (!selectAllCheckbox) return;
 
-        switch (filter) {
-            case 'light':
-                filteredLeads = filteredLeads.filter(lead => 
-                    lead.analysis_type === 'light' || !lead.analysis_type
-                );
-                break;
-            case 'deep':
-                filteredLeads = filteredLeads.filter(lead => 
-                    lead.analysis_type === 'deep'
-                );
-                break;
-            case 'score_high':
-                filteredLeads.sort((a, b) => (b.score || 0) - (a.score || 0));
-                break;
-            case 'score_low':
-                filteredLeads.sort((a, b) => (a.score || 0) - (b.score || 0));
-                break;
-            case 'recent':
-                filteredLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-                break;
-            case 'oldest':
-                filteredLeads.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-                break;
-        }
+    const visibleLeads = this.allLeads.filter((lead) => {
+      const row = document.querySelector(`tr[data-lead-id="${lead.id}"]`);
+      return row && row.style.display !== "none";
+    });
 
-        this.displayLeads(filteredLeads);
-        
-        // Update filter results count
-        const filterCount = document.getElementById('filter-results-count');
-        if (filterCount) {
-            filterCount.textContent = `${filteredLeads.length} results`;
-        }
-    }
+    const allSelected =
+      visibleLeads.length > 0 && visibleLeads.every((lead) => this.selectedLeads.has(lead.id));
+    const someSelected = visibleLeads.some((lead) => this.selectedLeads.has(lead.id));
 
-    searchLeads(searchTerm) {
-        if (!searchTerm.trim()) {
-            this.displayLeads(this.allLeads);
-            return;
-        }
-        
-        const filteredLeads = this.allLeads.filter(lead => 
-            lead.username.toLowerCase().includes(searchTerm.toLowerCase())
+    selectAllCheckbox.checked = allSelected;
+    selectAllCheckbox.indeterminate = someSelected && !allSelected;
+  }
+
+  applyActivityFilter() {
+    const filter = document.getElementById("activity-filter")?.value || "all";
+    let filteredLeads = [...this.allLeads];
+
+    switch (filter) {
+      case "light":
+        filteredLeads = filteredLeads.filter(
+          (lead) => lead.analysis_type === "light" || !lead.analysis_type
         );
-        
-        this.displayLeads(filteredLeads);
+        break;
+      case "deep":
+        filteredLeads = filteredLeads.filter((lead) => lead.analysis_type === "deep");
+        break;
+      case "score_high":
+        filteredLeads.sort((a, b) => (b.score || 0) - (a.score || 0));
+        break;
+      case "score_low":
+        filteredLeads.sort((a, b) => (a.score || 0) - (b.score || 0));
+        break;
+      case "recent":
+        filteredLeads.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+      case "oldest":
+        filteredLeads.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        break;
     }
 
-async updateDashboardStats() {
+    this.displayLeads(filteredLeads);
+
+    // Update filter results count
+    const filterCount = document.getElementById("filter-results-count");
+    if (filterCount) {
+      filterCount.textContent = `${filteredLeads.length} results`;
+    }
+  }
+
+  searchLeads(searchTerm) {
+    if (!searchTerm.trim()) {
+      this.displayLeads(this.allLeads);
+      return;
+    }
+
+    const filteredLeads = this.allLeads.filter((lead) =>
+      lead.username.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    this.displayLeads(filteredLeads);
+  }
+
+  async updateDashboardStats() {
     try {
-        console.log('📊 Updating dashboard stats with database queries...');
-        
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
-        
-        if (!supabase || !user) {
-            console.warn('⚠️ No database connection available, using cached data');
-            this.updateStatsFromCachedData();
-            return;
-        }
+      console.log("📊 Updating dashboard stats with database queries...");
 
-        // ✅ QUERY 1: Total leads count
-        const { count: totalLeads, error: leadsCountError } = await supabase
-            .from('leads')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id);
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
 
-        // ✅ QUERY 2: Average score calculation
-        const { data: scoreData, error: scoreError } = await supabase
-            .from('leads')
-            .select('score')
-            .eq('user_id', user.id)
-            .not('score', 'is', null);
-
-        let avgScore = 0;
-        if (!scoreError && scoreData && scoreData.length > 0) {
-            const totalScore = scoreData.reduce((sum, lead) => sum + (lead.score || 0), 0);
-            avgScore = Math.round(totalScore / scoreData.length);
-        }
-
-        // ✅ QUERY 3: High-value leads count (score >= 80)
-        const { count: highValueLeads, error: highValueError } = await supabase
-            .from('leads')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .gte('score', 80);
-
-        // ✅ QUERY 4: Credits used from transactions
-        const { data: creditTransactions, error: creditError } = await supabase
-            .from('credit_transactions')
-            .select('amount')
-            .eq('user_id', user.id)
-            .eq('type', 'use');
-
-        let creditsUsed = 0;
-        if (!creditError && creditTransactions) {
-            creditsUsed = creditTransactions.reduce((sum, transaction) => {
-                return sum + Math.abs(transaction.amount || 0);
-            }, 0);
-        }
-
-        // ✅ PREPARE DATA
-        const statsData = {
-            totalLeads: totalLeads || 0,
-            avgScore: avgScore,
-            highValueLeads: highValueLeads || 0,
-            creditsUsed: creditsUsed
-        };
-
-        console.log('📊 Database query results:', statsData);
-
-        // ✅ UPDATE UI
-        this.updateStatElements(statsData);
-        this.updateTrendIndicators(statsData.totalLeads, statsData.avgScore, statsData.highValueLeads, statsData.creditsUsed);
-
-        console.log('✅ Dashboard stats updated successfully from database');
-
-    } catch (error) {
-        console.error('❌ Database stats update failed:', error);
+      if (!supabase || !user) {
+        console.warn("⚠️ No database connection available, using cached data");
         this.updateStatsFromCachedData();
+        return;
+      }
+
+      // ✅ QUERY 1: Total leads count
+      const { count: totalLeads, error: leadsCountError } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+
+      // ✅ QUERY 2: Average score calculation
+      const { data: scoreData, error: scoreError } = await supabase
+        .from("leads")
+        .select("score")
+        .eq("user_id", user.id)
+        .not("score", "is", null);
+
+      let avgScore = 0;
+      if (!scoreError && scoreData && scoreData.length > 0) {
+        const totalScore = scoreData.reduce((sum, lead) => sum + (lead.score || 0), 0);
+        avgScore = Math.round(totalScore / scoreData.length);
+      }
+
+      // ✅ QUERY 3: High-value leads count (score >= 80)
+      const { count: highValueLeads, error: highValueError } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("score", 80);
+
+      // ✅ QUERY 4: Credits used from transactions
+      const { data: creditTransactions, error: creditError } = await supabase
+        .from("credit_transactions")
+        .select("amount")
+        .eq("user_id", user.id)
+        .eq("type", "use");
+
+      let creditsUsed = 0;
+      if (!creditError && creditTransactions) {
+        creditsUsed = creditTransactions.reduce((sum, transaction) => {
+          return sum + Math.abs(transaction.amount || 0);
+        }, 0);
+      }
+
+      // ✅ PREPARE DATA
+      const statsData = {
+        totalLeads: totalLeads || 0,
+        avgScore: avgScore,
+        highValueLeads: highValueLeads || 0,
+        creditsUsed: creditsUsed,
+      };
+
+      console.log("📊 Database query results:", statsData);
+
+      // ✅ UPDATE UI
+      this.updateStatElements(statsData);
+      this.updateTrendIndicators(
+        statsData.totalLeads,
+        statsData.avgScore,
+        statsData.highValueLeads,
+        statsData.creditsUsed
+      );
+
+      console.log("✅ Dashboard stats updated successfully from database");
+    } catch (error) {
+      console.error("❌ Database stats update failed:", error);
+      this.updateStatsFromCachedData();
     }
-}
-debugElements() {
-    console.log('🔍 === ELEMENT DEBUG ===');
-    
+  }
+  debugElements() {
+    console.log("🔍 === ELEMENT DEBUG ===");
+
     // Find all elements that might contain stats
     const possibleElements = [
-        'total-leads', 'avg-score', 'credits-used', 'high-value-leads',
-        'leads-researched', 'average-score', 'high-quality-leads',
-        'total_leads', 'avg_score', 'credits_used', 'high_value_leads'
+      "total-leads",
+      "avg-score",
+      "credits-used",
+      "high-value-leads",
+      "leads-researched",
+      "average-score",
+      "high-quality-leads",
+      "total_leads",
+      "avg_score",
+      "credits_used",
+      "high_value_leads",
     ];
-    
-    console.log('📊 Checking possible element IDs:');
-    possibleElements.forEach(id => {
-        const element = document.getElementById(id);
-        console.log(`${id}: ${element ? '✅ EXISTS' : '❌ NOT FOUND'}`);
-        if (element) {
-            console.log(`  Current value: "${element.textContent}"`);
-        }
+
+    console.log("📊 Checking possible element IDs:");
+    possibleElements.forEach((id) => {
+      const element = document.getElementById(id);
+      console.log(`${id}: ${element ? "✅ EXISTS" : "❌ NOT FOUND"}`);
+      if (element) {
+        console.log(`  Current value: "${element.textContent}"`);
+      }
     });
-    
+
     // Check all .big-number elements
-    const bigNumbers = document.querySelectorAll('.big-number');
+    const bigNumbers = document.querySelectorAll(".big-number");
     console.log(`\n📊 Found ${bigNumbers.length} .big-number elements:`);
     bigNumbers.forEach((el, index) => {
-        const parent = el.closest('.stat-card');
-        const heading = parent ? parent.querySelector('h3')?.textContent : 'No heading';
-        console.log(`  [${index}] "${el.textContent}" - ${heading}`);
+      const parent = el.closest(".stat-card");
+      const heading = parent ? parent.querySelector("h3")?.textContent : "No heading";
+      console.log(`  [${index}] "${el.textContent}" - ${heading}`);
     });
-    
+
     // Check all stat cards
-    const statCards = document.querySelectorAll('.stat-card');
+    const statCards = document.querySelectorAll(".stat-card");
     console.log(`\n📊 Found ${statCards.length} .stat-card elements:`);
     statCards.forEach((card, index) => {
-        const heading = card.querySelector('h3')?.textContent || 'No heading';
-        const bigNumber = card.querySelector('.big-number');
-        const currentValue = bigNumber ? bigNumber.textContent : 'No big-number';
-        console.log(`  [${index}] "${heading}": "${currentValue}"`);
+      const heading = card.querySelector("h3")?.textContent || "No heading";
+      const bigNumber = card.querySelector(".big-number");
+      const currentValue = bigNumber ? bigNumber.textContent : "No big-number";
+      console.log(`  [${index}] "${heading}": "${currentValue}"`);
     });
-}
+  }
 
-// ✅ 2. REPLACE updateStatElements() WITH THIS ENHANCED VERSION
-updateStatElements(statsData) {
+  // ✅ 2. REPLACE updateStatElements() WITH THIS ENHANCED VERSION
+  updateStatElements(statsData) {
     const { totalLeads, avgScore, highValueLeads, creditsUsed } = statsData;
-    
-    console.log('📊 Updating UI elements with:', {
-        totalLeads: totalLeads.toLocaleString(),
-        avgScore: avgScore.toString(),
-        creditsUsed: creditsUsed.toString(),
-        highValueLeads: highValueLeads.toString()
+
+    console.log("📊 Updating UI elements with:", {
+      totalLeads: totalLeads.toLocaleString(),
+      avgScore: avgScore.toString(),
+      creditsUsed: creditsUsed.toString(),
+      highValueLeads: highValueLeads.toString(),
     });
 
     // ✅ PRIMARY METHOD: Update by .big-number position
-    const bigNumbers = document.querySelectorAll('.big-number');
+    const bigNumbers = document.querySelectorAll(".big-number");
     console.log(`Found ${bigNumbers.length} .big-number elements`);
-    
+
     if (bigNumbers.length >= 4) {
-        const values = [
-            totalLeads.toLocaleString(), // Position 0 - Total Leads
-            avgScore.toString(),          // Position 1 - Average Score
-            creditsUsed.toString(),       // Position 2 - Credits Used
-            highValueLeads.toString()     // Position 3 - High-Value Leads
-        ];
-        
-        bigNumbers.forEach((element, index) => {
-            if (values[index]) {
-                const oldValue = element.textContent;
-                element.textContent = values[index];
-                console.log(`✅ Updated .big-number[${index}]: "${oldValue}" → "${values[index]}"`);
-            }
-        });
+      const values = [
+        totalLeads.toLocaleString(), // Position 0 - Total Leads
+        avgScore.toString(), // Position 1 - Average Score
+        creditsUsed.toString(), // Position 2 - Credits Used
+        highValueLeads.toString(), // Position 3 - High-Value Leads
+      ];
+
+      bigNumbers.forEach((element, index) => {
+        if (values[index]) {
+          const oldValue = element.textContent;
+          element.textContent = values[index];
+          console.log(`✅ Updated .big-number[${index}]: "${oldValue}" → "${values[index]}"`);
+        }
+      });
     }
 
     // ✅ BACKUP METHOD: Update by stat-card heading text
-    const statCards = document.querySelectorAll('.stat-card');
+    const statCards = document.querySelectorAll(".stat-card");
     statCards.forEach((card) => {
-        const heading = card.querySelector('h3');
-        const bigNumber = card.querySelector('.big-number');
-        
-        if (heading && bigNumber) {
-            const headingText = heading.textContent.toLowerCase();
-            let newValue = null;
-            
-            if (headingText.includes('leads researched') || headingText.includes('total')) {
-                newValue = totalLeads.toLocaleString();
-            } else if (headingText.includes('average score')) {
-                newValue = avgScore.toString();
-            } else if (headingText.includes('credits used')) {
-                newValue = creditsUsed.toString();
-            } else if (headingText.includes('high-value') || headingText.includes('quality')) {
-                newValue = highValueLeads.toString();
-            }
-            
-            if (newValue && bigNumber.textContent !== newValue) {
-                const oldValue = bigNumber.textContent;
-                bigNumber.textContent = newValue;
-                console.log(`✅ Updated "${headingText}": "${oldValue}" → "${newValue}"`);
-            }
+      const heading = card.querySelector("h3");
+      const bigNumber = card.querySelector(".big-number");
+
+      if (heading && bigNumber) {
+        const headingText = heading.textContent.toLowerCase();
+        let newValue = null;
+
+        if (headingText.includes("leads researched") || headingText.includes("total")) {
+          newValue = totalLeads.toLocaleString();
+        } else if (headingText.includes("average score")) {
+          newValue = avgScore.toString();
+        } else if (headingText.includes("credits used")) {
+          newValue = creditsUsed.toString();
+        } else if (headingText.includes("high-value") || headingText.includes("quality")) {
+          newValue = highValueLeads.toString();
         }
+
+        if (newValue && bigNumber.textContent !== newValue) {
+          const oldValue = bigNumber.textContent;
+          bigNumber.textContent = newValue;
+          console.log(`✅ Updated "${headingText}": "${oldValue}" → "${newValue}"`);
+        }
+      }
     });
 
-    console.log('📊 UI element update completed');
-}
-// ✅ 3. SIMPLE FORCE UPDATE METHOD - USE THIS TO TEST
-forceUpdateAllStats() {
-    console.log('🔄 FORCE UPDATING ALL STATS...');
-    
+    console.log("📊 UI element update completed");
+  }
+  // ✅ 3. SIMPLE FORCE UPDATE METHOD - USE THIS TO TEST
+  forceUpdateAllStats() {
+    console.log("🔄 FORCE UPDATING ALL STATS...");
+
     // Use the values from your debug output
     const statsData = {
-        totalLeads: 28,
-        avgScore: 50, 
-        creditsUsed: 39,
-        highValueLeads: 1
+      totalLeads: 28,
+      avgScore: 50,
+      creditsUsed: 39,
+      highValueLeads: 1,
     };
-    
-    console.log('📊 Using values:', statsData);
-    
+
+    console.log("📊 Using values:", statsData);
+
     // Update elements
     this.updateStatElements(statsData);
-    
-    // Also try direct .big-number update
-    const bigNumbers = document.querySelectorAll('.big-number');
-    if (bigNumbers.length >= 4) {
-        bigNumbers[0].textContent = '28';  // Total leads
-        bigNumbers[1].textContent = '50';  // Average score
-        bigNumbers[2].textContent = '39';  // Credits used
-        bigNumbers[3].textContent = '1';   // High-value leads
-        
-        console.log('✅ Direct .big-number update completed');
-    }
-}
 
-updateStatsFromCachedData() {
-    console.log('📊 Updating stats from cached lead data...');
-    
+    // Also try direct .big-number update
+    const bigNumbers = document.querySelectorAll(".big-number");
+    if (bigNumbers.length >= 4) {
+      bigNumbers[0].textContent = "28"; // Total leads
+      bigNumbers[1].textContent = "50"; // Average score
+      bigNumbers[2].textContent = "39"; // Credits used
+      bigNumbers[3].textContent = "1"; // High-value leads
+
+      console.log("✅ Direct .big-number update completed");
+    }
+  }
+
+  updateStatsFromCachedData() {
+    console.log("📊 Updating stats from cached lead data...");
+
     const totalLeads = this.allLeads.length;
-    const avgScore = totalLeads > 0 
+    const avgScore =
+      totalLeads > 0
         ? Math.round(this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / totalLeads)
         : 0;
-    const highValueLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
+    const highValueLeads = this.allLeads.filter((lead) => (lead.score || 0) >= 80).length;
     const creditsUsed = this.allLeads.reduce((sum, lead) => {
-        return sum + (lead.analysis_type === 'deep' ? 2 : 1);
+      return sum + (lead.analysis_type === "deep" ? 2 : 1);
     }, 0);
 
     const statsData = { totalLeads, avgScore, highValueLeads, creditsUsed };
-    
-    console.log('📊 Cached data results:', statsData);
+
+    console.log("📊 Cached data results:", statsData);
     this.updateStatElements(statsData);
     this.updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed);
-}
+  }
 
-async updateStatsFromDatabase() {
-    console.log('📊 Updating dashboard stats from database...');
-    
+  async updateStatsFromDatabase() {
+    console.log("📊 Updating dashboard stats from database...");
+
     try {
-        const user = window.OsliraApp?.user;
-        const supabase = window.OsliraApp?.supabase;
-        
-        if (!user || !supabase) {
-            console.warn('⚠️ Missing user or supabase client, using cached data');
-            this.updateStatsFromCachedData();
-            return;
-        }
+      const user = window.OsliraApp?.user;
+      const supabase = window.OsliraApp?.supabase;
 
-        // ✅ QUERY 1: Total leads count
-        const { count: totalLeads, error: leadsError } = await supabase
-            .from('leads')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id);
-
-        // ✅ QUERY 2: Average score calculation
-        const { data: scoresData, error: scoresError } = await supabase
-            .from('leads')
-            .select('score')
-            .eq('user_id', user.id);
-
-        let avgScore = 0;
-        if (!scoresError && scoresData && scoresData.length > 0) {
-            const validScores = scoresData.filter(item => item.score != null && item.score > 0);
-            if (validScores.length > 0) {
-                const totalScore = validScores.reduce((sum, item) => sum + item.score, 0);
-                avgScore = Math.round(totalScore / validScores.length);
-            }
-        }
-
-        // ✅ QUERY 3: High-value leads count (score >= 80)
-        const { count: highValueLeads, error: highValueError } = await supabase
-            .from('leads')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .gte('score', 80);
-
-        // ✅ QUERY 4: Credits used from transactions
-        const { data: creditTransactions, error: creditError } = await supabase
-            .from('credit_transactions')
-            .select('amount')
-            .eq('user_id', user.id)
-            .eq('type', 'use');
-
-        let creditsUsed = 0;
-        if (!creditError && creditTransactions) {
-            creditsUsed = creditTransactions.reduce((sum, transaction) => {
-                return sum + Math.abs(transaction.amount || 0);
-            }, 0);
-        }
-
-        // ✅ PREPARE DATA
-        const statsData = {
-            totalLeads: totalLeads || 0,
-            avgScore: avgScore,
-            highValueLeads: highValueLeads || 0,
-            creditsUsed: creditsUsed
-        };
-
-        console.log('📊 Database query results:', statsData);
-
-        // ✅ UPDATE UI
-        this.updateStatElements(statsData);
-        this.updateTrendIndicators(statsData.totalLeads, statsData.avgScore, statsData.highValueLeads, statsData.creditsUsed);
-
-        console.log('✅ Dashboard stats updated successfully from database');
-
-    } catch (error) {
-        console.error('❌ Database stats update failed:', error);
+      if (!user || !supabase) {
+        console.warn("⚠️ Missing user or supabase client, using cached data");
         this.updateStatsFromCachedData();
-    }
-}
+        return;
+      }
 
-// ✅ 4. TREND INDICATORS - updateTrendIndicators()
-updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
-    try {
-        const updates = [
-            {
-                id: 'leads-trend',
-                text: totalLeads === 0 ? 'Start analyzing leads' : `${totalLeads} leads analyzed`,
-                className: totalLeads > 0 ? 'trend up' : 'trend'
-            },
-            {
-                id: 'score-trend', 
-                text: avgScore === 0 ? 'No scores yet' : 
-                      avgScore >= 70 ? 'High quality leads' : 
-                      avgScore >= 50 ? 'Good quality leads' : 'Focus on quality',
-                className: avgScore >= 70 ? 'trend up' : 
-                          avgScore >= 50 ? 'trend' : 'trend down'
-            },
-            {
-                id: 'credits-trend',
-                text: 'This month',
-                className: 'trend'
-            },
-            {
-                id: 'high-value-trend',
-                text: highValueLeads === 0 ? 'Find high-value leads' : 
-                      totalLeads > 0 ? `${Math.round((highValueLeads / totalLeads) * 100)}% are high-value` : 'Score 80+',
-                className: highValueLeads > 0 && totalLeads > 0 && (highValueLeads / totalLeads) >= 0.2 ? 'trend up' : 'trend'
-            }
-        ];
+      // ✅ QUERY 1: Total leads count
+      const { count: totalLeads, error: leadsError } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
 
-        updates.forEach(({ id, text, className }) => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.textContent = text;
-                element.className = className;
-            }
-        });
+      // ✅ QUERY 2: Average score calculation
+      const { data: scoresData, error: scoresError } = await supabase
+        .from("leads")
+        .select("score")
+        .eq("user_id", user.id);
 
+      let avgScore = 0;
+      if (!scoresError && scoresData && scoresData.length > 0) {
+        const validScores = scoresData.filter((item) => item.score != null && item.score > 0);
+        if (validScores.length > 0) {
+          const totalScore = validScores.reduce((sum, item) => sum + item.score, 0);
+          avgScore = Math.round(totalScore / validScores.length);
+        }
+      }
+
+      // ✅ QUERY 3: High-value leads count (score >= 80)
+      const { count: highValueLeads, error: highValueError } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("score", 80);
+
+      // ✅ QUERY 4: Credits used from transactions
+      const { data: creditTransactions, error: creditError } = await supabase
+        .from("credit_transactions")
+        .select("amount")
+        .eq("user_id", user.id)
+        .eq("type", "use");
+
+      let creditsUsed = 0;
+      if (!creditError && creditTransactions) {
+        creditsUsed = creditTransactions.reduce((sum, transaction) => {
+          return sum + Math.abs(transaction.amount || 0);
+        }, 0);
+      }
+
+      // ✅ PREPARE DATA
+      const statsData = {
+        totalLeads: totalLeads || 0,
+        avgScore: avgScore,
+        highValueLeads: highValueLeads || 0,
+        creditsUsed: creditsUsed,
+      };
+
+      console.log("📊 Database query results:", statsData);
+
+      // ✅ UPDATE UI
+      this.updateStatElements(statsData);
+      this.updateTrendIndicators(
+        statsData.totalLeads,
+        statsData.avgScore,
+        statsData.highValueLeads,
+        statsData.creditsUsed
+      );
+
+      console.log("✅ Dashboard stats updated successfully from database");
     } catch (error) {
-        console.warn('⚠️ Trend indicators update failed:', error);
+      console.error("❌ Database stats update failed:", error);
+      this.updateStatsFromCachedData();
     }
-}
+  }
 
-    // Test method - run this in console to verify
-async testStatsUpdate() {
-    console.log('🧪 Testing stats update...');
-    
+  // ✅ 4. TREND INDICATORS - updateTrendIndicators()
+  updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
+    try {
+      const updates = [
+        {
+          id: "leads-trend",
+          text: totalLeads === 0 ? "Start analyzing leads" : `${totalLeads} leads analyzed`,
+          className: totalLeads > 0 ? "trend up" : "trend",
+        },
+        {
+          id: "score-trend",
+          text:
+            avgScore === 0
+              ? "No scores yet"
+              : avgScore >= 70
+                ? "High quality leads"
+                : avgScore >= 50
+                  ? "Good quality leads"
+                  : "Focus on quality",
+          className: avgScore >= 70 ? "trend up" : avgScore >= 50 ? "trend" : "trend down",
+        },
+        {
+          id: "credits-trend",
+          text: "This month",
+          className: "trend",
+        },
+        {
+          id: "high-value-trend",
+          text:
+            highValueLeads === 0
+              ? "Find high-value leads"
+              : totalLeads > 0
+                ? `${Math.round((highValueLeads / totalLeads) * 100)}% are high-value`
+                : "Score 80+",
+          className:
+            highValueLeads > 0 && totalLeads > 0 && highValueLeads / totalLeads >= 0.2
+              ? "trend up"
+              : "trend",
+        },
+      ];
+
+      updates.forEach(({ id, text, className }) => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.textContent = text;
+          element.className = className;
+        }
+      });
+    } catch (error) {
+      console.warn("⚠️ Trend indicators update failed:", error);
+    }
+  }
+
+  // Test method - run this in console to verify
+  async testStatsUpdate() {
+    console.log("🧪 Testing stats update...");
+
     // Force update with real data
     await this.updateDashboardStats();
-    
+
     // Debug elements
     this.debugElements();
-    
+
     // Force update with test data
     this.forceUpdateAllStats();
-}
-// ✅ DEBUG METHOD - TEST DATABASE QUERIES
-async debugDatabaseStats() {
-    console.log('🔍 === DATABASE STATS DEBUG ===');
-    
+  }
+  // ✅ DEBUG METHOD - TEST DATABASE QUERIES
+  async debugDatabaseStats() {
+    console.log("🔍 === DATABASE STATS DEBUG ===");
+
     const supabase = window.OsliraApp?.supabase;
     const user = window.OsliraApp?.user;
-    
+
     if (!supabase || !user) {
-        console.error('❌ No database connection');
-        return;
+      console.error("❌ No database connection");
+      return;
     }
 
     try {
-        // Test each query individually
-        console.log('1. Testing total leads count...');
-        const { count: totalLeads, error: e1 } = await supabase
-            .from('leads')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id);
-        console.log('Total leads:', totalLeads, e1 ? 'ERROR: ' + e1.message : '✅');
+      // Test each query individually
+      console.log("1. Testing total leads count...");
+      const { count: totalLeads, error: e1 } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      console.log("Total leads:", totalLeads, e1 ? "ERROR: " + e1.message : "✅");
 
-        console.log('2. Testing score data...');
-        const { data: scoreData, error: e2 } = await supabase
-            .from('leads')
-            .select('score')
-            .eq('user_id', user.id);
-        console.log('Score data:', scoreData?.length, 'records', e2 ? 'ERROR: ' + e2.message : '✅');
-        console.log('Sample scores:', scoreData?.slice(0, 5));
+      console.log("2. Testing score data...");
+      const { data: scoreData, error: e2 } = await supabase
+        .from("leads")
+        .select("score")
+        .eq("user_id", user.id);
+      console.log("Score data:", scoreData?.length, "records", e2 ? "ERROR: " + e2.message : "✅");
+      console.log("Sample scores:", scoreData?.slice(0, 5));
 
-        console.log('3. Testing high-value leads count...');
-        const { count: highValueLeads, error: e3 } = await supabase
-            .from('leads')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id)
-            .gte('score', 80);
-        console.log('High-value leads:', highValueLeads, e3 ? 'ERROR: ' + e3.message : '✅');
+      console.log("3. Testing high-value leads count...");
+      const { count: highValueLeads, error: e3 } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .gte("score", 80);
+      console.log("High-value leads:", highValueLeads, e3 ? "ERROR: " + e3.message : "✅");
 
-        console.log('4. Testing credit transactions...');
-        const { data: creditData, error: e4 } = await supabase
-            .from('credit_transactions')
-            .select('amount, type')
-            .eq('user_id', user.id)
-            .eq('type', 'use');
-        console.log('Credit transactions:', creditData?.length, 'records', e4 ? 'ERROR: ' + e4.message : '✅');
-        console.log('Sample transactions:', creditData?.slice(0, 5));
-        
-        if (creditData) {
-            const totalUsed = creditData.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
-            console.log('Total credits used:', totalUsed);
-        }
+      console.log("4. Testing credit transactions...");
+      const { data: creditData, error: e4 } = await supabase
+        .from("credit_transactions")
+        .select("amount, type")
+        .eq("user_id", user.id)
+        .eq("type", "use");
+      console.log(
+        "Credit transactions:",
+        creditData?.length,
+        "records",
+        e4 ? "ERROR: " + e4.message : "✅"
+      );
+      console.log("Sample transactions:", creditData?.slice(0, 5));
 
+      if (creditData) {
+        const totalUsed = creditData.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+        console.log("Total credits used:", totalUsed);
+      }
     } catch (error) {
-        console.error('❌ Debug failed:', error);
+      console.error("❌ Debug failed:", error);
     }
-}
-// ✅ 6. NEW METHOD - UPDATE TREND INDICATORS
-updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
+  }
+  // ✅ 6. NEW METHOD - UPDATE TREND INDICATORS
+  updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
     try {
-        // Update trends with meaningful messages
-        const leadsTrend = document.getElementById('leads-trend');
-        const scoreTrend = document.getElementById('score-trend');
-        const highValueTrend = document.getElementById('high-value-trend');
-        const creditsTrend = document.getElementById('credits-trend');
+      // Update trends with meaningful messages
+      const leadsTrend = document.getElementById("leads-trend");
+      const scoreTrend = document.getElementById("score-trend");
+      const highValueTrend = document.getElementById("high-value-trend");
+      const creditsTrend = document.getElementById("credits-trend");
 
-        if (leadsTrend) {
-            if (totalLeads === 0) {
-                leadsTrend.textContent = 'Start analyzing leads';
-                leadsTrend.className = 'trend';
-            } else {
-                leadsTrend.textContent = `${totalLeads} leads analyzed`;
-                leadsTrend.className = 'trend up';
-            }
+      if (leadsTrend) {
+        if (totalLeads === 0) {
+          leadsTrend.textContent = "Start analyzing leads";
+          leadsTrend.className = "trend";
+        } else {
+          leadsTrend.textContent = `${totalLeads} leads analyzed`;
+          leadsTrend.className = "trend up";
         }
+      }
 
-        if (scoreTrend) {
-            if (avgScore === 0) {
-                scoreTrend.textContent = 'No scores yet';
-                scoreTrend.className = 'trend';
-            } else {
-                const quality = avgScore >= 70 ? 'High quality leads' : 
-                              avgScore >= 50 ? 'Good quality leads' : 
-                              'Focus on quality';
-                scoreTrend.textContent = quality;
-                scoreTrend.className = avgScore >= 70 ? 'trend up' : 
-                                     avgScore >= 50 ? 'trend' : 'trend down';
-            }
+      if (scoreTrend) {
+        if (avgScore === 0) {
+          scoreTrend.textContent = "No scores yet";
+          scoreTrend.className = "trend";
+        } else {
+          const quality =
+            avgScore >= 70
+              ? "High quality leads"
+              : avgScore >= 50
+                ? "Good quality leads"
+                : "Focus on quality";
+          scoreTrend.textContent = quality;
+          scoreTrend.className =
+            avgScore >= 70 ? "trend up" : avgScore >= 50 ? "trend" : "trend down";
         }
+      }
 
-        if (highValueTrend) {
-            if (highValueLeads === 0) {
-                highValueTrend.textContent = 'Find high-value leads';
-                highValueTrend.className = 'trend';
-            } else {
-                const percentage = totalLeads > 0 ? Math.round((highValueLeads / totalLeads) * 100) : 0;
-                highValueTrend.textContent = `${percentage}% are high-value`;
-                highValueTrend.className = percentage >= 20 ? 'trend up' : 'trend';
-            }
+      if (highValueTrend) {
+        if (highValueLeads === 0) {
+          highValueTrend.textContent = "Find high-value leads";
+          highValueTrend.className = "trend";
+        } else {
+          const percentage = totalLeads > 0 ? Math.round((highValueLeads / totalLeads) * 100) : 0;
+          highValueTrend.textContent = `${percentage}% are high-value`;
+          highValueTrend.className = percentage >= 20 ? "trend up" : "trend";
         }
+      }
 
-        if (creditsTrend) {
-            creditsTrend.textContent = 'This month';
-            creditsTrend.className = 'trend';
-        }
-
+      if (creditsTrend) {
+        creditsTrend.textContent = "This month";
+        creditsTrend.className = "trend";
+      }
     } catch (error) {
-        console.warn('⚠️ Trend indicators update failed:', error);
+      console.warn("⚠️ Trend indicators update failed:", error);
     }
-}
+  }
 
-    updateStatsUI(totalLeads, avgScore, highValueLeads) {
-        const totalLeadsEl = document.getElementById('total-leads');
-        const avgScoreEl = document.getElementById('avg-score');
-        const highValueEl = document.getElementById('high-value-leads');
-        
-        if (totalLeadsEl) totalLeadsEl.textContent = totalLeads;
-        if (avgScoreEl) avgScoreEl.textContent = avgScore;
-        if (highValueEl) highValueEl.textContent = highValueLeads;
-        
-        // Update trends
-        const leadsTrend = document.getElementById('leads-trend');
-        const scoreTrend = document.getElementById('score-trend');
-        const highValueTrend = document.getElementById('high-value-trend');
-        
-        if (leadsTrend && totalLeads > 0) {
-            leadsTrend.textContent = `${totalLeads} total analyzed`;
-            leadsTrend.className = 'trend up';
-        }
-        
-        if (scoreTrend && avgScore > 0) {
-            scoreTrend.textContent = `${avgScore}/100 average quality`;
-            scoreTrend.className = avgScore >= 70 ? 'trend up' : avgScore >= 50 ? 'trend stable' : 'trend down';
-        }
-        
-        if (highValueTrend && highValueLeads > 0) {
-            const percentage = totalLeads > 0 ? Math.round((highValueLeads / totalLeads) * 100) : 0;
-            highValueTrend.textContent = `${percentage}% high-value leads`;
-            highValueTrend.className = percentage >= 20 ? 'trend up' : 'trend stable';
-        }
+  updateStatsUI(totalLeads, avgScore, highValueLeads) {
+    const totalLeadsEl = document.getElementById("total-leads");
+    const avgScoreEl = document.getElementById("avg-score");
+    const highValueEl = document.getElementById("high-value-leads");
+
+    if (totalLeadsEl) totalLeadsEl.textContent = totalLeads;
+    if (avgScoreEl) avgScoreEl.textContent = avgScore;
+    if (highValueEl) highValueEl.textContent = highValueLeads;
+
+    // Update trends
+    const leadsTrend = document.getElementById("leads-trend");
+    const scoreTrend = document.getElementById("score-trend");
+    const highValueTrend = document.getElementById("high-value-trend");
+
+    if (leadsTrend && totalLeads > 0) {
+      leadsTrend.textContent = `${totalLeads} total analyzed`;
+      leadsTrend.className = "trend up";
     }
 
-    displayErrorState(message) {
-        const tableBody = document.getElementById('activity-table');
-        if (tableBody) {
-            tableBody.innerHTML = `
+    if (scoreTrend && avgScore > 0) {
+      scoreTrend.textContent = `${avgScore}/100 average quality`;
+      scoreTrend.className =
+        avgScore >= 70 ? "trend up" : avgScore >= 50 ? "trend stable" : "trend down";
+    }
+
+    if (highValueTrend && highValueLeads > 0) {
+      const percentage = totalLeads > 0 ? Math.round((highValueLeads / totalLeads) * 100) : 0;
+      highValueTrend.textContent = `${percentage}% high-value leads`;
+      highValueTrend.className = percentage >= 20 ? "trend up" : "trend stable";
+    }
+  }
+
+  displayErrorState(message) {
+    const tableBody = document.getElementById("activity-table");
+    if (tableBody) {
+      tableBody.innerHTML = `
                 <tr>
                     <td colspan="6" style="text-align: center; padding: 40px; color: var(--error);">
                         <div style="font-size: 32px; margin-bottom: 16px;">⚠️</div>
@@ -3526,409 +3685,426 @@ updateTrendIndicators(totalLeads, avgScore, highValueLeads, creditsUsed) {
                     </td>
                 </tr>
             `;
-        }
     }
+  }
 
-    // ===============================================================================
-    // MODAL AND UI MANAGEMENT
-    // ===============================================================================
+  // ===============================================================================
+  // MODAL AND UI MANAGEMENT
+  // ===============================================================================
 
-   closeModal(modalId) {
-    console.log('❌ Closing modal:', modalId);
-    
+  closeModal(modalId) {
+    console.log("❌ Closing modal:", modalId);
+
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.style.display = 'none';
-        
-        // Reset form if it's the analysis modal
-        if (modalId === 'analysisModal') {
-            const form = document.getElementById('analysisForm');
-            if (form) {
-                form.reset();
-            }
-            
-            const inputContainer = document.getElementById('input-field-container');
-            if (inputContainer) {
-                inputContainer.style.display = 'none';
-            }
-        }
-        
-        console.log('✅ Modal closed:', modalId);
-    } else {
-        console.error('❌ Modal not found:', modalId);
-    }
-}
+      modal.style.display = "none";
 
-    async debugBusinessProfiles() {
-    console.log('🔍 DEBUG: Testing business profiles...');
-    
+      // Reset form if it's the analysis modal
+      if (modalId === "analysisModal") {
+        const form = document.getElementById("analysisForm");
+        if (form) {
+          form.reset();
+        }
+
+        const inputContainer = document.getElementById("input-field-container");
+        if (inputContainer) {
+          inputContainer.style.display = "none";
+        }
+      }
+
+      console.log("✅ Modal closed:", modalId);
+    } else {
+      console.error("❌ Modal not found:", modalId);
+    }
+  }
+
+  async debugBusinessProfiles() {
+    console.log("🔍 DEBUG: Testing business profiles...");
+
     const supabase = window.OsliraApp?.supabase;
     const user = window.OsliraApp?.user;
-    
-    console.log('Auth status:', {
-        hasSupabase: !!supabase,
-        hasUser: !!user,
-        userId: user?.id
+
+    console.log("Auth status:", {
+      hasSupabase: !!supabase,
+      hasUser: !!user,
+      userId: user?.id,
     });
-    
+
     if (!supabase || !user) {
-        console.log('❌ No auth available');
-        return;
+      console.log("❌ No auth available");
+      return;
     }
-    
+
     try {
-        // Test query
-        const { data, error, count } = await supabase
-            .from('business_profiles')
-            .select('*', { count: 'exact' })
-            .eq('user_id', user.id);
-            
-        console.log('📊 Business profiles debug result:', {
-            data,
-            error,
-            count,
-            query: `business_profiles where user_id = ${user.id}`
-        });
-        
-        if (error) {
-            console.error('❌ Query error:', error);
-        }
-        
+      // Test query
+      const { data, error, count } = await supabase
+        .from("business_profiles")
+        .select("*", { count: "exact" })
+        .eq("user_id", user.id);
+
+      console.log("📊 Business profiles debug result:", {
+        data,
+        error,
+        count,
+        query: `business_profiles where user_id = ${user.id}`,
+      });
+
+      if (error) {
+        console.error("❌ Query error:", error);
+      }
     } catch (error) {
-        console.error('❌ Debug failed:', error);
+      console.error("❌ Debug failed:", error);
     }
-}
+  }
 
+  showAnalysisModal(prefillUsername = "") {
+    console.log("🔍 Opening analysis modal...");
 
-
-showAnalysisModal(prefillUsername = '') {
-    console.log('🔍 Opening analysis modal...');
-    
-    const modal = document.getElementById('analysisModal');
+    const modal = document.getElementById("analysisModal");
     if (!modal) {
-        console.error('❌ Analysis modal not found in DOM');
-        return;
+      console.error("❌ Analysis modal not found in DOM");
+      return;
     }
-    
+
     // Reset form
-    const form = document.getElementById('analysisForm');
+    const form = document.getElementById("analysisForm");
     if (form) {
-        form.reset();
+      form.reset();
     }
-    
+
     // Reset form fields
-    const analysisType = document.getElementById('analysis-type');
-    const profileInput = document.getElementById('profile-input');
-    const inputContainer = document.getElementById('input-field-container');
-    
+    const analysisType = document.getElementById("analysis-type");
+    const profileInput = document.getElementById("profile-input");
+    const inputContainer = document.getElementById("input-field-container");
+
     if (analysisType) {
-        analysisType.value = '';
+      analysisType.value = "";
     }
     if (profileInput) {
-        profileInput.value = prefillUsername; // ✅ Allow prefilling username
+      profileInput.value = prefillUsername; // ✅ Allow prefilling username
     }
     if (inputContainer) {
-        inputContainer.style.display = 'none';
+      inputContainer.style.display = "none";
     }
-    
+
     // ✅ Load business profiles with auto-selection
     this.loadBusinessProfilesForModal();
-    
+
     // Show the modal
-    modal.style.display = 'flex';
-    
+    modal.style.display = "flex";
+
     // Focus on analysis type dropdown
     setTimeout(() => {
-        if (analysisType) {
-            analysisType.focus();
-        }
+      if (analysisType) {
+        analysisType.focus();
+      }
     }, 100);
-    
-    console.log('✅ Analysis modal opened with auto-selected business profile');
-}
 
-setDefaultBusinessProfile() {
-    const businessSelect = document.getElementById('business-id');
+    console.log("✅ Analysis modal opened with auto-selected business profile");
+  }
+
+  setDefaultBusinessProfile() {
+    const businessSelect = document.getElementById("business-id");
     if (businessSelect && businessSelect.value) {
-        localStorage.setItem('selectedBusinessId', businessSelect.value);
-        window.OsliraApp?.showMessage('Default business profile saved!', 'success');
+      localStorage.setItem("selectedBusinessId", businessSelect.value);
+      window.OsliraApp?.showMessage("Default business profile saved!", "success");
     }
-}
-    // ===============================================================================
-    // BULK OPERATIONS
-    // ===============================================================================
+  }
+  // ===============================================================================
+  // BULK OPERATIONS
+  // ===============================================================================
 
-    async bulkDeleteLeads() {
-        if (this.selectedLeads.size === 0) {
-            window.OsliraApp.showMessage('No leads selected', 'warning');
-            return;
-        }
-
-        const confirmMessage = `Are you sure you want to delete ${this.selectedLeads.size} lead${this.selectedLeads.size > 1 ? 's' : ''}? This action cannot be undone.`;
-
-        if (!confirm(confirmMessage)) {
-            return;
-        }
-
-        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
-        if (!bulkDeleteBtn) return;
-
-        const originalText = bulkDeleteBtn.innerHTML;
-        bulkDeleteBtn.innerHTML = '🔄 Deleting...';
-        bulkDeleteBtn.disabled = true;
-
-        try {
-            const supabase = window.OsliraApp.supabase;
-            const user = window.OsliraApp.user;
-
-            if (!supabase || !user) {
-                throw new Error('Database connection not available');
-            }
-
-            // Convert Set to Array for database query
-            const leadIds = Array.from(this.selectedLeads);
-
-            // Delete from lead_analyses first (foreign key constraint)
-            const { error: analysisError } = await supabase
-                .from('lead_analyses')
-                .delete()
-                .in('lead_id', leadIds);
-
-            if (analysisError) {
-                console.warn('Some analysis records could not be deleted:', analysisError.message);
-            }
-
-            // Delete from leads table
-            const { error: leadsError } = await supabase
-                .from('leads')
-                .delete()
-                .in('id', leadIds)
-                .eq('user_id', user.id); // Security: only delete user's own leads
-
-            if (leadsError) {
-                throw leadsError;
-            }
-
-            window.OsliraApp.showMessage(
-                `Successfully deleted ${leadIds.length} lead${leadIds.length > 1 ? 's' : ''}`, 
-                'success'
-            );
-
-            // Clear selection and refresh
-            this.selectedLeads.clear();
-            await this.loadDashboardData();
-
-        } catch (error) {
-            console.error('Bulk deletion failed:', error);
-            window.OsliraApp.showMessage(`Deletion failed: ${error.message}`, 'error');
-        } finally {
-            bulkDeleteBtn.innerHTML = originalText;
-            bulkDeleteBtn.disabled = false;
-        }
+  async bulkDeleteLeads() {
+    if (this.selectedLeads.size === 0) {
+      Alert.warning({ message: "No leads selected for deletion" });
+      return;
     }
 
-    async bulkExportLeads() {
-        if (this.selectedLeads.size === 0) {
-            window.OsliraApp.showMessage('No leads selected for export', 'warning');
-            return;
-        }
+    const confirmMessage = `Are you sure you want to delete ${this.selectedLeads.size} lead${this.selectedLeads.size > 1 ? "s" : ""}? This action cannot be undone.`;
 
-        try {
-            const selectedLeadData = this.allLeads.filter(lead => this.selectedLeads.has(lead.id));
-            
-            // Create CSV content
-            const headers = ['Username', 'Platform', 'Score', 'Analysis Type', 'Followers', 'Date Analyzed'];
-            const csvContent = [
-                headers.join(','),
-                ...selectedLeadData.map(lead => [
-                    lead.username,
-                    lead.platform || 'Instagram',
-                    lead.score || 0,
-                    lead.analysis_type || 'light',
-                    lead.followers_count || 0,
-                    new Date(lead.created_at).toLocaleDateString()
-                ].join(','))
-            ].join('\n');
-
-            // Download CSV
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `oslira-leads-${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-
-            window.OsliraApp.showMessage(`Exported ${this.selectedLeads.size} leads successfully`, 'success');
-
-        } catch (error) {
-            console.error('Export failed:', error);
-            window.OsliraApp.showMessage('Export failed: ' + error.message, 'error');
-        }
+    if (!confirm(confirmMessage)) {
+      return;
     }
 
-    exportLeadData(leadId) {
-        const lead = this.allLeads.find(l => l.id === leadId);
-        if (!lead) {
-            window.OsliraApp.showMessage('Lead not found', 'error');
-            return;
-        }
+    const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+    if (!bulkDeleteBtn) return;
 
-        // For individual lead export, we'd need to fetch the full analysis data
-        window.OsliraApp.showMessage('Individual lead export coming soon!', 'info');
-    }
+    const originalText = bulkDeleteBtn.innerHTML;
+    bulkDeleteBtn.innerHTML = "🔄 Deleting...";
+    bulkDeleteBtn.disabled = true;
 
-    rerunAnalysis(leadId) {
-        console.log('Rerunning analysis for lead:', leadId);
-        window.OsliraApp.showMessage('Rerun analysis functionality coming soon!', 'info');
-    }
+    try {
+      const supabase = window.OsliraApp.supabase;
+      const user = window.OsliraApp.user;
 
-    // ===============================================================================
-    // UTILITY METHODS
-    // ===============================================================================
-
-    formatDateCached(dateString) {
-        if (this.dateFormatCache.has(dateString)) {
-            return this.dateFormatCache.get(dateString);
-        }
-        
-        const formatted = new Date(dateString).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
+      if (!supabase || !user) {
+        Alert.error("Database connection failed", {
+          actions: [{ label: "Refresh Page", action: "reload" }],
+          sticky: true,
         });
-        
-        this.dateFormatCache.set(dateString, formatted);
-        return formatted;
+      }
+
+      // Convert Set to Array for database query
+      const leadIds = Array.from(this.selectedLeads);
+
+      // Delete from lead_analyses first (foreign key constraint)
+      const { error: analysisError } = await supabase
+        .from("lead_analyses")
+        .delete()
+        .in("lead_id", leadIds);
+
+      if (analysisError) {
+        console.warn("Some analysis records could not be deleted:", analysisError.message);
+      }
+
+      // Delete from leads table
+      const { error: leadsError } = await supabase
+        .from("leads")
+        .delete()
+        .in("id", leadIds)
+        .eq("user_id", user.id); // Security: only delete user's own leads
+
+      if (leadsError) {
+        throw leadsError;
+      }
+
+      Alert.success({
+        message: `Successfully deleted ${leadIds.length} lead${leadIds.length > 1 ? "s" : ""}`,
+      });
+
+      // Clear selection and refresh
+      this.selectedLeads.clear();
+      await this.loadDashboardData();
+    } catch (error) {
+      console.error("Bulk deletion failed:", error);
+      Alert.error("Failed to delete leads", {
+        details: error.message,
+        actions: [{ label: "Retry", action: "retry" }],
+      });
+    } finally {
+      bulkDeleteBtn.innerHTML = originalText;
+      bulkDeleteBtn.disabled = false;
+    }
+  }
+
+  async bulkExportLeads() {
+    if (this.selectedLeads.size === 0) {
+      Alert.warning({ message: "No leads selected for export" });
+      return;
     }
 
-    // ===============================================================================
-    // EVENT HANDLERS AND CLEANUP
-    // ===============================================================================
+    try {
+      const selectedLeadData = this.allLeads.filter((lead) => this.selectedLeads.has(lead.id));
 
-    handleVisibilityChange() {
-        if (document.visibilityState === 'visible' && this.allLeads.length === 0) {
-            // Reload data when user returns to tab if no data is loaded
-            this.loadDashboardData();
-        }
+      // Create CSV content
+      const headers = [
+        "Username",
+        "Platform",
+        "Score",
+        "Analysis Type",
+        "Followers",
+        "Date Analyzed",
+      ];
+      const csvContent = [
+        headers.join(","),
+        ...selectedLeadData.map((lead) =>
+          [
+            lead.username,
+            lead.platform || "Instagram",
+            lead.score || 0,
+            lead.analysis_type || "light",
+            lead.followers_count || 0,
+            new Date(lead.created_at).toLocaleDateString(),
+          ].join(",")
+        ),
+      ].join("\n");
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `oslira-leads-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      Alert.success({
+        message: `Exported ${this.selectedLeads.size} leads successfully`,
+      });
+    } catch (error) {
+      console.error("Export failed:", error);
+      Alert.error("Export failed", {
+        details: error.message,
+        actions: [{ label: "Try Again", action: "retry" }],
+      });
+    }
+  }
+
+  exportLeadData(leadId) {
+    const lead = this.allLeads.find((l) => l.id === leadId);
+    if (!lead) {
+      Alert.error("Lead not found", {
+        suggestions: ["Refresh the page", "Check if lead still exists"],
+      });
+      return;
     }
 
-setupRealtimeSubscription() {
-        if (this.isRealtimeActive && this.realtimeSubscription) {
-        console.log('✅ Real-time already active, skipping setup');
-        return;
+    // For individual lead export, we'd need to fetch the full analysis data
+    Alert.info({ message: "Individual lead export coming soon!" });
+  }
+
+  rerunAnalysis(leadId) {
+    console.log("Rerunning analysis for lead:", leadId);
+    Alert.info({ message: "Rerun analysis functionality coming soon!" });
+  }
+
+  // ===============================================================================
+  // UTILITY METHODS
+  // ===============================================================================
+
+  formatDateCached(dateString) {
+    if (this.dateFormatCache.has(dateString)) {
+      return this.dateFormatCache.get(dateString);
+    }
+
+    const formatted = new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    this.dateFormatCache.set(dateString, formatted);
+    return formatted;
+  }
+
+  // ===============================================================================
+  // EVENT HANDLERS AND CLEANUP
+  // ===============================================================================
+
+  handleVisibilityChange() {
+    if (document.visibilityState === "visible" && this.allLeads.length === 0) {
+      // Reload data when user returns to tab if no data is loaded
+      this.loadDashboardData();
+    }
+  }
+
+  setupRealtimeSubscription() {
+    if (this.isRealtimeActive && this.realtimeSubscription) {
+      console.log("✅ Real-time already active, skipping setup");
+      return;
     }
 
     if (!this.canUseRealtime()) {
-        console.log('⚠️ Real-time disabled: WebSocket connections not available');
-        this.setupPollingFallback();
-        return;
+      console.log("⚠️ Real-time disabled: WebSocket connections not available");
+      this.setupPollingFallback();
+      return;
     }
 
     try {
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
-        
-        if (!supabase || !user) {
-            console.warn('⚠️ Supabase or user not available for real-time subscription');
-            this.setupPollingFallback();
-            return;
-        }
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
 
-        console.log('🔄 Setting up real-time subscription for user:', user.id);
-
-        // Clean up existing subscription
-        if (this.realtimeSubscription) {
-            console.log('🧹 Cleaning up existing subscription');
-            try {
-                supabase.removeChannel(this.realtimeSubscription);
-            } catch (cleanupError) {
-                console.warn('⚠️ Cleanup warning:', cleanupError);
-            }
-            this.realtimeSubscription = null;
-        }
-
-        // ✅ SIMPLIFIED APPROACH - Just listen to leads table
-        const channelName = `dashboard-${user.id}`;
-        console.log('📡 Creating simplified channel:', channelName);
-
-        this.realtimeSubscription = supabase
-            .channel(channelName)
-            .on(
-                'postgres_changes',
-                { 
-                    event: '*', 
-                    schema: 'public', 
-                    table: 'leads',
-                    filter: `user_id=eq.${user.id}`
-                },
-                (payload) => {
-                    console.log('📊 Lead change detected:', payload.eventType, payload.new?.username);
-                    // Simple refresh instead of complex handling
-                    setTimeout(() => this.loadDashboardData(), 1000);
-                }
-            )
-            .subscribe((status, err) => {
-                console.log(`📡 Subscription status: ${status}`, err || '');
-                
-                switch (status) {
-                    case 'SUBSCRIBED':
-                        console.log('✅ Real-time ACTIVE');
-                        this.isRealtimeActive = true;
-                        break;
-                        
-                    case 'CLOSED':
-                    case 'CHANNEL_ERROR':
-                    case 'TIMED_OUT':
-                        console.warn(`❌ Real-time failed (${status}):`, err);
-                        this.isRealtimeActive = false;
-                        
-                        // Don't retry immediately - use polling instead
-                        console.log('🔄 Falling back to polling updates');
-                        this.setupPollingFallback();
-                        break;
-                }
-            });
-
-        // ✅ ADD TIMEOUT FALLBACK
-        setTimeout(() => {
-            if (!this.isRealtimeActive) {
-                console.warn('⚠️ Real-time subscription timeout - using polling');
-                this.setupPollingFallback();
-            }
-        }, 5000);
-
-    } catch (error) {
-        console.error('❌ Real-time setup failed:', error);
-        this.isRealtimeActive = false;
+      if (!supabase || !user) {
+        console.warn("⚠️ Supabase or user not available for real-time subscription");
         this.setupPollingFallback();
+        return;
+      }
+
+      console.log("🔄 Setting up real-time subscription for user:", user.id);
+
+      // Clean up existing subscription
+      if (this.realtimeSubscription) {
+        console.log("🧹 Cleaning up existing subscription");
+        try {
+          supabase.removeChannel(this.realtimeSubscription);
+        } catch (cleanupError) {
+          console.warn("⚠️ Cleanup warning:", cleanupError);
+        }
+        this.realtimeSubscription = null;
+      }
+
+      // ✅ SIMPLIFIED APPROACH - Just listen to leads table
+      const channelName = `dashboard-${user.id}`;
+      console.log("📡 Creating simplified channel:", channelName);
+
+      this.realtimeSubscription = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "leads",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log("📊 Lead change detected:", payload.eventType, payload.new?.username);
+            // Simple refresh instead of complex handling
+            setTimeout(() => this.loadDashboardData(), 1000);
+          }
+        )
+        .subscribe((status, err) => {
+          console.log(`📡 Subscription status: ${status}`, err || "");
+
+          switch (status) {
+            case "SUBSCRIBED":
+              console.log("✅ Real-time ACTIVE");
+              this.isRealtimeActive = true;
+              break;
+
+            case "CLOSED":
+            case "CHANNEL_ERROR":
+            case "TIMED_OUT":
+              console.warn(`❌ Real-time failed (${status}):`, err);
+              this.isRealtimeActive = false;
+
+              // Don't retry immediately - use polling instead
+              console.log("🔄 Falling back to polling updates");
+              this.setupPollingFallback();
+              break;
+          }
+        });
+
+      // ✅ ADD TIMEOUT FALLBACK
+      setTimeout(() => {
+        if (!this.isRealtimeActive) {
+          this.setupPollingFallback();
+        }
+      }, 5000);
+    } catch (error) {
+      Alert.warning({
+        message: "Real-time updates unavailable",
+        suggestions: ["Refresh manually for latest data"],
+      });
+      this.isRealtimeActive = false;
+      this.setupPollingFallback();
     }
-}
-    // ✅ ADD THIS MISSING METHOD:
-    displayDemoLeads() {
-    console.log('📋 No authentication - showing empty state');
-    
+  }
+  // ✅ ADD THIS MISSING METHOD:
+  displayDemoLeads() {
+    console.log("📋 No authentication - showing empty state");
+
     // Set empty leads array
     this.allLeads = [];
     this.selectedLeads.clear();
-    
+
     // Show empty state
     this.displayLeads([]);
     this.updateDashboardStats();
     this.generateInsights();
-    
-    console.log('✅ Empty state displayed - ready for first lead research');
-}
 
-    // ✅ ADD THIS MISSING METHOD:
-    displayErrorState(errorMessage) {
-        console.error('🚨 Dashboard error state:', errorMessage);
-        
-        const tableBody = document.getElementById('activity-table');
-        if (tableBody) {
-            tableBody.innerHTML = `
+    console.log("✅ Empty state displayed - ready for first lead research");
+  }
+
+  // ✅ ADD THIS MISSING METHOD:
+  displayErrorState(errorMessage) {
+    console.error("🚨 Dashboard error state:", errorMessage);
+
+    const tableBody = document.getElementById("activity-table");
+    if (tableBody) {
+      tableBody.innerHTML = `
                 <tr>
                     <td colspan="6" style="text-align: center; padding: 40px; color: var(--error);">
                         <div style="font-size: 32px; margin-bottom: 16px;">⚠️</div>
@@ -3941,51 +4117,51 @@ setupRealtimeSubscription() {
                     </td>
                 </tr>
             `;
-        }
+    }
 
-        // Also show error in insights section
-        const insightsContainer = document.getElementById('insights-container');
-        if (insightsContainer) {
-            insightsContainer.innerHTML = `
+    // Also show error in insights section
+    const insightsContainer = document.getElementById("insights-container");
+    if (insightsContainer) {
+      insightsContainer.innerHTML = `
                 <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 24px; text-align: center;">
                     <div style="font-size: 24px; margin-bottom: 12px;">⚠️</div>
                     <h4 style="color: var(--error); margin: 0 0 8px 0;">Unable to load insights</h4>
                     <p style="color: var(--text-secondary); margin: 0;">${errorMessage}</p>
                 </div>
             `;
-        }
     }
+  }
 
-    // ✅ FIXED canUseRealtime() method - Remove external WebSocket test:
- canUseRealtime() {
+  // ✅ FIXED canUseRealtime() method - Remove external WebSocket test:
+  canUseRealtime() {
     try {
-        // Check if WebSocket is available
-        if (typeof WebSocket === 'undefined' || !window.WebSocket) {
-            console.log('📱 WebSocket not available in this environment');
-            return false;
-        }
-
-        // Check if we're in a secure context (WSS requires HTTPS or localhost)
-        if (location.protocol === 'https:' || 
-            location.hostname === 'localhost' || 
-            location.hostname === '127.0.0.1' ||
-            location.hostname.startsWith('192.168.') ||
-            location.hostname.endsWith('.netlify.app')) {
-            return true;
-        }
-
-        console.log('🔒 Real-time requires HTTPS or localhost environment');
+      // Check if WebSocket is available
+      if (typeof WebSocket === "undefined" || !window.WebSocket) {
         return false;
+      }
 
+      // Check if we're in a secure context (WSS requires HTTPS or localhost)
+      if (
+        location.protocol === "https:" ||
+        location.hostname === "localhost" ||
+        location.hostname === "127.0.0.1" ||
+        location.hostname.startsWith("192.168.") ||
+        location.hostname.endsWith(".netlify.app")
+      ) {
+        return true;
+      }
+
+      console.log("🔒 Real-time requires HTTPS or localhost environment");
+      return false;
     } catch (error) {
-        console.warn('⚠️ WebSocket availability check failed:', error);
-        return false;
+      console.warn("⚠️ WebSocket availability check failed:", error);
+      return false;
     }
- }
+  }
 
-    showGettingStartedGuide() {
+  showGettingStartedGuide() {
     // Create a simple getting started modal
-    const modal = document.createElement('div');
+    const modal = document.createElement("div");
     modal.style.cssText = `
         position: fixed;
         top: 0;
@@ -3998,7 +4174,7 @@ setupRealtimeSubscription() {
         justify-content: center;
         z-index: 1000;
     `;
-    
+
     modal.innerHTML = `
         <div style="background: white; border-radius: 16px; padding: 32px; max-width: 500px; margin: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);">
             <div style="text-align: center; margin-bottom: 24px;">
@@ -4045,711 +4221,748 @@ setupRealtimeSubscription() {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Close modal when clicking outside
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.remove();
-        }
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
     });
-}
+  }
 
+  // ✅ ADD THIS MISSING METHOD:
+  async generateInsights() {
+    const container = document.getElementById("insights-container");
+    const loading = document.getElementById("loading-insights");
 
-    // ✅ ADD THIS MISSING METHOD:
-   async generateInsights() {
-    const container = document.getElementById('insights-container');
-    const loading = document.getElementById('loading-insights');
-    
     if (!container) {
-        console.warn('Insights container not found');
-        return;
+      console.warn("Insights container not found");
+      return;
     }
-    
+
     if (loading) {
-        loading.style.display = 'block';
+      loading.style.display = "block";
     }
-    
+
     try {
-        // Wait a moment to simulate loading
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        let insights = [];
-        
-        // Always show welcome message when no leads exist
-        if (this.allLeads.length === 0) {
-            insights = [
-                {
-                    type: 'welcome',
-                    icon: '🚀',
-                    title: 'Welcome to Oslira!',
-                    content: 'Start researching leads to unlock AI-powered insights and recommendations tailored to your data.',
-                    cta: 'Research Your First Lead',
-                    actionType: 'function',
-                    actionValue: 'showAnalysisModal'
-                },
-                {
-                    type: 'getting-started',
-                    icon: '📚',
-                    title: 'Getting Started Guide',
-                    content: 'Learn how to maximize your lead research with our AI-powered analysis tools and outreach generation.',
-                    cta: 'View Guide',
-                    actionType: 'function', 
-                    actionValue: 'showGettingStartedGuide'
-                },
-                {
-                    type: 'features',
-                    icon: '⚡',
-                    title: 'Powerful Features',
-                    content: 'Deep Instagram analysis, AI-generated outreach messages, lead scoring, and audience quality assessment.',
-                    cta: 'Start Analyzing',
-                    actionType: 'function',
-                    actionValue: 'showAnalysisModal'
-                }
-            ];
-        } else {
-            // Show performance insights when leads exist
-            const avgScore = this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / this.allLeads.length;
-            const highScoreLeads = this.allLeads.filter(lead => (lead.score || 0) >= 80).length;
-            
-            insights.push({
-                type: 'performance',
-                icon: '📈',
-                title: 'Lead Quality Analysis',
-                content: `Your average lead score is ${Math.round(avgScore)}. You have ${highScoreLeads} high-quality leads (80+ score).`,
-                cta: 'View Top Leads',
-                actionType: 'filter',
-                actionValue: 'score_high'
-            });
+      // Wait a moment to simulate loading
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
-            if (this.allLeads.length >= 10) {
-                insights.push({
-                    type: 'optimization',
-                    icon: '🎯',
-                    title: 'Targeting Optimization', 
-                    content: 'With 10+ leads analyzed, consider refining your targeting criteria for better results.',
-                    cta: 'Analyze Patterns',
-                    actionType: 'function',
-                    actionValue: 'showPatternAnalysis'
-                });
-            }
-        }
+      let insights = [];
 
-        this.renderInsights(insights);
-        
-        if (loading) {
-            loading.style.display = 'none';
-        }
-        
-        if (container) {
-            container.style.display = 'grid';
-        }
+      // Always show welcome message when no leads exist
+      if (this.allLeads.length === 0) {
+        insights = [
+          {
+            type: "welcome",
+            icon: "🚀",
+            title: "Welcome to Oslira!",
+            content:
+              "Start researching leads to unlock AI-powered insights and recommendations tailored to your data.",
+            cta: "Research Your First Lead",
+            actionType: "function",
+            actionValue: "showAnalysisModal",
+          },
+          {
+            type: "getting-started",
+            icon: "📚",
+            title: "Getting Started Guide",
+            content:
+              "Learn how to maximize your lead research with our AI-powered analysis tools and outreach generation.",
+            cta: "View Guide",
+            actionType: "function",
+            actionValue: "showGettingStartedGuide",
+          },
+          {
+            type: "features",
+            icon: "⚡",
+            title: "Powerful Features",
+            content:
+              "Deep Instagram analysis, AI-generated outreach messages, lead scoring, and audience quality assessment.",
+            cta: "Start Analyzing",
+            actionType: "function",
+            actionValue: "showAnalysisModal",
+          },
+        ];
+      } else {
+        // Show performance insights when leads exist
+        const avgScore =
+          this.allLeads.reduce((sum, lead) => sum + (lead.score || 0), 0) / this.allLeads.length;
+        const highScoreLeads = this.allLeads.filter((lead) => (lead.score || 0) >= 80).length;
 
+        insights.push({
+          type: "performance",
+          icon: "📈",
+          title: "Lead Quality Analysis",
+          content: `Your average lead score is ${Math.round(avgScore)}. You have ${highScoreLeads} high-quality leads (80+ score).`,
+          cta: "View Top Leads",
+          actionType: "filter",
+          actionValue: "score_high",
+        });
+
+        if (this.allLeads.length >= 10) {
+          insights.push({
+            type: "optimization",
+            icon: "🎯",
+            title: "Targeting Optimization",
+            content:
+              "With 10+ leads analyzed, consider refining your targeting criteria for better results.",
+            cta: "Analyze Patterns",
+            actionType: "function",
+            actionValue: "showPatternAnalysis",
+          });
+        }
+      }
+
+      this.renderInsights(insights);
+
+      if (loading) {
+        loading.style.display = "none";
+      }
+
+      if (container) {
+        container.style.display = "grid";
+      }
     } catch (error) {
-        console.error('Error generating insights:', error);
-        
-        if (loading) {
-            loading.style.display = 'none';
-        }
-        
-        if (container) {
-            container.innerHTML = `
+      console.error("Error generating insights:", error);
+
+      if (loading) {
+        loading.style.display = "none";
+      }
+
+      if (container) {
+        container.innerHTML = `
                 <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 24px; text-align: center;">
                     <div style="font-size: 24px; margin-bottom: 12px;">⚠️</div>
                     <h4 style="color: var(--error); margin: 0 0 8px 0;">Insights Unavailable</h4>
                     <p style="color: var(--text-secondary); margin: 0;">Unable to generate insights at this time.</p>
                 </div>
             `;
-            container.style.display = 'block';
-        }
+        container.style.display = "block";
+      }
     }
-}
+  }
 
-    // ✅ ADD THIS MISSING METHOD:
-    renderInsights(insights) {
-        const container = document.getElementById('insights-container');
-        if (!container || !insights.length) return;
+  // ✅ ADD THIS MISSING METHOD:
+  renderInsights(insights) {
+    const container = document.getElementById("insights-container");
+    if (!container || !insights.length) return;
 
-        const html = insights.map(insight => `
+    const html = insights
+      .map(
+        (insight) => `
             <div class="insight-card" style="background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--border-light);">
                 <div style="font-size: 32px; margin-bottom: 16px;">${insight.icon}</div>
                 <h4 style="color: var(--text-primary); margin: 0 0 12px 0; font-size: 18px;">${insight.title}</h4>
                 <p style="color: var(--text-secondary); margin: 0 0 20px 0; line-height: 1.5;">${insight.content}</p>
-                ${insight.cta ? `
+                ${
+                  insight.cta
+                    ? `
                     <button onclick="dashboard.handleInsightAction('${insight.actionType}', '${insight.actionValue}')"
                             style="background: var(--primary-blue); color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
                         ${insight.cta}
                     </button>
-                ` : ''}
-            </div>
-        `).join('');
-
-        container.innerHTML = html;
-    }
-
-    // ✅ ADD THIS MISSING METHOD:
-    handleInsightAction(actionType, actionValue) {
-    console.log('🎯 Insight action triggered:', actionType, actionValue);
-    
-    switch (actionType) {
-        case 'function':
-            if (actionValue === 'showAnalysisModal') {
-                this.showAnalysisModal();
-            } else if (actionValue === 'showPatternAnalysis') {
-                window.OsliraApp?.showMessage('Pattern analysis coming soon!', 'info');
-            } else if (actionValue === 'showGettingStartedGuide') {
-                this.showGettingStartedGuide();
-            }
-            break;
-            
-        case 'filter':
-            if (actionValue === 'score_high') {
-                const filterSelect = document.getElementById('activity-filter');
-                if (filterSelect) {
-                    filterSelect.value = 'score_high';
-                    this.applyActivityFilter();
+                `
+                    : ""
                 }
-            }
-            break;
-            
-        default:
-            console.warn('Unknown insight action:', actionType, actionValue);
+            </div>
+        `
+      )
+      .join("");
+
+    container.innerHTML = html;
+  }
+
+  // ✅ ADD THIS MISSING METHOD:
+  handleInsightAction(actionType, actionValue) {
+    console.log("🎯 Insight action triggered:", actionType, actionValue);
+
+    switch (actionType) {
+      case "function":
+        if (actionValue === "showAnalysisModal") {
+          this.showAnalysisModal();
+        } else if (actionValue === "showPatternAnalysis") {
+          window.OsliraApp?.showMessage("Pattern analysis coming soon!", "info");
+        } else if (actionValue === "showGettingStartedGuide") {
+          this.showGettingStartedGuide();
+        }
+        break;
+
+      case "filter":
+        if (actionValue === "score_high") {
+          const filterSelect = document.getElementById("activity-filter");
+          if (filterSelect) {
+            filterSelect.value = "score_high";
+            this.applyActivityFilter();
+          }
+        }
+        break;
+
+      default:
+        console.warn("Unknown insight action:", actionType, actionValue);
     }
-}
-    // ✅ ADD THIS MISSING METHOD:
-    showAnalysisModal() {
-    console.log('🔍 Opening analysis modal...');
-    
-    const modal = document.getElementById('analysisModal');
+  }
+  // ✅ ADD THIS MISSING METHOD:
+  showAnalysisModal() {
+    console.log("🔍 Opening analysis modal...");
+
+    const modal = document.getElementById("analysisModal");
     if (!modal) {
-        console.error('❌ Analysis modal not found in DOM');
-        window.OsliraApp?.showMessage('Analysis modal not available', 'error');
-        return;
+      console.error("❌ Analysis modal not found in DOM");
+      window.OsliraApp?.showMessage("Analysis modal not available", "error");
+      return;
     }
-    
+
     // Reset form
-    const form = document.getElementById('analysisForm');
+    const form = document.getElementById("analysisForm");
     if (form) {
-        form.reset();
+      form.reset();
     }
-    
+
     // Reset form fields
-    const analysisType = document.getElementById('analysis-type');
-    const profileInput = document.getElementById('profile-input');
-    const inputContainer = document.getElementById('input-field-container');
-    
+    const analysisType = document.getElementById("analysis-type");
+    const profileInput = document.getElementById("profile-input");
+    const inputContainer = document.getElementById("input-field-container");
+
     if (analysisType) {
-        analysisType.value = '';
+      analysisType.value = "";
     }
     if (profileInput) {
-        profileInput.value = '';
+      profileInput.value = "";
     }
     if (inputContainer) {
-        inputContainer.style.display = 'none';
+      inputContainer.style.display = "none";
     }
-    
+
     // Load business profiles IMMEDIATELY when modal opens
     this.loadBusinessProfilesForModal();
-    
+
     // Show the modal
-    modal.style.display = 'flex';
-    
+    modal.style.display = "flex";
+
     // Focus on analysis type dropdown
     setTimeout(() => {
-        if (analysisType) {
-            analysisType.focus();
-        }
+      if (analysisType) {
+        analysisType.focus();
+      }
     }, 100);
-    
-    console.log('✅ Analysis modal opened');
-}
 
-setupPollingFallback() {
-    console.log('🔄 Setting up polling fallback for real-time updates');
-    
+    console.log("✅ Analysis modal opened");
+  }
+
+  setupPollingFallback() {
+    console.log("🔄 Setting up polling fallback for real-time updates");
+
     // Clear any existing polling
     if (this.pollingInterval) {
-        clearInterval(this.pollingInterval);
-        this.pollingInterval = null;
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
     }
-    
+
     // Only set up polling if real-time is not active
     if (!this.isRealtimeActive) {
-        // Poll for updates every 15 seconds when tab is visible
-        this.pollingInterval = setInterval(() => {
-            if (document.visibilityState === 'visible' && window.OsliraApp?.user) {
-                this.checkForUpdates();
-            }
-        }, 15000); // Poll every 15 seconds
-        
-        console.log('✅ Polling fallback active (15s intervals)');
-    }
-}
+      // Poll for updates every 15 seconds when tab is visible
+      this.pollingInterval = setInterval(() => {
+        if (document.visibilityState === "visible" && window.OsliraApp?.user) {
+          this.checkForUpdates();
+        }
+      }, 15000); // Poll every 15 seconds
 
-async checkForUpdates() {
+      console.log("✅ Polling fallback active (15s intervals)");
+    }
+  }
+
+  async checkForUpdates() {
     try {
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
-        
-        if (!supabase || !user) return;
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
 
-        // Check for new leads since last update
-        const lastUpdate = this.lastUpdateTimestamp || new Date(Date.now() - 60000).toISOString();
-        
-        const { data: newLeads, error } = await supabase
-            .from('leads')
-            .select('id, created_at')
-            .eq('user_id', user.id)
-            .gt('created_at', lastUpdate)
-            .limit(1);
+      if (!supabase || !user) return;
 
-        if (error) {
-            console.warn('⚠️ Update check failed:', error);
-            return;
-        }
+      // Check for new leads since last update
+      const lastUpdate = this.lastUpdateTimestamp || new Date(Date.now() - 60000).toISOString();
 
-        if (newLeads && newLeads.length > 0) {
-            console.log('📊 New data detected, refreshing dashboard');
-            await this.loadDashboardData();
-            this.lastUpdateTimestamp = new Date().toISOString();
-        }
+      const { data: newLeads, error } = await supabase
+        .from("leads")
+        .select("id, created_at")
+        .eq("user_id", user.id)
+        .gt("created_at", lastUpdate)
+        .limit(1);
 
+      if (error) {
+        console.warn("⚠️ Update check failed:", error);
+        return;
+      }
+
+      if (newLeads && newLeads.length > 0) {
+        console.log("📊 New data detected, refreshing dashboard");
+        await this.loadDashboardData();
+        this.lastUpdateTimestamp = new Date().toISOString();
+      }
     } catch (error) {
-        console.warn('⚠️ Polling update check failed:', error);
+      console.warn("⚠️ Polling update check failed:", error);
     }
-}
-handleRealtimeLeadUpdate(payload) {
+  }
+  handleRealtimeLeadUpdate(payload) {
     const { eventType, new: newRecord, old: oldRecord } = payload;
-    
-    console.log('📊 Processing lead update:', eventType, newRecord?.username || oldRecord?.username);
-    
-    switch (eventType) {
-        case 'INSERT':
-            if (newRecord) {
-                console.log('➕ New lead detected:', newRecord.username);
-                // Refresh dashboard data to show new lead
-                setTimeout(() => {
-                    this.loadDashboardData();
-                }, 1000);
-                
-                // Show notification
-                if (window.OsliraApp?.showMessage) {
-                    window.OsliraApp.showMessage(`New lead analyzed: @${newRecord.username}`, 'success', 3000);
-                }
-            }
-            break;
-            
-        case 'UPDATE':
-            if (newRecord) {
-                console.log('✏️ Lead updated:', newRecord.username);
-                // Refresh to show updated data
-                setTimeout(() => {
-                    this.loadDashboardData();
-                }, 500);
-            }
-            break;
-            
-        case 'DELETE':
-            if (oldRecord) {
-                console.log('🗑️ Lead deleted:', oldRecord.username);
-                // Refresh to remove deleted lead
-                setTimeout(() => {
-                    this.loadDashboardData();
-                }, 500);
-            }
-            break;
-    }
-}
 
+    console.log(
+      "📊 Processing lead update:",
+      eventType,
+      newRecord?.username || oldRecord?.username
+    );
+
+    switch (eventType) {
+      case "INSERT":
+        if (newRecord) {
+          console.log("➕ New lead detected:", newRecord.username);
+          // Refresh dashboard data to show new lead
+          setTimeout(() => {
+            this.loadDashboardData();
+          }, 1000);
+
+          // Show notification
+          if (window.OsliraApp?.showMessage) {
+            window.OsliraApp.showMessage(
+              `New lead analyzed: @${newRecord.username}`,
+              "success",
+              3000
+            );
+          }
+        }
+        break;
+
+      case "UPDATE":
+        if (newRecord) {
+          console.log("✏️ Lead updated:", newRecord.username);
+          // Refresh to show updated data
+          setTimeout(() => {
+            this.loadDashboardData();
+          }, 500);
+        }
+        break;
+
+      case "DELETE":
+        if (oldRecord) {
+          console.log("🗑️ Lead deleted:", oldRecord.username);
+          // Refresh to remove deleted lead
+          setTimeout(() => {
+            this.loadDashboardData();
+          }, 500);
+        }
+        break;
+    }
+  }
 
   cleanup() {
-    console.log('🧹 Cleaning up dashboard resources...');
-    
+    console.log("🧹 Cleaning up dashboard resources...");
+
     // Clean up real-time subscription
     if (this.realtimeSubscription) {
-        try {
-            this.realtimeSubscription.unsubscribe();
-            console.log('✅ Real-time subscription cleaned up');
-        } catch (error) {
-            console.warn('⚠️ Real-time cleanup warning:', error);
-        }
-        this.realtimeSubscription = null;
+      try {
+        this.realtimeSubscription.unsubscribe();
+        console.log("✅ Real-time subscription cleaned up");
+      } catch (error) {
+        console.warn("⚠️ Real-time cleanup warning:", error);
+      }
+      this.realtimeSubscription = null;
     }
-    
+
     // Clean up polling interval
     if (this.pollingInterval) {
-        clearInterval(this.pollingInterval);
-        this.pollingInterval = null;
-        console.log('✅ Polling interval cleaned up');
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+      console.log("✅ Polling interval cleaned up");
     }
-    
+
     // Mark real-time as inactive
     this.isRealtimeActive = false;
-    
+
     // Clean up event listeners
-    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
-    
-    console.log('✅ Dashboard cleanup completed');
-}
-    // ===============================================================================
-    // INITIALIZATION COMPLETION
-    // ===============================================================================
+    document.removeEventListener("visibilitychange", this.handleVisibilityChange);
 
-    async setupDashboard() {
+    console.log("✅ Dashboard cleanup completed");
+  }
+  // ===============================================================================
+  // INITIALIZATION COMPLETION
+  // ===============================================================================
+
+  async setupDashboard() {
     try {
-        console.log('🔧 Setting up dashboard functionality...');
-        
-        // ✅ WAIT for authentication before setting up real-time
-        const isAuthReady = await this.waitForAuth(10000);
-        
-        if (isAuthReady) {
-            console.log('✅ Auth ready, setting up real-time subscription');
-            this.setupRealtimeSubscription();
-        } else {
-            console.warn('⚠️ Auth not ready, using polling fallback');
-            this.setupPollingFallback();
-        }
-        
-        // Set up visibility change handler
-        document.addEventListener('visibilitychange', this.handleVisibilityChange.bind(this));
-        
-        // Load business profiles
-        await this.loadBusinessProfiles();
-        
-        console.log('✅ Dashboard setup completed');
-        
-    } catch (error) {
-        console.warn('⚠️ Dashboard setup partially failed:', error);
+      console.log("🔧 Setting up dashboard functionality...");
+
+      // ✅ WAIT for authentication before setting up real-time
+      const isAuthReady = await this.waitForAuth(10000);
+
+      if (isAuthReady) {
+        console.log("✅ Auth ready, setting up real-time subscription");
+        this.setupRealtimeSubscription();
+      } else {
+        console.warn("⚠️ Auth not ready, using polling fallback");
         this.setupPollingFallback();
+      }
+
+      // Set up visibility change handler
+      document.addEventListener("visibilitychange", this.handleVisibilityChange.bind(this));
+
+      // Load business profiles
+      await this.loadBusinessProfiles();
+
+      console.log("✅ Dashboard setup completed");
+    } catch (error) {
+      console.warn("⚠️ Dashboard setup partially failed:", error);
+      this.setupPollingFallback();
     }
-}
+  }
 
-async loadBusinessProfilesForModal() {
-    console.log('🏢 Loading business profiles for modal...');
-    
+  async loadBusinessProfilesForModal() {
+    console.log("🏢 Loading business profiles for modal...");
+
     try {
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
 
-        const businessSelect = document.getElementById('business-id');
-        if (!businessSelect) {
-            console.warn('❌ Business dropdown not found');
-            return;
-        }
+      const businessSelect = document.getElementById("business-id");
+      if (!businessSelect) {
+        console.warn("❌ Business dropdown not found");
+        return;
+      }
 
-        // Show loading state
-        businessSelect.innerHTML = '<option value="">Loading business profiles...</option>';
-        businessSelect.disabled = true;
+      // Show loading state
+      businessSelect.innerHTML = '<option value="">Loading business profiles...</option>';
+      businessSelect.disabled = true;
 
-        if (!supabase || !user) {
-            console.log('📋 No auth - showing placeholder');
-            businessSelect.innerHTML = '<option value="">Please log in to load business profiles</option>';
-            businessSelect.disabled = false;
-            return;
-        }
-
-        const { data: profiles, error } = await supabase
-            .from('business_profiles')
-            .select('id, business_name, is_active')
-            .eq('user_id', user.id)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.warn('⚠️ Business profiles query failed:', error.message);
-            businessSelect.innerHTML = '<option value="">Error loading profiles</option>';
-            businessSelect.disabled = false;
-            return;
-        }
-
-        // ✅ AUTO-SELECT LOGIC
-        if (profiles && profiles.length > 0) {
-            // Get saved preference or use first profile
-            const savedBusinessId = localStorage.getItem('selectedBusinessId');
-            const defaultProfile = savedBusinessId 
-                ? profiles.find(p => p.id === savedBusinessId) || profiles[0]
-                : profiles[0];
-
-            // Build options with default selected
-            const options = profiles.map(profile => {
-                const isSelected = profile.id === defaultProfile.id;
-                return `<option value="${profile.id}" ${isSelected ? 'selected' : ''}>${profile.business_name}</option>`;
-            }).join('');
-
-            businessSelect.innerHTML = options;
-            
-            // ✅ SAVE SELECTION ON CHANGE
-            businessSelect.addEventListener('change', (e) => {
-                if (e.target.value) {
-                    localStorage.setItem('selectedBusinessId', e.target.value);
-                    console.log('💾 Saved business preference:', e.target.value);
-                }
-            });
-            
-            console.log(`✅ Loaded ${profiles.length} profiles, auto-selected: ${defaultProfile.business_name}`);
-        } else {
-            businessSelect.innerHTML = '<option value="">No business profiles found - create one first</option>';
-        }
-
+      if (!supabase || !user) {
+        console.log("📋 No auth - showing placeholder");
+        businessSelect.innerHTML =
+          '<option value="">Please log in to load business profiles</option>';
         businessSelect.disabled = false;
+        return;
+      }
 
+      const { data: profiles, error } = await supabase
+        .from("business_profiles")
+        .select("id, business_name, is_active")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.warn("⚠️ Business profiles query failed:", error.message);
+        businessSelect.innerHTML = '<option value="">Error loading profiles</option>';
+        businessSelect.disabled = false;
+        return;
+      }
+
+      // ✅ AUTO-SELECT LOGIC
+      if (profiles && profiles.length > 0) {
+        // Get saved preference or use first profile
+        const savedBusinessId = localStorage.getItem("selectedBusinessId");
+        const defaultProfile = savedBusinessId
+          ? profiles.find((p) => p.id === savedBusinessId) || profiles[0]
+          : profiles[0];
+
+        // Build options with default selected
+        const options = profiles
+          .map((profile) => {
+            const isSelected = profile.id === defaultProfile.id;
+            return `<option value="${profile.id}" ${isSelected ? "selected" : ""}>${profile.business_name}</option>`;
+          })
+          .join("");
+
+        businessSelect.innerHTML = options;
+
+        // ✅ SAVE SELECTION ON CHANGE
+        businessSelect.addEventListener("change", (e) => {
+          if (e.target.value) {
+            localStorage.setItem("selectedBusinessId", e.target.value);
+            console.log("💾 Saved business preference:", e.target.value);
+          }
+        });
+
+        console.log(
+          `✅ Loaded ${profiles.length} profiles, auto-selected: ${defaultProfile.business_name}`
+        );
+      } else {
+        businessSelect.innerHTML =
+          '<option value="">No business profiles found - create one first</option>';
+      }
+
+      businessSelect.disabled = false;
     } catch (error) {
-        console.error('❌ Business profiles loading failed:', error);
-        const businessSelect = document.getElementById('business-id');
-        if (businessSelect) {
-            businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
-            businessSelect.disabled = false;
-        }
+      Alert.error("Failed to load business profiles", {
+        suggestions: ["Refresh the page", "Check your connection"],
+        details: error.message,
+      });
+      const businessSelect = document.getElementById("business-id");
+      if (businessSelect) {
+        businessSelect.innerHTML = '<option value="">Failed to load profiles</option>';
+        businessSelect.disabled = false;
+      }
     }
-}
-    
-async createDefaultBusinessProfile() {
+  }
+
+  async createDefaultBusinessProfile() {
     try {
-        const supabase = window.OsliraApp?.supabase;
-        const user = window.OsliraApp?.user;
-        
-        if (!supabase || !user) return;
+      const supabase = window.OsliraApp?.supabase;
+      const user = window.OsliraApp?.user;
 
-        const defaultProfile = {
-            user_id: user.id,
-            business_name: 'My Business',
-            industry: 'General',
-            target_audience: 'General Audience',
-            value_proposition: 'Quality products and services',
-            created_at: new Date().toISOString()
-        };
+      if (!supabase || !user) return;
 
-        const { data, error } = await supabase
-            .from('business_profiles')
-            .insert([defaultProfile])
-            .select()
-            .single();
+      const defaultProfile = {
+        user_id: user.id,
+        business_name: "My Business",
+        industry: "General",
+        target_audience: "General Audience",
+        value_proposition: "Quality products and services",
+        created_at: new Date().toISOString(),
+      };
 
-        if (error) {
-            console.warn('⚠️ Could not create default business profile:', error);
-            this.businessProfiles = [this.getDefaultBusinessProfile()];
-        } else {
-            this.businessProfiles = [data];
-            console.log('✅ Created default business profile');
-        }
+      const { data, error } = await supabase
+        .from("business_profiles")
+        .insert([defaultProfile])
+        .select()
+        .single();
 
-    } catch (error) {
-        console.warn('⚠️ Default business profile creation failed:', error);
+      if (error) {
+        console.warn("⚠️ Could not create default business profile:", error);
         this.businessProfiles = [this.getDefaultBusinessProfile()];
+      } else {
+        this.businessProfiles = [data];
+        console.log("✅ Created default business profile");
+      }
+    } catch (error) {
+      console.warn("⚠️ Default business profile creation failed:", error);
+      this.businessProfiles = [this.getDefaultBusinessProfile()];
     }
-}
+  }
 
-getDefaultBusinessProfile() {
+  getDefaultBusinessProfile() {
     return {
-        id: 'default',
-        business_name: 'My Business',
-        industry: 'General',
-        target_audience: 'General Audience',
-        value_proposition: 'Quality products and services'
+      id: "default",
+      business_name: "My Business",
+      industry: "General",
+      target_audience: "General Audience",
+      value_proposition: "Quality products and services",
     };
-}
+  }
 }
 
 class UnifiedAnalysisQueue {
-    constructor() {
-        this.activeAnalyses = new Map();
-        this.maxVisible = 5;
-        this.autoHideDelay = 3000;
-        this.setupQueueContainer();
+  constructor() {
+    this.activeAnalyses = new Map();
+    this.maxVisible = 5;
+    this.autoHideDelay = 3000;
+    this.setupQueueContainer();
+  }
+
+  // Enhanced startSingleAnalysis with realistic progress
+  async startSingleAnalysis(username, analysisType, businessId, requestData) {
+    const analysisId = this.addAnalysis(username, analysisType, businessId);
+
+    try {
+      // Start realistic progress simulation
+      this.simulateProgress(analysisId, analysisType);
+
+      // Call actual API
+      const result = await this.callAnalysisAPI(requestData);
+
+      if (result.success) {
+        this.completeAnalysis(analysisId, true, "Analysis completed!");
+        return { success: true, analysisId, result };
+      } else {
+        this.completeAnalysis(analysisId, false, result.error || "Analysis failed");
+        return { success: false, analysisId, error: result.error };
+      }
+    } catch (error) {
+      this.completeAnalysis(analysisId, false, error.message);
+      return { success: false, analysisId, error: error.message };
     }
+  }
 
-    // Enhanced startSingleAnalysis with realistic progress
-    async startSingleAnalysis(username, analysisType, businessId, requestData) {
-        const analysisId = this.addAnalysis(username, analysisType, businessId);
-        
-        try {
-            // Start realistic progress simulation
-            this.simulateProgress(analysisId, analysisType);
-            
-            // Call actual API
-            const result = await this.callAnalysisAPI(requestData);
-            
-            if (result.success) {
-                this.completeAnalysis(analysisId, true, 'Analysis completed!');
-                return { success: true, analysisId, result };
-            } else {
-                this.completeAnalysis(analysisId, false, result.error || 'Analysis failed');
-                return { success: false, analysisId, error: result.error };
-            }
+  // Realistic progress simulation
+  simulateProgress(analysisId, analysisType) {
+    const analysis = this.activeAnalyses.get(analysisId);
+    if (!analysis) return;
 
-        } catch (error) {
-            this.completeAnalysis(analysisId, false, error.message);
-            return { success: false, analysisId, error: error.message };
-        }
+    const steps = [
+      { progress: 10, message: "Connecting to Instagram...", delay: 500 },
+      { progress: 30, message: "Scraping profile data...", delay: 2000 },
+      { progress: 60, message: "AI analyzing engagement...", delay: 3000 },
+      {
+        progress: 85,
+        message:
+          analysisType === "deep" ? "Generating outreach message..." : "Finalizing results...",
+        delay: 2000,
+      },
+      { progress: 95, message: "Saving to database...", delay: 1000 },
+    ];
+
+    let currentStep = 0;
+    const updateProgress = () => {
+      if (currentStep < steps.length && analysis.status === "analyzing") {
+        const step = steps[currentStep];
+        this.updateAnalysis(analysisId, {
+          progress: step.progress,
+          message: step.message,
+        });
+        currentStep++;
+        setTimeout(updateProgress, step.delay);
+      }
+    };
+
+    // Start after initial delay
+    setTimeout(updateProgress, 100);
+  }
+
+  // ===============================================================================
+  // QUEUE MANAGEMENT
+  // ===============================================================================
+
+  addAnalysis(username, analysisType, businessId) {
+    const analysisId = this.generateId();
+    const analysisInfo = {
+      id: analysisId,
+      username: username.replace("@", ""),
+      analysisType,
+      businessId,
+      status: "starting", // starting, analyzing, completed, failed
+      progress: 0,
+      startTime: Date.now(),
+      message: "Initializing analysis...",
+      credits: analysisType === "deep" ? 2 : 1,
+    };
+
+    this.activeAnalyses.set(analysisId, analysisInfo);
+    this.renderQueue();
+    this.showQueue();
+
+    console.log(`✅ Added ${username} to analysis queue (${analysisType})`);
+    return analysisId;
+  }
+
+  updateAnalysis(analysisId, updates) {
+    const analysis = this.activeAnalyses.get(analysisId);
+    if (analysis) {
+      Object.assign(analysis, updates);
+      this.renderQueue();
+      console.log(`🔄 Updated analysis ${analysisId}:`, updates);
     }
+  }
 
-    // Realistic progress simulation
-    simulateProgress(analysisId, analysisType) {
-        const analysis = this.activeAnalyses.get(analysisId);
-        if (!analysis) return;
+  completeAnalysis(analysisId, success = true, message = null) {
+    const analysis = this.activeAnalyses.get(analysisId);
+    if (!analysis) return;
 
-        const steps = [
-            { progress: 10, message: 'Connecting to Instagram...', delay: 500 },
-            { progress: 30, message: 'Scraping profile data...', delay: 2000 },
-            { progress: 60, message: 'AI analyzing engagement...', delay: 3000 },
-            { progress: 85, message: analysisType === 'deep' ? 'Generating outreach message...' : 'Finalizing results...', delay: 2000 },
-            { progress: 95, message: 'Saving to database...', delay: 1000 }
-        ];
+    analysis.status = success ? "completed" : "failed";
+    analysis.progress = 100;
+    analysis.message = message || (success ? "Analysis completed!" : "Analysis failed");
+    analysis.endTime = Date.now();
+    analysis.duration = Math.round((analysis.endTime - analysis.startTime) / 1000);
 
-        let currentStep = 0;
-        const updateProgress = () => {
-            if (currentStep < steps.length && analysis.status === 'analyzing') {
-                const step = steps[currentStep];
-                this.updateAnalysis(analysisId, {
-                    progress: step.progress,
-                    message: step.message
-                });
-                currentStep++;
-                setTimeout(updateProgress, step.delay);
-            }
-        };
+    this.renderQueue();
 
-        // Start after initial delay
-        setTimeout(updateProgress, 100);
-    }
+    // Auto-remove after delay
+    setTimeout(() => {
+      this.removeAnalysis(analysisId);
+    }, this.autoHideDelay);
 
-    // ===============================================================================
-    // QUEUE MANAGEMENT
-    // ===============================================================================
+    console.log(
+      `${success ? "✅" : "❌"} ${success ? "Completed" : "Failed"} analysis for @${analysis.username}`
+    );
+  }
 
-    addAnalysis(username, analysisType, businessId) {
-        const analysisId = this.generateId();
-        const analysisInfo = {
-            id: analysisId,
-            username: username.replace('@', ''),
-            analysisType,
-            businessId,
-            status: 'starting', // starting, analyzing, completed, failed
-            progress: 0,
-            startTime: Date.now(),
-            message: 'Initializing analysis...',
-            credits: analysisType === 'deep' ? 2 : 1
-        };
+  removeAnalysis(analysisId) {
+    const analysis = this.activeAnalyses.get(analysisId);
+    if (!analysis) return;
 
-        this.activeAnalyses.set(analysisId, analysisInfo);
+    // Add removing class for animation
+    const element = document.getElementById(`queue-item-${analysisId}`);
+    if (element) {
+      element.classList.add("removing");
+      setTimeout(() => {
+        this.activeAnalyses.delete(analysisId);
         this.renderQueue();
-        this.showQueue();
-
-        console.log(`✅ Added ${username} to analysis queue (${analysisType})`);
-        return analysisId;
+        this.maybeHideQueue();
+      }, 300); // Match CSS animation duration
+    } else {
+      this.activeAnalyses.delete(analysisId);
+      this.renderQueue();
+      this.maybeHideQueue();
     }
 
-    updateAnalysis(analysisId, updates) {
-        const analysis = this.activeAnalyses.get(analysisId);
-        if (analysis) {
-            Object.assign(analysis, updates);
-            this.renderQueue();
-            console.log(`🔄 Updated analysis ${analysisId}:`, updates);
-        }
+    console.log(`🗑️ Removed analysis for @${analysis.username}`);
+  }
+
+  clearCompleted() {
+    const completed = Array.from(this.activeAnalyses.entries()).filter(
+      ([_, analysis]) => analysis.status === "completed" || analysis.status === "failed"
+    );
+
+    completed.forEach(([id]) => this.removeAnalysis(id));
+
+    if (completed.length > 0) {
+      window.OsliraApp?.showMessage(`Cleared ${completed.length} completed analyses`, "success");
+    }
+  }
+
+  // ===============================================================================
+  // UI MANAGEMENT
+  // ===============================================================================
+
+  setupQueueContainer() {
+    // Remove existing container if it exists
+    const existing = document.getElementById("analysis-queue-container");
+    if (existing) {
+      existing.remove();
     }
 
-    completeAnalysis(analysisId, success = true, message = null) {
-        const analysis = this.activeAnalyses.get(analysisId);
-        if (!analysis) return;
+    const container = document.createElement("div");
+    container.id = "analysis-queue-container";
+    container.className = "analysis-queue";
+    container.style.display = "none"; // Hidden by default
 
-        analysis.status = success ? 'completed' : 'failed';
-        analysis.progress = 100;
-        analysis.message = message || (success ? 'Analysis completed!' : 'Analysis failed');
-        analysis.endTime = Date.now();
-        analysis.duration = Math.round((analysis.endTime - analysis.startTime) / 1000);
+    document.body.appendChild(container);
+    console.log("🏗️ Queue container created");
+  }
 
-        this.renderQueue();
+  renderQueue() {
+    const container = document.getElementById("analysis-queue-container");
+    if (!container) return;
 
-        // Auto-remove after delay
-        setTimeout(() => {
-            this.removeAnalysis(analysisId);
-        }, this.autoHideDelay);
+    const analyses = Array.from(this.activeAnalyses.values()).sort(
+      (a, b) => b.startTime - a.startTime
+    ); // Newest first
 
-        console.log(`${success ? '✅' : '❌'} ${success ? 'Completed' : 'Failed'} analysis for @${analysis.username}`);
+    if (analyses.length === 0) {
+      container.innerHTML = "";
+      return;
     }
 
-    removeAnalysis(analysisId) {
-        const analysis = this.activeAnalyses.get(analysisId);
-        if (!analysis) return;
+    // Create scrollable container if needed
+    const needsScroll = analyses.length > this.maxVisible;
+    const visibleAnalyses = needsScroll ? analyses.slice(0, this.maxVisible) : analyses;
 
-        // Add removing class for animation
-        const element = document.getElementById(`queue-item-${analysisId}`);
-        if (element) {
-            element.classList.add('removing');
-            setTimeout(() => {
-                this.activeAnalyses.delete(analysisId);
-                this.renderQueue();
-                this.maybeHideQueue();
-            }, 300); // Match CSS animation duration
-        } else {
-            this.activeAnalyses.delete(analysisId);
-            this.renderQueue();
-            this.maybeHideQueue();
-        }
-
-        console.log(`🗑️ Removed analysis for @${analysis.username}`);
-    }
-
-    clearCompleted() {
-        const completed = Array.from(this.activeAnalyses.entries())
-            .filter(([_, analysis]) => analysis.status === 'completed' || analysis.status === 'failed');
-
-        completed.forEach(([id]) => this.removeAnalysis(id));
-
-        if (completed.length > 0) {
-            window.OsliraApp?.showMessage(`Cleared ${completed.length} completed analyses`, 'success');
-        }
-    }
-
-    // ===============================================================================
-    // UI MANAGEMENT  
-    // ===============================================================================
-
-    setupQueueContainer() {
-        // Remove existing container if it exists
-        const existing = document.getElementById('analysis-queue-container');
-        if (existing) {
-            existing.remove();
-        }
-
-        const container = document.createElement('div');
-        container.id = 'analysis-queue-container';
-        container.className = 'analysis-queue';
-        container.style.display = 'none'; // Hidden by default
-
-        document.body.appendChild(container);
-        console.log('🏗️ Queue container created');
-    }
-
-    renderQueue() {
-        const container = document.getElementById('analysis-queue-container');
-        if (!container) return;
-
-        const analyses = Array.from(this.activeAnalyses.values())
-            .sort((a, b) => b.startTime - a.startTime); // Newest first
-
-        if (analyses.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
-
-        // Create scrollable container if needed
-        const needsScroll = analyses.length > this.maxVisible;
-        const visibleAnalyses = needsScroll ? analyses.slice(0, this.maxVisible) : analyses;
-
-        container.innerHTML = `
-            <div style="max-height: ${this.maxVisible * 90}px; overflow-y: ${needsScroll ? 'auto' : 'visible'}; padding-right: 8px;">
-                ${visibleAnalyses.map(analysis => this.renderQueueItem(analysis)).join('')}
+    container.innerHTML = `
+            <div style="max-height: ${this.maxVisible * 90}px; overflow-y: ${needsScroll ? "auto" : "visible"}; padding-right: 8px;">
+                ${visibleAnalyses.map((analysis) => this.renderQueueItem(analysis)).join("")}
             </div>
-            ${needsScroll ? `
+            ${
+              needsScroll
+                ? `
                 <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.9); border-radius: 8px; margin-top: 8px;">
                     <span style="font-size: 12px; color: var(--text-secondary);">
                         +${analyses.length - this.maxVisible} more items
                     </span>
                 </div>
-            ` : ''}
-            ${this.hasCompletedItems() ? `
+            `
+                : ""
+            }
+            ${
+              this.hasCompletedItems()
+                ? `
                 <div style="text-align: center; padding: 8px; margin-top: 8px;">
                     <button onclick="analysisQueue.clearCompleted()" 
                             class="btn btn-small"
@@ -4757,16 +4970,18 @@ class UnifiedAnalysisQueue {
                         Clear Completed
                     </button>
                 </div>
-            ` : ''}
+            `
+                : ""
+            }
         `;
-    }
+  }
 
-    renderQueueItem(analysis) {
-        const statusConfig = this.getStatusConfig(analysis.status);
-        const elapsed = Math.round((Date.now() - analysis.startTime) / 1000);
-        const timeText = elapsed < 60 ? `${elapsed}s` : `${Math.round(elapsed/60)}m`;
+  renderQueueItem(analysis) {
+    const statusConfig = this.getStatusConfig(analysis.status);
+    const elapsed = Math.round((Date.now() - analysis.startTime) / 1000);
+    const timeText = elapsed < 60 ? `${elapsed}s` : `${Math.round(elapsed / 60)}m`;
 
-        return `
+    return `
             <div id="queue-item-${analysis.id}" 
                  class="queue-item ${analysis.status}"
                  style="margin-bottom: 12px;">
@@ -4782,11 +4997,15 @@ class UnifiedAnalysisQueue {
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 11px; color: var(--text-secondary);">${timeText}</span>
-                        ${analysis.status === 'starting' || analysis.status === 'analyzing' ? `
+                        ${
+                          analysis.status === "starting" || analysis.status === "analyzing"
+                            ? `
                             <button class="queue-close" 
                                     onclick="analysisQueue.removeAnalysis('${analysis.id}')"
                                     title="Cancel analysis">×</button>
-                        ` : ''}
+                        `
+                            : ""
+                        }
                     </div>
                 </div>
 
@@ -4800,7 +5019,9 @@ class UnifiedAnalysisQueue {
                 </div>
 
                 <!-- Actions for completed -->
-                ${analysis.status === 'completed' ? `
+                ${
+                  analysis.status === "completed"
+                    ? `
                     <div class="queue-actions">
                         <button onclick="dashboard.viewLatestLead('${analysis.username}')" 
                                 class="btn primary-btn">
@@ -4811,189 +5032,192 @@ class UnifiedAnalysisQueue {
                             Dismiss
                         </button>
                     </div>
-                ` : ''}
+                `
+                    : ""
+                }
             </div>
         `;
+  }
+
+  getStatusConfig(status) {
+    const configs = {
+      starting: { icon: "⏳", color: "#f59e0b" },
+      analyzing: { icon: "🔄", color: "#3b82f6" },
+      completed: { icon: "✅", color: "#10b981" },
+      failed: { icon: "❌", color: "#ef4444" },
+    };
+    return configs[status] || configs.starting;
+  }
+
+  showQueue() {
+    const container = document.getElementById("analysis-queue-container");
+    if (container) {
+      container.style.display = "block";
+    }
+  }
+
+  maybeHideQueue() {
+    if (this.activeAnalyses.size === 0) {
+      const container = document.getElementById("analysis-queue-container");
+      if (container) {
+        container.style.display = "none";
+      }
+    }
+  }
+
+  hasCompletedItems() {
+    return Array.from(this.activeAnalyses.values()).some(
+      (analysis) => analysis.status === "completed" || analysis.status === "failed"
+    );
+  }
+
+  generateId() {
+    return "analysis_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+  }
+
+  // ===============================================================================
+  // PUBLIC METHODS FOR DASHBOARD INTEGRATION
+  // ===============================================================================
+
+  // Start a single analysis
+  async startSingleAnalysis(username, analysisType, businessId, requestData) {
+    const analysisId = this.addAnalysis(username, analysisType, businessId);
+
+    try {
+      // Update to analyzing status
+      setTimeout(() => {
+        this.updateAnalysis(analysisId, {
+          status: "analyzing",
+          progress: 20,
+          message: "Scraping Instagram profile...",
+        });
+      }, 1000);
+
+      // Simulate progress updates (you can remove these and let worker handle)
+      setTimeout(() => {
+        this.updateAnalysis(analysisId, {
+          progress: 60,
+          message: "AI analysis in progress...",
+        });
+      }, 5000);
+
+      // Call the actual API
+      const result = await this.callAnalysisAPI(requestData);
+
+      if (result.success) {
+        this.completeAnalysis(analysisId, true, "Analysis completed successfully!");
+        return { success: true, analysisId, result };
+      } else {
+        this.completeAnalysis(analysisId, false, result.error || "Analysis failed");
+        return { success: false, analysisId, error: result.error };
+      }
+    } catch (error) {
+      this.completeAnalysis(analysisId, false, error.message);
+      return { success: false, analysisId, error: error.message };
+    }
+  }
+
+  // Start bulk analysis
+  async startBulkAnalysis(leads, analysisType, businessId) {
+    const analysisIds = [];
+    const results = [];
+
+    console.log(`🚀 Starting bulk analysis for ${leads.length} leads`);
+
+    // Add all to queue first
+    for (const lead of leads) {
+      const analysisId = this.addAnalysis(lead.username, analysisType, businessId);
+      analysisIds.push(analysisId);
     }
 
-    getStatusConfig(status) {
-        const configs = {
-            starting: { icon: '⏳', color: '#f59e0b' },
-            analyzing: { icon: '🔄', color: '#3b82f6' },
-            completed: { icon: '✅', color: '#10b981' },
-            failed: { icon: '❌', color: '#ef4444' }
+    // Process all concurrently (since Cloudflare Workers handle concurrency)
+    const promises = leads.map(async (lead, index) => {
+      const analysisId = analysisIds[index];
+
+      try {
+        const requestData = {
+          username: lead.username,
+          analysis_type: analysisType,
+          business_id: businessId,
+          user_id: window.OsliraApp?.user?.id,
+          platform: "instagram",
         };
-        return configs[status] || configs.starting;
-    }
 
-    showQueue() {
-        const container = document.getElementById('analysis-queue-container');
-        if (container) {
-            container.style.display = 'block';
-        }
-    }
-
-    maybeHideQueue() {
-        if (this.activeAnalyses.size === 0) {
-            const container = document.getElementById('analysis-queue-container');
-            if (container) {
-                container.style.display = 'none';
-            }
-        }
-    }
-
-    hasCompletedItems() {
-        return Array.from(this.activeAnalyses.values())
-            .some(analysis => analysis.status === 'completed' || analysis.status === 'failed');
-    }
-
-    generateId() {
-        return 'analysis_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    // ===============================================================================
-    // PUBLIC METHODS FOR DASHBOARD INTEGRATION
-    // ===============================================================================
-
-    // Start a single analysis
-    async startSingleAnalysis(username, analysisType, businessId, requestData) {
-        const analysisId = this.addAnalysis(username, analysisType, businessId);
-        
-        try {
-            // Update to analyzing status
-            setTimeout(() => {
-                this.updateAnalysis(analysisId, {
-                    status: 'analyzing',
-                    progress: 20,
-                    message: 'Scraping Instagram profile...'
-                });
-            }, 1000);
-
-            // Simulate progress updates (you can remove these and let worker handle)
-            setTimeout(() => {
-                this.updateAnalysis(analysisId, {
-                    progress: 60,
-                    message: 'AI analysis in progress...'
-                });
-            }, 5000);
-
-            // Call the actual API
-            const result = await this.callAnalysisAPI(requestData);
-            
-            if (result.success) {
-                this.completeAnalysis(analysisId, true, 'Analysis completed successfully!');
-                return { success: true, analysisId, result };
-            } else {
-                this.completeAnalysis(analysisId, false, result.error || 'Analysis failed');
-                return { success: false, analysisId, error: result.error };
-            }
-
-        } catch (error) {
-            this.completeAnalysis(analysisId, false, error.message);
-            return { success: false, analysisId, error: error.message };
-        }
-    }
-
-    // Start bulk analysis
-    async startBulkAnalysis(leads, analysisType, businessId) {
-        const analysisIds = [];
-        const results = [];
-
-        console.log(`🚀 Starting bulk analysis for ${leads.length} leads`);
-
-        // Add all to queue first
-        for (const lead of leads) {
-            const analysisId = this.addAnalysis(lead.username, analysisType, businessId);
-            analysisIds.push(analysisId);
-        }
-
-        // Process all concurrently (since Cloudflare Workers handle concurrency)
-        const promises = leads.map(async (lead, index) => {
-            const analysisId = analysisIds[index];
-            
-            try {
-                const requestData = {
-                    username: lead.username,
-                    analysis_type: analysisType,
-                    business_id: businessId,
-                    user_id: window.OsliraApp?.user?.id,
-                    platform: 'instagram'
-                };
-
-                // Update to analyzing
-                this.updateAnalysis(analysisId, {
-                    status: 'analyzing',
-                    progress: 30,
-                    message: 'Processing...'
-                });
-
-                const result = await this.callAnalysisAPI(requestData);
-                
-                if (result.success) {
-                    this.completeAnalysis(analysisId, true);
-                    return { success: true, username: lead.username, result };
-                } else {
-                    this.completeAnalysis(analysisId, false, result.error);
-                    return { success: false, username: lead.username, error: result.error };
-                }
-
-            } catch (error) {
-                this.completeAnalysis(analysisId, false, error.message);
-                return { success: false, username: lead.username, error: error.message };
-            }
+        // Update to analyzing
+        this.updateAnalysis(analysisId, {
+          status: "analyzing",
+          progress: 30,
+          message: "Processing...",
         });
 
-        // Wait for all to complete
-        const allResults = await Promise.allSettled(promises);
-        
-        return {
-            total: leads.length,
-            successful: allResults.filter(r => r.status === 'fulfilled' && r.value.success).length,
-            failed: allResults.filter(r => r.status === 'rejected' || !r.value?.success).length,
-            results: allResults.map(r => r.status === 'fulfilled' ? r.value : { success: false, error: r.reason })
-        };
-    }
+        const result = await this.callAnalysisAPI(requestData);
 
-async callAnalysisAPI(requestData) {
+        if (result.success) {
+          this.completeAnalysis(analysisId, true);
+          return { success: true, username: lead.username, result };
+        } else {
+          this.completeAnalysis(analysisId, false, result.error);
+          return { success: false, username: lead.username, error: result.error };
+        }
+      } catch (error) {
+        this.completeAnalysis(analysisId, false, error.message);
+        return { success: false, username: lead.username, error: error.message };
+      }
+    });
+
+    // Wait for all to complete
+    const allResults = await Promise.allSettled(promises);
+
+    return {
+      total: leads.length,
+      successful: allResults.filter((r) => r.status === "fulfilled" && r.value.success).length,
+      failed: allResults.filter((r) => r.status === "rejected" || !r.value?.success).length,
+      results: allResults.map((r) =>
+        r.status === "fulfilled" ? r.value : { success: false, error: r.reason }
+      ),
+    };
+  }
+
+  async callAnalysisAPI(requestData) {
     // Get worker URL from environment configuration
     let workerUrl;
     try {
-        const envConfig = window.getEnvConfig ? window.getEnvConfig() : null;
-        workerUrl = envConfig ? envConfig.WORKER_URL : window.CONFIG?.workerUrl;
+      const envConfig = window.getEnvConfig ? window.getEnvConfig() : null;
+      workerUrl = envConfig ? envConfig.WORKER_URL : window.CONFIG?.workerUrl;
     } catch (error) {
-        // Fallback to legacy config
-        workerUrl = window.CONFIG?.workerUrl;
+      // Fallback to legacy config
+      workerUrl = window.CONFIG?.workerUrl;
     }
-    
+
     // Final fallback
     if (!workerUrl) {
-        workerUrl = 'https://ai-outreach-api.hamzawilliamsbusiness.workers.dev';
-        console.warn('⚠️ No worker URL found, using fallback:', workerUrl);
+      workerUrl = "https://ai-outreach-api.hamzawilliamsbusiness.workers.dev";
+      console.warn("⚠️ No worker URL found, using fallback:", workerUrl);
     }
 
     const session = window.OsliraApp?.session;
     if (!session) {
-        throw new Error('No active session');
+      throw new Error("No active session");
     }
 
     console.log(`🌐 [Dashboard] Making API call to: ${workerUrl}/v1/analyze`);
 
     const response = await fetch(`${workerUrl}/v1/analyze`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify(requestData)
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify(requestData),
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API Error: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`API Error: ${response.status}`);
     }
 
     return await response.json();
-}
+  }
 }
 
 // ===============================================================================
@@ -5005,18 +5229,18 @@ const dashboard = new Dashboard();
 window.analysisQueue = new UnifiedAnalysisQueue();
 
 // Initialize dashboard when DOM is ready
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await dashboard.init();
-        await dashboard.setupDashboard();
-    } catch (error) {
-        console.error('❌ Dashboard initialization failed:', error);
-    }
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await dashboard.init();
+    await dashboard.setupDashboard();
+  } catch (error) {
+    console.error("❌ Dashboard initialization failed:", error);
+  }
 });
 
 // Handle page unload cleanup
-window.addEventListener('beforeunload', () => {
-    dashboard.cleanup();
+window.addEventListener("beforeunload", () => {
+  dashboard.cleanup();
 });
 
 // Export dashboard instance for global access
