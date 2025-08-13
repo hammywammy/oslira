@@ -3,10 +3,6 @@
 // leads table: Basic profile info only (username, score, analysis_type, followers_count)
 // lead_analyses table: ALL engagement data, insights, outreach, selling points
 // ===============================================================================
-    if (window.location.hostname === 'osliratest.netlify.app') {
-    console.log = console.warn = console.info = () => {};
-}
-
 class Dashboard {
 constructor() {
     this.allLeads = [];
