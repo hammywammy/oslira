@@ -10,8 +10,21 @@ const shouldDisableLogs = (
     (DISABLE_LOGS_IN_STAGING && window.location.hostname === 'osliratest.netlify.app')
 );
 
+// *** DETECT ENVIRONMENT FOR DYNAMIC MESSAGE ***
+const getCurrentEnvironment = () => {
+    if (window.location.hostname === 'oslira.com') {
+        return 'production';
+    } else if (window.location.hostname === 'osliratest.netlify.app') {
+        return 'staging';
+    } else {
+        return 'development';
+    }
+};
+
+// *** IMPLEMENT LOG DISABLING WITH DYNAMIC MESSAGE ***
 if (shouldDisableLogs) {
-    console.log('🔇 Disabling console logs for production environment');
+    const currentEnv = getCurrentEnvironment();
+    console.log(`🔇 Disabling console logs for ${currentEnv} environment`);
     
     // Store original console methods
     const originalConsole = {
@@ -49,10 +62,6 @@ if (shouldDisableLogs) {
         writable: false,
         configurable: false
     });
-    
-    // Optional: Store original console in a way only you can access for debugging
-    // Uncomment if you need emergency access to logs in production
-    // window.__originalConsole = originalConsole;
 }
     
 (function() {
