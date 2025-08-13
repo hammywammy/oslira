@@ -9,6 +9,51 @@ const shouldDisableLogs = (
     (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') ||
     (DISABLE_LOGS_IN_STAGING && window.location.hostname === 'osliratest.netlify.app')
 );
+
+if (shouldDisableLogs) {
+    console.log('🔇 Disabling console logs for production environment');
+    
+    // Store original console methods
+    const originalConsole = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+        info: console.info,
+        debug: console.debug,
+        trace: console.trace,
+        group: console.group,
+        groupEnd: console.groupEnd,
+        groupCollapsed: console.groupCollapsed,
+        table: console.table,
+        time: console.time,
+        timeEnd: console.timeEnd
+    };
+    
+    // Override console methods with no-op functions
+    console.log = function() {};
+    console.warn = function() {};
+    console.error = function() {};
+    console.info = function() {};
+    console.debug = function() {};
+    console.trace = function() {};
+    console.group = function() {};
+    console.groupEnd = function() {};
+    console.groupCollapsed = function() {};
+    console.table = function() {};
+    console.time = function() {};
+    console.timeEnd = function() {};
+    
+    // Prevent console restoration attempts
+    Object.defineProperty(window, 'console', {
+        value: console,
+        writable: false,
+        configurable: false
+    });
+    
+    // Optional: Store original console in a way only you can access for debugging
+    // Uncomment if you need emergency access to logs in production
+    // window.__originalConsole = originalConsole;
+}
     
 (function() {
     'use strict';
