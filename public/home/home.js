@@ -31,15 +31,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 // INITIALIZATION (matches dashboard/campaigns pattern)
 // =============================================================================
 
+// In home.js, update the initializeApp function:
 async function initializeApp() {
     try {
+        console.log('🚀 Initializing app...');
+        
+        // Load environment config FIRST
+        if (typeof loadEnvConfig !== 'undefined') {
+            try {
+                await loadEnvConfig();
+                console.log('🔧 Environment configuration loaded');
+            } catch (error) {
+                console.warn('⚠️ Environment config failed:', error);
+            }
+        }
+        
         // Initialize Supabase using the modern pattern
         await initializeSupabase();
         isInitialized = true;
         console.log('✅ Landing page initialized');
     } catch (error) {
         console.error('❌ Landing page initialization failed:', error);
-        // Landing page should still work without Supabase for demo
         setupDemoMode();
     }
 }

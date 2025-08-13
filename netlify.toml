@@ -16,14 +16,13 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # ✅ FIXED: Added wss://*.supabase.co for WebSocket connections
     Content-Security-Policy = """
       default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com;
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: https: blob: https://images.weserv.nl;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io;
       frame-src https://js.stripe.com;
       object-src 'none';
       base-uri 'self';

@@ -33,39 +33,42 @@ class EnvironmentConfig {
             const ENV = BASE_URL.includes('oslira.com') ? 'prod' : 'staging';
             
             // Build complete configuration
-            this.config = {
-                // Core URLs
-                BASE_URL,
-                WORKER_URL: apiConfig.workerUrl,
-                
-                // Environment
-                ENV,
-                IS_PRODUCTION: ENV === 'prod',
-                IS_STAGING: ENV === 'staging',
-                
-                // Supabase
-                SUPABASE_URL: apiConfig.supabaseUrl,
-                SUPABASE_ANON_KEY: apiConfig.supabaseAnonKey,
-                
-                // Auth URLs
-                AUTH_CALLBACK_URL: `${BASE_URL}/auth/callback`,
-                AUTH_LOGIN_URL: `${BASE_URL}/auth.html`,
-                DASHBOARD_URL: `${BASE_URL}/dashboard.html`,
-                ONBOARDING_URL: `${BASE_URL}/onboarding.html`,
-                
-                // API Configuration
-                API_TIMEOUT: 30000,
-                MAX_RETRIES: 3,
-                
-                // Feature flags by environment
-                FEATURES: {
-                    DEBUG_MODE: ENV === 'staging',
-                    ANALYTICS_ENABLED: true,
-                    BULK_UPLOAD: true,
-                    CAMPAIGNS: ENV === 'prod', // Only in production
-                    INTEGRATIONS: false
-                }
-            };
+this.config = {
+    // Core URLs
+    BASE_URL,
+    WORKER_URL: apiConfig.workerUrl,
+    
+    // Environment
+    ENV,
+    IS_PRODUCTION: ENV === 'prod',
+    IS_STAGING: ENV === 'staging',
+    
+    // Supabase
+    SUPABASE_URL: apiConfig.supabaseUrl,
+    SUPABASE_ANON_KEY: apiConfig.supabaseAnonKey,
+    
+    // Staging Protection - ADD THIS LINE:
+    stagingPassword: apiConfig.stagingPassword,
+    
+    // Auth URLs
+    AUTH_CALLBACK_URL: `${BASE_URL}/auth/callback`,
+    AUTH_LOGIN_URL: `${BASE_URL}/auth.html`,
+    DASHBOARD_URL: `${BASE_URL}/dashboard.html`,
+    ONBOARDING_URL: `${BASE_URL}/onboarding.html`,
+    
+    // API Configuration
+    API_TIMEOUT: 30000,
+    MAX_RETRIES: 3,
+    
+    // Feature flags by environment
+    FEATURES: {
+        DEBUG_MODE: ENV === 'staging',
+        ANALYTICS_ENABLED: true,
+        BULK_UPLOAD: true,
+        CAMPAIGNS: ENV === 'prod', // Only in production
+        INTEGRATIONS: false
+    }
+};
 
             this.isLoaded = true;
             console.log(`✅ [EnvConfig] Configuration loaded for ${ENV} environment`);

@@ -93,40 +93,70 @@ async function loadAppConfig() {
 // 3. SUPABASE INITIALIZATION
 // =============================================================================
 
+// In shared-code.js, find and replace the initializeSupabase function:
 async function initializeSupabase() {
     try {
-        console.log('🔧 Initializing Supabase...');
+        console.log('🔄 Initializing Supabase...');
         
-        if (typeof supabase === 'undefined') {
-            throw new Error('Supabase library not loaded. Include the Supabase CDN script.');
+        // Wait longer for Supabase library to load
+        let attempts = 0;
+        const maxAttempts = 100; // Increased from 50
+        
+        while ((!window.supabase || typeof window.supabase.createClient !== 'function') && attempts < maxAttempts) {
+            console.log(`⏳ Waiting for Supabase library... (${attempts + 1}/${maxAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, 200)); // Increased delay
+            attempts++;
+        }
+
+        // Final check
+        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+            throw new Error('Supabase library failed to load after 20 seconds');
+        }
+
+        // Check if config is available
+        if (!window.OsliraApp.config.supabaseUrl || !window.OsliraApp.config.supabaseAnonKey) {
+            console.error('Missing Supabase config:', {
+                hasUrl: !!window.OsliraApp.config.supabaseUrl,
+                hasKey: !!window.OsliraApp.config.supabaseAnonKey,
+                config: window.OsliraApp.config
+            });
+            throw new Error('Supabase configuration missing');
         }
         
-        const config = window.OsliraApp.config;
-        if (!config.supabaseUrl || !config.supabaseAnonKey) {
-            throw new Error('Supabase configuration missing. Check your environment variables.');
-        }
+        console.log('🔧 Creating Supabase client...');
         
-        window.OsliraApp.supabase = supabase.createClient(
-            config.supabaseUrl,
-            config.supabaseAnonKey,
-            {
-                auth: {
-                    autoRefreshToken: true,
-                    persistSession: true,
-                    detectSessionInUrl: true
-                }
-            }
+        // Create Supabase client
+        window.OsliraApp.supabase = window.supabase.createClient(
+            window.OsliraApp.config.supabaseUrl,
+            window.OsliraApp.config.supabaseAnonKey
         );
+        
+        // Verify the client was created
+        if (!window.OsliraApp.supabase || !window.OsliraApp.supabase.auth) {
+            throw new Error('Supabase client creation failed');
+        }
         
         console.log('✅ Supabase initialized successfully');
         return window.OsliraApp.supabase;
         
     } catch (error) {
         console.error('❌ Supabase initialization failed:', error);
-        throw error;
+        
+        // Show user-friendly error
+        const errorMsg = `Supabase failed to load. This might be due to:
+        1. Network connectivity issues
+        2. Script blocking (ad blockers, etc.)
+        3. CDN availability
+        
+        Please refresh the page or try again later.`;
+        
+        if (typeof showMessage === 'function') {
+            showMessage(errorMsg, 'error', 10000);
+        }
+        
+        return null;
     }
 }
-
 // =============================================================================
 // 4. AUTHENTICATION SYSTEM
 // =============================================================================
