@@ -566,6 +566,8 @@ async function executeOpenAIAnalysisOptimized(
     // Cache the result in both caches
     enhancedAnalysisCache.set(safeUserId, 'analysis', prompt, data);
     analysisCache.set(legacyCacheKey, data);
+
+    await logUsageToSupabase(env, event, requestId);
     
     // Flush metrics asynchronously
     ctx.flush().catch(error => {
@@ -676,8 +678,14 @@ async function executeClaudeAnalysisOptimized(
     
     // Cache the result
     enhancedAnalysisCache.set(safeUserId, 'analysis', prompt, data);
+    analysisCache.set(legacyCacheKey, data);
     
-    ctx.flush().catch(console.error);
+    await logUsageToSupabase(env, event, requestId);
+
+    // Flush metrics asynchronously
+    ctx.flush().catch(error => {
+      logger('error', 'Failed to flush metrics', { error: error.message }, requestId);
+    });
     
     return data;
     
@@ -980,6 +988,9 @@ export async function generateOutreachMessage(
       // Cache in both systems
       enhancedAnalysisCache.set(safeUserId, 'outreach', messagePrompt, data);
       analysisCache.set(legacyCacheKey, data);
+
+      await logUsageToSupabase(env, event, requestId);
+      
       ctx.flush().catch(console.error);
       
       return data;
@@ -1024,6 +1035,9 @@ export async function generateOutreachMessage(
       // Cache in both systems
       enhancedAnalysisCache.set(safeUserId, 'outreach', messagePrompt, data);
       analysisCache.set(legacyCacheKey, data);
+
+      await logUsageToSupabase(env, event, requestId);
+      
       ctx.flush().catch(console.error);
       
       return data;
@@ -1205,6 +1219,8 @@ Write a concise, actionable summary for decision makers.`;
       tokens: event.total_tokens,
       rateLimits: rateLimitMonitor.getLimits('openai')
     }, requestId);
+
+    await logUsageToSupabase(env, event, requestId);
     
     // Cache the result
     enhancedAnalysisCache.set(safeUserId, 'summary', summaryPrompt, data);
