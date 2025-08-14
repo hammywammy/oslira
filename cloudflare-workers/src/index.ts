@@ -1,268 +1,303 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import type { Env } from './types/interfaces.js';
-import { generateRequestId, logger } from './utils/logger.js';
-import { createStandardResponse } from './utils/response.js';
+import { compress } from 'hono/compress';
+import { secureHeaders } from 'hono/secure-headers';
+import { logger } from 'hono/logger';
+import { getEnvironment, isProduction, isStaging } from './utils/env';
+import { validateAuth } from './middleware/auth';
+import { rateLimiter } from './middleware/rate-limit';
+import { errorHandler } from './middleware/error-handler';
+
+// Import handlers
+import { handleLeadAnalysis } from './handlers/lead-analysis';
+import { handleLeadResearch } from './handlers/lead-research';
+import { handleEmailGeneration } from './handlers/email-generation';
+import { handleLinkedInGeneration } from './handlers/linkedin-generation';
+import { handleConfigChange } from './handlers/admin';
+import { handleNetlifySync } from './handlers/netlify-sync';
+import { handleHealthCheck } from './handlers/health';
+
+// Type definitions
+export interface Env {
+  // Environment variables
+  APP_ENV: 'production' | 'staging';
+  
+  // API Keys
+  OPENAI_API_KEY: string;
+  ANTHROPIC_API_KEY: string;
+  PERPLEXITY_API_KEY: string;
+  TAVILY_API_KEY: string;
+  
+  // Supabase
+  SUPABASE_URL: string;
+  SUPABASE_SERVICE_KEY: string;
+  
+  // Cloudflare
+  CLOUDFLARE_API_TOKEN?: string;
+  CLOUDFLARE_ZONE_ID?: string;
+  
+  // Netlify
+  NETLIFY_BUILD_HOOK_URL?: string;
+  
+  // Internal
+  INTERNAL_API_TOKEN?: string;
+  WORKER_URL: string;
+  
+  // KV Namespaces
+  RATE_LIMIT?: KVNamespace;
+  CONFIG_CACHE?: KVNamespace;
+  
+  // Durable Objects
+  rateLimiter?: DurableObjectNamespace;
+}
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use('*', cors({
-  origin: ['https://oslira.netlify.app', 'https://osliratest.netlify.app', 'http://localhost:8000', 'https://oslira.com'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
-}));
-
-// ===============================================================================
-// BASIC ENDPOINTS
-// ===============================================================================
-
-app.get('/', (c) => {
-  return c.json({
-    status: 'healthy',
-    service: 'OSLIRA Enterprise Analysis API - MODULAR VERSION',
-    version: 'v3.1.0-modular',
-    timestamp: new Date().toISOString(),
-    features: [
-      'modular_architecture',
-      'lazy_loading',
-      'real_engagement_calculation',
-      'enterprise_analytics'
-    ]
-  });
+// Global middleware
+app.use('*', async (c, next) => {
+  const environment = getEnvironment(c.env);
+  
+  // Add environment headers
+  c.header('X-Environment', environment);
+  c.header('X-Worker-Version', '1.0.0');
+  
+  // Environment-specific logging
+  if (isStaging(c.env)) {
+    console.log(`[${environment.toUpperCase()}] ${c.req.method} ${c.req.url}`);
+    console.log('Headers:', Object.fromEntries(c.req.headers.entries()));
+  }
+  
+  await next();
 });
 
-app.get('/health', (c) => c.json({ status: 'healthy', timestamp: new Date().toISOString() }));
+// CORS configuration
+app.use('*', cors({
+  origin: (origin) => {
+    const env = getEnvironment(c.env);
+    
+    // Allowed origins based on environment
+    const allowedOrigins = isProduction(c.env) 
+      ? [
+          'https://oslira.com',
+          'https://www.oslira.com',
+          'https://app.oslira.com'
+        ]
+      : [
+          'https://osliratest.netlify.app',
+          'https://staging.oslira.com',
+          'http://localhost:3000',
+          'http://localhost:8000',
+          'http://127.0.0.1:8000'
+        ];
+    
+    if (!origin) return '*';
+    return allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  },
+  credentials: true,
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposeHeaders: ['X-Environment', 'X-Worker-Version', 'X-Rate-Limit-Remaining'],
+  maxAge: 86400,
+}));
 
-app.get('/config', async (c) => {
-  try {
-    const { getEnhancedConfigManager } = await import('./services/enhanced-config-manager.js');
-    const configManager = getEnhancedConfigManager(c.env);
+// Compression
+app.use('*', compress());
+
+// Security headers
+app.use('*', secureHeaders());
+
+// Conditional middleware based on environment
+app.use('*', async (c, next) => {
+  const env = getEnvironment(c.env);
+  
+  // Staging-specific middleware
+  if (isStaging(c.env)) {
+    // Add debug headers
+    c.header('X-Debug-Mode', 'true');
+    c.header('X-Request-ID', crypto.randomUUID());
     
-    // Get SUPABASE_ANON_KEY from AWS/Supabase instead of environment
-    const supabaseAnonKey = await configManager.getConfig('SUPABASE_ANON_KEY');
-    
-    if (!supabaseAnonKey) {
-      // Fallback to environment variable if not found in AWS/Supabase
-      const fallbackKey = c.env.SUPABASE_ANON_KEY;
-      if (!fallbackKey) {
-        logger('error', 'SUPABASE_ANON_KEY not found in any source');
-        return c.json({ error: 'Configuration incomplete' }, 500);
+    // Log request body for debugging
+    if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+      try {
+        const body = await c.req.text();
+        console.log('[STAGING] Request body:', body);
+        // Restore body for actual handler
+        c.req = new Request(c.req.url, {
+          method: c.req.method,
+          headers: c.req.headers,
+          body: body
+        });
+      } catch (e) {
+        console.log('[STAGING] Could not log body:', e);
       }
-      return c.json({
-        supabaseUrl: c.env.SUPABASE_URL,
-        supabaseAnonKey: fallbackKey,
-        workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-        configSource: 'environment_fallback',
-        message: 'Using fallback configuration'
-      });
     }
+  }
+  
+  // Production-specific middleware
+  if (isProduction(c.env)) {
+    // Stricter rate limiting
+    const identifier = c.req.header('CF-Connecting-IP') || 'unknown';
+    const rateLimitKey = `rate:${identifier}:${Date.now() / 60000 | 0}`;
+    
+    if (c.env.RATE_LIMIT) {
+      const count = await c.env.RATE_LIMIT.get(rateLimitKey);
+      const currentCount = parseInt(count || '0') + 1;
+      
+      if (currentCount > 100) { // 100 requests per minute in production
+        return c.json({ error: 'Rate limit exceeded' }, 429);
+      }
+      
+      await c.env.RATE_LIMIT.put(rateLimitKey, currentCount.toString(), {
+        expirationTtl: 60
+      });
+      
+      c.header('X-Rate-Limit-Remaining', String(100 - currentCount));
+    }
+  }
+  
+  await next();
+});
 
+// Error handling
+app.onError((err, c) => {
+  const environment = getEnvironment(c.env);
+  
+  console.error(`[${environment}] Error:`, err);
+  
+  // Different error responses based on environment
+  if (isStaging(c.env)) {
     return c.json({
-      supabaseUrl: c.env.SUPABASE_URL,
-      supabaseAnonKey: supabaseAnonKey,
-      workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-      configSource: 'enhanced_config_manager',
-      message: 'Configuration loaded from AWS/Supabase'
-    });
-    
-  } catch (error: any) {
-    logger('error', 'Config endpoint error', { error: error.message });
-    
-    // Final fallback to environment variables
+      error: err.message,
+      stack: err.stack,
+      environment,
+      timestamp: new Date().toISOString(),
+      path: c.req.url,
+      method: c.req.method
+    }, 500);
+  } else {
+    // Production: Hide internal details
     return c.json({
-      supabaseUrl: c.env.SUPABASE_URL,
-      supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
-      workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-      configSource: 'environment_emergency_fallback',
-      message: 'Using emergency fallback configuration'
-    });
+      error: 'Internal server error',
+      reference: crypto.randomUUID(),
+      timestamp: new Date().toISOString()
+    }, 500);
   }
 });
 
-// ===============================================================================
-// LAZY LOADED ENDPOINTS
-// ===============================================================================
-
-// Main analysis endpoints
-app.post('/v1/analyze', async (c) => {
-  const { handleAnalyze } = await import('./handlers/analyze.js');
-  return handleAnalyze(c);
-});
-
-app.post('/v1/bulk-analyze', async (c) => {
-  const { handleBulkAnalyze } = await import('./handlers/bulk-analyze.js');
-  return handleBulkAnalyze(c);
-});
-
-// Legacy redirects
-app.post('/analyze', async (c) => {
-  const { handleLegacyAnalyze } = await import('./handlers/legacy.js');
-  return handleLegacyAnalyze(c);
-});
-
-app.post('/bulk-analyze', async (c) => {
-  const { handleLegacyBulkAnalyze } = await import('./handlers/legacy.js');
-  return handleLegacyBulkAnalyze(c);
-});
-
-// Billing endpoints
-app.post('/stripe-webhook', async (c) => {
-  const { handleStripeWebhook } = await import('./handlers/billing.js');
-  return handleStripeWebhook(c);
-});
-
-app.post('/billing/create-checkout-session', async (c) => {
-  const { handleCreateCheckoutSession } = await import('./handlers/billing.js');
-  return handleCreateCheckoutSession(c);
-});
-
-app.post('/billing/create-portal-session', async (c) => {
-  const { handleCreatePortalSession } = await import('./handlers/billing.js');
-  return handleCreatePortalSession(c);
-});
-
-// Analytics endpoints
-app.get('/analytics/summary', async (c) => {
-  const { handleAnalyticsSummary } = await import('./handlers/analytics.js');
-  return handleAnalyticsSummary(c);
-});
-
-app.post('/ai/generate-insights', async (c) => {
-  const { handleGenerateInsights } = await import('./handlers/analytics.js');
-  return handleGenerateInsights(c);
-});
-
-// Debug endpoints
-app.get('/debug-engagement/:username', async (c) => {
-  const { handleDebugEngagement } = await import('./handlers/debug.js');
-  return handleDebugEngagement(c);
-});
-
-app.get('/debug-scrape/:username', async (c) => {
-  const { handleDebugScrape } = await import('./handlers/debug.js');
-  return handleDebugScrape(c);
-});
-
-app.get('/debug-parsing/:username', async (c) => {
-  const { handleDebugParsing } = await import('./handlers/debug.js');
-  return handleDebugParsing(c);
-});
-
-app.get('/debug-env', async (c) => {
-  const { handleDebugEnv } = await import('./handlers/test.js');
-  return handleDebugEnv(c);
-});
-
-// Test endpoints
-app.get('/test-supabase', async (c) => {
-  const { handleTestSupabase } = await import('./handlers/test.js');
-  return handleTestSupabase(c);
-});
-
-app.get('/test-apify', async (c) => {
-  const { handleTestApify } = await import('./handlers/test.js');
-  return handleTestApify(c);
-});
-
-app.get('/test-openai', async (c) => {
-  const { handleTestOpenAI } = await import('./handlers/test.js');
-  return handleTestOpenAI(c);
-});
-
-app.post('/test-post', async (c) => {
-  const { handleTestPost } = await import('./handlers/test.js');
-  return handleTestPost(c);
-});
-
-// Add these enhanced admin endpoints to your existing routes
-app.post('/admin/migrate-to-aws', async (c) => {
-  const { handleMigrateToAWS } = await import('./handlers/enhanced-admin.js');
-  return handleMigrateToAWS(c);
-});
-
-app.post('/admin/trigger-rotation', async (c) => {
-  const { handleTriggerRotation } = await import('./handlers/enhanced-admin.js');
-  return handleTriggerRotation(c);
-});
-
-// Replace existing admin routes with enhanced versions
-app.post('/admin/update-key', async (c) => {
-  const { handleUpdateApiKey } = await import('./handlers/enhanced-admin.js');
-  return handleUpdateApiKey(c);
-});
-
-app.get('/admin/config-status', async (c) => {
-  const { handleGetConfigStatus } = await import('./handlers/enhanced-admin.js');
-  return handleGetConfigStatus(c);
-});
-
-app.get('/admin/audit-log', async (c) => {
-  const { handleGetAuditLog } = await import('./handlers/enhanced-admin.js');
-  return handleGetAuditLog(c);
-});
-
-app.post('/admin/test-key', async (c) => {
-  const { handleTestApiKey } = await import('./handlers/enhanced-admin.js');
-  return handleTestApiKey(c);
-});
-
-app.post('/admin/get-config', async (c) => {
-  const { handleGetConfig } = await import('./handlers/admin.js');
-  return handleGetConfig(c);
-});
-
-// Updated config endpoint that reads from Supabase
-app.get('/config', (c) => {
-  const env = getEnvironment(c.env); // Your new env helper
+// Health check endpoint
+app.get('/health', async (c) => {
+  const environment = getEnvironment(c.env);
   
   return c.json({
-    supabaseUrl: c.env.SUPABASE_URL,
-    supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
-    workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-    environment: env, // 🔥 ADD THIS
-    configSource: 'supabase_app_config_table',
-    message: 'Frontend should load additional config from Supabase'
-  });
-});
-
-// ===============================================================================
-// ERROR HANDLING
-// ===============================================================================
-
-app.onError((err, c) => {
-  const requestId = generateRequestId();
-  logger('error', 'Unhandled enterprise worker error', { 
-    error: err.message, 
-    stack: err.stack, 
-    requestId 
-  });
-  
-  return c.json(createStandardResponse(false, undefined, 'Internal server error', requestId), 500);
-});
-
-app.notFound(c => {
-  const requestId = generateRequestId();
-  
-  return c.json({
-    success: false,
-    error: 'Endpoint not found',
-    requestId,
+    status: 'healthy',
+    environment,
     timestamp: new Date().toISOString(),
-    version: 'v3.1.0-modular',
-    architecture: 'modular_with_lazy_loading',
-    available_endpoints: [
-      'GET / - Health check',
-      'GET /health - Simple health status',
-      'GET /config - Configuration',
-      'POST /v1/analyze - Main analysis endpoint',
-      'POST /v1/bulk-analyze - Bulk analysis',
-      'POST /billing/* - Stripe endpoints',
-      'GET /analytics/* - Analytics endpoints',
-      'GET /debug-* - Debug endpoints',
-      'GET /test-* - Test endpoints'
-    ]
+    version: '1.0.0',
+    features: {
+      staging: isStaging(c.env),
+      production: isProduction(c.env),
+      debug: isStaging(c.env)
+    }
+  });
+});
+
+// Test endpoint (staging only)
+app.get('/test', async (c) => {
+  if (!isStaging(c.env)) {
+    return c.json({ error: 'Not found' }, 404);
+  }
+  
+  return c.json({
+    message: 'Test endpoint - staging only',
+    environment: getEnvironment(c.env),
+    timestamp: new Date().toISOString(),
+    headers: Object.fromEntries(c.req.headers.entries()),
+    env_vars: {
+      hasOpenAI: !!c.env.OPENAI_API_KEY,
+      hasAnthropic: !!c.env.ANTHROPIC_API_KEY,
+      hasSupabase: !!c.env.SUPABASE_URL,
+      hasRateLimit: !!c.env.RATE_LIMIT,
+      hasConfigCache: !!c.env.CONFIG_CACHE
+    }
+  });
+});
+
+// API Routes - Protected endpoints
+app.post('/api/lead/analyze', validateAuth, rateLimiter, handleLeadAnalysis);
+app.post('/api/lead/research', validateAuth, rateLimiter, handleLeadResearch);
+app.post('/api/email/generate', validateAuth, rateLimiter, handleEmailGeneration);
+app.post('/api/linkedin/generate', validateAuth, rateLimiter, handleLinkedInGeneration);
+
+// Admin endpoints (internal only)
+app.post('/internal/config-changed', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const internalToken = c.env.INTERNAL_API_TOKEN;
+  
+  if (!internalToken || authHeader !== `Bearer ${internalToken}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  
+  return handleConfigChange(c);
+});
+
+// Netlify sync endpoint
+app.post('/internal/netlify-sync', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const internalToken = c.env.INTERNAL_API_TOKEN;
+  
+  if (!internalToken || authHeader !== `Bearer ${internalToken}`) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  
+  return handleNetlifySync(c);
+});
+
+// Environment-specific info endpoint
+app.get('/info', async (c) => {
+  const environment = getEnvironment(c.env);
+  
+  const baseInfo = {
+    environment,
+    api_version: '1.0.0',
+    timestamp: new Date().toISOString()
+  };
+  
+  // Add more details in staging
+  if (isStaging(c.env)) {
+    return c.json({
+      ...baseInfo,
+      debug: true,
+      endpoints: [
+        '/health',
+        '/test',
+        '/info',
+        '/api/lead/analyze',
+        '/api/lead/research',
+        '/api/email/generate',
+        '/api/linkedin/generate'
+      ],
+      cors_origins: [
+        'https://osliratest.netlify.app',
+        'http://localhost:3000',
+        'http://localhost:8000'
+      ]
+    });
+  }
+  
+  return c.json(baseInfo);
+});
+
+// 404 handler
+app.notFound((c) => {
+  const environment = getEnvironment(c.env);
+  
+  return c.json({
+    error: 'Not found',
+    path: c.req.url,
+    environment,
+    suggestion: isStaging(c.env) ? 'Check /info for available endpoints' : undefined
   }, 404);
 });
 
+// Export the app
 export default app;
