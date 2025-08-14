@@ -1,0 +1,297 @@
+name: Sync Workers (Staging → Production)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "SYNC" to confirm staging → production sync'
+        required: true
+        default: ''
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+  
+  # Automatic sync on staging success (optional)
+  workflow_run:
+    workflows: ["Deploy Staging Cloudflare Worker"]
+    types:
+      - completed
+    branches:
+      - staging
+
+jobs:
+  # ============================================================================
+  # VALIDATION JOB
+  # ============================================================================
+  validate:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'SYNC' || github.event.workflow_run.conclusion == 'success'
+    
+    outputs:
+      should_sync: ${{ steps.check.outputs.should_sync }}
+      source_env: ${{ steps.check.outputs.source_env }}
+      target_env: ${{ steps.check.outputs.target_env }}
+    
+    steps:
+      - name: Validate sync request
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ github.event.inputs.confirm }}" != "SYNC" ]]; then
+              echo "❌ Confirmation failed. Type 'SYNC' to confirm."
+              exit 1
+            fi
+            echo "should_sync=true" >> $GITHUB_OUTPUT
+            echo "source_env=staging" >> $GITHUB_OUTPUT
+            echo "target_env=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "✅ Manual sync confirmed"
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "should_sync=true" >> $GITHUB_OUTPUT
+            echo "source_env=staging" >> $GITHUB_OUTPUT
+            echo "target_env=production" >> $GITHUB_OUTPUT
+            echo "✅ Automatic sync triggered by staging deployment"
+          else
+            echo "should_sync=false" >> $GITHUB_OUTPUT
+            echo "❌ Invalid trigger"
+          fi
+
+  # ============================================================================
+  # SYNC JOB
+  # ============================================================================
+  sync:
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should_sync == 'true'
+    
+    environment: 
+      name: ${{ needs.validate.outputs.target_env }}
+      url: ${{ needs.validate.outputs.target_env == 'production' && 'https://api.oslira.com' || 'https://api-staging.oslira.com' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for comparison
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'cloudflare-workers/package-lock.json'
+          
+      - name: Install dependencies
+        run: |
+          cd cloudflare-workers
+          npm ci
+          
+      - name: Verify source environment
+        run: |
+          cd cloudflare-workers
+          echo "🔍 Checking ${{ needs.validate.outputs.source_env }} environment..."
+          
+          # Test staging worker health
+          if [[ "${{ needs.validate.outputs.source_env }}" == "staging" ]]; then
+            STAGING_URL="https://api-staging.oslira.com"
+            echo "Testing staging worker at $STAGING_URL"
+            
+            HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/health" || echo "000")
+            if [[ "$HEALTH_CHECK" != "200" ]]; then
+              echo "❌ Staging worker health check failed (HTTP $HEALTH_CHECK)"
+              exit 1
+            fi
+            echo "✅ Staging worker is healthy"
+          fi
+          
+      - name: Create sync summary
+        id: summary
+        run: |
+          cd cloudflare-workers
+          
+          echo "## 🔄 Worker Sync Summary" > sync_summary.md
+          echo "" >> sync_summary.md
+          echo "**Source:** ${{ needs.validate.outputs.source_env }}" >> sync_summary.md
+          echo "**Target:** ${{ needs.validate.outputs.target_env }}" >> sync_summary.md
+          echo "**Triggered by:** ${{ github.event_name }}" >> sync_summary.md
+          echo "**Time:** $(date -u)" >> sync_summary.md
+          echo "" >> sync_summary.md
+          
+          # Check for differences
+          if git diff --quiet HEAD~1 HEAD -- src/; then
+            echo "**Changes:** No source code changes detected" >> sync_summary.md
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          else
+            echo "**Changes:** Source code changes detected" >> sync_summary.md
+            echo "" >> sync_summary.md
+            echo "### Modified Files:" >> sync_summary.md
+            git diff --name-only HEAD~1 HEAD -- src/ | sed 's/^/- /' >> sync_summary.md
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "" >> sync_summary.md
+          echo "### Configuration:" >> sync_summary.md
+          echo "- Environment: ${{ needs.validate.outputs.target_env }}" >> sync_summary.md
+          echo "- Worker Name: oslira-api${{ needs.validate.outputs.target_env == 'staging' && '-staging' || '' }}" >> sync_summary.md
+          echo "- Route: api${{ needs.validate.outputs.target_env == 'staging' && '-staging' || '' }}.oslira.com/*" >> sync_summary.md
+          
+          cat sync_summary.md
+          
+      - name: Deploy to target environment
+        run: |
+          cd cloudflare-workers
+          
+          echo "🚀 Deploying to ${{ needs.validate.outputs.target_env }}..."
+          
+          if [[ "${{ needs.validate.outputs.target_env }}" == "production" ]]; then
+            npx wrangler deploy --env production
+          else
+            npx wrangler deploy --env staging
+          fi
+          
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          
+      - name: Verify deployment
+        id: verify
+        run: |
+          cd cloudflare-workers
+          
+          # Determine target URL
+          if [[ "${{ needs.validate.outputs.target_env }}" == "production" ]]; then
+            TARGET_URL="https://api.oslira.com"
+          else
+            TARGET_URL="https://api-staging.oslira.com"
+          fi
+          
+          echo "🔍 Verifying deployment at $TARGET_URL"
+          
+          # Wait for deployment to propagate
+          sleep 30
+          
+          # Health check
+          HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "$TARGET_URL/health" || echo "000")
+          if [[ "$HEALTH_CHECK" != "200" ]]; then
+            echo "❌ Deployment verification failed (HTTP $HEALTH_CHECK)"
+            echo "verification_status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Info endpoint check
+          INFO_CHECK=$(curl -s "$TARGET_URL/info" | jq -r '.environment // "unknown"')
+          if [[ "$INFO_CHECK" != "${{ needs.validate.outputs.target_env }}" ]]; then
+            echo "❌ Environment mismatch: expected ${{ needs.validate.outputs.target_env }}, got $INFO_CHECK"
+            echo "verification_status=failed" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          echo "✅ Deployment verified successfully"
+          echo "verification_status=success" >> $GITHUB_OUTPUT
+          echo "target_url=$TARGET_URL" >> $GITHUB_OUTPUT
+          
+      - name: Update sync summary with results
+        if: always()
+        run: |
+          cd cloudflare-workers
+          
+          echo "" >> sync_summary.md
+          echo "### 🎯 Results:" >> sync_summary.md
+          
+          if [[ "${{ steps.verify.outputs.verification_status }}" == "success" ]]; then
+            echo "- ✅ Deployment successful" >> sync_summary.md
+            echo "- ✅ Health check passed" >> sync_summary.md
+            echo "- ✅ Environment verification passed" >> sync_summary.md
+            echo "- 🔗 URL: ${{ steps.verify.outputs.target_url }}" >> sync_summary.md
+          else
+            echo "- ❌ Deployment failed" >> sync_summary.md
+            echo "- ⚠️ Manual intervention required" >> sync_summary.md
+          fi
+          
+          echo "" >> sync_summary.md
+          echo "---" >> sync_summary.md
+          echo "*Sync completed at $(date -u)*" >> sync_summary.md
+          
+          cat sync_summary.md
+          
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "🎉 Worker sync completed successfully!"
+          echo "Source: ${{ needs.validate.outputs.source_env }}"
+          echo "Target: ${{ needs.validate.outputs.target_env }}"
+          echo "URL: ${{ steps.verify.outputs.target_url }}"
+          
+      - name: Notify on failure  
+        if: failure()
+        run: |
+          echo "💥 Worker sync failed!"
+          echo "Source: ${{ needs.validate.outputs.source_env }}"
+          echo "Target: ${{ needs.validate.outputs.target_env }}"
+          echo "Check logs for details."
+          
+  # ============================================================================
+  # ROLLBACK JOB (runs only on failure)
+  # ============================================================================
+  rollback:
+    runs-on: ubuntu-latest
+    needs: [validate, sync]
+    if: failure() && needs.validate.outputs.target_env == 'production'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'cloudflare-workers/package-lock.json'
+          
+      - name: Install dependencies
+        run: |
+          cd cloudflare-workers
+          npm ci
+          
+      - name: Rollback to previous version
+        run: |
+          cd cloudflare-workers
+          
+          echo "🔄 Rolling back production deployment..."
+          
+          # Get previous commit
+          PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
+          echo "Rolling back to commit: $PREVIOUS_COMMIT"
+          
+          # Checkout previous version
+          git checkout $PREVIOUS_COMMIT -- src/
+          
+          # Deploy previous version
+          npx wrangler deploy --env production
+          
+          echo "✅ Rollback completed"
+          
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          
+      - name: Verify rollback
+        run: |
+          echo "🔍 Verifying rollback..."
+          
+          # Wait for deployment
+          sleep 30
+          
+          # Health check
+          HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "https://api.oslira.com/health" || echo "000")
+          if [[ "$HEALTH_CHECK" == "200" ]]; then
+            echo "✅ Rollback verified - production is healthy"
+          else
+            echo "❌ Rollback verification failed"
+            exit 1
+          fi
