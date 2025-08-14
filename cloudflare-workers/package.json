@@ -18,8 +18,8 @@
     "secrets:production": "wrangler secret list --env production"
   },
   "dependencies": {
-    "hono": "^4.8.9",
-    "@supabase/supabase-js": "^2.38.0"
+    "@supabase/supabase-js": "^2.55.0",
+    "hono": "^4.8.9"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",
@@ -27,7 +27,7 @@
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "typescript": "^5.0.0",
-    "wrangler": "^3.0.0"
+    "wrangler": "^4.30.0"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -63,5 +63,5 @@
       ".wrangler/",
       "node_modules/"
     ]
-  },
+  }
 }
