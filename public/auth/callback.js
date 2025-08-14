@@ -217,17 +217,12 @@ function showError(message) {
     }
     
     // Show debug info in staging
-    if (envConfig && envConfig.ENV === 'staging') {
-        const debugInfo = document.getElementById('debug-info');
-        if (debugInfo) {
-            debugInfo.style.display = 'block';
-            debugInfo.innerHTML = `
-                <strong>Debug Info (Staging Only):</strong><br>
-                Environment: ${envConfig.ENV}<br>
-                URL: ${window.location.href}<br>
-                Origin: ${window.location.origin}<br>
-                Timestamp: ${new Date().toISOString()}
-            `;
-        }
+// Minimal debug info for staging only
+if (envConfig && envConfig.ENV === 'staging' && window.location.hostname === 'localhost') {
+    const debugInfo = document.getElementById('debug-info');
+    if (debugInfo) {
+        debugInfo.style.display = 'block';
+        debugInfo.innerHTML = `<strong>Debug Mode Active</strong>`;
     }
+}
 }

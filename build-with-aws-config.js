@@ -104,10 +104,16 @@ console.log('✅ Configuration loaded from AWS + Supabase');
     }
 
     const configPath = path.join(publicDir, 'env-config.js');
-    fs.writeFileSync(configPath, configContent);
-    
-    console.log('✅ Build completed successfully');
-    console.log('📁 Created:', configPath);
+
+try {
+  fs.writeFileSync(configPath, configContent);
+  console.log('✅ Build completed successfully');
+  console.log('📁 Created:', configPath);
+} catch (writeError) {
+  console.error('❌ Failed to write config file:', writeError.message);
+  console.log('🔧 Check file permissions and disk space');
+  process.exit(1);
+}
     console.log('📊 Configuration source: AWS Secrets Manager + Supabase app_config table');
     console.log('🔄 To update SUPABASE_SERVICE_ROLE: Use AWS console or admin panel');
     

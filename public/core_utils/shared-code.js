@@ -894,17 +894,29 @@ function formatNumber(number, options = {}) {
 }
 
 function copyToClipboard(text) {
-    if (navigator.clipboard) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
         return navigator.clipboard.writeText(text);
     } else {
         // Fallback for older browsers
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        document.body.appendChild(textArea);
-        textArea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textArea);
-        return Promise.resolve();
+        return new Promise((resolve, reject) => {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (successful) {
+                    resolve();
+                } else {
+                    reject(new Error('Copy command failed'));
+                }
+            } catch (error) {
+                reject(error);
+            }
+        });
     }
 }
 
@@ -1507,20 +1519,12 @@ window.OsliraApp.errorHandler = {
             user: window.OsliraApp.user?.id || 'anonymous'
         };
         
+        // Always maintain size limit
+        if (this.errors.length >= this.maxErrors) {
+            this.errors.shift(); // Remove oldest error
+        }
+        
         this.errors.push(errorInfo);
-        
-        // Keep only recent errors
-        if (this.errors.length > this.maxErrors) {
-            this.errors = this.errors.slice(-this.maxErrors);
-        }
-        
-        console.error('🚨 Error logged:', errorInfo);
-        
-        // Send to error reporting service in production
-        if (window.location.hostname !== 'localhost') {
-            this.reportError(errorInfo);
-        }
-    },
     
     reportError: function(errorInfo) {
         // This would integrate with your error reporting service
@@ -1617,7 +1621,7 @@ if (document.readyState === 'loading') {
 // 16. DEBUG UTILITIES (Development only)
 // =============================================================================
 
-if (window.location.hostname === 'localhost' || window.location.hostname.includes('netlify')) {
+if (window.location.hostname === 'localhost') {
     window.OsliraApp.debug = {
         logState: function() {
             console.group('🔍 Oslira App State');
@@ -1631,18 +1635,6 @@ if (window.location.hostname === 'localhost' || window.location.hostname.include
             console.groupEnd();
         },
         
-        logPerformance: function() {
-            console.group('⏱️ Performance Report');
-            console.log(window.OsliraApp.performance.getReport());
-            console.groupEnd();
-        },
-        
-        logErrors: function() {
-            console.group('🚨 Error Report');
-            console.log(window.OsliraApp.errorHandler.getErrorReport());
-            console.groupEnd();
-        },
-        
         clearCache: function() {
             window.OsliraApp.cache = {
                 leads: [],
@@ -1651,10 +1643,6 @@ if (window.location.hostname === 'localhost' || window.location.hostname.include
             };
             localStorage.removeItem('selectedBusinessId');
             console.log('🧹 Cache cleared');
-        },
-        
-        simulateError: function() {
-            throw new Error('Simulated error for testing');
         },
         
         testApi: async function() {

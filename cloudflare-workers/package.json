@@ -18,8 +18,8 @@
     "secrets:production": "wrangler secret list --env production"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.55.0",
-    "hono": "^4.8.9"
+    "hono": "^4.8.9",
+    "@supabase/supabase-js": "^2.38.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",
@@ -27,7 +27,7 @@
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "typescript": "^5.0.0",
-    "wrangler": "^4.30.0"
+    "wrangler": "^3.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -64,35 +64,4 @@
       "node_modules/"
     ]
   },
-  "typescript": {
-    "compilerOptions": {
-      "target": "ES2022",
-      "lib": [
-        "ES2022"
-      ],
-      "module": "ESNext",
-      "moduleResolution": "bundler",
-      "allowSyntheticDefaultImports": true,
-      "esModuleInterop": true,
-      "allowJs": true,
-      "checkJs": false,
-      "declaration": true,
-      "declarationMap": true,
-      "skipLibCheck": true,
-      "strict": true,
-      "noEmit": true,
-      "isolatedModules": true,
-      "types": [
-        "@cloudflare/workers-types"
-      ]
-    },
-    "include": [
-      "src/**/*"
-    ],
-    "exclude": [
-      "node_modules",
-      "dist",
-      ".wrangler"
-    ]
-  }
 }
