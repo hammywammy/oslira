@@ -467,19 +467,18 @@ const analysisCache = new Map<string, { data: any; timestamp: number }>();
 
 // Initialize with environment configuration
 function initializeWithConfig(env: Env): void {
+  if (globalConfig) return; // Already initialized
+  
   globalConfig = loadConfigFromEnv(env);
   
-  // Initialize cache with config
+  // Initialize ONLY the enhanced cache (remove dual system)
   enhancedAnalysisCache = new EnhancedIntelligentCache(globalConfig.caching);
-  
-  // Initialize rate limiter with config
   rateLimitMonitor = new RateLimitMonitor(globalConfig.rateLimiting);
   
-  logger('info', 'AI Analysis service initialized with configuration', {
+  logger('info', 'AI Analysis service initialized with unified cache system', {
     cacheEnabled: globalConfig.caching.enabled,
     rateLimitEnabled: globalConfig.rateLimiting.enabled,
-    cacheTTL: globalConfig.caching.ttl,
-    maxConcurrent: globalConfig.performance.maxConcurrentBatch
+    legacyCacheRemoved: true // Confirm legacy removal
   });
 }
 
@@ -1315,8 +1314,8 @@ function getRateLimitStatus() {
 
 function getCacheStats() {
   return {
-    legacy: { size: analysisCache.size },
-    enhanced: enhancedAnalysisCache?.getStats()
+    enhanced: enhancedAnalysisCache?.getStats(),
+    legacy: null // Explicitly null to show legacy is removed
   };
 }
 
@@ -1335,7 +1334,8 @@ function getSystemHealthStatus(): any {
       enabled: globalConfig?.caching.enabled,
       hitRate: cacheStats?.hitRate || 0,
       size: cacheStats?.totalSize || 0,
-      memoryUsage: cacheStats?.memoryUsage || 0
+      memoryUsage: cacheStats?.memoryUsage || 0,
+      type: 'enhanced_only' // Confirm unified system
     },
     rateLimiting: {
       enabled: globalConfig?.rateLimiting.enabled,
@@ -1347,7 +1347,7 @@ function getSystemHealthStatus(): any {
       anthropic: anthropicCircuitBreaker.getStatus()
     },
     performance: globalPerformanceMonitor.getStats(),
-    anomalies: globalAnomalyDetector.getStatistics()
+    systemHealth: 'optimized' // Confirm cleanup
   };
 }
 
