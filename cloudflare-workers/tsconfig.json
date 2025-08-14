@@ -1,5 +1,5 @@
 # Create the proper tsconfig.json file
-@"
+$tsconfigContent = @'
 {
   "compilerOptions": {
     "target": "ES2022",
@@ -29,3 +29,6 @@
     ".wrangler"
   ]
 }
+'@
+
+$tsconfigContent | Out-File -FilePath "tsconfig.json" -Encoding UTF8
