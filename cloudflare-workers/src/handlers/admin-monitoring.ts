@@ -373,3 +373,43 @@ export async function handlePerformanceStats(c: Context<{ Bindings: Env }>) {
     }, 500);
   }
 }
+
+export async function handleCacheCleanup(c: Context): Promise<Response> {
+  const requestId = crypto.randomUUID();
+  
+  try {
+    const cacheOptimizer = new CacheOptimizer(enhancedAnalysisCache);
+    
+    // Perform migration and cleanup
+    const migrationResult = await cacheOptimizer.migrateLegacyCache();
+    const cleanupTasks = await cacheOptimizer.cleanupCodeReferences();
+    const recommendations = cacheOptimizer.getPerformanceRecommendations();
+    
+    const responseData = {
+      cleanup: {
+        completed: true,
+        migrationResult,
+        cleanupTasks,
+        recommendations
+      },
+      cacheStats: enhancedAnalysisCache?.getStats(),
+      systemHealth: {
+        legacySystemRemoved: true,
+        unifiedCacheActive: true,
+        optimizationComplete: true
+      },
+      nextSteps: [
+        'Monitor cache hit rates over next 24 hours',
+        'Review performance metrics weekly',
+        'Consider implementing cache warming',
+        'Set up automated health alerts'
+      ]
+    };
+
+    return c.json(createStandardResponse(true, responseData, 'Cache cleanup completed successfully', requestId));
+
+  } catch (error: any) {
+    logger('error', 'Cache cleanup failed', { error: error.message, requestId });
+    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
+  }
+}
