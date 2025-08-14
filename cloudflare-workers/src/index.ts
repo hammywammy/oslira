@@ -5,8 +5,9 @@ import { secureHeaders } from 'hono/secure-headers';
 import { logger } from 'hono/logger';
 import { getEnvironment, isProduction, isStaging } from './utils/env';
 
-import { handleConfigChange } from './handlers/admin';
-import { handleNetlifySync } from './handlers/netlify-sync';
+// Fixed imports - use the actual exported function names
+import { handleUpdateApiKey } from './handlers/admin.js';
+import { handleConfigChanged } from './handlers/netlify-sync.js';
 
 import { adminAuthMiddleware } from './middleware/admin-auth.js';
 import { 
