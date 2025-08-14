@@ -44,15 +44,9 @@
       "import": "./src/index.ts"
     }
   },
-  "build": {
-    "external": [
-      "@supabase/supabase-js"
-    ],
-    "target": "es2022",
-    "format": "esm",
-    "minify": true,
-    "sourcemap": true
-  },
+  "external": [
+    "@supabase/supabase-js"
+  ],
   "eslintConfig": {
     "extends": [
       "@typescript-eslint/recommended"
