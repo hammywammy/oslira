@@ -1,6 +1,7 @@
 name = "ai-outreach-api"
 main = "src/index.ts"
 compatibility_date = "2025-08-01"
+compatibility_flags = ["nodejs_compat"]
 
 # Default/Production configuration
 [vars]
@@ -38,6 +39,7 @@ zone_name = "oslira.com"
 [env.staging]
 name = "oslira-api-stg"
 workers_dev = false
+compatibility_flags = ["nodejs_compat"]
 
 [env.staging.vars]
 APP_ENV = "staging"
@@ -74,6 +76,7 @@ zone_name = "oslira.com"
 [env.production]
 name = "ai-outreach-api"
 workers_dev = false
+compatibility_flags = ["nodejs_compat"]
 
 [env.production.vars]
 APP_ENV = "production"
