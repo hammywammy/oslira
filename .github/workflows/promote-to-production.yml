@@ -1,0 +1,35 @@
+name: Promote Staging to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "PROMOTE" to confirm promotion to production'
+        required: true
+        default: ''
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'PROMOTE'
+    
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+      - name: Merge staging into main
+        run: |
+          git fetch origin staging
+          git merge origin/staging -m "Promote staging to production"
+          
+      - name: Push to main
+        run: |
+          git push origin main
