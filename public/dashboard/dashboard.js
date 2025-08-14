@@ -2652,18 +2652,113 @@ class Dashboard {
   }
 
   async bulkDeleteLeads() {
-    if (this.selectedLeads.size === 0) {
-      Alert.warning({ message: "No leads selected for deletion" });
-      return;
-    }
-
-    if (!confirm(`Delete ${this.selectedLeads.size} selected leads?`)) {
-      return;
-    }
-
-    // TODO: Implement bulk delete
-    Alert.info({ message: "Bulk delete functionality coming soon!" });
+  if (this.selectedLeads.size === 0) {
+    Alert.warning({ message: "No leads selected for deletion" });
+    return;
   }
+
+  // Enhanced confirmation dialog
+  const leadCount = this.selectedLeads.size;
+  const leadNames = Array.from(this.selectedLeads)
+    .slice(0, 3)
+    .map(id => {
+      const lead = this.allLeads.find(l => l.id === id);
+      return lead ? lead.username : 'Unknown';
+    })
+    .join(', ');
+
+  const displayNames = leadCount > 3 ? `${leadNames} and ${leadCount - 3} more` : leadNames;
+
+  const confirmed = confirm(
+    `Are you sure you want to delete ${leadCount} lead${leadCount !== 1 ? 's' : ''}?\n\n` +
+    `This will delete: ${displayNames}\n\n` +
+    `This action cannot be undone and will also delete all associated analysis data.`
+  );
+
+  if (!confirmed) return;
+
+  const bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+  const originalText = bulkDeleteBtn.innerHTML;
+
+  try {
+    this.bulkOperationInProgress = true;
+    bulkDeleteBtn.innerHTML = `<div class="loading-spinner"></div> Deleting...`;
+    bulkDeleteBtn.disabled = true;
+
+    const selectedIds = Array.from(this.selectedLeads);
+    const supabase = window.OsliraApp.supabase;
+
+    // Delete in batches to avoid timeout
+    const batchSize = 10;
+    let deletedCount = 0;
+    let errors = [];
+
+    for (let i = 0; i < selectedIds.length; i += batchSize) {
+      const batch = selectedIds.slice(i, i + batchSize);
+      
+      try {
+        // First delete analysis data
+        const { error: analysisError } = await supabase
+          .from('lead_analyses')
+          .delete()
+          .in('lead_id', batch);
+
+        if (analysisError) {
+          console.warn('Error deleting analysis data:', analysisError);
+        }
+
+        // Then delete leads
+        const { error: leadsError } = await supabase
+          .from('leads')
+          .delete()
+          .in('id', batch);
+
+        if (leadsError) {
+          throw leadsError;
+        }
+
+        deletedCount += batch.length;
+
+        // Update progress
+        bulkDeleteBtn.innerHTML = `<div class="loading-spinner"></div> Deleted ${deletedCount}/${selectedIds.length}...`;
+
+      } catch (error) {
+        console.error(`Batch delete error for batch ${i / batchSize + 1}:`, error);
+        errors.push(`Batch ${i / batchSize + 1}: ${error.message}`);
+      }
+    }
+
+    // Show results
+    if (errors.length === 0) {
+      Alert.success({
+        message: `Successfully deleted ${deletedCount} lead${deletedCount !== 1 ? 's' : ''}`,
+        timeoutMs: 5000
+      });
+    } else {
+      Alert.warning({
+        title: `Partially Completed`,
+        message: `Deleted ${deletedCount} of ${selectedIds.length} leads`,
+        details: `Some errors occurred: ${errors.slice(0, 3).join('; ')}`,
+        suggestions: ['Try again for failed items', 'Check your internet connection']
+      });
+    }
+
+    // Clear selection and refresh
+    this.selectedLeads.clear();
+    await this.loadDashboardData();
+
+  } catch (error) {
+    console.error("Bulk deletion failed:", error);
+    Alert.error("Failed to delete leads", {
+      details: error.message,
+      actions: [{ label: "Retry", action: "retry" }],
+    });
+  } finally {
+    this.bulkOperationInProgress = false;
+    bulkDeleteBtn.innerHTML = originalText;
+    bulkDeleteBtn.disabled = false;
+  }
+}
 
   clearSelection() {
     this.selectedLeads.clear();
@@ -2700,8 +2795,13 @@ class Dashboard {
   }
 
   exportLeads() {
-    Alert.info({ message: "Export functionality coming soon!" });
+  if (this.selectedLeads.size === 0) {
+    Alert.warning({ message: "No leads selected for export" });
+    return;
   }
+  
+  this.bulkExportLeads();
+}
 
   // ===============================================================================
   // INTERACTION METHODS FOR BUTTONS AND ACTIONS
@@ -3810,10 +3910,110 @@ class Dashboard {
       window.OsliraApp?.showMessage("Default business profile saved!", "success");
     }
   }
+  
+  async showExportDialog() {
+  return new Promise((resolve) => {
+    const dialog = document.createElement('div');
+    dialog.className = 'modal';
+    dialog.style.display = 'flex';
+    dialog.innerHTML = `
+      <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+          <h3>Export Format</h3>
+          <button class="modal-close" onclick="this.closest('.modal').remove(); resolve(null);">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 20px;">Choose your export format:</p>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="export-option" data-format="csv">📊 CSV (Spreadsheet)</button>
+            <button class="export-option" data-format="json">📝 JSON (Developer)</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    dialog.querySelectorAll('.export-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const format = btn.dataset.format;
+        dialog.remove();
+        resolve(format);
+      });
+    });
+
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) {
+        dialog.remove();
+        resolve(null);
+      }
+    });
+  });
+}
+
+  async generateCSVExport(leads) {
+  const headers = [
+    "Username", "Platform", "Score", "Analysis Type", "Followers", 
+    "Date Analyzed", "Profile URL", "Bio"
+  ];
+
+  const rows = leads.map(lead => [
+    lead.username,
+    lead.platform || "Instagram",
+    lead.score || 0,
+    lead.analysis_type || "light",
+    lead.followers_count || 0,
+    new Date(lead.created_at).toLocaleDateString(),
+    lead.profile_url || `https://instagram.com/${lead.username}`,
+    (lead.bio || '').replace(/"/g, '""')
+  ].map(field => `"${field}"`).join(','));
+
+  return [headers.join(','), ...rows].join('\n');
+}
+
+// ADD: JSON generation  
+async generateJSONExport(leads) {
+  const exportData = {
+    metadata: {
+      exportDate: new Date().toISOString(),
+      totalLeads: leads.length,
+      version: '1.0'
+    },
+    leads: leads.map(lead => ({
+      username: lead.username,
+      platform: lead.platform || 'Instagram',
+      score: lead.score || 0,
+      analysisType: lead.analysis_type || 'light',
+      followers: lead.followers_count || 0,
+      dateAnalyzed: lead.created_at,
+      profileUrl: lead.profile_url || `https://instagram.com/${lead.username}`,
+      bio: lead.bio,
+      analysis: lead.lead_analyses?.[0] || {}
+    }))
+  };
+
+  return JSON.stringify(exportData, null, 2);
+}
+
+// ADD: File download helper
+downloadFile(data, filename, mimeType) {
+  const blob = new Blob([data], { type: mimeType });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.style.display = "none";
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
   // ===============================================================================
   // BULK OPERATIONS
   // ===============================================================================
 
+  
   async bulkDeleteLeads() {
     if (this.selectedLeads.size === 0) {
       Alert.warning({ message: "No leads selected for deletion" });
@@ -3887,60 +4087,54 @@ class Dashboard {
     }
   }
 
-  async bulkExportLeads() {
-    if (this.selectedLeads.size === 0) {
-      Alert.warning({ message: "No leads selected for export" });
-      return;
-    }
-
-    try {
-      const selectedLeadData = this.allLeads.filter((lead) => this.selectedLeads.has(lead.id));
-
-      // Create CSV content
-      const headers = [
-        "Username",
-        "Platform",
-        "Score",
-        "Analysis Type",
-        "Followers",
-        "Date Analyzed",
-      ];
-      const csvContent = [
-        headers.join(","),
-        ...selectedLeadData.map((lead) =>
-          [
-            lead.username,
-            lead.platform || "Instagram",
-            lead.score || 0,
-            lead.analysis_type || "light",
-            lead.followers_count || 0,
-            new Date(lead.created_at).toLocaleDateString(),
-          ].join(",")
-        ),
-      ].join("\n");
-
-      // Download CSV
-      const blob = new Blob([csvContent], { type: "text/csv" });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.style.display = "none";
-      a.href = url;
-      a.download = `oslira-leads-${new Date().toISOString().split("T")[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-
-      Alert.success({
-        message: `Exported ${this.selectedLeads.size} leads successfully`,
-      });
-    } catch (error) {
-      console.error("Export failed:", error);
-      Alert.error("Export failed", {
-        details: error.message,
-        actions: [{ label: "Try Again", action: "retry" }],
-      });
-    }
+ async bulkExportLeads() {
+  if (this.selectedLeads.size === 0) {
+    Alert.warning({ message: "No leads selected for export" });
+    return;
   }
+
+  try {
+    const selectedLeadData = this.allLeads.filter((lead) => this.selectedLeads.has(lead.id));
+    
+    // Show format selection
+    const format = await this.showExportDialog();
+    if (!format) return;
+
+    Alert.info({
+      message: `Preparing ${format.toUpperCase()} export...`,
+      timeoutMs: 3000
+    });
+
+    let exportData;
+    let filename;
+    let mimeType;
+
+    if (format === 'csv') {
+      exportData = await this.generateCSVExport(selectedLeadData);
+      filename = `oslira-leads-${new Date().toISOString().split("T")[0]}.csv`;
+      mimeType = 'text/csv';
+    } else if (format === 'json') {
+      exportData = await this.generateJSONExport(selectedLeadData);
+      filename = `oslira-leads-${new Date().toISOString().split("T")[0]}.json`;
+      mimeType = 'application/json';
+    }
+
+    // Download the file
+    this.downloadFile(exportData, filename, mimeType);
+
+    Alert.success({
+      message: `Exported ${this.selectedLeads.size} leads successfully`,
+      timeoutMs: 5000
+    });
+
+  } catch (error) {
+    console.error("Export failed:", error);
+    Alert.error("Export failed", {
+      details: error.message,
+      actions: [{ label: "Try Again", action: "retry" }],
+    });
+  }
+}
 
   exportLeadData(leadId) {
     const lead = this.allLeads.find((l) => l.id === leadId);
@@ -3955,10 +4149,92 @@ class Dashboard {
     Alert.info({ message: "Individual lead export coming soon!" });
   }
 
-  rerunAnalysis(leadId) {
-    console.log("Rerunning analysis for lead:", leadId);
-    Alert.info({ message: "Rerun analysis functionality coming soon!" });
+  async rerunAnalysis(leadId) {
+  const lead = this.allLeads.find(l => l.id === leadId);
+  if (!lead) {
+    Alert.error("Lead not found");
+    return;
   }
+
+  const confirmed = confirm(
+    `Re-analyze ${lead.username}?\n\n` +
+    `This will run a fresh analysis and may use credits.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const button = document.querySelector(`[onclick*="rerunAnalysis('${leadId}')"]`);
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<div class="loading-spinner"></div> Analyzing...';
+    }
+
+    Alert.info({
+      message: `Starting fresh analysis for ${lead.username}...`,
+      timeoutMs: 3000
+    });
+
+    const response = await fetch(`${window.OsliraApp.config.WORKER_URL}/api/lead/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${window.OsliraApp.session?.access_token}`
+      },
+      body: JSON.stringify({
+        profile_url: lead.profile_url || `https://instagram.com/${lead.username}`,
+        username: lead.username,
+        analysis_type: lead.analysis_type || 'light',
+        business_id: window.OsliraApp.user?.business_id || 'default',
+        user_id: window.OsliraApp.user?.id,
+        reanalysis: true
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || `Analysis failed with status ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.success) {
+      Alert.success({
+        message: `Successfully re-analyzed ${lead.username}!`,
+        timeoutMs: 5000
+      });
+      await this.refreshLeadData(leadId);
+    } else {
+      throw new Error(result.error || 'Analysis failed');
+    }
+
+  } catch (error) {
+    console.error('Re-analysis failed:', error);
+    
+    let errorMessage = 'Re-analysis failed';
+    let suggestions = ['Try again later', 'Check your internet connection'];
+
+    if (error.message.includes('credits')) {
+      errorMessage = 'Insufficient credits for re-analysis';
+      suggestions = ['Purchase more credits', 'Try a lighter analysis'];
+    } else if (error.message.includes('rate limit')) {
+      errorMessage = 'Rate limit exceeded';
+      suggestions = ['Wait a few minutes and try again'];
+    }
+
+    Alert.error(errorMessage, {
+      details: error.message,
+      suggestions: suggestions,
+      actions: [{ label: 'Try Again', action: 'retry' }]
+    });
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.innerHTML = '🔄 Re-analyze';
+    }
+  }
+}
 
   // ===============================================================================
   // UTILITY METHODS
