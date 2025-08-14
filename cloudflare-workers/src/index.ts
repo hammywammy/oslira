@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import { compress } from 'hono/compress';
 import { secureHeaders } from 'hono/secure-headers';
 import { logger } from 'hono/logger';
-import { getEnvironment, isProduction, isStaging } from './utils/env'; 
+import { getEnvironment, isProduction, isStaging } from './utils/env';
 
 // Fixed imports - use the actual exported function names
 import { handleUpdateApiKey } from './handlers/admin.js';
@@ -78,7 +78,15 @@ app.use('*', async (c, next) => {
   // Environment-specific logging
   if (isStaging(c.env)) {
     console.log(`[${environment.toUpperCase()}] ${c.req.method} ${c.req.url}`);
-    console.log('Headers:', Object.fromEntries(c.req.headers.entries()));
+    
+    // Safe header logging
+    try {
+      if (c.req.headers && typeof c.req.headers.entries === 'function') {
+        console.log('Headers:', Object.fromEntries(c.req.headers.entries()));
+      }
+    } catch (error) {
+      console.log('Headers: [unavailable]');
+    }
   }
   
   await next();
@@ -87,22 +95,16 @@ app.use('*', async (c, next) => {
 // CORS configuration
 app.use('*', cors({
   origin: (origin) => {
-    const environment = getEnvironment(c.env);
+    // Allow all origins in staging, specific origins in production
+    if (isStaging(c.env)) {
+      return '*';
+    }
     
-    // Allowed origins based on environment
-    const allowedOrigins = isProduction(c.env) 
-      ? [
-          'https://oslira.com',
-          'https://www.oslira.com',
-          'https://app.oslira.com'
-        ]
-      : [
-          'https://osliratest.netlify.app',
-          'https://staging.oslira.com',
-          'http://localhost:3000',
-          'http://localhost:8000',
-          'http://127.0.0.1:8000'
-        ];
+    const allowedOrigins = [
+      'https://oslira.com',
+      'https://www.oslira.com',
+      'https://app.oslira.com'
+    ];
     
     if (!origin) return '*';
     return allowedOrigins.includes(origin) ? origin : false;
