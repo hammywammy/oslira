@@ -1,31 +1,44 @@
-@"
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "WebWorker"],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "allowJs": true,
     "checkJs": false,
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
+    "declarationMap": false,
     "skipLibCheck": true,
-    "strict": true,
+    "strict": false,
     "noEmit": true,
     "isolatedModules": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+    "noUncheckedSideEffectImports": false,
     "types": [
       "@cloudflare/workers-types"
+    ],
+    "typeRoots": [
+      "node_modules/@types",
+      "node_modules/@cloudflare"
     ]
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "src/**/*.ts",
+    "src/**/*.js"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    ".wrangler"
+    ".wrangler",
+    "**/*.test.ts",
+    "**/*.spec.ts"
   ]
 }
-"@ | Out-File -FilePath "tsconfig.json" -Encoding UTF8
