@@ -19,6 +19,212 @@
     <link rel="stylesheet" href="/admin/admin.css">
 </head>
 <body>
+    <div class="admin-section">
+  <div class="section-header">
+    <h3>🔧 System Maintenance</h3>
+    <p>Optimize system performance and clean up technical debt</p>
+  </div>
+  
+  <div class="maintenance-actions">
+    <button id="system-cleanup-btn" class="btn btn-secondary">
+      <span class="btn-icon">🧹</span>
+      Run System Cleanup
+    </button>
+    
+    <div class="maintenance-info">
+      <h4>What cleanup includes:</h4>
+      <ul>
+        <li>✅ Legacy cache system removal</li>
+        <li>✅ Memory optimization</li>
+        <li>✅ Performance improvements</li>
+        <li>✅ Code cleanup and consolidation</li>
+      </ul>
+    </div>
+  </div>
+  
+  <div id="cleanup-results" class="cleanup-results-container">
+    <!-- Results will be displayed here -->
+  </div>
+</div>
+
+<!-- ADD these styles to your admin CSS -->
+<style>
+.cleanup-results-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 20px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cleanup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.cleanup-status.success {
+  background: #10b981;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cleanup-section {
+  margin-bottom: 24px;
+}
+
+.cleanup-section h5 {
+  margin-bottom: 12px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.cleanup-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.stat-label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.stat-value {
+  font-weight: 600;
+  color: #374151;
+}
+
+.optimization-list ul,
+.task-list,
+.recommendation-list {
+  list-style: none;
+  padding: 0;
+}
+
+.optimization-list li,
+.task-list li,
+.recommendation-list li {
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.task-completed {
+  background: #d1fae5 !important;
+  color: #065f46;
+}
+
+.recommendation {
+  background: #fef3c7 !important;
+  color: #92400e;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.stat-number {
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.next-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.next-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.step-number {
+  background: #3b82f6;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.step-text {
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.maintenance-actions {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.maintenance-info {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  flex: 1;
+}
+
+.maintenance-info h4 {
+  margin: 0 0 12px 0;
+  color: #374151;
+  font-size: 14px;
+}
+
+.maintenance-info ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.maintenance-info li {
+  padding: 4px 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+</style>
     <div class="admin-container">
         <!-- Sidebar Navigation -->
         <aside class="admin-sidebar">
