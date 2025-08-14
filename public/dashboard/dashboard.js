@@ -10,6 +10,7 @@ class Dashboard {
     this.currentFilter = "all";
     this.isLoading = false;
     this.dateFormatCache = new Map();
+    this.bulkOperationInProgress = false;
 
     // ✅ ADD THESE REAL-TIME PROPERTIES
     this.realtimeSubscription = null;
