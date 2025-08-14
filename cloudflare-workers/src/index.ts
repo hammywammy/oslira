@@ -461,23 +461,63 @@ app.use('*', async (c, next) => {
 // ============================================================================
 app.use('*', cors({
   origin: (origin) => {
-    if (isStaging(c.env)) {
-      return '*'; // Allow all origins in staging
-    }
+    const environment = getEnvironment(c.env);
     
+    // Base allowed origins
     const allowedOrigins = [
       'https://oslira.com',
       'https://www.oslira.com',
-      'https://app.oslira.com',
-      'https://osliratest.netlify.app'
+      'https://app.oslira.com'
     ];
-    
-    if (!origin) return '*';
-    return allowedOrigins.includes(origin) ? origin : false;
+
+    if (environment === 'staging') {
+      allowedOrigins.push(
+        'https://osliratest.netlify.app',
+        'https://oslira-staging.netlify.app',
+        'http://localhost:3000',
+        'http://localhost:8000',
+        'http://localhost:8080',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:8000',
+        'http://127.0.0.1:8080'
+      );
+    }
+
+    // Allow if no origin (for non-browser requests)
+    if (!origin) return environment === 'staging' ? '*' : false;
+
+    // Exact match
+    if (allowedOrigins.includes(origin)) {
+      return origin;
+    }
+
+    // Pattern matching for staging
+    if (environment === 'staging') {
+      const stagingPatterns = [
+        /^https:\/\/.*\.netlify\.app$/,
+        /^https:\/\/.*\.vercel\.app$/,
+        /^http:\/\/localhost:\d+$/,
+        /^http:\/\/127\.0\.0\.1:\d+$/
+      ];
+
+      if (stagingPatterns.some(pattern => pattern.test(origin))) {
+        return origin;
+      }
+    }
+
+    return false;
   },
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-User-Email'],
-  credentials: true
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowHeaders: [
+    'Content-Type',
+    'Authorization', 
+    'X-Requested-With',
+    'X-User-Email',
+    'X-Request-ID',
+    'X-Client-Version'
+  ],
+  credentials: true,
+  maxAge: 86400 // 24 hours
 }));
 
 // Security and compression middleware
