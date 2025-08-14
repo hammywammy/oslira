@@ -388,7 +388,7 @@ class RateLimitMonitor {
 // PARALLEL PROCESSING FOR BATCH OPERATIONS
 // ============================================================================
 
-export class ParallelProcessor {
+class ParallelProcessor {
   private readonly MAX_CONCURRENT: number;
   
   constructor(maxConcurrent?: number) {
@@ -466,7 +466,7 @@ let rateLimitMonitor: RateLimitMonitor;
 const analysisCache = new Map<string, { data: any; timestamp: number }>();
 
 // Initialize with environment configuration
-export function initializeWithConfig(env: Env): void {
+function initializeWithConfig(env: Env): void {
   globalConfig = loadConfigFromEnv(env);
   
   // Initialize cache with config
@@ -495,7 +495,7 @@ const ANALYSIS_TIERS: AnalysisTier[] = [
   { tier: 4, model: 'gpt-4o-2024-08-06', maxTokens: 3000, targetSpeed: 15000, minDataRichness: 85, minAnalysisValue: 85 }
 ];
 
-export function calculateProfileIntelligence(profile: ProfileData, business: BusinessProfile): ProfileIntelligence {
+function calculateProfileIntelligence(profile: ProfileData, business: BusinessProfile): ProfileIntelligence {
   let dataRichness = 0;
   let analysisValue = 0;
 
@@ -628,7 +628,7 @@ async function callAPIWithRateLimit(
 // MAIN ANALYSIS FUNCTION WITH FULL METERING
 // ============================================================================
 
-export async function performAIAnalysis(
+async function performAIAnalysis(
   profile: ProfileData,
   business: BusinessProfile,
   analysisType: 'light' | 'deep',
@@ -777,7 +777,7 @@ export async function performAIAnalysis(
 
     return analysisResult;
 
-  } catch (error) {
+   } catch (error) {
     const duration = performance.now() - startTime;
     logger('error', `Analysis failed for ${profile.username}`, {
       error: error instanceof Error ? error.message : String(error),
@@ -806,7 +806,7 @@ export async function performAIAnalysis(
 // OUTREACH MESSAGE GENERATION WITH METERING
 // ============================================================================
 
-export async function generateOutreachMessage(
+async function generateOutreachMessage(
   profile: ProfileData,
   business: BusinessProfile,
   analysisResult: AnalysisResult,
@@ -946,7 +946,7 @@ export async function generateOutreachMessage(
 // ENHANCED BATCH ANALYSIS WITH METERING
 // ============================================================================
 
-export async function performBatchAnalysis(
+async function performBatchAnalysis(
   profiles: ProfileData[],
   business: BusinessProfile,
   analysisType: 'light' | 'deep',
@@ -1033,7 +1033,7 @@ export async function performBatchAnalysis(
 // ULTIMATE ANALYSIS FUNCTION
 // ============================================================================
 
-export async function performUltimateAnalysis(
+async function performUltimateAnalysis(
   profile: ProfileData,
   business: BusinessProfile,
   env: Env,
@@ -1196,7 +1196,7 @@ Return JSON:
 }`;
 }
 
-export function validateAnalysisResult(result: any): AnalysisResult {
+function validateAnalysisResult(result: any): AnalysisResult {
   return {
     score: Math.max(0, Math.min(100, result.score || 0)),
     engagement_score: Math.max(0, Math.min(100, result.engagement_score || 0)),
@@ -1211,7 +1211,7 @@ export function validateAnalysisResult(result: any): AnalysisResult {
   };
 }
 
-export function calculateConfidenceLevel(
+function calculateConfidenceLevel(
   result: AnalysisResult,
   intelligence: ProfileIntelligence
 ): number {
@@ -1234,7 +1234,7 @@ export function calculateConfidenceLevel(
   return Math.max(0, Math.min(100, Math.round(confidence)));
 }
 
-export function extractPostThemes(posts: any[]): string[] {
+function extractPostThemes(posts: any[]): string[] {
   if (!posts || posts.length === 0) return [];
   
   const themes = new Set<string>();
@@ -1262,11 +1262,11 @@ export function extractPostThemes(posts: any[]): string[] {
 // PERFORMANCE AND COST MONITORING
 // ============================================================================
 
-export function getAnalysisPerformanceStats(): any {
+function getAnalysisPerformanceStats(): any {
   return globalPerformanceMonitor.getStats();
 }
 
-export function getCostBreakdown(timeRange?: { start: Date; end: Date }): any {
+function getCostBreakdown(timeRange?: { start: Date; end: Date }): any {
   const openaiStats = globalPerformanceMonitor.getStats();
   const anthropicStats = globalPerformanceMonitor.getStats();
   
@@ -1305,15 +1305,15 @@ export function getCostBreakdown(timeRange?: { start: Date; end: Date }): any {
   };
 }
 
-export function getEnhancedCacheStats() {
+function getEnhancedCacheStats() {
   return enhancedAnalysisCache?.getStats() || null;
 }
 
-export function getRateLimitStatus() {
+function getRateLimitStatus() {
   return rateLimitMonitor?.getAllLimits() || {};
 }
 
-export function getCacheStats() {
+function getCacheStats() {
   return {
     legacy: { size: analysisCache.size },
     enhanced: enhancedAnalysisCache?.getStats()
@@ -1324,7 +1324,7 @@ export function getCacheStats() {
 // SYSTEM HEALTH AND OPTIMIZATION
 // ============================================================================
 
-export function getSystemHealthStatus(): any {
+function getSystemHealthStatus(): any {
   const cacheStats = enhancedAnalysisCache?.getStats();
   const rateLimits = rateLimitMonitor?.getAllLimits();
   
@@ -1351,7 +1351,7 @@ export function getSystemHealthStatus(): any {
   };
 }
 
-export function optimizeCache(): { before: any; after: any; optimizations: string[] } {
+function optimizeCache(): { before: any; after: any; optimizations: string[] } {
   const before = enhancedAnalysisCache?.getStats();
   const optimizations: string[] = [];
   
@@ -1380,7 +1380,7 @@ export function optimizeCache(): { before: any; after: any; optimizations: strin
   return { before: null, after: null, optimizations: ['Cache not initialized'] };
 }
 
-export function clearUserCache(userId: string): { cleared: boolean; entriesRemoved: number } {
+function clearUserCache(userId: string): { cleared: boolean; entriesRemoved: number } {
   if (enhancedAnalysisCache) {
     const removed = enhancedAnalysisCache.clearUserCache(userId);
     return { cleared: true, entriesRemoved: removed };
@@ -1420,7 +1420,7 @@ const DEFAULT_CONFIG: EnhancedAnalysisConfig = {
 
 let currentConfig: EnhancedAnalysisConfig = { ...DEFAULT_CONFIG };
 
-export function updateAnalysisConfig(newConfig: Partial<EnhancedAnalysisConfig>): EnhancedAnalysisConfig {
+function updateAnalysisConfig(newConfig: Partial<EnhancedAnalysisConfig>): EnhancedAnalysisConfig {
   currentConfig = {
     ...currentConfig,
     ...newConfig,
@@ -1440,11 +1440,11 @@ export function updateAnalysisConfig(newConfig: Partial<EnhancedAnalysisConfig>)
   return currentConfig;
 }
 
-export function getAnalysisConfig(): EnhancedAnalysisConfig {
+function getAnalysisConfig(): EnhancedAnalysisConfig {
   return { ...currentConfig };
 }
 
-export function resetAnalysisConfig(): EnhancedAnalysisConfig {
+function resetAnalysisConfig(): EnhancedAnalysisConfig {
   currentConfig = { ...DEFAULT_CONFIG };
   logger('info', 'Analysis configuration reset to defaults');
   return currentConfig;
@@ -1454,7 +1454,7 @@ export function resetAnalysisConfig(): EnhancedAnalysisConfig {
 // PERFORMANCE BENCHMARKING
 // ============================================================================
 
-export async function benchmarkAnalysisPerformance(
+async function benchmarkAnalysisPerformance(
   sampleProfile: ProfileData,
   sampleBusiness: BusinessProfile,
   env: Env,
@@ -1521,7 +1521,7 @@ export async function benchmarkAnalysisPerformance(
 }
 
 // ============================================================================
-// EXPORTS
+// SINGLE EXPORT BLOCK - NO DUPLICATES
 // ============================================================================
 
 export {
@@ -1568,4 +1568,4 @@ export {
   
   // Initialize the service
   initializeWithConfig
-};
+}; 
