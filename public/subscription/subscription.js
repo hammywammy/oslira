@@ -77,8 +77,13 @@
                 handleUrlParams();
 
             } catch (error) {
-                console.error('Initialization error:', error);
-                showMessage(`Initialization failed: ${error.message}`, 'error');
+                console.error('Page initialization failed:', error);
+        // Add this:
+        Alert.error('Page failed to load properly', {
+            details: error.message,
+            actions: [{ label: 'Refresh Page', action: 'reload' }],
+            sticky: true
+        });
             }
         }
 
@@ -89,6 +94,11 @@ async function loadConfigFromAPI() {
     }
     const configData = await response.json();
     if (configData.error) {
+        Alert.error('Configuration failed to load', {
+    message: 'Unable to connect to payment services',
+    actions: [{ label: 'Refresh Page', action: 'reload' }],
+    sticky: true
+});
         throw new Error(configData.error);
     }
     return configData;
@@ -110,9 +120,23 @@ async function loadConfigFromAPI() {
                 
             } catch (err) {
                 console.error('Auth check failed:', err);
-                window.location.href = 'auth.html';
+Alert.error('Authentication failed', {
+    actions: [{ label: 'Go to Login', action: 'redirect:/auth.html' }]
+});
             }
         }
+
+function validatePaymentSetup() {
+    // Add validation logic here
+    if (!stripe) {
+        Alert.error('Payment system not ready', {
+            suggestions: ['Refresh the page', 'Check your connection'],
+            actions: [{ label: 'Refresh', action: 'reload' }]
+        });
+        return false;
+    }
+    return true;
+}
 
         // Load subscription data
         async function loadSubscriptionData() {
@@ -125,7 +149,11 @@ async function loadConfigFromAPI() {
                 
                 if (error) {
                     console.warn('User data not accessible:', error);
-                    updateUIWithPlan('free', 'active', 0, null);
+Alert.info({ 
+    message: 'Showing default plan information',
+    suggestions: ['Refresh the page to load your data']
+});
+updateUIWithPlan('free', 'active', 0, null);
                     return;
                 }
                 
@@ -138,7 +166,11 @@ async function loadConfigFromAPI() {
                 
             } catch (err) {
                 console.error('Error loading subscription data:', err);
-                updateUIWithPlan('free', 'active', 0, null);
+Alert.warning({ 
+    message: 'Unable to load subscription details',
+    suggestions: ['Page will show basic info', 'Refresh to retry']
+});
+updateUIWithPlan('free', 'active', 0, null);
             }
         }
 
@@ -266,6 +298,10 @@ async function loadConfigFromAPI() {
                 
                 if (error) {
                     console.warn('Billing history not accessible:', error);
+Alert.info({ 
+    message: 'Billing history unavailable',
+    suggestions: ['Try refreshing the page', 'Check with support']
+});
                     historyTable.innerHTML = `
                         <tr>
                             <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
@@ -326,7 +362,12 @@ async function loadConfigFromAPI() {
         // Subscribe to plan - WITH CORRECT PRICE IDs
         async function subscribeToplan(plan, price, buttonElement) {
             if (plan === 'enterprise') {
-                window.open('mailto:sales@oslira.com?subject=Enterprise Plan Inquiry&body=Hi, I\'m interested in the Enterprise plan for Oslira. Please contact me to discuss pricing and features.', '_blank');
+                Alert.info({ 
+    message: 'Enterprise plan inquiry',
+    suggestions: ['Check your email client', 'You can also contact us directly'],
+    actions: [{ label: 'Contact Support', action: 'redirect:/support' }]
+});
+window.open('mailto:support@oslira.com?subject=Enterprise%20Plan%20Inquiry&body=Please contact me to discuss pricing and features.', '_blank');
                 return;
             }
 
@@ -340,7 +381,9 @@ async function loadConfigFromAPI() {
                 // Check authentication
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 if (sessionError || !session) {
-                    showMessage('Please log in to subscribe', 'error');
+                    Alert.error('Login required to subscribe', {
+    actions: [{ label: 'Go to Login', action: 'redirect:/auth.html' }]
+});
                     window.location.href = 'auth.html';
                     return;
                 }
@@ -354,7 +397,11 @@ async function loadConfigFromAPI() {
 
                 const priceId = priceIds[plan];
                 if (!priceId) {
-                    throw new Error('Price ID not configured for plan: ' + plan);
+                    Alert.error('Plan configuration error', {
+    details: `Price ID not configured for plan: ${plan}`,
+    actions: [{ label: 'Contact Support', action: 'redirect:/support' }]
+});
+throw new Error('Price ID not configured for plan: ' + plan);
                 }
 
                 console.log(`🔄 Creating subscription for ${plan} with price_id: ${priceId}`);
@@ -389,28 +436,39 @@ async function loadConfigFromAPI() {
                 console.log('✅ Checkout session created:', data);
                 
                 if (!data.url) {
-                    throw new Error('No checkout URL received from server');
+                   Alert.error('Payment setup failed', {
+    message: 'Unable to create checkout session',
+    suggestions: ['Try again in a moment', 'Check your internet connection'],
+    actions: [{ label: 'Retry', action: 'retry' }]
+});
+throw new Error('No checkout URL received from server');
                 }
 
                 // Redirect to Stripe Checkout
                 window.location.href = data.url;
 
             } catch (err) {
-                console.error('❌ Subscription error:', err);
-                showMessage('Subscription failed: ' + err.message, 'error');
-                
-                // Reset button
-                button.textContent = originalText;
-                button.disabled = false;
-            }
-        }
+    console.error('❌ Subscription error:', err);
+    showMessage('Subscription failed: ' + err.message, 'error');
+    
+    // Reset button with error handling
+    try {
+        button.textContent = originalText;
+        button.disabled = false;
+    } catch (error) {
+        console.error('Button reset failed:', error);
+        // Don't show alert for this - just log it
+    }
+}}
 
         // Manage billing
         async function manageBilling() {
             try {
                 const { data: { session }, error: sessionError } = await supabase.auth.getSession();
                 if (sessionError || !session) {
-                    showMessage('Please log in to manage billing', 'error');
+                    Alert.error('Login required to manage billing', {
+    actions: [{ label: 'Go to Login', action: 'redirect:/auth.html' }]
+});
                     return;
                 }
 
@@ -431,14 +489,24 @@ async function loadConfigFromAPI() {
                 if (!response.ok) {
                     const errorData = await response.json();
                     console.error('❌ Portal creation failed:', errorData);
-                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+                    Alert.error('Payment service error', {
+    details: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
+    suggestions: ['Try again in a moment', 'Check your payment method'],
+    actions: [{ label: 'Retry', action: 'retry' }]
+});
+throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const data = await response.json();
                 console.log('✅ Portal session created');
                 
                 if (!data.url) {
-                    throw new Error('No portal URL received from server');
+                    Alert.error('Billing portal unavailable', {
+    message: 'Unable to create billing session',
+    suggestions: ['Try again in a moment', 'Contact support'],
+    actions: [{ label: 'Retry', action: 'retry' }]
+});
+throw new Error('No portal URL received from server');
                 }
 
                 // Redirect to Stripe Customer Portal
@@ -446,7 +514,15 @@ async function loadConfigFromAPI() {
 
             } catch (err) {
                 console.error('❌ Billing portal error:', err);
-                showMessage('Unable to access billing portal: ' + err.message, 'error');
+                Alert.error('Unable to access billing portal', {
+    details: err.message,
+    suggestions: [
+        'Try refreshing the page',
+        'Check your internet connection',
+        'Contact support if issue continues'
+    ],
+    actions: [{ label: 'Try Again', action: 'retry' }]
+});
             }
         }
 
@@ -455,7 +531,10 @@ async function loadConfigFromAPI() {
             const urlParams = new URLSearchParams(window.location.search);
             
             if (urlParams.get('success') === 'true') {
-                showMessage('🎉 Subscription activated! Welcome to your new plan.', 'success');
+                Alert.success({ 
+    message: 'Subscription activated! Welcome to your new plan.',
+    timeoutMs: 6000
+});
                 window.history.replaceState({}, document.title, window.location.pathname);
                 setTimeout(async () => {
                     await loadSubscriptionData();
@@ -464,28 +543,45 @@ async function loadConfigFromAPI() {
             }
             
             if (urlParams.get('canceled') === 'true') {
-                showMessage('Subscription setup was canceled. No charges were made.', 'error');
+                Alert.info({ 
+    message: 'Subscription setup was canceled',
+    suggestions: ['No charges were made', 'You can try again anytime']
+});
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         }
 
         // Show message function
         function showMessage(text, type = 'success') {
-            const existingMessages = document.querySelectorAll('.message');
-            existingMessages.forEach(msg => msg.remove());
+    // Legacy support - redirect to Alert system
+    if (type === 'error') {
+        Alert.error(text);
+    } else if (type === 'success') {
+        Alert.success({ message: text });
+    } else if (type === 'warning') {
+        Alert.warning({ message: text });
+    } else {
+        Alert.info({ message: text });
+    }
+}
 
-            const message = document.createElement('div');
-            message.className = `message ${type}`;
-            message.textContent = text;
-            document.body.appendChild(message);
-
-            setTimeout(() => message.classList.add('show'), 100);
-
-            setTimeout(() => {
-                message.classList.remove('show');
-                setTimeout(() => message.remove(), 300);
-            }, 5000);
-        }
+function checkNetworkAndRetry(operation, operationName) {
+    if (!navigator.onLine) {
+        Alert.error('No internet connection', {
+            suggestions: ['Check your internet connection', 'Try again when connected'],
+            actions: [{ label: 'Retry', action: 'retry' }]
+        });
+        return;
+    }
+    
+    operation().catch(error => {
+        Alert.error(`${operationName} failed`, {
+            details: error.message,
+            suggestions: ['Check your connection', 'Try again in a moment'],
+            actions: [{ label: 'Retry', action: 'retry' }]
+        });
+    });
+}
 
         // Logout function
         function logout() {
@@ -500,9 +596,12 @@ async function loadConfigFromAPI() {
         window.addEventListener('load', () => {
             if (supabase) {
                 supabase.auth.onAuthStateChange((event, session) => {
-                    if (event === 'SIGNED_OUT' || !session) {
-                        window.location.href = 'auth.html';
-                    }
-                });
+    if (event === 'SIGNED_OUT' || !session) {
+        Alert.info({ 
+            message: 'You have been signed out',
+            actions: [{ label: 'Go to Login', action: 'redirect:/auth.html' }]
+        });
+    }
+});
             }
         });
