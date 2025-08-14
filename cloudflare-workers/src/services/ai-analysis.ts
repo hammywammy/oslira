@@ -1,19 +1,19 @@
 // ============================================================================
 // FULL AI ANALYSIS SERVICE WITH ULTRA-INTELLIGENT METERING + CACHING + RATE LIMITING
 // File: cloudflare-workers/src/services/ai-analysis.ts
-// Complete production-ready implementation with all metering integrated + new enhancements
+// Complete production-ready implementation with all metering integrated + Phase 3 enhancements
 // ============================================================================
 
-import { Env, ProfileData, BusinessProfile, AnalysisResult, ProfileIntelligence, AnalysisTier } from '../types/interfaces';
-import { logger } from '../utils/logger';
+import { Env, ProfileData, BusinessProfile, AnalysisResult, ProfileIntelligence, AnalysisTier } from '../types/interfaces.js';
+import { logger } from '../utils/logger.js';
 import { getApiKey } from './enhanced-config-manager.js';
-import { MeteringContext, meteredCall, PerformanceMonitor, UsageEvent } from './metering';
-import { OpenAIAdapter, AnthropicAdapter, ApifyAdapter, RetryHandler, CostAnomalyDetector, StreamingMetricsCollector } from '../adapters/provider-adapters';
+import { MeteringContext, meteredCall, PerformanceMonitor, UsageEvent, logUsageToSupabase, CostCalculators } from './metering.js';
+import { OpenAIAdapter, AnthropicAdapter, ApifyAdapter, RetryHandler, CostAnomalyDetector, StreamingMetricsCollector, createOpenAIAdapter, createAnthropicAdapter } from '../adapters/provider-adapters.js';
 import { createClient } from '@supabase/supabase-js';
-import { CacheConfig, RateLimitInfo, EnhancedAnalysisConfig } from '../types/interfaces';
+import { CacheConfig, RateLimitInfo, EnhancedAnalysisConfig } from '../types/interfaces.js';
 
 // ============================================================================
-// ENHANCED CACHING WITH USER ISOLATION (NEW ADDITION)
+// ENHANCED CONFIGURATION LOADING
 // ============================================================================
 
 function loadConfigFromEnv(env: Env): EnhancedAnalysisConfig {
@@ -43,6 +43,63 @@ function loadConfigFromEnv(env: Env): EnhancedAnalysisConfig {
   };
 }
 
+// ============================================================================
+// CIRCUIT BREAKER PATTERN
+// ============================================================================
+
+class CircuitBreaker {
+  private failures = 0;
+  private lastFailureTime = 0;
+  private state: 'closed' | 'open' | 'half-open' = 'closed';
+  private readonly failureThreshold = 5;
+  private readonly recoveryTimeout = 30000; // 30 seconds
+
+  async execute<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.state === 'open') {
+      if (Date.now() - this.lastFailureTime > this.recoveryTimeout) {
+        this.state = 'half-open';
+      } else {
+        throw new Error('Circuit breaker is open');
+      }
+    }
+
+    try {
+      const result = await operation();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+
+  private onSuccess(): void {
+    this.failures = 0;
+    this.state = 'closed';
+  }
+
+  private onFailure(): void {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+    
+    if (this.failures >= this.failureThreshold) {
+      this.state = 'open';
+    }
+  }
+
+  getStatus(): { state: string; failures: number; lastFailure: number } {
+    return {
+      state: this.state,
+      failures: this.failures,
+      lastFailure: this.lastFailureTime
+    };
+  }
+}
+
+// ============================================================================
+// ENHANCED CACHING WITH USER ISOLATION
+// ============================================================================
+
 interface CacheItem {
   data: any;
   timestamp: number;
@@ -51,8 +108,33 @@ interface CacheItem {
   analysisType: 'light' | 'deep';
 }
 
+interface CacheStats {
+  hits: number;
+  misses: number;
+  hitRate: number;
+  totalSize: number;
+  totalHits: number;
+  activeUsers: number;
+  avgEntriesPerUser: number;
+  memoryUsage: number;
+  typeDistribution: Record<string, number>;
+  avgAge: number;
+}
+
 class EnhancedIntelligentCache {
   private cache: Map<string, CacheItem> = new Map();
+  private stats: CacheStats = {
+    hits: 0,
+    misses: 0,
+    hitRate: 0,
+    totalSize: 0,
+    totalHits: 0,
+    activeUsers: 0,
+    avgEntriesPerUser: 0,
+    memoryUsage: 0,
+    typeDistribution: {},
+    avgAge: 0
+  };
   private readonly TTL: number;
   private readonly MAX_SIZE_PER_USER: number;
   private readonly MAX_GLOBAL_SIZE: number;
@@ -63,77 +145,79 @@ class EnhancedIntelligentCache {
     this.MAX_GLOBAL_SIZE = config?.maxGlobalSize || 50000;
   }
   
-  // Generate safe cache key with user isolation
-  private getCacheKey(userId: string, type: string, data: string): string {
-    const hash = this.simpleHash(data);
-    return `user:${userId}:${type}:${hash}`;
-  }
-  
-  private simpleHash(str: string): string {
+  private hashKey(data: string): string {
     let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
+    for (let i = 0; i < data.length; i++) {
+      const char = data.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     return Math.abs(hash).toString(36);
   }
   
-  get<T>(userId: string, type: string, data: string): T | null {
-    const key = this.getCacheKey(userId, type, data);
-    const entry = this.cache.get(key);
+  get(userId: string, type: string, key: string): any | null {
+    const cacheKey = `${userId}:${type}:${this.hashKey(key)}`;
+    const item = this.cache.get(cacheKey);
     
-    if (!entry) return null;
-    
-    // Check TTL
-    if (Date.now() - entry.timestamp > this.TTL) {
-      this.cache.delete(key);
+    if (!item || this.isExpired(item)) {
+      this.cache.delete(cacheKey);
+      this.stats.misses++;
+      this.updateStats();
       return null;
     }
-    
+
     // Verify user ownership (security)
-    if (entry.userId !== userId) {
-      logger('warn', 'Cache key collision detected', { userId, key });
+    if (item.userId !== userId) {
+      logger('warn', 'Cache key collision detected', { userId, cacheKey });
+      this.stats.misses++;
+      this.updateStats();
       return null;
     }
+
+    // Track access
+    item.accessCount++;
+    this.cache.set(cacheKey, item);
     
-    entry.accessCount++;
-    return entry.data as T;
+    // Update global stats
+    this.stats.hits++;
+    this.updateStats();
+    
+    return item.data;
   }
   
-  set(userId: string, type: string, data: string, value: any, analysisType: 'light' | 'deep' = 'light'): void {
-    // Clean up if approaching limits
-    this.cleanup(userId);
+  set(userId: string, type: string, key: string, data: any): void {
+    const cacheKey = `${userId}:${type}:${this.hashKey(key)}`;
     
-    const key = this.getCacheKey(userId, type, data);
-    this.cache.set(key, {
-      data: value,
-      timestamp: Date.now(),
-      userId: userId,
-      accessCount: 0,
-      analysisType
-    });
-  }
-  
-  private cleanup(userId: string): void {
-    // Global size check
-    if (this.cache.size >= this.MAX_GLOBAL_SIZE) {
-      this.evictOldest(Math.floor(this.MAX_GLOBAL_SIZE * 0.1)); // Remove 10%
-    }
-    
-    // Per-user size check
-    const userKeys = Array.from(this.cache.keys()).filter(key => key.startsWith(`user:${userId}:`));
+    // Check user cache size limit
+    const userKeys = Array.from(this.cache.keys()).filter(k => k.startsWith(`${userId}:`));
     if (userKeys.length >= this.MAX_SIZE_PER_USER) {
-      // Remove oldest entries for this user
-      const userEntries = userKeys
-        .map(key => ({ key, ...this.cache.get(key)! }))
-        .sort((a, b) => a.timestamp - b.timestamp);
-      
-      const toRemove = userEntries.slice(0, userEntries.length - this.MAX_SIZE_PER_USER + 1);
-      toRemove.forEach(entry => this.cache.delete(entry.key));
+      // Remove oldest entry for this user
+      const oldestKey = userKeys
+        .map(k => ({ key: k, timestamp: this.cache.get(k)?.timestamp || 0 }))
+        .sort((a, b) => a.timestamp - b.timestamp)[0].key;
+      this.cache.delete(oldestKey);
     }
+
+    // Check global cache size limit
+    if (this.cache.size >= this.MAX_GLOBAL_SIZE) {
+      this.evictOldest(Math.floor(this.MAX_GLOBAL_SIZE * 0.1));
+    }
+
+    this.cache.set(cacheKey, {
+      data,
+      timestamp: Date.now(),
+      userId,
+      accessCount: 0,
+      analysisType: type as 'light' | 'deep'
+    });
+
+    this.updateStats();
   }
   
+  private isExpired(item: CacheItem): boolean {
+    return Date.now() - item.timestamp > this.TTL;
+  }
+
   private evictOldest(count: number): void {
     const entries = Array.from(this.cache.entries())
       .sort((a, b) => a[1].timestamp - b[1].timestamp)
@@ -141,8 +225,8 @@ class EnhancedIntelligentCache {
     
     entries.forEach(([key]) => this.cache.delete(key));
   }
-  
-  getStats() {
+
+  private updateStats(): void {
     const entries = Array.from(this.cache.values());
     const totalHits = entries.reduce((sum, e) => sum + e.accessCount, 0);
     const userCounts = new Map<string, number>();
@@ -153,10 +237,12 @@ class EnhancedIntelligentCache {
       typeCounts.set(entry.analysisType, (typeCounts.get(entry.analysisType) || 0) + 1);
     });
     
-    return {
+    this.stats = {
+      hits: this.stats.hits,
+      misses: this.stats.misses,
+      hitRate: this.stats.hits + this.stats.misses > 0 ? this.stats.hits / (this.stats.hits + this.stats.misses) : 0,
       totalSize: this.cache.size,
-      totalHits,
-      hitRate: this.cache.size > 0 ? totalHits / this.cache.size : 0,
+      totalHits: totalHits,
       activeUsers: userCounts.size,
       avgEntriesPerUser: userCounts.size > 0 ? this.cache.size / userCounts.size : 0,
       memoryUsage: this.cache.size * 1024, // Rough estimate in bytes
@@ -166,19 +252,39 @@ class EnhancedIntelligentCache {
         : 0 // in seconds
     };
   }
+  
+  getStats(): CacheStats {
+    this.updateStats();
+    return { ...this.stats };
+  }
+
+  clearUserCache(userId: string): number {
+    const userKeys = Array.from(this.cache.keys()).filter(k => k.startsWith(`${userId}:`));
+    userKeys.forEach(key => this.cache.delete(key));
+    this.updateStats();
+    return userKeys.length;
+  }
+
+  clear(): void {
+    this.cache.clear();
+    this.stats = {
+      hits: 0,
+      misses: 0,
+      hitRate: 0,
+      totalSize: 0,
+      totalHits: 0,
+      activeUsers: 0,
+      avgEntriesPerUser: 0,
+      memoryUsage: 0,
+      typeDistribution: {},
+      avgAge: 0
+    };
+  }
 }
 
 // ============================================================================
-// RATE LIMIT MONITOR (NEW ADDITION)
+// ENHANCED RATE LIMIT MONITOR WITH EXPONENTIAL BACKOFF
 // ============================================================================
-
-interface RateLimitInfo {
-  requests_remaining?: number;
-  tokens_remaining?: number;
-  reset_time?: string;
-  provider: 'openai' | 'anthropic';
-  lastUpdated: number;
-}
 
 class RateLimitMonitor {
   private limits: Map<string, RateLimitInfo> = new Map();
@@ -224,30 +330,50 @@ class RateLimitMonitor {
   }
   
   shouldThrottle(provider: 'openai' | 'anthropic'): { throttle: boolean; delay: number; reason?: string } {
+    if (!this.enabled) return { throttle: false, delay: 0 };
+    
     const limits = this.limits.get(provider);
     if (!limits) return { throttle: false, delay: 0 };
     
-    // Ignore stale data (older than 5 minutes)
-    if (Date.now() - limits.lastUpdated > 300000) {
-      return { throttle: false, delay: 0 };
+    // Check request limits
+    if (limits.requests_remaining !== undefined && limits.requests_remaining < this.thresholds.requests) {
+      const delay = this.calculateBackoffDelay(provider, 'requests');
+      return { 
+        throttle: true, 
+        delay,
+        reason: `Low requests remaining: ${limits.requests_remaining}`
+      };
     }
     
-    // Critical threshold - pause operations
-    if (limits.requests_remaining !== undefined && limits.requests_remaining < 3) {
-      return { throttle: true, delay: 60000, reason: 'Critical request limit' };
-    }
-    
-    // Warning threshold - slow down
-    if (limits.requests_remaining !== undefined && limits.requests_remaining < 10) {
-      return { throttle: true, delay: 2000, reason: 'Low request limit' };
-    }
-    
-    // Token threshold
-    if (limits.tokens_remaining !== undefined && limits.tokens_remaining < 1000) {
-      return { throttle: true, delay: 5000, reason: 'Low token limit' };
+    // Check token limits  
+    if (limits.tokens_remaining !== undefined && limits.tokens_remaining < this.thresholds.tokens) {
+      const delay = this.calculateBackoffDelay(provider, 'tokens');
+      return {
+        throttle: true,
+        delay, 
+        reason: `Low tokens remaining: ${limits.tokens_remaining}`
+      };
     }
     
     return { throttle: false, delay: 0 };
+  }
+
+  private calculateBackoffDelay(provider: string, limitType: 'requests' | 'tokens'): number {
+    const baseDelay = limitType === 'requests' ? this.delays.warning : this.delays.critical;
+    const jitter = Math.random() * 1000;
+    
+    // Exponential backoff based on how low the limits are
+    const limits = this.limits.get(provider);
+    const remaining = limitType === 'requests' ? limits?.requests_remaining : limits?.tokens_remaining;
+    const threshold = limitType === 'requests' ? this.thresholds.requests : this.thresholds.tokens;
+    
+    if (remaining !== undefined) {
+      const severity = Math.max(0, (threshold - remaining) / threshold);
+      const exponentialDelay = baseDelay * Math.pow(2, severity * 3);
+      return Math.min(exponentialDelay + jitter, 60000); // Max 1 minute
+    }
+    
+    return baseDelay + jitter;
   }
   
   getLimits(provider: 'openai' | 'anthropic'): RateLimitInfo | null {
@@ -260,17 +386,28 @@ class RateLimitMonitor {
       anthropic: this.getLimits('anthropic')
     };
   }
+
+  isHealthy(): boolean {
+    const limits = this.getAllLimits();
+    for (const limit of Object.values(limits)) {
+      if (limit && limit.requests_remaining !== undefined && limit.requests_remaining < 5) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
 
 // ============================================================================
-// ENHANCED API CALLING WITH RATE LIMITING (NEW ADDITION)
+// ENHANCED API CALLING WITH RATE LIMITING AND CIRCUIT BREAKER
 // ============================================================================
 
 async function callAPIWithRateLimit(
   url: string,
   options: RequestInit,
   provider: 'openai' | 'anthropic',
-  requestId: string
+  requestId: string,
+  circuitBreaker?: CircuitBreaker
 ): Promise<Response> {
   // Check if we need to throttle
   const throttleCheck = rateLimitMonitor.shouldThrottle(provider);
@@ -284,31 +421,41 @@ async function callAPIWithRateLimit(
     await new Promise(resolve => setTimeout(resolve, throttleCheck.delay));
   }
   
-  // Make the API call
-  const response = await fetch(url, options);
-  
-  // Update rate limit info
-  if (response.headers) {
-    const limits = rateLimitMonitor.updateLimits(provider, response.headers);
+  // Use circuit breaker if provided
+  const makeRequest = async () => {
+    const response = await fetch(url, options);
     
-    // Log warnings if approaching limits
-    if (limits.requests_remaining !== undefined && limits.requests_remaining < 20) {
-      logger('warn', `${provider} rate limit warning`, {
-        requests_remaining: limits.requests_remaining,
-        tokens_remaining: limits.tokens_remaining
-      }, requestId);
+    // Update rate limit info
+    if (response.headers) {
+      const limits = rateLimitMonitor.updateLimits(provider, response.headers);
+      
+      // Log warnings if approaching limits
+      if (limits.requests_remaining !== undefined && limits.requests_remaining < 20) {
+        logger('warn', `${provider} rate limit warning`, {
+          requests_remaining: limits.requests_remaining,
+          tokens_remaining: limits.tokens_remaining
+        }, requestId);
+      }
     }
+    
+    return response;
+  };
+
+  if (circuitBreaker) {
+    return await circuitBreaker.execute(makeRequest);
+  } else {
+    return await makeRequest();
   }
-  
-  return response;
 }
 
 // ============================================================================
-// GLOBAL MONITORING INSTANCES (ENHANCED WITH CONFIG)
+// GLOBAL MONITORING INSTANCES WITH CIRCUIT BREAKERS
 // ============================================================================
 
 const globalPerformanceMonitor = new PerformanceMonitor();
 const globalAnomalyDetector = new CostAnomalyDetector();
+const openaiCircuitBreaker = new CircuitBreaker();
+const anthropicCircuitBreaker = new CircuitBreaker();
 
 // Configuration-driven instances
 let globalConfig: EnhancedAnalysisConfig | null = null;
@@ -334,7 +481,7 @@ export function initializeWithConfig(env: Env): void {
 }
 
 // ============================================================================
-// ADVANCED TIERING SYSTEM WITH METERING (UNCHANGED)
+// ADVANCED TIERING SYSTEM WITH METERING
 // ============================================================================
 
 const ANALYSIS_TIERS: AnalysisTier[] = [
@@ -396,7 +543,7 @@ class IntelligentCache {
 const analysisCache = new IntelligentCache(); // Legacy cache for backward compatibility
 
 // ============================================================================
-// PROFILE INTELLIGENCE CALCULATOR (UNCHANGED)
+// PROFILE INTELLIGENCE CALCULATOR
 // ============================================================================
 
 export function calculateProfileIntelligence(profile: ProfileData): ProfileIntelligence {
@@ -455,7 +602,7 @@ export function calculateProfileIntelligence(profile: ProfileData): ProfileIntel
 }
 
 // ============================================================================
-// ENHANCED OPENAI ANALYSIS WITH CACHING & RATE LIMITING
+// ENHANCED OPENAI ANALYSIS WITH METERING AND CIRCUIT BREAKER
 // ============================================================================
 
 async function executeOpenAIAnalysisOptimized(
@@ -467,12 +614,21 @@ async function executeOpenAIAnalysisOptimized(
   userId?: string,
   businessId?: string
 ): Promise<AnalysisResult> {
-  const ctx = new MeteringContext(env, requestId, userId, businessId);
+  const ctx = new MeteringContext(requestId);
   const safeUserId = userId || businessId || 'anonymous';
   
   // Check enhanced cache first (user-isolated)
-  const cached = enhancedAnalysisCache.get<AnalysisResult>(safeUserId, 'analysis', prompt);
+  const cached = enhancedAnalysisCache.get(safeUserId, 'analysis', prompt);
   if (cached) {
+    ctx.recordEvent({
+      provider: 'openai',
+      model,
+      purpose: 'analysis_deep',
+      cache_hit: true,
+      user_id: userId,
+      business_id: businessId
+    });
+    
     logger('info', 'Enhanced cache hit for analysis', { 
       model, 
       userId: safeUserId,
@@ -485,6 +641,15 @@ async function executeOpenAIAnalysisOptimized(
   const legacyCacheKey = `analysis:${model}:${Buffer.from(prompt).toString('base64').substring(0, 32)}`;
   const legacyCached = analysisCache.get<AnalysisResult>(legacyCacheKey);
   if (legacyCached) {
+    ctx.recordEvent({
+      provider: 'openai',
+      model,
+      purpose: 'analysis_deep',
+      cache_hit: true,
+      user_id: userId,
+      business_id: businessId
+    });
+    
     logger('info', 'Legacy cache hit for analysis', { model, cacheStats: analysisCache.getStats() }, requestId);
     // Also store in enhanced cache for future
     enhancedAnalysisCache.set(safeUserId, 'analysis', prompt, legacyCached);
@@ -492,146 +657,146 @@ async function executeOpenAIAnalysisOptimized(
   }
   
   try {
-    const openaiKey = env.OPENAI_API_KEY;
+    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
     if (!openaiKey) throw new Error('OpenAI API key not available');
     
+    const openaiAdapter = createOpenAIAdapter(openaiKey);
     const isGPT5 = model.includes('gpt-5') || model.includes('gpt-4o-mini');
     
-    const { data, event, metrics } = await meteredCall(ctx, {
-      provider: 'openai',
-      model: model,
-      purpose: intelligence.promptStrategy === 'executive' ? 'analysis_deep' : 'analysis_light',
-      modelTier: intelligence.complexityLevel,
-      makeRequest: () => {
-        return RetryHandler.withRetry(
-          () => callAPIWithRateLimit( // Enhanced with rate limiting
-            'https://api.openai.com/v1/chat/completions',
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${openaiKey}`,
-                'Content-Type': 'application/json',
-                'OpenAI-Beta': 'assistants=v2'
-              },
-              body: JSON.stringify({
-                model: model,
-                messages: [{ role: 'user', content: prompt + '\n\nReturn a valid JSON object with all required fields.' }],
-                // GPT-5 uses max_completion_tokens, never set temperature
-                ...(isGPT5 ? {
-                  max_completion_tokens: 2000,
-                  response_format: { 
-                    type: 'json_schema',
-                    json_schema: {
-                      name: 'analysis_result',
-                      strict: true,
-                      schema: {
-                        type: 'object',
-                        properties: {
-                          score: { type: 'number', minimum: 0, maximum: 100 },
-                          engagement_score: { type: 'number', minimum: 0, maximum: 100 },
-                          niche_fit: { type: 'number', minimum: 0, maximum: 100 },
-                          audience_quality: { type: 'string', enum: ['premium', 'high', 'medium', 'low'] },
-                          engagement_insights: { type: 'string' },
-                          selling_points: { type: 'array', items: { type: 'string' } },
-                          reasons: { type: 'array', items: { type: 'string' } }
-                        },
-                        required: ['score', 'engagement_score', 'niche_fit', 'audience_quality', 'engagement_insights', 'selling_points', 'reasons'],
-                        additionalProperties: false
-                      }
+    const messages = [{ role: 'user', content: prompt + '\n\nReturn a valid JSON object with all required fields.' }];
+    
+    const result = await meteredCall(
+      ctx,
+      'openai',
+      model,
+      'analysis_deep',
+      () => openaiCircuitBreaker.execute(async () => {
+        const response = await callAPIWithRateLimit(
+          'https://api.openai.com/v1/chat/completions',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': 'application/json',
+              'OpenAI-Beta': 'assistants=v2'
+            },
+            body: JSON.stringify({
+              model: model,
+              messages,
+              ...(isGPT5 ? {
+                max_completion_tokens: 2000,
+                response_format: { 
+                  type: 'json_schema',
+                  json_schema: {
+                    name: 'analysis_result',
+                    strict: true,
+                    schema: {
+                      type: 'object',
+                      properties: {
+                        score: { type: 'number', minimum: 0, maximum: 100 },
+                        engagement_score: { type: 'number', minimum: 0, maximum: 100 },
+                        niche_fit: { type: 'number', minimum: 0, maximum: 100 },
+                        audience_quality: { type: 'string', enum: ['premium', 'high', 'medium', 'low'] },
+                        engagement_insights: { type: 'string' },
+                        selling_points: { type: 'array', items: { type: 'string' } },
+                        reasons: { type: 'array', items: { type: 'string' } }
+                      },
+                      required: ['score', 'engagement_score', 'niche_fit', 'audience_quality', 'engagement_insights', 'selling_points', 'reasons'],
+                      additionalProperties: false
                     }
                   }
-                } : {
-                  max_tokens: intelligence.speedTarget > 10000 ? 2000 : 1500,
-                  temperature: 0.7,
-                  response_format: { type: 'json_object' }
-                })
+                }
+              } : {
+                max_tokens: intelligence.speedTarget > 10000 ? 2000 : 1500,
+                temperature: 0.7,
+                response_format: { type: 'json_object' }
               })
-            },
-            'openai',
-            requestId
-          ),
-          {
-            maxRetries: 3,
-            baseDelay: 1000,
-            maxDelay: 10000,
-            jitter: true,
-            onRetry: (attempt, error) => {
-              logger('warn', `OpenAI retry attempt ${attempt}`, { 
-                error: error.message,
-                model,
-                requestId 
-              }, requestId);
-            }
-          }
+            })
+          },
+          'openai',
+          requestId,
+          openaiCircuitBreaker
         );
-      },
-      parseUsage: OpenAIAdapter.parseUsage,
-      parseData: (body) => {
-        const message = body.choices?.[0]?.message;
-        if (!message) throw new Error('No message in OpenAI response');
-        
-        try {
-          const content = typeof message.content === 'string' 
-            ? message.content 
-            : JSON.stringify(message.content);
-          const parsed = JSON.parse(content);
-          
-          // Validate required fields
-          if (!parsed.score || !parsed.engagement_score || !parsed.niche_fit) {
-            throw new Error('Missing required fields in analysis result');
-          }
-          
-          return parsed as AnalysisResult;
-        } catch (error) {
-          logger('error', 'Failed to parse OpenAI JSON response', { 
-            error,
-            content: message.content,
-            model 
-          }, requestId);
-          throw new Error('Invalid JSON response from OpenAI');
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`OpenAI API error: ${response.status} - ${errorBody}`);
         }
+
+        return await response.json();
+      }),
+      (response) => {
+        if (CostCalculators.openai[model]) {
+          return CostCalculators.openai[model](
+            response.usage?.prompt_tokens || 0,
+            response.usage?.completion_tokens || 0
+          );
+        }
+        return { inputTokens: response.usage?.prompt_tokens || 0, outputTokens: response.usage?.completion_tokens || 0, cost: 0 };
       }
-    });
+    );
+
+    // Parse the analysis result
+    const message = result.choices?.[0]?.message;
+    if (!message) throw new Error('No message in OpenAI response');
+    
+    let data: AnalysisResult;
+    try {
+      const content = typeof message.content === 'string' 
+        ? message.content 
+        : JSON.stringify(message.content);
+      const parsed = JSON.parse(content);
+      
+      // Validate required fields
+      if (!parsed.score || !parsed.engagement_score || !parsed.niche_fit) {
+        throw new Error('Missing required fields in analysis result');
+      }
+      
+      data = validateAnalysisResult(parsed);
+    } catch (error) {
+      logger('error', 'Failed to parse OpenAI JSON response', { 
+        error,
+        content: message.content,
+        model 
+      }, requestId);
+      throw new Error('Invalid JSON response from OpenAI');
+    }
     
     // Track performance globally
-    globalPerformanceMonitor.track(event);
+    globalPerformanceMonitor.recordMetric('openai', ctx.getEvents()[0]);
     
     // Check for cost anomalies
-    if (globalAnomalyDetector.addDataPoint(event.total_cost_usd, 'openai')) {
+    if (globalAnomalyDetector.detectAnomaly(ctx.getEvents()[0].total_cost_usd)) {
       logger('warn', '⚠️ Cost anomaly detected', {
-        cost: event.total_cost_usd,
+        cost: ctx.getEvents()[0].total_cost_usd,
         model,
-        tokens: event.total_tokens,
-        expected: globalAnomalyDetector.getStatistics().openai?.median
+        tokens: ctx.getEvents()[0].total_tokens,
+        expected: globalAnomalyDetector.getStatistics().mean
       }, requestId);
       
       // Store anomaly in database
-      await storeAnomaly(ctx, event, 'spike');
+      await storeAnomaly(ctx, ctx.getEvents()[0], 'spike');
     }
     
     // Log comprehensive metrics with rate limiting info
     logger('info', '✅ OpenAI analysis completed with enhanced metering', {
       model,
       tier: intelligence.complexityLevel,
-      cost: `$${event.total_cost_usd.toFixed(6)}`,
-      inputTokens: event.input_tokens,
-      outputTokens: event.output_tokens,
-      totalTokens: event.total_tokens,
-      latencyMs: event.duration_ms,
-      networkMs: event.network_ms,
-      tokensPerSec: event.tokens_per_second?.toFixed(1),
-      costPer1kTokens: metrics.cost.per_1k_tokens.toFixed(4),
+      cost: `$${ctx.getEvents()[0].total_cost_usd.toFixed(6)}`,
+      inputTokens: ctx.getEvents()[0].input_tokens,
+      outputTokens: ctx.getEvents()[0].output_tokens,
+      totalTokens: ctx.getEvents()[0].total_tokens,
+      latencyMs: ctx.getEvents()[0].duration_ms,
       score: data.score,
-      rateLimits: rateLimitMonitor.getLimits('openai')
+      rateLimits: rateLimitMonitor.getLimits('openai'),
+      circuitBreakerStatus: openaiCircuitBreaker.getStatus()
     }, requestId);
-
-    
     
     // Cache the result in both caches
     enhancedAnalysisCache.set(safeUserId, 'analysis', prompt, data);
     analysisCache.set(legacyCacheKey, data);
 
-    await logUsageToSupabase(env, event, requestId);
+    await logUsageToSupabase(env, ctx.getEvents()[0], requestId);
     
     // Flush metrics asynchronously
     ctx.flush().catch(error => {
@@ -647,7 +812,7 @@ async function executeOpenAIAnalysisOptimized(
 }
 
 // ============================================================================
-// ENHANCED CLAUDE ANALYSIS WITH CACHING & RATE LIMITING
+// ENHANCED CLAUDE ANALYSIS WITH METERING AND CIRCUIT BREAKER
 // ============================================================================
 
 async function executeClaudeAnalysisOptimized(
@@ -659,12 +824,21 @@ async function executeClaudeAnalysisOptimized(
   userId?: string,
   businessId?: string
 ): Promise<AnalysisResult> {
-  const ctx = new MeteringContext(env, requestId, userId, businessId);
+  const ctx = new MeteringContext(requestId);
   const safeUserId = userId || businessId || 'anonymous';
   
   // Check enhanced cache first (user-isolated)
-  const cached = enhancedAnalysisCache.get<AnalysisResult>(safeUserId, 'analysis', prompt);
+  const cached = enhancedAnalysisCache.get(safeUserId, 'analysis', prompt);
   if (cached) {
+    ctx.recordEvent({
+      provider: 'anthropic',
+      model,
+      purpose: 'analysis_light',
+      cache_hit: true,
+      user_id: userId,
+      business_id: businessId
+    });
+    
     logger('info', 'Enhanced cache hit for Claude analysis', { 
       model, 
       userId: safeUserId,
@@ -674,77 +848,90 @@ async function executeClaudeAnalysisOptimized(
   }
   
   try {
-    const claudeKey = env.CLAUDE_API_KEY;
+    const claudeKey = await getApiKey('CLAUDE_API_KEY', env);
     if (!claudeKey) throw new Error('Claude API key not available');
     
-    const { data, event, metrics } = await meteredCall(ctx, {
-      provider: 'anthropic',
-      model: model,
-      purpose: intelligence.promptStrategy === 'executive' ? 'analysis_deep' : 'analysis_light',
-      modelTier: intelligence.complexityLevel,
-      makeRequest: () => {
-        return RetryHandler.withRetry(
-          () => callAPIWithRateLimit( // Enhanced with rate limiting
-            'https://api.anthropic.com/v1/messages',
-            {
-              method: 'POST',
-              headers: {
-                'x-api-key': claudeKey,
-                'anthropic-version': '2023-06-01',
-                'Content-Type': 'application/json',
-                'anthropic-beta': 'messages-2023-12-15'
-              },
-              body: JSON.stringify({
-                model: model,
-                messages: [{ role: 'user', content: prompt + '\n\nReturn only a valid JSON object.' }],
-                max_tokens: 2000,
-                temperature: 0.7
-              })
-            },
-            'anthropic',
-            requestId
-          ),
-          {
-            maxRetries: 3,
-            baseDelay: 1000,
-            onRetry: (attempt, error) => {
-              logger('warn', `Claude retry attempt ${attempt}`, { error: error.message }, requestId);
-            }
-          }
-        );
-      },
-      parseUsage: AnthropicAdapter.parseUsage,
-      parseData: (body) => {
-        const content = body.content?.[0]?.text;
-        if (!content) throw new Error('No content in Claude response');
-        
-        try {
-          const parsed = JSON.parse(content);
-          return parsed as AnalysisResult;
-        } catch (error) {
-          logger('error', 'Failed to parse Claude response', { error, content }, requestId);
-          throw new Error('Invalid JSON response from Claude');
-        }
-      }
-    });
+    const anthropicAdapter = createAnthropicAdapter(claudeKey);
+    const messages = [{ role: 'user', content: prompt + '\n\nReturn only a valid JSON object.' }];
     
-    globalPerformanceMonitor.track(event);
+    const result = await meteredCall(
+      ctx,
+      'anthropic',
+      model,
+      'analysis_light',
+      () => anthropicCircuitBreaker.execute(async () => {
+        const response = await callAPIWithRateLimit(
+          'https://api.anthropic.com/v1/messages',
+          {
+            method: 'POST',
+            headers: {
+              'x-api-key': claudeKey,
+              'anthropic-version': '2023-06-01',
+              'Content-Type': 'application/json',
+              'anthropic-beta': 'messages-2023-12-15'
+            },
+            body: JSON.stringify({
+              model: model,
+              messages,
+              max_tokens: 2000,
+              temperature: 0.7
+            })
+          },
+          'anthropic',
+          requestId,
+          anthropicCircuitBreaker
+        );
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`Anthropic API error: ${response.status} - ${errorBody}`);
+        }
+
+        return await response.json();
+      }),
+      (response) => {
+        if (CostCalculators.anthropic[model]) {
+          return CostCalculators.anthropic[model](
+            response.usage?.input_tokens || 0,
+            response.usage?.output_tokens || 0
+          );
+        }
+        return { inputTokens: response.usage?.input_tokens || 0, outputTokens: response.usage?.output_tokens || 0, cost: 0 };
+      }
+    );
+
+    // Parse the analysis result
+    const content = result.content?.[0]?.text;
+    if (!content) throw new Error('No content in Claude response');
+    
+    let data: AnalysisResult;
+    try {
+      const parsed = JSON.parse(content);
+      data = validateAnalysisResult(parsed);
+    } catch (error) {
+      logger('error', 'Failed to parse Claude response', { error, content }, requestId);
+      throw new Error('Invalid JSON response from Claude');
+    }
+    
+    globalPerformanceMonitor.recordMetric('anthropic', ctx.getEvents()[0]);
     
     logger('info', '✅ Claude analysis completed with enhanced metering', {
       model,
-      cost: `$${event.total_cost_usd.toFixed(6)}`,
-      inputTokens: event.input_tokens,
-      outputTokens: event.output_tokens,
-      cachedTokens: event.cached_tokens,
-      latencyMs: event.duration_ms,
-      rateLimits: rateLimitMonitor.getLimits('anthropic')
+      cost: `$${ctx.getEvents()[0].total_cost_usd.toFixed(6)}`,
+      inputTokens: ctx.getEvents()[0].input_tokens,
+      outputTokens: ctx.getEvents()[0].output_tokens,
+      cachedTokens: ctx.getEvents()[0].cached_tokens,
+      latencyMs: ctx.getEvents()[0].duration_ms,
+      rateLimits: rateLimitMonitor.getLimits('anthropic'),
+      circuitBreakerStatus: anthropicCircuitBreaker.getStatus()
     }, requestId);
     
     // Cache the result
+    const legacyCacheKey = `analysis:${model}:${Buffer.from(prompt).toString('base64').substring(0, 32)}`;
     enhancedAnalysisCache.set(safeUserId, 'analysis', prompt, data);
     analysisCache.set(legacyCacheKey, data);
     
-    await logUsageToSupabase(env, event, requestId);
+    await logUsageToSupabase(env, ctx.getEvents()[0], requestId);
 
     // Flush metrics asynchronously
     ctx.flush().catch(error => {
@@ -760,7 +947,7 @@ async function executeClaudeAnalysisOptimized(
 }
 
 // ============================================================================
-// INTELLIGENT EXECUTION WITH AUTOMATIC MODEL SELECTION (ENHANCED)
+// INTELLIGENT EXECUTION WITH AUTOMATIC MODEL SELECTION
 // ============================================================================
 
 async function executeIntelligentAnalysis(
@@ -785,7 +972,11 @@ async function executeIntelligentAnalysis(
       model,
       error: error.message,
       requestId,
-      rateLimits: rateLimitMonitor.getAllLimits()
+      rateLimits: rateLimitMonitor.getAllLimits(),
+      circuitBreakers: {
+        openai: openaiCircuitBreaker.getStatus(),
+        anthropic: anthropicCircuitBreaker.getStatus()
+      }
     }, requestId);
     
     // Intelligent fallback
@@ -799,60 +990,8 @@ async function executeIntelligentAnalysis(
   }
 }
 
-async function logUsageToSupabase(
-  env: Env,
-  event: UsageEvent,
-  requestId: string
-): Promise<void> {
-  try {
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE);
-    
-    await supabase.from('ai_usage_logs').insert({
-      provider: event.provider,
-      model: event.model,
-      input_tokens: event.input_tokens || 0,
-      output_tokens: event.output_tokens || 0,
-      total_cost_usd: event.total_cost_usd || 0,
-      cache_hit: event.cache_hit || false,
-      request_id: event.trace_id || requestId,
-      http_status: 200, // Assuming success if we're logging
-      meta: {
-        user_id: event.user_id,
-        business_id: event.business_id,
-        purpose: event.purpose,
-        duration_ms: event.duration_ms,
-        rate_limited: event.rate_limited || false
-      }
-    });
-    
-  } catch (error) {
-    logger('error', 'Failed to log usage to Supabase', { error: error.message }, requestId);
-  }
-}
-
-// Add this function for system health snapshots
-async function logSystemHealthSnapshot(env: Env): Promise<void> {
-  try {
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE);
-    const cacheStats = enhancedAnalysisCache.getStats();
-    const rateLimits = rateLimitMonitor.getAllLimits();
-    
-    await supabase.from('system_health_snapshots').insert({
-      cache_hit_rate: cacheStats.hitRate,
-      total_active_users: cacheStats.activeUsers,
-      avg_response_time_ms: Math.round(cacheStats.avgAge * 1000), // Convert to ms
-      memory_usage_mb: cacheStats.memoryUsage / 1024 / 1024,
-      openai_requests_remaining: rateLimits.openai?.requests_remaining || null,
-      anthropic_requests_remaining: rateLimits.anthropic?.requests_remaining || null
-    });
-    
-  } catch (error) {
-    logger('error', 'Failed to log system health', { error: error.message });
-  }
-}
-
 // ============================================================================
-// MAIN ANALYSIS FUNCTION WITH FULL METERING (ENHANCED)
+// MAIN ANALYSIS FUNCTION WITH FULL METERING
 // ============================================================================
 
 export async function performAIAnalysis(
@@ -879,7 +1018,11 @@ export async function performAIAnalysis(
     hasEngagement: (profile.engagement?.postsAnalyzed || 0) > 0,
     dataQuality: profile.dataQuality,
     cacheStats: enhancedAnalysisCache.getStats(),
-    rateLimits: rateLimitMonitor.getAllLimits()
+    rateLimits: rateLimitMonitor.getAllLimits(),
+    circuitBreakers: {
+      openai: openaiCircuitBreaker.getStatus(),
+      anthropic: anthropicCircuitBreaker.getStatus()
+    }
   }, requestId);
   
   // Calculate intelligence
@@ -930,9 +1073,7 @@ export async function performAIAnalysis(
   };
   
   // Log final metrics with enhanced stats
-  const stats = globalPerformanceMonitor.getStats('openai' as any, 
-    analysisType === 'deep' ? 'analysis_deep' as any : 'analysis_light' as any
-  );
+  const stats = globalPerformanceMonitor.getStats();
   
   logger('info', '✨ AI analysis completed with enhanced metrics', {
     username: profile.username,
@@ -941,21 +1082,16 @@ export async function performAIAnalysis(
     nicheFit: finalResult.niche_fit,
     confidence: finalResult.confidence_level,
     totalTimeMs: Math.round(totalTime),
-    sessionStats: {
-      totalCalls: stats.count,
-      totalCost: `$${stats.totalCost.toFixed(4)}`,
-      avgLatency: `${stats.avgLatency}ms`,
-      p95Latency: `${stats.p95Latency}ms`
-    },
     cachePerformance: enhancedAnalysisCache.getStats(),
-    rateLimitStatus: rateLimitMonitor.getAllLimits()
+    rateLimitStatus: rateLimitMonitor.getAllLimits(),
+    systemHealth: rateLimitMonitor.isHealthy()
   }, requestId);
   
   return finalResult;
 }
 
 // ============================================================================
-// ENHANCED OUTREACH MESSAGE GENERATION WITH CACHING & RATE LIMITING
+// ENHANCED OUTREACH MESSAGE GENERATION
 // ============================================================================
 
 export async function generateOutreachMessage(
@@ -974,7 +1110,7 @@ export async function generateOutreachMessage(
     score: analysis.score 
   }, requestId);
   
-  const ctx = new MeteringContext(env, requestId, userId, businessId);
+  const ctx = new MeteringContext(requestId);
   const safeUserId = userId || businessId || 'anonymous';
   
   const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 ?
@@ -991,6 +1127,15 @@ export async function generateOutreachMessage(
     // Check enhanced cache first
     const cached = enhancedAnalysisCache.get<string>(safeUserId, 'outreach', messagePrompt);
     if (cached) {
+      ctx.recordEvent({
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        purpose: 'outreach',
+        cache_hit: true,
+        user_id: userId,
+        business_id: businessId
+      });
+      
       logger('info', 'Enhanced cache hit for outreach message', { 
         cacheHit: true,
         cacheStats: enhancedAnalysisCache.getStats()
@@ -1002,6 +1147,15 @@ export async function generateOutreachMessage(
     const legacyCacheKey = `msg:${profile.username}:${business.name}:${analysis.score}`;
     const legacyCached = analysisCache.get<string>(legacyCacheKey);
     if (legacyCached) {
+      ctx.recordEvent({
+        provider: 'anthropic',
+        model: 'claude-3-5-sonnet-20241022',
+        purpose: 'outreach',
+        cache_hit: true,
+        user_id: userId,
+        business_id: businessId
+      });
+      
       logger('info', 'Legacy cache hit for outreach message', { cacheHit: true }, requestId);
       // Store in enhanced cache for future
       enhancedAnalysisCache.set(safeUserId, 'outreach', messagePrompt, legacyCached);
@@ -1013,44 +1167,59 @@ export async function generateOutreachMessage(
     
     // Prefer Claude for outreach (better conversational tone)
     if (claudeKey) {
-      const { data, event } = await meteredCall(ctx, {
-        provider: 'anthropic',
-        model: 'claude-3-5-sonnet-20241022',
-        purpose: 'outreach',
-        makeRequest: () => {
-          return RetryHandler.withRetry(
-            () => callAPIWithRateLimit( // Enhanced with rate limiting
-              'https://api.anthropic.com/v1/messages',
-              {
-                method: 'POST',
-                headers: {
-                  'x-api-key': claudeKey,
-                  'anthropic-version': '2023-06-01',
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                  model: 'claude-3-5-sonnet-20241022',
-                  messages: [{ role: 'user', content: messagePrompt }],
-                  max_tokens: 2500,
-                  temperature: 0.7
-                })
+      const result = await meteredCall(
+        ctx,
+        'anthropic',
+        'claude-3-5-sonnet-20241022',
+        'outreach',
+        () => anthropicCircuitBreaker.execute(async () => {
+          const response = await callAPIWithRateLimit(
+            'https://api.anthropic.com/v1/messages',
+            {
+              method: 'POST',
+              headers: {
+                'x-api-key': claudeKey,
+                'anthropic-version': '2023-06-01',
+                'Content-Type': 'application/json'
               },
-              'anthropic',
-              requestId
-            ),
-            { maxRetries: 3 }
+              body: JSON.stringify({
+                model: 'claude-3-5-sonnet-20241022',
+                messages: [{ role: 'user', content: messagePrompt }],
+                max_tokens: 2500,
+                temperature: 0.7
+              })
+            },
+            'anthropic',
+            requestId,
+            anthropicCircuitBreaker
           );
-        },
-        parseUsage: AnthropicAdapter.parseUsage,
-        parseData: (body) => body.content?.[0]?.text || ''
-      });
+
+          if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`Anthropic API error: ${response.status} - ${errorBody}`);
+          }
+
+          return await response.json();
+        }),
+        (response) => {
+          if (CostCalculators.anthropic['claude-3-5-sonnet-20241022']) {
+            return CostCalculators.anthropic['claude-3-5-sonnet-20241022'](
+              response.usage?.input_tokens || 0,
+              response.usage?.output_tokens || 0
+            );
+          }
+          return { inputTokens: response.usage?.input_tokens || 0, outputTokens: response.usage?.output_tokens || 0, cost: 0 };
+        }
+      );
+
+      const data = result.content?.[0]?.text || '';
       
-      globalPerformanceMonitor.track(event);
+      globalPerformanceMonitor.recordMetric('anthropic', ctx.getEvents()[0]);
       
       logger('info', '✅ Outreach message generated (Claude) with enhanced features', {
-        cost: `$${event.total_cost_usd.toFixed(6)}`,
-        tokens: event.total_tokens,
-        latencyMs: event.duration_ms,
+        cost: `$${ctx.getEvents()[0].total_cost_usd.toFixed(6)}`,
+        tokens: ctx.getEvents()[0].total_tokens,
+        latencyMs: ctx.getEvents()[0].duration_ms,
         rateLimits: rateLimitMonitor.getLimits('anthropic')
       }, requestId);
       
@@ -1058,19 +1227,20 @@ export async function generateOutreachMessage(
       enhancedAnalysisCache.set(safeUserId, 'outreach', messagePrompt, data);
       analysisCache.set(legacyCacheKey, data);
 
-      await logUsageToSupabase(env, event, requestId);
+      await logUsageToSupabase(env, ctx.getEvents()[0], requestId);
       
       ctx.flush().catch(console.error);
       
       return data;
       
     } else if (openaiKey) {
-      const { data, event } = await meteredCall(ctx, {
-        provider: 'openai',
-        model: 'gpt-4o-mini-2024-07-18',
-        purpose: 'outreach',
-        makeRequest: () => {
-          return callAPIWithRateLimit( // Enhanced with rate limiting
+      const result = await meteredCall(
+        ctx,
+        'openai',
+        'gpt-4o-mini-2024-07-18',
+        'outreach',
+        () => openaiCircuitBreaker.execute(async () => {
+          const response = await callAPIWithRateLimit(
             'https://api.openai.com/v1/chat/completions',
             {
               method: 'POST',
@@ -1085,19 +1255,36 @@ export async function generateOutreachMessage(
               })
             },
             'openai',
-            requestId
+            requestId,
+            openaiCircuitBreaker
           );
-        },
-        parseUsage: OpenAIAdapter.parseUsage,
-        parseData: (body) => body.choices?.[0]?.message?.content || ''
-      });
+
+          if (!response.ok) {
+            const errorBody = await response.text();
+            throw new Error(`OpenAI API error: ${response.status} - ${errorBody}`);
+          }
+
+          return await response.json();
+        }),
+        (response) => {
+          if (CostCalculators.openai['gpt-4o-mini-2024-07-18']) {
+            return CostCalculators.openai['gpt-4o-mini-2024-07-18'](
+              response.usage?.prompt_tokens || 0,
+              response.usage?.completion_tokens || 0
+            );
+          }
+          return { inputTokens: response.usage?.prompt_tokens || 0, outputTokens: response.usage?.completion_tokens || 0, cost: 0 };
+        }
+      );
+
+      const data = result.choices?.[0]?.message?.content || '';
       
-      globalPerformanceMonitor.track(event);
+      globalPerformanceMonitor.recordMetric('openai', ctx.getEvents()[0]);
       
       logger('info', '✅ Outreach message generated (OpenAI) with enhanced features', {
-        cost: `$${event.total_cost_usd.toFixed(6)}`,
-        tokens: event.total_tokens,
-        latencyMs: event.duration_ms,
+        cost: `$${ctx.getEvents()[0].total_cost_usd.toFixed(6)}`,
+        tokens: ctx.getEvents()[0].total_tokens,
+        latencyMs: ctx.getEvents()[0].duration_ms,
         rateLimits: rateLimitMonitor.getLimits('openai')
       }, requestId);
       
@@ -1105,7 +1292,7 @@ export async function generateOutreachMessage(
       enhancedAnalysisCache.set(safeUserId, 'outreach', messagePrompt, data);
       analysisCache.set(legacyCacheKey, data);
 
-      await logUsageToSupabase(env, event, requestId);
+      await logUsageToSupabase(env, ctx.getEvents()[0], requestId);
       
       ctx.flush().catch(console.error);
       
@@ -1121,7 +1308,7 @@ export async function generateOutreachMessage(
 }
 
 // ============================================================================
-// HELPER FUNCTIONS (UNCHANGED)
+// HELPER FUNCTIONS
 // ============================================================================
 
 function buildLightEvaluatorPrompt(profile: ProfileData, business: BusinessProfile): string {
@@ -1233,7 +1420,7 @@ async function generateDeepSummary(
   userId?: string,
   businessId?: string
 ): Promise<string> {
-  const ctx = new MeteringContext(env, requestId, userId, businessId);
+  const ctx = new MeteringContext(requestId);
   const safeUserId = userId || businessId || 'anonymous';
   
   const summaryPrompt = `Create a 2-3 sentence executive summary of this influencer analysis:
@@ -1249,6 +1436,15 @@ Write a concise, actionable summary for decision makers.`;
     // Check enhanced cache first
     const cached = enhancedAnalysisCache.get<string>(safeUserId, 'summary', summaryPrompt);
     if (cached) {
+      ctx.recordEvent({
+        provider: 'openai',
+        model: 'gpt-4o-mini-2024-07-18',
+        purpose: 'summary',
+        cache_hit: true,
+        user_id: userId,
+        business_id: businessId
+      });
+      
       logger('info', 'Enhanced cache hit for deep summary', { cacheHit: true }, requestId);
       return cached;
     }
@@ -1256,12 +1452,13 @@ Write a concise, actionable summary for decision makers.`;
     const openaiKey = await getApiKey('OPENAI_API_KEY', env);
     if (!openaiKey) return analysis.engagement_insights || '';
     
-    const { data, event } = await meteredCall(ctx, {
-      provider: 'openai',
-      model: 'gpt-4o-mini-2024-07-18',
-      purpose: 'summary',
-      makeRequest: () => {
-        return callAPIWithRateLimit( // Enhanced with rate limiting
+    const result = await meteredCall(
+      ctx,
+      'openai',
+      'gpt-4o-mini-2024-07-18',
+      'summary',
+      () => openaiCircuitBreaker.execute(async () => {
+        const response = await callAPIWithRateLimit(
           'https://api.openai.com/v1/chat/completions',
           {
             method: 'POST',
@@ -1276,20 +1473,37 @@ Write a concise, actionable summary for decision makers.`;
             })
           },
           'openai',
-          requestId
+          requestId,
+          openaiCircuitBreaker
         );
-      },
-      parseUsage: OpenAIAdapter.parseUsage,
-      parseData: (body) => body.choices?.[0]?.message?.content || ''
-    });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(`OpenAI API error: ${response.status} - ${errorBody}`);
+        }
+
+        return await response.json();
+      }),
+      (response) => {
+        if (CostCalculators.openai['gpt-4o-mini-2024-07-18']) {
+          return CostCalculators.openai['gpt-4o-mini-2024-07-18'](
+            response.usage?.prompt_tokens || 0,
+            response.usage?.completion_tokens || 0
+          );
+        }
+        return { inputTokens: response.usage?.prompt_tokens || 0, outputTokens: response.usage?.completion_tokens || 0, cost: 0 };
+      }
+    );
+
+    const data = result.choices?.[0]?.message?.content || '';
     
     logger('info', 'Deep summary generated with enhanced features', {
-      cost: `$${event.total_cost_usd.toFixed(6)}`,
-      tokens: event.total_tokens,
+      cost: `$${ctx.getEvents()[0].total_cost_usd.toFixed(6)}`,
+      tokens: ctx.getEvents()[0].total_tokens,
       rateLimits: rateLimitMonitor.getLimits('openai')
     }, requestId);
 
-    await logUsageToSupabase(env, event, requestId);
+    await logUsageToSupabase(env, ctx.getEvents()[0], requestId);
     
     // Cache the result
     enhancedAnalysisCache.set(safeUserId, 'summary', summaryPrompt, data);
@@ -1304,7 +1518,7 @@ Write a concise, actionable summary for decision makers.`;
 }
 
 // ============================================================================
-// VALIDATION AND CONFIDENCE FUNCTIONS (UNCHANGED)
+// VALIDATION AND CONFIDENCE FUNCTIONS
 // ============================================================================
 
 function validateAnalysisResult(result: any): AnalysisResult {
@@ -1377,7 +1591,7 @@ function extractPostThemes(posts: any[]): string {
 }
 
 // ============================================================================
-// ANOMALY STORAGE FUNCTION (UNCHANGED)
+// ANOMALY STORAGE FUNCTION
 // ============================================================================
 
 async function storeAnomaly(
@@ -1418,13 +1632,13 @@ async function storeAnomaly(
 
 export function getAnalysisPerformanceStats(): any {
   const stats = {
-    openai: globalPerformanceMonitor.getStats('openai' as any),
-    anthropic: globalPerformanceMonitor.getStats('anthropic' as any),
+    openai: globalPerformanceMonitor.getStats(),
+    anthropic: globalPerformanceMonitor.getStats(),
     byPurpose: {
-      analysis_light: globalPerformanceMonitor.getStats(undefined, 'analysis_light' as any),
-      analysis_deep: globalPerformanceMonitor.getStats(undefined, 'analysis_deep' as any),
-      outreach: globalPerformanceMonitor.getStats(undefined, 'outreach' as any),
-      summary: globalPerformanceMonitor.getStats(undefined, 'summary' as any)
+      analysis_light: globalPerformanceMonitor.getStats(),
+      analysis_deep: globalPerformanceMonitor.getStats(),
+      outreach: globalPerformanceMonitor.getStats(),
+      summary: globalPerformanceMonitor.getStats()
     },
     anomalies: globalAnomalyDetector.getStatistics(),
     cache: {
@@ -1432,6 +1646,10 @@ export function getAnalysisPerformanceStats(): any {
       enhanced: enhancedAnalysisCache.getStats()
     },
     rateLimits: rateLimitMonitor.getAllLimits(),
+    circuitBreakers: {
+      openai: openaiCircuitBreaker.getStatus(),
+      anthropic: anthropicCircuitBreaker.getStatus()
+    },
     timestamp: new Date().toISOString()
   };
   
@@ -1439,35 +1657,35 @@ export function getAnalysisPerformanceStats(): any {
 }
 
 export function getCostBreakdown(timeRange?: { start: Date; end: Date }): any {
-  const openaiStats = globalPerformanceMonitor.getStats('openai' as any);
-  const anthropicStats = globalPerformanceMonitor.getStats('anthropic' as any);
+  const openaiStats = globalPerformanceMonitor.getStats();
+  const anthropicStats = globalPerformanceMonitor.getStats();
   
   return {
     total: {
-      cost: openaiStats.totalCost + anthropicStats.totalCost,
-      calls: openaiStats.count + anthropicStats.count,
-      avgCost: (openaiStats.avgCost + anthropicStats.avgCost) / 2
+      cost: (openaiStats.totalCost || 0) + (anthropicStats.totalCost || 0),
+      calls: (openaiStats.count || 0) + (anthropicStats.count || 0),
+      avgCost: ((openaiStats.avgCost || 0) + (anthropicStats.avgCost || 0)) / 2
     },
     byProvider: {
       openai: {
-        cost: openaiStats.totalCost,
-        calls: openaiStats.count,
-        avgCost: openaiStats.avgCost,
-        avgLatency: openaiStats.avgLatency,
-        errorRate: openaiStats.errorRate
+        cost: openaiStats.totalCost || 0,
+        calls: openaiStats.count || 0,
+        avgCost: openaiStats.avgCost || 0,
+        avgLatency: openaiStats.avgLatency || 0,
+        errorRate: openaiStats.errorRate || 0
       },
       anthropic: {
-        cost: anthropicStats.totalCost,
-        calls: anthropicStats.count,
-        avgCost: anthropicStats.avgCost,
-        avgLatency: anthropicStats.avgLatency,
-        errorRate: anthropicStats.errorRate
+        cost: anthropicStats.totalCost || 0,
+        calls: anthropicStats.count || 0,
+        avgCost: anthropicStats.avgCost || 0,
+        avgLatency: anthropicStats.avgLatency || 0,
+        errorRate: anthropicStats.errorRate || 0
       }
     },
     latencyPercentiles: {
-      p50: Math.min(openaiStats.p50Latency, anthropicStats.p50Latency),
-      p95: Math.max(openaiStats.p95Latency, anthropicStats.p95Latency),
-      p99: Math.max(openaiStats.p99Latency, anthropicStats.p99Latency)
+      p50: Math.min(openaiStats.p50Latency || 0, anthropicStats.p50Latency || 0),
+      p95: Math.max(openaiStats.p95Latency || 0, anthropicStats.p95Latency || 0),
+      p99: Math.max(openaiStats.p99Latency || 0, anthropicStats.p99Latency || 0)
     },
     cachePerformance: {
       legacy: analysisCache.getStats(),
@@ -1497,11 +1715,15 @@ export function getCacheStats() {
 }
 
 // ============================================================================
-// PARALLEL PROCESSING FOR BATCH OPERATIONS (ENHANCED)
+// PARALLEL PROCESSING FOR BATCH OPERATIONS
 // ============================================================================
 
 export class ParallelProcessor {
-  private readonly MAX_CONCURRENT = 5;
+  private readonly MAX_CONCURRENT: number;
+  
+  constructor(maxConcurrent?: number) {
+    this.MAX_CONCURRENT = maxConcurrent || globalConfig?.performance.maxConcurrentBatch || 5;
+  }
   
   async processBatch<T, R>(
     items: T[],
@@ -1515,8 +1737,13 @@ export class ParallelProcessor {
     // Log rate limit status before batch processing
     logger('info', 'Starting batch processing', {
       totalItems: items.length,
+      maxConcurrent: this.MAX_CONCURRENT,
       rateLimits: rateLimitMonitor.getAllLimits(),
-      cacheStats: enhancedAnalysisCache.getStats()
+      cacheStats: enhancedAnalysisCache.getStats(),
+      circuitBreakers: {
+        openai: openaiCircuitBreaker.getStatus(),
+        anthropic: anthropicCircuitBreaker.getStatus()
+      }
     });
     
     while (queue.length > 0 || inProgress.size > 0) {
@@ -1530,6 +1757,11 @@ export class ParallelProcessor {
               onProgress(results.filter(r => r !== undefined).length, items.length);
             }
           })
+          .catch(error => {
+            logger('error', `Batch item ${index} failed`, { error: error.message });
+            // Set a default error result
+            results[index] = null as any;
+          })
           .finally(() => {
             inProgress.delete(promise);
           });
@@ -1542,7 +1774,7 @@ export class ParallelProcessor {
       }
     }
     
-    return results;
+    return results.filter(r => r !== null);
   }
 }
 
@@ -1653,7 +1885,7 @@ export async function performUltimateAnalysis(
   const userId = business.user_id;
   const businessId = business.id;
   
-  const ctx = new MeteringContext(env, requestId, userId, businessId);
+  const ctx = new MeteringContext(requestId);
   const startTime = performance.now();
   
   try {
@@ -1694,8 +1926,8 @@ export async function performUltimateAnalysis(
       timings: {
         totalMs: Math.round(performance.now() - startTime),
         breakdown: {
-          analysis: stats.openai.avgLatency,
-          outreach: outreachMessage ? stats.anthropic.avgLatency : 0
+          analysis: stats.openai.avgLatency || 0,
+          outreach: outreachMessage ? stats.anthropic.avgLatency || 0 : 0
         }
       },
       costs: {
@@ -1708,11 +1940,14 @@ export async function performUltimateAnalysis(
         overallHitRate: stats.cache.enhanced.hitRate
       },
       rateLimits: stats.rateLimits,
+      circuitBreakers: stats.circuitBreakers,
       outreachGenerated: !!outreachMessage,
       enhancedFeatures: {
         userIsolatedCache: true,
         rateLimitMonitoring: true,
-        automaticThrottling: true
+        automaticThrottling: true,
+        circuitBreakerProtection: true,
+        exponentialBackoff: true
       }
     };
     
@@ -1743,29 +1978,17 @@ export async function performUltimateAnalysis(
 }
 
 // ============================================================================
-// EXPORT ALL PUBLIC FUNCTIONS (ENHANCED)
-// ============================================================================
-
-export {
-  IntelligentCache,
-  EnhancedIntelligentCache,
-  RateLimitMonitor,
-  ParallelProcessor,
-  calculateProfileIntelligence,
-  validateAnalysisResult,
-  calculateConfidenceLevel,
-  extractPostThemes,
-  callAPIWithRateLimit
-};
-
-// ============================================================================
-// ADMIN & MONITORING ENDPOINTS (NEW)
+// ADMIN & MONITORING ENDPOINTS
 // ============================================================================
 
 export function getSystemHealthStatus(): any {
   const cacheStats = enhancedAnalysisCache.getStats();
   const rateLimits = rateLimitMonitor.getAllLimits();
   const performanceStats = getAnalysisPerformanceStats();
+  const circuitBreakers = {
+    openai: openaiCircuitBreaker.getStatus(),
+    anthropic: anthropicCircuitBreaker.getStatus()
+  };
   
   // Calculate overall system health
   let healthScore = 100;
@@ -1784,6 +2007,15 @@ export function getSystemHealthStatus(): any {
   });
   healthScore = healthScore * 0.8 + rateLimitHealth * 0.2;
   
+  // Circuit breaker health (10% of score)
+  let circuitBreakerHealth = 100;
+  Object.values(circuitBreakers).forEach(cb => {
+    if (cb.state === 'open') circuitBreakerHealth -= 50;
+    else if (cb.state === 'half-open') circuitBreakerHealth -= 25;
+    else if (cb.failures > 2) circuitBreakerHealth -= 10;
+  });
+  healthScore = healthScore * 0.9 + circuitBreakerHealth * 0.1;
+  
   return {
     overallHealth: Math.round(healthScore),
     status: healthScore > 80 ? 'healthy' : healthScore > 60 ? 'warning' : 'critical',
@@ -1800,10 +2032,15 @@ export function getSystemHealthStatus(): any {
         openai: rateLimits.openai,
         anthropic: rateLimits.anthropic
       },
+      circuitBreakers: {
+        status: circuitBreakerHealth > 80 ? 'healthy' : circuitBreakerHealth > 60 ? 'warning' : 'critical',
+        openai: circuitBreakers.openai,
+        anthropic: circuitBreakers.anthropic
+      },
       performance: {
-        totalAnalyses: performanceStats.openai.count + performanceStats.anthropic.count,
-        avgLatency: `${((performanceStats.openai.avgLatency + performanceStats.anthropic.avgLatency) / 2).toFixed(0)}ms`,
-        errorRate: `${((performanceStats.openai.errorRate + performanceStats.anthropic.errorRate) / 2 * 100).toFixed(2)}%`
+        totalAnalyses: (performanceStats.openai.count || 0) + (performanceStats.anthropic.count || 0),
+        avgLatency: `${(((performanceStats.openai.avgLatency || 0) + (performanceStats.anthropic.avgLatency || 0)) / 2).toFixed(0)}ms`,
+        errorRate: `${(((performanceStats.openai.errorRate || 0) + (performanceStats.anthropic.errorRate || 0)) / 2 * 100).toFixed(2)}%`
       }
     },
     timestamp: new Date().toISOString()
@@ -1840,13 +2077,12 @@ export function optimizeCache(): { before: any; after: any; optimizations: strin
 
 export function clearUserCache(userId: string): { cleared: boolean; message: string } {
   try {
-    // In a real implementation, this would clear specific user entries
-    // For now, we'll just return a status
-    logger('info', 'Cache clear requested for user', { userId });
+    const clearedCount = enhancedAnalysisCache.clearUserCache(userId);
+    logger('info', 'Cache cleared for user', { userId, clearedCount });
     
     return {
       cleared: true,
-      message: `Cache cleared for user ${userId}`
+      message: `Cache cleared for user ${userId} (${clearedCount} entries removed)`
     };
   } catch (error) {
     return {
@@ -1857,33 +2093,8 @@ export function clearUserCache(userId: string): { cleared: boolean; message: str
 }
 
 // ============================================================================
-// CONFIGURATION & FEATURE FLAGS (NEW)
+// CONFIGURATION & FEATURE FLAGS
 // ============================================================================
-
-export interface EnhancedAnalysisConfig {
-  caching: {
-    enabled: boolean;
-    ttl: number;
-    maxSizePerUser: number;
-    maxGlobalSize: number;
-  };
-  rateLimiting: {
-    enabled: boolean;
-    throttleThresholds: {
-      requests: number;
-      tokens: number;
-    };
-    delays: {
-      warning: number;
-      critical: number;
-    };
-  };
-  performance: {
-    maxConcurrentBatch: number;
-    timeoutMs: number;
-    retries: number;
-  };
-}
 
 const DEFAULT_CONFIG: EnhancedAnalysisConfig = {
   caching: {
@@ -1921,6 +2132,13 @@ export function updateAnalysisConfig(newConfig: Partial<EnhancedAnalysisConfig>)
     performance: { ...currentConfig.performance, ...newConfig.performance }
   };
   
+  // Reinitialize with new config if global config exists
+  if (globalConfig) {
+    globalConfig = currentConfig;
+    enhancedAnalysisCache = new EnhancedIntelligentCache(globalConfig.caching);
+    rateLimitMonitor = new RateLimitMonitor(globalConfig.rateLimiting);
+  }
+  
   logger('info', 'Analysis configuration updated', { newConfig: currentConfig });
   return currentConfig;
 }
@@ -1936,7 +2154,7 @@ export function resetAnalysisConfig(): EnhancedAnalysisConfig {
 }
 
 // ============================================================================
-// PERFORMANCE BENCHMARKING (NEW)
+// PERFORMANCE BENCHMARKING
 // ============================================================================
 
 export async function benchmarkAnalysisPerformance(
@@ -1964,7 +2182,7 @@ export async function benchmarkAnalysisPerformance(
       
       // Clear cache for first iteration to ensure fair testing
       if (i === 0) {
-        // In real implementation, would clear cache here
+        enhancedAnalysisCache.clear();
       }
       
       const result = await performAIAnalysis(
@@ -2041,17 +2259,97 @@ function generatePerformanceRecommendations(results: any): string[] {
 // ============================================================================
 
 export {
-  // New enhanced functions
+  // Core analysis functions
+  performAIAnalysis,
+  generateOutreachMessage,
+  performBatchAnalysis,
+  performUltimateAnalysis,
+  
+  // Performance monitoring
+  getAnalysisPerformanceStats,
+  getCostBreakdown,
+  
+  // Enhanced cache management
+  getCacheStats,
+  getEnhancedCacheStats,
+  
+  // Rate limiting
+  getRateLimitStatus,
+  
+  // System health
   getSystemHealthStatus,
   optimizeCache,
   clearUserCache,
+  
+  // Configuration management
   updateAnalysisConfig,
   getAnalysisConfig,
   resetAnalysisConfig,
   benchmarkAnalysisPerformance,
   
+  // Utility functions
+  calculateProfileIntelligence,
+  validateAnalysisResult,
+  calculateConfidenceLevel,
+  extractPostThemes,
+  callAPIWithRateLimit,
+  
+  // Classes for advanced usage
+  ParallelProcessor,
+  EnhancedIntelligentCache,
+  RateLimitMonitor,
+  CircuitBreaker,
+  
   // Enhanced config type
   type EnhancedAnalysisConfig
 };
 
+// ============================================================================
+// DEFAULT EXPORT WITH ALL FEATURES
+// ============================================================================
 
+export default {
+  // Core analysis functions
+  performAIAnalysis,
+  generateOutreachMessage,
+  performBatchAnalysis,
+  performUltimateAnalysis,
+  
+  // Performance monitoring
+  getAnalysisPerformanceStats,
+  getCostBreakdown,
+  
+  // Enhanced cache management
+  getCacheStats,
+  getEnhancedCacheStats,
+  
+  // Rate limiting
+  getRateLimitStatus,
+  
+  // System administration
+  getSystemHealthStatus,
+  optimizeCache,
+  clearUserCache,
+  
+  // Configuration
+  updateAnalysisConfig,
+  getAnalysisConfig,
+  resetAnalysisConfig,
+  benchmarkAnalysisPerformance,
+  
+  // Utility functions
+  calculateProfileIntelligence,
+  validateAnalysisResult,
+  calculateConfidenceLevel,
+  extractPostThemes,
+  callAPIWithRateLimit,
+  
+  // Classes for advanced usage
+  ParallelProcessor,
+  EnhancedIntelligentCache,
+  RateLimitMonitor,
+  CircuitBreaker,
+  
+  // Initialize the service
+  initializeWithConfig
+};
