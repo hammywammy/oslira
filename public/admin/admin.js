@@ -139,6 +139,134 @@ async verifyAdminAccess() {
     }
 }
 
+    async performSystemCleanup() {
+  try {
+    this.showLoadingOverlay('Performing system cleanup...');
+    
+    // Cache cleanup
+    const cacheResponse = await window.OsliraApp.apiRequest('/admin/cache-cleanup', {
+      method: 'POST'
+    });
+    
+    if (cacheResponse.success) {
+      Alert.success({
+        title: 'System Cleanup Complete',
+        message: 'Legacy systems removed and cache optimized',
+        suggestions: [
+          'Monitor performance over next 24 hours',
+          'Check admin dashboard for improvements'
+        ],
+        timeoutMs: 8000
+      });
+      
+      // Update UI with cleanup results
+      this.displayCleanupResults(cacheResponse.data);
+    } else {
+      throw new Error(cacheResponse.error || 'Cleanup failed');
+    }
+    
+  } catch (error) {
+    console.error('System cleanup failed:', error);
+    Alert.error('System cleanup failed', {
+      details: error.message,
+      actions: [{ label: 'Try Again', action: 'retry' }]
+    });
+  } finally {
+    this.hideLoadingOverlay();
+  }
+}
+
+displayCleanupResults(cleanupData) {
+  const container = document.getElementById('cleanup-results');
+  if (!container) return;
+  
+  container.innerHTML = `
+    <div class="cleanup-results-card">
+      <div class="cleanup-header">
+        <h4>🧹 System Cleanup Results</h4>
+        <span class="cleanup-status success">Completed</span>
+      </div>
+      
+      <div class="cleanup-section">
+        <h5>Migration Results</h5>
+        <div class="cleanup-stats">
+          <div class="stat-item">
+            <span class="stat-label">Systems Migrated:</span>
+            <span class="stat-value">${cleanupData.cleanup.migrationResult.migrated}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Errors:</span>
+            <span class="stat-value">${cleanupData.cleanup.migrationResult.errors}</span>
+          </div>
+        </div>
+        
+        <div class="optimization-list">
+          <h6>Optimizations Applied:</h6>
+          <ul>
+            ${cleanupData.cleanup.migrationResult.optimizations.map(opt => 
+              `<li>${opt}</li>`
+            ).join('')}
+          </ul>
+        </div>
+      </div>
+      
+      <div class="cleanup-section">
+        <h5>Cleanup Tasks</h5>
+        <ul class="task-list">
+          ${cleanupData.cleanup.cleanupTasks.map(task => 
+            `<li class="task-completed">${task}</li>`
+          ).join('')}
+        </ul>
+      </div>
+      
+      <div class="cleanup-section">
+        <h5>Performance Recommendations</h5>
+        <ul class="recommendation-list">
+          ${cleanupData.cleanup.recommendations.map(rec => 
+            `<li class="recommendation">${rec}</li>`
+          ).join('')}
+        </ul>
+      </div>
+      
+      <div class="cleanup-section">
+        <h5>Current Cache Statistics</h5>
+        <div class="cache-stats">
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="stat-number">${cleanupData.cacheStats?.hitRate?.toFixed(1) || 0}%</span>
+              <span class="stat-label">Hit Rate</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number">${cleanupData.cacheStats?.totalSize || 0}</span>
+              <span class="stat-label">Cache Size</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number">${cleanupData.cacheStats?.activeUsers || 0}</span>
+              <span class="stat-label">Active Users</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-number">${Math.round((cleanupData.cacheStats?.memoryUsage || 0) / 1024)}KB</span>
+              <span class="stat-label">Memory Usage</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="cleanup-section">
+        <h5>Next Steps</h5>
+        <div class="next-steps">
+          ${cleanupData.nextSteps.map((step, index) => `
+            <div class="next-step">
+              <span class="step-number">${index + 1}</span>
+              <span class="step-text">${step}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
     handleInitializationError(error) {
         const errorMessage = error.message || 'Failed to initialize admin dashboard';
         window.OsliraApp.showMessage(errorMessage, 'error');
@@ -172,6 +300,15 @@ async verifyAdminAccess() {
     }
 
     setupUIEventListeners() {
+
+        const cleanupBtn = document.getElementById('system-cleanup-btn');
+if (cleanupBtn) {
+  cleanupBtn.addEventListener('click', () => {
+    if (confirm('Perform system cleanup and optimization?\n\nThis will:\n- Remove legacy cache systems\n- Optimize performance\n- Clean up technical debt\n\nRecommended during low-traffic periods.')) {
+      this.performSystemCleanup();
+    }
+  });
+}
         // Global click handlers
         document.addEventListener('click', (e) => {
             // Handle any global click events
