@@ -17,18 +17,44 @@ export interface AnalysisTier {
 }
 
 export interface Env {
+  // App Environment
   APP_ENV: 'production' | 'staging';
+  
+  // API Keys (retrieved from AWS)
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
   APIFY_API_TOKEN?: string;
+  
+  // Database
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE?: string;
+  SUPABASE_ANON_KEY?: string;
+  
+  // AWS Configuration
+  AWS_ACCESS_KEY_ID?: string;
+  AWS_SECRET_ACCESS_KEY?: string;
+  AWS_REGION?: string;
+  
+  // Auth & Admin
   INTERNAL_API_TOKEN?: string;
   ADMIN_TOKEN?: string;
+  
+  // URLs
   WORKER_URL?: string;
   FRONTEND_URL?: string;
-  RATE_LIMIT?: KVNamespace;
-  CONFIG_CACHE?: KVNamespace;
+  
+  // Rate Limiting & Caching (from wrangler.toml)
+  RATE_LIMIT_ENABLED?: string;
+  CACHE_TTL?: string;
+  MAX_CACHE_SIZE_PER_USER?: string;
+  MAX_GLOBAL_CACHE_SIZE?: string;
+  THROTTLE_THRESHOLD_REQUESTS?: string;
+  THROTTLE_THRESHOLD_TOKENS?: string;
+  
+  // Performance Configuration
+  MAX_CONCURRENT_BATCH?: string;
+  TIMEOUT_MS?: string;
+  RETRIES?: string;
 }
 
 export interface ProfileData {
