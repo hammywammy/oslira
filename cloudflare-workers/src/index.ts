@@ -360,11 +360,27 @@ app.get('/admin/rate-limits', async (c) => {
 // ============================================================================
 // INTERNAL ENDPOINTS WITH TOKEN VALIDATION
 // ============================================================================
-if (getEnvironment(c.env) === 'staging') {
-  app.get('/debug/engagement/:username', handleDebugEngagement);
-  app.get('/debug/profile/:username', handleDebugProfile);
-  app.get('/debug/parsing/:username', handleDebugParsing);
-}
+// Debug endpoints for development (staging only)
+app.get('/debug/engagement/:username', async (c) => {
+  if (getEnvironment(c.env) === 'staging') {
+    return handleDebugEngagement(c);
+  }
+  return c.json({ error: 'Debug endpoints only available in staging' }, 404);
+});
+
+app.get('/debug/profile/:username', async (c) => {
+  if (getEnvironment(c.env) === 'staging') {
+    return handleDebugProfile(c);
+  }
+  return c.json({ error: 'Debug endpoints only available in staging' }, 404);
+});
+
+app.get('/debug/parsing/:username', async (c) => {
+  if (getEnvironment(c.env) === 'staging') {
+    return handleDebugParsing(c);
+  }
+  return c.json({ error: 'Debug endpoints only available in staging' }, 404);
+});
 
 app.post('/analyze', handleAnalyze);
 app.post('/v1/analyze', handleAnalyze);
