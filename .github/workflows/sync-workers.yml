@@ -97,7 +97,7 @@ jobs:
           
           # Test staging worker health
           if [[ "${{ needs.validate.outputs.source_env }}" == "staging" ]]; then
-            STAGING_URL="https://api-staging.oslira.com"
+            STAGING_URL="https://api-staging.oslira.com" 
             echo "Testing staging worker at $STAGING_URL"
             
             HEALTH_CHECK=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL/health" || echo "000")
@@ -136,7 +136,7 @@ jobs:
           echo "" >> sync_summary.md
           echo "### Configuration:" >> sync_summary.md
           echo "- Environment: ${{ needs.validate.outputs.target_env }}" >> sync_summary.md
-          echo "- Worker Name: oslira-api${{ needs.validate.outputs.target_env == 'staging' && '-staging' || '' }}" >> sync_summary.md
+          echo "- Worker Name: ${{ needs.validate.outputs.target_env == 'staging' && 'oslira-api-stg' || 'ai-outreach-api' }}" >> sync_summary.md
           echo "- Route: api${{ needs.validate.outputs.target_env == 'staging' && '-staging' || '' }}.oslira.com/*" >> sync_summary.md
           
           cat sync_summary.md
