@@ -1,17 +1,104 @@
 {
-  "name": "ai-outreach-api",
-  "version": "1.0.0",
-  "description": "Oslira AI outreach worker",
+  "name": "oslira-workers",
+  "version": "2.0.0",
+  "description": "Oslira AI lead analysis workers with enhanced metering and AWS integration",
   "type": "module",
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "dev:staging": "wrangler dev --env staging",
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.js",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "deploy": "npm run deploy:production",
+    "promote": "echo 'Promoting staging to production...' && npm run deploy:production",
+    "clean": "rm -rf dist .wrangler",
+    "secrets:staging": "wrangler secret list --env staging",
+    "secrets:production": "wrangler secret list --env production"
   },
   "dependencies": {
     "hono": "^4.8.9"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.0.0",
-    "typescript": "^5.0.0"
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "private": true,
+  "keywords": [
+    "cloudflare-workers",
+    "ai",
+    "lead-analysis",
+    "business-intelligence"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "build": {
+    "external": [
+      "@supabase/supabase-js"
+    ],
+    "target": "es2022",
+    "format": "esm",
+    "minify": true,
+    "sourcemap": true
+  },
+  "eslintConfig": {
+    "extends": [
+      "@typescript-eslint/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+      "@typescript-eslint"
+    ],
+    "root": true,
+    "env": {
+      "browser": true,
+      "es6": true
+    },
+    "ignorePatterns": [
+      "dist/",
+      ".wrangler/",
+      "node_modules/"
+    ]
+  },
+  "typescript": {
+    "compilerOptions": {
+      "target": "ES2022",
+      "lib": ["ES2022"],
+      "module": "ESNext",
+      "moduleResolution": "bundler",
+      "allowSyntheticDefaultImports": true,
+      "esModuleInterop": true,
+      "allowJs": true,
+      "checkJs": false,
+      "declaration": true,
+      "declarationMap": true,
+      "skipLibCheck": true,
+      "strict": true,
+      "noEmit": true,
+      "isolatedModules": true,
+      "types": [
+        "@cloudflare/workers-types"
+      ]
+    },
+    "include": [
+      "src/**/*"
+    ],
+    "exclude": [
+      "node_modules",
+      "dist",
+      ".wrangler"
+    ]
   }
 }
