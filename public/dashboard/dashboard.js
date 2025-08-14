@@ -5352,6 +5352,165 @@ class UnifiedAnalysisQueue {
     return "analysis_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
   }
 
+  getScoreInterpretation(score) {
+  if (score >= 90) {
+    return {
+      label: 'Exceptional',
+      color: '#10B981',
+      description: 'Outstanding lead with high conversion potential',
+      actionable: 'Priority outreach recommended',
+      icon: '🌟'
+    };
+  } else if (score >= 75) {
+    return {
+      label: 'Excellent',
+      color: '#059669',
+      description: 'High-quality lead with strong engagement',
+      actionable: 'Schedule outreach this week',
+      icon: '💎'
+    };
+  } else if (score >= 60) {
+    return {
+      label: 'Good',
+      color: '#3B82F6',
+      description: 'Solid lead potential with good metrics',
+      actionable: 'Include in next outreach batch',
+      icon: '👍'
+    };
+  } else if (score >= 40) {
+    return {
+      label: 'Fair',
+      color: '#F59E0B',
+      description: 'Moderate potential, may need nurturing',
+      actionable: 'Consider for follow-up campaigns',
+      icon: '⚡'
+    };
+  } else {
+    return {
+      label: 'Poor',
+      color: '#EF4444',
+      description: 'Low quality match for your criteria',
+      actionable: 'Review targeting or skip',
+      icon: '⚠️'
+    };
+  }
+}
+
+// Enhanced confidence display
+getConfidenceInterpretation(confidence) {
+  if (confidence >= 85) {
+    return {
+      label: 'Very High',
+      color: '#10B981',
+      description: 'Analysis based on comprehensive data',
+      reliability: 'Highly reliable'
+    };
+  } else if (confidence >= 70) {
+    return {
+      label: 'High',
+      color: '#059669',
+      description: 'Good data quality with reliable insights',
+      reliability: 'Reliable'
+    };
+  } else if (confidence >= 55) {
+    return {
+      label: 'Moderate',
+      color: '#F59E0B',
+      description: 'Limited data, interpret with caution',
+      reliability: 'Moderately reliable'
+    };
+  } else {
+    return {
+      label: 'Low',
+      color: '#EF4444',
+      description: 'Insufficient data for accurate analysis',
+      reliability: 'Use with caution'
+    };
+  }
+}
+
+  buildScoreSection(analysisData) {
+  const totalScore = analysisData.score || 0;
+  const confidenceLevel = analysisData.confidence_level || 50;
+  
+  const scoreInterp = this.getScoreInterpretation(totalScore);
+  const confidenceInterp = this.getConfidenceInterpretation(confidenceLevel);
+  
+  return `
+    <div class="score-section enhanced-score">
+      <h4 style="margin-bottom: 20px; color: var(--text-primary);">
+        📊 Lead Quality Analysis
+      </h4>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+        <!-- Main Score -->
+        <div style="background: linear-gradient(135deg, ${scoreInterp.color}15, ${scoreInterp.color}05); border: 1px solid ${scoreInterp.color}30; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;">
+            <span style="font-size: 24px;">${scoreInterp.icon}</span>
+            <span style="font-weight: 600; color: ${scoreInterp.color}; font-size: 18px;">${scoreInterp.label}</span>
+          </div>
+          <div style="font-size: 36px; font-weight: 800; color: ${scoreInterp.color}; margin-bottom: 8px;">
+            ${totalScore}/100
+          </div>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+            ${scoreInterp.description}
+          </p>
+          <div style="background: ${scoreInterp.color}; color: white; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+            ${scoreInterp.actionable}
+          </div>
+        </div>
+        
+        <!-- Confidence Level -->
+        <div style="background: linear-gradient(135deg, ${confidenceInterp.color}15, ${confidenceInterp.color}05); border: 1px solid ${confidenceInterp.color}30; border-radius: 12px; padding: 20px; text-align: center;">
+          <div style="font-weight: 600; color: ${confidenceInterp.color}; margin-bottom: 8px; font-size: 14px;">
+            CONFIDENCE LEVEL
+          </div>
+          <div style="font-size: 28px; font-weight: 800; color: ${confidenceInterp.color}; margin-bottom: 8px;">
+            ${confidenceLevel}%
+          </div>
+          <div style="font-size: 12px; font-weight: 600; color: ${confidenceInterp.color}; margin-bottom: 8px;">
+            ${confidenceInterp.label}
+          </div>
+          <p style="font-size: 11px; color: var(--text-secondary);">
+            ${confidenceInterp.description}
+          </p>
+        </div>
+      </div>
+      
+      ${analysisData.accuracy_note ? `
+        <div style="background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span style="color: #F59E0B; font-size: 14px;">⚠️</span>
+            <span style="font-weight: 600; color: #92400E; font-size: 12px;">ACCURACY NOTE</span>
+          </div>
+          <p style="color: #92400E; font-size: 11px; margin: 0;">
+            ${analysisData.accuracy_note}
+          </p>
+        </div>
+      ` : ''}
+      
+      <!-- Quick Insights -->
+      <div style="background: var(--bg-secondary); border-radius: 8px; padding: 16px;">
+        <h5 style="margin: 0 0 12px 0; color: var(--text-primary); font-size: 14px;">Quick Insights</h5>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; font-size: 11px;">
+          <div style="text-align: center;">
+            <div style="font-weight: 600; color: var(--text-primary);">Engagement</div>
+            <div style="color: var(--text-secondary);">${analysisData.engagement_score || 0}/100</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-weight: 600; color: var(--text-primary);">Niche Fit</div>
+            <div style="color: var(--text-secondary);">${analysisData.niche_fit || 0}/100</div>
+          </div>
+          <div style="text-align: center;">
+            <div style="font-weight: 600; color: var(--text-primary);">Data Quality</div>
+            <div style="color: var(--text-secondary);">${confidenceInterp.reliability}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
   // ===============================================================================
   // PUBLIC METHODS FOR DASHBOARD INTEGRATION
   // ===============================================================================
