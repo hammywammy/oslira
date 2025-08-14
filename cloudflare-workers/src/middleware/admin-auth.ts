@@ -163,3 +163,23 @@ function secureTokenCompare(provided: string, expected: string): boolean {
   
   return result === 0;
 }
+
+// Helper function to extract admin context from request
+export function getAdminContext(c: Context): { requestId: string; clientIP: string; adminToken?: string } {
+  const requestId = c.get('requestId') || crypto.randomUUID();
+  const clientIP = c.get('clientIP') || 
+                   c.req.header('CF-Connecting-IP') || 
+                   c.req.header('X-Forwarded-For') || 
+                   c.req.header('X-Real-IP') || 
+                   'unknown';
+  const adminToken = c.get('adminToken');
+  
+  return { requestId, clientIP, adminToken };
+}
+
+// Helper function to get environment type
+function getEnvironment(env: any): string {
+  if (env.APP_ENV === 'production') return 'production';
+  if (env.APP_ENV === 'staging') return 'staging';
+  return 'development';
+}
