@@ -579,6 +579,7 @@ app.get('/admin/top-users', handleTopUsers);
 app.post('/admin/cache-optimize', handleCacheOptimize);
 app.post('/admin/clear-user-cache', handleClearUserCache);
 app.get('/admin/performance-stats', handlePerformanceStats);
+app.post('/admin/cache-cleanup', handleCacheCleanup);
 
 // Error monitoring endpoints
 app.get('/admin/errors', async (c) => {
