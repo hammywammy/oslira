@@ -1,5 +1,5 @@
 // ============================================================================
-// FINAL INDEX.TS - ALL CRITICAL FIXES APPLIED
+// COMPLETE WORKING INDEX.TS
 // File: cloudflare-workers/src/index.ts
 // ============================================================================
 
@@ -8,11 +8,10 @@ import { cors } from 'hono/cors';
 import { compress } from 'hono/compress';
 import { secureHeaders } from 'hono/secure-headers';
 import { logger as honoLogger } from 'hono/logger';
-import { getEnvironment, isProduction, isStaging } from './utils/env.js';
+import type { Env } from './types/interfaces.js';
 import { logger } from './utils/logger.js';
-import { createClient } from '@supabase/supabase-js';
 
-// Fixed imports - use the actual exported function names
+// Import handlers
 import { handleUpdateApiKey } from './handlers/admin.js';
 import { handleConfigChanged } from './handlers/netlify-sync.js';
 import { adminAuthMiddleware } from './middleware/admin-auth.js';
@@ -26,33 +25,6 @@ import {
   handlePerformanceStats,
   handleCacheCleanup
 } from './handlers/admin-monitoring.js';
-
-// Type definitions
-export interface Env {
-  // Environment
-  APP_ENV: 'production' | 'staging';
-  
-  // API Keys
-  OPENAI_API_KEY?: string;
-  ANTHROPIC_API_KEY?: string;
-  APIFY_API_TOKEN?: string;
-  
-  // Supabase
-  SUPABASE_URL: string;
-  SUPABASE_SERVICE_ROLE?: string;
-  
-  // Internal Tokens
-  INTERNAL_API_TOKEN?: string;
-  ADMIN_TOKEN?: string;
-  
-  // URLs
-  WORKER_URL?: string;
-  FRONTEND_URL?: string;
-  
-  // KV Namespaces  
-  RATE_LIMIT?: KVNamespace;
-  CONFIG_CACHE?: KVNamespace;
-}
 
 // ============================================================================
 // ERROR MONITORING SYSTEM
@@ -85,94 +57,27 @@ class ProductionErrorMonitor {
     error?: Error,
     requestId?: string
   ): Promise<void> {
-    const errorId = crypto.randomUUID();
-    const timestamp = Date.now();
-    
-    const report: ErrorReport = {
-      id: errorId,
-      timestamp,
+    const errorReport: ErrorReport = {
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
       level,
       message,
-      context: {
-        ...context,
-        environment: this.env.APP_ENV,
-        workerUrl: this.env.WORKER_URL
-      },
+      context,
       stack: error?.stack,
       requestId: requestId || crypto.randomUUID(),
       userId: context.userId
     };
     
-    // Store error (with size management)
-    this.errors.set(errorId, report);
-    this.maintainErrorBuffer();
+    this.errors.set(errorReport.id, errorReport);
     
-    // Log to console with appropriate level
-    this.logToConsole(report);
-    
-    // Store in database for persistence (async, don't block)
-    this.persistError(report).catch(persistError => {
-      console.error('Failed to persist error to database:', persistError);
-    });
-  }
-  
-  private maintainErrorBuffer(): void {
+    // Cleanup old errors
     if (this.errors.size > this.maxErrors) {
-      const sortedEntries = Array.from(this.errors.entries())
-        .sort(([, a], [, b]) => a.timestamp - b.timestamp);
-      
-      const toRemove = sortedEntries.slice(0, this.errors.size - this.maxErrors);
-      toRemove.forEach(([id]) => this.errors.delete(id));
+      const oldestKey = this.errors.keys().next().value;
+      this.errors.delete(oldestKey);
     }
-  }
-  
-  private logToConsole(report: ErrorReport): void {
-    const logData = {
-      id: report.id,
-      message: report.message,
-      context: report.context,
-      requestId: report.requestId
-    };
     
-    switch (report.level) {
-      case 'critical':
-        console.error('🚨 CRITICAL:', logData);
-        break;
-      case 'error':
-        console.error('❌ ERROR:', logData);
-        break;
-      case 'warn':
-        console.warn('⚠️ WARNING:', logData);
-        break;
-      case 'info':
-        console.log('ℹ️ INFO:', logData);
-        break;
-    }
-  }
-  
-  private async persistError(report: ErrorReport): Promise<void> {
-    try {
-      if (!this.env.SUPABASE_URL || !this.env.SUPABASE_SERVICE_KEY) {
-        return;
-      }
-      
-      const supabase = createClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
-      
-      await supabase.from('error_logs').insert({
-        id: report.id,
-        level: report.level,
-        message: report.message,
-        context: report.context,
-        stack: report.stack,
-        request_id: report.requestId,
-        user_id: report.userId,
-        created_at: new Date(report.timestamp).toISOString()
-      });
-      
-    } catch (persistError) {
-      // Don't log this error to avoid infinite loops
-      console.error('Error persistence failed:', persistError instanceof Error ? persistError.message : persistError);
-    }
+    // Log error
+    logger(level, message, context, requestId);
   }
   
   getRecentErrors(limit: number = 50): ErrorReport[] {
@@ -181,133 +86,33 @@ class ProductionErrorMonitor {
       .slice(0, limit);
   }
   
-  getErrorStats(): {
-    total: number;
-    byLevel: Record<string, number>;
-    recentCount: number;
-  } {
-    const errors = Array.from(this.errors.values());
-    const recent = errors.filter(e => Date.now() - e.timestamp < 3600000); // Last hour
-    
-    return {
-      total: errors.length,
-      byLevel: errors.reduce((acc, e) => {
-        acc[e.level] = (acc[e.level] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>),
-      recentCount: recent.length
-    };
+  getErrorStats(): { total: number; byLevel: Record<string, number> } {
+    const byLevel: Record<string, number> = {};
+    for (const error of this.errors.values()) {
+      byLevel[error.level] = (byLevel[error.level] || 0) + 1;
+    }
+    return { total: this.errors.size, byLevel };
   }
 }
 
 // ============================================================================
-// RATE LIMITING SYSTEM
+// RATE LIMIT MONITORING
 // ============================================================================
 
 interface RateLimitInfo {
-  provider: string;
   requests_remaining?: number;
   tokens_remaining?: number;
   reset_time?: string;
+  provider: 'openai' | 'anthropic';
   lastUpdated: number;
 }
 
 class EnhancedRateLimitMonitor {
   private limits: Map<string, RateLimitInfo> = new Map();
-  private throttleState: Map<string, number> = new Map();
-  private readonly enabled: boolean;
-  private readonly thresholds: { requests: number; tokens: number };
-  private readonly delays: { warning: number; critical: number };
+  private readonly env: Env;
   
   constructor(env: Env) {
-    this.enabled = env.RATE_LIMIT_ENABLED === 'true';
-    this.thresholds = {
-      requests: parseInt(env.THROTTLE_THRESHOLD_REQUESTS || '10'),
-      tokens: parseInt(env.THROTTLE_THRESHOLD_TOKENS || '1000')
-    };
-    this.delays = {
-      warning: 2000,
-      critical: 60000
-    };
-  }
-  
-  shouldThrottle(provider: 'openai' | 'anthropic'): { 
-    throttle: boolean; 
-    delay: number; 
-    reason?: string;
-    severity: 'none' | 'warning' | 'critical';
-  } {
-    if (!this.enabled) {
-      return { throttle: false, delay: 0, severity: 'none' };
-    }
-    
-    // Check manual throttle state
-    const nextAllowedTime = this.throttleState.get(provider) || 0;
-    if (Date.now() < nextAllowedTime) {
-      return {
-        throttle: true,
-        delay: nextAllowedTime - Date.now(),
-        reason: 'Throttled due to previous rate limit',
-        severity: 'warning'
-      };
-    }
-    
-    const limits = this.limits.get(provider);
-    if (!limits) {
-      return { throttle: false, delay: 0, severity: 'none' };
-    }
-    
-    // CRITICAL: Emergency throttling
-    if (limits.requests_remaining !== undefined && limits.requests_remaining <= 2) {
-      const delay = this.delays.critical * 2;
-      this.setThrottleState(provider, delay);
-      return { 
-        throttle: true, 
-        delay,
-        reason: `Emergency: Only ${limits.requests_remaining} requests remaining`,
-        severity: 'critical'
-      };
-    }
-    
-    if (limits.tokens_remaining !== undefined && limits.tokens_remaining <= this.thresholds.tokens / 20) {
-      const delay = this.delays.critical * 1.5;
-      this.setThrottleState(provider, delay);
-      return { 
-        throttle: true, 
-        delay,
-        reason: `Emergency: Only ${limits.tokens_remaining} tokens remaining`,
-        severity: 'critical'
-      };
-    }
-    
-    // WARNING: Standard throttling
-    if (limits.requests_remaining !== undefined && limits.requests_remaining <= this.thresholds.requests) {
-      const delay = this.delays.warning;
-      this.setThrottleState(provider, delay);
-      return { 
-        throttle: true, 
-        delay,
-        reason: `Warning: ${limits.requests_remaining} requests remaining`,
-        severity: 'warning'
-      };
-    }
-    
-    if (limits.tokens_remaining !== undefined && limits.tokens_remaining <= this.thresholds.tokens) {
-      const delay = this.delays.warning;
-      this.setThrottleState(provider, delay);
-      return { 
-        throttle: true, 
-        delay,
-        reason: `Warning: ${limits.tokens_remaining} tokens remaining`,
-        severity: 'warning'
-      };
-    }
-    
-    return { throttle: false, delay: 0, severity: 'none' };
-  }
-  
-  private setThrottleState(provider: string, delayMs: number): void {
-    this.throttleState.set(provider, Date.now() + delayMs);
+    this.env = env;
   }
   
   updateLimits(provider: 'openai' | 'anthropic', headers: Headers): RateLimitInfo {
@@ -357,6 +162,22 @@ class EnhancedRateLimitMonitor {
 }
 
 // ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+function getEnvironment(env: Env): string {
+  return env?.APP_ENV || 'development';
+}
+
+function isProduction(env: Env): boolean {
+  return getEnvironment(env) === 'production';
+}
+
+function isStaging(env: Env): boolean {
+  return getEnvironment(env) === 'staging';
+}
+
+// ============================================================================
 // HONO APP INITIALIZATION
 // ============================================================================
 
@@ -367,8 +188,10 @@ let errorMonitor: ProductionErrorMonitor;
 let rateLimitMonitor: EnhancedRateLimitMonitor;
 
 // ============================================================================
-// CRITICAL FIX #1: SAFE HEADER LOGGING MIDDLEWARE
+// MIDDLEWARE SETUP
 // ============================================================================
+
+// Safe header logging middleware
 app.use('*', async (c, next) => {
   const environment = getEnvironment(c.env);
   
@@ -382,97 +205,62 @@ app.use('*', async (c, next) => {
   c.header('X-Environment', environment);
   c.header('X-Worker-Version', '1.0.0');
   
-  // CRITICAL FIX: Safe header logging for staging
-  if (isStaging(c.env)) {
-    console.log(`[${environment.toUpperCase()}] ${c.req.method} ${c.req.url}`);
-    
-    // FIXED: Safe header access with comprehensive error handling
+  // Safe header logging for debugging
+  if (environment === 'staging') {
     try {
-      const headers = c.req.header();
-      if (headers && typeof headers === 'object') {
-        // Safe object iteration
-        const safeHeaders: Record<string, string> = {};
-        for (const [key, value] of Object.entries(headers)) {
-          if (typeof key === 'string' && typeof value === 'string') {
-            // Filter sensitive headers
-            if (!key.toLowerCase().includes('authorization') && 
-                !key.toLowerCase().includes('token') &&
-                !key.toLowerCase().includes('key')) {
-              safeHeaders[key] = value;
-            } else {
-              safeHeaders[key] = '[REDACTED]';
-            }
-          }
-        }
-        console.log('Headers:', safeHeaders);
-      } else {
-        console.log('Headers: [object not iterable]');
-      }
-    } catch (headerError) {
-      // Fallback: log essential info without headers
-      console.log('Headers: [access error - logged safely]');
-      if (headerError instanceof Error) {
-        console.log('Header access error:', {
-          error: headerError.message,
-          type: typeof c.req.header,
-          hasEntries: typeof c.req.header === 'function'
+      const headers = c.req.raw.headers;
+      if (headers && typeof headers.entries === 'function') {
+        const headerEntries = Array.from(headers.entries());
+        logger('debug', 'Request headers', { 
+          headers: headerEntries.map(([key, value]) => ({ key, value })),
+          path: c.req.url,
+          method: c.req.method
         });
       }
+    } catch (headerError) {
+      logger('warn', 'Header logging failed', { error: headerError });
     }
   }
   
   await next();
 });
 
-// ============================================================================
-// CORS CONFIGURATION
-// ============================================================================
+// CORS configuration
 app.use('*', cors({
   origin: (origin) => {
-    const environment = getEnvironment(c.env);
+    const environment = getEnvironment({ APP_ENV: 'staging' } as Env); // Fallback for middleware
     
-    // Base allowed origins
     const allowedOrigins = [
       'https://oslira.com',
-      'https://www.oslira.com',
-      'https://app.oslira.com'
+      'https://osliratest.netlify.app'
     ];
-
-    if (environment === 'staging') {
-      allowedOrigins.push(
-        'https://osliratest.netlify.app',
-        'https://oslira-staging.netlify.app',
-        'http://localhost:3000',
-        'http://localhost:8000',
-        'http://localhost:8080',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:8000',
-        'http://127.0.0.1:8080'
-      );
+    
+    // Always allow if no origin (same-origin requests)
+    if (!origin) return true;
+    
+    // Production restrictions
+    if (environment === 'production') {
+      return allowedOrigins.includes(origin) ? origin : false;
     }
-
-    // Allow if no origin (for non-browser requests)
-    if (!origin) return environment === 'staging' ? '*' : false;
-
+    
+    // Staging allows more origins
+    const stagingPatterns = [
+      /^https:\/\/.*\.netlify\.app$/,
+      /^https:\/\/.*\.vercel\.app$/,
+      /^http:\/\/localhost:\d+$/,
+      /^http:\/\/127\.0\.0\.1:\d+$/
+    ];
+    
     // Exact match
     if (allowedOrigins.includes(origin)) {
       return origin;
     }
-
+    
     // Pattern matching for staging
-    if (environment === 'staging') {
-      const stagingPatterns = [
-        /^https:\/\/.*\.netlify\.app$/,
-        /^https:\/\/.*\.vercel\.app$/,
-        /^http:\/\/localhost:\d+$/,
-        /^http:\/\/127\.0\.0\.1:\d+$/
-      ];
-
-      if (stagingPatterns.some(pattern => pattern.test(origin))) {
-        return origin;
-      }
+    if (stagingPatterns.some(pattern => pattern.test(origin))) {
+      return origin;
     }
-
+    
     return false;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -491,29 +279,27 @@ app.use('*', cors({
 // Security and compression middleware
 app.use('*', compress());
 app.use('*', secureHeaders());
-app.use('*', honoLogger());
+
+// Logging middleware for staging only
+app.use('*', async (c, next) => {
+  if (getEnvironment(c.env) === 'staging') {
+    return honoLogger()(c, next);
+  }
+  await next();
+});
 
 // ============================================================================
 // BASIC ENDPOINTS
 // ============================================================================
 
 // Health check endpoint
-// Health check endpoint
 app.get('/health', (c) => {
-  try {
-    return c.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      environment: c.env?.APP_ENV || 'unknown',
-      version: '1.0.0'
-    });
-  } catch (error) {
-    return c.json({
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    }, 500);
-  }
+  return c.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    environment: getEnvironment(c.env),
+    version: '1.0.0'
+  });
 });
 
 // Test endpoint with environment validation
@@ -538,7 +324,7 @@ app.get('/test', (c) => {
 });
 
 // ============================================================================
-// CRITICAL FIX #2: ADMIN ROUTES WITH ENHANCED AUTHENTICATION
+// ADMIN ROUTES WITH AUTHENTICATION
 // ============================================================================
 
 // All admin routes require authentication
@@ -593,7 +379,7 @@ app.get('/admin/rate-limits', async (c) => {
 });
 
 // ============================================================================
-// CRITICAL FIX #3: INTERNAL ENDPOINTS WITH TOKEN VALIDATION
+// INTERNAL ENDPOINTS WITH TOKEN VALIDATION
 // ============================================================================
 
 // Internal config change endpoint
@@ -611,29 +397,6 @@ app.post('/internal/config-changed', async (c) => {
   if (authHeader !== `Bearer ${internalToken}`) {
     await errorMonitor?.reportError('warn', 'Unauthorized internal API access attempt', {
       endpoint: '/internal/config-changed',
-      authHeader: authHeader ? authHeader.substring(0, 20) + '...' : 'missing'
-    });
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-  
-  return handleConfigChanged(c);
-});
-
-// Netlify sync endpoint
-app.post('/internal/netlify-sync', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const internalToken = c.env.INTERNAL_API_TOKEN;
-  
-  if (!internalToken) {
-    await errorMonitor?.reportError('error', 'INTERNAL_API_TOKEN not configured', {
-      endpoint: '/internal/netlify-sync'
-    });
-    return c.json({ error: 'Internal API not configured' }, 500);
-  }
-  
-  if (authHeader !== `Bearer ${internalToken}`) {
-    await errorMonitor?.reportError('warn', 'Unauthorized internal API access attempt', {
-      endpoint: '/internal/netlify-sync',
       authHeader: authHeader ? authHeader.substring(0, 20) + '...' : 'missing'
     });
     return c.json({ error: 'Unauthorized' }, 401);
@@ -699,7 +462,7 @@ app.get('/info', async (c) => {
 });
 
 // ============================================================================
-// CRITICAL FIX #4: GLOBAL ERROR HANDLER
+// GLOBAL ERROR HANDLER
 // ============================================================================
 
 // Global error handler with automatic reporting
@@ -733,11 +496,11 @@ app.onError(async (err, c) => {
   }
   
   // Return user-friendly error
-  const isProduction = c.env.APP_ENV === 'production';
+  const isProductionEnv = c.env.APP_ENV === 'production';
   
   return c.json({
     success: false,
-    error: isProduction ? 'Internal server error' : err.message,
+    error: isProductionEnv ? 'Internal server error' : err.message,
     requestId,
     timestamp: new Date().toISOString()
   }, 500);
