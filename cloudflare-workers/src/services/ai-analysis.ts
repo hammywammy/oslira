@@ -6,7 +6,6 @@
 
 import { Env, ProfileData, BusinessProfile, AnalysisResult, ProfileIntelligence, AnalysisTier } from '../types/interfaces';
 import { logger } from '../utils/logger';
-import { getApiKey } from '../utils/secrets';
 import { MeteringContext, meteredCall, PerformanceMonitor, UsageEvent } from './metering';
 import { OpenAIAdapter, AnthropicAdapter, ApifyAdapter, RetryHandler, CostAnomalyDetector, StreamingMetricsCollector } from '../adapters/provider-adapters';
 import { createClient } from '@supabase/supabase-js';
