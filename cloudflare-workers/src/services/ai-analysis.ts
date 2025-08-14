@@ -686,7 +686,7 @@ async function performAIAnalysis(
     }, requestId);
 
     // Create adapter and make API call
-    const openaiKey = await getApiKey(env, 'OPENAI_API_KEY');
+    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
     const adapter = createOpenAIAdapter(openaiKey);
     
     const messages = [
@@ -838,7 +838,7 @@ async function generateOutreachMessage(
     // Create outreach prompt
     const prompt = createOutreachPrompt(profile, business, analysisResult);
     
-    const claudeKey = await getApiKey(env, 'CLAUDE_API_KEY');
+    const claudeKey = await getApiKey('ANTHROPIC_API_KEY', env);
     const adapter = createAnthropicAdapter(claudeKey);
 
     const messages = [
