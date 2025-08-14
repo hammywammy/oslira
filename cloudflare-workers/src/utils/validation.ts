@@ -1,16 +1,60 @@
 import { logger } from '../utils/logger.js';
 import type { PostData, EngagementData, AnalysisType } from '../types/interfaces.js';
 
-export function validateAnalysisResult(result: any): AnalysisResult {
-  return {
+export function validateAnalysisResult(result: any, profileData?: any): any {
+  // Enhanced validation with accuracy checks
+  const validatedResult = {
     score: Math.round(parseFloat(result.score) || 0),
     engagement_score: Math.round(parseFloat(result.engagement_score) || 0),
     niche_fit: Math.round(parseFloat(result.niche_fit) || 0),
     audience_quality: result.audience_quality || 'Unknown',
     engagement_insights: result.engagement_insights || 'No insights available',
     selling_points: Array.isArray(result.selling_points) ? result.selling_points : [],
-    reasons: Array.isArray(result.reasons) ? result.reasons : (Array.isArray(result.selling_points) ? result.selling_points : [])
+    reasons: Array.isArray(result.reasons) ? result.reasons : 
+      (Array.isArray(result.selling_points) ? result.selling_points : []),
+    quick_summary: result.quick_summary || '',
+    deep_summary: result.deep_summary || '',
+    confidence_level: result.confidence_level || 0
   };
+  
+  // Accuracy validation
+  if (profileData) {
+    // Validate engagement score against real data
+    if (profileData.engagement?.engagementRate !== undefined) {
+      const realEngagementRate = profileData.engagement.engagementRate;
+      const predictedEngagement = validatedResult.engagement_score;
+      
+      // Adjust confidence based on prediction accuracy
+      const accuracy = Math.abs(realEngagementRate * 100 - predictedEngagement);
+      if (accuracy > 50) {
+        validatedResult.confidence_level = Math.max(20, validatedResult.confidence_level - 20);
+        validatedResult.accuracy_note = 'Engagement prediction may be inaccurate due to limited data';
+      }
+    }
+    
+    // Validate follower quality indicators
+    if (profileData.followersCount && profileData.followingCount) {
+      const ratio = profileData.followersCount / profileData.followingCount;
+      if (ratio < 0.5 && validatedResult.score > 70) {
+        validatedResult.score = Math.max(validatedResult.score - 15, 0);
+        validatedResult.accuracy_note = 'Score adjusted for low follower/following ratio';
+      }
+    }
+    
+    // Validate for bot-like behavior indicators
+    if (profileData.bio === '' && profileData.postsCount === 0 && validatedResult.score > 50) {
+      validatedResult.score = Math.max(validatedResult.score - 25, 0);
+      validatedResult.accuracy_note = 'Score adjusted for incomplete profile data';
+    }
+  }
+  
+  // Ensure scores are within valid ranges
+  validatedResult.score = Math.max(0, Math.min(100, validatedResult.score));
+  validatedResult.engagement_score = Math.max(0, Math.min(100, validatedResult.engagement_score));
+  validatedResult.niche_fit = Math.max(0, Math.min(100, validatedResult.niche_fit));
+  validatedResult.confidence_level = Math.max(0, Math.min(100, validatedResult.confidence_level));
+  
+  return validatedResult;
 }
 
 export function extractUsername(input: string): string {
@@ -415,3 +459,23 @@ export function extractPostThemes(posts: PostData[]): string {
   return topHashtags.length > 0 ? 
     topHashtags.join(', ') : 'content themes not available';
 }
+
+export function calculateAccurateEngagementRate(posts: any[], followerCount: number): number {
+  if (!posts || posts.length === 0 || !followerCount) return 0;
+  
+  // Filter out outliers (posts with unusually high or low engagement)
+  const sortedEngagements = posts
+    .map(post => (post.likesCount || 0) + (post.commentsCount || 0))
+    .sort((a, b) => a - b);
+  
+  // Remove top and bottom 10% to reduce outlier impact
+  const startIndex = Math.floor(sortedEngagements.length * 0.1);
+  const endIndex = Math.ceil(sortedEngagements.length * 0.9);
+  const filteredEngagements = sortedEngagements.slice(startIndex, endIndex);
+  
+  if (filteredEngagements.length === 0) return 0;
+  
+  const avgEngagement = filteredEngagements.reduce((sum, eng) => sum + eng, 0) / filteredEngagements.length;
+  return Math.round((avgEngagement / followerCount) * 10000) / 100; // Two decimal places
+}
+
