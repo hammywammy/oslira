@@ -16,29 +16,35 @@ export interface AnalysisTier {
   minAnalysisValue: number;
 }
 
-// UPDATE Env interface - CHANGE OPENAI_KEY to OPENAI_API_KEY:
 export interface Env {
+  // Database
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE: string;
   SUPABASE_ANON_KEY: string;
+  
+  // AI APIs - CONSISTENT NAMING
   OPENAI_API_KEY: string;  // CHANGED FROM OPENAI_KEY
-  CLAUDE_API_KEY: string;  // NEW - Add this
+  CLAUDE_API_KEY: string;  // CHANGED FROM CLAUDE_KEY
   APIFY_API_TOKEN: string;
+  
+  // Payment
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
+  
+  // URLs
   FRONTEND_URL: string;
-}
-
-export interface Env {
-  SUPABASE_URL: string;
-  SUPABASE_SERVICE_ROLE: string;
-  SUPABASE_ANON_KEY: string;
-  OPENAI_KEY: string;
-  CLAUDE_KEY: string;
-  APIFY_API_TOKEN: string;
-  STRIPE_SECRET_KEY: string;
-  STRIPE_WEBHOOK_SECRET: string;
-  FRONTEND_URL: string;
+  WORKER_URL: string;
+  
+  // Admin
+  INTERNAL_API_TOKEN: string;
+  
+  // Cache & Rate Limiting (NEW)
+  CACHE_TTL?: string;
+  MAX_CACHE_SIZE_PER_USER?: string;
+  MAX_GLOBAL_CACHE_SIZE?: string;
+  RATE_LIMIT_ENABLED?: string;
+  THROTTLE_THRESHOLD_REQUESTS?: string;
+  THROTTLE_THRESHOLD_TOKENS?: string;
 }
 
 export interface ProfileData {
@@ -128,6 +134,46 @@ export interface User {
   last_login: string;
   subscription_id: string;
   stripe_customer_id: string;
+}
+
+export interface CacheConfig {
+  enabled: boolean;
+  ttl: number;
+  maxSizePerUser: number;
+  maxGlobalSize: number;
+}
+
+export interface RateLimitInfo {
+  requests_remaining?: number;
+  tokens_remaining?: number;
+  reset_time?: string;
+  provider: 'openai' | 'anthropic';
+  lastUpdated: number;
+}
+
+export interface EnhancedAnalysisConfig {
+  caching: {
+    enabled: boolean;
+    ttl: number;
+    maxSizePerUser: number;
+    maxGlobalSize: number;
+  };
+  rateLimiting: {
+    enabled: boolean;
+    throttleThresholds: {
+      requests: number;
+      tokens: number;
+    };
+    delays: {
+      warning: number;
+      critical: number;
+    };
+  };
+  performance: {
+    maxConcurrentBatch: number;
+    timeoutMs: number;
+    retries: number;
+  };
 }
 
 export type AnalysisType = 'light' | 'deep';
