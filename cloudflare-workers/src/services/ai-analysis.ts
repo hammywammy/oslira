@@ -304,13 +304,34 @@ async function callAPIWithRateLimit(
 }
 
 // ============================================================================
-// GLOBAL MONITORING INSTANCES (ENHANCED)
+// GLOBAL MONITORING INSTANCES (ENHANCED WITH CONFIG)
 // ============================================================================
 
 const globalPerformanceMonitor = new PerformanceMonitor();
 const globalAnomalyDetector = new CostAnomalyDetector();
-const enhancedAnalysisCache = new EnhancedIntelligentCache(); // Enhanced cache
-const rateLimitMonitor = new RateLimitMonitor(); // New rate limit monitor
+
+// Configuration-driven instances
+let globalConfig: EnhancedAnalysisConfig | null = null;
+let enhancedAnalysisCache: EnhancedIntelligentCache;
+let rateLimitMonitor: RateLimitMonitor;
+
+// Initialize with environment configuration
+export function initializeWithConfig(env: Env): void {
+  globalConfig = loadConfigFromEnv(env);
+  
+  // Initialize cache with config
+  enhancedAnalysisCache = new EnhancedIntelligentCache(globalConfig.caching);
+  
+  // Initialize rate limiter with config
+  rateLimitMonitor = new RateLimitMonitor(globalConfig.rateLimiting);
+  
+  logger('info', 'AI Analysis service initialized with configuration', {
+    cacheEnabled: globalConfig.caching.enabled,
+    rateLimitEnabled: globalConfig.rateLimiting.enabled,
+    cacheTTL: globalConfig.caching.ttl,
+    maxConcurrent: globalConfig.performance.maxConcurrentBatch
+  });
+}
 
 // ============================================================================
 // ADVANCED TIERING SYSTEM WITH METERING (UNCHANGED)
@@ -471,7 +492,7 @@ async function executeOpenAIAnalysisOptimized(
   }
   
   try {
-    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+    const openaiKey = env.OPENAI_API_KEY;
     if (!openaiKey) throw new Error('OpenAI API key not available');
     
     const isGPT5 = model.includes('gpt-5') || model.includes('gpt-4o-mini');
@@ -653,7 +674,7 @@ async function executeClaudeAnalysisOptimized(
   }
   
   try {
-    const claudeKey = await getApiKey('CLAUDE_API_KEY', env);
+    const claudeKey = env.CLAUDE_API_KEY;
     if (!claudeKey) throw new Error('Claude API key not available');
     
     const { data, event, metrics } = await meteredCall(ctx, {
