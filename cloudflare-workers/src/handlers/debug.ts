@@ -173,7 +173,6 @@ export async function handleDebugProfile(c: Context): Promise<Response> {
         biography: profileData.biography?.length || 0,
         hasProfilePicture: !!profileData.profilePicUrl,
         hasLatestPosts: !profileData.latestPosts,
-        postsCount: profileData.latestPosts?.length || 0,
         dataQuality: profileData.dataQuality,
         scraperUsed: profileData.scraperUsed,
         noFakeData: true,
