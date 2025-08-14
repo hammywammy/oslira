@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 import { compress } from 'hono/compress';
 import { secureHeaders } from 'hono/secure-headers';
 import { logger } from 'hono/logger';
-import { getEnvironment, isProduction, isStaging } from './utils/env';
+import { getEnvironment, isProduction, isStaging } from './utils/env'; 
 
 // Fixed imports - use the actual exported function names
 import { handleUpdateApiKey } from './handlers/admin.js';
