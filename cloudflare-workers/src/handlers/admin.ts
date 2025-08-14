@@ -3,7 +3,8 @@ import { getEnhancedConfigManager } from '../services/enhanced-config-manager.js
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js'; 
 import { fetchJson } from '../utils/helpers.js';
- 
+import { AWSSecretsManager } from '../services/aws-secrets-manager.js';
+
 interface ConfigUpdateRequest {
   keyName: string; 
   newValue: string;
@@ -40,93 +41,59 @@ function verifyAdminAccess(c: Context): boolean {
 
 export async function handleUpdateApiKey(c: Context): Promise<Response> {
   const requestId = generateRequestId();
-
-    const sensitiveKeys = ['OPENAI_API_KEY', 'CLAUDE_API_KEY', 'APIFY_API_TOKEN', 'STRIPE_SECRET_KEY'];
-  
-  if (sensitiveKeys.includes(keyName)) {
-    // Store in AWS Secrets Manager
-    const awsSecrets = new AWSSecretsManager(c.env);
-    await awsSecrets.putSecret(keyName, newValue);
-    
-    // Also update Supabase as backup
-    const configManager = getConfigManager(c.env);
-    await configManager.updateConfig(keyName, newValue, userEmail);
-  } else {
-    // Non-sensitive keys only go to Supabase
-    const configManager = getConfigManager(c.env);
-    await configManager.updateConfig(keyName, newValue, userEmail);
-  }
   
   try {
     // Verify admin access
     if (!verifyAdminAccess(c)) {
-      logger('warn', 'Unauthorized admin access attempt', { requestId });
-      return c.json(createStandardResponse(false, undefined, 'Unauthorized access', requestId), 401);
+      return c.json({ 
+        success: false, 
+        error: 'Unauthorized' 
+      }, 401);
     }
-    
+
     const body = await c.req.json() as ConfigUpdateRequest;
-    const { keyName, newValue } = body;
+    const { keyName, newValue, adminToken } = body;
     
-    // Validate input
     if (!keyName || !newValue) {
-      return c.json(createStandardResponse(false, undefined, 'keyName and newValue are required', requestId), 400);
+      return c.json({
+        success: false,
+        error: 'keyName and newValue are required'
+      }, 400);
+    }
+
+    const userEmail = 'admin-update'; // Default for admin updates
+    const sensitiveKeys = ['OPENAI_API_KEY', 'CLAUDE_API_KEY', 'APIFY_API_TOKEN', 'STRIPE_SECRET_KEY'];
+    
+    if (sensitiveKeys.includes(keyName)) {
+      // Store in AWS Secrets Manager
+      const awsSecrets = new AWSSecretsManager(c.env);
+      await awsSecrets.putSecret(keyName, newValue);
+      
+      // Also update Supabase as backup
+      const configManager = getEnhancedConfigManager(c.env);
+      await configManager.updateConfig(keyName, newValue, userEmail);
+    } else {
+      // Non-sensitive keys only go to Supabase
+      const configManager = getEnhancedConfigManager(c.env);
+      await configManager.updateConfig(keyName, newValue, userEmail);
     }
     
-    // Validate keyName against allowed keys
-    const allowedKeys = [
-  'OPENAI_API_KEY', 
-  'CLAUDE_API_KEY', 
-  'APIFY_API_TOKEN', 
-  'STRIPE_SECRET_KEY', 
-  'STRIPE_WEBHOOK_SECRET',
-  'STRIPE_PUBLISHABLE_KEY',
-  'WORKER_URL',
-  'NETLIFY_BUILD_HOOK_URL',
-  'SUPABASE_SERVICE_ROLE',
-  'SUPABASE_ANON_KEY'  // ✅ ADD THIS
-];
+    logger('info', 'API key updated successfully', { keyName, userEmail }, requestId);
     
-    if (!allowedKeys.includes(keyName)) {
-      return c.json(createStandardResponse(false, undefined, 'Invalid key name', requestId), 400);
-    }
-    
-    // Validate key format
-    const keyValidation = validateApiKeyFormat(keyName, newValue);
-    if (!keyValidation.valid) {
-      return c.json(createStandardResponse(false, undefined, keyValidation.error, requestId), 400);
-    }
-    
-    // Get user info from session if available
-    const userEmail = c.req.header('X-User-Email') || 'admin-panel';
-    
-    // Update configuration
-    const configManager = getEnhancedConfigManager(c.env);
-    await configManager.updateConfig(keyName, newValue, userEmail);
-    
-    // Trigger auto-sync to other services
-    await triggerAutoSync(keyName, userEmail, c.env);
-    
-    // Test the key to ensure it's working (optional)
-    const testResult = await testApiKey(keyName, newValue, c.env);
-    
-    logger('info', 'API key updated via admin panel', { 
-      keyName, 
-      updatedBy: userEmail,
-      testResult: testResult.success,
-      requestId 
+    return c.json({
+      success: true,
+      message: `${keyName} updated successfully`,
+      timestamp: new Date().toISOString()
     });
     
-    return c.json(createStandardResponse(true, {
-      message: `${keyName} updated successfully`,
-      testResult: testResult
-    }, undefined, requestId));
-    
   } catch (error: any) {
-    logger('error', 'Admin key update failed', { error: error.message, requestId });
-    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
+    logger('error', 'Failed to update API key', { error: error.message }, requestId);
+    return c.json({
+      success: false,
+      error: 'Failed to update API key'
+    }, 500);
   }
 }
-
 // Auto-sync function to trigger updates across all services
 async function triggerAutoSync(keyName: string, updatedBy: string, env: any): Promise<void> {
   const promises: Promise<any>[] = [];
