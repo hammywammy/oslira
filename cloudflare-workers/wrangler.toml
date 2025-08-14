@@ -1,10 +1,18 @@
-name = "oslira-api"
+name = "ai-outreach-api"
 main = "src/index.ts"
 compatibility_date = "2025-08-01"
 
 # Default/Production configuration
 [vars]
 APP_ENV = "production"
+
+# Database URLs (non-sensitive)
+SUPABASE_URL = "https://jswzzihuqtjqvobfosks.supabase.co"
+FRONTEND_URL = "https://oslira.com"
+WORKER_URL = "https://api.oslira.com"
+
+# AWS Configuration for secrets retrieval
+AWS_REGION = "us-east-1"
 
 # Cache configuration
 CACHE_TTL = "3600000"
@@ -28,11 +36,19 @@ zone_name = "oslira.com"
 
 # Staging environment configuration
 [env.staging]
-name = "oslira-api-staging"
+name = "oslira-api-stg"
 workers_dev = false
 
 [env.staging.vars]
 APP_ENV = "staging"
+
+# Database URLs (staging)
+SUPABASE_URL = "https://jswzzihuqtjqvobfosks.supabase.co"
+FRONTEND_URL = "https://osliratest.netlify.app"
+WORKER_URL = "https://api-staging.oslira.com"
+
+# AWS Configuration (staging)
+AWS_REGION = "us-east-1"
 
 # Cache configuration (staging - smaller limits)
 CACHE_TTL = "1800000"
@@ -56,11 +72,19 @@ zone_name = "oslira.com"
 
 # Production environment configuration (explicit)
 [env.production]
-name = "oslira-api"
+name = "ai-outreach-api"
 workers_dev = false
 
 [env.production.vars]
 APP_ENV = "production"
+
+# Database URLs (production)
+SUPABASE_URL = "https://jswzzihuqtjqvobfosks.supabase.co"
+FRONTEND_URL = "https://oslira.com"
+WORKER_URL = "https://api.oslira.com"
+
+# AWS Configuration (production)
+AWS_REGION = "us-east-1"
 
 # Cache configuration (production)
 CACHE_TTL = "3600000"
@@ -80,3 +104,23 @@ RETRIES = "3"
 [[env.production.routes]]
 pattern = "api.oslira.com/*"
 zone_name = "oslira.com"
+
+# ============================================================================
+# SECRETS CONFIGURATION (AWS-MANAGED)
+# ============================================================================
+# The following secrets are managed via AWS Secrets Manager:
+# - OPENAI_API_KEY
+# - CLAUDE_API_KEY
+# - APIFY_API_TOKEN
+# - STRIPE_SECRET_KEY
+# - STRIPE_WEBHOOK_SECRET
+# - SUPABASE_SERVICE_ROLE
+# - SUPABASE_ANON_KEY
+# - AWS_ACCESS_KEY_ID
+# - AWS_SECRET_ACCESS_KEY
+# - ADMIN_TOKEN
+# - INTERNAL_API_TOKEN
+#
+# These are retrieved at runtime via enhanced-config-manager.ts
+# DO NOT add them to [vars] sections above
+# ============================================================================
