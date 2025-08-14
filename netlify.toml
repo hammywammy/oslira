@@ -99,69 +99,35 @@
   status = 200
 
 # ===========================
-# 🔁 Footer Pages
+# 🏠 Footer Pages
 # ===========================
 
 [[redirects]]
-  from = "/footer/about"
-  to = "/footer/about/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/footer/api"
-  to = "/footer/api/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/footer/case-studies"
-  to = "/footer/case-studies/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/footer/guides"
-  to = "/footer/guides/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/footer/help"
-  to = "/footer/help/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/footer/pricing"
+  from = "/pricing"
   to = "/footer/pricing/index.html"
   status = 200
 
 [[redirects]]
-  from = "/footer/security"
+  from = "/privacy"
+  to = "/footer/privacy/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/footer/terms/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/security"
   to = "/footer/security/index.html"
   status = 200
 
 [[redirects]]
-  from = "/footer/status"
-  to = "/footer/status/index.html"
-  status = 200
-
-# ===========================
-# 🔁 Legal Subpages
-# ===========================
-
-[[redirects]]
-  from = "/footer/legal/privacy"
-  to = "/footer/legal/privacy/index.html"
+  from = "/disclaimer"
+  to = "/footer/disclaimer/index.html"
   status = 200
 
 [[redirects]]
-  from = "/footer/legal/terms"
-  to = "/footer/legal/terms/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/footer/legal/refund"
-  to = "/footer/legal/refund/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/footer/legal/disclaimer"
-  to = "/footer/legal/disclaimer/index.html"
+  from = "/refund"
+  to = "/footer/refund/index.html"
   status = 200
