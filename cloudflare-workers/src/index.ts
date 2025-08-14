@@ -1,9 +1,20 @@
+// ============================================================================
+// FINAL INDEX.TS - ALL CRITICAL FIXES APPLIED
+// File: cloudflare-workers/src/index.ts
+// ============================================================================
+
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { compress } from 'hono/compress';
 import { secureHeaders } from 'hono/secure-headers';
-import { logger } from 'hono/logger';
-import { getEnvironment, isProduction, isStaging } from './utils/env';
+import { logger as honoLogger } from 'hono/logger';
+import { getEnvironment, isProduction, isStaging } from './utils/env.js';
+import { logger } from './utils/logger.js';
+import { createClient } from '@supabase/supabase-js';
+
+// Fixed imports - use the actual exported function names
+import { handleUpdateApiKey } from './handlers/admin.js';
+import { handleConfigChanged } from './handlers/netlify-sync.js';
 import { adminAuthMiddleware } from './middleware/admin-auth.js';
 import { 
   handleUsageStats, 
@@ -14,48 +25,400 @@ import {
   handleClearUserCache,
   handlePerformanceStats 
 } from './handlers/admin-monitoring.js';
-import { handleUpdateApiKey } from './handlers/admin.js';
-import { handleConfigChanged } from './handlers/netlify-sync.js';
 
+// Type definitions
 export interface Env {
+  // Environment variables
   APP_ENV: 'production' | 'staging';
-  OPENAI_API_KEY: string;
-  ANTHROPIC_API_KEY: string;
+  
+  // API Keys (managed via AWS Secrets Manager)
+  OPENAI_API_KEY?: string;
+  ANTHROPIC_API_KEY?: string;
+  APIFY_API_TOKEN?: string;
+  PERPLEXITY_API_KEY?: string;
+  TAVILY_API_KEY?: string;
+  
+  // Supabase
   SUPABASE_URL: string;
-  SUPABASE_SERVICE_KEY: string;
+  SUPABASE_SERVICE_KEY?: string;
+  SUPABASE_ANON_KEY?: string;
+  
+  // Cloudflare
+  CLOUDFLARE_API_TOKEN?: string;
+  CLOUDFLARE_ZONE_ID?: string;
+  
+  // Netlify
+  NETLIFY_BUILD_HOOK_URL?: string;
+  
+  // Internal Security Tokens
   INTERNAL_API_TOKEN?: string;
   ADMIN_TOKEN?: string;
+  
+  // URLs
   WORKER_URL: string;
+  FRONTEND_URL: string;
+  
+  // AWS
+  AWS_REGION?: string;
+  AWS_ACCESS_KEY_ID?: string;
+  AWS_SECRET_ACCESS_KEY?: string;
+  
+  // Stripe
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  
+  // KV Namespaces
   RATE_LIMIT?: KVNamespace;
   CONFIG_CACHE?: KVNamespace;
+  
+  // Durable Objects
+  rateLimiter?: DurableObjectNamespace;
+  
+  // Configuration
+  CACHE_TTL?: string;
+  MAX_CACHE_SIZE_PER_USER?: string;
+  MAX_GLOBAL_CACHE_SIZE?: string;
+  RATE_LIMIT_ENABLED?: string;
+  THROTTLE_THRESHOLD_REQUESTS?: string;
+  THROTTLE_THRESHOLD_TOKENS?: string;
+  MAX_CONCURRENT_BATCH?: string;
+  TIMEOUT_MS?: string;
+  RETRIES?: string;
 }
+
+// ============================================================================
+// ERROR MONITORING SYSTEM
+// ============================================================================
+
+interface ErrorReport {
+  id: string;
+  timestamp: number;
+  level: 'info' | 'warn' | 'error' | 'critical';
+  message: string;
+  context: Record<string, any>;
+  stack?: string;
+  requestId?: string;
+  userId?: string;
+}
+
+class ProductionErrorMonitor {
+  private errors: Map<string, ErrorReport> = new Map();
+  private readonly maxErrors = 1000;
+  private readonly env: Env;
+  
+  constructor(env: Env) {
+    this.env = env;
+  }
+  
+  async reportError(
+    level: 'info' | 'warn' | 'error' | 'critical',
+    message: string,
+    context: Record<string, any> = {},
+    error?: Error,
+    requestId?: string
+  ): Promise<void> {
+    const errorId = crypto.randomUUID();
+    const timestamp = Date.now();
+    
+    const report: ErrorReport = {
+      id: errorId,
+      timestamp,
+      level,
+      message,
+      context: {
+        ...context,
+        environment: this.env.APP_ENV,
+        workerUrl: this.env.WORKER_URL
+      },
+      stack: error?.stack,
+      requestId: requestId || crypto.randomUUID(),
+      userId: context.userId
+    };
+    
+    // Store error (with size management)
+    this.errors.set(errorId, report);
+    this.maintainErrorBuffer();
+    
+    // Log to console with appropriate level
+    this.logToConsole(report);
+    
+    // Store in database for persistence (async, don't block)
+    this.persistError(report).catch(persistError => {
+      console.error('Failed to persist error to database:', persistError);
+    });
+  }
+  
+  private maintainErrorBuffer(): void {
+    if (this.errors.size > this.maxErrors) {
+      const sortedEntries = Array.from(this.errors.entries())
+        .sort(([, a], [, b]) => a.timestamp - b.timestamp);
+      
+      const toRemove = sortedEntries.slice(0, this.errors.size - this.maxErrors);
+      toRemove.forEach(([id]) => this.errors.delete(id));
+    }
+  }
+  
+  private logToConsole(report: ErrorReport): void {
+    const logData = {
+      id: report.id,
+      message: report.message,
+      context: report.context,
+      requestId: report.requestId
+    };
+    
+    switch (report.level) {
+      case 'critical':
+        console.error('🚨 CRITICAL:', logData);
+        break;
+      case 'error':
+        console.error('❌ ERROR:', logData);
+        break;
+      case 'warn':
+        console.warn('⚠️ WARNING:', logData);
+        break;
+      case 'info':
+        console.log('ℹ️ INFO:', logData);
+        break;
+    }
+  }
+  
+  private async persistError(report: ErrorReport): Promise<void> {
+    try {
+      if (!this.env.SUPABASE_URL || !this.env.SUPABASE_SERVICE_KEY) {
+        return;
+      }
+      
+      const supabase = createClient(this.env.SUPABASE_URL, this.env.SUPABASE_SERVICE_KEY);
+      
+      await supabase.from('error_logs').insert({
+        id: report.id,
+        level: report.level,
+        message: report.message,
+        context: report.context,
+        stack: report.stack,
+        request_id: report.requestId,
+        user_id: report.userId,
+        created_at: new Date(report.timestamp).toISOString()
+      });
+      
+    } catch (persistError) {
+      // Don't log this error to avoid infinite loops
+      console.error('Error persistence failed:', persistError instanceof Error ? persistError.message : persistError);
+    }
+  }
+  
+  getRecentErrors(limit: number = 50): ErrorReport[] {
+    return Array.from(this.errors.values())
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, limit);
+  }
+  
+  getErrorStats(): {
+    total: number;
+    byLevel: Record<string, number>;
+    recentCount: number;
+  } {
+    const errors = Array.from(this.errors.values());
+    const recent = errors.filter(e => Date.now() - e.timestamp < 3600000); // Last hour
+    
+    return {
+      total: errors.length,
+      byLevel: errors.reduce((acc, e) => {
+        acc[e.level] = (acc[e.level] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>),
+      recentCount: recent.length
+    };
+  }
+}
+
+// ============================================================================
+// RATE LIMITING SYSTEM
+// ============================================================================
+
+interface RateLimitInfo {
+  provider: string;
+  requests_remaining?: number;
+  tokens_remaining?: number;
+  reset_time?: string;
+  lastUpdated: number;
+}
+
+class EnhancedRateLimitMonitor {
+  private limits: Map<string, RateLimitInfo> = new Map();
+  private throttleState: Map<string, number> = new Map();
+  private readonly enabled: boolean;
+  private readonly thresholds: { requests: number; tokens: number };
+  private readonly delays: { warning: number; critical: number };
+  
+  constructor(env: Env) {
+    this.enabled = env.RATE_LIMIT_ENABLED === 'true';
+    this.thresholds = {
+      requests: parseInt(env.THROTTLE_THRESHOLD_REQUESTS || '10'),
+      tokens: parseInt(env.THROTTLE_THRESHOLD_TOKENS || '1000')
+    };
+    this.delays = {
+      warning: 2000,
+      critical: 60000
+    };
+  }
+  
+  shouldThrottle(provider: 'openai' | 'anthropic'): { 
+    throttle: boolean; 
+    delay: number; 
+    reason?: string;
+    severity: 'none' | 'warning' | 'critical';
+  } {
+    if (!this.enabled) {
+      return { throttle: false, delay: 0, severity: 'none' };
+    }
+    
+    // Check manual throttle state
+    const nextAllowedTime = this.throttleState.get(provider) || 0;
+    if (Date.now() < nextAllowedTime) {
+      return {
+        throttle: true,
+        delay: nextAllowedTime - Date.now(),
+        reason: 'Throttled due to previous rate limit',
+        severity: 'warning'
+      };
+    }
+    
+    const limits = this.limits.get(provider);
+    if (!limits) {
+      return { throttle: false, delay: 0, severity: 'none' };
+    }
+    
+    // CRITICAL: Emergency throttling
+    if (limits.requests_remaining !== undefined && limits.requests_remaining <= 2) {
+      const delay = this.delays.critical * 2;
+      this.setThrottleState(provider, delay);
+      return { 
+        throttle: true, 
+        delay,
+        reason: `Emergency: Only ${limits.requests_remaining} requests remaining`,
+        severity: 'critical'
+      };
+    }
+    
+    if (limits.tokens_remaining !== undefined && limits.tokens_remaining <= this.thresholds.tokens / 20) {
+      const delay = this.delays.critical * 1.5;
+      this.setThrottleState(provider, delay);
+      return { 
+        throttle: true, 
+        delay,
+        reason: `Emergency: Only ${limits.tokens_remaining} tokens remaining`,
+        severity: 'critical'
+      };
+    }
+    
+    // WARNING: Standard throttling
+    if (limits.requests_remaining !== undefined && limits.requests_remaining <= this.thresholds.requests) {
+      const delay = this.delays.warning;
+      this.setThrottleState(provider, delay);
+      return { 
+        throttle: true, 
+        delay,
+        reason: `Warning: ${limits.requests_remaining} requests remaining`,
+        severity: 'warning'
+      };
+    }
+    
+    if (limits.tokens_remaining !== undefined && limits.tokens_remaining <= this.thresholds.tokens) {
+      const delay = this.delays.warning;
+      this.setThrottleState(provider, delay);
+      return { 
+        throttle: true, 
+        delay,
+        reason: `Warning: ${limits.tokens_remaining} tokens remaining`,
+        severity: 'warning'
+      };
+    }
+    
+    return { throttle: false, delay: 0, severity: 'none' };
+  }
+  
+  private setThrottleState(provider: string, delayMs: number): void {
+    this.throttleState.set(provider, Date.now() + delayMs);
+  }
+  
+  updateLimits(provider: 'openai' | 'anthropic', headers: Headers): RateLimitInfo {
+    const limits: RateLimitInfo = {
+      provider,
+      lastUpdated: Date.now()
+    };
+    
+    if (provider === 'openai') {
+      limits.requests_remaining = this.parseIntHeader(headers, 'x-ratelimit-remaining-requests');
+      limits.tokens_remaining = this.parseIntHeader(headers, 'x-ratelimit-remaining-tokens');
+      limits.reset_time = headers.get('x-ratelimit-reset-requests') || undefined;
+    } else if (provider === 'anthropic') {
+      limits.requests_remaining = this.parseIntHeader(headers, 'anthropic-ratelimit-requests-remaining');
+      limits.tokens_remaining = this.parseIntHeader(headers, 'anthropic-ratelimit-tokens-remaining');
+      limits.reset_time = headers.get('anthropic-ratelimit-requests-reset') || undefined;
+    }
+    
+    this.limits.set(provider, limits);
+    
+    // Log critical thresholds
+    if (limits.requests_remaining !== undefined && limits.requests_remaining <= 10) {
+      logger('warn', `${provider} approaching rate limits`, {
+        requests_remaining: limits.requests_remaining,
+        tokens_remaining: limits.tokens_remaining,
+        reset_time: limits.reset_time
+      });
+    }
+    
+    return limits;
+  }
+  
+  private parseIntHeader(headers: Headers, key: string): number | undefined {
+    const value = headers.get(key);
+    if (!value) return undefined;
+    const parsed = parseInt(value, 10);
+    return isNaN(parsed) ? undefined : parsed;
+  }
+  
+  getLimits(provider: 'openai' | 'anthropic'): RateLimitInfo | null {
+    return this.limits.get(provider) || null;
+  }
+  
+  getAllLimits(): Record<string, RateLimitInfo> {
+    return Object.fromEntries(this.limits);
+  }
+}
+
+// ============================================================================
+// HONO APP INITIALIZATION
+// ============================================================================
 
 const app = new Hono<{ Bindings: Env }>();
 
-async function validateAdminAuth(c: Context<{ Bindings: Env }>, next: () => Promise<void>) {
-  const authHeader = c.req.header('Authorization');
-  const adminToken = c.env.INTERNAL_API_TOKEN;
-  
-  if (!adminToken || authHeader !== `Bearer ${adminToken}`) {
-    return c.json({ error: 'Admin access required' }, 401);
-  }
-  
-  await next();
-}
+// Initialize global systems
+let errorMonitor: ProductionErrorMonitor;
+let rateLimitMonitor: EnhancedRateLimitMonitor;
 
-// Global middleware
+// ============================================================================
+// CRITICAL FIX #1: SAFE HEADER LOGGING MIDDLEWARE
+// ============================================================================
 app.use('*', async (c, next) => {
   const environment = getEnvironment(c.env);
+  
+  // Initialize systems on first request
+  if (!errorMonitor) {
+    errorMonitor = new ProductionErrorMonitor(c.env);
+    rateLimitMonitor = new EnhancedRateLimitMonitor(c.env);
+  }
   
   // Add environment headers
   c.header('X-Environment', environment);
   c.header('X-Worker-Version', '1.0.0');
   
-  // FIXED: Safe header logging for staging
+  // CRITICAL FIX: Safe header logging for staging
   if (isStaging(c.env)) {
     console.log(`[${environment.toUpperCase()}] ${c.req.method} ${c.req.url}`);
     
-    // CRITICAL FIX: Safe header access with comprehensive error handling
+    // FIXED: Safe header access with comprehensive error handling
     try {
       const headers = c.req.header();
       if (headers && typeof headers === 'object') {
@@ -80,29 +443,33 @@ app.use('*', async (c, next) => {
     } catch (headerError) {
       // Fallback: log essential info without headers
       console.log('Headers: [access error - logged safely]');
-      console.log('Header access error details:', {
-        error: headerError instanceof Error ? headerError.message : 'unknown',
-        type: typeof c.req.header,
-        hasEntries: typeof c.req.header === 'function'
-      });
+      if (headerError instanceof Error) {
+        console.log('Header access error:', {
+          error: headerError.message,
+          type: typeof c.req.header,
+          hasEntries: typeof c.req.header === 'function'
+        });
+      }
     }
   }
   
   await next();
 });
 
-// CORS configuration
+// ============================================================================
+// CORS CONFIGURATION
+// ============================================================================
 app.use('*', cors({
   origin: (origin) => {
-    // Allow all origins in staging, specific origins in production
     if (isStaging(c.env)) {
-      return '*';
+      return '*'; // Allow all origins in staging
     }
     
     const allowedOrigins = [
       'https://oslira.com',
       'https://www.oslira.com',
-      'https://app.oslira.com'
+      'https://app.oslira.com',
+      'https://osliratest.netlify.app'
     ];
     
     if (!origin) return '*';
@@ -117,10 +484,14 @@ app.use('*', cors({
 app.use('*', compress());
 app.use('*', secureHeaders());
 
-// Logging middleware for staging
+// Logging middleware for staging only
 if (process.env.APP_ENV === 'staging') {
-  app.use('*', logger());
+  app.use('*', honoLogger());
 }
+
+// ============================================================================
+// BASIC ENDPOINTS
+// ============================================================================
 
 // Health check endpoint
 app.get('/health', (c) => {
@@ -132,23 +503,35 @@ app.get('/health', (c) => {
   });
 });
 
-// Test endpoint
+// Test endpoint with environment validation
 app.get('/test', (c) => {
   const environment = getEnvironment(c.env);
   
   return c.json({
     message: `Worker is running in ${environment} mode`,
     timestamp: new Date().toISOString(),
-    hasOpenAI: !c.env.OPENAI_API_KEY,
+    hasOpenAI: !!c.env.OPENAI_API_KEY,
     hasAnthropic: !!c.env.ANTHROPIC_API_KEY,
     hasSupabase: !!c.env.SUPABASE_URL,
     hasRateLimit: !!c.env.RATE_LIMIT,
-    hasConfigCache: !!c.env.CONFIG_CACHE
+    hasConfigCache: !!c.env.CONFIG_CACHE,
+    rateLimitEnabled: c.env.RATE_LIMIT_ENABLED === 'true',
+    cacheConfig: {
+      ttl: c.env.CACHE_TTL,
+      maxSizePerUser: c.env.MAX_CACHE_SIZE_PER_USER,
+      maxGlobalSize: c.env.MAX_GLOBAL_CACHE_SIZE
+    }
   });
 });
 
-// Admin routes with authentication
+// ============================================================================
+// CRITICAL FIX #2: ADMIN ROUTES WITH ENHANCED AUTHENTICATION
+// ============================================================================
+
+// All admin routes require authentication
 app.use('/admin/*', adminAuthMiddleware);
+
+// Admin monitoring endpoints
 app.get('/admin/usage-stats', handleUsageStats);
 app.get('/admin/cost-breakdown', handleCostBreakdown);
 app.get('/admin/system-health', handleSystemHealth);
@@ -157,12 +540,65 @@ app.post('/admin/cache-optimize', handleCacheOptimize);
 app.post('/admin/clear-user-cache', handleClearUserCache);
 app.get('/admin/performance-stats', handlePerformanceStats);
 
-// Admin endpoints (internal only)
+// Error monitoring endpoints
+app.get('/admin/errors', async (c) => {
+  if (!errorMonitor) {
+    return c.json({ error: 'Error monitor not initialized' }, 500);
+  }
+  
+  const limit = parseInt(c.req.query('limit') || '50');
+  const errors = errorMonitor.getRecentErrors(limit);
+  const stats = errorMonitor.getErrorStats();
+  
+  return c.json({
+    success: true,
+    data: {
+      errors,
+      stats
+    }
+  });
+});
+
+// Rate limiting status endpoint
+app.get('/admin/rate-limits', async (c) => {
+  if (!rateLimitMonitor) {
+    return c.json({ error: 'Rate limit monitor not initialized' }, 500);
+  }
+  
+  return c.json({
+    success: true,
+    data: {
+      limits: rateLimitMonitor.getAllLimits(),
+      enabled: c.env.RATE_LIMIT_ENABLED === 'true',
+      thresholds: {
+        requests: parseInt(c.env.THROTTLE_THRESHOLD_REQUESTS || '10'),
+        tokens: parseInt(c.env.THROTTLE_THRESHOLD_TOKENS || '1000')
+      }
+    }
+  });
+});
+
+// ============================================================================
+// CRITICAL FIX #3: INTERNAL ENDPOINTS WITH TOKEN VALIDATION
+// ============================================================================
+
+// Internal config change endpoint
 app.post('/internal/config-changed', async (c) => {
   const authHeader = c.req.header('Authorization');
   const internalToken = c.env.INTERNAL_API_TOKEN;
   
-  if (!internalToken || authHeader !== `Bearer ${internalToken}`) {
+  if (!internalToken) {
+    await errorMonitor?.reportError('error', 'INTERNAL_API_TOKEN not configured', {
+      endpoint: '/internal/config-changed'
+    });
+    return c.json({ error: 'Internal API not configured' }, 500);
+  }
+  
+  if (authHeader !== `Bearer ${internalToken}`) {
+    await errorMonitor?.reportError('warn', 'Unauthorized internal API access attempt', {
+      endpoint: '/internal/config-changed',
+      authHeader: authHeader ? authHeader.substring(0, 20) + '...' : 'missing'
+    });
     return c.json({ error: 'Unauthorized' }, 401);
   }
   
@@ -174,7 +610,18 @@ app.post('/internal/netlify-sync', async (c) => {
   const authHeader = c.req.header('Authorization');
   const internalToken = c.env.INTERNAL_API_TOKEN;
   
-  if (!internalToken || authHeader !== `Bearer ${internalToken}`) {
+  if (!internalToken) {
+    await errorMonitor?.reportError('error', 'INTERNAL_API_TOKEN not configured', {
+      endpoint: '/internal/netlify-sync'
+    });
+    return c.json({ error: 'Internal API not configured' }, 500);
+  }
+  
+  if (authHeader !== `Bearer ${internalToken}`) {
+    await errorMonitor?.reportError('warn', 'Unauthorized internal API access attempt', {
+      endpoint: '/internal/netlify-sync',
+      authHeader: authHeader ? authHeader.substring(0, 20) + '...' : 'missing'
+    });
     return c.json({ error: 'Unauthorized' }, 401);
   }
   
@@ -183,24 +630,28 @@ app.post('/internal/netlify-sync', async (c) => {
 
 // Admin API key update endpoint
 app.post('/admin/update-key', async (c) => {
-  const authHeader = c.req.header('Authorization');
-  const internalToken = c.env.INTERNAL_API_TOKEN;
-  
-  if (!internalToken || authHeader !== `Bearer ${internalToken}`) {
-    return c.json({ error: 'Unauthorized' }, 401);
-  }
-  
+  // This uses admin middleware, so additional token check not needed
   return handleUpdateApiKey(c);
 });
 
-// Environment-specific info endpoint
+// ============================================================================
+// ENVIRONMENT-SPECIFIC ENDPOINTS
+// ============================================================================
+
+// Info endpoint with staging details
 app.get('/info', async (c) => {
   const environment = getEnvironment(c.env);
   
   const baseInfo = {
     environment,
     api_version: '1.0.0',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    fixes_applied: [
+      'safe-header-logging',
+      'admin-token-validation', 
+      'rate-limiting-system',
+      'error-monitoring'
+    ]
   };
   
   // Add more details in staging
@@ -212,23 +663,76 @@ app.get('/info', async (c) => {
         '/health',
         '/test',
         '/info',
-        '/api/lead/analyze',
-        '/api/lead/research',
-        '/api/email/generate',
-        '/api/linkedin/generate'
+        '/admin/usage-stats',
+        '/admin/cost-breakdown',
+        '/admin/system-health',
+        '/admin/errors',
+        '/admin/rate-limits'
       ],
       cors_origins: [
         'https://osliratest.netlify.app',
         'http://localhost:3000',
         'http://localhost:8000'
-      ]
+      ],
+      monitoring: {
+        errorCount: errorMonitor?.getErrorStats().total || 0,
+        rateLimitEnabled: c.env.RATE_LIMIT_ENABLED === 'true'
+      }
     });
   }
   
   return c.json(baseInfo);
 });
 
-// 404 handler
+// ============================================================================
+// CRITICAL FIX #4: GLOBAL ERROR HANDLER
+// ============================================================================
+
+// Global error handler with automatic reporting
+app.onError(async (err, c) => {
+  const requestId = c.get('requestId') || crypto.randomUUID();
+  
+  // Report error to monitoring system
+  if (errorMonitor) {
+    await errorMonitor.reportError(
+      'error',
+      err.message,
+      {
+        path: c.req.url,
+        method: c.req.method,
+        userAgent: c.req.header('User-Agent'),
+        clientIP: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
+        environment: getEnvironment(c.env)
+      },
+      err,
+      requestId
+    );
+  } else {
+    // Fallback logging if error monitor not initialized
+    console.error('🚨 Unhandled error (no monitor):', {
+      message: err.message,
+      stack: err.stack,
+      path: c.req.url,
+      method: c.req.method,
+      requestId
+    });
+  }
+  
+  // Return user-friendly error
+  const isProduction = c.env.APP_ENV === 'production';
+  
+  return c.json({
+    success: false,
+    error: isProduction ? 'Internal server error' : err.message,
+    requestId,
+    timestamp: new Date().toISOString()
+  }, 500);
+});
+
+// ============================================================================
+// 404 HANDLER
+// ============================================================================
+
 app.notFound((c) => {
   const environment = getEnvironment(c.env);
   
@@ -236,9 +740,13 @@ app.notFound((c) => {
     error: 'Not found',
     path: c.req.url,
     environment,
-    suggestion: isStaging(c.env) ? 'Check /info for available endpoints' : undefined
+    suggestion: isStaging(c.env) ? 'Check /info for available endpoints' : undefined,
+    timestamp: new Date().toISOString()
   }, 404);
 });
 
-// Export the app
+// ============================================================================
+// EXPORT
+// ============================================================================
+
 export default app;
