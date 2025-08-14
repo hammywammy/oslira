@@ -1758,40 +1758,6 @@ export {
 };
 
 // ============================================================================
-// ENHANCED DEFAULT EXPORT WITH ALL FEATURES
-// ============================================================================
-
-export default {
-  // Core analysis functions
-  performAIAnalysis,
-  generateOutreachMessage,
-  performBatchAnalysis,
-  performUltimateAnalysis,
-  
-  // Performance monitoring
-  getAnalysisPerformanceStats,
-  getCostBreakdown,
-  
-  // Enhanced cache management
-  getCacheStats,
-  getEnhancedCacheStats,
-  
-  // Rate limiting
-  getRateLimitStatus,
-  
-  // Utility functions
-  calculateProfileIntelligence,
-  validateAnalysisResult,
-  calculateConfidenceLevel,
-  extractPostThemes,
-  
-  // Classes for advanced usage
-  ParallelProcessor,
-  EnhancedIntelligentCache,
-  RateLimitMonitor
-};
-
-// ============================================================================
 // ADMIN & MONITORING ENDPOINTS (NEW)
 // ============================================================================
 
@@ -2087,26 +2053,4 @@ export {
   type EnhancedAnalysisConfig
 };
 
-export function getAnalysisConfig(): EnhancedAnalysisConfig | null {
-  return globalConfig;
-}
 
-export function updateAnalysisConfig(newConfig: Partial<EnhancedAnalysisConfig>, env: Env): void {
-  if (!globalConfig) {
-    initializeWithConfig(env);
-  }
-  
-  globalConfig = {
-    ...globalConfig!,
-    ...newConfig,
-    caching: { ...globalConfig!.caching, ...newConfig.caching },
-    rateLimiting: { ...globalConfig!.rateLimiting, ...newConfig.rateLimiting },
-    performance: { ...globalConfig!.performance, ...newConfig.performance }
-  };
-  
-  // Reinitialize with new config
-  enhancedAnalysisCache = new EnhancedIntelligentCache(globalConfig.caching);
-  rateLimitMonitor = new RateLimitMonitor(globalConfig.rateLimiting);
-  
-  logger('info', 'Analysis configuration updated', { newConfig: globalConfig });
-}
