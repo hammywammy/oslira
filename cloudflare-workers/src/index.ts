@@ -10,6 +10,8 @@ import { secureHeaders } from 'hono/secure-headers';
 import { logger as honoLogger } from 'hono/logger';
 import type { Env } from './types/interfaces.js';
 import { logger } from './utils/logger.js';
+import { handleAnalyze } from './handlers/analyze.js';
+import { handleBulkAnalyze } from './handlers/bulk-analyze.js';
 
 // Import handlers
 import { handleUpdateApiKey } from './handlers/admin.js';
@@ -381,7 +383,13 @@ app.get('/admin/rate-limits', async (c) => {
 // ============================================================================
 // INTERNAL ENDPOINTS WITH TOKEN VALIDATION
 // ============================================================================
+app.post('/analyze', handleAnalyze);
+app.post('/v1/analyze', handleAnalyze);
 
+// Batch analysis
+app.post('/analyze-batch', handleBulkAnalyze);
+app.post('/bulk-analyze', handleBulkAnalyze);
+app.post('/v1/bulk-analyze', handleBulkAnalyze);
 // Internal config change endpoint
 app.post('/internal/config-changed', async (c) => {
   const authHeader = c.req.header('Authorization');
