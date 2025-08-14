@@ -23,7 +23,8 @@ import {
   handleTopUsers, 
   handleCacheOptimize,
   handleClearUserCache,
-  handlePerformanceStats 
+  handlePerformanceStats,
+  handleCacheCleanup
 } from './handlers/admin-monitoring.js';
 
 // Type definitions
