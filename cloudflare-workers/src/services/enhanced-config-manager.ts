@@ -1,11 +1,12 @@
 // ============================================================================
-// ENHANCED CONFIG MANAGER - Complete AWS Integration
+// ENHANCED CONFIG MANAGER - Fixed AWS Integration
 // File: src/services/enhanced-config-manager.ts
 // ============================================================================
 
 import type { Env } from '../types/interfaces.js';
 import { fetchJson } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
+import { AWSSecretsManager, getAWSSecretsManager } from './aws-secrets-manager.js';
 
 interface ConfigItem {
   key_name: string;
@@ -13,12 +14,6 @@ interface ConfigItem {
   environment: string;
   updated_at: string;
   source: 'supabase' | 'aws' | 'env';
-}
-
-interface AWSSecretsManager {
-  getSecret(secretName: string): Promise<string>;
-  putSecret(secretName: string, secretValue: string, rotatedBy?: string): Promise<void>;
-  testConnection(): Promise<boolean>;
 }
 
 class EnhancedConfigManager {
@@ -51,7 +46,7 @@ class EnhancedConfigManager {
         return;
       }
 
-      this.awsSecrets = new AWSSecretsManagerClient(this.env);
+      this.awsSecrets = getAWSSecretsManager(this.env);
       logger('info', 'AWS Secrets Manager initialized successfully');
     } catch (error: any) {
       logger('error', 'Failed to initialize AWS Secrets Manager', { error: error.message });
@@ -154,128 +149,102 @@ class EnhancedConfigManager {
       logger('info', `Config retrieved successfully`, { 
         keyName, 
         source,
-        hasValue: !!value,
-        length: value.length
+        hasValue: !!value
       });
 
       return value;
 
     } catch (error: any) {
-      logger('error', `Failed to retrieve config for ${keyName}`, { error: error.message });
-      
-      // Last resort: environment variable
-      const envValue = this.env[keyName as keyof Env] as string || '';
-      if (envValue) {
-        logger('info', `Using environment fallback for ${keyName}`);
-        return envValue;
-      }
-      
-      throw new Error(`Configuration unavailable: ${keyName}`);
-    }
-  }
-
-  private validateSecretFormat(keyName: string, value: string): boolean {
-    switch (keyName) {
-      case 'OPENAI_API_KEY':
-        return value.startsWith('sk-') && value.length > 20;
-      case 'CLAUDE_API_KEY':
-        return value.startsWith('sk-ant-') && value.length > 30;
-      case 'APIFY_API_TOKEN':
-        return value.startsWith('apify_api_') && value.length > 40;
-      case 'STRIPE_SECRET_KEY':
-        return value.startsWith('sk_') && value.length > 20;
-      case 'SUPABASE_SERVICE_ROLE':
-        return value.startsWith('eyJ') && value.length > 100; // JWT format
-      case 'SUPABASE_ANON_KEY':
-        return value.startsWith('eyJ') && value.length > 100; // JWT format
-      default:
-        return true; // No specific validation
+      logger('error', `Failed to retrieve config for ${keyName}`, { 
+        error: error.message 
+      });
+      throw error;
     }
   }
 
   private async getFromSupabase(keyName: string): Promise<string> {
-    const environment = this.env.APP_ENV || 'production';
-    
-    const response = await fetch(`${this.env.SUPABASE_URL}/rest/v1/app_config`, {
+    if (!this.env.SUPABASE_URL || !this.env.SUPABASE_SERVICE_ROLE) {
+      throw new Error('Supabase not configured');
+    }
+
+    const response = await fetchJson(`${this.env.SUPABASE_URL}/rest/v1/app_config`, {
       method: 'GET',
       headers: {
-        'apikey': this.env.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${this.env.SUPABASE_SERVICE_ROLE || this.env.SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${this.env.SUPABASE_SERVICE_ROLE}`,
+        'apikey': this.env.SUPABASE_SERVICE_ROLE,
         'Content-Type': 'application/json'
+      },
+      params: {
+        'key_name': `eq.${keyName}`,
+        'environment': 'eq.production'
       }
     });
 
-    if (!response.ok) {
-      throw new Error(`Supabase config fetch failed: ${response.status}`);
+    if (!response || !Array.isArray(response) || response.length === 0) {
+      throw new Error(`Config key not found in Supabase: ${keyName}`);
     }
 
-    const configs: ConfigItem[] = await response.json();
-    const config = configs.find(c => 
-      c.key_name === keyName && 
-      (c.environment === environment || c.environment === 'all')
-    );
-
-    if (!config) {
-      throw new Error(`Config not found in Supabase: ${keyName}`);
-    }
-
-    // Decrypt if base64 encoded
-    try {
-      return atob(config.key_value);
-    } catch {
-      return config.key_value;
-    }
+    return response[0].key_value;
   }
 
-  async updateConfig(keyName: string, newValue: string, updatedBy: string = 'system'): Promise<void> {
+  private validateSecretFormat(keyName: string, value: string): boolean {
+    const validations: Record<string, (key: string) => boolean> = {
+      'OPENAI_API_KEY': (key) => key.startsWith('sk-') && key.length > 20,
+      'CLAUDE_API_KEY': (key) => key.startsWith('sk-ant-') && key.length > 30,
+      'APIFY_API_TOKEN': (key) => key.startsWith('apify_api_') && key.length > 20,
+      'STRIPE_SECRET_KEY': (key) => (key.startsWith('sk_live_') || key.startsWith('sk_test_')) && key.length > 20,
+      'STRIPE_WEBHOOK_SECRET': (key) => key.startsWith('whsec_') && key.length > 20
+    };
+
+    const validator = validations[keyName];
+    return !validator || validator(value);
+  }
+
+  async updateConfig(keyName: string, newValue: string, source: 'aws' | 'supabase' = 'aws'): Promise<void> {
     try {
-      // For sensitive keys, update AWS first, then Supabase as backup
-      if (this.AWS_MANAGED_KEYS.includes(keyName)) {
-        if (this.awsSecrets && await this.testAWSConnection()) {
-          try {
-            await this.awsSecrets.putSecret(keyName, newValue, updatedBy);
-            logger('info', `Updated ${keyName} in AWS Secrets Manager`);
-          } catch (awsError: any) {
-            logger('error', `Failed to update ${keyName} in AWS`, { error: awsError.message });
-            throw awsError;
-          }
+      if (source === 'aws' && this.AWS_MANAGED_KEYS.includes(keyName)) {
+        if (!this.awsSecrets) {
+          throw new Error('AWS Secrets Manager not available');
         }
         
-        // Also update Supabase as backup
-        await this.updateSupabase(keyName, newValue, updatedBy);
-        logger('info', `Updated ${keyName} in Supabase as backup`);
+        await this.awsSecrets.putSecret(keyName, newValue, 'admin_update');
+        logger('info', `Updated ${keyName} in AWS Secrets Manager`);
       } else {
-        // Non-sensitive keys only go to Supabase
-        await this.updateSupabase(keyName, newValue, updatedBy);
+        await this.updateInSupabase(keyName, newValue);
         logger('info', `Updated ${keyName} in Supabase`);
       }
 
       // Clear cache for this key
       this.cache.delete(keyName);
-      
+
     } catch (error: any) {
-      logger('error', `Failed to update config ${keyName}`, { error: error.message });
+      logger('error', `Failed to update config for ${keyName}`, { 
+        error: error.message,
+        source 
+      });
       throw error;
     }
   }
 
-  private async updateSupabase(keyName: string, newValue: string, updatedBy: string): Promise<void> {
-    const environment = this.env.APP_ENV || 'production';
-    
+  private async updateInSupabase(keyName: string, newValue: string): Promise<void> {
+    if (!this.env.SUPABASE_URL || !this.env.SUPABASE_SERVICE_ROLE) {
+      throw new Error('Supabase not configured');
+    }
+
     const response = await fetch(`${this.env.SUPABASE_URL}/rest/v1/app_config`, {
       method: 'POST',
       headers: {
-        'apikey': this.env.SUPABASE_SERVICE_ROLE || this.env.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${this.env.SUPABASE_SERVICE_ROLE || this.env.SUPABASE_ANON_KEY}`,
+        'Authorization': `Bearer ${this.env.SUPABASE_SERVICE_ROLE}`,
+        'apikey': this.env.SUPABASE_SERVICE_ROLE,
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       },
       body: JSON.stringify({
         key_name: keyName,
-        key_value: btoa(newValue), // Base64 encode for security
-        environment,
-        updated_by: updatedBy,
-        updated_at: new Date().toISOString()
+        key_value: newValue,
+        environment: 'production',
+        updated_at: new Date().toISOString(),
+        updated_by: 'admin_api'
       })
     });
 
@@ -283,6 +252,32 @@ class EnhancedConfigManager {
       const errorText = await response.text();
       throw new Error(`Supabase update failed: ${response.status} - ${errorText}`);
     }
+  }
+
+  async getConfigStatus(): Promise<Record<string, any>> {
+    const status: Record<string, any> = {};
+
+    for (const keyName of this.AWS_MANAGED_KEYS) {
+      try {
+        const value = await this.getConfig(keyName);
+        const cached = this.cache.get(keyName);
+        
+        status[keyName] = {
+          configured: !!value,
+          source: cached?.source || 'unknown',
+          lastUpdated: new Date().toISOString(),
+          hasValidFormat: this.validateSecretFormat(keyName, value)
+        };
+      } catch (error: any) {
+        status[keyName] = {
+          configured: false,
+          error: error.message,
+          source: 'none'
+        };
+      }
+    }
+
+    return status;
   }
 
   clearCache(): void {
@@ -297,117 +292,6 @@ class EnhancedConfigManager {
       awsAvailable: this.awsSecrets !== null,
       connectionTested: this.connectionTested
     };
-  }
-}
-
-// AWS Secrets Manager Client Implementation
-class AWSSecretsManagerClient implements AWSSecretsManager {
-  private accessKeyId: string;
-  private secretAccessKey: string;
-  private region: string;
-
-  constructor(env: Env) {
-    this.accessKeyId = env.AWS_ACCESS_KEY_ID;
-    this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
-    this.region = env.AWS_REGION || 'us-east-1';
-
-    if (!this.accessKeyId || !this.secretAccessKey) {
-      throw new Error('AWS credentials not configured');
-    }
-  }
-
-  async testConnection(): Promise<boolean> {
-    try {
-      // Test with a simple list secrets call
-      const response = await this.makeAWSRequest('ListSecrets', {
-        MaxResults: 1
-      });
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  async getSecret(secretName: string): Promise<string> {
-    try {
-      const response = await this.makeAWSRequest('GetSecretValue', {
-        SecretId: `Oslira/${secretName}`,
-        VersionStage: 'AWSCURRENT'
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`AWS API error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.SecretString) {
-        throw new Error('Secret has no string value');
-      }
-
-      // Try to parse as JSON first (for complex secrets)
-      try {
-        const secretValue = JSON.parse(data.SecretString);
-        return secretValue.apiKey || secretValue.value || data.SecretString;
-      } catch {
-        // Return as plain string
-        return data.SecretString;
-      }
-
-    } catch (error: any) {
-      logger('error', 'Failed to retrieve secret from AWS', { 
-        secretName, 
-        error: error.message 
-      });
-      throw new Error(`AWS Secrets retrieval failed: ${error.message}`);
-    }
-  }
-
-  async putSecret(secretName: string, secretValue: string, rotatedBy: string = 'manual'): Promise<void> {
-    try {
-      const payload = {
-        SecretId: `Oslira/${secretName}`,
-        SecretString: JSON.stringify({
-          apiKey: secretValue,
-          createdAt: new Date().toISOString(),
-          version: `v${Date.now()}`,
-          rotatedBy: rotatedBy
-        })
-      };
-
-      const response = await this.makeAWSRequest('PutSecretValue', payload);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`AWS API error: ${response.status} - ${errorText}`);
-      }
-
-      logger('info', 'Secret updated in AWS successfully', { secretName, rotatedBy });
-
-    } catch (error: any) {
-      logger('error', 'Failed to update secret in AWS', { 
-        secretName, 
-        error: error.message 
-      });
-      throw new Error(`AWS Secrets update failed: ${error.message}`);
-    }
-  }
-
-  private async makeAWSRequest(action: string, payload: any): Promise<Response> {
-    const endpoint = `https://secretsmanager.${this.region}.amazonaws.com/`;
-    
-    // AWS Signature V4 would go here in production
-    // For now, using basic headers (this needs proper AWS signing)
-    return fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-amz-json-1.1',
-        'X-Amz-Target': `secretsmanager.${action}`,
-        'Authorization': `AWS4-HMAC-SHA256 Credential=${this.accessKeyId}/...` // Simplified
-      },
-      body: JSON.stringify(payload)
-    });
   }
 }
 
