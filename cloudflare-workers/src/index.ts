@@ -4,18 +4,18 @@ import { compress } from 'hono/compress';
 import { secureHeaders } from 'hono/secure-headers';
 import { logger } from 'hono/logger';
 import { getEnvironment, isProduction, isStaging } from './utils/env';
-import { validateAuth } from './middleware/auth';
-import { rateLimiter } from './middleware/rate-limit';
-import { errorHandler } from './middleware/error-handler';
 
-// Import handlers
-import { handleLeadAnalysis } from './handlers/lead-analysis';
-import { handleLeadResearch } from './handlers/lead-research';
-import { handleEmailGeneration } from './handlers/email-generation';
-import { handleLinkedInGeneration } from './handlers/linkedin-generation';
 import { handleConfigChange } from './handlers/admin';
 import { handleNetlifySync } from './handlers/netlify-sync';
-import { handleHealthCheck } from './handlers/health';
+
+import { 
+  handleUsageStats, 
+  handleCostBreakdown, 
+  handleSystemHealth, 
+  handleTopUsers, 
+  handleCacheOptimize, 
+  handlePerformanceStats 
+} from './handlers/admin-monitoring';
 
 // Type definitions
 export interface Env {
@@ -49,6 +49,17 @@ export interface Env {
   
   // Durable Objects
   rateLimiter?: DurableObjectNamespace;
+}
+
+async function validateAdminAuth(c: Context<{ Bindings: Env }>, next: () => Promise<void>) {
+  const authHeader = c.req.header('Authorization');
+  const adminToken = c.env.INTERNAL_API_TOKEN;
+  
+  if (!adminToken || authHeader !== `Bearer ${adminToken}`) {
+    return c.json({ error: 'Admin access required' }, 401);
+  }
+  
+  await next();
 }
 
 const app = new Hono<{ Bindings: Env }>();
@@ -222,11 +233,12 @@ app.get('/test', async (c) => {
   });
 });
 
-// API Routes - Protected endpoints
-app.post('/api/lead/analyze', validateAuth, rateLimiter, handleLeadAnalysis);
-app.post('/api/lead/research', validateAuth, rateLimiter, handleLeadResearch);
-app.post('/api/email/generate', validateAuth, rateLimiter, handleEmailGeneration);
-app.post('/api/linkedin/generate', validateAuth, rateLimiter, handleLinkedInGeneration);
+app.get('/admin/usage-stats', validateAdminAuth, handleUsageStats);
+app.get('/admin/cost-breakdown', validateAdminAuth, handleCostBreakdown);
+app.get('/admin/system-health', validateAdminAuth, handleSystemHealth);
+app.get('/admin/top-users', validateAdminAuth, handleTopUsers);
+app.post('/admin/cache-optimize', validateAdminAuth, handleCacheOptimize);
+app.get('/admin/performance-stats', validateAdminAuth, handlePerformanceStats);
 
 // Admin endpoints (internal only)
 app.post('/internal/config-changed', async (c) => {
