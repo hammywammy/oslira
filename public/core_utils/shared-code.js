@@ -1519,20 +1519,12 @@ window.OsliraApp.errorHandler = {
             user: window.OsliraApp.user?.id || 'anonymous'
         };
         
+        // Always maintain size limit
+        if (this.errors.length >= this.maxErrors) {
+            this.errors.shift(); // Remove oldest error
+        }
+        
         this.errors.push(errorInfo);
-        
-        // Keep only recent errors
-        if (this.errors.length > this.maxErrors) {
-            this.errors = this.errors.slice(-this.maxErrors);
-        }
-        
-        console.error('🚨 Error logged:', errorInfo);
-        
-        // Send to error reporting service in production
-        if (window.location.hostname !== 'localhost') {
-            this.reportError(errorInfo);
-        }
-    },
     
     reportError: function(errorInfo) {
         // This would integrate with your error reporting service
