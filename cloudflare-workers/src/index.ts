@@ -305,15 +305,58 @@ app.get('/health', (c) => {
 });
 
 // Test endpoint with environment validation
-app.get('/test', (c) => {
+// Test endpoint with environment validation
+app.get('/test', async (c) => {
   const environment = getEnvironment(c.env);
+  
+  // Test AWS integration
+  let hasOpenAI = false;
+  let hasAnthropic = false;
+  let hasApify = false;
+  let awsStatus = 'not_tested';
+  
+  try {
+    const { getApiKey } = await import('./services/enhanced-config-manager.js');
+    
+    // Test AWS key retrieval
+    try {
+      const openaiKey = await getApiKey('OPENAI_API_KEY', c.env);
+      hasOpenAI = !!openaiKey;
+    } catch (e) {
+      console.log('OpenAI key not found in AWS:', e.message);
+    }
+    
+    try {
+      const anthropicKey = await getApiKey('ANTHROPIC_API_KEY', c.env);
+      hasAnthropic = !!anthropicKey;
+    } catch (e) {
+      console.log('Anthropic key not found in AWS:', e.message);
+    }
+    
+    try {
+      const apifyKey = await getApiKey('APIFY_API_TOKEN', c.env);
+      hasApify = !!apifyKey;
+    } catch (e) {
+      console.log('Apify key not found in AWS:', e.message);
+    }
+    
+    awsStatus = 'working';
+  } catch (error) {
+    awsStatus = `error: ${error.message}`;
+    // Fallback to environment variables
+    hasOpenAI = !!c.env.OPENAI_API_KEY;
+    hasAnthropic = !!c.env.ANTHROPIC_API_KEY;
+    hasApify = !!c.env.APIFY_API_TOKEN;
+  }
   
   return c.json({
     message: `Worker is running in ${environment} mode`,
     timestamp: new Date().toISOString(),
-    hasOpenAI: !!c.env.OPENAI_API_KEY,
-    hasAnthropic: !!c.env.ANTHROPIC_API_KEY,
+    hasOpenAI,
+    hasAnthropic,
+    hasApify,
     hasSupabase: !!c.env.SUPABASE_URL,
+    awsIntegration: awsStatus,
     hasRateLimit: !!c.env.RATE_LIMIT,
     hasConfigCache: !!c.env.CONFIG_CACHE,
     rateLimitEnabled: c.env.RATE_LIMIT_ENABLED === 'true',
@@ -512,6 +555,28 @@ app.onError(async (err, c) => {
     requestId,
     timestamp: new Date().toISOString()
   }, 500);
+});
+
+// Temporary AWS test endpoint
+app.get('/test-aws', async (c) => {
+  try {
+    const { getApiKey } = await import('./services/enhanced-config-manager.js');
+    
+    const openaiKey = await getApiKey('OPENAI_API_KEY', c.env);
+    
+    return c.json({
+      success: true,
+      awsWorking: true,
+      hasOpenAIKey: !!openaiKey,
+      keyPrefix: openaiKey ? openaiKey.substring(0, 8) + '...' : 'none'
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      awsWorking: false,
+      error: error.message
+    });
+  }
 });
 
 // ============================================================================
