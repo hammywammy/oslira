@@ -1,3 +1,5 @@
+# Create the proper tsconfig.json file
+@"
 {
   "compilerOptions": {
     "target": "ES2022",
