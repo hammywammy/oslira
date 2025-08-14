@@ -12,7 +12,7 @@ import type { Env } from './types/interfaces.js';
 import { logger } from './utils/logger.js';
 import { handleAnalyze } from './handlers/analyze.js';
 import { handleBulkAnalyze } from './handlers/bulk-analyze.js';
-import { getApiKey } from '../services/enhanced-config-manager.js';
+import { getApiKey } from './services/enhanced-config-manager.js';
 
 // Import handlers
 import { handleUpdateApiKey } from './handlers/admin.js';
