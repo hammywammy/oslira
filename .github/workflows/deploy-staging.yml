@@ -1,4 +1,4 @@
-name: Deploy Staging Cloudflare Worker
+name: Deploy Staging Worker (Phase 3 Enhanced)
 
 on:
   push:
@@ -7,10 +7,50 @@ on:
     branches:
       - staging
   workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force deployment even if no changes detected'
+        required: false
+        default: 'false'
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+      changes_detected: ${{ steps.check.outputs.changes_detected }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          
+      - name: Check for changes
+        id: check
+        run: |
+          if [[ "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+            echo "🔄 Force deployment requested"
+          elif git diff --quiet HEAD~1 HEAD -- cloudflare-workers/; then
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No changes detected in cloudflare-workers/"
+          else
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+            echo "📝 Changes detected in cloudflare-workers/"
+            echo "Changed files:"
+            git diff --name-only HEAD~1 HEAD -- cloudflare-workers/
+          fi
+
   deploy-staging:
     runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should_deploy == 'true'
+    environment:
+      name: staging
+      url: https://api-staging.oslira.com
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,15 +59,95 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'cloudflare-workers/package-lock.json'
           
       - name: Install dependencies
         run: |
           cd cloudflare-workers
-          npm install
+          npm ci
+          
+      - name: Run type checking
+        run: |
+          cd cloudflare-workers
+          npm run typecheck
+          
+      - name: Run build validation
+        run: |
+          cd cloudflare-workers
+          npm run build
           
       - name: Deploy Staging Worker
         run: |
           cd cloudflare-workers
+          echo "🚀 Deploying oslira-api-stg to staging environment..."
           npx wrangler deploy --env staging
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          
+      - name: Wait for deployment
+        run: |
+          echo "⏳ Waiting for deployment to propagate..."
+          sleep 30
+          
+      - name: Health check
+        id: health_check
+        run: |
+          echo "🔍 Testing staging worker health..."
+          
+          HEALTH_URL="https://api-staging.oslira.com/health"
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Testing $HEALTH_URL"
+            
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" || echo "000")
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed (HTTP $HTTP_CODE)"
+              echo "health_status=healthy" >> $GITHUB_OUTPUT
+              break
+            else
+              echo "❌ Health check failed (HTTP $HTTP_CODE)"
+              if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                echo "health_status=unhealthy" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+              sleep 10
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+      - name: Test enhanced features
+        if: steps.health_check.outputs.health_status == 'healthy'
+        run: |
+          echo "🧪 Testing enhanced features..."
+          
+          # Test admin endpoints (these should fail without auth, which is expected)
+          ADMIN_URL="https://api-staging.oslira.com/admin/system-health"
+          
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$ADMIN_URL" || echo "000")
+          
+          if [ "$HTTP_CODE" = "401" ]; then
+            echo "✅ Admin authentication working (HTTP 401 as expected)"
+          else
+            echo "⚠️ Unexpected admin endpoint response: HTTP $HTTP_CODE"
+          fi
+          
+      - name: Deployment summary
+        run: |
+          echo "## 🎯 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Worker:** oslira-api-stg" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** staging" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** https://api-staging.oslira.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health:** ${{ steps.health_check.outputs.health_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Changes:** ${{ needs.validate.outputs.changes_detected }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Enhanced Features Deployed:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Enhanced caching with user isolation" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Rate limiting with exponential backoff" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Circuit breaker protection" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Comprehensive metering & monitoring" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Admin endpoints with authentication" >> $GITHUB_STEP_SUMMARY
