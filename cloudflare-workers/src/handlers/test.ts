@@ -1,5 +1,6 @@
 import type { Context } from 'hono';
 import { fetchJson } from '../utils/helpers.js';
+import type { Env } from '../types/interfaces.js';
 
 export async function handleTestSupabase(c: Context): Promise<Response> {
   try {
