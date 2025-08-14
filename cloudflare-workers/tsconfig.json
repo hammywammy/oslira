@@ -1,5 +1,5 @@
-# Create the proper tsconfig.json file
-$tsconfigContent = @'
+# Your original command is perfect:
+@"
 {
   "compilerOptions": {
     "target": "ES2022",
@@ -29,6 +29,4 @@ $tsconfigContent = @'
     ".wrangler"
   ]
 }
-'@
-
-$tsconfigContent | Out-File -FilePath "tsconfig.json" -Encoding UTF8
+"@ | Out-File -FilePath "tsconfig.json" -Encoding UTF8
