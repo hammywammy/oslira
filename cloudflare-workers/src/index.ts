@@ -8,14 +8,16 @@ import { getEnvironment, isProduction, isStaging } from './utils/env';
 import { handleConfigChange } from './handlers/admin';
 import { handleNetlifySync } from './handlers/netlify-sync';
 
+import { adminAuthMiddleware } from './middleware/admin-auth.js';
 import { 
   handleUsageStats, 
   handleCostBreakdown, 
   handleSystemHealth, 
   handleTopUsers, 
-  handleCacheOptimize, 
+  handleCacheOptimize,
+  handleClearUserCache,
   handlePerformanceStats 
-} from './handlers/admin-monitoring';
+} from './handlers/admin-monitoring.js';
 
 // Type definitions
 export interface Env {
@@ -233,12 +235,14 @@ app.get('/test', async (c) => {
   });
 });
 
-app.get('/admin/usage-stats', validateAdminAuth, handleUsageStats);
-app.get('/admin/cost-breakdown', validateAdminAuth, handleCostBreakdown);
-app.get('/admin/system-health', validateAdminAuth, handleSystemHealth);
-app.get('/admin/top-users', validateAdminAuth, handleTopUsers);
-app.post('/admin/cache-optimize', validateAdminAuth, handleCacheOptimize);
-app.get('/admin/performance-stats', validateAdminAuth, handlePerformanceStats);
+app.use('/admin/*', adminAuthMiddleware);
+app.get('/admin/usage-stats', handleUsageStats);
+app.get('/admin/cost-breakdown', handleCostBreakdown);
+app.get('/admin/system-health', handleSystemHealth);
+app.get('/admin/top-users', handleTopUsers);
+app.post('/admin/cache-optimize', handleCacheOptimize);
+app.post('/admin/clear-user-cache', handleClearUserCache);
+app.get('/admin/performance-stats', handlePerformanceStats);
 
 // Admin endpoints (internal only)
 app.post('/internal/config-changed', async (c) => {
