@@ -1,23 +1,31 @@
 // ============================================================================
-// ADMIN MONITORING HANDLER
-// File: cloudflare-workers/src/handlers/admin-monitoring.ts
-// Complete admin endpoints for AI analysis monitoring dashboard
+// COMPLETE ADMIN MONITORING HANDLERS
+// File: src/handlers/admin-monitoring.ts
 // ============================================================================
 
-import { Context } from 'hono';
-import { Env } from '../types/interfaces';
-import { getSystemHealthStatus, getCostBreakdown, getAnalysisPerformanceStats, optimizeCache } from '../services/ai-analysis';
+import type { Context } from 'hono';
+import type { Env } from '../types/interfaces.js';
+import { 
+  getSystemHealthStatus, 
+  getCostBreakdown, 
+  getAnalysisPerformanceStats, 
+  optimizeCache,
+  clearUserCache,
+  getEnhancedCacheStats,
+  getRateLimitStatus
+} from '../services/ai-analysis.js';
 import { createClient } from '@supabase/supabase-js';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
+import { getAdminContext } from '../middleware/admin-auth.js';
 
 // ============================================================================
 // ADMIN ENDPOINT: /admin/usage-stats
 // ============================================================================
 export async function handleUsageStats(c: Context<{ Bindings: Env }>) {
-  const requestId = crypto.randomUUID();
+  const { requestId, clientIP } = getAdminContext(c as any);
   
   try {
-    logger('info', 'Admin usage stats requested', {}, requestId);
+    logger('info', 'Admin usage stats requested', { clientIP }, requestId);
     
     const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE);
     
@@ -42,13 +50,14 @@ export async function handleUsageStats(c: Context<{ Bindings: Env }>) {
     const providerStats = usageData.reduce((acc, log) => {
       const provider = log.provider;
       if (!acc[provider]) {
-        acc[provider] = { requests: 0, cost: 0, tokens: 0 };
+        acc[provider] = { requests: 0, cost: 0, tokens: 0, cacheHits: 0 };
       }
       acc[provider].requests += 1;
       acc[provider].cost += log.total_cost_usd || 0;
       acc[provider].tokens += (log.input_tokens || 0) + (log.output_tokens || 0);
+      if (log.cache_hit) acc[provider].cacheHits += 1;
       return acc;
-    }, {} as Record<string, { requests: number; cost: number; tokens: number }>);
+    }, {} as Record<string, { requests: number; cost: number; tokens: number; cacheHits: number }>);
 
     // Top users by cost
     const userStats = usageData
@@ -56,62 +65,57 @@ export async function handleUsageStats(c: Context<{ Bindings: Env }>) {
       .reduce((acc, log) => {
         const userId = log.meta.user_id;
         if (!acc[userId]) {
-          acc[userId] = { total_cost: 0, request_count: 0 };
+          acc[userId] = { requests: 0, cost: 0, tokens: 0 };
         }
-        acc[userId].total_cost += log.total_cost_usd || 0;
-        acc[userId].request_count += 1;
+        acc[userId].requests += 1;
+        acc[userId].cost += log.total_cost_usd || 0;
+        acc[userId].tokens += (log.input_tokens || 0) + (log.output_tokens || 0);
         return acc;
-      }, {} as Record<string, { total_cost: number; request_count: number }>);
+      }, {} as Record<string, { requests: number; cost: number; tokens: number }>);
 
     const topUsers = Object.entries(userStats)
-      .map(([userId, stats]) => ({ userId, ...stats }))
-      .sort((a, b) => b.total_cost - a.total_cost)
-      .slice(0, 10);
+      .sort((a, b) => b[1].cost - a[1].cost)
+      .slice(0, 10)
+      .map(([userId, stats]) => ({ userId, ...stats }));
 
-    // Recent activity (last 10 requests)
-    const recentActivity = usageData.slice(0, 10).map(log => ({
-      id: log.id,
-      provider: log.provider,
-      model: log.model,
-      cost: log.total_cost_usd,
-      tokens: (log.input_tokens || 0) + (log.output_tokens || 0),
-      cache_hit: log.cache_hit,
-      created_at: log.created_at,
-      user_id: log.meta?.user_id || 'unknown'
-    }));
-
+    // Time-based analysis (last 24 hours)
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentUsage = usageData.filter(log => new Date(log.created_at) > last24h);
+    
     const response = {
       success: true,
       data: {
         summary: {
           totalRequests,
-          totalCost: Number(totalCost.toFixed(6)),
+          totalCost: parseFloat(totalCost.toFixed(6)),
           totalTokens,
-          avgCostPerRequest: totalRequests > 0 ? Number((totalCost / totalRequests).toFixed(6)) : 0,
-          cacheHitRate: usageData.filter(log => log.cache_hit).length / Math.max(totalRequests, 1)
+          avgCostPerRequest: totalRequests > 0 ? parseFloat((totalCost / totalRequests).toFixed(6)) : 0,
+          avgTokensPerRequest: totalRequests > 0 ? Math.round(totalTokens / totalRequests) : 0
         },
-        providerStats,
+        providers: providerStats,
         topUsers,
-        recentActivity,
-        timeRange: '24 hours',
-        timestamp: new Date().toISOString()
-      }
+        last24Hours: {
+          requests: recentUsage.length,
+          cost: parseFloat(recentUsage.reduce((sum, log) => sum + (log.total_cost_usd || 0), 0).toFixed(6)),
+          avgLatency: recentUsage.length > 0 
+            ? Math.round(recentUsage.reduce((sum, log) => sum + (log.meta?.duration_ms || 0), 0) / recentUsage.length)
+            : 0
+        },
+        cachePerformance: getEnhancedCacheStats(),
+        rateLimits: getRateLimitStatus()
+      },
+      requestId,
+      timestamp: new Date().toISOString()
     };
-
-    logger('info', 'Usage stats generated successfully', { 
-      totalRequests, 
-      totalCost: response.data.summary.totalCost,
-      providers: Object.keys(providerStats).length 
-    }, requestId);
 
     return c.json(response);
     
   } catch (error: any) {
-    logger('error', 'Usage stats handler failed', { error: error.message }, requestId);
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      requestId 
+    logger('error', 'Failed to get usage stats', { error: error.message, clientIP }, requestId);
+    return c.json({
+      success: false,
+      error: 'Failed to retrieve usage statistics',
+      requestId
     }, 500);
   }
 }
@@ -120,68 +124,39 @@ export async function handleUsageStats(c: Context<{ Bindings: Env }>) {
 // ADMIN ENDPOINT: /admin/cost-breakdown
 // ============================================================================
 export async function handleCostBreakdown(c: Context<{ Bindings: Env }>) {
-  const requestId = crypto.randomUUID();
+  const { requestId, clientIP } = getAdminContext(c as any);
   
   try {
-    logger('info', 'Admin cost breakdown requested', {}, requestId);
+    logger('info', 'Admin cost breakdown requested', { clientIP }, requestId);
     
-    // Get enhanced cost breakdown from AI analysis service
-    const stats = getCostBreakdown();
+    const costData = getCostBreakdown();
+    const performanceStats = getAnalysisPerformanceStats();
     
-    // Also get database summary for validation
-    const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE);
-    
-    const { data: dbStats, error } = await supabase
-      .from('ai_usage_logs')
-      .select('provider, total_cost_usd, created_at')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-
-    if (error) {
-      logger('warn', 'Database cost query failed, using service stats only', { error: error.message }, requestId);
-    }
-
-    // Calculate database totals for comparison
-    let dbTotals = { total: 0, openai: 0, anthropic: 0 };
-    if (dbStats) {
-      dbTotals = dbStats.reduce((acc, log) => {
-        const cost = log.total_cost_usd || 0;
-        acc.total += cost;
-        if (log.provider === 'openai') acc.openai += cost;
-        if (log.provider === 'anthropic') acc.anthropic += cost;
-        return acc;
-      }, { total: 0, openai: 0, anthropic: 0 });
-    }
-
-    const response = {
+    return c.json({
       success: true,
       data: {
-        enhancedStats: stats,
-        databaseTotals: {
-          total: Number(dbTotals.total.toFixed(6)),
-          openai: Number(dbTotals.openai.toFixed(6)),
-          anthropic: Number(dbTotals.anthropic.toFixed(6))
+        costs: costData,
+        performance: {
+          totalAnalyses: performanceStats.openai.count + performanceStats.anthropic.count,
+          avgLatency: Math.round((performanceStats.openai.avgLatency + performanceStats.anthropic.avgLatency) / 2),
+          errorRate: ((performanceStats.openai.errorRate + performanceStats.anthropic.errorRate) / 2 * 100).toFixed(2) + '%'
         },
-        comparison: {
-          dataSource: 'enhanced_ai_service',
-          validated: dbStats ? 'database_verified' : 'service_only'
-        },
-        timestamp: new Date().toISOString()
-      }
-    };
-
-    logger('info', 'Cost breakdown generated', { 
-      serviceTotal: stats.total?.cost || 0,
-      dbTotal: dbTotals.total 
-    }, requestId);
-
-    return c.json(response);
+        predictions: {
+          dailyCost: costData.total.cost * 24, // Rough estimate
+          monthlyCost: costData.total.cost * 24 * 30,
+          costPerUser: costData.total.calls > 0 ? costData.total.cost / costData.total.calls : 0
+        }
+      },
+      requestId,
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error: any) {
-    logger('error', 'Cost breakdown handler failed', { error: error.message }, requestId);
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      requestId 
+    logger('error', 'Failed to get cost breakdown', { error: error.message, clientIP }, requestId);
+    return c.json({
+      success: false,
+      error: 'Failed to retrieve cost breakdown',
+      requestId
     }, 500);
   }
 }
@@ -190,80 +165,26 @@ export async function handleCostBreakdown(c: Context<{ Bindings: Env }>) {
 // ADMIN ENDPOINT: /admin/system-health
 // ============================================================================
 export async function handleSystemHealth(c: Context<{ Bindings: Env }>) {
-  const requestId = crypto.randomUUID();
+  const { requestId, clientIP } = getAdminContext(c as any);
   
   try {
-    logger('info', 'Admin system health requested', {}, requestId);
+    logger('info', 'Admin system health requested', { clientIP }, requestId);
     
-    // Get system health from AI analysis service
-    const health = getSystemHealthStatus();
+    const healthStatus = getSystemHealthStatus();
     
-    // Get latest system snapshot from database
-    const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE);
-    
-    const { data: latestSnapshot, error } = await supabase
-      .from('system_health_snapshots')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error) {
-      logger('warn', 'Health snapshot query failed', { error: error.message }, requestId);
-    }
-
-    // Get recent error rates
-    const { data: recentLogs, error: logsError } = await supabase
-      .from('ai_usage_logs')
-      .select('http_status, created_at')
-      .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()) // Last hour
-      .order('created_at', { ascending: false });
-
-    let errorRate = 0;
-    if (!logsError && recentLogs) {
-      const totalRequests = recentLogs.length;
-      const errorRequests = recentLogs.filter(log => log.http_status >= 400).length;
-      errorRate = totalRequests > 0 ? (errorRequests / totalRequests) * 100 : 0;
-    }
-
-    const response = {
+    return c.json({
       success: true,
-      data: {
-        serviceHealth: health,
-        databaseSnapshot: latestSnapshot ? {
-          cache_hit_rate: latestSnapshot.cache_hit_rate,
-          total_active_users: latestSnapshot.total_active_users,
-          avg_response_time_ms: latestSnapshot.avg_response_time_ms,
-          memory_usage_mb: latestSnapshot.memory_usage_mb,
-          openai_requests_remaining: latestSnapshot.openai_requests_remaining,
-          anthropic_requests_remaining: latestSnapshot.anthropic_requests_remaining,
-          snapshot_time: latestSnapshot.created_at
-        } : null,
-        metrics: {
-          errorRate: Number(errorRate.toFixed(2)),
-          totalRequestsLastHour: recentLogs?.length || 0,
-          lastSnapshotAge: latestSnapshot 
-            ? Math.round((Date.now() - new Date(latestSnapshot.created_at).getTime()) / 1000 / 60)
-            : null
-        },
-        timestamp: new Date().toISOString()
-      }
-    };
-
-    logger('info', 'System health generated', { 
-      overallHealth: health.overallHealth,
-      errorRate: errorRate,
-      hasSnapshot: !!latestSnapshot
-    }, requestId);
-
-    return c.json(response);
+      data: healthStatus,
+      requestId,
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error: any) {
-    logger('error', 'System health handler failed', { error: error.message }, requestId);
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      requestId 
+    logger('error', 'Failed to get system health', { error: error.message, clientIP }, requestId);
+    return c.json({
+      success: false,
+      error: 'Failed to retrieve system health',
+      requestId
     }, 500);
   }
 }
@@ -272,126 +193,89 @@ export async function handleSystemHealth(c: Context<{ Bindings: Env }>) {
 // ADMIN ENDPOINT: /admin/top-users
 // ============================================================================
 export async function handleTopUsers(c: Context<{ Bindings: Env }>) {
-  const requestId = crypto.randomUUID();
+  const { requestId, clientIP } = getAdminContext(c as any);
   
   try {
-    logger('info', 'Admin top users requested', {}, requestId);
+    logger('info', 'Admin top users requested', { clientIP }, requestId);
     
     const supabase = createClient(c.env.SUPABASE_URL, c.env.SUPABASE_SERVICE_ROLE);
     
-    // Get usage data with user information
+    // Get top users by usage and cost
     const { data: usageData, error } = await supabase
       .from('ai_usage_logs')
-      .select('meta, total_cost_usd, created_at')
+      .select('meta, total_cost_usd, input_tokens, output_tokens, created_at')
       .not('meta->user_id', 'is', null)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()); // Last 7 days
+      .order('created_at', { ascending: false })
+      .limit(5000); // Larger sample for better analysis
 
     if (error) {
-      logger('error', 'Failed to fetch user usage data', { error: error.message }, requestId);
+      logger('error', 'Failed to fetch user data', { error: error.message }, requestId);
       throw error;
     }
 
-    // Group by user and calculate totals
-    const userStats = usageData.reduce((acc, log) => {
+    // Aggregate user statistics
+    const userAggregates = usageData.reduce((acc, log) => {
       const userId = log.meta?.user_id;
       if (!userId) return acc;
       
       if (!acc[userId]) {
-        acc[userId] = { 
-          total_cost: 0, 
-          request_count: 0, 
-          last_activity: log.created_at,
-          business_ids: new Set()
+        acc[userId] = {
+          requests: 0,
+          totalCost: 0,
+          totalTokens: 0,
+          lastActive: log.created_at,
+          avgCostPerRequest: 0
         };
       }
       
-      acc[userId].total_cost += log.total_cost_usd || 0;
-      acc[userId].request_count += 1;
+      acc[userId].requests += 1;
+      acc[userId].totalCost += log.total_cost_usd || 0;
+      acc[userId].totalTokens += (log.input_tokens || 0) + (log.output_tokens || 0);
       
-      // Track most recent activity
-      if (new Date(log.created_at) > new Date(acc[userId].last_activity)) {
-        acc[userId].last_activity = log.created_at;
-      }
-      
-      // Track business IDs for this user
-      if (log.meta?.business_id) {
-        acc[userId].business_ids.add(log.meta.business_id);
+      // Update last active if this log is more recent
+      if (new Date(log.created_at) > new Date(acc[userId].lastActive)) {
+        acc[userId].lastActive = log.created_at;
       }
       
       return acc;
-    }, {} as Record<string, { 
-      total_cost: number; 
-      request_count: number; 
-      last_activity: string;
-      business_ids: Set<string>;
-    }>);
+    }, {} as Record<string, any>);
 
-    // Get user details for top users
-    const topUserIds = Object.entries(userStats)
-      .sort(([,a], [,b]) => b.total_cost - a.total_cost)
-      .slice(0, 20)
-      .map(([userId]) => userId);
+    // Calculate averages and sort
+    const topUsers = Object.entries(userAggregates)
+      .map(([userId, stats]) => ({
+        userId,
+        requests: stats.requests,
+        totalCost: parseFloat(stats.totalCost.toFixed(6)),
+        totalTokens: stats.totalTokens,
+        avgCostPerRequest: parseFloat((stats.totalCost / stats.requests).toFixed(6)),
+        avgTokensPerRequest: Math.round(stats.totalTokens / stats.requests),
+        lastActive: stats.lastActive,
+        daysSinceActive: Math.round((Date.now() - new Date(stats.lastActive).getTime()) / (1000 * 60 * 60 * 24))
+      }))
+      .sort((a, b) => b.totalCost - a.totalCost)
+      .slice(0, 20);
 
-    const { data: userDetails, error: userError } = await supabase
-      .from('users')
-      .select('id, email, created_at, subscription_status')
-      .in('id', topUserIds);
-
-    if (userError) {
-      logger('warn', 'Failed to fetch user details', { error: userError.message }, requestId);
-    }
-
-    // Combine stats with user details
-    const topUsers = Object.entries(userStats)
-      .map(([userId, stats]) => {
-        const userDetail = userDetails?.find(u => u.id === userId);
-        return {
-          userId,
-          email: userDetail?.email || 'unknown',
-          total_cost: Number(stats.total_cost.toFixed(6)),
-          request_count: stats.request_count,
-          avg_cost_per_request: Number((stats.total_cost / stats.request_count).toFixed(6)),
-          last_activity: stats.last_activity,
-          business_count: stats.business_ids.size,
-          subscription_status: userDetail?.subscription_status || 'unknown',
-          account_age_days: userDetail?.created_at 
-            ? Math.round((Date.now() - new Date(userDetail.created_at).getTime()) / (1000 * 60 * 60 * 24))
-            : null
-        };
-      })
-      .sort((a, b) => b.total_cost - a.total_cost)
-      .slice(0, 10);
-
-    const response = {
+    return c.json({
       success: true,
       data: {
-        topUsers,
-        summary: {
-          totalUsers: Object.keys(userStats).length,
-          totalCost: Number(Object.values(userStats).reduce((sum, stats) => sum + stats.total_cost, 0).toFixed(6)),
-          totalRequests: Object.values(userStats).reduce((sum, stats) => sum + stats.request_count, 0),
-          avgCostPerUser: Object.keys(userStats).length > 0 
-            ? Number((Object.values(userStats).reduce((sum, stats) => sum + stats.total_cost, 0) / Object.keys(userStats).length).toFixed(6))
-            : 0
-        },
-        timeRange: '7 days',
-        timestamp: new Date().toISOString()
-      }
-    };
-
-    logger('info', 'Top users generated', { 
-      totalUsers: response.data.summary.totalUsers,
-      topUserCost: topUsers[0]?.total_cost || 0
-    }, requestId);
-
-    return c.json(response);
+        topUsersByCost: topUsers.slice(0, 10),
+        topUsersByUsage: [...topUsers].sort((a, b) => b.requests - a.requests).slice(0, 10),
+        recentlyActive: topUsers.filter(u => u.daysSinceActive <= 7).slice(0, 10),
+        totalUniqueUsers: Object.keys(userAggregates).length,
+        avgRequestsPerUser: topUsers.length > 0 
+          ? Math.round(topUsers.reduce((sum, u) => sum + u.requests, 0) / topUsers.length)
+          : 0
+      },
+      requestId,
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error: any) {
-    logger('error', 'Top users handler failed', { error: error.message }, requestId);
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      requestId 
+    logger('error', 'Failed to get top users', { error: error.message, clientIP }, requestId);
+    return c.json({
+      success: false,
+      error: 'Failed to retrieve top users',
+      requestId
     }, 500);
   }
 }
@@ -400,34 +284,64 @@ export async function handleTopUsers(c: Context<{ Bindings: Env }>) {
 // ADMIN ENDPOINT: /admin/cache-optimize
 // ============================================================================
 export async function handleCacheOptimize(c: Context<{ Bindings: Env }>) {
-  const requestId = crypto.randomUUID();
+  const { requestId, clientIP } = getAdminContext(c as any);
   
   try {
-    logger('info', 'Admin cache optimization requested', {}, requestId);
+    logger('info', 'Admin cache optimization requested', { clientIP }, requestId);
     
-    const result = optimizeCache();
+    const optimizationResult = optimizeCache();
     
-    const response = {
+    return c.json({
       success: true,
-      data: {
-        optimization: result,
-        timestamp: new Date().toISOString()
-      }
-    };
-
-    logger('info', 'Cache optimization completed', { 
-      optimizations: result.optimizations.length,
-      beforeHitRate: result.before.hitRate 
-    }, requestId);
-
-    return c.json(response);
+      data: optimizationResult,
+      requestId,
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error: any) {
-    logger('error', 'Cache optimization failed', { error: error.message }, requestId);
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      requestId 
+    logger('error', 'Failed to optimize cache', { error: error.message, clientIP }, requestId);
+    return c.json({
+      success: false,
+      error: 'Failed to optimize cache',
+      requestId
+    }, 500);
+  }
+}
+
+// ============================================================================
+// ADMIN ENDPOINT: /admin/clear-user-cache
+// ============================================================================
+export async function handleClearUserCache(c: Context<{ Bindings: Env }>) {
+  const { requestId, clientIP } = getAdminContext(c as any);
+  
+  try {
+    const { userId } = await c.req.json();
+    
+    if (!userId) {
+      return c.json({
+        success: false,
+        error: 'userId required',
+        requestId
+      }, 400);
+    }
+    
+    logger('info', 'Admin user cache clear requested', { userId, clientIP }, requestId);
+    
+    const clearResult = clearUserCache(userId);
+    
+    return c.json({
+      success: true,
+      data: clearResult,
+      requestId,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error: any) {
+    logger('error', 'Failed to clear user cache', { error: error.message, clientIP }, requestId);
+    return c.json({
+      success: false,
+      error: 'Failed to clear user cache',
+      requestId
     }, 500);
   }
 }
@@ -436,34 +350,26 @@ export async function handleCacheOptimize(c: Context<{ Bindings: Env }>) {
 // ADMIN ENDPOINT: /admin/performance-stats
 // ============================================================================
 export async function handlePerformanceStats(c: Context<{ Bindings: Env }>) {
-  const requestId = crypto.randomUUID();
+  const { requestId, clientIP } = getAdminContext(c as any);
   
   try {
-    logger('info', 'Admin performance stats requested', {}, requestId);
+    logger('info', 'Admin performance stats requested', { clientIP }, requestId);
     
-    const stats = getAnalysisPerformanceStats();
+    const performanceData = getAnalysisPerformanceStats();
     
-    const response = {
+    return c.json({
       success: true,
-      data: {
-        performance: stats,
-        timestamp: new Date().toISOString()
-      }
-    };
-
-    logger('info', 'Performance stats generated', { 
-      openaiCalls: stats.openai?.count || 0,
-      anthropicCalls: stats.anthropic?.count || 0 
-    }, requestId);
-
-    return c.json(response);
+      data: performanceData,
+      requestId,
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error: any) {
-    logger('error', 'Performance stats handler failed', { error: error.message }, requestId);
-    return c.json({ 
-      success: false, 
-      error: error.message,
-      requestId 
+    logger('error', 'Failed to get performance stats', { error: error.message, clientIP }, requestId);
+    return c.json({
+      success: false,
+      error: 'Failed to retrieve performance statistics',
+      requestId
     }, 500);
   }
 }
