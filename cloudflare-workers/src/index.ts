@@ -13,6 +13,7 @@ import { logger } from './utils/logger.js';
 import { handleAnalyze } from './handlers/analyze.js';
 import { handleBulkAnalyze } from './handlers/bulk-analyze.js';
 import { getApiKey } from './services/enhanced-config-manager.js';
+import { ProductionErrorMonitor, type ErrorReport } from './services/error-monitor.js';
 
 // Import handlers
 import { handleUpdateApiKey } from './handlers/admin.js';
@@ -28,75 +29,6 @@ import {
   handlePerformanceStats,
   handleCacheCleanup
 } from './handlers/admin-monitoring.js';
-
-// ============================================================================
-// ERROR MONITORING SYSTEM
-// ============================================================================
-
-interface ErrorReport {
-  id: string;
-  timestamp: number;
-  level: 'info' | 'warn' | 'error' | 'critical';
-  message: string;
-  context: Record<string, any>;
-  stack?: string;
-  requestId?: string;
-  userId?: string;
-}
-
-class ProductionErrorMonitor {
-  private errors: Map<string, ErrorReport> = new Map();
-  private readonly maxErrors = 1000;
-  private readonly env: Env;
-  
-  constructor(env: Env) {
-    this.env = env;
-  }
-  
-  async reportError(
-    level: 'info' | 'warn' | 'error' | 'critical',
-    message: string,
-    context: Record<string, any> = {},
-    error?: Error,
-    requestId?: string
-  ): Promise<void> {
-    const errorReport: ErrorReport = {
-      id: crypto.randomUUID(),
-      timestamp: Date.now(),
-      level,
-      message,
-      context,
-      stack: error?.stack,
-      requestId: requestId || crypto.randomUUID(),
-      userId: context.userId
-    };
-    
-    this.errors.set(errorReport.id, errorReport);
-    
-    // Cleanup old errors
-    if (this.errors.size > this.maxErrors) {
-      const oldestKey = this.errors.keys().next().value;
-      this.errors.delete(oldestKey);
-    }
-    
-    // Log error
-    logger(level, message, context, requestId);
-  }
-  
-  getRecentErrors(limit: number = 50): ErrorReport[] {
-    return Array.from(this.errors.values())
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, limit);
-  }
-  
-  getErrorStats(): { total: number; byLevel: Record<string, number> } {
-    const byLevel: Record<string, number> = {};
-    for (const error of this.errors.values()) {
-      byLevel[error.level] = (byLevel[error.level] || 0) + 1;
-    }
-    return { total: this.errors.size, byLevel };
-  }
-}
 
 // ============================================================================
 // RATE LIMIT MONITORING
