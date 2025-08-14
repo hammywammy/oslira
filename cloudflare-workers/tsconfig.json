@@ -1,3 +1,5 @@
+# Your original command is perfect:
+@"
 {
   "compilerOptions": {
     "target": "ES2022",
@@ -27,3 +29,4 @@
     ".wrangler"
   ]
 }
+"@ | Out-File -FilePath "tsconfig.json" -Encoding UTF8
