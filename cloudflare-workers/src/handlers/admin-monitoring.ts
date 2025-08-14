@@ -17,6 +17,8 @@ import {
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '../utils/logger.js';
 import { getAdminContext } from '../middleware/admin-auth.js';
+import { CacheOptimizer } from '../services/cache-optimizer.js';
+import { createStandardResponse } from '../utils/response.js';
 
 // ============================================================================
 // ADMIN ENDPOINT: /admin/usage-stats
