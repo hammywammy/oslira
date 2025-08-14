@@ -16,6 +16,33 @@ import { CacheConfig, RateLimitInfo, EnhancedAnalysisConfig } from '../types/int
 // ENHANCED CACHING WITH USER ISOLATION (NEW ADDITION)
 // ============================================================================
 
+function loadConfigFromEnv(env: Env): EnhancedAnalysisConfig {
+  return {
+    caching: {
+      enabled: true,
+      ttl: parseInt(env.CACHE_TTL || '3600000'),
+      maxSizePerUser: parseInt(env.MAX_CACHE_SIZE_PER_USER || '50'),
+      maxGlobalSize: parseInt(env.MAX_GLOBAL_CACHE_SIZE || '50000')
+    },
+    rateLimiting: {
+      enabled: env.RATE_LIMIT_ENABLED === 'true',
+      throttleThresholds: {
+        requests: parseInt(env.THROTTLE_THRESHOLD_REQUESTS || '10'),
+        tokens: parseInt(env.THROTTLE_THRESHOLD_TOKENS || '1000')
+      },
+      delays: {
+        warning: 2000,
+        critical: 60000
+      }
+    },
+    performance: {
+      maxConcurrentBatch: parseInt(env.MAX_CONCURRENT_BATCH || '5'),
+      timeoutMs: parseInt(env.TIMEOUT_MS || '60000'),
+      retries: parseInt(env.RETRIES || '3')
+    }
+  };
+}
+
 interface CacheItem {
   data: any;
   timestamp: number;
@@ -26,9 +53,15 @@ interface CacheItem {
 
 class EnhancedIntelligentCache {
   private cache: Map<string, CacheItem> = new Map();
-  private readonly TTL = 3600000; // 1 hour
-  private readonly MAX_SIZE_PER_USER = 50;
-  private readonly MAX_GLOBAL_SIZE = 50000;
+  private readonly TTL: number;
+  private readonly MAX_SIZE_PER_USER: number;
+  private readonly MAX_GLOBAL_SIZE: number;
+  
+  constructor(config?: CacheConfig) {
+    this.TTL = config?.ttl || 3600000;
+    this.MAX_SIZE_PER_USER = config?.maxSizePerUser || 50;
+    this.MAX_GLOBAL_SIZE = config?.maxGlobalSize || 50000;
+  }
   
   // Generate safe cache key with user isolation
   private getCacheKey(userId: string, type: string, data: string): string {
@@ -149,6 +182,15 @@ interface RateLimitInfo {
 
 class RateLimitMonitor {
   private limits: Map<string, RateLimitInfo> = new Map();
+  private readonly enabled: boolean;
+  private readonly thresholds: { requests: number; tokens: number };
+  private readonly delays: { warning: number; critical: number };
+  
+  constructor(config?: EnhancedAnalysisConfig['rateLimiting']) {
+    this.enabled = config?.enabled ?? true;
+    this.thresholds = config?.throttleThresholds || { requests: 10, tokens: 1000 };
+    this.delays = config?.delays || { warning: 2000, critical: 60000 };
+  }
   
   updateLimits(provider: 'openai' | 'anthropic', headers: Headers): RateLimitInfo {
     let limits: RateLimitInfo = { provider, lastUpdated: Date.now() };
@@ -800,6 +842,11 @@ export async function performAIAnalysis(
   requestId?: string,
   userId?: string
 ): Promise<AnalysisResult> {
+  // Initialize configuration if not already done
+  if (!globalConfig) {
+    initializeWithConfig(env);
+  }
+  
   requestId = requestId || crypto.randomUUID();
   const businessId = business.id;
   
@@ -2019,3 +2066,27 @@ export {
   // Enhanced config type
   type EnhancedAnalysisConfig
 };
+
+export function getAnalysisConfig(): EnhancedAnalysisConfig | null {
+  return globalConfig;
+}
+
+export function updateAnalysisConfig(newConfig: Partial<EnhancedAnalysisConfig>, env: Env): void {
+  if (!globalConfig) {
+    initializeWithConfig(env);
+  }
+  
+  globalConfig = {
+    ...globalConfig!,
+    ...newConfig,
+    caching: { ...globalConfig!.caching, ...newConfig.caching },
+    rateLimiting: { ...globalConfig!.rateLimiting, ...newConfig.rateLimiting },
+    performance: { ...globalConfig!.performance, ...newConfig.performance }
+  };
+  
+  // Reinitialize with new config
+  enhancedAnalysisCache = new EnhancedIntelligentCache(globalConfig.caching);
+  rateLimitMonitor = new RateLimitMonitor(globalConfig.rateLimiting);
+  
+  logger('info', 'Analysis configuration updated', { newConfig: globalConfig });
+}
