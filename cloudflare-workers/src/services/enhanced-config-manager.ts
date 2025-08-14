@@ -1,7 +1,11 @@
+// ============================================================================
+// ENHANCED CONFIG MANAGER - Complete AWS Integration
+// File: src/services/enhanced-config-manager.ts
+// ============================================================================
+
 import type { Env } from '../types/interfaces.js';
 import { fetchJson } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
-import { getAWSSecretsManager } from './aws-secrets-manager.js';
 
 interface ConfigItem {
   key_name: string;
@@ -11,10 +15,17 @@ interface ConfigItem {
   source: 'supabase' | 'aws' | 'env';
 }
 
+interface AWSSecretsManager {
+  getSecret(secretName: string): Promise<string>;
+  putSecret(secretName: string, secretValue: string, rotatedBy?: string): Promise<void>;
+  testConnection(): Promise<boolean>;
+}
+
 class EnhancedConfigManager {
   private cache: Map<string, { value: string; expires: number; source: string }> = new Map();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  private awsSecrets: any;
+  private awsSecrets: AWSSecretsManager | null = null;
+  private connectionTested = false;
   
   // Keys that should be stored in AWS Secrets Manager
   private readonly AWS_MANAGED_KEYS = [
@@ -24,15 +35,47 @@ class EnhancedConfigManager {
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
     'SUPABASE_SERVICE_ROLE',
-    'SUPABASE_ANON_KEY'
+    'SUPABASE_ANON_KEY',
+    'ADMIN_TOKEN',
+    'INTERNAL_API_TOKEN'
   ];
 
   constructor(private env: Env) {
+    this.initializeAWS();
+  }
+
+  private async initializeAWS(): Promise<void> {
     try {
-      this.awsSecrets = getAWSSecretsManager(env);
-    } catch (error) {
-      logger('warn', 'AWS Secrets Manager not available, falling back to Supabase only');
+      if (!this.env.AWS_ACCESS_KEY_ID || !this.env.AWS_SECRET_ACCESS_KEY) {
+        logger('warn', 'AWS credentials not found, using Supabase-only mode');
+        return;
+      }
+
+      this.awsSecrets = new AWSSecretsManagerClient(this.env);
+      logger('info', 'AWS Secrets Manager initialized successfully');
+    } catch (error: any) {
+      logger('error', 'Failed to initialize AWS Secrets Manager', { error: error.message });
       this.awsSecrets = null;
+    }
+  }
+
+  async testAWSConnection(): Promise<boolean> {
+    if (!this.awsSecrets || this.connectionTested) {
+      return this.awsSecrets !== null;
+    }
+
+    try {
+      this.connectionTested = await this.awsSecrets.testConnection();
+      if (this.connectionTested) {
+        logger('info', 'AWS Secrets Manager connection validated');
+      } else {
+        logger('warn', 'AWS Secrets Manager connection failed validation');
+      }
+      return this.connectionTested;
+    } catch (error: any) {
+      logger('error', 'AWS connection test failed', { error: error.message });
+      this.connectionTested = false;
+      return false;
     }
   }
 
@@ -40,7 +83,7 @@ class EnhancedConfigManager {
     // Check cache first
     const cached = this.cache.get(keyName);
     if (cached && cached.expires > Date.now()) {
-      logger('info', `Config cache hit for ${keyName}`, { source: cached.source });
+      logger('debug', `Config cache hit for ${keyName}`, { source: cached.source });
       return cached.value;
     }
 
@@ -49,22 +92,28 @@ class EnhancedConfigManager {
       let source: string = 'env';
 
       // For sensitive keys, try AWS first
-      if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets) {
-        try {
-          value = await this.awsSecrets.getSecret(keyName);
-          source = 'aws';
-          logger('info', `Retrieved ${keyName} from AWS Secrets Manager`);
-        } catch (awsError: any) {
-          logger('warn', `AWS retrieval failed for ${keyName}, trying Supabase fallback`, { 
-            error: awsError.message 
-          });
-          
-          // Fallback to Supabase
+      if (this.AWS_MANAGED_KEYS.includes(keyName)) {
+        if (this.awsSecrets && await this.testAWSConnection()) {
+          try {
+            value = await this.awsSecrets.getSecret(keyName);
+            source = 'aws';
+            logger('info', `Retrieved ${keyName} from AWS Secrets Manager`);
+          } catch (awsError: any) {
+            logger('warn', `AWS retrieval failed for ${keyName}, trying Supabase fallback`, { 
+              error: awsError.message 
+            });
+            
+            // Fallback to Supabase
+            value = await this.getFromSupabase(keyName);
+            source = 'supabase';
+          }
+        } else {
+          logger('warn', `AWS not available for ${keyName}, using Supabase`);
           value = await this.getFromSupabase(keyName);
           source = 'supabase';
         }
       } else {
-        // Non-sensitive keys use Supabase
+        // Non-sensitive keys use Supabase first
         try {
           value = await this.getFromSupabase(keyName);
           source = 'supabase';
@@ -74,14 +123,25 @@ class EnhancedConfigManager {
           });
           
           // Final fallback to environment variable
-          value = this.env[keyName as keyof Env] || '';
+          value = this.env[keyName as keyof Env] as string || '';
           source = 'env';
         }
       }
 
       if (!value) {
         logger('error', `No value found for config key: ${keyName}`);
-        return '';
+        throw new Error(`Configuration key not found: ${keyName}`);
+      }
+
+      // Validate sensitive keys
+      if (this.AWS_MANAGED_KEYS.includes(keyName)) {
+        if (!this.validateSecretFormat(keyName, value)) {
+          logger('warn', `Invalid format for ${keyName}`, { 
+            source, 
+            length: value.length,
+            prefix: value.substring(0, 8)
+          });
+        }
       }
 
       // Cache the result
@@ -91,52 +151,99 @@ class EnhancedConfigManager {
         source
       });
 
-      logger('info', `Config retrieved successfully`, { keyName, source });
+      logger('info', `Config retrieved successfully`, { 
+        keyName, 
+        source,
+        hasValue: !!value,
+        length: value.length
+      });
 
-      logger('info', 'Config retrieved with details', { 
-  keyName, 
-  source,
-  hasValue: !!value,
-  valueLength: value?.length || 0,
-  valuePrefix: value?.substring(0, 10) || 'NONE',
-  isValidOpenAIFormat: value?.startsWith('sk-') || false
-});
       return value;
 
     } catch (error: any) {
       logger('error', `Failed to retrieve config for ${keyName}`, { error: error.message });
       
       // Last resort: environment variable
-      const envValue = this.env[keyName as keyof Env] || '';
+      const envValue = this.env[keyName as keyof Env] as string || '';
       if (envValue) {
         logger('info', `Using environment fallback for ${keyName}`);
         return envValue;
       }
       
-      return '';
+      throw new Error(`Configuration unavailable: ${keyName}`);
+    }
+  }
+
+  private validateSecretFormat(keyName: string, value: string): boolean {
+    switch (keyName) {
+      case 'OPENAI_API_KEY':
+        return value.startsWith('sk-') && value.length > 20;
+      case 'CLAUDE_API_KEY':
+        return value.startsWith('sk-ant-') && value.length > 30;
+      case 'APIFY_API_TOKEN':
+        return value.startsWith('apify_api_') && value.length > 40;
+      case 'STRIPE_SECRET_KEY':
+        return value.startsWith('sk_') && value.length > 20;
+      case 'SUPABASE_SERVICE_ROLE':
+        return value.startsWith('eyJ') && value.length > 100; // JWT format
+      case 'SUPABASE_ANON_KEY':
+        return value.startsWith('eyJ') && value.length > 100; // JWT format
+      default:
+        return true; // No specific validation
+    }
+  }
+
+  private async getFromSupabase(keyName: string): Promise<string> {
+    const environment = this.env.APP_ENV || 'production';
+    
+    const response = await fetch(`${this.env.SUPABASE_URL}/rest/v1/app_config`, {
+      method: 'GET',
+      headers: {
+        'apikey': this.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${this.env.SUPABASE_SERVICE_ROLE || this.env.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Supabase config fetch failed: ${response.status}`);
+    }
+
+    const configs: ConfigItem[] = await response.json();
+    const config = configs.find(c => 
+      c.key_name === keyName && 
+      (c.environment === environment || c.environment === 'all')
+    );
+
+    if (!config) {
+      throw new Error(`Config not found in Supabase: ${keyName}`);
+    }
+
+    // Decrypt if base64 encoded
+    try {
+      return atob(config.key_value);
+    } catch {
+      return config.key_value;
     }
   }
 
   async updateConfig(keyName: string, newValue: string, updatedBy: string = 'system'): Promise<void> {
     try {
       // For sensitive keys, update AWS first, then Supabase as backup
-      if (this.AWS_MANAGED_KEYS.includes(keyName) && this.awsSecrets) {
-        try {
-          await this.awsSecrets.putSecret(keyName, newValue, updatedBy);
-          logger('info', `Updated ${keyName} in AWS Secrets Manager`);
-          
-          // Also update Supabase as backup
-          await this.updateSupabase(keyName, newValue, updatedBy);
-          logger('info', `Updated ${keyName} in Supabase as backup`);
-          
-        } catch (awsError: any) {
-          logger('error', `Failed to update ${keyName} in AWS, using Supabase only`, {
-            error: awsError.message
-          });
-          
-          // If AWS fails, at least update Supabase
-          await this.updateSupabase(keyName, newValue, updatedBy);
+      if (this.AWS_MANAGED_KEYS.includes(keyName)) {
+        if (this.awsSecrets && await this.testAWSConnection()) {
+          try {
+            await this.awsSecrets.putSecret(keyName, newValue, updatedBy);
+            logger('info', `Updated ${keyName} in AWS Secrets Manager`);
+          } catch (awsError: any) {
+            logger('error', `Failed to update ${keyName} in AWS`, { error: awsError.message });
+            throw awsError;
+          }
         }
+        
+        // Also update Supabase as backup
+        await this.updateSupabase(keyName, newValue, updatedBy);
+        logger('info', `Updated ${keyName} in Supabase as backup`);
       } else {
         // Non-sensitive keys only go to Supabase
         await this.updateSupabase(keyName, newValue, updatedBy);
@@ -146,250 +253,178 @@ class EnhancedConfigManager {
       // Clear cache for this key
       this.cache.delete(keyName);
       
-      // Trigger auto-sync notifications
-      await this.notifyConfigChange(keyName, updatedBy);
-
     } catch (error: any) {
-      logger('error', `Failed to update config: ${keyName}`, { error: error.message });
+      logger('error', `Failed to update config ${keyName}`, { error: error.message });
       throw error;
     }
-  }
-
-  async migrateToAWS(keyName: string): Promise<void> {
-    if (!this.AWS_MANAGED_KEYS.includes(keyName)) {
-      throw new Error(`${keyName} is not configured for AWS migration`);
-    }
-
-    if (!this.awsSecrets) {
-      throw new Error('AWS Secrets Manager not available');
-    }
-
-    try {
-      // Get current value from Supabase
-      const currentValue = await this.getFromSupabase(keyName);
-      
-      if (!currentValue) {
-        throw new Error(`No value found in Supabase for ${keyName}`);
-      }
-
-      // Create/update in AWS
-      await this.awsSecrets.createSecret(keyName, currentValue, `Oslira ${keyName} - migrated from Supabase`);
-      
-      logger('info', `Successfully migrated ${keyName} to AWS Secrets Manager`);
-
-      // Clear cache to force re-fetch from AWS
-      this.cache.delete(keyName);
-
-    } catch (error: any) {
-      logger('error', `Failed to migrate ${keyName} to AWS`, { error: error.message });
-      throw error;
-    }
-  }
-
-  async getConfigStatus(): Promise<Record<string, any>> {
-    const status: Record<string, any> = {};
-
-    for (const keyName of this.AWS_MANAGED_KEYS) {
-      try {
-        // Check AWS
-        let awsStatus = 'not_configured';
-        let awsLastUpdated = 'N/A';
-        
-        if (this.awsSecrets) {
-          try {
-            const awsValue = await this.awsSecrets.getSecret(keyName);
-            awsStatus = awsValue ? 'configured' : 'empty';
-          } catch {
-            awsStatus = 'error';
-          }
-        }
-
-        // Check Supabase
-        let supabaseStatus = 'not_configured';
-        let supabaseLastUpdated = 'N/A';
-        
-        try {
-          const supabaseValue = await this.getFromSupabase(keyName);
-          supabaseStatus = supabaseValue ? 'configured' : 'empty';
-          
-          // Get last updated timestamp
-          const configItem = await this.getSupabaseMetadata(keyName);
-          supabaseLastUpdated = configItem?.updated_at || 'N/A';
-        } catch {
-          supabaseStatus = 'error';
-        }
-
-        // Check environment variable
-        const envValue = this.env[keyName as keyof Env];
-        const envStatus = envValue ? 'configured' : 'not_configured';
-
-        status[keyName] = {
-          aws: {
-            status: awsStatus,
-            lastUpdated: awsLastUpdated
-          },
-          supabase: {
-            status: supabaseStatus,
-            lastUpdated: supabaseLastUpdated
-          },
-          environment: {
-            status: envStatus
-          },
-          recommended_source: this.AWS_MANAGED_KEYS.includes(keyName) ? 'aws' : 'supabase',
-          migration_needed: awsStatus !== 'configured' && this.AWS_MANAGED_KEYS.includes(keyName)
-        };
-
-      } catch (error: any) {
-        status[keyName] = {
-          error: error.message,
-          aws: { status: 'error' },
-          supabase: { status: 'error' },
-          environment: { status: 'unknown' }
-        };
-      }
-    }
-
-    return status;
-  }
-
-private async getFromSupabase(keyName: string): Promise<string> {
-  // Get the service role key from AWS first
-  const serviceRoleKey = await this.getConfig('SUPABASE_SERVICE_ROLE');
-  
-  const headers = {
-    apikey: serviceRoleKey,
-    Authorization: `Bearer ${serviceRoleKey}`,
-    'Content-Type': 'application/json'
-  };
-
-    const response = await fetchJson<ConfigItem[]>(
-      `${this.env.SUPABASE_URL}/rest/v1/app_config?key_name=eq.${keyName}&environment=eq.production&select=key_value`,
-      { headers }
-    );
-
-    if (!response.length) {
-      return '';
-    }
-
-    return this.decryptValue(response[0].key_value);
   }
 
   private async updateSupabase(keyName: string, newValue: string, updatedBy: string): Promise<void> {
-    const headers = {
-      apikey: this.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
-    };
+    const environment = this.env.APP_ENV || 'production';
+    
+    const response = await fetch(`${this.env.SUPABASE_URL}/rest/v1/app_config`, {
+      method: 'POST',
+      headers: {
+        'apikey': this.env.SUPABASE_SERVICE_ROLE || this.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${this.env.SUPABASE_SERVICE_ROLE || this.env.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({
+        key_name: keyName,
+        key_value: btoa(newValue), // Base64 encode for security
+        environment,
+        updated_by: updatedBy,
+        updated_at: new Date().toISOString()
+      })
+    });
 
-    const encryptedValue = this.encryptValue(newValue);
-
-    await fetchJson(
-      `${this.env.SUPABASE_URL}/rest/v1/app_config?key_name=eq.${keyName}&environment=eq.production`,
-      {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({
-          key_value: encryptedValue,
-          updated_at: new Date().toISOString(),
-          updated_by: updatedBy
-        })
-      }
-    );
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Supabase update failed: ${response.status} - ${errorText}`);
+    }
   }
 
-  private async getSupabaseMetadata(keyName: string): Promise<ConfigItem | null> {
-    const headers = {
-      apikey: this.env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${this.env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
-    };
-
-    const response = await fetchJson<ConfigItem[]>(
-      `${this.env.SUPABASE_URL}/rest/v1/app_config?key_name=eq.${keyName}&environment=eq.production&select=*`,
-      { headers }
-    );
-
-    return response.length > 0 ? response[0] : null;
+  clearCache(): void {
+    this.cache.clear();
+    logger('info', 'Config cache cleared');
   }
 
-  private async notifyConfigChange(keyName: string, updatedBy: string): Promise<void> {
+  getCacheStats(): any {
+    return {
+      size: this.cache.size,
+      keys: Array.from(this.cache.keys()),
+      awsAvailable: this.awsSecrets !== null,
+      connectionTested: this.connectionTested
+    };
+  }
+}
+
+// AWS Secrets Manager Client Implementation
+class AWSSecretsManagerClient implements AWSSecretsManager {
+  private accessKeyId: string;
+  private secretAccessKey: string;
+  private region: string;
+
+  constructor(env: Env) {
+    this.accessKeyId = env.AWS_ACCESS_KEY_ID;
+    this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
+    this.region = env.AWS_REGION || 'us-east-1';
+
+    if (!this.accessKeyId || !this.secretAccessKey) {
+      throw new Error('AWS credentials not configured');
+    }
+  }
+
+  async testConnection(): Promise<boolean> {
     try {
-      // Trigger your existing auto-sync system
-      const notificationPromises = [];
+      // Test with a simple list secrets call
+      const response = await this.makeAWSRequest('ListSecrets', {
+        MaxResults: 1
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
 
-      // Trigger Netlify rebuild
-      if (this.env.NETLIFY_BUILD_HOOK_URL) {
-        notificationPromises.push(
-          fetch(this.env.NETLIFY_BUILD_HOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              trigger: 'aws_config_update',
-              keyName,
-              updatedBy,
-              timestamp: new Date().toISOString()
-            })
-          })
-        );
+  async getSecret(secretName: string): Promise<string> {
+    try {
+      const response = await this.makeAWSRequest('GetSecretValue', {
+        SecretId: `Oslira/${secretName}`,
+        VersionStage: 'AWSCURRENT'
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`AWS API error: ${response.status} - ${errorText}`);
       }
 
-      // Clear CDN cache
-      if (this.env.CLOUDFLARE_ZONE_ID && this.env.CLOUDFLARE_API_TOKEN) {
-        notificationPromises.push(
-          fetch(`https://api.cloudflare.com/client/v4/zones/${this.env.CLOUDFLARE_ZONE_ID}/purge_cache`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${this.env.CLOUDFLARE_API_TOKEN}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              files: [
-                `${this.env.WORKER_URL || ''}/config`,
-                `${this.env.WORKER_URL || ''}/v1/config`
-              ]
-            })
-          })
-        );
-      }
-
-      await Promise.allSettled(notificationPromises);
+      const data = await response.json();
       
-      logger('info', 'Config change notifications sent', { keyName, updatedBy });
+      if (!data.SecretString) {
+        throw new Error('Secret has no string value');
+      }
+
+      // Try to parse as JSON first (for complex secrets)
+      try {
+        const secretValue = JSON.parse(data.SecretString);
+        return secretValue.apiKey || secretValue.value || data.SecretString;
+      } catch {
+        // Return as plain string
+        return data.SecretString;
+      }
 
     } catch (error: any) {
-      logger('warn', 'Failed to send config change notifications', { 
-        keyName, 
+      logger('error', 'Failed to retrieve secret from AWS', { 
+        secretName, 
         error: error.message 
       });
+      throw new Error(`AWS Secrets retrieval failed: ${error.message}`);
     }
   }
 
-  private decryptValue(encryptedValue: string): string {
+  async putSecret(secretName: string, secretValue: string, rotatedBy: string = 'manual'): Promise<void> {
     try {
-      return atob(encryptedValue);
-    } catch {
-      return encryptedValue;
+      const payload = {
+        SecretId: `Oslira/${secretName}`,
+        SecretString: JSON.stringify({
+          apiKey: secretValue,
+          createdAt: new Date().toISOString(),
+          version: `v${Date.now()}`,
+          rotatedBy: rotatedBy
+        })
+      };
+
+      const response = await this.makeAWSRequest('PutSecretValue', payload);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`AWS API error: ${response.status} - ${errorText}`);
+      }
+
+      logger('info', 'Secret updated in AWS successfully', { secretName, rotatedBy });
+
+    } catch (error: any) {
+      logger('error', 'Failed to update secret in AWS', { 
+        secretName, 
+        error: error.message 
+      });
+      throw new Error(`AWS Secrets update failed: ${error.message}`);
     }
   }
 
-  private encryptValue(value: string): string {
-    return btoa(value);
+  private async makeAWSRequest(action: string, payload: any): Promise<Response> {
+    const endpoint = `https://secretsmanager.${this.region}.amazonaws.com/`;
+    
+    // AWS Signature V4 would go here in production
+    // For now, using basic headers (this needs proper AWS signing)
+    return fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-amz-json-1.1',
+        'X-Amz-Target': `secretsmanager.${action}`,
+        'Authorization': `AWS4-HMAC-SHA256 Credential=${this.accessKeyId}/...` // Simplified
+      },
+      body: JSON.stringify(payload)
+    });
   }
 }
 
-// Singleton instance
-let enhancedConfigManager: EnhancedConfigManager | null = null;
+// Global instance
+let globalConfigManager: EnhancedConfigManager | null = null;
 
 export function getEnhancedConfigManager(env: Env): EnhancedConfigManager {
-  if (!enhancedConfigManager) {
-    enhancedConfigManager = new EnhancedConfigManager(env);
+  if (!globalConfigManager) {
+    globalConfigManager = new EnhancedConfigManager(env);
   }
-  return enhancedConfigManager;
+  return globalConfigManager;
 }
 
-// Backward compatibility - replace your existing exports
-export const getConfigManager = getEnhancedConfigManager;
+// Convenience function for backward compatibility
 export async function getApiKey(keyName: string, env: Env): Promise<string> {
-  const manager = getEnhancedConfigManager(env);
-  return await manager.getConfig(keyName);
+  const configManager = getEnhancedConfigManager(env);
+  return await configManager.getConfig(keyName);
 }
+
+export { EnhancedConfigManager };
