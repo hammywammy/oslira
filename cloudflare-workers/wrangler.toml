@@ -1,17 +1,37 @@
 name = "oslira-api"
 main = "src/index.ts"
 compatibility_date = "2025-08-01"
- 
-routes = [
-  { pattern = "api.oslira.com/*", zone_name = "oslira.com" }
-]
 
+# Default/Production configuration
 [vars]
 APP_ENV = "production"
 
+# Production routes
+[[routes]]
+pattern = "api.oslira.com/*"
+zone_name = "oslira.com"
+
+# Staging environment configuration
 [env.staging]
-name = "oslira-api-stg" 
-workers_dev = true
+name = "oslira-api-staging"
+workers_dev = false
 
 [env.staging.vars]
 APP_ENV = "staging"
+
+# Staging routes
+[[env.staging.routes]]
+pattern = "api-staging.oslira.com/*"
+zone_name = "oslira.com"
+
+# Production environment configuration (explicit)
+[env.production]
+name = "oslira-api"
+workers_dev = false
+
+[env.production.vars]
+APP_ENV = "production"
+
+[[env.production.routes]]
+pattern = "api.oslira.com/*"
+zone_name = "oslira.com"
