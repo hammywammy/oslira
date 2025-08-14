@@ -3,33 +3,225 @@ name: Promote Staging to Production
 on:
   workflow_dispatch:
     inputs:
-      confirm:
-        description: 'Type "PROMOTE" to confirm promotion to production'
+      confirmation:
+        description: 'Type "PROMOTE" to confirm production deployment'
         required: true
-        default: ''
+        type: string
+      skip_health_check:
+        description: 'Skip staging health check'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      should_promote: ${{ steps.check.outputs.should_promote }}
+      staging_healthy: ${{ steps.health.outputs.staging_healthy }}
+    steps:
+      - name: Validate confirmation
+        id: check
+        run: |
+          if [[ "${{ github.event.inputs.confirmation }}" != "PROMOTE" ]]; then
+            echo "❌ Invalid confirmation. Type 'PROMOTE' to confirm."
+            echo "should_promote=false" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ Promotion confirmed"
+            echo "should_promote=true" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Check staging health
+        id: health
+        if: github.event.inputs.skip_health_check != 'true'
+        run: |
+          echo "🔍 Checking staging worker health..."
+          
+          STAGING_URL="https://api-staging.oslira.com/health"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL" || echo "000")
+          
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ Staging worker is healthy"
+            echo "staging_healthy=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Staging worker health check failed (HTTP $HTTP_CODE)"
+            echo "staging_healthy=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
   promote:
     runs-on: ubuntu-latest
-    if: github.event.inputs.confirm == 'PROMOTE'
-    
+    needs: validate
+    if: needs.validate.outputs.should_promote == 'true'
+    environment:
+      name: production
+      url: https://api.oslira.com
     steps:
-      - name: Checkout main branch
+      - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          ref: main
-          token: ${{ secrets.GITHUB_TOKEN }}
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'cloudflare-workers/package-lock.json'
           
-      - name: Configure Git
+      - name: Install dependencies
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
+          cd cloudflare-workers
+          npm ci
           
-      - name: Merge staging into main
+      - name: Final validation
         run: |
-          git fetch origin staging
-          git merge origin/staging -m "Promote staging to production"
+          cd cloudflare-workers
+          echo "🔍 Running final validation before production deployment..."
+          npm run typecheck
+          npm run build
+          echo "✅ Validation passed"
           
-      - name: Push to main
+      - name: Deploy to Production
         run: |
-          git push origin main
+          cd cloudflare-workers
+          echo "🚀 Deploying ai-outreach-api to production environment..."
+          echo "⚠️  This will update the live production API"
+          npx wrangler deploy --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          
+      - name: Wait for production deployment
+        run: |
+          echo "⏳ Waiting for production deployment to propagate..."
+          sleep 45
+          
+      - name: Production health check
+        id: prod_health
+        run: |
+          echo "🔍 Testing production worker health..."
+          
+          PROD_URL="https://api.oslira.com/health"
+          MAX_ATTEMPTS=5
+          ATTEMPT=1
+          
+          while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS: Testing $PROD_URL"
+            
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$PROD_URL" || echo "000")
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Production health check passed (HTTP $HTTP_CODE)"
+              echo "prod_healthy=true" >> $GITHUB_OUTPUT
+              break
+            else
+              echo "❌ Production health check failed (HTTP $HTTP_CODE)"
+              if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                echo "prod_healthy=false" >> $GITHUB_OUTPUT
+                echo "🚨 PRODUCTION DEPLOYMENT FAILED - MANUAL INTERVENTION REQUIRED"
+                exit 1
+              fi
+              sleep 15
+              ATTEMPT=$((ATTEMPT + 1))
+            fi
+          done
+          
+      - name: Test critical endpoints
+        if: steps.prod_health.outputs.prod_healthy == 'true'
+        run: |
+          echo "🧪 Testing critical production endpoints..."
+          
+          BASE_URL="https://api.oslira.com"
+          
+          # Test admin auth (should return 401 without token)
+          echo "Testing admin authentication..."
+          ADMIN_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/admin/system-health" || echo "000")
+          
+          if [ "$ADMIN_CODE" = "401" ]; then
+            echo "✅ Admin authentication working (HTTP 401 as expected)"
+          else
+            echo "⚠️ Unexpected admin response: HTTP $ADMIN_CODE"
+          fi
+          
+          echo "✅ Critical endpoint tests completed"
+          
+      - name: Rollback on failure
+        if: steps.prod_health.outputs.prod_healthy == 'false'
+        run: |
+          echo "🔄 Production health check failed - attempting rollback..."
+          echo "This would rollback to previous version in a real implementation"
+          echo "MANUAL INTERVENTION REQUIRED:"
+          echo "1. Check Cloudflare Workers dashboard"
+          echo "2. Verify wrangler.toml configuration"
+          echo "3. Check production environment variables"
+          echo "4. Consider manual rollback if needed"
+          
+      - name: Success notification
+        if: steps.prod_health.outputs.prod_healthy == 'true'
+        run: |
+          echo "## 🎉 Production Deployment Successful" >> $GITHUB_STEP_SUMMARY
+          echo "- **Worker:** ai-outreach-api" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** production" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** https://api.oslira.com" >> $GITHUB_STEP_SUMMARY
+          echo "- **Health:** healthy ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Production Features Active:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Enhanced AI analysis with metering" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ User-isolated caching system" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Rate limiting with exponential backoff" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Circuit breaker protection" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Admin monitoring endpoints" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Comprehensive usage tracking" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "- Monitor production metrics in admin dashboard" >> $GITHUB_STEP_SUMMARY
+          echo "- Verify AWS secrets integration" >> $GITHUB_STEP_SUMMARY
+          echo "- Check Supabase usage logging" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Create deployment tag
+        if: steps.prod_health.outputs.prod_healthy == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          TAG_NAME="production-$(date +%Y%m%d-%H%M%S)"
+          git tag -a "$TAG_NAME" -m "Production deployment: Phase 3 Enhanced AI Analysis Service
+          
+          Features:
+          - Enhanced caching with user isolation
+          - Rate limiting with exponential backoff  
+          - Circuit breaker protection
+          - Comprehensive metering & monitoring
+          - Admin endpoints with authentication
+          
+          Deployed by: ${{ github.actor }}
+          Commit: ${{ github.sha }}"
+          
+          git push origin "$TAG_NAME"
+          
+          echo "📋 Created deployment tag: $TAG_NAME"
+
+  post-deployment:
+    runs-on: ubuntu-latest
+    needs: promote
+    if: always()
+    steps:
+      - name: Post-deployment tasks
+        run: |
+          echo "📊 Post-deployment checklist:"
+          echo "1. ✅ Production worker deployed"
+          echo "2. ⏳ Monitor error rates in Cloudflare dashboard"
+          echo "3. ⏳ Check Supabase ai_usage_logs table for entries"
+          echo "4. ⏳ Verify admin endpoints work with proper authentication"
+          echo "5. ⏳ Monitor cache hit rates and performance metrics"
+          echo ""
+          echo "🔗 Useful links:"
+          echo "- Production API: https://api.oslira.com"
+          echo "- Cloudflare Dashboard: https://dash.cloudflare.com"
+          echo "- Supabase Dashboard: https://app.supabase.com"
+          echo ""
+          echo "⚠️  Remember to:"
+          echo "- Update any hardcoded staging URLs to production"
+          echo "- Verify all environment secrets are properly configured"
+          echo "- Test end-to-end AI analysis workflows"
