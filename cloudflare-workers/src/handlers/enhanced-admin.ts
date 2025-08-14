@@ -4,6 +4,7 @@ import { getAWSSecretsManager } from '../services/aws-secrets-manager.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { fetchJson } from '../utils/helpers.js';
+import type { Env } from '../types/interfaces.js';
 
 interface ConfigUpdateRequest {
   keyName: string;
