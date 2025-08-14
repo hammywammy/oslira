@@ -6,6 +6,21 @@ compatibility_date = "2025-08-01"
 [vars]
 APP_ENV = "production"
 
+# Cache configuration
+CACHE_TTL = "3600000"
+MAX_CACHE_SIZE_PER_USER = "50"
+MAX_GLOBAL_CACHE_SIZE = "50000"
+
+# Rate limiting configuration  
+RATE_LIMIT_ENABLED = "true"
+THROTTLE_THRESHOLD_REQUESTS = "10"
+THROTTLE_THRESHOLD_TOKENS = "1000"
+
+# Performance configuration
+MAX_CONCURRENT_BATCH = "5"
+TIMEOUT_MS = "60000"
+RETRIES = "3"
+
 # Production routes
 [[routes]]
 pattern = "api.oslira.com/*"
@@ -19,6 +34,21 @@ workers_dev = false
 [env.staging.vars]
 APP_ENV = "staging"
 
+# Cache configuration (staging - smaller limits)
+CACHE_TTL = "1800000"
+MAX_CACHE_SIZE_PER_USER = "25"
+MAX_GLOBAL_CACHE_SIZE = "25000"
+
+# Rate limiting configuration (staging - more lenient)
+RATE_LIMIT_ENABLED = "true"
+THROTTLE_THRESHOLD_REQUESTS = "20"
+THROTTLE_THRESHOLD_TOKENS = "2000"
+
+# Performance configuration (staging)
+MAX_CONCURRENT_BATCH = "3"
+TIMEOUT_MS = "30000"
+RETRIES = "2"
+
 # Staging routes
 [[env.staging.routes]]
 pattern = "api-staging.oslira.com/*"
@@ -31,6 +61,21 @@ workers_dev = false
 
 [env.production.vars]
 APP_ENV = "production"
+
+# Cache configuration (production)
+CACHE_TTL = "3600000"
+MAX_CACHE_SIZE_PER_USER = "50"
+MAX_GLOBAL_CACHE_SIZE = "50000"
+
+# Rate limiting configuration (production)
+RATE_LIMIT_ENABLED = "true"
+THROTTLE_THRESHOLD_REQUESTS = "10" 
+THROTTLE_THRESHOLD_TOKENS = "1000"
+
+# Performance configuration (production)
+MAX_CONCURRENT_BATCH = "5"
+TIMEOUT_MS = "60000"
+RETRIES = "3"
 
 [[env.production.routes]]
 pattern = "api.oslira.com/*"
