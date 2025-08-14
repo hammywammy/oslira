@@ -14,6 +14,7 @@ import { handleAnalyze } from './handlers/analyze.js';
 import { handleBulkAnalyze } from './handlers/bulk-analyze.js';
 import { getApiKey } from './services/enhanced-config-manager.js';
 import { ProductionErrorMonitor, type ErrorReport } from './services/error-monitor.js';
+import { handleDebugEngagement, handleDebugProfile, handleDebugParsing } from './handlers/debug.js';
 
 // Import handlers
 import { handleUpdateApiKey } from './handlers/admin.js';
@@ -359,6 +360,12 @@ app.get('/admin/rate-limits', async (c) => {
 // ============================================================================
 // INTERNAL ENDPOINTS WITH TOKEN VALIDATION
 // ============================================================================
+if (getEnvironment(c.env) === 'staging') {
+  app.get('/debug/engagement/:username', handleDebugEngagement);
+  app.get('/debug/profile/:username', handleDebugProfile);
+  app.get('/debug/parsing/:username', handleDebugParsing);
+}
+
 app.post('/analyze', handleAnalyze);
 app.post('/v1/analyze', handleAnalyze);
 
