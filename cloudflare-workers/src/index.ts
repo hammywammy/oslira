@@ -491,24 +491,29 @@ app.use('*', cors({
 // Security and compression middleware
 app.use('*', compress());
 app.use('*', secureHeaders());
-
-// Logging middleware for staging only
-if (process.env.APP_ENV === 'staging') {
-  app.use('*', honoLogger());
-}
+app.use('*', honoLogger());
 
 // ============================================================================
 // BASIC ENDPOINTS
 // ============================================================================
 
 // Health check endpoint
+// Health check endpoint
 app.get('/health', (c) => {
-  return c.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    environment: getEnvironment(c.env),
-    version: '1.0.0'
-  });
+  try {
+    return c.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      environment: c.env?.APP_ENV || 'unknown',
+      version: '1.0.0'
+    });
+  } catch (error) {
+    return c.json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
 });
 
 // Test endpoint with environment validation
