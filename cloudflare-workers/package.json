@@ -64,33 +64,4 @@
       "node_modules/"
     ]
   },
-  "typescript": {
-    "compilerOptions": {
-      "target": "ES2022",
-      "lib": ["ES2022"],
-      "module": "ESNext",
-      "moduleResolution": "bundler",
-      "allowSyntheticDefaultImports": true,
-      "esModuleInterop": true,
-      "allowJs": true,
-      "checkJs": false,
-      "declaration": true,
-      "declarationMap": true,
-      "skipLibCheck": true,
-      "strict": true,
-      "noEmit": true,
-      "isolatedModules": true,
-      "types": [
-        "@cloudflare/workers-types"
-      ]
-    },
-    "include": [
-      "src/**/*"
-    ],
-    "exclude": [
-      "node_modules",
-      "dist",
-      ".wrangler"
-    ]
-  }
 }
