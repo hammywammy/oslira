@@ -9,6 +9,7 @@ import { logger } from '../utils/logger';
 import { getApiKey } from '../utils/secrets';
 import { MeteringContext, meteredCall, PerformanceMonitor, UsageEvent } from './metering';
 import { OpenAIAdapter, AnthropicAdapter, ApifyAdapter, RetryHandler, CostAnomalyDetector, StreamingMetricsCollector } from '../adapters/provider-adapters';
+import { createClient } from '@supabase/supabase-js';
 
 // ============================================================================
 // ENHANCED CACHING WITH USER ISOLATION (NEW ADDITION)
@@ -559,6 +560,8 @@ async function executeOpenAIAnalysisOptimized(
       score: data.score,
       rateLimits: rateLimitMonitor.getLimits('openai')
     }, requestId);
+
+    
     
     // Cache the result in both caches
     enhancedAnalysisCache.set(safeUserId, 'analysis', prompt, data);
@@ -721,6 +724,58 @@ async function executeIntelligentAnalysis(
     }
     
     throw error;
+  }
+}
+
+async function logUsageToSupabase(
+  env: Env,
+  event: UsageEvent,
+  requestId: string
+): Promise<void> {
+  try {
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE);
+    
+    await supabase.from('ai_usage_logs').insert({
+      provider: event.provider,
+      model: event.model,
+      input_tokens: event.input_tokens || 0,
+      output_tokens: event.output_tokens || 0,
+      total_cost_usd: event.total_cost_usd || 0,
+      cache_hit: event.cache_hit || false,
+      request_id: event.trace_id || requestId,
+      http_status: 200, // Assuming success if we're logging
+      meta: {
+        user_id: event.user_id,
+        business_id: event.business_id,
+        purpose: event.purpose,
+        duration_ms: event.duration_ms,
+        rate_limited: event.rate_limited || false
+      }
+    });
+    
+  } catch (error) {
+    logger('error', 'Failed to log usage to Supabase', { error: error.message }, requestId);
+  }
+}
+
+// Add this function for system health snapshots
+async function logSystemHealthSnapshot(env: Env): Promise<void> {
+  try {
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE);
+    const cacheStats = enhancedAnalysisCache.getStats();
+    const rateLimits = rateLimitMonitor.getAllLimits();
+    
+    await supabase.from('system_health_snapshots').insert({
+      cache_hit_rate: cacheStats.hitRate,
+      total_active_users: cacheStats.activeUsers,
+      avg_response_time_ms: Math.round(cacheStats.avgAge * 1000), // Convert to ms
+      memory_usage_mb: cacheStats.memoryUsage / 1024 / 1024,
+      openai_requests_remaining: rateLimits.openai?.requests_remaining || null,
+      anthropic_requests_remaining: rateLimits.anthropic?.requests_remaining || null
+    });
+    
+  } catch (error) {
+    logger('error', 'Failed to log system health', { error: error.message });
   }
 }
 
