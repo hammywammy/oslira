@@ -31,6 +31,10 @@ class EnvironmentConfig {
             // Environment detection from current domain
             const BASE_URL = window.location.origin;
             const ENV = BASE_URL.includes('oslira.com') ? 'prod' : 'staging';
+
+            const WORKER_URL = this.IS_STAGING 
+            ? 'https://api-staging.oslira.com'
+            : 'https://api.oslira.com';
             
             // Build complete configuration
 this.config = {
