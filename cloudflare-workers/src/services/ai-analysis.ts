@@ -10,6 +10,7 @@ import { getApiKey } from '../utils/secrets';
 import { MeteringContext, meteredCall, PerformanceMonitor, UsageEvent } from './metering';
 import { OpenAIAdapter, AnthropicAdapter, ApifyAdapter, RetryHandler, CostAnomalyDetector, StreamingMetricsCollector } from '../adapters/provider-adapters';
 import { createClient } from '@supabase/supabase-js';
+import { CacheConfig, RateLimitInfo, EnhancedAnalysisConfig } from '../types/interfaces';
 
 // ============================================================================
 // ENHANCED CACHING WITH USER ISOLATION (NEW ADDITION)
