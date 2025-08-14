@@ -4,11 +4,6 @@ import { compress } from 'hono/compress';
 import { secureHeaders } from 'hono/secure-headers';
 import { logger } from 'hono/logger';
 import { getEnvironment, isProduction, isStaging } from './utils/env';
-
-// Fixed imports - use the actual exported function names
-import { handleUpdateApiKey } from './handlers/admin.js';
-import { handleConfigChanged } from './handlers/netlify-sync.js';
-
 import { adminAuthMiddleware } from './middleware/admin-auth.js';
 import { 
   handleUsageStats, 
@@ -19,40 +14,23 @@ import {
   handleClearUserCache,
   handlePerformanceStats 
 } from './handlers/admin-monitoring.js';
+import { handleUpdateApiKey } from './handlers/admin.js';
+import { handleConfigChanged } from './handlers/netlify-sync.js';
 
-// Type definitions
 export interface Env {
-  // Environment variables
   APP_ENV: 'production' | 'staging';
-  
-  // API Keys
   OPENAI_API_KEY: string;
   ANTHROPIC_API_KEY: string;
-  PERPLEXITY_API_KEY: string;
-  TAVILY_API_KEY: string;
-  
-  // Supabase
   SUPABASE_URL: string;
   SUPABASE_SERVICE_KEY: string;
-  
-  // Cloudflare
-  CLOUDFLARE_API_TOKEN?: string;
-  CLOUDFLARE_ZONE_ID?: string;
-  
-  // Netlify
-  NETLIFY_BUILD_HOOK_URL?: string;
-  
-  // Internal
   INTERNAL_API_TOKEN?: string;
+  ADMIN_TOKEN?: string;
   WORKER_URL: string;
-  
-  // KV Namespaces
   RATE_LIMIT?: KVNamespace;
   CONFIG_CACHE?: KVNamespace;
-  
-  // Durable Objects
-  rateLimiter?: DurableObjectNamespace;
 }
+
+const app = new Hono<{ Bindings: Env }>();
 
 async function validateAdminAuth(c: Context<{ Bindings: Env }>, next: () => Promise<void>) {
   const authHeader = c.req.header('Authorization');
@@ -65,8 +43,6 @@ async function validateAdminAuth(c: Context<{ Bindings: Env }>, next: () => Prom
   await next();
 }
 
-const app = new Hono<{ Bindings: Env }>();
-
 // Global middleware
 app.use('*', async (c, next) => {
   const environment = getEnvironment(c.env);
@@ -75,17 +51,40 @@ app.use('*', async (c, next) => {
   c.header('X-Environment', environment);
   c.header('X-Worker-Version', '1.0.0');
   
-  // Environment-specific logging
+  // FIXED: Safe header logging for staging
   if (isStaging(c.env)) {
     console.log(`[${environment.toUpperCase()}] ${c.req.method} ${c.req.url}`);
     
-    // Safe header logging
+    // CRITICAL FIX: Safe header access with comprehensive error handling
     try {
-      if (c.req.headers && typeof c.req.headers.entries === 'function') {
-        console.log('Headers:', Object.fromEntries(c.req.headers.entries()));
+      const headers = c.req.header();
+      if (headers && typeof headers === 'object') {
+        // Safe object iteration
+        const safeHeaders: Record<string, string> = {};
+        for (const [key, value] of Object.entries(headers)) {
+          if (typeof key === 'string' && typeof value === 'string') {
+            // Filter sensitive headers
+            if (!key.toLowerCase().includes('authorization') && 
+                !key.toLowerCase().includes('token') &&
+                !key.toLowerCase().includes('key')) {
+              safeHeaders[key] = value;
+            } else {
+              safeHeaders[key] = '[REDACTED]';
+            }
+          }
+        }
+        console.log('Headers:', safeHeaders);
+      } else {
+        console.log('Headers: [object not iterable]');
       }
-    } catch (error) {
-      console.log('Headers: [unavailable]');
+    } catch (headerError) {
+      // Fallback: log essential info without headers
+      console.log('Headers: [access error - logged safely]');
+      console.log('Header access error details:', {
+        error: headerError instanceof Error ? headerError.message : 'unknown',
+        type: typeof c.req.header,
+        hasEntries: typeof c.req.header === 'function'
+      });
     }
   }
   
