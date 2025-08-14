@@ -3,6 +3,7 @@ import { generateRequestId, logger } from '../utils/logger.js';
 import { callWithRetry } from '../utils/helpers.js';
 import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
 import { validateProfileData } from '../utils/validation.js';
+import { getApiKey } from '../services/enhanced-config-manager.js';
 import type { Env } from '../types/interfaces.js';
 
 export async function handleDebugEngagement(c: Context): Promise<Response> {
@@ -10,6 +11,17 @@ export async function handleDebugEngagement(c: Context): Promise<Response> {
   
   try {
     logger('info', 'Starting engagement calculation debug test', { username });
+    
+    // GET APIFY TOKEN FROM AWS INTEGRATION
+    const apifyToken = await getApiKey('APIFY_API_TOKEN', c.env);
+    
+    if (!apifyToken) {
+      return c.json({
+        success: false,
+        error: 'Apify token not configured',
+        username
+      });
+    }
     
     const deepInput = {
       directUrls: [`https://instagram.com/${username}/`],
@@ -22,7 +34,7 @@ export async function handleDebugEngagement(c: Context): Promise<Response> {
     };
 
     const rawResponse = await callWithRetry(
-      `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+      `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${apifyToken}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,139 +65,120 @@ export async function handleDebugEngagement(c: Context): Promise<Response> {
     rawResponse.forEach((item, index) => {
       const itemType = item.type || item.__typename || 'unknown';
       analysisResults.itemTypes[itemType] = (analysisResults.itemTypes[itemType] || 0) + 1;
-      
-      // Check if it's a profile item
-      if (item.username || item.ownerUsername || (item.followersCount !== undefined && item.postsCount !== undefined)) {
+
+      // Profile items analysis
+      if (item.username || item.ownerUsername) {
         analysisResults.profileItems.push({
           index,
-          keys: Object.keys(item),
           username: item.username || item.ownerUsername,
-          followers: item.followersCount || item.followers,
-          posts: item.postsCount || item.posts
+          followersCount: item.followersCount,
+          followingCount: item.followingCount,
+          postsCount: item.postsCount,
+          isPrivate: item.isPrivate,
+          isVerified: item.isVerified
         });
       }
-      
-      // Check if it's a post item
-      if (item.shortCode || item.code) {
-        const engagementData = {
-          likesCount: item.likesCount,
-          likes: item.likes,
-          like_count: item.like_count,
-          likeCount: item.likeCount,
-          commentsCount: item.commentsCount,
-          comments: item.comments,
-          comment_count: item.comment_count,
-          commentCount: item.commentCount
-        };
-        
+
+      // Post items analysis
+      if (item.shortCode && item.likesCount !== undefined) {
         analysisResults.postItems.push({
           index,
-          shortCode: item.shortCode || item.code,
-          keys: Object.keys(item),
-          engagementData,
-          parsedLikes: parseInt(String(item.likesCount || item.likes || item.like_count || 0)) || 0,
-          parsedComments: parseInt(String(item.commentsCount || item.comments || item.comment_count || 0)) || 0
+          shortCode: item.shortCode,
+          likesCount: item.likesCount,
+          commentsCount: item.commentsCount,
+          caption: item.caption?.length || 0,
+          timestamp: item.timestamp
         });
       }
-      
-      // Analyze common field patterns
-      Object.keys(item).forEach(key => {
-        if (!analysisResults.fieldAnalysis[key]) {
-          analysisResults.fieldAnalysis[key] = 0;
+
+      // Field analysis for debugging
+      Object.keys(item).forEach(field => {
+        if (!analysisResults.fieldAnalysis[field]) {
+          analysisResults.fieldAnalysis[field] = {
+            count: 0,
+            sampleValue: item[field],
+            type: typeof item[field]
+          };
         }
-        analysisResults.fieldAnalysis[key]++;
-        
-        // Track engagement-related fields
-        if (key.toLowerCase().includes('like') || key.toLowerCase().includes('comment') || key.toLowerCase().includes('engagement')) {
-          if (!analysisResults.engagementFieldAnalysis[key]) {
-            analysisResults.engagementFieldAnalysis[key] = [];
+        analysisResults.fieldAnalysis[field].count++;
+      });
+
+      // Engagement field analysis
+      ['likesCount', 'commentsCount', 'viewsCount', 'playsCount'].forEach(field => {
+        if (item[field] !== undefined) {
+          if (!analysisResults.engagementFieldAnalysis[field]) {
+            analysisResults.engagementFieldAnalysis[field] = {
+              count: 0,
+              total: 0,
+              max: 0,
+              min: Infinity
+            };
           }
-          if (analysisResults.engagementFieldAnalysis[key].length < 3) {
-            analysisResults.engagementFieldAnalysis[key].push(item[key]);
-          }
+          const value = parseInt(item[field]) || 0;
+          analysisResults.engagementFieldAnalysis[field].count++;
+          analysisResults.engagementFieldAnalysis[field].total += value;
+          analysisResults.engagementFieldAnalysis[field].max = Math.max(analysisResults.engagementFieldAnalysis[field].max, value);
+          analysisResults.engagementFieldAnalysis[field].min = Math.min(analysisResults.engagementFieldAnalysis[field].min, value);
         }
       });
     });
 
-    // Test manual engagement calculation
-    let manualCalculationTest = null;
-    if (analysisResults.postItems.length > 0) {
-      const validPosts = analysisResults.postItems.filter(post => 
-        post.parsedLikes > 0 || post.parsedComments > 0
-      );
-      
-      if (validPosts.length > 0) {
-        const totalLikes = validPosts.reduce((sum, post) => sum + post.parsedLikes, 0);
-        const totalComments = validPosts.reduce((sum, post) => sum + post.parsedComments, 0);
-        const avgLikes = Math.round(totalLikes / validPosts.length);
-        const avgComments = Math.round(totalComments / validPosts.length);
-        
-        manualCalculationTest = {
-          validPostsCount: validPosts.length,
-          totalLikes,
-          totalComments,
-          avgLikes,
-          avgComments,
-          calculationSteps: {
-            step1: `Found ${validPosts.length} valid posts out of ${analysisResults.postItems.length}`,
-            step2: `Total likes: ${totalLikes}, Total comments: ${totalComments}`,
-            step3: `Avg likes: ${totalLikes} / ${validPosts.length} = ${avgLikes}`,
-            step4: `Avg comments: ${totalComments} / ${validPosts.length} = ${avgComments}`
-          }
-        };
-      }
-    }
+    // Calculate averages
+    Object.keys(analysisResults.engagementFieldAnalysis).forEach(field => {
+      const fieldData = analysisResults.engagementFieldAnalysis[field];
+      fieldData.average = fieldData.count > 0 ? Math.round(fieldData.total / fieldData.count) : 0;
+    });
 
     return c.json({
       success: true,
       username,
-      debug: {
-        rawResponseStructure: analysisResults,
-        manualCalculationTest,
-        recommendations: [
-          analysisResults.postItems.length === 0 ? 'No post items found - check scraper configuration' : 'Post items found ✓',
-          analysisResults.profileItems.length === 0 ? 'No profile items found - check scraper response' : 'Profile items found ✓',
-          !manualCalculationTest ? 'Manual calculation failed - no valid engagement data' : 'Manual calculation successful ✓'
-        ],
-        troubleshooting: {
-          mostCommonFields: Object.entries(analysisResults.fieldAnalysis)
-            .sort(([,a], [,b]) => b - a)
-            .slice(0, 10),
-          engagementFields: analysisResults.engagementFieldAnalysis,
-          itemTypeDistribution: analysisResults.itemTypes
-        }
-      }
+      analysis: analysisResults,
+      recommendations: [
+        `Found ${analysisResults.profileItems.length} profile items and ${analysisResults.postItems.length} post items`,
+        analysisResults.postItems.length >= 3 ? 'Good: Sufficient posts for analysis' : 'Warning: Low post count may affect analysis quality',
+        Object.keys(analysisResults.engagementFieldAnalysis).length > 0 ? 'Good: Engagement data available' : 'Warning: No engagement data found'
+      ]
     });
-    
+
   } catch (error: any) {
     return c.json({
       success: false,
       error: error.message,
-      username
+      username,
+      stack: error.stack
     }, 500);
   }
 }
-export async function handleDebugScrape(c: Context): Promise<Response> {
+
+export async function handleDebugProfile(c: Context): Promise<Response> {
   const username = c.req.param('username');
-  const analysisType = (c.req.query('type') as 'light' | 'deep') || 'light';
+  const analysisType = (c.req.query('type') || 'light') as 'light' | 'deep';
   
   try {
+    logger('info', 'Starting debug profile scraping', { username, analysisType });
+    
     const profileData = await scrapeInstagramProfile(username, analysisType, c.env);
     
     return c.json({
       success: true,
       username,
       analysisType,
-      profileData,
-      debug: {
-        hasRealEngagement: (profileData.engagement?.postsAnalyzed || 0) > 0,
-        realEngagementStats: profileData.engagement || null,
-        hasLatestPosts: !!profileData.latestPosts,
+      profileData: {
+        username: profileData.username,
+        followersCount: profileData.followersCount,
+        followingCount: profileData.followingCount,
+        postsCount: profileData.postsCount,
+        isPrivate: profileData.isPrivate,
+        isVerified: profileData.isVerified,
+        biography: profileData.biography?.length || 0,
+        hasProfilePicture: !!profileData.profilePicUrl,
+        hasLatestPosts: !profileData.latestPosts,
         postsCount: profileData.latestPosts?.length || 0,
         dataQuality: profileData.dataQuality,
         scraperUsed: profileData.scraperUsed,
         noFakeData: true,
-        manualCalculation: true}
+        manualCalculation: true
+      }
     });
   } catch (error: any) {
     return c.json({
@@ -201,6 +194,17 @@ export async function handleDebugParsing(c: Context): Promise<Response> {
   const username = c.req.param('username');
   
   try {
+    // GET APIFY TOKEN FROM AWS INTEGRATION
+    const apifyToken = await getApiKey('APIFY_API_TOKEN', c.env);
+    
+    if (!apifyToken) {
+      return c.json({
+        success: false,
+        error: 'Apify token not configured',
+        username
+      });
+    }
+    
     const deepInput = {
       directUrls: [`https://instagram.com/${username}/`],
       resultsLimit: 5,
@@ -212,7 +216,7 @@ export async function handleDebugParsing(c: Context): Promise<Response> {
     };
 
     const rawResponse = await callWithRetry(
-      `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${c.env.APIFY_API_TOKEN}`,
+      `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${apifyToken}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -259,22 +263,22 @@ export async function handleDebugParsing(c: Context): Promise<Response> {
       profileItems: profileItems.length,
       postItems: postItems.length,
       firstItemKeys: rawResponse?.[0] ? Object.keys(rawResponse[0]) : [],
-      hasProfileData: profileItems.length > 0,
-      hasPostData: postItems.length > 0,
-      samplePost: postItems[0] || null,
-      engagementCalculationTest: engagementTest,
-      enterprise: true,
-      manualCalculation: true,
-      noFakeData: true,
-      allIssuesFixed: true
+      sampleProfileItem: profileItems[0] || null,
+      samplePostItem: postItems[0] || null,
+      engagementTest,
+      debugInfo: {
+        apifyTokenConfigured: !!apifyToken,
+        rawResponseType: typeof rawResponse,
+        hasData: !!rawResponse && rawResponse.length > 0
+      }
     });
-    
+
   } catch (error: any) {
-    return c.json({ 
-      success: false, 
+    return c.json({
+      success: false,
       error: error.message,
       username,
-      enterprise: true
+      stack: error.stack
     }, 500);
   }
 }
