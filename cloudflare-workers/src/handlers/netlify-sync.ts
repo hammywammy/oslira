@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
+import type { Env } from '../types/interfaces.js';
 
 export async function handleConfigChanged(c: Context): Promise<Response> {
   const requestId = generateRequestId();
