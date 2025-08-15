@@ -1,5 +1,6 @@
-// build-with-aws-config.js - Simplified build script for Netlify
-// Fetches config from AWS via Cloudflare Worker API
+// ============================================================================
+// FIXED build-with-aws-config.js - SUPABASE_SERVICE_ROLE handling
+// ============================================================================
 
 async function buildWithAWSConfig() {
   try {
@@ -23,40 +24,6 @@ async function buildWithAWSConfig() {
     
     console.log('✅ Required environment variables found');
     
-    // Get SUPABASE_SERVICE_ROLE from AWS via worker
-    const workerUrl = process.env.WORKER_URL;
-    const adminToken = process.env.ADMIN_TOKEN;
-
-    console.log('🔄 Fetching SUPABASE_SERVICE_ROLE from AWS Secrets Manager...');
-
-    const serviceRoleResponse = await fetch(`${workerUrl}/admin/get-config`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${adminToken}`
-      },
-      body: JSON.stringify({
-        keyName: 'SUPABASE_SERVICE_ROLE'
-      })
-    });
-
-    if (!serviceRoleResponse.ok) {
-      throw new Error(`Failed to fetch SUPABASE_SERVICE_ROLE: ${serviceRoleResponse.status} ${serviceRoleResponse.statusText}`);
-    }
-
-    const serviceRoleData = await serviceRoleResponse.json();
-    
-    if (!serviceRoleData.success) {
-      throw new Error(`AWS config error: ${serviceRoleData.error}`);
-    }
-
-    const supabaseServiceRole = serviceRoleData.data?.value;
-    if (!supabaseServiceRole) {
-      throw new Error('SUPABASE_SERVICE_ROLE not found in AWS Secrets Manager');
-    }
-
-    console.log('✅ Retrieved SUPABASE_SERVICE_ROLE from AWS');
-
     // Build base configuration
     const config = {
       supabaseUrl: process.env.SUPABASE_URL,
@@ -64,31 +31,81 @@ async function buildWithAWSConfig() {
       workerUrl: process.env.WORKER_URL
     };
 
-    // Optional: Load additional config from Supabase if needed
-    try {
-      console.log('🔄 Loading additional config from Supabase...');
-      
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(process.env.SUPABASE_URL, supabaseServiceRole);
-      
-      const { data: configs, error } = await supabase
-        .from('app_config')
-        .select('key_name, key_value')
-        .eq('environment', 'production');
+    // Try to get SUPABASE_SERVICE_ROLE from AWS first, then fallback to env var
+    const workerUrl = process.env.WORKER_URL;
+    const adminToken = process.env.ADMIN_TOKEN;
 
-      if (error) {
-        console.warn('⚠️ Failed to load additional config from Supabase:', error.message);
-        console.log('🔄 Continuing with minimal config...');
-      } else if (configs && configs.length > 0) {
-        console.log(`✅ Loaded ${configs.length} additional config items from Supabase`);
+    console.log('🔄 Attempting to fetch SUPABASE_SERVICE_ROLE from AWS...');
+
+    let supabaseServiceRole = null;
+
+    try {
+      const serviceRoleResponse = await fetch(`${workerUrl}/admin/get-config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({
+          keyName: 'SUPABASE_SERVICE_ROLE'
+        })
+      });
+
+      if (serviceRoleResponse.ok) {
+        const serviceRoleData = await serviceRoleResponse.json();
         
-        configs.forEach(item => {
-          config[item.key_name] = item.key_value;
-        });
+        if (serviceRoleData.success && serviceRoleData.data?.value) {
+          supabaseServiceRole = serviceRoleData.data.value;
+          console.log('✅ Retrieved SUPABASE_SERVICE_ROLE from AWS Secrets Manager');
+        } else {
+          console.warn('⚠️ SUPABASE_SERVICE_ROLE not found in AWS:', serviceRoleData.error);
+        }
+      } else {
+        console.warn('⚠️ AWS fetch failed:', serviceRoleResponse.status, serviceRoleResponse.statusText);
       }
-    } catch (supabaseError) {
-      console.warn('⚠️ Supabase additional config failed:', supabaseError.message);
-      console.log('🔄 Continuing with minimal config...');
+    } catch (awsError) {
+      console.warn('⚠️ AWS fetch error:', awsError.message);
+    }
+
+    // Fallback to environment variable if AWS failed
+    if (!supabaseServiceRole) {
+      console.log('🔄 Falling back to SUPABASE_SERVICE_ROLE environment variable...');
+      supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE;
+      
+      if (supabaseServiceRole) {
+        console.log('✅ Using SUPABASE_SERVICE_ROLE from environment variable');
+      } else {
+        console.error('❌ SUPABASE_SERVICE_ROLE not found in AWS or environment variables');
+        console.error('💡 Add SUPABASE_SERVICE_ROLE to Netlify environment variables as fallback');
+        process.exit(1);
+      }
+    }
+
+    // Optional: Load additional config from Supabase if we have service role
+    if (supabaseServiceRole) {
+      try {
+        console.log('🔄 Loading additional config from Supabase...');
+        
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(process.env.SUPABASE_URL, supabaseServiceRole);
+        
+        const { data: configs, error } = await supabase
+          .from('app_config')
+          .select('key_name, key_value')
+          .eq('environment', 'production');
+
+        if (error) {
+          console.warn('⚠️ Failed to load additional config from Supabase:', error.message);
+        } else if (configs && configs.length > 0) {
+          console.log(`✅ Loaded ${configs.length} additional config items from Supabase`);
+          
+          configs.forEach(item => {
+            config[item.key_name] = item.key_value;
+          });
+        }
+      } catch (supabaseError) {
+        console.warn('⚠️ Supabase additional config failed:', supabaseError.message);
+      }
     }
 
     // Generate env-config.js for frontend
@@ -97,7 +114,7 @@ async function buildWithAWSConfig() {
 window.CONFIG = ${JSON.stringify(config, null, 2)};
 
 console.log('✅ Configuration loaded successfully');
-console.log('📊 Config source: AWS Secrets Manager + Supabase');
+console.log('📊 Config source: AWS Secrets Manager + Environment Variables + Supabase');
 `;
 
     // Write configuration file
@@ -127,8 +144,10 @@ console.log('📊 Config source: AWS Secrets Manager + Supabase');
     console.log('====================================================================');
     console.log('🎉 Build completed successfully!');
     console.log('====================================================================');
-    console.log('📊 Configuration source: AWS Secrets Manager + Supabase');
-    console.log('🔧 SUPABASE_SERVICE_ROLE: Retrieved from AWS');
+    console.log('📊 Configuration sources used:');
+    console.log('   - AWS Secrets Manager (attempted)');
+    console.log('   - Environment Variables (fallback)');
+    console.log('   - Supabase app_config (additional)');
     console.log(`📄 Config keys loaded: ${Object.keys(config).length}`);
     console.log('');
     
@@ -141,8 +160,9 @@ console.log('📊 Config source: AWS Secrets Manager + Supabase');
     console.error('🔧 Debug steps:');
     console.error('1. Verify ADMIN_TOKEN is correct in Netlify settings');
     console.error('2. Check WORKER_URL is accessible');
-    console.error('3. Ensure SUPABASE_SERVICE_ROLE exists in AWS Secrets Manager');
-    console.error('4. Test worker endpoint manually:');
+    console.error('3. Add SUPABASE_SERVICE_ROLE to Netlify environment variables as fallback');
+    console.error('4. Ensure AWS Secrets Manager contains Oslira/SUPABASE_SERVICE_ROLE');
+    console.error('5. Test worker endpoint manually:');
     console.error(`   curl -X POST ${process.env.WORKER_URL}/admin/get-config \\`);
     console.error(`   -H "Authorization: Bearer ${process.env.ADMIN_TOKEN}" \\`);
     console.error('   -H "Content-Type: application/json" \\');
