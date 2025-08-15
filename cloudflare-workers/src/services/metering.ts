@@ -256,18 +256,20 @@ export const CostCalculators = {
 
 export async function logUsageToSupabase(events: UsageEvent[], env: Env): Promise<void> {
   try {
-    // Fix: Ensure SUPABASE_URL is properly accessed
-    const supabaseUrl = env.SUPABASE_URL;
-    if (!supabaseUrl) {
-      throw new Error('SUPABASE_URL environment variable not found');
+    if (!env.SUPABASE_URL) {
+      throw new Error('SUPABASE_URL not found in environment');
+    }
+
+    if (!env.SUPABASE_SERVICE_ROLE) {
+      throw new Error('SUPABASE_SERVICE_ROLE not found in environment');
     }
 
     for (const event of events) {
-      const response = await fetch(`${supabaseUrl}/rest/v1/ai_usage_logs`, {
+      const response = await fetch(`${env.SUPABASE_URL}/rest/v1/ai_usage_logs`, {
         method: 'POST',
         headers: {
-          'apikey': env.SUPABASE_SERVICE_ROLE || '',
-          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE || ''}`,
+          'apikey': env.SUPABASE_SERVICE_ROLE,
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
           'Content-Type': 'application/json',
           'Prefer': 'return=minimal'
         },
@@ -278,9 +280,13 @@ export async function logUsageToSupabase(events: UsageEvent[], env: Env): Promis
         throw new Error(`Supabase logging failed: ${response.status}`);
       }
     }
+
+    logger('info', 'Usage logged to Supabase successfully', { 
+      eventCount: events.length
+    });
   } catch (error: any) {
     logger('error', 'Failed to log usage to Supabase', { 
-      error: error.message 
+      error: error.message
     });
     // Don't throw - logging failure shouldn't break the request
   }
