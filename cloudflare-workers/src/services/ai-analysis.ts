@@ -838,7 +838,7 @@ async function generateOutreachMessage(
     // Create outreach prompt
     const prompt = createOutreachPrompt(profile, business, analysisResult);
     
-    const claudeKey = await getApiKey('ANTHROPIC_API_KEY', env);
+    const claudeKey = await getApiKey('CLAUDE_API_KEY', env);
     const adapter = createAnthropicAdapter(claudeKey);
 
     const messages = [
