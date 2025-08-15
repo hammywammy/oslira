@@ -1,3 +1,8 @@
+// ============================================================================
+// ENHANCED ADMIN HANDLER - CLEANED VERSION
+// File: cloudflare-workers/src/handlers/enhanced-admin.ts
+// ============================================================================
+
 import type { Context } from 'hono';
 import { getEnhancedConfigManager } from '../services/enhanced-config-manager.js';
 import { getAWSSecretsManager } from '../services/aws-secrets-manager.js';
@@ -23,6 +28,16 @@ interface RotationRequest {
   adminToken?: string;
 }
 
+// List of keys that are managed in AWS Secrets Manager
+const AWS_MANAGED_KEYS = [
+  'OPENAI_API_KEY',
+  'ANTHROPIC_API_KEY', 
+  'APIFY_API_TOKEN',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'SUPABASE_SERVICE_ROLE'
+];
+
 // Admin authentication middleware
 function verifyAdminAccess(c: Context): boolean {
   const authHeader = c.req.header('Authorization');
@@ -40,6 +55,14 @@ function verifyAdminAccess(c: Context): boolean {
   const token = authHeader.substring(7);
   return token === adminToken;
 }
+
+function isAWSManagedKey(keyName: string): boolean {
+  return AWS_MANAGED_KEYS.includes(keyName);
+}
+
+// ============================================================================
+// ADMIN ENDPOINTS
+// ============================================================================
 
 export async function handleUpdateApiKey(c: Context): Promise<Response> {
   const requestId = generateRequestId();
@@ -62,11 +85,12 @@ export async function handleUpdateApiKey(c: Context): Promise<Response> {
     // Validate keyName against allowed keys
     const allowedKeys = [
       'OPENAI_API_KEY', 
-      'CLAUDE_API_KEY', 
+      'ANTHROPIC_API_KEY', 
       'APIFY_API_TOKEN', 
       'STRIPE_SECRET_KEY', 
       'STRIPE_WEBHOOK_SECRET',
       'STRIPE_PUBLISHABLE_KEY',
+      'SUPABASE_SERVICE_ROLE',
       'WORKER_URL',
       'NETLIFY_BUILD_HOOK_URL'
     ];
@@ -102,7 +126,7 @@ export async function handleUpdateApiKey(c: Context): Promise<Response> {
     return c.json(createStandardResponse(true, {
       message: `${keyName} updated successfully`,
       testResult: testResult,
-      storage: isAWSManagedKey(keyName) ? 'AWS Secrets Manager + Supabase backup' : 'Supabase only',
+      storage: isAWSManagedKey(keyName) ? 'AWS Secrets Manager' : 'Environment Variables',
       autoSyncTriggered: true
     }, undefined, requestId));
     
@@ -128,14 +152,15 @@ export async function handleGetConfigStatus(c: Context): Promise<Response> {
     let awsStatus = 'not_configured';
     try {
       const awsSecrets = getAWSSecretsManager(c.env);
-      const awsSecretsList = await awsSecrets.listSecrets();
+      // Test AWS connectivity by attempting to list secrets
+      await awsSecrets.listSecrets();
       awsStatus = 'connected';
       
       // Add migration recommendations
       Object.keys(status).forEach(keyName => {
         if (isAWSManagedKey(keyName)) {
-          status[keyName].migration_recommended = status[keyName].aws.status !== 'configured';
-          status[keyName].in_aws = awsSecretsList.includes(keyName);
+          status[keyName].migration_recommended = status[keyName].aws?.status !== 'configured';
+          status[keyName].aws_managed = true;
         }
       });
       
@@ -176,19 +201,33 @@ export async function handleMigrateToAWS(c: Context): Promise<Response> {
     const configManager = getEnhancedConfigManager(c.env);
     
     // Determine which keys to migrate
-    const awsManagedKeys = ['OPENAI_API_KEY', 'CLAUDE_API_KEY', 'APIFY_API_TOKEN', 'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET'];
-    const keysToMigrate = migrateAll ? awsManagedKeys : (keyNames || []);
+    const keysToMigrate = migrateAll ? AWS_MANAGED_KEYS : (keyNames || []);
     
     if (keysToMigrate.length === 0) {
       return c.json(createStandardResponse(false, undefined, 'No keys specified for migration', requestId), 400);
     }
     
-    const results = [];
+    const migrationResults = [];
     
     for (const keyName of keysToMigrate) {
       try {
-        await configManager.migrateToAWS(keyName);
-        results.push({
+        // Get current value from environment/Supabase
+        const currentValue = await configManager.getConfig(keyName);
+        
+        if (!currentValue) {
+          migrationResults.push({
+            keyName,
+            success: false,
+            error: 'Key not found in current configuration'
+          });
+          continue;
+        }
+        
+        // Store in AWS Secrets Manager
+        const awsSecrets = getAWSSecretsManager(c.env);
+        await awsSecrets.createOrUpdateSecret(keyName, currentValue);
+        
+        migrationResults.push({
           keyName,
           success: true,
           message: 'Successfully migrated to AWS Secrets Manager'
@@ -196,41 +235,36 @@ export async function handleMigrateToAWS(c: Context): Promise<Response> {
         
         logger('info', 'Key migrated to AWS', { keyName, requestId });
         
-      } catch (migrationError: any) {
-        results.push({
+      } catch (keyError: any) {
+        migrationResults.push({
           keyName,
           success: false,
-          error: migrationError.message
+          error: keyError.message
         });
         
-        logger('error', 'Key migration failed', { 
-          keyName, 
-          error: migrationError.message, 
-          requestId 
-        });
+        logger('error', 'Failed to migrate key', { keyName, error: keyError.message, requestId });
       }
     }
     
-    const successCount = results.filter(r => r.success).length;
-    const failureCount = results.filter(r => !r.success).length;
+    const successCount = migrationResults.filter(r => r.success).length;
     
     return c.json(createStandardResponse(true, {
-      message: `Migration completed: ${successCount} successful, ${failureCount} failed`,
-      results,
+      message: `Migration completed: ${successCount}/${keysToMigrate.length} keys migrated successfully`,
+      results: migrationResults,
       summary: {
         total: keysToMigrate.length,
         successful: successCount,
-        failed: failureCount
+        failed: keysToMigrate.length - successCount
       }
     }, undefined, requestId));
     
   } catch (error: any) {
-    logger('error', 'Migration process failed', { error: error.message, requestId });
+    logger('error', 'Migration to AWS failed', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 }
 
-export async function handleTriggerRotation(c: Context): Promise<Response> {
+export async function handleGetConfig(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
@@ -239,38 +273,30 @@ export async function handleTriggerRotation(c: Context): Promise<Response> {
       return c.json(createStandardResponse(false, undefined, 'Unauthorized access', requestId), 401);
     }
     
-    const body = await c.req.json() as RotationRequest;
-    const { keyName } = body;
+    const { keyName } = await c.req.json();
     
-    if (!keyName || !isAWSManagedKey(keyName)) {
-      return c.json(createStandardResponse(false, undefined, 'Invalid key name for rotation', requestId), 400);
+    if (!keyName) {
+      return c.json(createStandardResponse(false, undefined, 'keyName is required', requestId), 400);
     }
     
-    // Get Lambda function ARN for this key
-    const lambdaArn = getLambdaArnForKey(keyName, c.env);
+    const configManager = getEnhancedConfigManager(c.env);
+    const value = await configManager.getConfig(keyName);
     
-    if (!lambdaArn) {
-      return c.json(createStandardResponse(false, undefined, 'Lambda function not configured for this key', requestId), 400);
+    if (!value) {
+      return c.json(createStandardResponse(false, undefined, `Configuration key not found: ${keyName}`, requestId), 404);
     }
     
-    // Trigger Lambda function manually
-    const lambdaResult = await triggerLambdaRotation(lambdaArn, keyName, c.env);
-    
-    logger('info', 'Manual rotation triggered', { 
-      keyName, 
-      lambdaArn,
-      success: lambdaResult.success,
-      requestId 
-    });
+    logger('info', 'Config retrieved via admin API', { keyName, requestId });
     
     return c.json(createStandardResponse(true, {
-      message: `Rotation triggered for ${keyName}`,
-      lambdaResult,
-      note: 'Rotation will complete asynchronously. Check logs for status.'
+      keyName,
+      value,
+      source: isAWSManagedKey(keyName) ? 'aws' : 'env',
+      timestamp: new Date().toISOString()
     }, undefined, requestId));
     
   } catch (error: any) {
-    logger('error', 'Failed to trigger rotation', { error: error.message, requestId });
+    logger('error', 'Failed to get config', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 }
@@ -290,7 +316,7 @@ export async function handleTestApiKey(c: Context): Promise<Response> {
       return c.json(createStandardResponse(false, undefined, 'keyName is required', requestId), 400);
     }
     
-    // If keyValue is provided, test that value, otherwise get from enhanced config
+   // If keyValue is provided, test that value, otherwise get from enhanced config
     let valueToTest = keyValue;
     if (!valueToTest) {
       const configManager = getEnhancedConfigManager(c.env);
@@ -347,111 +373,148 @@ export async function handleGetAuditLog(c: Context): Promise<Response> {
       timestamp: entry.updated_at,
       user: entry.updated_by || 'system',
       id: `${entry.key_name}-${entry.updated_at}`,
-      storage: isAWSManagedKey(entry.key_name) ? 'AWS + Supabase' : 'Supabase'
+      storage: isAWSManagedKey(entry.key_name) ? 'AWS Secrets Manager' : 'Environment Variables'
     }));
     
-    return c.json(createStandardResponse(true, { 
-      log: formattedLog,
-      total: formattedLog.length,
-      limit,
-      offset,
-      hasAWSIntegration: true
+    logger('info', 'Audit log retrieved', { count: formattedLog.length, requestId });
+    
+    return c.json(createStandardResponse(true, {
+      logs: formattedLog,
+      pagination: {
+        limit,
+        offset,
+        total: formattedLog.length
+      }
     }, undefined, requestId));
     
   } catch (error: any) {
-    logger('error', 'Failed to get enhanced audit log', { error: error.message, requestId });
+    logger('error', 'Failed to get audit log', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 }
 
-// =======================================================================================
-// HELPER FUNCTIONS - PASTE THESE AT THE END OF THE FILE
-// =======================================================================================
-
-function isAWSManagedKey(keyName: string): boolean {
-  const awsManagedKeys = [
-    'OPENAI_API_KEY',
-    'CLAUDE_API_KEY',
-    'APIFY_API_TOKEN',
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET'
-  ];
-  
-  return awsManagedKeys.includes(keyName);
-}
+// ============================================================================
+// VALIDATION AND TESTING FUNCTIONS
+// ============================================================================
 
 function validateApiKeyFormat(keyName: string, keyValue: string): { valid: boolean; error?: string } {
-  const validations: Record<string, (key: string) => boolean> = {
-    'OPENAI_API_KEY': (key) => key.startsWith('sk-') && key.length > 20,
-    'CLAUDE_API_KEY': (key) => key.startsWith('sk-ant-') && key.length > 30,
-    'APIFY_API_TOKEN': (key) => key.startsWith('apify_api_') && key.length > 20,
-    'STRIPE_SECRET_KEY': (key) => (key.startsWith('sk_live_') || key.startsWith('sk_test_')) && key.length > 20,
-    'STRIPE_WEBHOOK_SECRET': (key) => key.startsWith('whsec_') && key.length > 20,
-    'STRIPE_PUBLISHABLE_KEY': (key) => (key.startsWith('pk_live_') || key.startsWith('pk_test_')) && key.length > 20,
-    'WORKER_URL': (key) => key.startsWith('https://') && key.includes('.workers.dev'),
-    'NETLIFY_BUILD_HOOK_URL': (key) => key.startsWith('https://api.netlify.com/build_hooks/')
-  };
-  
-  const validator = validations[keyName];
-  if (!validator) {
-    return { valid: true }; // Allow unknown key types
+  switch (keyName) {
+    case 'OPENAI_API_KEY':
+      return {
+        valid: keyValue.startsWith('sk-proj-') || keyValue.startsWith('sk-'),
+        error: keyValue.startsWith('sk-proj-') || keyValue.startsWith('sk-') ? undefined : 'OpenAI API key must start with "sk-proj-" or "sk-"'
+      };
+      
+    case 'ANTHROPIC_API_KEY':
+      return {
+        valid: keyValue.startsWith('sk-ant-'),
+        error: keyValue.startsWith('sk-ant-') ? undefined : 'Anthropic API key must start with "sk-ant-"'
+      };
+      
+    case 'APIFY_API_TOKEN':
+      return {
+        valid: keyValue.startsWith('apify_api_'),
+        error: keyValue.startsWith('apify_api_') ? undefined : 'Apify API token must start with "apify_api_"'
+      };
+      
+    case 'STRIPE_SECRET_KEY':
+      return {
+        valid: keyValue.startsWith('sk_live_') || keyValue.startsWith('sk_test_'),
+        error: (keyValue.startsWith('sk_live_') || keyValue.startsWith('sk_test_')) ? undefined : 'Stripe secret key must start with "sk_live_" or "sk_test_"'
+      };
+      
+    case 'STRIPE_WEBHOOK_SECRET':
+      return {
+        valid: keyValue.startsWith('whsec_'),
+        error: keyValue.startsWith('whsec_') ? undefined : 'Stripe webhook secret must start with "whsec_"'
+      };
+      
+    case 'STRIPE_PUBLISHABLE_KEY':
+      return {
+        valid: keyValue.startsWith('pk_live_') || keyValue.startsWith('pk_test_'),
+        error: (keyValue.startsWith('pk_live_') || keyValue.startsWith('pk_test_')) ? undefined : 'Stripe publishable key must start with "pk_live_" or "pk_test_"'
+      };
+      
+    case 'SUPABASE_SERVICE_ROLE':
+      return {
+        valid: keyValue.length > 100 && !keyValue.includes(' '),
+        error: (keyValue.length > 100 && !keyValue.includes(' ')) ? undefined : 'Supabase service role key appears invalid'
+      };
+      
+    case 'WORKER_URL':
+      return {
+        valid: keyValue.startsWith('https://') && keyValue.includes('.workers.dev'),
+        error: (keyValue.startsWith('https://') && keyValue.includes('.workers.dev')) ? undefined : 'Worker URL must be a valid Cloudflare Workers URL'
+      };
+      
+    case 'NETLIFY_BUILD_HOOK_URL':
+      return {
+        valid: keyValue.includes('api.netlify.com/build_hooks/'),
+        error: keyValue.includes('api.netlify.com/build_hooks/') ? undefined : 'Invalid Netlify build hook URL format'
+      };
+      
+    default:
+      return {
+        valid: keyValue.length > 0,
+        error: keyValue.length > 0 ? undefined : 'Value cannot be empty'
+      };
   }
-  
-  if (!validator(keyValue)) {
-    return { valid: false, error: `Invalid format for ${keyName}` };
-  }
-  
-  return { valid: true };
 }
 
-async function testApiKey(keyName: string, keyValue: string, env: any): Promise<{ success: boolean; message: string; details?: any }> {
+async function testApiKey(keyName: string, keyValue: string, env: Env): Promise<{ success: boolean; message: string; details?: any }> {
   try {
     switch (keyName) {
       case 'OPENAI_API_KEY':
         const openaiResponse = await fetch('https://api.openai.com/v1/models', {
-          headers: { 'Authorization': `Bearer ${keyValue}` }
+          headers: {
+            'Authorization': `Bearer ${keyValue}`,
+            'Content-Type': 'application/json'
+          }
         });
         return {
           success: openaiResponse.ok,
-          message: openaiResponse.ok ? 'OpenAI API key is valid' : 'OpenAI API key is invalid',
+          message: openaiResponse.ok ? 'OpenAI API key is valid' : 'OpenAI API key test failed',
           details: { status: openaiResponse.status, source: 'enhanced_admin' }
         };
         
-      case 'CLAUDE_API_KEY':
-        const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      case 'ANTHROPIC_API_KEY':
+        const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
             'x-api-key': keyValue,
-            'anthropic-version': '2023-06-01',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify({
             model: 'claude-3-haiku-20240307',
-            messages: [{ role: 'user', content: 'test' }],
-            max_tokens: 1
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'test' }]
           })
         });
         return {
-          success: claudeResponse.status !== 401 && claudeResponse.status !== 403,
-          message: claudeResponse.status !== 401 && claudeResponse.status !== 403 ? 'Claude API key is valid' : 'Claude API key is invalid',
-          details: { status: claudeResponse.status, source: 'enhanced_admin' }
+          success: anthropicResponse.ok,
+          message: anthropicResponse.ok ? 'Anthropic API key is valid' : 'Anthropic API key test failed',
+          details: { status: anthropicResponse.status, source: 'enhanced_admin' }
         };
         
       case 'APIFY_API_TOKEN':
-        const apifyResponse = await fetch(`https://api.apify.com/v2/key-value-stores?token=${keyValue}&limit=1`);
+        const apifyResponse = await fetch(`https://api.apify.com/v2/users/me?token=${keyValue}`);
         return {
           success: apifyResponse.ok,
-          message: apifyResponse.ok ? 'Apify API token is valid' : 'Apify API token is invalid',
+          message: apifyResponse.ok ? 'Apify API token is valid' : 'Apify API token test failed',
           details: { status: apifyResponse.status, source: 'enhanced_admin' }
         };
         
       case 'STRIPE_SECRET_KEY':
-        const stripeResponse = await fetch('https://api.stripe.com/v1/charges?limit=1', {
-          headers: { 'Authorization': `Bearer ${keyValue}` }
+        const stripeResponse = await fetch('https://api.stripe.com/v1/balance', {
+          headers: {
+            'Authorization': `Bearer ${keyValue}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
         });
         return {
           success: stripeResponse.ok,
-          message: stripeResponse.ok ? 'Stripe secret key is valid' : 'Stripe secret key is invalid',
+          message: stripeResponse.ok ? 'Stripe secret key is valid' : 'Stripe secret key test failed',
           details: { status: stripeResponse.status, source: 'enhanced_admin' }
         };
         
@@ -467,6 +530,20 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
           success: keyValue.startsWith('pk_live_') || keyValue.startsWith('pk_test_'),
           message: (keyValue.startsWith('pk_live_') || keyValue.startsWith('pk_test_')) ? 'Stripe publishable key format is valid' : 'Invalid publishable key format',
           details: { source: 'enhanced_admin' }
+        };
+        
+      case 'SUPABASE_SERVICE_ROLE':
+        const supabaseResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/`, {
+          headers: {
+            'Authorization': `Bearer ${keyValue}`,
+            'apikey': keyValue,
+            'Content-Type': 'application/json'
+          }
+        });
+        return {
+          success: supabaseResponse.ok,
+          message: supabaseResponse.ok ? 'Supabase service role is valid' : 'Supabase service role test failed',
+          details: { status: supabaseResponse.status, source: 'enhanced_admin' }
         };
         
       case 'WORKER_URL':
@@ -500,63 +577,63 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
   }
 }
 
-function getLambdaArnForKey(keyName: string, env: any): string | null {
-  const lambdaArns: Record<string, string> = {
-    // 'OPENAI_API_KEY': env.OPENAI_ROTATOR_LAMBDA_ARN,  // Removed - Lambda deleted
-    'CLAUDE_API_KEY': env.CLAUDE_ROTATOR_LAMBDA_ARN,
-    'APIFY_API_TOKEN': env.APIFY_ROTATOR_LAMBDA_ARN,
-    'STRIPE_SECRET_KEY': env.STRIPE_ROTATOR_LAMBDA_ARN,
-    'STRIPE_WEBHOOK_SECRET': env.STRIPE_ROTATOR_LAMBDA_ARN
-  };
-  
-  return lambdaArns[keyName] || null;
-}
+// ============================================================================
+// MANUAL ROTATION HANDLER (Replaces Lambda-based rotation)
+// ============================================================================
 
-async function triggerLambdaRotation(lambdaArn: string, keyName: string, env: any): Promise<{ success: boolean; message: string; details?: any }> {
+export async function handleManualRotation(c: Context): Promise<Response> {
+  const requestId = generateRequestId();
+  
   try {
-    // This would typically use AWS SDK to invoke Lambda
-    // For now, we'll simulate the call
+    // Verify admin access
+    if (!verifyAdminAccess(c)) {
+      return c.json(createStandardResponse(false, undefined, 'Unauthorized access', requestId), 401);
+    }
     
-    const payload = {
-      SecretId: `Oslira/${keyName}`,
-      trigger: 'manual_rotation',
+    const body = await c.req.json() as RotationRequest;
+    const { keyName } = body;
+    
+    if (!keyName || !isAWSManagedKey(keyName)) {
+      return c.json(createStandardResponse(false, undefined, 'Invalid or non-AWS managed key specified', requestId), 400);
+    }
+    
+    logger('info', 'Manual rotation initiated', { keyName, requestId });
+    
+    // Manual rotation process:
+    // 1. Generate rotation instructions for the user
+    // 2. Provide API testing capabilities
+    // 3. Log the rotation request
+    
+    const rotationInstructions = generateRotationInstructions(keyName);
+    
+    return c.json(createStandardResponse(true, {
+      message: `Manual rotation process initiated for ${keyName}`,
+      instructions: rotationInstructions,
+      nextSteps: [
+        '1. Follow the provider-specific instructions to generate a new key',
+        '2. Use the test endpoint to verify the new key works',
+        '3. Update the key using the admin panel',
+        '4. Verify all services are working with the new key'
+      ],
+      keyName,
       timestamp: new Date().toISOString()
-    };
-    
-    // In a real implementation, you would use AWS SDK:
-    // const lambda = new AWS.Lambda();
-    // const result = await lambda.invoke({
-    //   FunctionName: lambdaArn,
-    //   Payload: JSON.stringify(payload)
-    // }).promise();
-    
-    logger('info', 'Lambda rotation would be triggered', { 
-      lambdaArn, 
-      keyName, 
-      payload 
-    });
-    
-    return {
-      success: true,
-      message: `Rotation triggered for ${keyName}`,
-      details: { 
-        lambdaArn, 
-        payload,
-        note: 'This is a simulation - implement AWS SDK for actual Lambda invocation'
-      }
-    };
+    }, undefined, requestId));
     
   } catch (error: any) {
-    logger('error', 'Failed to trigger Lambda rotation', { 
-      lambdaArn, 
-      keyName, 
-      error: error.message 
-    });
-    
-    return {
-      success: false,
-      message: `Failed to trigger rotation: ${error.message}`,
-      details: { error: error.message }
-    };
+    logger('error', 'Manual rotation failed', { error: error.message, requestId });
+    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
+}
+
+function generateRotationInstructions(keyName: string): string {
+  const instructions: Record<string, string> = {
+    'OPENAI_API_KEY': 'Go to OpenAI Dashboard → API Keys → Create new secret key. Copy the new key and test it before updating.',
+    'ANTHROPIC_API_KEY': 'Go to Anthropic Console → API Keys → Create Key. Generate a new key and test it before updating.',
+    'APIFY_API_TOKEN': 'Go to Apify Console → Settings → Integrations → API tokens → Create new token.',
+    'STRIPE_SECRET_KEY': 'Go to Stripe Dashboard → Developers → API keys → Create restricted key or regenerate existing key.',
+    'STRIPE_WEBHOOK_SECRET': 'Go to Stripe Dashboard → Developers → Webhooks → Select endpoint → Reveal signing secret.',
+    'SUPABASE_SERVICE_ROLE': 'Go to Supabase Dashboard → Settings → API → Service Role key. This key typically doesn\'t need rotation unless compromised.'
+  };
+  
+  return instructions[keyName] || 'Manual rotation instructions not available for this key type.';
 }
