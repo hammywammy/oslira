@@ -254,31 +254,34 @@ export const CostCalculators = {
   }
 };
 
-export async function logUsageToSupabase(env: Env, event: UsageEvent, requestId: string): Promise<void> {
+export async function logUsageToSupabase(events: UsageEvent[], env: Env): Promise<void> {
   try {
-    const response = await fetch(`${env.SUPABASE_URL}/rest/v1/ai_usage_logs`, {
-      method: 'POST',
-      headers: {
-        'apikey': env.SUPABASE_SERVICE_ROLE,
-        'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify(event)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Supabase logging failed: ${response.status}`);
+    // Fix: Ensure SUPABASE_URL is properly accessed
+    const supabaseUrl = env.SUPABASE_URL;
+    if (!supabaseUrl) {
+      throw new Error('SUPABASE_URL environment variable not found');
     }
 
-    logger('info', 'Usage logged to Supabase successfully', { 
-      provider: event.provider, 
-      cost: event.total_cost_usd 
-    }, requestId);
+    for (const event of events) {
+      const response = await fetch(`${supabaseUrl}/rest/v1/ai_usage_logs`, {
+        method: 'POST',
+        headers: {
+          'apikey': env.SUPABASE_SERVICE_ROLE || '',
+          'Authorization': `Bearer ${env.SUPABASE_SERVICE_ROLE || ''}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(event)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Supabase logging failed: ${response.status}`);
+      }
+    }
   } catch (error: any) {
     logger('error', 'Failed to log usage to Supabase', { 
-      error: error.message,
-      event: event
-    }, requestId);
+      error: error.message 
+    });
+    // Don't throw - logging failure shouldn't break the request
   }
 }
