@@ -7,7 +7,7 @@ import type { Env } from '../types/interfaces.js';
 import { logger } from '../utils/logger.js';
 
 interface AWSCredentials {
-  accessKeyId: string;
+  accessKeyId: string; 
   secretAccessKey: string;
   region: string;
 }
