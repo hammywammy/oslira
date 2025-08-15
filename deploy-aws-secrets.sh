@@ -1,13 +1,12 @@
 #!/bin/bash
-# deploy-aws-secrets.sh - Complete AWS Secrets Manager setup script
+# deploy-aws-secrets.sh - AWS Secrets Manager setup (Manual rotation only)
 
 set -e
 
-echo "🚀 Setting up AWS Secrets Manager for Oslira"
+echo "🚀 Setting up AWS Secrets Manager for Oslira (Manual Rotation)"
 
 # Configuration
 AWS_REGION="${AWS_REGION:-us-east-1}"
-LAMBDA_ROLE_NAME="OsliraRotationRole"
 SECRETS_PREFIX="Oslira"
 
 # Colors for output
@@ -50,9 +49,9 @@ check_prerequisites() {
     print_success "Prerequisites check passed"
 }
 
-# Create IAM role for Lambda rotation functions
+# Create IAM role for accessing secrets
 create_iam_role() {
-    print_status "Creating IAM role for Lambda functions..."
+    print_status "Creating IAM role for Oslira Workers..."
     
     TRUST_POLICY='{
         "Version": "2012-10-17",
@@ -60,26 +59,21 @@ create_iam_role() {
             {
                 "Effect": "Allow",
                 "Principal": {
-                    "Service": "lambda.amazonaws.com"
+                    "AWS": "'$(aws sts get-caller-identity --query Arn --output text)'"
                 },
                 "Action": "sts:AssumeRole"
             }
         ]
     }'
     
-    # Create role
+    # Create role for Cloudflare Workers access
     aws iam create-role \
-        --role-name $LAMBDA_ROLE_NAME \
+        --role-name OsliraSecretsAccessRole \
         --assume-role-policy-document "$TRUST_POLICY" \
-        --description "Role for Oslira key rotation Lambda functions" \
+        --description "Role for Oslira Cloudflare Workers to access secrets" \
         2>/dev/null || print_warning "Role might already exist"
     
-    # Attach basic Lambda execution policy
-    aws iam attach-role-policy \
-        --role-name $LAMBDA_ROLE_NAME \
-        --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-    
-    # Create custom policy for Secrets Manager
+    # Create policy for Secrets Manager access
     SECRETS_POLICY='{
         "Version": "2012-10-17",
         "Statement": [
@@ -87,48 +81,36 @@ create_iam_role() {
                 "Effect": "Allow",
                 "Action": [
                     "secretsmanager:GetSecretValue",
-                    "secretsmanager:PutSecretValue",
-                    "secretsmanager:CreateSecret",
-                    "secretsmanager:UpdateSecret",
                     "secretsmanager:DescribeSecret",
-                    "secretsmanager:ListSecrets",
-                    "secretsmanager:RotateSecret"
+                    "secretsmanager:ListSecrets"
                 ],
                 "Resource": "arn:aws:secretsmanager:*:*:secret:Oslira/*"
-            },
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "ssm:GetParameter",
-                    "ssm:PutParameter"
-                ],
-                "Resource": "arn:aws:ssm:*:*:parameter/*KEY_POOL"
             }
         ]
     }'
     
     aws iam put-role-policy \
-        --role-name $LAMBDA_ROLE_NAME \
+        --role-name OsliraSecretsAccessRole \
         --policy-name OsliraSecretsManagerPolicy \
         --policy-document "$SECRETS_POLICY"
     
-    print_success "IAM role created: $LAMBDA_ROLE_NAME"
+    print_success "IAM role created: OsliraSecretsAccessRole"
 }
 
 # Create secrets in AWS Secrets Manager
 create_secrets() {
     print_status "Creating secrets in AWS Secrets Manager..."
     
-    # Get current environment variables (you'll need to set these)
-    read -p "Enter current OpenAI API key: " -s OPENAI_KEY
+    # Get current environment variables
+    read -p "Enter current OpenAI API key (or press Enter to skip): " -s OPENAI_KEY
     echo
-    read -p "Enter current Claude API key: " -s CLAUDE_KEY
+    read -p "Enter current Anthropic API key (or press Enter to skip): " -s ANTHROPIC_KEY
     echo
-    read -p "Enter current Apify API token: " -s APIFY_TOKEN
+    read -p "Enter current Apify API token (or press Enter to skip): " -s APIFY_TOKEN
     echo
-    read -p "Enter current Stripe secret key: " -s STRIPE_SECRET
+    read -p "Enter current Stripe secret key (or press Enter to skip): " -s STRIPE_SECRET
     echo
-    read -p "Enter current Stripe webhook secret: " -s STRIPE_WEBHOOK
+    read -p "Enter current Stripe webhook secret (or press Enter to skip): " -s STRIPE_WEBHOOK
     echo
     
     # Create OpenAI secret
@@ -138,17 +120,17 @@ create_secrets() {
             --description "Oslira OpenAI API Key" \
             --secret-string "{\"apiKey\":\"$OPENAI_KEY\",\"createdAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"version\":\"v1\"}" \
             --region $AWS_REGION 2>/dev/null || print_warning "OpenAI secret might already exist"
-        print_success "OpenAI secret created"
+        print_success "OpenAI API key stored in AWS Secrets Manager"
     fi
     
-    # Create Claude secret
-    if [ ! -z "$CLAUDE_KEY" ]; then
+    # Create Anthropic secret
+    if [ ! -z "$ANTHROPIC_KEY" ]; then
         aws secretsmanager create-secret \
-            --name "${SECRETS_PREFIX}/CLAUDE_API_KEY" \
-            --description "Oslira Claude API Key" \
-            --secret-string "{\"apiKey\":\"$CLAUDE_KEY\",\"createdAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"version\":\"v1\"}" \
-            --region $AWS_REGION 2>/dev/null || print_warning "Claude secret might already exist"
-        print_success "Claude secret created"
+            --name "${SECRETS_PREFIX}/ANTHROPIC_API_KEY" \
+            --description "Oslira Anthropic API Key" \
+            --secret-string "{\"apiKey\":\"$ANTHROPIC_KEY\",\"createdAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"version\":\"v1\"}" \
+            --region $AWS_REGION 2>/dev/null || print_warning "Anthropic secret might already exist"
+        print_success "Anthropic API key stored in AWS Secrets Manager"
     fi
     
     # Create Apify secret
@@ -158,166 +140,66 @@ create_secrets() {
             --description "Oslira Apify API Token" \
             --secret-string "{\"apiKey\":\"$APIFY_TOKEN\",\"createdAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"version\":\"v1\"}" \
             --region $AWS_REGION 2>/dev/null || print_warning "Apify secret might already exist"
-        print_success "Apify secret created"
+        print_success "Apify API token stored in AWS Secrets Manager"
     fi
     
-    # Create Stripe secrets
+    # Create Stripe secret
     if [ ! -z "$STRIPE_SECRET" ]; then
         aws secretsmanager create-secret \
             --name "${SECRETS_PREFIX}/STRIPE_SECRET_KEY" \
             --description "Oslira Stripe Secret Key" \
             --secret-string "{\"apiKey\":\"$STRIPE_SECRET\",\"createdAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"version\":\"v1\"}" \
             --region $AWS_REGION 2>/dev/null || print_warning "Stripe secret key might already exist"
-        print_success "Stripe secret key created"
+        print_success "Stripe secret key stored in AWS Secrets Manager"
     fi
     
+    # Create Stripe webhook secret
     if [ ! -z "$STRIPE_WEBHOOK" ]; then
         aws secretsmanager create-secret \
             --name "${SECRETS_PREFIX}/STRIPE_WEBHOOK_SECRET" \
             --description "Oslira Stripe Webhook Secret" \
             --secret-string "{\"apiKey\":\"$STRIPE_WEBHOOK\",\"createdAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"version\":\"v1\"}" \
             --region $AWS_REGION 2>/dev/null || print_warning "Stripe webhook secret might already exist"
-        print_success "Stripe webhook secret created"
+        print_success "Stripe webhook secret stored in AWS Secrets Manager"
     fi
-}
-
-# Package and deploy Lambda functions
-deploy_lambda_functions() {
-    print_status "Deploying Lambda rotation functions..."
-    
-    # Get account ID and role ARN
-    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-    ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${LAMBDA_ROLE_NAME}"
-    
-    # Create Lambda deployment packages
-    mkdir -p lambda-packages
-    
-    # Deploy OpenAI rotator
-    print_status "Deploying OpenAI rotator..."
-    cat > lambda-packages/openai-index.js << 'EOF'
-const AWS = require('aws-sdk');
-const https = require('https');
-
-const secretsManager = new AWS.SecretsManager();
-const WORKER_URL = process.env.WORKER_URL;
-const OSLIRA_ADMIN_TOKEN = process.env.OSLIRA_ADMIN_TOKEN;
-
-exports.handler = async (event) => {
-    console.log('OpenAI Key Rotation Started', { event });
-    
-    try {
-        const secretId = event.SecretId || 'Oslira/OPENAI_API_KEY';
-        
-        // For demo purposes, we'll just update the secret with a new timestamp
-        // In production, implement actual key generation logic
-        const currentSecret = await secretsManager.getSecretValue({ SecretId: secretId }).promise();
-        const secretData = JSON.parse(currentSecret.SecretString);
-        
-        // Simulate key rotation (replace with actual logic)
-        const newSecretValue = {
-            ...secretData,
-            rotatedAt: new Date().toISOString(),
-            version: `v${Date.now()}`,
-            rotatedBy: 'lambda_auto_rotation'
-        };
-        
-        await secretsManager.putSecretValue({
-            SecretId: secretId,
-            SecretString: JSON.stringify(newSecretValue)
-        }).promise();
-        
-        console.log('OpenAI Key Rotation Completed Successfully');
-        
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: 'OpenAI API key rotation simulated successfully',
-                secretId: secretId,
-                timestamp: new Date().toISOString()
-            })
-        };
-        
-    } catch (error) {
-        console.error('OpenAI Key Rotation Failed:', error);
-        
-        return {
-            statusCode: 500,
-            body: JSON.stringify({
-                error: 'Key rotation failed',
-                message: error.message,
-                timestamp: new Date().toISOString()
-            })
-        };
-    }
-};
-EOF
-    
-    cd lambda-packages
-    zip openai-rotator.zip openai-index.js
-    
-    # Create OpenAI Lambda function
-    aws lambda create-function \
-        --function-name oslira-openai-rotator \
-        --runtime nodejs18.x \
-        --role $ROLE_ARN \
-        --handler openai-index.handler \
-        --zip-file fileb://openai-rotator.zip \
-        --description "Oslira OpenAI API key rotation function" \
-        --timeout 300 \
-        --environment Variables="{WORKER_URL=${WORKER_URL:-},OSLIRA_ADMIN_TOKEN=${OSLIRA_ADMIN_TOKEN:-}}" \
-        --region $AWS_REGION 2>/dev/null || \
-    aws lambda update-function-code \
-        --function-name oslira-openai-rotator \
-        --zip-file fileb://openai-rotator.zip \
-        --region $AWS_REGION
-    
-    cd ..
-    
-    print_success "Lambda functions deployed"
-}
-
-# Enable rotation for secrets
-enable_rotation() {
-    print_status "Skipping automatic rotation setup - OpenAI rotator disabled..."
-    
-    # Note: OpenAI rotator Lambda has been removed
-    # Automatic rotation is disabled to prevent AWS errors
-    
-    print_warning "Automatic OpenAI key rotation is disabled"
-    print_warning "Keys must be rotated manually via admin panel"
-}
-
-# Create CloudWatch schedule for manual triggering
-create_schedule() {
-    print_status "Skipping CloudWatch schedule creation - OpenAI rotator disabled..."
-    
-    # Note: OpenAI rotator Lambda has been removed
-    # CloudWatch schedule creation is disabled to prevent errors
-    
-    print_warning "Automatic OpenAI key rotation is disabled"
-    print_warning "Use manual key management via admin panel or wrangler secrets"
 }
 
 # Test the setup
 test_setup() {
     print_status "Testing the setup..."
     
-    # Test secret retrieval
-    SECRET_VALUE=$(aws secretsmanager get-secret-value \
-        --secret-id "${SECRETS_PREFIX}/OPENAI_API_KEY" \
-        --query SecretString \
-        --output text \
-        --region $AWS_REGION 2>/dev/null)
+    # Test secret retrieval for each created secret
+    SECRETS=(
+        "${SECRETS_PREFIX}/OPENAI_API_KEY"
+        "${SECRETS_PREFIX}/ANTHROPIC_API_KEY"
+        "${SECRETS_PREFIX}/APIFY_API_TOKEN"
+        "${SECRETS_PREFIX}/STRIPE_SECRET_KEY"
+        "${SECRETS_PREFIX}/STRIPE_WEBHOOK_SECRET"
+    )
     
-    if [ $? -eq 0 ]; then
-        print_success "Secret retrieval test passed"
+    SUCCESSFUL_TESTS=0
+    
+    for SECRET in "${SECRETS[@]}"; do
+        SECRET_VALUE=$(aws secretsmanager get-secret-value \
+            --secret-id "$SECRET" \
+            --query SecretString \
+            --output text \
+            --region $AWS_REGION 2>/dev/null)
+        
+        if [ $? -eq 0 ]; then
+            print_success "✓ Secret retrieval test passed: $SECRET"
+            ((SUCCESSFUL_TESTS++))
+        else
+            print_warning "⚠ Secret not found (might not have been created): $SECRET"
+        fi
+    done
+    
+    if [ $SUCCESSFUL_TESTS -gt 0 ]; then
+        print_success "AWS Secrets Manager setup is working ($SUCCESSFUL_TESTS secrets accessible)"
     else
-        print_error "Secret retrieval test failed"
+        print_error "No secrets were successfully created or accessible"
+        exit 1
     fi
-    
-# Test Lambda function - DISABLED
-print_warning "Lambda function test skipped - OpenAI rotator has been removed"
-print_success "Secret retrieval works, Lambda rotation disabled"
 }
 
 # Generate environment variables for Cloudflare Worker
@@ -331,16 +213,12 @@ AWS_ACCESS_KEY_ID=your-aws-access-key-id
 AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
 AWS_REGION=${AWS_REGION}
 
-# Lambda function ARNs for manual rotation triggers:
-# OPENAI_ROTATOR_LAMBDA_ARN - REMOVED (Lambda function deleted)
-CLAUDE_ROTATOR_LAMBDA_ARN=arn:aws:lambda:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):function:oslira-claude-rotator
-APIFY_ROTATOR_LAMBDA_ARN=arn:aws:lambda:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):function:oslira-apify-rotator
-STRIPE_ROTATOR_LAMBDA_ARN=arn:aws:lambda:${AWS_REGION}:$(aws sts get-caller-identity --query Account --output text):function:oslira-stripe-rotator
+# Optional: Manual rotation triggers (implement as needed)
+MANUAL_ROTATION_ENABLED=true
 
 # Optional: Slack webhook for notifications
 SLACK_WEBHOOK_URL=your-slack-webhook-url
 
-EOF
 EOF
     
     print_success "Environment variables saved to cloudflare-env-vars.txt"
@@ -350,16 +228,13 @@ EOF
 # Main execution
 main() {
     echo "======================================================================"
-    echo "🔑 AWS Secrets Manager Setup for Oslira"
+    echo "🔑 AWS Secrets Manager Setup for Oslira (Manual Rotation Only)"
     echo "======================================================================"
     
     check_prerequisites
     create_iam_role
-    sleep 10  # Wait for IAM propagation
+    sleep 5  # Wait for IAM propagation
     create_secrets
-    deploy_lambda_functions
-    enable_rotation
-    create_schedule
     test_setup
     generate_env_vars
     
@@ -370,14 +245,16 @@ main() {
     echo ""
     echo "Next steps:"
     echo "1. Add the environment variables from cloudflare-env-vars.txt to your Cloudflare Worker"
-    echo "2. Deploy your updated Cloudflare Worker with AWS integration"
-    echo "3. Test the admin panel migration features"
-    echo "4. Set up additional Lambda functions for other services (Claude, Apify, Stripe)"
+    echo "2. Deploy your updated Cloudflare Worker with proper AWS integration"
+    echo "3. Test the API endpoints to verify AWS integration works"
+    echo "4. Use the admin panel for manual key rotation when needed"
     echo ""
     echo "Your secrets are now:"
     echo "- 🔒 Stored securely in AWS Secrets Manager"
-    echo "- 🔄 Set to rotate automatically every Sunday"
-    echo "- 🔗 Integrated with your Oslira admin panel"
+    echo "- 🔧 Managed manually via admin panel (no auto-rotation)"
+    echo "- 🔗 Ready for integration with your Cloudflare Workers"
+    echo ""
+    print_warning "Note: Auto-rotation has been disabled. Use admin panel for manual key updates."
     echo ""
 }
 
