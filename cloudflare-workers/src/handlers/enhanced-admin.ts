@@ -83,17 +83,17 @@ export async function handleUpdateApiKey(c: Context): Promise<Response> {
     }
     
     // Validate keyName against allowed keys
-    const allowedKeys = [
-      'OPENAI_API_KEY', 
-      'ANTHROPIC_API_KEY', 
-      'APIFY_API_TOKEN', 
-      'STRIPE_SECRET_KEY', 
-      'STRIPE_WEBHOOK_SECRET',
-      'STRIPE_PUBLISHABLE_KEY',
-      'SUPABASE_SERVICE_ROLE',
-      'WORKER_URL',
-      'NETLIFY_BUILD_HOOK_URL'
-    ];
+const allowedKeys = [
+  'OPENAI_API_KEY', 
+  'CLAUDE_API_KEY',          // Changed from ANTHROPIC_API_KEY
+  'APIFY_API_TOKEN', 
+  'STRIPE_SECRET_KEY', 
+  'STRIPE_WEBHOOK_SECRET',
+  'STRIPE_PUBLISHABLE_KEY',
+  'SUPABASE_SERVICE_ROLE',   // Added this
+  'WORKER_URL',
+  'NETLIFY_BUILD_HOOK_URL'
+];
     
     if (!allowedKeys.includes(keyName)) {
       return c.json(createStandardResponse(false, undefined, 'Invalid key name', requestId), 400);
@@ -405,10 +405,10 @@ function validateApiKeyFormat(keyName: string, keyValue: string): { valid: boole
         error: keyValue.startsWith('sk-proj-') || keyValue.startsWith('sk-') ? undefined : 'OpenAI API key must start with "sk-proj-" or "sk-"'
       };
       
-    case 'ANTHROPIC_API_KEY':
+    case 'CLAUDE_API_KEY':     // Changed from ANTHROPIC_API_KEY
       return {
         valid: keyValue.startsWith('sk-ant-'),
-        error: keyValue.startsWith('sk-ant-') ? undefined : 'Anthropic API key must start with "sk-ant-"'
+        error: keyValue.startsWith('sk-ant-') ? undefined : 'Claude API key must start with "sk-ant-"'
       };
       
     case 'APIFY_API_TOKEN':
@@ -477,8 +477,8 @@ async function testApiKey(keyName: string, keyValue: string, env: Env): Promise<
           details: { status: openaiResponse.status, source: 'enhanced_admin' }
         };
         
-      case 'ANTHROPIC_API_KEY':
-        const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      case 'CLAUDE_API_KEY':   // Changed from ANTHROPIC_API_KEY
+        const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
             'x-api-key': keyValue,
@@ -492,9 +492,9 @@ async function testApiKey(keyName: string, keyValue: string, env: Env): Promise<
           })
         });
         return {
-          success: anthropicResponse.ok,
-          message: anthropicResponse.ok ? 'Anthropic API key is valid' : 'Anthropic API key test failed',
-          details: { status: anthropicResponse.status, source: 'enhanced_admin' }
+          success: claudeResponse.ok,
+          message: claudeResponse.ok ? 'Claude API key is valid' : 'Claude API key test failed',
+          details: { status: claudeResponse.status, source: 'enhanced_admin' }
         };
         
       case 'APIFY_API_TOKEN':
