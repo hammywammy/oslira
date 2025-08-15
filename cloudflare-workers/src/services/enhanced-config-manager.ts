@@ -12,13 +12,14 @@ class EnhancedConfigManager {
   private awsSecrets: any = null;
   
   // Keys that should be stored in AWS Secrets Manager
-  private readonly AWS_MANAGED_KEYS = [
-    'OPENAI_API_KEY',
-    'ANTHROPIC_API_KEY', 
-    'APIFY_API_TOKEN',
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET'
-  ];
+private readonly AWS_MANAGED_KEYS = [
+  'OPENAI_API_KEY',
+  'CLAUDE_API_KEY',          // Changed from ANTHROPIC_API_KEY
+  'APIFY_API_TOKEN',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
+  'SUPABASE_SERVICE_ROLE'    // Added this - was missing!
+];
 
   constructor(private env: Env) {
     this.initializeAWS();
