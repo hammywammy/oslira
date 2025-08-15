@@ -85,20 +85,34 @@ export function extractMentions(text: string): string[] {
   return matches ? matches.map(mention => mention.toLowerCase()) : [];
 }
 
+// ADD this at the beginning of your current normalizeRequest() function:
 export function normalizeRequest(body: AnalysisRequest) {
   const errors: string[] = [];
   
+  // 🔥 BACKWARD COMPATIBILITY: Handle direct username parameter (your working call)
   let profile_url = body.profile_url;
-  if (!profile_url && body.username) {
-    const username = extractUsername(body.username);
-    profile_url = username ? `https://instagram.com/${username}` : '';
+  let username = body.username;
+  
+  // If direct username provided (like your PowerShell call), create profile_url
+  if (!profile_url && username) {
+    // Clean username (remove @ if present, handle raw usernames)
+    const cleanUsername = username.toString().trim().replace(/^@/, '');
+    profile_url = `https://instagram.com/${cleanUsername}`;
+    username = cleanUsername;
   }
   
+  // If profile_url provided but no username, extract it
+  if (profile_url && !username) {
+    username = extractUsername(profile_url);
+  }
+  
+  // Continue with your existing enhanced validation logic...
   const analysis_type = body.analysis_type || body.type;
   const business_id = body.business_id;
   const user_id = body.user_id;
 
-  if (!profile_url) errors.push('profile_url or username is required');
+  // Updated validation messages for better debugging
+  if (!username && !profile_url) errors.push('username or profile_url is required');
   if (!analysis_type || !['light', 'deep'].includes(analysis_type)) {
     errors.push('analysis_type must be "light" or "deep"');
   }
@@ -106,17 +120,18 @@ export function normalizeRequest(body: AnalysisRequest) {
   if (!user_id) errors.push('user_id is required');
 
   if (errors.length > 0) {
-    throw new Error(errors.join(', '));
+    throw new Error(`Validation failed: ${errors.join(', ')}`);
   }
 
   return {
     profile_url: profile_url!,
-    username: extractUsername(profile_url!),
+    username: username!,
     analysis_type: analysis_type as AnalysisType,
     business_id,
     user_id
   };
 }
+
 export function validateProfileData(responseData: any, analysisType?: string): ProfileData {
   try {
     logger('info', 'Starting CORRECTED profile data validation for nested posts structure', { 
