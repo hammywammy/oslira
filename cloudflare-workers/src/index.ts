@@ -17,7 +17,15 @@ import { ProductionErrorMonitor, type ErrorReport } from './services/error-monit
 import { handleDebugEngagement, handleDebugProfile, handleDebugParsing } from './handlers/debug.js';
 
 // Import handlers
-import { handleUpdateApiKey } from './handlers/admin.js';
+import { 
+  handleUpdateApiKey, 
+  handleGetConfigStatus, 
+  handleMigrateToAWS,
+  handleGetConfig,
+  handleTestApiKey,
+  handleGetAuditLog,
+  handleManualRotation
+} from './handlers/enhanced-admin.js';
 import { handleConfigChanged } from './handlers/netlify-sync.js';
 import { adminAuthMiddleware } from './middleware/admin-auth.js';
 import { 
