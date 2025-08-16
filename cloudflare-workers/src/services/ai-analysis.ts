@@ -701,45 +701,40 @@ async function performAIAnalysis(
     ];
 
     // Use metered call with circuit breaker
-    const result = await meteredCall(
-      meteringContext,
-      async () => {
-        const response = await callAPIWithRateLimit(
-          'https://api.openai.com/v1/chat/completions',
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${openaiKey}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: modelTier.model,
-              messages,
-              max_tokens: modelTier.maxTokens,
-              temperature: 0.3,
-              response_format: { type: 'json_object' }
-            })
-          },
-          'openai',
-          requestId,
-          openaiCircuitBreaker
-        );
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(`OpenAI API error: ${response.status} - ${errorBody}`);
-        }
-
-        return await response.json();
+   const result = await meteredCall(
+  meteringContext,
+  'openai',
+  modelTier.model,
+  analysisType === 'light' ? 'analysis_light' : 'analysis_deep',
+  async () => {
+    const response = await callAPIWithRateLimit(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: modelTier.model,
+          messages,
+          max_tokens: modelTier.maxTokens,
+          temperature: 0.3,
+          response_format: { type: 'json_object' }
+        })
       },
       'openai',
-      modelTier.model,
-      analysisType === 'light' ? 'analysis_light' : 'analysis_deep',
-      {
-        user_id: userId,
-        business_id: business.id
-      }
+      requestId,
+      openaiCircuitBreaker
     );
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`OpenAI API error: ${response.status} - ${errorBody}`);
+    }
+    return await response.json();
+  },
+  CostCalculators.openai[modelTier.model]
+);
 
     // Parse and validate result
     const content = result.choices[0]?.message?.content;
@@ -850,43 +845,38 @@ async function generateOutreachMessage(
 
     // Use metered call with circuit breaker
     const result = await meteredCall(
-      meteringContext,
-      async () => {
-        const response = await callAPIWithRateLimit(
-          'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'x-api-key': claudeKey,
-              'Content-Type': 'application/json',
-              'anthropic-version': '2023-06-01'
-            },
-            body: JSON.stringify({
-              model: 'claude-3-haiku-20240307',
-              max_tokens: 1000,
-              messages
-            })
-          },
-          'anthropic',
-          requestId,
-          anthropicCircuitBreaker
-        );
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(`Anthropic API error: ${response.status} - ${errorBody}`);
-        }
-
-        return await response.json();
+  meteringContext,
+  'anthropic',
+  'claude-3-haiku-20240307',
+  'outreach',
+  async () => {
+    const response = await callAPIWithRateLimit(
+      'https://api.anthropic.com/v1/messages',
+      {
+        method: 'POST',
+        headers: {
+          'x-api-key': claudeKey,
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 1000,
+          messages
+        })
       },
       'anthropic',
-      'claude-3-haiku-20240307',
-      'outreach',
-      {
-        user_id: userId,
-        business_id: business.id
-      }
+      requestId,
+      anthropicCircuitBreaker
     );
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Anthropic API error: ${response.status} - ${errorBody}`);
+    }
+    return await response.json();
+  },
+  CostCalculators.anthropic['claude-3-haiku-20240307']
+);
 
     const content = result.content[0]?.text;
     if (!content) {
