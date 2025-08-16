@@ -73,12 +73,11 @@ async function performActualScraping(
 }
 
 async function lightScrape(username: string, apifyToken: string): Promise<ProfileData> {
-  const actorId = 'apify/instagram-profile-scraper';
+  // ✅ LIGHT SCRAPE: Use instagram-profile-scraper
+  const actorId = 'dSCLg0C3YEZ83HzYX';
   
   const runInput = {
-    username: [username],
-    resultsType: 'details',
-    resultsLimit: 1
+    usernames: [username]  // ✅ Fixed: 'usernames' not 'username'
   };
   
   const response = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${apifyToken}`, {
@@ -108,13 +107,17 @@ async function lightScrape(username: string, apifyToken: string): Promise<Profil
 }
 
 async function deepScrape(username: string, apifyToken: string): Promise<ProfileData> {
-  const actorId = 'apify/instagram-profile-scraper';
+  // ✅ DEEP SCRAPE: Use instagram-scraper  
+  const actorId = 'shu8hvrXbJbY3Eb9W';
   
   const runInput = {
-    username: [username],
-    resultsType: 'posts',
-    resultsLimit: 50, // Get more posts for deep analysis
-    addParentData: true
+    directUrls: [`https://instagram.com/${username}/`],  // ✅ Fixed: directUrls format
+    resultsType: 'details',  // ✅ Keep as requested
+    resultsLimit: 50,        // Get more posts for deep analysis
+    addParentData: true,
+    enhanceUserSearchWithFacebookPage: false,
+    isUserReelFeedURL: false,
+    isUserTaggedFeedURL: false
   };
   
   const response = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${apifyToken}`, {
