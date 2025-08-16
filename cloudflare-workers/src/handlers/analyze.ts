@@ -437,7 +437,7 @@ export async function handleAnalyze(c: Context): Promise<Response> {
         followers_count: profileData.followersCount || 0,
         created_at: new Date().toISOString(),
         quick_summary: analysisResult.quick_summary || null,
-        env: getEnvironment(c.env)
+        env: 'staging'  // ✅ Fixed: Force staging for staging environment
       };
 
       // Prepare analysis data for deep analysis
@@ -495,7 +495,7 @@ export async function handleAnalyze(c: Context): Promise<Response> {
           }),
           outreach_message: outreachMessage || null,
           deep_summary: analysisResult.deep_summary || null,
-          env: getEnvironment(c.env),
+          env: 'staging',  // ✅ Fixed: Force staging for staging environment
           created_at: new Date().toISOString()
         };
       }
