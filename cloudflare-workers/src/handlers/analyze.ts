@@ -166,8 +166,10 @@ export async function handleAnalyze(c: Context): Promise<Response> {
         user_id: user_id,
         business_name: 'Test Business',
         business_niche: 'Technology',
+        industry: 'Technology',  // ✅ Add missing field
         target_audience: 'Tech enthusiasts',
         target_problems: 'Need tech solutions',
+        pain_points: ['Need tech solutions', 'Digital transformation', 'Automation'], // ✅ Add as array
         value_proposition: 'Innovative tech products',
         communication_style: 'Professional and friendly',
         message_example: 'Hi there! I noticed your interest in tech...',
