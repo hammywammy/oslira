@@ -30,7 +30,7 @@ if (shouldDisableLogs) {
     const originalConsole = {
         log: console.log,
         warn: console.warn,
-        error: console.error,
+        //error: console.error,
         info: console.info,
         debug: console.debug,
         trace: console.trace,
