@@ -1,3 +1,8 @@
+// ============================================================================
+// COMPLETE ANALYZE.TS - FIXED VERSION
+// File: cloudflare-workers/src/handlers/analyze.ts
+// ============================================================================
+
 import type { Context } from 'hono';
 import type { Env, AnalysisRequest, ProfileData, BusinessProfile, AnalysisResult, User } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
@@ -148,61 +153,58 @@ export async function handleAnalyze(c: Context): Promise<Response> {
       // Create mock data for testing
       userResult = { 
         id: user_id, 
-        credits: 100,
-        email: 'test@test.com',
-        full_name: 'Test User',
-        subscription_status: 'active',
+        credits: 100, 
+        email: 'test@example.com',
         created_at: new Date().toISOString(),
-        last_login: new Date().toISOString(),
-        subscription_id: 'test_sub',
-        stripe_customer_id: 'test_cust'
-      } as User;
-      
+        subscription_plan: 'test',
+        subscription_status: 'active',
+        onboarding_completed: true
+      };
+
       business = {
         id: business_id,
         user_id: user_id,
-        name: 'Test Business',
-        industry: 'Technology',
-        target_audience: 'Tech professionals',
-        value_proposition: 'Test value proposition for analysis',
-        pain_points: ['lack of leads', 'poor targeting'],
-        unique_advantages: ['AI-powered analysis', 'real-time insights'],
-        website: 'https://test.com',
-        created_at: new Date().toISOString()
-      } as BusinessProfile;
-      
+        business_name: 'Test Business',
+        business_niche: 'Technology',
+        target_audience: 'Tech enthusiasts',
+        target_problems: 'Need tech solutions',
+        value_proposition: 'Innovative tech products',
+        communication_style: 'Professional and friendly',
+        message_example: 'Hi there! I noticed your interest in tech...',
+        success_outcome: 'Increased engagement',
+        call_to_action: 'Let\'s connect!',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
       logger('info', 'Mock data created for test call', { requestId });
     } else {
-      // Real database lookups for production calls
+      // Fetch real user and business data
       try {
-        logger('info', 'Fetching user and business data from database', { requestId });
+        userResult = await fetchUserAndCredits(user_id, c.env);
+        business = await fetchBusinessProfile(business_id, user_id, c.env);
         
-        [userResult, business] = await Promise.all([
-          fetchUserAndCredits(user_id, c.env),
-          fetchBusinessProfile(business_id, user_id, c.env)
-        ]);
-        
-        logger('info', 'Database fetch successful', { 
+        logger('info', 'Real user and business data fetched', { 
           userCredits: userResult.credits,
-          businessName: business.name,
+          businessName: business.business_name,
           requestId 
         });
-      } catch (dbError: any) {
-        logger('error', 'Database fetch failed', { 
-          error: dbError.message,
-          userId: user_id,
-          businessId: business_id,
+      } catch (fetchError: any) {
+        logger('error', 'Failed to fetch user/business data', { 
+          error: fetchError.message,
+          user_id,
+          business_id,
           requestId 
         });
         
-        // Record database failure in metering
         meteringContext.recordEvent({
           purpose: analysis_type === 'deep' ? 'analysis_deep' : 'analysis_light',
           cache_hit: false,
           user_id: user_id,
           business_id: business_id,
-          error_code: 'DATABASE_ERROR',
-          error_message: dbError.message,
+          error_code: 'DATA_FETCH_FAILED',
+          error_message: fetchError.message,
           http_status: 500
         });
         
@@ -211,13 +213,13 @@ export async function handleAnalyze(c: Context): Promise<Response> {
         return c.json(createStandardResponse(
           false, 
           undefined, 
-          `Failed to fetch user data: ${dbError.message}`, 
+          'Failed to fetch user or business data', 
           requestId
         ), 500);
       }
     }
 
-    // 🔥 PRESERVED: Credit validation (skip for test calls)
+    // 🔥 ENHANCED: Credit validation with detailed logging
     const creditCost = analysis_type === 'deep' ? 2 : 1;
     if (!isTestCall && userResult.credits < creditCost) {
       logger('warn', 'Insufficient credits', { 
@@ -399,108 +401,66 @@ export async function handleAnalyze(c: Context): Promise<Response> {
     }
 
     // 🔥 PRESERVED: Outreach message generation for deep analysis
-    let outreachMessage = '';
+    let outreachMessage: string | undefined;
+    
     if (analysis_type === 'deep') {
       try {
         logger('info', 'Generating outreach message', { requestId });
-        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-        logger('info', 'Outreach message generated', { 
-          messageLength: outreachMessage.length,
+        
+        const outreachResult = await generateOutreachMessage(
+          profileData,
+          analysisResult,
+          business,
+          c.env,
+          requestId,
+          user_id
+        );
+        
+        outreachMessage = outreachResult.message;
+        
+        logger('info', 'Outreach message generated', { requestId });
+        
+      } catch (outreachError: any) {
+        logger('warn', 'Outreach message generation failed', { 
+          error: outreachError.message,
           requestId 
         });
-      } catch (messageError: any) {
-        logger('warn', 'Outreach message generation failed (non-fatal)', { 
-          error: messageError.message,
-          requestId 
-        });
+        // Continue without outreach message - not critical
+        outreachMessage = undefined;
       }
     }
 
-    // 🔥 PRESERVED: Database saving logic (skip for test calls)
-    let lead_id: string = `test-${requestId}`;
+    // 🔥 ENHANCED: Database operations for non-test calls
+    let lead_id = `test-${requestId}`;
     
     if (!isTestCall) {
-      // Prepare lead data
-      const leadData = {
-        user_id: user_id,
-        business_id: business_id,
-        username: profileData.username,
-        platform: 'instagram',
-        profile_url: profile_url,
-        profile_pic_url: profileData.profilePicUrl || null,
-        score: analysisResult.score || 0,
-        analysis_type: analysis_type,
-        followers_count: profileData.followersCount || 0,
-        created_at: new Date().toISOString(),
-        quick_summary: analysisResult.quick_summary || null,
-        env: getEnvironment(c.env)
-      };
-
-      // Prepare analysis data for deep analysis
-      let analysisData = null;
-      if (analysis_type === 'deep') {
-        analysisData = {
-          user_id: user_id,
-          username: profileData.username,
-          analysis_type: 'deep',
-          score: analysisResult.score || 0,
-          engagement_score: analysisResult.engagement_score || 0,
-          score_niche_fit: analysisResult.niche_fit || 0,
-          score_total: analysisResult.score || 0,
-          niche_fit: analysisResult.niche_fit || 0,
-          avg_likes: profileData.engagement?.avgLikes || 0,
-          avg_comments: profileData.engagement?.avgComments || 0,
-          engagement_rate: profileData.engagement?.engagementRate || 0,
-          audience_quality: analysisResult.audience_quality || 'Unknown',
-          engagement_insights: analysisResult.engagement_insights || 'No insights available',
-          selling_points: Array.isArray(analysisResult.selling_points) ? 
-            analysisResult.selling_points : 
-            (analysisResult.selling_points ? [analysisResult.selling_points] : null),
-          reasons: Array.isArray(analysisResult.reasons) ? analysisResult.reasons : 
-            (Array.isArray(analysisResult.selling_points) ? analysisResult.selling_points : null),
-          latest_posts: (profileData.latestPosts?.length || 0) > 0 ? 
-            JSON.stringify(profileData.latestPosts.slice(0, 12)) : null,
-          engagement_data: profileData.engagement ? JSON.stringify({
-            avgLikes: profileData.engagement.avgLikes,
-            avgComments: profileData.engagement.avgComments,
-            engagementRate: profileData.engagement.engagementRate,
-            totalEngagement: profileData.engagement.totalEngagement,
-            postsAnalyzed: profileData.engagement.postsAnalyzed,
-            dataQuality: profileData.dataQuality,
-            scraperUsed: profileData.scraperUsed,
-            dataSource: 'real_scraped_data',
-            calculationMethod: 'manual_averaging_from_posts'
-          }) : JSON.stringify({
-            dataSource: 'no_real_data_available',
-            reason: 'scraping_failed_or_private_account',
-            scraperUsed: profileData.scraperUsed,
-            estimatedData: false
-          }),
-          analysis_data: JSON.stringify({
-            confidence_level: analysisResult.confidence_level || calculateConfidenceLevel(profileData, analysis_type),
-            scraper_used: profileData.scraperUsed,
-            data_quality: profileData.dataQuality,
-            posts_found: profileData.latestPosts?.length || 0,
-            posts_with_engagement: profileData.latestPosts?.filter(p => p.likesCount > 0 || p.commentsCount > 0).length || 0,
-            real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0,
-            follower_count: profileData.followersCount,
-            verification_status: profileData.isVerified,
-            account_type: profileData.isPrivate ? 'private' : 'public',
-            analysis_timestamp: new Date().toISOString(),
-            ai_model_used: 'enhanced-ai-analysis'
-          }),
-          outreach_message: outreachMessage || null,
-          deep_summary: analysisResult.deep_summary || null,
-          env: getEnvironment(c.env),
-          created_at: new Date().toISOString()
-        };
-      }
-
-      // Save to database
       try {
-        logger('info', 'Saving analysis data to database', { requestId });
-        lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
-        logger('info', 'Database save successful', { lead_id, requestId });
+        lead_id = await saveLeadAndAnalysis(
+          profileData,
+          analysisResult,
+          business,
+          user_id,
+          analysis_type,
+          c.env,
+          outreachMessage
+        );
+        
+        logger('info', 'Lead and analysis saved to database', { 
+          lead_id, 
+          requestId 
+        });
+        
+        // Record database save success in metering
+        meteringContext.recordEvent({
+          provider: 'supabase',
+          model: 'database',
+          purpose: analysis_type === 'deep' ? 'database_save_deep' : 'database_save_light',
+          user_id: user_id,
+          business_id: business_id,
+          http_status: 200,
+          cache_hit: false
+        });
+        
       } catch (saveError: any) {
         logger('error', 'Database save failed', { 
           error: saveError.message,
@@ -509,6 +469,8 @@ export async function handleAnalyze(c: Context): Promise<Response> {
         
         // Record database save failure in metering
         meteringContext.recordEvent({
+          provider: 'supabase',
+          model: 'database',
           purpose: analysis_type === 'deep' ? 'database_save_deep' : 'database_save_light',
           user_id: user_id,
           business_id: business_id,
@@ -560,8 +522,17 @@ export async function handleAnalyze(c: Context): Promise<Response> {
       }
     }
 
-    // 🔥 ENHANCED: Final metering log
-    await logUsageToSupabase(meteringContext.getEvents(), c.env);
+    // ✅ FIXED: Check if there are any unlogged events (shouldn't be any)
+    const remainingEvents = meteringContext.getEvents();
+    if (remainingEvents.length > 0) {
+      logger('warn', 'Found unlogged metering events at end of request', { 
+        eventCount: remainingEvents.length,
+        requestId 
+      });
+      await logUsageToSupabase(remainingEvents, c.env);
+    } else {
+      logger('info', 'All metering events already logged', { requestId });
+    }
 
     // 🔥 PRESERVED: Response preparation
     const responseData = {
