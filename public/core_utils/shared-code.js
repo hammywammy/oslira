@@ -933,23 +933,6 @@ function safeJsonParse(str, fallback = {}) {
     }
 }
 
-function truncateText(text, maxLength = 100, suffix = '...') {
-    if (!text || text.length <= maxLength) return text;
-    return text.substring(0, maxLength - suffix.length) + suffix;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function unescapeHtml(html) {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent || div.innerText || '';
-}
-
 function validateEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -969,47 +952,6 @@ function formatCurrency(amount, currency = 'USD') {
         style: 'currency',
         currency: currency
     }).format(amount);
-}
-
-function formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-function getRelativeTime(date) {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - new Date(date)) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`;
-    
-    return new Date(date).toLocaleDateString();
-}
-
-function isElementInViewport(el) {
-    const rect = el.getBoundingClientRect();
-    return (
-        rect.top >= 0 &&
-        rect.left >= 0 &&
-        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
-    );
-}
-
-function scrollToElement(element, options = {}) {
-    const defaultOptions = {
-        behavior: 'smooth',
-        block: 'start',
-        inline: 'nearest'
-    };
-    
-    element.scrollIntoView({ ...defaultOptions, ...options });
 }
 
 // =============================================================================
@@ -1213,16 +1155,9 @@ window.OsliraApp.generateId = generateId;
 window.OsliraApp.sanitizeHTML = sanitizeHTML;
 window.OsliraApp.safeObjectKeys = safeObjectKeys;
 window.OsliraApp.safeJsonParse = safeJsonParse;
-window.OsliraApp.truncateText = truncateText;
-window.OsliraApp.escapeHtml = escapeHtml;
-window.OsliraApp.unescapeHtml = unescapeHtml;
 window.OsliraApp.validateEmail = validateEmail;
 window.OsliraApp.validateUrl = validateUrl;
 window.OsliraApp.formatCurrency = formatCurrency;
-window.OsliraApp.formatBytes = formatBytes;
-window.OsliraApp.getRelativeTime = getRelativeTime;
-window.OsliraApp.isElementInViewport = isElementInViewport;
-window.OsliraApp.scrollToElement = scrollToElement;
 window.OsliraApp.openModal = openModal;
 window.OsliraApp.closeModal = closeModal;
 window.OsliraApp.closeAllModals = closeAllModals;
