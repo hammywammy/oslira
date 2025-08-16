@@ -1,247 +1,210 @@
-import type { Env, ProfileData, PostData, EngagementData } from '../types/interfaces.js';
+// File: cloudflare-workers/src/services/instagram-scraper.ts
+// ✅ REPLACE THE ENTIRE FILE WITH YOUR OLD WORKING VERSION (with minor fixes)
+
+import type { ProfileData, AnalysisType, Env, PostData, EngagementData } from '../types/interfaces.js';
 import { logger } from '../utils/logger.js';
-import { validateProfileData } from '../utils/validation.js';
+import { callWithRetry } from '../utils/helpers.js';
+import { validateProfileData, extractHashtags, extractMentions } from '../utils/validation.js';
 import { getApiKey } from './enhanced-config-manager.js';
 
-export async function scrapeInstagramProfile(
-  username: string,
-  analysisType: string,
-  env: Env
-): Promise<ProfileData> {
-  const timeoutMs = parseInt(env.TIMEOUT_MS || '30000');
-  const maxRetries = parseInt(env.RETRIES || '2');
-  
-  logger('info', 'Starting profile scraping', { username, analysisType });
-  
-  // Create timeout promise
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error('Scraping timeout after 30 seconds')), timeoutMs);
-  });
-  
-  try {
-    // Race between scraping and timeout
-    const result = await Promise.race([
-      performActualScraping(username, analysisType, env),
-      timeoutPromise
-    ]);
-    
-    return result;
-    
-  } catch (error: any) {
-    logger('error', 'Instagram scraping failed', { 
-      username, 
-      error: error.message,
-      analysisType 
-    });
-    
-    // Check if this is a test username or timeout
-    const isTestUsername = ['nike', 'cristiano', 'test'].includes(username.toLowerCase());
-    const isTimeout = error.message.includes('timeout') || error.message.includes('aborted');
-    
-    if (isTestUsername || isTimeout) {
-      logger('warn', 'Using mock profile data due to scraping failure', { 
-        username, 
-        reason: isTimeout ? 'timeout' : 'test_username'
-      });
-      return createMockProfileData(username);
-    }
-    
-    // For production usernames, still throw the error
-    throw error;
-  }
-}
-
-async function performActualScraping(
-  username: string,
-  analysisType: string,
-  env: Env
-): Promise<ProfileData> {
+export async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
+  // Get Apify API token from centralized config
   const apifyToken = await getApiKey('APIFY_API_TOKEN', env);
   
   if (!apifyToken) {
-    throw new Error('APIFY_API_TOKEN not configured');
+    throw new Error('Profile scraping service not configured');
   }
-  
-  // Use appropriate scraper based on analysis type
-  if (analysisType === 'light') {
-    logger('info', 'Using light scraper for basic profile data');
-    return await lightScrape(username, apifyToken);
-  } else {
-    logger('info', 'Using deep scraper for detailed analysis');
-    return await deepScrape(username, apifyToken);
-  }
-}
 
-async function lightScrape(username: string, apifyToken: string): Promise<ProfileData> {
-  // ✅ LIGHT SCRAPE: Use instagram-profile-scraper
-  const actorId = 'dSCLg0C3YEZ83HzYX';
-  
-  const runInput = {
-    usernames: [username]  // ✅ Fixed: 'usernames' not 'username'
-  };
-  
-  const response = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${apifyToken}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(runInput)
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Apify API error: ${response.status}`);
-  }
-  
-  const runData = await response.json();
-  const runId = runData.data.id;
-  
-  // Wait for completion with shorter timeout for light scraping
-  await waitForCompletion(runId, apifyToken, 15000); // 15 seconds max
-  
-  const resultsResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs/${runId}/dataset/items?token=${apifyToken}`);
-  
-  if (!resultsResponse.ok) {
-    throw new Error(`Failed to fetch results: ${resultsResponse.status}`);
-  }
-  
-  const rawResults = await resultsResponse.json();
-  return validateProfileData(rawResults, 'light');
-}
+  logger('info', 'Starting profile scraping', { username, analysisType });
 
-async function deepScrape(username: string, apifyToken: string): Promise<ProfileData> {
-  // ✅ DEEP SCRAPE: Use instagram-scraper  
-  const actorId = 'shu8hvrXbJbY3Eb9W';
-  
-  const runInput = {
-    directUrls: [`https://instagram.com/${username}/`],  // ✅ Fixed: directUrls format
-    resultsType: 'details',  // ✅ Keep as requested
-    resultsLimit: 50,        // Get more posts for deep analysis
-    addParentData: true,
-    enhanceUserSearchWithFacebookPage: false,
-    isUserReelFeedURL: false,
-    isUserTaggedFeedURL: false
-  };
-  
-  const response = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs?token=${apifyToken}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(runInput)
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Apify API error: ${response.status}`);
-  }
-  
-  const runData = await response.json();
-  const runId = runData.data.id;
-  
-  // Wait for completion with longer timeout for deep scraping
-  await waitForCompletion(runId, apifyToken, 25000); // 25 seconds max
-  
-  const resultsResponse = await fetch(`https://api.apify.com/v2/acts/${actorId}/runs/${runId}/dataset/items?token=${apifyToken}`);
-  
-  if (!resultsResponse.ok) {
-    throw new Error(`Failed to fetch results: ${resultsResponse.status}`);
-  }
-  
-  const rawResults = await resultsResponse.json();
-  return validateProfileData(rawResults, 'deep');
-}
+  try {
+    if (analysisType === 'light') {
+      logger('info', 'Using light scraper for basic profile data');
+      
+      const lightInput = {
+        usernames: [username],
+        resultsType: "details",
+        resultsLimit: 1
+      };
 
-async function waitForCompletion(runId: string, apifyToken: string, maxWaitMs: number): Promise<void> {
-  const startTime = Date.now();
-  const pollInterval = 2000; // Check every 2 seconds
-  
-  while (Date.now() - startTime < maxWaitMs) {
-    const statusResponse = await fetch(`https://api.apify.com/v2/acts/runs/${runId}?token=${apifyToken}`);
+      const profileResponse = await callWithRetry(
+        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${apifyToken}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lightInput)
+        },
+        3, 2000, 30000
+      );
+
+      if (!profileResponse || !Array.isArray(profileResponse) || profileResponse.length === 0) {
+        throw new Error('Profile not found or private');
+      }
+
+      const profileData = validateProfileData(profileResponse[0], 'light');
+      profileData.scraperUsed = 'light';
+      profileData.dataQuality = 'medium';
+      
+      return profileData;
+
+    } else {
+      logger('info', 'Deep analysis: Starting with deep scraper configurations');
+      
+      const deepConfigs = [
+        {
+          name: 'primary_deep',
+          input: {
+            directUrls: [`https://instagram.com/${username}/`],
+            resultsLimit: 12,
+            addParentData: false,
+            enhanceUserSearchWithFacebookPage: false,
+            onlyPostsNewerThan: "2024-01-01",
+            resultsType: "details",
+            searchType: "hashtag"
+          }
+        },
+        {
+          name: 'alternative_deep',
+          input: {
+            directUrls: [`https://www.instagram.com/${username}/`],
+            resultsLimit: 10,
+            addParentData: true,
+            enhanceUserSearchWithFacebookPage: false,
+            onlyPostsNewerThan: "2023-06-01",
+            resultsType: "details"
+          }
+        }
+      ];
+
+      let lastError: Error | null = null;
+
+      for (const config of deepConfigs) {
+        try {
+          logger('info', `Trying deep scraper config: ${config.name}`, { username });
+          
+          const deepResponse = await callWithRetry(
+            `https://api.apify.com/v2/acts/shu8hvrXbJbY3Eb9W/run-sync-get-dataset-items?token=${apifyToken}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(config.input)
+            },
+            2, 3000, 60000
+          );
+
+          logger('info', `Deep scraper (${config.name}) response received`, { 
+            responseLength: deepResponse?.length,
+            hasData: !!deepResponse?.[0]
+          });
+
+          if (deepResponse && Array.isArray(deepResponse) && deepResponse.length > 0) {
+            const profileItems = deepResponse.filter(item => item.username || item.ownerUsername);
+            const postItems = deepResponse.filter(item => item.shortCode && item.likesCount !== undefined);
+            
+            logger('info', 'Deep scraper data analysis', {
+              totalItems: deepResponse.length,
+              profileItems: profileItems.length,
+              postItems: postItems.length,
+              config: config.name
+            });
+
+            if (profileItems.length === 0) {
+              logger('warn', `No profile data found in ${config.name} response`);
+              continue;
+            }
+
+            const profileData = validateProfileData(deepResponse, 'deep');
+            profileData.scraperUsed = config.name;
+            profileData.dataQuality = postItems.length >= 3 ? 'high' : postItems.length >= 1 ? 'medium' : 'low';
+            
+            logger('info', 'Deep scraping successful', {
+              username: profileData.username,
+              postsFound: profileData.latestPosts?.length || 0,
+              hasRealEngagement: !!profileData.engagement,
+              avgLikes: profileData.engagement?.avgLikes || 'N/A',
+              avgComments: profileData.engagement?.avgComments || 'N/A',
+              engagementRate: profileData.engagement?.engagementRate || 'N/A',
+              dataQuality: profileData.dataQuality
+            });
+
+            return profileData;
+          } else {
+            throw new Error(`${config.name} returned no usable data`);
+          }
+
+        } catch (configError: any) {
+          logger('warn', `Deep scraper config ${config.name} failed`, { error: configError.message });
+          lastError = configError;
+          continue;
+        }
+      }
+
+      // Fallback to light scraper with NO fake engagement data
+      logger('warn', 'All deep scraper configs failed, falling back to light scraper - NO ENGAGEMENT DATA');
+      
+      const lightInput = {
+        usernames: [username],
+        resultsType: "details",
+        resultsLimit: 1
+      };
+
+      const lightResponse = await callWithRetry(
+        `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${apifyToken}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lightInput)
+        },
+        3, 2000, 30000
+      );
+
+      if (!lightResponse || !Array.isArray(lightResponse) || lightResponse.length === 0) {
+        throw new Error('Profile not found on any scraper');
+      }
+
+      const profile = lightResponse[0];
+      
+      const fallbackProfile: ProfileData = {
+        username: profile.username || username,
+        displayName: profile.fullName || profile.displayName || '',
+        bio: profile.biography || profile.bio || '',
+        followersCount: parseInt(profile.followersCount) || 0,
+        followingCount: parseInt(profile.followingCount) || 0,
+        postsCount: parseInt(profile.postsCount) || 0,
+        isVerified: Boolean(profile.verified || profile.isVerified),
+        isPrivate: Boolean(profile.private || profile.isPrivate),
+        profilePicUrl: profile.profilePicUrl || profile.profilePicture || '',
+        externalUrl: profile.externalUrl || profile.website || '',
+        isBusinessAccount: Boolean(profile.isBusinessAccount),
+        latestPosts: [],
+        engagement: undefined, // NO FAKE DATA - explicitly undefined
+        scraperUsed: 'light_fallback',
+        dataQuality: 'low'
+      };
+
+      logger('info', 'Fallback scraping completed - NO ENGAGEMENT DATA AVAILABLE', {
+        username: fallbackProfile.username,
+        followers: fallbackProfile.followersCount,
+        dataNote: 'Real engagement data could not be scraped'
+      });
+
+      return fallbackProfile;
+    }
+
+  } catch (error: any) {
+    logger('error', 'All scraping methods failed', { username, error: error.message });
     
-    if (!statusResponse.ok) {
-      throw new Error(`Failed to check run status: ${statusResponse.status}`);
+    let errorMessage = 'Failed to retrieve profile data';
+    if (error.message.includes('not found') || error.message.includes('404')) {
+      errorMessage = 'Instagram profile not found';
+    } else if (error.message.includes('private') || error.message.includes('403')) {
+      errorMessage = 'This Instagram profile is private';
+    } else if (error.message.includes('rate limit') || error.message.includes('429')) {
+      errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
+    } else if (error.message.includes('timeout')) {
+      errorMessage = 'Profile scraping timed out. Please try again.';
     }
     
-    const statusData = await statusResponse.json();
-    const status = statusData.data.status;
-    
-    if (status === 'SUCCEEDED') {
-      return;
-    }
-    
-    if (status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') {
-      throw new Error(`Scraping ${status.toLowerCase()}: ${statusData.data.statusMessage || 'Unknown error'}`);
-    }
-    
-    // Wait before next poll
-    await new Promise(resolve => setTimeout(resolve, pollInterval));
+    throw new Error(errorMessage);
   }
-  
-  throw new Error('Scraping timed out waiting for completion');
-}
-
-function createMockProfileData(username: string): ProfileData {
-  const mockProfiles: Record<string, Partial<ProfileData>> = {
-    'cristiano': {
-      displayName: 'Cristiano Ronaldo',
-      bio: 'Manchester United, Portugal, Entrepreneur',
-      followersCount: 615000000,
-      followingCount: 560,
-      postsCount: 3450,
-      isVerified: true,
-      externalUrl: 'https://www.cristianoronaldo.com'
-    },
-    'nike': {
-      displayName: 'Nike',
-      bio: 'Just Do It ✔️',
-      followersCount: 302000000,
-      followingCount: 150,
-      postsCount: 1200,
-      isVerified: true,
-      externalUrl: 'https://www.nike.com'
-    }
-  };
-  
-  const profile = mockProfiles[username.toLowerCase()] || {};
-  
-  const mockPosts: PostData[] = Array.from({ length: 12 }, (_, i) => ({
-    id: `mock_post_${i + 1}`,
-    shortCode: `mock_${username}_${i + 1}`,
-    caption: `Mock post ${i + 1} for ${username} #${username} #mock`,
-    likesCount: Math.floor(Math.random() * 500000) + 50000,
-    commentsCount: Math.floor(Math.random() * 10000) + 1000,
-    timestamp: new Date(Date.now() - (i * 24 * 60 * 60 * 1000)).toISOString(),
-    url: `https://instagram.com/p/mock_${username}_${i + 1}/`,
-    type: i % 3 === 0 ? 'video' : 'photo',
-    hashtags: [`#${username}`, '#mock', '#test'],
-    mentions: [],
-    viewCount: i % 3 === 0 ? Math.floor(Math.random() * 1000000) + 100000 : undefined,
-    isVideo: i % 3 === 0
-  }));
-  
-  const totalLikes = mockPosts.reduce((sum, post) => sum + post.likesCount, 0);
-  const totalComments = mockPosts.reduce((sum, post) => sum + post.commentsCount, 0);
-  const avgLikes = Math.round(totalLikes / mockPosts.length);
-  const avgComments = Math.round(totalComments / mockPosts.length);
-  const followers = profile.followersCount || 50000000;
-  const engagementRate = Math.round(((avgLikes + avgComments) / followers) * 10000) / 100;
-  
-  return {
-    username: username.toLowerCase(),
-    displayName: profile.displayName || `Mock ${username}`,
-    bio: profile.bio || `Mock bio for ${username}`,
-    followersCount: profile.followersCount || 50000000,
-    followingCount: profile.followingCount || 1000,
-    postsCount: profile.postsCount || 2500,
-    isVerified: profile.isVerified !== undefined ? profile.isVerified : true,
-    isPrivate: false,
-    profilePicUrl: `https://mock.example.com/${username}.jpg`,
-    externalUrl: profile.externalUrl || `https://www.${username}.com`,
-    isBusinessAccount: true,
-    latestPosts: mockPosts,
-    engagement: {
-      avgLikes,
-      avgComments,
-      engagementRate,
-      totalEngagement: avgLikes + avgComments,
-      postsAnalyzed: mockPosts.length
-    },
-    dataQuality: 'mock' as any,
-    scraperUsed: 'mock-data-generator'
-  };
 }
