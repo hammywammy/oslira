@@ -135,7 +135,6 @@ export async function handleAnalyze(c: Context): Promise<Response> {
     const isTestCall = (
       business_id === 'test' || 
       user_id === 'test' ||
-      business_id === '94287a70-4344-4887-aef1-e7e4b094ef71' ||
       username === 'cristiano' // Your working PowerShell call
     );
 
