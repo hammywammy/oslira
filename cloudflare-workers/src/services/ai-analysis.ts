@@ -527,7 +527,9 @@ function calculateProfileIntelligence(profile: ProfileData, business: BusinessPr
   }
 
   // Business alignment
-  const businessKeywords = [business.industry, ...business.pain_points, business.target_audience]
+  const painPoints = business.pain_points || (business.target_problems ? [business.target_problems] : []);
+  const industry = business.industry || business.business_niche || 'general';
+  const businessKeywords = [industry, ...painPoints, business.target_audience]
     .join(' ').toLowerCase().split(/\s+/);
   
   const profileText = [profile.bio, profile.displayName, 
@@ -1105,10 +1107,10 @@ PROFILE DATA:
 - External URL: ${profile.externalUrl}
 
 BUSINESS CONTEXT:
-- Industry: ${business.industry}
+- Industry: ${business.industry || business.business_niche}
 - Target Audience: ${business.target_audience}
 - Value Proposition: ${business.value_proposition}
-- Pain Points: ${business.pain_points.join(', ')}
+- Pain Points: ${(business.pain_points || (business.target_problems ? [business.target_problems] : [])).join(', ')}
 
 LATEST POSTS (${profile.latestPosts?.length || 0} posts):
 ${profile.latestPosts?.map(post => `
