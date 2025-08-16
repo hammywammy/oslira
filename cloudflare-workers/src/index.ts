@@ -14,7 +14,6 @@ import { handleAnalyze } from './handlers/analyze.js';
 import { handleBulkAnalyze } from './handlers/bulk-analyze.js';
 import { getApiKey } from './services/enhanced-config-manager.js';
 import { ProductionErrorMonitor, type ErrorReport } from './services/error-monitor.js';
-import { handleDebugEngagement, handleDebugProfile, handleDebugParsing } from './handlers/debug.js';
 
 // Import handlers
 import { 
@@ -359,27 +358,6 @@ app.get('/admin/rate-limits', async (c) => {
 // ============================================================================
 // INTERNAL ENDPOINTS WITH TOKEN VALIDATION
 // ============================================================================
-// Debug endpoints for development (staging only)
-app.get('/debug/engagement/:username', async (c) => {
-  if (getEnvironment(c.env) === 'staging') {
-    return handleDebugEngagement(c);
-  }
-  return c.json({ error: 'Debug endpoints only available in staging' }, 404);
-});
-
-app.get('/debug/profile/:username', async (c) => {
-  if (getEnvironment(c.env) === 'staging') {
-    return handleDebugProfile(c);
-  }
-  return c.json({ error: 'Debug endpoints only available in staging' }, 404);
-});
-
-app.get('/debug/parsing/:username', async (c) => {
-  if (getEnvironment(c.env) === 'staging') {
-    return handleDebugParsing(c);
-  }
-  return c.json({ error: 'Debug endpoints only available in staging' }, 404);
-});
 
 app.post('/analyze', handleAnalyze);
 app.post('/v1/analyze', handleAnalyze);
