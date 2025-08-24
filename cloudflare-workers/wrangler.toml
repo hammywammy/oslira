@@ -2,7 +2,6 @@ name = "oslira-api"
 main = "src/index.ts"
 compatibility_date = "2025-08-01"
 
-# Production routes
 routes = [
   { pattern = "api.oslira.com/*", zone_name = "oslira.com" }
 ]
@@ -11,11 +10,8 @@ routes = [
 APP_ENV = "production"
 FRONTEND_URL = "https://oslira.com"
 
-# Staging environment
 [env.staging]
 name = "oslira-api-staging"
-workers_dev = false
-
 routes = [
   { pattern = "api-staging.oslira.com/*", zone_name = "oslira.com" }
 ]
