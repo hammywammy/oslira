@@ -16,7 +16,7 @@ Line Numbers – show the exact lines involved.
 Replacement Block – give the full replacement code, never simplified or abbreviated.
 
 
-Never say "insert here" or "just change this part" — always provide the complete replacement block.
+Never say "insert here" or "just change this part" — always provide the complete replacement block. You will say "Current code:x , replace with:x"
 
 Context Rule
 
@@ -33,3 +33,4 @@ Deep Context Analysis Required
 FIRST: Search through my entire project to get a deep understanding of the architecture, patterns, dependencies, and current state before providing any recommendations.
 THEN: Analyze the specific issue within the broader system context.
 FINALLY: Provide solutions that maintain consistency with existing patterns and avoid breaking changes.
+
