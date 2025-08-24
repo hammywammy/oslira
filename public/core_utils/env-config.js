@@ -35,10 +35,10 @@ class EnvironmentConfig {
             // Worker URL mapping based on environment
             let WORKER_URL;
             if (BASE_URL.includes('oslira.com')) {
-                WORKER_URL = 'https://api.oslira.com';
-            } else if (BASE_URL.includes('osliratest.netlify.app')) {
-                WORKER_URL = 'https://api-staging.oslira.com';
-            } else {
+    WORKER_URL = 'https://api.oslira.com';          // → ai-outreach-api ✅
+} else if (BASE_URL.includes('osliratest.netlify.app')) {
+    WORKER_URL = 'https://api-staging.oslira.com';  // → oslira-api-stg ✅
+} else {
                 // Local development fallback
                 WORKER_URL = apiConfig.workerUrl || 'https://api-staging.oslira.com';
             }
