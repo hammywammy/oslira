@@ -28,15 +28,26 @@ class EnvironmentConfig {
                 throw new Error(apiConfig.error);
             }
 
-            // Environment detection from current domain
+           // Environment detection from current domain
             const BASE_URL = window.location.origin;
             const ENV = BASE_URL.includes('oslira.com') ? 'prod' : 'staging';
+            
+            // Worker URL mapping based on environment
+            let WORKER_URL;
+            if (BASE_URL.includes('oslira.com')) {
+                WORKER_URL = 'https://api.oslira.com';
+            } else if (BASE_URL.includes('osliratest.netlify.app')) {
+                WORKER_URL = 'https://api-staging.oslira.com';
+            } else {
+                // Local development fallback
+                WORKER_URL = apiConfig.workerUrl || 'https://api-staging.oslira.com';
+            }
             
             // Build complete configuration
 this.config = {
     // Core URLs
     BASE_URL,
-    WORKER_URL: apiConfig.workerUrl,
+    WORKER_URL: WORKER_URL,
     
     // Environment
     ENV,
