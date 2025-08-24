@@ -1,4 +1,4 @@
-name = "oslira-api"
+name = "ai-outreach-api"
 main = "src/index.ts"
 compatibility_date = "2025-08-01"
 
@@ -11,7 +11,7 @@ APP_ENV = "production"
 FRONTEND_URL = "https://oslira.com"
 
 [env.staging]
-name = "oslira-api-staging"
+name = "oslira-api-stg"
 routes = [
   { pattern = "api-staging.oslira.com/*", zone_name = "oslira.com" }
 ]
