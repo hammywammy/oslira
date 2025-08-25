@@ -181,11 +181,6 @@ app.post('/admin/migrate-to-aws', async (c) => {
   return handleMigrateToAWS(c);
 });
 
-app.post('/admin/trigger-rotation', async (c) => {
-  const { handleTriggerRotation } = await import('./handlers/enhanced-admin.js');
-  return handleTriggerRotation(c);
-});
-
 // Replace existing admin routes with enhanced versions
 app.post('/admin/update-key', async (c) => {
   const { handleUpdateApiKey } = await import('./handlers/enhanced-admin.js');
