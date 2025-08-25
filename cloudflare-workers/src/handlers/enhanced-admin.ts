@@ -17,11 +17,6 @@ interface MigrationRequest {
   adminToken?: string;
 }
 
-interface RotationRequest {
-  keyName: string;
-  adminToken?: string;
-}
-
 // Admin authentication middleware
 function verifyAdminAccess(c: Context): boolean {
   const authHeader = c.req.header('Authorization');
