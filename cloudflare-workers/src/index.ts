@@ -212,20 +212,6 @@ app.post('/admin/get-config', async (c) => {
   return handleGetConfig(c);
 });
 
-// Updated config endpoint that reads from Supabase
-app.get('/config', (c) => {
-  const env = getEnvironment(c.env); // Your new env helper
-  
-  return c.json({
-    supabaseUrl: c.env.SUPABASE_URL,
-    supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
-    workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-    environment: env, // 🔥 ADD THIS
-    configSource: 'supabase_app_config_table',
-    message: 'Frontend should load additional config from Supabase'
-  });
-});
-
 // ===============================================================================
 // ERROR HANDLING
 // ===============================================================================
