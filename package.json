@@ -6,8 +6,6 @@
   "type": "module",
   "scripts": {
     "build": "node build-with-aws-config.js",
-    "build:legacy": "node inject-env.js",
-    "build:migrate": "node build-with-supabase-config.js migrate",
     "dev": "npm run build && python -m http.server 8000",
     "start": "npm run dev",
     "clean": "node -e \"const fs = require('fs'); try { fs.unlinkSync('public/env-config.js'); console.log('✅ Cleaned env-config.js'); } catch(e) { console.log('ℹ️  No file to clean'); }\""
