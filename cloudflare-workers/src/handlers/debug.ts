@@ -261,19 +261,14 @@ export async function handleDebugParsing(c: Context): Promise<Response> {
       hasProfileData: profileItems.length > 0,
       hasPostData: postItems.length > 0,
       samplePost: postItems[0] || null,
-      engagementCalculationTest: engagementTest,
-      enterprise: true,
-      manualCalculation: true,
-      noFakeData: true,
-      allIssuesFixed: true
+      engagementCalculationTest: engagementTest
     });
     
   } catch (error: any) {
     return c.json({ 
       success: false, 
       error: error.message,
-      username,
-      enterprise: true
+      username
     }, 500);
   }
 }
