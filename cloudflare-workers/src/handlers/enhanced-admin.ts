@@ -229,51 +229,6 @@ export async function handleMigrateToAWS(c: Context): Promise<Response> {
   }
 }
 
-export async function handleTriggerRotation(c: Context): Promise<Response> {
-  const requestId = generateRequestId();
-  
-  try {
-    // Verify admin access
-    if (!verifyAdminAccess(c)) {
-      return c.json(createStandardResponse(false, undefined, 'Unauthorized access', requestId), 401);
-    }
-    
-    const body = await c.req.json() as RotationRequest;
-    const { keyName } = body;
-    
-    if (!keyName || !isAWSManagedKey(keyName)) {
-      return c.json(createStandardResponse(false, undefined, 'Invalid key name for rotation', requestId), 400);
-    }
-    
-    // Get Lambda function ARN for this key
-    const lambdaArn = getLambdaArnForKey(keyName, c.env);
-    
-    if (!lambdaArn) {
-      return c.json(createStandardResponse(false, undefined, 'Lambda function not configured for this key', requestId), 400);
-    }
-    
-    // Trigger Lambda function manually
-    const lambdaResult = await triggerLambdaRotation(lambdaArn, keyName, c.env);
-    
-    logger('info', 'Manual rotation triggered', { 
-      keyName, 
-      lambdaArn,
-      success: lambdaResult.success,
-      requestId 
-    });
-    
-    return c.json(createStandardResponse(true, {
-      message: `Rotation triggered for ${keyName}`,
-      lambdaResult,
-      note: 'Rotation will complete asynchronously. Check logs for status.'
-    }, undefined, requestId));
-    
-  } catch (error: any) {
-    logger('error', 'Failed to trigger rotation', { error: error.message, requestId });
-    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
-  }
-}
-
 export async function handleTestApiKey(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
@@ -495,67 +450,6 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
       success: false,
       message: `Test failed: ${error.message}`,
       details: { error: error.message, source: 'enhanced_admin' }
-    };
-  }
-}
-
-function getLambdaArnForKey(keyName: string, env: any): string | null {
-  const lambdaArns: Record<string, string> = {
-    // 'OPENAI_API_KEY': env.OPENAI_ROTATOR_LAMBDA_ARN,  // Removed - Lambda deleted
-    'CLAUDE_API_KEY': env.CLAUDE_ROTATOR_LAMBDA_ARN,
-    'APIFY_API_TOKEN': env.APIFY_ROTATOR_LAMBDA_ARN,
-    'STRIPE_SECRET_KEY': env.STRIPE_ROTATOR_LAMBDA_ARN,
-    'STRIPE_WEBHOOK_SECRET': env.STRIPE_ROTATOR_LAMBDA_ARN
-  };
-  
-  return lambdaArns[keyName] || null;
-}
-
-async function triggerLambdaRotation(lambdaArn: string, keyName: string, env: any): Promise<{ success: boolean; message: string; details?: any }> {
-  try {
-    // This would typically use AWS SDK to invoke Lambda
-    // For now, we'll simulate the call
-    
-    const payload = {
-      SecretId: `Oslira/${keyName}`,
-      trigger: 'manual_rotation',
-      timestamp: new Date().toISOString()
-    };
-    
-    // In a real implementation, you would use AWS SDK:
-    // const lambda = new AWS.Lambda();
-    // const result = await lambda.invoke({
-    //   FunctionName: lambdaArn,
-    //   Payload: JSON.stringify(payload)
-    // }).promise();
-    
-    logger('info', 'Lambda rotation would be triggered', { 
-      lambdaArn, 
-      keyName, 
-      payload 
-    });
-    
-    return {
-      success: true,
-      message: `Rotation triggered for ${keyName}`,
-      details: { 
-        lambdaArn, 
-        payload,
-        note: 'This is a simulation - implement AWS SDK for actual Lambda invocation'
-      }
-    };
-    
-  } catch (error: any) {
-    logger('error', 'Failed to trigger Lambda rotation', { 
-      lambdaArn, 
-      keyName, 
-      error: error.message 
-    });
-    
-    return {
-      success: false,
-      message: `Failed to trigger rotation: ${error.message}`,
-      details: { error: error.message }
     };
   }
 }
