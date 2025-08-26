@@ -237,36 +237,20 @@ class OsliraAppInitializer {
     }
     
     async initAuth() {
-        const currentPage = this.getCurrentPageName();
-        const publicPages = ['auth', 'index', 'landing', 'home'];
-        
-        if (publicPages.includes(currentPage)) {
-            console.log('📖 [App] Public page - skipping auth check');
-            return;
-        }
-        
-        try {
-            console.log('🔐 [App] Checking authentication...');
-            const { data: { session }, error } = await this.supabase.auth.getSession();
-            
-            if (error) throw error;
-            
-            if (session) {
-                this.session = session;
-                this.user = session.user;
-                console.log('✅ [App] User authenticated:', this.user.email);
-            } else {
-                console.log('❌ [App] No valid session, redirecting to auth');
-                window.location.href = '/auth.html';
-                return;
-            }
-            
-        } catch (error) {
-            console.error('❌ [App] Authentication check failed:', error);
-            window.location.href = '/auth.html';
-            throw error;
-        }
-    }
+    this.auth = await window.OsliraAuth.initialize(this.config);
+    
+    // Attach to global app
+    window.OsliraApp.auth = this.auth;
+    
+    // Setup auth event listeners
+    this.auth.onAuthChange((event, session) => {
+        // Update app state when auth changes
+        this.user = this.auth.getCurrentUser();
+        this.session = this.auth.getCurrentSession();
+        this.businesses = this.auth.getBusinesses();
+        this.business = this.auth.getSelectedBusiness();
+    });
+}
     
     async initBusinessContext() {
         if (!this.user) return;
