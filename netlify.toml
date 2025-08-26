@@ -40,62 +40,62 @@
 
 [[redirects]]
   from = "/dashboard"
-  to = "/dashboard/index.html"
+  to = "pages/dashboard/index.html"
   status = 200
 
 [[redirects]]
   from = "/admin"
-  to = "/admin/index.html"
+  to = "pages/admin/index.html"
   status = 200
 
 [[redirects]]
   from = "/analytics"
-  to = "/analytics/index.html"
+  to = "pages/analytics/index.html"
   status = 200
 
 [[redirects]]
   from = "/auth"
-  to = "/auth/index.html"
+  to = "pages/auth/index.html"
   status = 200
 
 [[redirects]]
   from = "/campaigns"
-  to = "/campaigns/index.html"
+  to = "pages/campaigns/index.html"
   status = 200
 
 [[redirects]]
   from = "/"
-  to = "/home/index.html"
+  to = "pages/home/index.html"
   status = 200
 
 [[redirects]]
   from = "/integrations"
-  to = "/integrations/index.html"
+  to = "pages/integrations/index.html"
   status = 200
 
 [[redirects]]
   from = "/leads"
-  to = "/leads/index.html"
+  to = "pages/leads/index.html"
   status = 200
 
 [[redirects]]
   from = "/messages"
-  to = "/messages/index.html"
+  to = "pages/messages/index.html"
   status = 200
 
 [[redirects]]
   from = "/onboarding"
-  to = "/onboarding/index.html"
+  to = "pages/onboarding/index.html"
   status = 200
 
 [[redirects]]
   from = "/settings"
-  to = "/settings/index.html"
+  to = "pages/settings/index.html"
   status = 200
 
 [[redirects]]
   from = "/subscription"
-  to = "/subscription/index.html"
+  to = "pages/subscription/index.html"
   status = 200
 
 # ===========================
@@ -104,42 +104,42 @@
 
 [[redirects]]
   from = "/footer/about"
-  to = "/footer/about/index.html"
+  to = "pages/footer/about/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/api"
-  to = "/footer/api/index.html"
+  to = "pages/footer/api/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/case-studies"
-  to = "/footer/case-studies/index.html"
+  to = "pages/footer/case-studies/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/guides"
-  to = "/footer/guides/index.html"
+  to = "pages/footer/guides/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/help"
-  to = "/footer/help/index.html"
+  to = "pages/footer/help/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/pricing"
-  to = "/footer/pricing/index.html"
+  to = "pages/footer/pricing/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/security"
-  to = "/footer/security/index.html"
+  to = "pages/footer/security/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/status"
-  to = "/footer/status/index.html"
+  to = "pages/footer/status/index.html"
   status = 200
 
 # ===========================
@@ -148,20 +148,20 @@
 
 [[redirects]]
   from = "/footer/legal/privacy"
-  to = "/footer/legal/privacy/index.html"
+  to = "pages/footer/legal/privacy/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/legal/terms"
-  to = "/footer/legal/terms/index.html"
+  to = "pages/footer/legal/terms/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/legal/refund"
-  to = "/footer/legal/refund/index.html"
+  to = "pages/footer/legal/refund/index.html"
   status = 200
 
 [[redirects]]
   from = "/footer/legal/disclaimer"
-  to = "/footer/legal/disclaimer/index.html"
+  to = "pages/footer/legal/disclaimer/index.html"
   status = 200
