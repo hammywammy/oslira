@@ -37,63 +37,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   await initializeAuth();
 });
 
-// =============================================================================
-// INITIALIZATION (Modern System + Original Features)
-// =============================================================================
-
-async function initializeAuth() {
-  try {
-    console.log("🚀 Starting auth initialization...");
-
-    // Wait for Supabase to be available (original timing)
-    let attempts = 0;
-    while (typeof window.supabase === "undefined" && attempts < 50) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      attempts++;
-    }
-
-    if (typeof window.supabase === "undefined") {
-      throw new Error("Supabase library not available");
-    }
-
-    // Load environment configuration first
-    if (!window.EnvConfig || !window.EnvConfig.isLoaded) {
-      await loadEnvConfig();
-    }
-    const envConfig = getEnvConfig();
-
-    // Get Supabase configuration
-    const supabaseConfig = envConfig.getSupabaseConfig
-      ? envConfig.getSupabaseConfig()
-      : {
-          url: envConfig.SUPABASE_URL,
-          anonKey: envConfig.SUPABASE_ANON_KEY,
-        };
-
-    // Initialize Supabase client
-    supabase = window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-      },
-    });
-
-    // Check for existing session or magic link
-    await handleExistingAuth();
-
-    // Set up form handler
+// Use centralized auth manager instead
+const authManager = window.OsliraApp.auth;
+if (await authManager.handleAuthPage()) {
     setupFormHandler();
-
-    isInitialized = true;
-    console.log("✅ Auth initialized");
-  } catch (error) {
-    console.error("❌ Auth initialization failed:", error);
-    Alert.error("Authentication setup failed", {
-      details: error.message,
-      actions: [{ label: "Refresh Page", action: "reload" }],
-      sticky: true,
-    });
-  }
 }
 
 async function loadConfigFromAPI() {
