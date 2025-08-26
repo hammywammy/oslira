@@ -1,6 +1,6 @@
 // =============================================================================
 // DATA-STORE.JS - Centralized State Management System
-// Reactive state management with localStorage persistence
+// Reactive state management with localStorage persistence and middleware support
 // =============================================================================
 
 class OsliraDataStore {
@@ -25,14 +25,18 @@ class OsliraDataStore {
                 theme: 'light',
                 sidebarCollapsed: false,
                 dashboardView: 'grid',
-                notificationsEnabled: true
+                notificationsEnabled: true,
+                leadSortBy: 'created_at',
+                leadSortOrder: 'desc'
             },
             
             // Cache
             cache: {
                 apiResponses: new Map(),
                 lastRefresh: null,
-                version: '1.0.0'
+                version: '1.0.0',
+                maxSize: 100,
+                ttl: 5 * 60 * 1000 // 5 minutes
             },
             
             // Real-time subscriptions
@@ -43,13 +47,15 @@ class OsliraDataStore {
                 online: navigator.onLine,
                 loading: false,
                 error: null,
-                lastSync: null
+                lastSync: null,
+                initialized: false
             }
         };
         
         this.subscribers = new Map();
         this.middleware = [];
         this.initialized = false;
+        this.cleanupInterval = null;
         
         this.init();
     }
@@ -66,7 +72,10 @@ class OsliraDataStore {
         // Setup periodic state cleanup
         this.setupCleanupInterval();
         
+        // Mark as initialized
+        this.set('status.initialized', true, { persist: false });
         this.initialized = true;
+        
         console.log('✅ [Store] Data Store initialized');
     }
     
@@ -170,15 +179,61 @@ class OsliraDataStore {
         const parentPath = keys.join('.');
         const parent = parentPath ? this.get(parentPath) : this.state;
         
-        if (parent && typeof parent === 'object') {
+        if (parent && typeof parent === 'object' && lastKey in parent) {
             const oldValue = parent[lastKey];
             delete parent[lastKey];
             
+            this.executeMiddleware(path, undefined, oldValue);
             this.notifySubscribers(path, undefined, oldValue);
-            this.persistToStorage(parentPath, parent);
             
             console.log(`🗑️ [Store] Deleted ${path}`);
         }
+    }
+    
+    /**
+     * Push item to array in state
+     * @param {string} path - Path to array
+     * @param {any} item - Item to push
+     */
+    push(path, item) {
+        const array = this.get(path);
+        if (Array.isArray(array)) {
+            array.push(item);
+            this.set(path, array);
+        } else {
+            this.set(path, [item]);
+        }
+    }
+    
+    /**
+     * Remove item from array in state
+     * @param {string} path - Path to array
+     * @param {function|any} predicate - Function to find item or item to remove
+     */
+    remove(path, predicate) {
+        const array = this.get(path);
+        if (!Array.isArray(array)) return;
+        
+        let index;
+        if (typeof predicate === 'function') {
+            index = array.findIndex(predicate);
+        } else {
+            index = array.indexOf(predicate);
+        }
+        
+        if (index > -1) {
+            array.splice(index, 1);
+            this.set(path, array);
+        }
+    }
+    
+    /**
+     * Toggle boolean value in state
+     * @param {string} path - Path to boolean
+     */
+    toggle(path) {
+        const currentValue = this.get(path);
+        this.set(path, !currentValue);
     }
     
     // =============================================================================
@@ -212,24 +267,35 @@ class OsliraDataStore {
     
     /**
      * Subscribe to multiple paths
-     * @param {object} subscriptions - Object with path: callback pairs
-     * @returns {function} Unsubscribe all function
+     * @param {string[]} paths - Paths to watch
+     * @param {function} callback - Callback function
+     * @returns {function} Unsubscribe function
      */
-    subscribeMultiple(subscriptions) {
-        const unsubscribers = Object.entries(subscriptions).map(([path, callback]) =>
-            this.subscribe(path, callback)
-        );
+    subscribeMultiple(paths, callback) {
+        const unsubscribers = paths.map(path => this.subscribe(path, callback));
         
         return () => {
-            unsubscribers.forEach(unsubscribe => unsubscribe());
+            unsubscribers.forEach(unsub => unsub());
         };
     }
     
+    /**
+     * Subscribe once to state change
+     * @param {string} path - Path to watch
+     * @param {function} callback - Callback function
+     */
+    subscribeOnce(path, callback) {
+        const unsubscribe = this.subscribe(path, (value, oldValue, changePath) => {
+            unsubscribe();
+            callback(value, oldValue, changePath);
+        });
+    }
+    
     notifySubscribers(path, newValue, oldValue) {
-        // Notify exact path subscribers
-        const pathSubscribers = this.subscribers.get(path);
-        if (pathSubscribers) {
-            pathSubscribers.forEach(callback => {
+        // Notify direct subscribers
+        const directSubscribers = this.subscribers.get(path);
+        if (directSubscribers) {
+            directSubscribers.forEach(callback => {
                 try {
                     callback(newValue, oldValue, path);
                 } catch (error) {
@@ -267,6 +333,17 @@ class OsliraDataStore {
         this.middleware.push(middleware);
     }
     
+    /**
+     * Remove middleware
+     * @param {function} middleware - Middleware function to remove
+     */
+    removeMiddleware(middleware) {
+        const index = this.middleware.indexOf(middleware);
+        if (index > -1) {
+            this.middleware.splice(index, 1);
+        }
+    }
+    
     executeMiddleware(path, newValue, oldValue) {
         this.middleware.forEach(middleware => {
             try {
@@ -278,7 +355,7 @@ class OsliraDataStore {
     }
     
     // =============================================================================
-    // PERSISTENCE
+    // PERSISTENCE SYSTEM
     // =============================================================================
     
     loadFromStorage() {
@@ -302,7 +379,11 @@ class OsliraDataStore {
                 const expirationTime = parsed.timestamp + (24 * 60 * 60 * 1000); // 24 hours
                 
                 if (Date.now() < expirationTime) {
-                    this.set('cache', parsed.data, { notify: false, persist: false });
+                    // Only load cache data, not the Map objects
+                    this.update('cache', {
+                        lastRefresh: parsed.data.lastRefresh,
+                        version: parsed.data.version
+                    }, { notify: false, persist: false });
                 }
             }
             
@@ -322,137 +403,108 @@ class OsliraDataStore {
                     localStorage.setItem('selectedBusinessId', value.id);
                 }
             } else if (path.startsWith('cache')) {
-                localStorage.setItem('oslira-cache', JSON.stringify({
-                    data: this.get('cache'),
-                    timestamp: Date.now()
-                }));
+                // Persist cache data with timestamp
+                const cacheData = {
+                    timestamp: Date.now(),
+                    data: {
+                        lastRefresh: this.get('cache.lastRefresh'),
+                        version: this.get('cache.version')
+                    }
+                };
+                localStorage.setItem('oslira-cache', JSON.stringify(cacheData));
             }
         } catch (error) {
-            console.error('Failed to persist state to storage:', error);
+            console.error('Failed to persist to storage:', error);
         }
-    }
-    
-    // =============================================================================
-    // BUSINESS METHODS
-    // =============================================================================
-    
-    setSelectedBusiness(business) {
-        this.set('selectedBusiness', business);
-        
-        // Emit business change event
-        window.dispatchEvent(new CustomEvent('business:changed', {
-            detail: { business }
-        }));
-    }
-    
-    getSelectedBusiness() {
-        return this.get('selectedBusiness');
-    }
-    
-    addLead(lead) {
-        const leads = this.get('leads') || [];
-        const newLead = {
-            ...lead,
-            id: lead.id || `lead-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            createdAt: lead.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        
-        this.set('leads', [...leads, newLead]);
-        
-        // Update analytics
-        this.updateLeadAnalytics();
-        
-        return newLead;
-    }
-    
-    updateLead(leadId, updates) {
-        const leads = this.get('leads') || [];
-        const updatedLeads = leads.map(lead => 
-            lead.id === leadId 
-                ? { ...lead, ...updates, updatedAt: new Date().toISOString() }
-                : lead
-        );
-        
-        this.set('leads', updatedLeads);
-        this.updateLeadAnalytics();
-    }
-    
-    deleteLead(leadId) {
-        const leads = this.get('leads') || [];
-        const filteredLeads = leads.filter(lead => lead.id !== leadId);
-        
-        this.set('leads', filteredLeads);
-        this.updateLeadAnalytics();
-    }
-    
-    updateLeadAnalytics() {
-        const leads = this.get('leads') || [];
-        
-        const analytics = {
-            total: leads.length,
-            highQuality: leads.filter(lead => lead.score >= 80).length,
-            mediumQuality: leads.filter(lead => lead.score >= 60 && lead.score < 80).length,
-            lowQuality: leads.filter(lead => lead.score < 60).length,
-            lastUpdated: new Date().toISOString()
-        };
-        
-        this.set('analytics.summary', analytics, { persist: false });
     }
     
     // =============================================================================
     // CACHE MANAGEMENT
     // =============================================================================
     
-    setCache(key, data, ttl = 3600000) { // 1 hour default TTL
-        const cache = this.get('cache.apiResponses') || new Map();
-        cache.set(key, {
+    /**
+     * Set cached response
+     * @param {string} key - Cache key
+     * @param {any} data - Data to cache
+     * @param {number} ttl - Time to live in milliseconds
+     */
+    setCache(key, data, ttl = null) {
+        const cache = this.get('cache.apiResponses');
+        const cacheEntry = {
             data,
             timestamp: Date.now(),
-            ttl
-        });
+            ttl: ttl || this.get('cache.ttl')
+        };
         
-        this.set('cache.apiResponses', cache, { persist: false });
+        cache.set(key, cacheEntry);
+        
+        // Clean up old entries if cache is getting too large
+        if (cache.size > this.get('cache.maxSize')) {
+            this.cleanupCache();
+        }
     }
     
+    /**
+     * Get cached response
+     * @param {string} key - Cache key
+     * @returns {any|null} Cached data or null if expired/not found
+     */
     getCache(key) {
-        const cache = this.get('cache.apiResponses') || new Map();
+        const cache = this.get('cache.apiResponses');
         const entry = cache.get(key);
         
         if (!entry) return null;
         
-        // Check if cache entry has expired
+        // Check if expired
         if (Date.now() - entry.timestamp > entry.ttl) {
             cache.delete(key);
-            this.set('cache.apiResponses', cache, { persist: false });
             return null;
         }
         
         return entry.data;
     }
     
-    clearCache(pattern = null) {
-        const cache = this.get('cache.apiResponses') || new Map();
+    /**
+     * Clear specific cache entry
+     * @param {string} key - Cache key to clear
+     */
+    clearCache(key = null) {
+        const cache = this.get('cache.apiResponses');
         
-        if (pattern) {
-            // Clear cache entries matching pattern
-            for (const key of cache.keys()) {
-                if (key.includes(pattern)) {
-                    cache.delete(key);
-                }
-            }
+        if (key) {
+            cache.delete(key);
         } else {
-            // Clear all cache
             cache.clear();
+            this.set('cache.lastRefresh', null);
         }
         
-        this.set('cache.apiResponses', cache, { persist: false });
-        console.log(`🧹 [Store] Cache cleared${pattern ? ` (pattern: ${pattern})` : ''}`);
+        console.log('🧹 [Store] Cache cleared');
     }
     
+    /**
+     * Clean up expired cache entries
+     */
+    cleanupCache() {
+        const cache = this.get('cache.apiResponses');
+        const now = Date.now();
+        
+        for (const [key, entry] of cache.entries()) {
+            if (now - entry.timestamp > entry.ttl) {
+                cache.delete(key);
+            }
+        }
+    }
+    
+    /**
+     * Get cache size and statistics
+     */
     getCacheSize() {
-        const cache = this.get('cache.apiResponses') || new Map();
-        return cache.size;
+        const cache = this.get('cache.apiResponses');
+        return {
+            entries: cache.size,
+            maxSize: this.get('cache.maxSize'),
+            usage: `${cache.size}/${this.get('cache.maxSize')}`
+        };
     }
     
     // =============================================================================
@@ -462,49 +514,31 @@ class OsliraDataStore {
     setupNetworkListeners() {
         window.addEventListener('online', () => {
             this.set('status.online', true, { persist: false });
-            console.log('🌐 [Store] Network status: ONLINE');
+            console.log('🌐 [Store] Network online');
         });
         
         window.addEventListener('offline', () => {
             this.set('status.online', false, { persist: false });
-            console.log('🌐 [Store] Network status: OFFLINE');
+            console.log('📡 [Store] Network offline');
         });
     }
     
-    isOnline() {
-        return this.get('status.online');
-    }
-    
     // =============================================================================
-    // CLEANUP & MAINTENANCE
+    // PERIODIC CLEANUP
     // =============================================================================
     
     setupCleanupInterval() {
-        // Run cleanup every 30 minutes
-        setInterval(() => {
-            this.cleanup();
-        }, 30 * 60 * 1000);
+        // Clean up cache every 5 minutes
+        this.cleanupInterval = setInterval(() => {
+            this.cleanupCache();
+        }, 5 * 60 * 1000);
     }
     
-    cleanup() {
-        // Clean expired cache entries
-        const cache = this.get('cache.apiResponses') || new Map();
-        let cleanedCount = 0;
-        
-        for (const [key, entry] of cache.entries()) {
-            if (Date.now() - entry.timestamp > entry.ttl) {
-                cache.delete(key);
-                cleanedCount++;
-            }
+    clearCleanupInterval() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
         }
-        
-        if (cleanedCount > 0) {
-            this.set('cache.apiResponses', cache, { persist: false });
-            console.log(`🧹 [Store] Cleaned ${cleanedCount} expired cache entries`);
-        }
-        
-        // Update last cleanup time
-        this.set('cache.lastCleanup', new Date().toISOString(), { persist: false });
     }
     
     // =============================================================================
@@ -544,7 +578,7 @@ class OsliraDataStore {
     }
     
     /**
-     * Reset specific state branch
+     * Reset specific state branch to default
      */
     reset(path) {
         const defaultStates = {
@@ -557,13 +591,17 @@ class OsliraDataStore {
             'cache': {
                 apiResponses: new Map(),
                 lastRefresh: null,
-                version: '1.0.0'
+                version: '1.0.0',
+                maxSize: 100,
+                ttl: 5 * 60 * 1000
             },
             'preferences': {
                 theme: 'light',
                 sidebarCollapsed: false,
                 dashboardView: 'grid',
-                notificationsEnabled: true
+                notificationsEnabled: true,
+                leadSortBy: 'created_at',
+                leadSortOrder: 'desc'
             }
         };
         
@@ -636,62 +674,19 @@ class OsliraDataStore {
                 try {
                     callback(value, undefined, path);
                 } catch (error) {
-                    console.error(`Error notifying subscriber for ${path}:`, error);
+                    console.error(`Error in subscriber for ${path}:`, error);
                 }
             });
         });
     }
     
-    // =============================================================================
-    // REAL-TIME SUBSCRIPTIONS
-    // =============================================================================
-    
     /**
-     * Add real-time subscription (e.g., Supabase subscription)
+     * Get performance statistics
      */
-    addSubscription(key, subscription) {
-        this.get('subscriptions').set(key, subscription);
-        console.log(`📡 [Store] Added real-time subscription: ${key}`);
-    }
-    
-    /**
-     * Remove real-time subscription
-     */
-    removeSubscription(key) {
-        const subscriptions = this.get('subscriptions');
-        const subscription = subscriptions.get(key);
-        
-        if (subscription && typeof subscription.unsubscribe === 'function') {
-            subscription.unsubscribe();
-        }
-        
-        subscriptions.delete(key);
-        console.log(`📡 [Store] Removed real-time subscription: ${key}`);
-    }
-    
-    /**
-     * Remove all subscriptions
-     */
-    clearSubscriptions() {
-        const subscriptions = this.get('subscriptions');
-        
-        subscriptions.forEach((subscription, key) => {
-            if (subscription && typeof subscription.unsubscribe === 'function') {
-                subscription.unsubscribe();
-            }
-        });
-        
-        subscriptions.clear();
-        console.log('📡 [Store] Cleared all real-time subscriptions');
-    }
-    
-    // =============================================================================
-    // PERFORMANCE MONITORING
-    // =============================================================================
-    
     getPerformanceStats() {
         return {
-            subscribersCount: Array.from(this.subscribers.values()).reduce((total, set) => total + set.size, 0),
+            subscriberCount: Array.from(this.subscribers.values()).reduce((total, set) => 
+                total + set.size, 0),
             pathsWatched: this.subscribers.size,
             cacheSize: this.getCacheSize(),
             lastCleanup: this.get('cache.lastCleanup'),
@@ -730,10 +725,10 @@ class OsliraDataStore {
     // =============================================================================
     
     destroy() {
-        // Clear all subscriptions
-        this.clearSubscriptions();
+        // Clear cleanup interval
+        this.clearCleanupInterval();
         
-        // Clear all state subscribers
+        // Clear all subscriptions
         this.subscribers.clear();
         
         // Clear middleware
@@ -742,9 +737,15 @@ class OsliraDataStore {
         // Clear cache
         this.clearCache();
         
+        // Remove network listeners
+        window.removeEventListener('online', this.setupNetworkListeners);
+        window.removeEventListener('offline', this.setupNetworkListeners);
+        
         console.log('🗑️ [Store] Data Store destroyed');
     }
 }
 
 // Export for global use
 window.OsliraDataStore = OsliraDataStore;
+
+console.log('📊 Data Store class loaded');
