@@ -3,52 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authentication - Oslira</title>
-    <meta name="description" content="Completing your authentication to Oslira">
-    <link rel="icon" type="image/x-icon" href="/assets/favicon.ico">
-    
-    <!-- SEO Meta Tags -->
-    <meta property="og:title" content="Authentication - Oslira">
-    <meta property="og:description" content="Completing your authentication to Oslira">
-    <meta property="og:type" content="website">
-    <meta name="twitter:card" content="summary">
-    
-    <!-- Styling -->
+    <title>Completing Sign In - Oslira</title>
     <style>
-        * {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #333;
+            color: white;
         }
 
         .callback-container {
-            background: white;
-            border-radius: 12px;
-            padding: 48px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
             text-align: center;
             max-width: 400px;
-            width: 90%;
+            padding: 40px 20px;
         }
 
         .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid #f3f4f6;
-            border-top: 4px solid #667eea;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 24px;
+            margin: 0 auto 24px auto;
         }
 
         @keyframes spin {
@@ -59,18 +41,16 @@
         .callback-title {
             font-size: 24px;
             font-weight: 600;
-            margin-bottom: 16px;
-            color: #1f2937;
+            margin-bottom: 12px;
         }
 
         .callback-message {
             font-size: 16px;
-            color: #6b7280;
-            margin-bottom: 24px;
+            opacity: 0.9;
             line-height: 1.5;
         }
 
-        .error-state {
+        .error-container {
             display: none;
         }
 
@@ -79,44 +59,28 @@
             margin-bottom: 16px;
         }
 
-        .error-message {
-            color: #dc2626;
-            margin-bottom: 24px;
-        }
-
         .retry-button {
-            background: #667eea;
-            color: white;
-            border: none;
+            background: white;
+            color: #667eea;
             padding: 12px 24px;
+            border: none;
             border-radius: 8px;
             font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             text-decoration: none;
             display: inline-block;
-            transition: background 0.2s;
+            margin-top: 20px;
+            transition: all 0.2s ease;
         }
 
         .retry-button:hover {
-            background: #5a67d8;
-        }
-
-        .debug-info {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            padding: 16px;
-            margin-top: 24px;
-            text-align: left;
-            font-family: monospace;
-            font-size: 12px;
-            color: #6b7280;
-            display: none;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
 <body>
-    <!-- Loading State -->
     <div class="callback-container" id="loading-state">
         <div class="loading-spinner"></div>
         <h1 class="callback-title">Completing Sign In</h1>
@@ -125,19 +89,53 @@
         </p>
     </div>
 
-    <!-- Error State -->
-    <div class="callback-container error-state" id="error-state">
+    <div class="callback-container error-container" id="error-state">
         <div class="error-icon">⚠️</div>
         <h1 class="callback-title">Authentication Failed</h1>
-        <p class="error-message" id="error-message">
+        <p class="callback-message" id="error-message">
             There was a problem completing your sign in.
         </p>
         <a href="/auth.html" class="retry-button">Try Again</a>
-        
-        <div class="debug-info" id="debug-info"></div>
     </div>
 
-   <script src="/core/script-loader.js"></script>
-    <script src="/auth/callback.js"></script>
+    <!-- Load core scripts -->
+    <script src="/core/script-loader.js"></script>
+    
+    <!-- Simplified callback handler -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                console.log('🔗 [Callback] Processing authentication callback...');
+                
+                // Wait for auth manager to be available
+                let attempts = 0;
+                while (!window.OsliraApp?.auth && attempts < 100) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    attempts++;
+                }
+                
+                if (!window.OsliraApp?.auth) {
+                    throw new Error('Auth manager not available');
+                }
+                
+                // Use centralized auth manager for callback handling
+                await window.OsliraApp.auth.handleCallback();
+                
+            } catch (error) {
+                console.error('🔗 [Callback] Processing failed:', error);
+                showError(error.message);
+            }
+        });
+
+        function showError(message) {
+            const loadingState = document.getElementById('loading-state');
+            const errorState = document.getElementById('error-state');
+            const errorMessage = document.getElementById('error-message');
+            
+            loadingState.style.display = 'none';
+            errorState.style.display = 'block';
+            errorMessage.textContent = message;
+        }
+    </script>
 </body>
 </html>
