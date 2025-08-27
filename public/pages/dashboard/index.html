@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
+    <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Dashboard - Oslira</title>
     <link rel="stylesheet" href="/core/design-system.css">
     <link rel="stylesheet" href="/pages/dashboard/dashboard.css">
@@ -13,31 +12,35 @@
     <a href="#main-content" class="skip-nav">Skip to main content</a>
     
     <div class="dashboard">
+        <!-- Sidebar -->
         <aside class="sidebar">
+            <!-- Logo -->
             <div class="logo">
                 <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
                 Oslira
             </div>
             
+            <!-- Business Selector -->
             <div class="business-selector">
                 <h4>Active Business</h4>
-                <select id="business-select" aria-label="Select active business">
-                    <option value="">Select Business...</option>
+                <select id="business-select" aria-label="Select active business" onchange="businessManager?.handleBusinessChange(this.value)">
+                    <option value="">Loading businesses...</option>
                 </select>
             </div>
             
+            <!-- Navigation Menu -->
             <nav class="menu">
                 <div class="menu-section">
                     <h4>Main</h4>
-                    <a href="../dashboard/index.html" class="active">
+                    <a href="/pages/dashboard/index.html" class="active">
                         <span class="icon">📊</span>
                         Dashboard
                     </a>
-                    <a href="../leads/index.html">
+                    <a href="/pages/leads/index.html">
                         <span class="icon">🔍</span>
                         Lead Research
                     </a>
-                    <a href="../analytics/index.html">
+                    <a href="/pages/analytics/index.html">
                         <span class="icon">📈</span>
                         Analytics
                     </a>
@@ -45,15 +48,15 @@
                 
                 <div class="menu-section">
                     <h4>Tools</h4>
-                    <a href="../campaigns/index.html">
+                    <a href="/pages/campaigns/index.html">
                         <span class="icon">🚀</span>
                         Campaigns
                     </a>
-                    <a href="../messages/index.html">
+                    <a href="/pages/messages/index.html">
                         <span class="icon">💬</span>
                         Messages
                     </a>
-                    <a href="../integrations/index.html">
+                    <a href="/pages/integrations/index.html">
                         <span class="icon">🔗</span>
                         Integrations
                     </a>
@@ -61,228 +64,186 @@
                 
                 <div class="menu-section">
                     <h4>Account</h4>
-                    <a href="../subscription/index.html">
-                        <span class="icon">💳</span>
-                        Subscription
-                    </a>
-                    <a href="../settings/index.html">
+                    <a href="/pages/settings/index.html">
                         <span class="icon">⚙️</span>
                         Settings
+                    </a>
+                    <a href="/pages/subscription/index.html">
+                        <span class="icon">💳</span>
+                        Subscription
                     </a>
                 </div>
             </nav>
             
-<div class="subscription-status">
-    <h4>Current Plan</h4>
-    <p class="plan-name" id="sidebar-plan">Loading...</p>
-    <div class="credits-display" id="sidebar-billing">Loading...</div>
-    <a href="subscription.html" style="margin-top: 12px; display: inline-block;">Manage Subscription</a>
-</div>
+            <!-- Subscription Status -->
+            <div class="subscription-status">
+                <h4>Subscription</h4>
+                <div class="plan-name" id="plan-display">Loading...</div>
+                <div class="credits-display">
+                    <div id="credits-free" class="credits-free">0 free credits</div>
+                    <div id="credits-paid" class="credits-paid">0 paid credits</div>
+                </div>
+                <a href="/pages/subscription/index.html">Manage Subscription</a>
+            </div>
             
+            <!-- User Info -->
             <div class="user-info">
                 <p id="user-email">Loading...</p>
-                <a href="#" id="logout-link">Sign Out</a>
+                <a href="#" onclick="window.OsliraApp?.auth?.signOut()">Sign Out</a>
             </div>
         </aside>
         
-        <main role="main" id="main-content" class="main-content">
+        <!-- Main Content -->
+        <main class="main-content" id="main-content">
+            <!-- Dashboard Header -->
             <header>
-                <div>
-                    <h1>Welcome back! 👋</h1>
-                    <p class="header-subtitle">Here's what's happening with your lead generation</p>
+                <div class="header-left">
+                    <h1>Dashboard</h1>
+                    <p class="header-subtitle">Manage your leads and analyze performance</p>
                 </div>
                 <div class="header-actions">
-                    <button class="secondary-btn" id="bulk-upload-btn">
+                    <button onclick="dashboard?.showAnalysisModal()" class="primary-btn">
+                        🔍 Analyze Lead
+                    </button>
+                    <button onclick="dashboard?.showBulkModal()" class="secondary-btn">
                         📤 Bulk Upload
                     </button>
-                    <button class="primary-btn" id="research-lead-btn">
-                        🔍 Research Lead
+                    <button onclick="dashboard?.refreshStats()" class="btn btn-small">
+                        🔄 Refresh
                     </button>
                 </div>
             </header>
-            
-            <div class="action-cards">
-                <div class="action-card" id="research-action-card">
-                    <div class="icon">🎯</div>
-                    <h3>Research a Lead</h3>
-                    <p>Analyze any Instagram profile with AI-powered insights and get personalized outreach messages</p>
-                    <span class="badge">1-2 Credits</span>
-                </div>
-                
-                <div class="action-card" id="campaigns-action-card">
-                    <div class="icon">🚀</div>
-                    <h3>Create Campaign</h3>
-                    <p>Build automated outreach sequences with AI-powered message variants and lead targeting</p>
-                    <span class="badge">New</span>
-                </div>
-                
-<!-- In your dashboard.html, find the "Manage Subscription" action card and replace it with this: -->
 
-<div class="action-card" id="csv-import-action-card">
-    <div class="icon">📤</div>
-    <h3>Import CSV</h3>
-    <p>Upload a CSV file with Instagram profiles for bulk analysis and lead generation</p>
-    <span class="badge">Bulk</span>
-</div>
-                
-                <div class="action-card" id="export-action-card">
-                    <div class="icon">📥</div>
-                    <h3>Export Data</h3>
-                    <p>Download your leads and analysis results in CSV format for external use</p>
+            <!-- Stats Grid - Required IDs for StatsCalculator -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-leads">0</div>
+                    <div class="stat-label">Total Leads</div>
+                    <div class="stat-change positive" id="leads-change" style="display: none;">+0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="average-score">0%</div>
+                    <div class="stat-label">Average Score</div>
+                    <div class="stat-change" id="score-change" style="display: none;">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="high-value-leads">0</div>
+                    <div class="stat-label">High-Value Leads</div>
+                    <div class="stat-change" id="high-value-percent" style="display: none;">0%</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="credits-remaining">0</div>
+                    <div class="stat-label">Credits Remaining</div>
+                    <div class="stat-change" id="credits-used" style="display: none;">0 used</div>
                 </div>
             </div>
-            
-           <div class="stats-grid">
-    <div class="stat-card">
-        <h3>Leads Researched</h3>
-        <p class="big-number" id="total-leads">0</p>
-        <span class="trend up" id="leads-trend">Ready to start</span>
-    </div>
-    
-    <div class="stat-card">
-        <h3>Average Score</h3>
-        <p class="big-number" id="avg-score">0</p>
-        <span class="trend" id="score-trend">Quality leads</span>
-    </div>
-    
-    <div class="stat-card">
-        <h3>Credits Used</h3>
-        <p class="big-number" id="credits-used">0</p>
-        <span class="trend" id="credits-trend">This month</span>
-    </div>
-    
-    <div class="stat-card">
-        <h3>High-Value Leads</h3>
-        <p class="big-number" id="high-value-leads">0</p>
-        <span class="trend up" id="high-value-trend">Score 80+</span>
-    </div>
-</div>
-            
-<!-- Replace your existing recent-activity section header with this: -->
-<section class="recent-activity">
-    <div class="section-header">
-        <h2>Recent Lead Activity</h2>
-        <div class="bulk-actions" id="bulk-actions" style="display: none;">
-            <button class="btn-small bulk-delete-btn" id="bulk-delete-btn">
-                🗑️ Delete Selected (<span id="selected-count">0</span>)
-            </button>
-            <button class="btn-small" id="clear-selection-btn">
-                ✖️ Clear Selection
-            </button>
-        </div>
-        <div class="time-filter">
-            <button class="btn-small" id="select-all-btn">
-                ☑️ Select All
-            </button>
-            <select id="timeframe-filter" aria-label="Filter by timeframe">
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month" selected>This Month</option>
-                <option value="all">All Time</option>
-            </select>
-            <select id="activity-filter" aria-label="Filter by activity type">
-                <option value="all">All Types</option>
-                <option value="light">Light Analysis</option>
-                <option value="deep">Deep Analysis</option>
-                <option value="score_high">Highest Score</option>
-                <option value="score_low">Lowest Score</option>
-                <option value="recent">Most Recent</option>
-                <option value="oldest">Oldest First</option>
-            </select>
-            <button class="btn-small" id="refresh-activity-btn">🔄 Refresh</button>
-        </div>
-    </div>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Lead</th>
-                    <th>Platform</th>
-                    <th>Score</th>
-                    <th>Type</th>
-                    <th>Time</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="activity-table">
-                <tr>
-                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                        No recent activity. Start by researching your first lead!
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</section>
 
-            <section class="insights">
+            <!-- Action Cards -->
+            <div class="action-cards">
+                <div class="action-card" onclick="dashboard?.showAnalysisModal()">
+                    <div class="icon">🔍</div>
+                    <h3>Research a Lead</h3>
+                    <p>Get AI-powered insights on Instagram profiles with personalized outreach messages</p>
+                    <div class="badge">1-2 Credits</div>
+                </div>
+                
+                <div class="action-card" onclick="dashboard?.showBulkModal()">
+                    <div class="icon">📤</div>
+                    <h3>Bulk Upload</h3>
+                    <p>Upload CSV files to analyze multiple leads at once</p>
+                    <div class="badge">Coming Soon</div>
+                </div>
+                
+                <div class="action-card" onclick="dashboard?.debugDashboard()">
+                    <div class="icon">🛠️</div>
+                    <h3>Debug Dashboard</h3>
+                    <p>View system status and debug information</p>
+                    <div class="badge">Dev Tools</div>
+                </div>
+            </div>
+
+            <!-- Leads Section -->
+            <div class="leads-section">
                 <div class="section-header">
-                    <h2>🧠 AI Insights & Recommendations</h2>
-                    <button class="btn-small" id="generate-insights-btn">🔄 Refresh Insights</button>
-                </div>
-                
-                <div class="loading-insights" id="loading-insights" style="display: none;">
-                    <div style="text-align: center; padding: 40px;">
-                        <div style="color: var(--text-secondary);">🤖 AI is analyzing your data and generating fresh insights...</div>
+                    <h2>Recent Leads</h2>
+                    <div class="leads-controls">
+                        <div class="search-container">
+                            <input type="text" id="lead-search" placeholder="Search leads..." 
+                                   onkeyup="dashboard?.searchLeads(this.value)" 
+                                   class="form-input">
+                        </div>
                     </div>
                 </div>
-                
-                <div class="insight-cards" id="insights-container">
-                    <div class="insight-card welcome">
-                        <div class="insight-icon">🚀</div>
-                        <h3>Welcome to Oslira!</h3>
-                        <p>Start researching leads to unlock AI-powered insights and recommendations tailored to your data.</p>
-                        <button class="insight-cta" id="welcome-cta-btn">Research Your First Lead</button>
+
+                <!-- Lead Filters -->
+                <div class="leads-filters">
+                    <button class="filter-btn active" onclick="dashboard?.filterLeads('all')" data-filter="all">
+                        All Leads
+                    </button>
+                    <button class="filter-btn" onclick="dashboard?.filterLeads('high-score')" data-filter="high-score">
+                        High Score (80+)
+                    </button>
+                    <button class="filter-btn" onclick="dashboard?.filterLeads('deep')" data-filter="deep">
+                        Deep Analysis
+                    </button>
+                    <button class="filter-btn" onclick="dashboard?.filterLeads('light')" data-filter="light">
+                        Light Analysis
+                    </button>
+                </div>
+
+                <!-- Bulk Actions Bar -->
+                <div class="bulk-actions" id="bulk-actions-bar">
+                    <div class="bulk-actions-info">
+                        <span id="selected-count">0</span> leads selected
+                    </div>
+                    <div class="bulk-actions-buttons">
+                        <button class="btn" onclick="dashboard?.bulkDeleteLeads()">
+                            🗑️ Delete Selected
+                        </button>
+                        <button class="btn" onclick="dashboard?.clearSelection()">
+                            ✕ Clear Selection
+                        </button>
                     </div>
                 </div>
-            </section>
+
+                <!-- Leads Display Area - Required for LeadRenderer -->
+                <div class="leads-container">
+                    <div id="leads-grid" class="leads-grid">
+                        <!-- Leads will be rendered here by LeadRenderer -->
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="leads-empty-state" class="empty-state" style="display: none;">
+                        <div class="icon">🔍</div>
+                        <h3>No leads yet</h3>
+                        <p>Start by analyzing your first Instagram lead to see insights and personalized messages here.</p>
+                        <button onclick="dashboard?.showAnalysisModal()" class="primary-btn">
+                            Analyze First Lead
+                        </button>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="leads-loading" class="loading-overlay">
+                        <div class="loading-content">
+                            <div class="spinner"></div>
+                            <div class="loading-text">Loading leads...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
-    <!-- Support Contact Widget -->
-    <div class="support-widget">
-        <button class="support-btn" id="support-btn">
-            💬 Need Help?
-        </button>
-    </div>
-
-    <!-- Support Modal -->
-    <div class="modal" id="supportModal">
-        <div class="modal-content">
-            <button class="modal-close" id="support-modal-close">×</button>
-            <h3>Contact Support</h3>
-            <div class="support-options" style="display: grid; gap: 16px; margin-top: 20px;">
-                <button id="general-support-btn" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                    🎧 General Support
-                </button>
-                <button id="billing-support-btn" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                    💳 Billing Help
-                </button>
-                <button id="security-support-btn" style="background: var(--bg-light); border: 2px solid var(--primary-blue); color: var(--primary-blue); padding: 16px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-                    🔒 Security Issue
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Lead Details Modal -->
-    <div class="modal" id="leadModal">
-        <div class="modal-content">
-            <button class="modal-close" id="lead-modal-close">×</button>
-            <h3>📋 Lead Details</h3>
-            <div id="leadDetails">Loading...</div>
-        </div>
-    </div>
-
-    <!-- Analysis Modal -->
+    <!-- Analysis Modal - Required by ModalManager -->
     <div class="modal" id="analysisModal">
         <div class="modal-content">
-            <button class="modal-close" id="analysis-modal-close">×</button>
+            <button class="modal-close" onclick="dashboard?.closeModal('analysisModal')">×</button>
             <h3>🔍 Research a Lead</h3>
-            <form id="analysisForm">
+            
+            <form id="analysisForm" onsubmit="dashboard?.processAnalysisForm(event)">
                 <div class="form-group">
                     <label for="analysis-type">Analysis Type *</label>
-                    <select id="analysis-type" required>
+                    <select id="analysis-type" required onchange="dashboard?.handleAnalysisTypeChange()">
                         <option value="">Select analysis type...</option>
                         <option value="light">⚡ Light Analysis (1 credit) - Basic profile info</option>
                         <option value="deep">🔍 Deep Analysis (2 credits) - Full insights + outreach message</option>
@@ -290,9 +251,9 @@
                 </div>
                 
                 <div class="form-group" id="input-field-container" style="display: none;">
-                    <label id="input-label" for="profile-input">Instagram Username *</label>
+                    <label for="profile-input">Instagram Username *</label>
                     <input type="text" id="profile-input" placeholder="username" autocomplete="off">
-                    <p id="input-help" style="font-size: 12px; margin-top: 4px; color: var(--text-secondary);">
+                    <p style="font-size: 12px; margin-top: 4px; color: var(--text-secondary);">
                         Enter just the username (without @)
                     </p>
                 </div>
@@ -300,42 +261,109 @@
                 <div class="form-group">
                     <label for="business-id">Business Profile</label>
                     <select id="business-id">
-                        <option value="">Select business profile...</option>
+                        <option value="">Loading business profiles...</option>
                     </select>
                     <div style="margin-top: 6px; font-size: 12px; color: var(--text-secondary);">
-                    💡 Your last used profile is automatically selected. Change if needed.
+                        💡 Your last used profile is automatically selected. Change if needed.
                     </div>
                 </div>
                 
-                <button type="submit" class="primary-btn" style="width: 100%; margin-top: 16px;">
+                <div style="margin: 20px 0; padding: 16px; background: var(--bg-light); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Credit Cost:</span>
+                        <strong id="analysis-cost">Select type</strong>
+                    </div>
+                </div>
+                
+                <button type="submit" id="analysis-submit-btn" class="primary-btn" style="width: 100%;">
                     🔍 Start Analysis
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- Bulk Upload Modal -->
+    <!-- Bulk Upload Modal - Required by ModalManager -->
     <div class="modal" id="bulkModal">
         <div class="modal-content">
-            <button class="modal-close" id="bulk-modal-close">×</button>
+            <button class="modal-close" onclick="dashboard?.closeModal('bulkModal')">×</button>
             <h3>📤 Bulk Upload</h3>
-            <p style="margin-bottom: 20px; color: var(--text-secondary);">Upload a CSV file with Instagram URLs for batch analysis</p>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">
+                Upload a CSV file with Instagram URLs for batch analysis
+            </p>
             
-            <div class="form-group">
-                <label>CSV Format Example:</label>
-                <div style="background: var(--bg-light); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 16px;">
-                    profile_url,name,notes<br>
-                    https://instagram.com/user1,John Doe,CEO at TechCorp<br>
-                    https://instagram.com/user2,Jane Smith,Founder at StartupCo
+            <form id="bulkForm" onsubmit="dashboard?.processBulkUpload(event)">
+                <div class="form-group">
+                    <label>CSV Format Example:</label>
+                    <div style="background: var(--bg-light); padding: 16px; border-radius: 8px; font-family: monospace; font-size: 14px; margin-bottom: 16px;">
+                        profile_url,name,notes<br>
+                        https://instagram.com/user1,John Doe,CEO at TechCorp<br>
+                        https://instagram.com/user2,Jane Smith,Founder at StartupCo
+                    </div>
                 </div>
-            </div>
-            
-            <div class="form-group">
-                <input type="file" id="csv-file" accept=".csv" style="margin-bottom: 16px;">
-                <p style="font-size: 14px; color: var(--text-secondary);">Coming soon! This feature will allow bulk analysis of up to 100 leads at once.</p>
+                
+                <div class="form-group">
+                    <label for="bulk-analysis-type">Analysis Type</label>
+                    <select id="bulk-analysis-type" required onchange="dashboard?.validateBulkForm()">
+                        <option value="">Select analysis type...</option>
+                        <option value="light">⚡ Light Analysis (1 credit each)</option>
+                        <option value="deep">🔍 Deep Analysis (2 credits each)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="bulk-business-id">Business Profile</label>
+                    <select id="bulk-business-id" required>
+                        <option value="">Loading business profiles...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <input type="file" id="csv-file" accept=".csv,.txt" 
+                           onchange="dashboard?.handleFileUpload(event)" required>
+                    <div id="file-display" style="margin-top: 10px;"></div>
+                </div>
+                
+                <button type="submit" id="bulk-submit-btn" class="primary-btn" style="width: 100%;" disabled>
+                    Select Analysis Type
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lead Details Modal - Required by ModalManager -->
+    <div class="modal" id="leadDetailsModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <button class="modal-close" onclick="dashboard?.closeModal('leadDetailsModal')">×</button>
+            <h3>📋 Lead Details</h3>
+            <div id="lead-details-content">
+                <!-- Lead details will be populated by ModalManager -->
             </div>
         </div>
     </div>
-<script src="/core/script-loader.js"></script>
+
+    <!-- Security Report Modal -->
+    <div class="modal" id="securityModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="dashboard?.closeModal('securityModal')">×</button>
+            <div style="text-align: center; padding: 40px;">
+                <div style="font-size: 48px; margin-bottom: 20px;">🔒</div>
+                <h3 style="color: var(--error); margin-bottom: 16px;">Security Issue Detected</h3>
+                <p style="margin-bottom: 20px; color: var(--text-secondary);">
+                    We detected unusual activity. For security, please contact support.
+                </p>
+                <button onclick="dashboard?.closeModal('securityModal')" 
+                        class="primary-btn" 
+                        style="background: var(--error); cursor: pointer; font-weight: 600;">
+                    🔒 Security Issue
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Queue Container - Will be injected by AnalysisQueue -->
+    <!-- This gets created dynamically by the AnalysisQueue module -->
+
+    <!-- Script Loading - Maintains your existing pattern -->
+    <script src="/core/script-loader.js"></script>
 </body>
 </html>
