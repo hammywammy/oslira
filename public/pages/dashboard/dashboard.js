@@ -1,20 +1,10 @@
 //public/pages/dashboard/dashboard.js
 
 /**
- * OSLIRA DASHBOARD - MAIN ORCHESTRATOR
+ * OSLIRA DASHBOARD - WORKS WITH SCRIPT LOADER
  * 
- * This file replaces the original 8,000-line monolithic dashboard.js
- * It now serves as a lightweight orchestrator that coordinates all the modular components.
- * 
- * MODULES LOADED:
- * - Core: EventBus, StateManager, DependencyContainer
- * - Features: LeadManager, AnalysisQueue, RealtimeManager, LeadRenderer
- * - Business: BusinessManager, StatsCalculator
- * - UI: ModalManager
- * 
- * COMPATIBILITY: Maintains 100% backward compatibility with existing HTML onclick handlers
- * PERFORMANCE: Reduced from 8,000 lines to ~150 lines orchestrator + focused modules
- * MAINTAINABILITY: Each module averages ~300-400 lines with single responsibility
+ * Simple and clean. Script loader handles all module loading,
+ * this just initializes the already-loaded modules.
  */
 
 class Dashboard {
@@ -23,10 +13,7 @@ class Dashboard {
         this.initialized = false;
         this.initStartTime = Date.now();
         
-        // Bind methods for HTML compatibility
-        this.init = this.init.bind(this);
-        
-        console.log('🚀 [Dashboard] Initializing modular dashboard architecture...');
+        console.log('🚀 [Dashboard] Dashboard controller ready');
     }
     
     async init() {
@@ -38,20 +25,21 @@ class Dashboard {
         try {
             console.log('🔧 [Dashboard] Starting dashboard initialization...');
             
-            // Verify all required modules are loaded
+            // All modules should be loaded by script loader at this point
             this.verifyModulesLoaded();
             
             // Create and initialize the main dashboard app
             this.app = new DashboardApp();
             await this.app.init();
             
+            // Setup global compatibility for HTML onclick handlers
+            this.setupGlobalCompatibility();
+            
             this.initialized = true;
             const totalTime = Date.now() - this.initStartTime;
             
-            console.log(`✅ [Dashboard] Modular dashboard initialized successfully in ${totalTime}ms`);
-            console.log('📊 [Dashboard] Architecture summary:', this.getArchitectureSummary());
+            console.log(`✅ [Dashboard] Dashboard initialized successfully in ${totalTime}ms`);
             
-            // Show success message
             if (window.OsliraApp?.showMessage) {
                 window.OsliraApp.showMessage('Dashboard loaded successfully', 'success');
             }
@@ -63,87 +51,105 @@ class Dashboard {
         }
     }
     
-    // ===============================================================================
-    // MODULE VERIFICATION
-    // ===============================================================================
-    
     verifyModulesLoaded() {
         const requiredModules = [
-            // Core modules
-            { name: 'DashboardEventBus', global: 'DashboardEventBus' },
-            { name: 'DashboardStateManager', global: 'DashboardStateManager' },
-            { name: 'DependencyContainer', global: 'DependencyContainer' },
-            
-            // Feature modules
-            { name: 'LeadManager', global: 'LeadManager' },
-            { name: 'AnalysisQueue', global: 'AnalysisQueue' },
-            { name: 'RealtimeManager', global: 'RealtimeManager' },
-            { name: 'LeadRenderer', global: 'LeadRenderer' },
-            { name: 'StatsCalculator', global: 'StatsCalculator' },
-            { name: 'BusinessManager', global: 'BusinessManager' },
-            { name: 'ModalManager', global: 'ModalManager' },
-            
-            // Main app controller
-            { name: 'DashboardApp', global: 'DashboardApp' }
+            'DashboardEventBus', 'DashboardStateManager', 'DependencyContainer',
+            'LeadManager', 'LeadRenderer', 'AnalysisQueue', 'RealtimeManager',
+            'StatsCalculator', 'BusinessManager', 'ModalManager', 'DashboardApp'
         ];
         
-        const missingModules = [];
+        const missing = requiredModules.filter(module => !window[module]);
         
-        requiredModules.forEach(module => {
-            if (!window[module.global]) {
-                missingModules.push(module.name);
-            }
-        });
-        
-        if (missingModules.length > 0) {
-            throw new Error(`Missing required modules: ${missingModules.join(', ')}. Please ensure all module scripts are loaded before dashboard.js`);
+        if (missing.length > 0) {
+            throw new Error(`Missing modules: ${missing.join(', ')}. Script loader may have failed.`);
         }
         
-        console.log('✅ [Dashboard] All required modules verified and loaded');
-        console.log(`📊 [Dashboard] Loaded ${requiredModules.length} modules successfully`);
+        console.log('✅ [Dashboard] All modules verified and ready');
     }
     
-    // ===============================================================================
-    // DEPENDENCY VERIFICATION
-    // ===============================================================================
-    
-    verifyDependencies() {
-        const requiredDependencies = [
-            { name: 'Supabase', check: () => window.supabase },
-            { name: 'OsliraApp', check: () => window.OsliraApp },
-            { name: 'DASHBOARD_EVENTS', check: () => window.DASHBOARD_EVENTS }
-        ];
+    setupGlobalCompatibility() {
+        // Make dashboard functions available globally for HTML onclick handlers
+        window.dashboard = {
+            init: () => this.init(),
+            showAnalysisModal: (username) => this.app.showAnalysisModal(username),
+            showBulkModal: () => this.app.showBulkModal(),
+            closeModal: (id) => this.app.closeModal(id),
+            refreshStats: () => this.app.refreshStats(),
+            copyText: (elementId) => this.app.copyText(elementId),
+            editMessage: (leadId) => this.app.editMessage(leadId),
+            saveEditedMessage: (leadId) => this.app.saveEditedMessage(leadId),
+            handleAnalysisTypeChange: () => this.app.handleAnalysisTypeChange(),
+            handleFileUpload: (event) => this.app.handleFileUpload(event),
+            validateBulkForm: () => this.app.validateBulkForm(),
+            processAnalysisForm: (event) => this.app.processAnalysisForm(event),
+            processBulkUpload: () => this.app.processBulkUpload(),
+            deleteLead: (leadId) => this.app.deleteLead(leadId),
+            selectLead: (checkbox) => this.app.selectLead(checkbox),
+            toggleAllLeads: (masterCheckbox) => this.app.toggleAllLeads(masterCheckbox),
+            filterLeads: (filter) => this.app.filterLeads(filter),
+            searchLeads: (term) => this.app.searchLeads(term),
+            debugDashboard: () => this.app.debugDashboard(),
+            _app: this.app
+        };
         
-        const missingDeps = [];
-        
-        requiredDependencies.forEach(dep => {
-            if (!dep.check()) {
-                missingDeps.push(dep.name);
-            }
-        });
-        
-        if (missingDeps.length > 0) {
-            console.warn(`⚠️ [Dashboard] Missing optional dependencies: ${missingDeps.join(', ')}`);
+        // Expose managers for debugging
+        if (this.app?.container) {
+            window.analysisQueue = this.app.container.get('analysisQueue');
+            window.modalManager = this.app.container.get('modalManager');
+            window.businessManager = this.app.container.get('businessManager');
         }
         
-        return missingDeps.length === 0;
+        console.log('✅ [Dashboard] Global compatibility established');
     }
     
-    // ===============================================================================
-    // ARCHITECTURE SUMMARY
-    // ===============================================================================
-    
-    getArchitectureSummary() {
-        const status = this.app?.getDashboardStatus() || {};
+    handleInitializationFailure(error) {
+        console.error('🚨 [Dashboard] Initialization failed:', error);
         
-        return {
-            architecture: 'Modular',
-            originalSize: '8,000+ lines (monolithic)',
-            currentSize: '~150 lines orchestrator + focused modules',
-            modules: status.moduleCount || 0,
-            avgModuleSize: '~300-400 lines each',
-            benefits: [
-                'Single Responsibility Principle',
-                'Dependency Injection',
-                'Event-driven Communication',
-                'Centr//public/pages/dashboard/dashboard.js
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #ef4444; color: white; padding: 24px; border-radius: 12px;
+            max-width: 500px; text-align: center; z-index: 10000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        `;
+        errorDiv.innerHTML = `
+            <h3 style="margin: 0 0 12px 0;">Dashboard Failed to Load</h3>
+            <p style="margin: 0 0 16px 0;">${error.message}</p>
+            <button onclick="window.location.reload()" style="
+                background: white; color: #ef4444; border: none;
+                padding: 8px 16px; border-radius: 6px; cursor: pointer;
+            ">Reload Page</button>
+        `;
+        document.body.appendChild(errorDiv);
+    }
+}
+
+// Initialize when script loader is done
+window.addEventListener('oslira:scripts:loaded', async (event) => {
+    if (event.detail.page === 'dashboard') {
+        console.log('🎯 [Dashboard] Script loader finished, initializing dashboard...');
+        try {
+            window.dashboard = new Dashboard();
+            await window.dashboard.init();
+        } catch (error) {
+            console.error('❌ Dashboard initialization failed:', error);
+        }
+    }
+});
+
+// Fallback for direct access
+if (document.readyState === 'complete') {
+    setTimeout(async () => {
+        if (!window.dashboard) {
+            console.log('🔄 [Dashboard] Fallback initialization...');
+            try {
+                window.dashboard = new Dashboard();
+                await window.dashboard.init();
+            } catch (error) {
+                console.error('❌ Dashboard fallback failed:', error);
+            }
+        }
+    }, 500);
+}
+
+console.log('📱 Dashboard controller loaded, waiting for script loader...');
