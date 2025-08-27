@@ -3,7 +3,7 @@
 // =============================================================================
 
 class OsliraScriptLoader {
-    constructor() {
+    constructor() { 
         this.loadedScripts = new Set();
         this.loadingScripts = new Map(); // Track in-progress loads
         this.config = this.detectEnvironment();
