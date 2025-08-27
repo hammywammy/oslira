@@ -3,7 +3,7 @@
 // Prevents console manipulation and limits attempts
 // =============================================================================
 const DISABLE_LOGS_IN_PRODUCTION = true;
-const DISABLE_LOGS_IN_STAGING = true;
+const DISABLE_LOGS_IN_STAGING = false;
 
 const shouldDisableLogs = (
     (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') ||
