@@ -555,6 +555,62 @@ class OsliraAuthManager {
         });
         console.groupEnd();
     }
+
+    // =============================================================================
+    // TOKEN SECURITY & ROTATION
+    // =============================================================================
+    
+    setupTokenRotation() {
+        if (!this.session) return;
+        
+        // Refresh tokens every 15 minutes (Supabase default is 1 hour)
+        const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
+        
+        setInterval(async () => {
+            try {
+                const { data, error } = await this.supabase.auth.refreshSession();
+                if (error) {
+                    console.error('❌ [Auth] Token refresh failed:', error);
+                    await this.signOut();
+                } else {
+                    console.log('🔄 [Auth] Token refreshed successfully');
+                    this.session = data.session;
+                    this.notifyAuthChange('TOKEN_REFRESHED', data.session, null);
+                }
+            } catch (error) {
+                console.error('❌ [Auth] Token refresh error:', error);
+            }
+        }, REFRESH_INTERVAL);
+    }
+    
+    setupSecurityEventHandlers() {
+        // Force logout on multiple tabs
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'supabase.auth.token' && !event.newValue && event.oldValue) {
+                console.log('🔒 [Auth] Session cleared in another tab, logging out');
+                this.signOut();
+            }
+        });
+        
+        // Detect suspicious activity
+        this.lastActivityTime = Date.now();
+        document.addEventListener('click', () => {
+            this.lastActivityTime = Date.now();
+        });
+        
+        // Auto-logout after 4 hours of inactivity
+        setInterval(() => {
+            const inactiveTime = Date.now() - this.lastActivityTime;
+            const MAX_INACTIVE_TIME = 4 * 60 * 60 * 1000; // 4 hours
+            
+            if (inactiveTime > MAX_INACTIVE_TIME && this.session) {
+                console.log('⏰ [Auth] Auto-logout due to inactivity');
+                this.signOut();
+            }
+        }, 60000); // Check every minute
+    }
+    
+    // =============================================================================
     
     // =============================================================================
     // CLEANUP
