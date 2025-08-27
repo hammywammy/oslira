@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://*.supabase.co; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
+    <meta name="referrer" content="no-referrer">
+    <title>Completing Authentication - Oslira</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .callback-container {
+            text-align: center;
+            max-width: 400px;
+            padding: 40px 20px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 24px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .message {
+            font-size: 16px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        .error-state {
+            display: none;
+        }
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .retry-btn {
+            background: white;
+            color: #667eea;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+        }
+        .retry-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="callback-container" id="loading-state">
+        <div class="spinner"></div>
+        <h1 class="title">Completing Authentication</h1>
+        <p class="message">
+            Securely processing your login...
+        </p>
+    </div>
+
+    <div class="callback-container error-state" id="error-state">
+        <div class="error-icon">⚠️</div>
+        <h1 class="title">Authentication Failed</h1>
+        <p class="message" id="error-message">
+            Authentication could not be completed.
+        </p>
+        <a href="/auth" class="retry-btn">Try Again</a>
+    </div>
+
+    <!-- Load only essential scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/env-config.js"></script>
+    
+    <script>
+        (async function() {
+            'use strict';
+            
+            try {
+                console.log('🔗 [Callback] Starting secure authentication processing...');
+                
+                // Initialize Supabase immediately
+                const envConfig = window.getEnvConfig && window.getEnvConfig();
+                if (!envConfig || !envConfig.SUPABASE_URL || !envConfig.SUPABASE_ANON_KEY) {
+                    throw new Error('Missing configuration');
+                }
+                
+                const supabase = window.supabase.createClient(
+                    envConfig.SUPABASE_URL,
+                    envConfig.SUPABASE_ANON_KEY,
+                    {
+                        auth: {
+                            autoRefreshToken: true,
+                            persistSession: true,
+                            detectSessionInUrl: true,
+                            storage: window.localStorage
+                        }
+                    }
+                );
+                
+                // Process URL parameters securely
+                const urlParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                
+                // Check for error first
+                const error = hashParams.get('error') || urlParams.get('error');
+                const errorDescription = hashParams.get('error_description') || urlParams.get('error_description');
+                
+                if (error) {
+                    console.error('🔗 [Callback] Auth error:', error, errorDescription);
+                    throw new Error(errorDescription || error);
+                }
+                
+                // Get tokens
+                const accessToken = hashParams.get('access_token') || urlParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token');
+                const tokenType = hashParams.get('token_type') || urlParams.get('token_type');
+                
+                if (!accessToken || !refreshToken) {
+                    throw new Error('Missing authentication tokens');
+                }
+                
+                // Validate token format (basic security check)
+                if (!accessToken.match(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)) {
+                    throw new Error('Invalid token format');
+                }
+                
+                console.log('🔗 [Callback] Processing authentication tokens...');
+                
+                // Set session with tokens
+                const { data, error: sessionError } = await supabase.auth.setSession({
+                    access_token: accessToken,
+                    refresh_token: refreshToken
+                });
+                
+                if (sessionError) {
+                    console.error('🔗 [Callback] Session error:', sessionError);
+                    throw sessionError;
+                }
+                
+                if (!data.session || !data.user) {
+                    throw new Error('Failed to create session');
+                }
+                
+                console.log('✅ [Callback] Authentication successful for:', data.user.email);
+                
+                // Clear URL parameters immediately for security
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
+                
+                // Get user profile to determine redirect
+                const { data: userData, error: userError } = await supabase
+                    .from('users')
+                    .select('onboarding_completed, is_admin')
+                    .eq('id', data.user.id)
+                    .single();
+                
+                // Determine redirect URL
+                let redirectUrl = '/dashboard';
+                if (!userData?.onboarding_completed) {
+                    redirectUrl = '/onboarding';
+                } else if (userData?.is_admin && window.location.search.includes('admin')) {
+                    redirectUrl = '/admin';
+                }
+                
+                // Check for return URL from auth flow
+                const returnUrl = urlParams.get('return');
+                if (returnUrl && returnUrl.startsWith('/')) {
+                    redirectUrl = decodeURIComponent(returnUrl);
+                }
+                
+                console.log('🔗 [Callback] Redirecting to:', redirectUrl);
+                
+                // Small delay to ensure session is fully established
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 500);
+                
+            } catch (error) {
+                console.error('❌ [Callback] Authentication failed:', error);
+                showError(error.message || 'Authentication failed');
+                
+                // Clear any partial auth state
+                try {
+                    localStorage.removeItem('supabase.auth.token');
+                    sessionStorage.clear();
+                } catch (e) {
+                    console.warn('Could not clear auth state:', e);
+                }
+            }
+        })();
+        
+        function showError(message) {
+            const loadingState = document.getElementById('loading-state');
+            const errorState = document.getElementById('error-state');
+            const errorMessage = document.getElementById('error-message');
+            
+            loadingState.style.display = 'none';
+            errorState.style.display = 'block';
+            errorState.classList.remove('error-state');
+            
+            // Sanitize error message
+            errorMessage.textContent = message.length > 200 ? 'Authentication failed' : message;
+            
+            // Auto-redirect to auth page after 5 seconds
+            setTimeout(() => {
+                window.location.href = '/auth';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
