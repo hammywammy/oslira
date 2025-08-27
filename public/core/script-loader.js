@@ -142,11 +142,29 @@ class OsliraScriptLoader {
                     requiresAuth: false
                 },
                 'dashboard': {
-                    scripts: ['/pages/dashboard/dashboard.js'],
-                    styles: ['/pages/dashboard/dashboard.css'],
-                    requiresAuth: true,
-                    requiresBusiness: true
-                },
+    scripts: [
+        // Core modules first
+        '/pages/dashboard/modules/core/event-bus.js',
+        '/pages/dashboard/modules/core/state-manager.js', 
+        '/pages/dashboard/modules/core/dependency-container.js',
+        '/pages/dashboard/modules/core/dashboard-app.js',
+        
+        // Feature modules
+        '/pages/dashboard/modules/leads/lead-manager.js',
+        '/pages/dashboard/modules/leads/lead-renderer.js',
+        '/pages/dashboard/modules/analysis/analysis-queue.js',
+        '/pages/dashboard/modules/realtime/realtime-manager.js',
+        '/pages/dashboard/modules/stats/stats-calculator.js',
+        '/pages/dashboard/modules/business/business-manager.js',
+        '/pages/dashboard/modules/ui/modal-manager.js',
+        
+        // Main orchestrator last
+        '/pages/dashboard/dashboard.js'
+    ],
+    styles: ['/pages/dashboard/dashboard.css'],
+    requiresAuth: true,
+    requiresBusiness: true
+},
                 'admin': {
                     scripts: ['/pages/admin/admin.js'],
                     styles: ['/pages/admin/admin.css'],
