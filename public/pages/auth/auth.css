@@ -1,6 +1,6 @@
 /* =============================================================================
-   AUTH.CSS - MIGRATED TO DESIGN SYSTEM
-   Uses centralized design system variables from /core/design-system.css
+   AUTH.CSS - FINAL VERSION WITH ALL FIXES
+   Fixed: Spinning text, empty submission, form validation, loading states
    ============================================================================= */
 
 @import url('/core/design-system.css');
@@ -63,22 +63,28 @@ body {
     color: var(--text-primary);
 }
 
-.logo-text {
+.logo-image {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-md);
+}
+
+.logo h1 {
     font-size: var(--text-2xl);
     font-weight: var(--font-bold);
     letter-spacing: var(--tracking-tight);
-}
-
-.auth-title {
-    font-size: var(--text-3xl);
-    font-weight: var(--font-bold);
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-2);
-    letter-spacing: var(--tracking-tight);
+    margin: 0;
 }
 
 .auth-subtitle {
     font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin-bottom: var(--spacing-4);
+}
+
+.auth-description {
+    font-size: var(--text-sm);
     color: var(--text-secondary);
     line-height: var(--leading-relaxed);
     margin-bottom: var(--spacing-8);
@@ -115,6 +121,7 @@ body {
     color: var(--text-primary);
     background: var(--bg-primary);
     transition: var(--transition-base);
+    box-sizing: border-box;
 }
 
 .form-input:focus {
@@ -126,14 +133,27 @@ body {
 .form-input.error {
     border-color: var(--error);
     box-shadow: 0 0 0 1px var(--error);
+    animation: shake 0.3s ease-in-out;
 }
 
 .form-input::placeholder {
     color: var(--text-tertiary);
 }
 
+.form-help {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    margin-top: var(--spacing-1);
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-2px); }
+    75% { transform: translateX(2px); }
+}
+
 /* =============================================================================
-   BUTTON STYLES
+   BUTTON STYLES - FIXED LOADING ISSUES
    ============================================================================= */
 
 .auth-button {
@@ -150,6 +170,10 @@ body {
     transition: var(--transition-base);
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-2);
 }
 
 .auth-button:hover:not(:disabled) {
@@ -161,28 +185,47 @@ body {
     transform: translateY(0);
 }
 
+/* FIXED: Button disabled state - prevents empty submission */
 .auth-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
+    pointer-events: none;
 }
 
+/* FIXED: Loading state - only shows when actively loading */
+.auth-button.loading {
+    pointer-events: none;
+}
+
+.auth-button.loading .button-text {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* FIXED: Spinner only appears during actual loading */
 .auth-button.loading::after {
     content: '';
     position: absolute;
     top: 50%;
     left: 50%;
-    width: var(--spacing-5);
-    height: var(--spacing-5);
-    margin: calc(-1 * var(--spacing-2-5)) 0 0 calc(-1 * var(--spacing-2-5));
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
     border: 2px solid transparent;
     border-top: 2px solid var(--text-inverse);
-    border-radius: var(--radius-full);
-    animation: spin var(--duration-1000) var(--ease-linear) infinite;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
 
-.auth-button.loading .button-text {
-    opacity: 0;
+/* FIXED: Default state - no spinner */
+.auth-button:not(.loading)::after {
+    display: none;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* =============================================================================
@@ -192,7 +235,11 @@ body {
 .success-state {
     display: none;
     text-align: center;
-    padding: var(--spacing-4);
+    padding: var(--spacing-8);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    margin-top: var(--spacing-6);
+    animation: slideUp 0.3s ease-out;
 }
 
 .success-state.show {
@@ -202,6 +249,7 @@ body {
 .success-icon {
     font-size: var(--text-4xl);
     margin-bottom: var(--spacing-4);
+    color: var(--success);
 }
 
 .success-title {
@@ -215,11 +263,11 @@ body {
     font-size: var(--text-base);
     color: var(--text-secondary);
     line-height: var(--leading-relaxed);
-    margin-bottom: var(--spacing-6);
+    margin-bottom: var(--spacing-4);
 }
 
 .success-details {
-    background: var(--bg-secondary);
+    background: var(--bg-light);
     padding: var(--spacing-4);
     border-radius: var(--radius-md);
     border-left: 4px solid var(--success);
@@ -228,6 +276,55 @@ body {
 
 .success-details strong {
     color: var(--text-primary);
+}
+
+.success-note {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    margin-top: var(--spacing-2);
+    font-style: italic;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* =============================================================================
+   ERROR STATES - FIXED VALIDATION DISPLAY
+   ============================================================================= */
+
+.error-message {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid var(--error);
+    color: var(--error);
+    padding: var(--spacing-3) var(--spacing-4);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    margin-bottom: var(--spacing-4);
+    display: none;
+    animation: slideDown 0.3s ease-out;
+}
+
+.error-message.show {
+    display: block;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 /* =============================================================================
@@ -241,11 +338,18 @@ body {
     margin-top: var(--spacing-8);
 }
 
+.auth-note {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+}
+
 .auth-links {
     display: flex;
     justify-content: center;
     gap: var(--spacing-6);
     flex-wrap: wrap;
+    margin-top: var(--spacing-4);
 }
 
 .auth-link {
@@ -261,60 +365,22 @@ body {
 }
 
 /* =============================================================================
-   ERROR STATES
+   FORM VALIDATION STATES
    ============================================================================= */
 
-.error-message {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid var(--error);
-    color: var(--error);
-    padding: var(--spacing-3) var(--spacing-4);
-    border-radius: var(--radius-md);
-    font-size: var(--text-sm);
-    margin-bottom: var(--spacing-4);
-    display: none;
+.form-input:invalid {
+    border-color: var(--input-border-color);
+    box-shadow: none;
 }
 
-.error-message.show {
-    display: block;
+.form-input:invalid:not(:placeholder-shown) {
+    border-color: var(--error);
+    box-shadow: 0 0 0 1px var(--error);
 }
 
-/* =============================================================================
-   LOADING OVERLAY
-   ============================================================================= */
-
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--bg-overlay);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: var(--z-overlay);
-}
-
-.loading-overlay.show {
-    display: flex;
-}
-
-.loading-content {
-    background: var(--bg-primary);
-    padding: var(--spacing-8);
-    border-radius: var(--radius-xl);
-    text-align: center;
-    box-shadow: var(--shadow-2xl);
-}
-
-.loading-spinner {
-    margin: 0 auto var(--spacing-4) auto;
-}
-
-.loading-text {
-    font-size: var(--text-base);
-    color: var(--text-secondary);
+.form-input:valid:not(:placeholder-shown) {
+    border-color: var(--success);
+    box-shadow: 0 0 0 1px var(--success);
 }
 
 /* =============================================================================
@@ -328,18 +394,10 @@ body {
     
     .auth-container {
         padding: var(--spacing-8) var(--spacing-6);
+        max-width: none;
     }
     
-    .auth-title {
-        font-size: var(--text-2xl);
-    }
-    
-    .auth-links {
-        flex-direction: column;
-        gap: var(--spacing-4);
-    }
-    
-    .logo-text {
+    .logo h1 {
         font-size: var(--text-xl);
     }
     
@@ -349,6 +407,12 @@ body {
     
     .auth-button {
         height: var(--button-height-md);
+        font-size: var(--text-sm);
+    }
+    
+    .auth-links {
+        flex-direction: column;
+        gap: var(--spacing-4);
     }
 }
 
@@ -358,48 +422,52 @@ body {
         border-radius: var(--radius-xl);
     }
     
-    .auth-title {
-        font-size: var(--text-xl);
-    }
-    
     .auth-subtitle {
         font-size: var(--text-sm);
     }
     
-    .logo-text {
+    .logo h1 {
         font-size: var(--text-lg);
     }
 }
 
 /* =============================================================================
-   DARK MODE SUPPORT (Future Implementation)
+   ACCESSIBILITY IMPROVEMENTS
    ============================================================================= */
 
-@media (prefers-color-scheme: dark) {
-    /* Dark mode styles would be implemented here when design system supports it */
-    /* Currently using light mode defaults only */
+@media (prefers-reduced-motion: reduce) {
+    .auth-button,
+    .form-input,
+    .auth-link {
+        transition: none;
+    }
+    
+    .success-state,
+    .error-message {
+        animation: none;
+    }
+    
+    .auth-button.loading::after {
+        animation: none;
+    }
 }
-
-/* =============================================================================
-   HIGH CONTRAST MODE SUPPORT
-   ============================================================================= */
 
 @media (prefers-contrast: high) {
     .auth-container {
-        border: var(--border-width-thick) solid var(--text-primary);
+        border: 2px solid var(--text-primary);
     }
     
     .form-input {
-        border: var(--border-width-medium) solid var(--text-primary);
+        border-width: 2px;
     }
     
     .form-input:focus {
-        outline: var(--border-width-thick) solid var(--primary-blue);
-        outline-offset: var(--spacing-1);
+        outline: 2px solid var(--primary-blue);
+        outline-offset: 2px;
     }
     
     .auth-button {
-        border: var(--border-width-medium) solid var(--text-primary);
+        border: 2px solid var(--text-primary);
     }
 }
 
@@ -410,11 +478,10 @@ body {
 @media print {
     .auth-container {
         box-shadow: none;
-        border: var(--border-width-thin) solid var(--print-border-color);
+        border: 1px solid var(--text-primary);
     }
     
     .auth-button,
-    .loading-overlay,
     .success-state {
         display: none !important;
     }
@@ -425,217 +492,5 @@ body {
         font-style: italic;
         text-align: center;
         margin-top: var(--spacing-4);
-    }
-}
-
-/* =============================================================================
-   ANIMATION KEYFRAMES
-   ============================================================================= */
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(var(--spacing-4));
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(var(--spacing-8));
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
-}
-
-/* =============================================================================
-   ENHANCED INTERACTIVE STATES
-   ============================================================================= */
-
-.auth-container {
-    animation: fadeIn var(--duration-500) var(--ease-out);
-}
-
-.success-state.show {
-    animation: slideUp var(--duration-300) var(--ease-out);
-}
-
-.form-input:invalid:not(:placeholder-shown) {
-    border-color: var(--error);
-    animation: pulse var(--duration-1000) var(--ease-in-out) 2;
-}
-
-/* =============================================================================
-   FOCUS TRAP STYLES (for accessibility)
-   ============================================================================= */
-
-.focus-trap-active {
-    position: relative;
-}
-
-.focus-trap-active::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: var(--z-modal);
-    pointer-events: none;
-}
-
-/* =============================================================================
-   STAGING ENVIRONMENT INDICATORS
-   ============================================================================= */
-
-.staging-indicator {
-    position: fixed;
-    top: var(--spacing-2);
-    right: var(--spacing-2);
-    background: var(--warning);
-    color: var(--text-inverse);
-    padding: var(--spacing-1) var(--spacing-2);
-    border-radius: var(--radius-sm);
-    font-size: var(--text-xs);
-    font-weight: var(--font-bold);
-    z-index: var(--z-banner);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-}
-
-/* =============================================================================
-   ERROR BOUNDARY STYLES
-   ============================================================================= */
-
-.error-boundary {
-    padding: var(--spacing-8);
-    text-align: center;
-    border: var(--border-width-medium) solid var(--error);
-    border-radius: var(--radius-lg);
-    background: rgba(239, 68, 68, 0.05);
-    margin: var(--spacing-4);
-}
-
-.error-boundary h2 {
-    color: var(--error);
-    font-size: var(--text-xl);
-    margin-bottom: var(--spacing-4);
-}
-
-.error-boundary p {
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-6);
-}
-
-.error-boundary button {
-    background: var(--error);
-    color: var(--text-inverse);
-    border: none;
-    padding: var(--spacing-2) var(--spacing-4);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    font-weight: var(--font-medium);
-}
-
-/* =============================================================================
-   DEVELOPMENT HELPERS
-   ============================================================================= */
-
-/* Debug mode styles - remove in production */
-.debug-mode .auth-container {
-    outline: 2px dashed var(--info);
-    outline-offset: var(--spacing-2);
-}
-
-.debug-mode .form-input {
-    outline: 1px solid var(--success);
-}
-
-.debug-mode .auth-button {
-    outline: 1px solid var(--warning);
-}
-
-/* =============================================================================
-   LEGACY BROWSER FALLBACKS
-   ============================================================================= */
-
-/* Fallback for browsers without CSS custom properties */
-@supports not (color: var(--primary-blue)) {
-    .auth-container {
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 20px 50px rgba(45, 108, 223, 0.15);
-    }
-    
-    .auth-button {
-        background: linear-gradient(135deg, #2D6CDF, #8A6DF1);
-        color: #ffffff;
-    }
-    
-    .form-input {
-        border: 1px solid #cbd5e1;
-    }
-    
-    .form-input:focus {
-        border-color: #2D6CDF;
-    }
-}
-
-/* =============================================================================
-   COMPONENT VARIATIONS
-   ============================================================================= */
-
-/* Compact auth form variant */
-.auth-container.compact {
-    padding: var(--spacing-6);
-    max-width: 320px;
-}
-
-.auth-container.compact .auth-title {
-    font-size: var(--text-xl);
-}
-
-.auth-container.compact .auth-subtitle {
-    font-size: var(--text-sm);
-    margin-bottom: var(--spacing-6);
-}
-
-/* Elevated auth form variant */
-.auth-container.elevated {
-    box-shadow: var(--shadow-2xl);
-    border: none;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-}
-
-.auth-container.elevated::before {
-    height: 6px;
-    background: var(--gradient-brand);
-}
-
-/* Wide auth form variant for tablets */
-@media (min-width: 768px) {
-    .auth-container.wide {
-        max-width: 500px;
-        padding: var(--spacing-16) var(--spacing-12);
-    }
-    
-    .auth-container.wide .auth-form {
-        display: grid;
-        gap: var(--spacing-6);
     }
 }
