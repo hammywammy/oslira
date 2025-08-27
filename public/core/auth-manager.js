@@ -65,6 +65,10 @@ class OsliraAuthManager {
             await this.loadUserContext();
         }
         
+        // Setup token security features
+        this.setupTokenRotation();
+        this.setupSecurityEventHandlers();
+        
         this.initialized = true;
         console.log('✅ [Auth] Authentication system ready');
         
