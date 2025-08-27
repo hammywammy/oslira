@@ -5,7 +5,7 @@
  * 
  * Simple and clean. Script loader handles all module loading,
  * this just initializes the already-loaded modules.
- */
+ */ 
 
 class Dashboard {
     constructor() {
