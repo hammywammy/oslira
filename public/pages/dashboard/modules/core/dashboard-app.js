@@ -684,6 +684,70 @@ class DashboardApp {
             console.error('❌ [DashboardApp] Cleanup failed:', error);
         }
     }
+
+    copyText(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    const text = element.textContent || element.innerText;
+    
+    navigator.clipboard.writeText(text).then(() => {
+        this.container.get('osliraApp')?.showMessage('Copied to clipboard!', 'success');
+    }).catch(() => {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        this.container.get('osliraApp')?.showMessage('Copied to clipboard!', 'success');
+    });
+}
+
+editMessage(leadId) {
+    // Delegate to modal manager
+    this.container.get('modalManager').editMessage(leadId);
+}
+
+saveEditedMessage(leadId) {
+    // Delegate to modal manager
+    this.container.get('modalManager').saveEditedMessage(leadId);
+}
+
+deleteLead(leadId) {
+    // Delegate to lead manager
+    this.container.get('leadManager').deleteLead(leadId);
+}
+
+selectLead(checkbox) {
+    // Delegate to lead manager
+    this.container.get('leadManager').selectLead(checkbox);
+}
+
+toggleAllLeads(masterCheckbox) {
+    // Delegate to lead manager
+    this.container.get('leadManager').toggleAllLeads(masterCheckbox);
+}
+
+debugDashboard() {
+    const state = this.container.get('stateManager').getStateSummary();
+    console.table(state);
+    return state;
+}
+
+async processAnalysisForm(event) {
+    // This should already exist - check if it's there
+    // If missing, delegate to modal manager
+    return this.container.get('modalManager').processAnalysisForm(event);
+}
+
+async processBulkUpload() {
+    // This should already exist - check if it's there  
+    // If missing, delegate to modal manager
+    return this.container.get('modalManager').processBulkUpload();
+}
 }
 
 // Export for global use
