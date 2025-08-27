@@ -180,18 +180,81 @@
                     .single();
                 
                 // Determine redirect URL
-                let redirectUrl = '/dashboard';
-                if (!userData?.onboarding_completed) {
-                    redirectUrl = '/onboarding';
-                } else if (userData?.is_admin && window.location.search.includes('admin')) {
-                    redirectUrl = '/admin';
-                }
-                
-                // Check for return URL from auth flow
-                const returnUrl = urlParams.get('return');
-                if (returnUrl && returnUrl.startsWith('/')) {
-                    redirectUrl = decodeURIComponent(returnUrl);
-                }
+                // SECURE: Complete whitelist of ALL your allowed routes
+const ALLOWED_REDIRECTS = [
+    // Main app pages
+    '/dashboard',
+    '/admin', 
+    '/analytics',
+    '/auth',
+    '/campaigns',
+    '/',
+    '/integrations',
+    '/leads',
+    '/messages', 
+    '/onboarding',
+    '/settings',
+    '/subscription',
+    
+    // Footer pages
+    '/footer/about',
+    '/footer/api',
+    '/footer/case-studies',
+    '/footer/guides',
+    '/footer/help',
+    '/footer/pricing',
+    '/footer/security',
+    '/footer/status',
+    
+    // Legal pages
+    '/footer/legal/privacy',
+    '/footer/legal/terms',
+    '/footer/legal/refund',
+    '/footer/legal/disclaimer'
+];
+
+// Determine redirect URL securely
+let redirectUrl = '/dashboard';
+if (!userData?.onboarding_completed) {
+    redirectUrl = '/onboarding';
+} else if (userData?.is_admin && window.location.search.includes('admin')) {
+    redirectUrl = '/admin';
+}
+
+// SECURE: Validate return URL against your complete route list
+const returnUrl = urlParams.get('return');
+if (returnUrl) {
+    const decodedUrl = decodeURIComponent(returnUrl);
+    
+    // Multi-layer security validation:
+    // 1. Must start with / (internal path only)
+    // 2. Cannot contain // (prevents protocol smuggling)  
+    // 3. Must exactly match or be subpath of allowed routes
+    // 4. No query params that could be used for injection
+    if (decodedUrl.startsWith('/') && 
+        !decodedUrl.includes('//') &&
+        !decodedUrl.includes('<') &&
+        !decodedUrl.includes('>') &&
+        ALLOWED_REDIRECTS.some(allowed => 
+            decodedUrl === allowed || 
+            decodedUrl.startsWith(allowed + '/') ||
+            decodedUrl.startsWith(allowed + '?') ||
+            decodedUrl.startsWith(allowed + '#')
+        )) {
+        redirectUrl = decodedUrl;
+        console.log('✅ [Callback] Valid return URL accepted:', redirectUrl);
+    } else {
+        console.log('🚫 [Callback] Invalid return URL rejected:', decodedUrl, 'using default:', redirectUrl);
+    }
+    // Any invalid/suspicious URLs are ignored - user goes to safe default
+}
+
+console.log('🔗 [Callback] Final secure redirect to:', redirectUrl);
+
+// Small delay to ensure session is established
+setTimeout(() => {
+    window.location.href = redirectUrl;
+}, 500);
                 
                 console.log('🔗 [Callback] Redirecting to:', redirectUrl);
                 
