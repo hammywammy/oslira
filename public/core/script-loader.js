@@ -86,6 +86,11 @@ class OsliraScriptLoader {
                     critical: true,
                     environments: ['staging', 'development']
                 },
+                'security-guard': {
+                    url: '/core/security-guard.js',
+                    critical: true,
+                    dependsOn: ['supabase']
+                },
                 'alert-system': {
                     url: '/utils/alert-system.js',
                     critical: false
