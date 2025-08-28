@@ -662,11 +662,49 @@ detectCurrentPage() {
     return 'home';
 }
 
+    // Add rate limiting for auth attempts
+setupAuthRateLimit() {
+    const RATE_LIMIT_KEY = 'auth_attempts';
+    const MAX_ATTEMPTS = 5;
+    const WINDOW_DURATION = 5 * 60 * 1000; // 5 minutes
+    
+    return {
+        checkRateLimit: () => {
+            const now = Date.now();
+            const attempts = JSON.parse(localStorage.getItem(RATE_LIMIT_KEY) || '[]');
+            
+            // Clean old attempts
+            const validAttempts = attempts.filter(time => now - time < WINDOW_DURATION);
+            
+            if (validAttempts.length >= MAX_ATTEMPTS) {
+                const oldestAttempt = Math.min(...validAttempts);
+                const timeRemaining = WINDOW_DURATION - (now - oldestAttempt);
+                const minutesRemaining = Math.ceil(timeRemaining / (1000 * 60));
+                throw new Error(`Too many attempts. Please try again in ${minutesRemaining} minute${minutesRemaining > 1 ? 's' : ''}.`);
+            }
+            
+            return true;
+        },
+        
+        recordAttempt: () => {
+            const now = Date.now();
+            const attempts = JSON.parse(localStorage.getItem(RATE_LIMIT_KEY) || '[]');
+            attempts.push(now);
+            
+            // Keep only recent attempts
+            const validAttempts = attempts.filter(time => now - time < WINDOW_DURATION);
+            localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(validAttempts));
+        }
+    };
+}
+
 async setupAuthForm() {
     const form = document.getElementById('auth-form');
     if (!form) return;
     
     console.log('🔐 [App] Setting up auth form...');
+    
+    const rateLimiter = this.setupAuthRateLimit();
     
     const formManager = new window.OsliraFormManager(form, {
         validateOnInput: true,
@@ -677,19 +715,53 @@ async setupAuthForm() {
         .addValidator('email', 'email', 'Please enter a valid email address')
         .addValidator('email', 'required', 'Email address is required')
         .onSubmit(async (formData) => {
-            const { error } = await this.supabase.auth.signInWithOtp({
-                email: formData.email,
-                options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`
+            // Check rate limit first
+            rateLimiter.checkRateLimit();
+            
+            // Add loading state
+            const submitButton = document.querySelector('#signin-button');
+            const buttonText = submitButton.querySelector('.button-text');
+            const originalText = buttonText.textContent;
+            
+            // Visual loading state
+            buttonText.textContent = 'Sending...';
+            submitButton.disabled = true;
+            submitButton.classList.add('loading');
+            
+            try {
+                const { data, error } = await this.supabase.auth.signInWithOtp({
+                    email: formData.email,
+                    options: {
+                        emailRedirectTo: `${window.location.origin}/pages/auth/callback.html`
+                    }
+                });
+                
+                if (error) {
+                    console.error('Supabase Auth Error:', error);
+                    throw new Error(error.message || 'Failed to send magic link');
                 }
-            });
-            
-            if (error) throw error;
-            
-            // Show success state
-            document.getElementById('main-card').style.display = 'none';
-            document.getElementById('sent-email').textContent = formData.email;
-            document.getElementById('success-card').style.display = 'block';
+                
+                console.log('✅ Magic link sent successfully:', data);
+                
+                // Record successful attempt for rate limiting
+                rateLimiter.recordAttempt();
+                
+                // Show success state
+                document.getElementById('main-card').style.display = 'none';
+                document.getElementById('sent-email').textContent = formData.email;
+                document.getElementById('success-card').style.display = 'block';
+                
+            } catch (err) {
+                console.error('Auth submission error:', err);
+                // Record failed attempt for rate limiting
+                rateLimiter.recordAttempt();
+                
+                // Reset button state
+                buttonText.textContent = originalText;
+                submitButton.disabled = false;
+                submitButton.classList.remove('loading');
+                throw err; // Re-throw for form manager error handling
+            }
         })
         .onError((error) => {
             const errorDisplay = document.getElementById('error-display');
@@ -699,7 +771,7 @@ async setupAuthForm() {
             }
         });
 }
-    
+  
     // =============================================================================
     // GLOBAL ATTACHMENT
     // =============================================================================
