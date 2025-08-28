@@ -7,6 +7,49 @@
     <title>Sign In - Oslira</title>
     <script src="/env-config.js"></script>
     <script src="/core/script-loader.js"></script>
+
+    <script>
+        // DEBUG: Trace form submission behavior
+        console.log('🔍 [DEBUG] Auth page loaded, setting up debugging...');
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('auth-form');
+            const button = document.getElementById('signin-button');
+            
+            if (form) {
+                console.log('🔍 [DEBUG] Form found, adding listeners');
+                
+                // Track all submit events
+                form.addEventListener('submit', (e) => {
+                    console.log('🔍 [DEBUG] Form submit event fired:', e);
+                    console.log('🔍 [DEBUG] preventDefault called?', e.defaultPrevented);
+                    console.log('🔍 [DEBUG] Event target:', e.target);
+                });
+                
+                // Track form submission attempts
+                form.addEventListener('submit', (e) => {
+                    console.log('🔍 [DEBUG] SECOND submit listener - this should not fire if first prevents default');
+                }, true); // Use capture phase
+            }
+            
+            if (button) {
+                console.log('🔍 [DEBUG] Button found, adding click listener');
+                button.addEventListener('click', (e) => {
+                    console.log('🔍 [DEBUG] Button clicked:', e);
+                    console.log('🔍 [DEBUG] Button type:', button.type);
+                    console.log('🔍 [DEBUG] Form element:', button.form);
+                });
+            }
+            
+            // Check if app.js auth manager is available
+            setTimeout(() => {
+                console.log('🔍 [DEBUG] Checking auth manager availability...');
+                console.log('🔍 [DEBUG] window.OsliraApp:', !!window.OsliraApp);
+                console.log('🔍 [DEBUG] window.OsliraApp?.auth:', !!window.OsliraApp?.auth);
+                console.log('🔍 [DEBUG] Script loader loaded scripts:', window.OsliraScriptLoader?.getLoadedScripts?.());
+            }, 2000);
+        });
+    </script>
     
     <link rel="stylesheet" href="/pages/auth/auth.css">
 </head>
