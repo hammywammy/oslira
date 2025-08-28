@@ -642,24 +642,406 @@ class OsliraAppInitializer {
     async setupPageSpecificFeatures() {
     const currentPage = this.detectCurrentPage();
     
-    switch (currentPage) {
-        case 'auth':
-            await this.setupAuthForm();
-            break;
-        case 'dashboard':
-            // Dashboard has its own controller
-            break;
-        default:
-            console.log(`📄 [App] No specific setup for page: ${currentPage}`);
+    console.log(`📄 [App] Setting up page-specific features for: ${currentPage}`);
+    
+    try {
+        switch (currentPage) {
+            case 'auth':
+                // Auth page setup
+                if (this.auth) {
+                    console.log('🔐 [App] Setting up authentication form...');
+                    await this.setupAuthForm();
+                } else {
+                    console.error('❌ [App] Cannot setup auth form - auth manager not initialized');
+                    // Show fallback auth error
+                    this.showInitializationError(new Error('Authentication system not available'));
+                }
+                break;
+                
+            case 'auth-callback':
+                // Callback page - no additional setup needed
+                console.log('🔗 [App] Auth callback page - handled by callback.html');
+                break;
+                
+            case 'dashboard':
+                // Dashboard has its own controller system
+                console.log('📊 [App] Dashboard page - controller will initialize separately');
+                await this.setupDashboardIntegrations();
+                break;
+                
+            case 'onboarding':
+                // Onboarding flow setup
+                console.log('🎯 [App] Setting up onboarding features...');
+                await this.setupOnboardingFlow();
+                break;
+                
+            case 'admin':
+                // Admin panel setup
+                console.log('👑 [App] Setting up admin panel...');
+                await this.setupAdminFeatures();
+                break;
+                
+            case 'settings':
+                // Settings page setup
+                console.log('⚙️ [App] Setting up settings page...');
+                await this.setupSettingsPage();
+                break;
+                
+            case 'subscription':
+                // Subscription management setup
+                console.log('💳 [App] Setting up subscription management...');
+                await this.setupSubscriptionPage();
+                break;
+                
+            case 'analytics':
+                // Analytics page setup
+                console.log('📈 [App] Setting up analytics page...');
+                await this.setupAnalyticsPage();
+                break;
+                
+            case 'leads':
+                // Leads page setup
+                console.log('🎯 [App] Setting up leads management...');
+                await this.setupLeadsPage();
+                break;
+                
+            case 'messages':
+                // Messages page setup
+                console.log('💬 [App] Setting up messages page...');
+                await this.setupMessagesPage();
+                break;
+                
+            case 'home':
+                // Landing page setup
+                console.log('🏠 [App] Setting up home page features...');
+                await this.setupHomePage();
+                break;
+                
+            case 'generic':
+            case 'unknown':
+                // Generic page setup
+                console.log('📄 [App] Setting up generic page features...');
+                await this.setupGenericPage();
+                break;
+                
+            default:
+                console.log(`📄 [App] No specific setup defined for page: ${currentPage}`);
+        }
+        
+        console.log(`✅ [App] Page-specific features setup complete for: ${currentPage}`);
+        
+    } catch (error) {
+        console.error(`❌ [App] Failed to setup page-specific features for ${currentPage}:`, error);
+        // Don't throw - allow app to continue with basic functionality
     }
 }
 
+// =============================================================================
+// PAGE-SPECIFIC SETUP METHODS
+// =============================================================================
+
+async setupDashboardIntegrations() {
+    // Set up global dashboard helpers that work with the dashboard controller
+    if (window.OsliraDashboard) {
+        console.log('📊 [App] Dashboard controller already loaded');
+        return;
+    }
+    
+    // Set up dashboard event listeners for when controller loads
+    window.addEventListener('oslira:dashboard:loaded', (event) => {
+        console.log('📊 [App] Dashboard controller loaded, setting up integrations...');
+        
+        // Integrate with global app systems
+        if (event.detail && event.detail.dashboard) {
+            this.dashboardInstance = event.detail.dashboard;
+            
+            // Connect dashboard to global error handling
+            this.dashboardInstance.onError = this.logError.bind(this);
+            
+            // Connect dashboard to global UI notifications
+            if (this.ui) {
+                this.dashboardInstance.showMessage = this.ui.toast.info.bind(this.ui.toast);
+                this.dashboardInstance.showError = this.ui.toast.error.bind(this.ui.toast);
+                this.dashboardInstance.showSuccess = this.ui.toast.success.bind(this.ui.toast);
+            }
+        }
+    });
+}
+
+async setupOnboardingFlow() {
+    // Initialize onboarding progress tracking
+    const currentStep = this.getOnboardingStep();
+    console.log('🎯 [App] Current onboarding step:', currentStep);
+    
+    // Set up step navigation
+    this.setupStepNavigation();
+    
+    // Set up form handling for onboarding forms
+    const onboardingForms = document.querySelectorAll('.onboarding-form');
+    onboardingForms.forEach(form => {
+        this.setupFormHandler(form, 'onboarding');
+    });
+    
+    // Set up progress indicators
+    this.updateOnboardingProgress(currentStep);
+}
+
+async setupAdminFeatures() {
+    // Verify admin access
+    if (!this.auth.isAdmin()) {
+        console.warn('⚠️ [App] Non-admin user on admin page');
+        window.location.href = '/dashboard';
+        return;
+    }
+    
+    // Set up admin-specific UI
+    console.log('👑 [App] Loading admin dashboard features...');
+    
+    // Enable admin shortcuts
+    this.setupAdminShortcuts();
+    
+    // Set up admin data refresh
+    this.setupAdminDataRefresh();
+}
+
+async setupSettingsPage() {
+    // Set up settings forms
+    const settingsForms = document.querySelectorAll('.settings-form');
+    settingsForms.forEach(form => {
+        this.setupFormHandler(form, 'settings');
+    });
+    
+    // Set up profile image upload
+    this.setupProfileImageUpload();
+    
+    // Set up account deletion confirmation
+    this.setupAccountDeletion();
+}
+
+async setupSubscriptionPage() {
+    // Initialize Stripe if not already loaded
+    if (!window.Stripe && this.config.STRIPE_PUBLISHABLE_KEY) {
+        await this.loadStripe();
+    }
+    
+    // Set up billing forms
+    this.setupBillingForms();
+    
+    // Set up subscription management
+    this.setupSubscriptionManagement();
+    
+    // Set up usage tracking display
+    this.setupUsageDisplay();
+}
+
+async setupAnalyticsPage() {
+    // Set up analytics data loading
+    this.setupAnalyticsDataLoader();
+    
+    // Set up chart initialization
+    this.setupAnalyticsCharts();
+    
+    // Set up export functionality
+    this.setupAnalyticsExport();
+}
+
+async setupLeadsPage() {
+    // Set up leads table
+    this.setupLeadsTable();
+    
+    // Set up bulk actions
+    this.setupBulkActions();
+    
+    // Set up lead import/export
+    this.setupLeadImportExport();
+}
+
+async setupMessagesPage() {
+    // Set up message templates
+    this.setupMessageTemplates();
+    
+    // Set up message queue
+    this.setupMessageQueue();
+    
+    // Set up message analytics
+    this.setupMessageAnalytics();
+}
+
+async setupHomePage() {
+    // Set up demo form handling
+    const demoForm = document.querySelector('.demo-form');
+    if (demoForm) {
+        this.setupDemoForm(demoForm);
+    }
+    
+    // Set up scroll animations
+    this.setupScrollAnimations();
+    
+    // Set up interactive elements
+    this.setupInteractiveElements();
+}
+
+async setupGenericPage() {
+    // Set up basic page features that apply to all pages
+    this.setupBasicInteractions();
+    
+    // Set up any forms on the page
+    const forms = document.querySelectorAll('form:not(.no-auto-setup)');
+    forms.forEach(form => {
+        if (form.id && !form.hasAttribute('data-setup-complete')) {
+            this.setupFormHandler(form, 'generic');
+        }
+    });
+}
+
+// =============================================================================
+// HELPER METHODS
+// =============================================================================
+
 detectCurrentPage() {
     const pathname = window.location.pathname;
+    
+    // Comprehensive page detection
+    const pageMap = {
+        '/': 'home',
+        '/index.html': 'home',
+        '/pages/home/index.html': 'home',
+        '/home': 'home',
+        
+        '/auth': 'auth',
+        '/auth.html': 'auth',
+        '/pages/auth/index.html': 'auth',
+        
+        '/auth/callback': 'auth-callback',
+        '/auth/callback.html': 'auth-callback', 
+        '/pages/auth/callback.html': 'auth-callback',
+        
+        '/dashboard': 'dashboard',
+        '/dashboard.html': 'dashboard',
+        '/pages/dashboard/index.html': 'dashboard',
+        
+        '/onboarding': 'onboarding',
+        '/onboarding.html': 'onboarding',
+        '/pages/onboarding/index.html': 'onboarding',
+        
+        '/admin': 'admin',
+        '/admin.html': 'admin',
+        '/pages/admin/index.html': 'admin',
+        
+        '/settings': 'settings',
+        '/settings.html': 'settings',
+        '/pages/settings/index.html': 'settings',
+        
+        '/subscription': 'subscription',
+        '/subscription.html': 'subscription',
+        '/pages/subscription/index.html': 'subscription',
+        
+        '/analytics': 'analytics',
+        '/analytics.html': 'analytics',
+        '/pages/analytics/index.html': 'analytics',
+        
+        '/leads': 'leads',
+        '/leads.html': 'leads',
+        '/pages/leads/index.html': 'leads',
+        
+        '/messages': 'messages',
+        '/messages.html': 'messages',
+        '/pages/messages/index.html': 'messages'
+    };
+    
+    // Exact match first
+    if (pageMap[pathname]) {
+        return pageMap[pathname];
+    }
+    
+    // Partial matches for nested paths
+    for (const [path, page] of Object.entries(pageMap)) {
+        if (pathname.startsWith(path) && path !== '/') {
+            return page;
+        }
+    }
+    
+    // Check for known page patterns
+    if (pathname.includes('/auth/callback')) return 'auth-callback';
     if (pathname.includes('/auth')) return 'auth';
     if (pathname.includes('/dashboard')) return 'dashboard';
     if (pathname.includes('/onboarding')) return 'onboarding';
-    return 'home';
+    if (pathname.includes('/admin')) return 'admin';
+    if (pathname.includes('/settings')) return 'settings';
+    if (pathname.includes('/subscription')) return 'subscription';
+    if (pathname.includes('/analytics')) return 'analytics';
+    if (pathname.includes('/leads')) return 'leads';
+    if (pathname.includes('/messages')) return 'messages';
+    
+    return 'generic';
+}
+
+setupFormHandler(form, context) {
+    if (form.hasAttribute('data-setup-complete')) return;
+    
+    form.setAttribute('data-setup-complete', 'true');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log(`📝 [App] Form submitted in ${context} context:`, form.id);
+        
+        // Handle based on context
+        try {
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Route to appropriate handler
+            switch (context) {
+                case 'onboarding':
+                    await this.handleOnboardingSubmit(form, data);
+                    break;
+                case 'settings':
+                    await this.handleSettingsSubmit(form, data);
+                    break;
+                default:
+                    await this.handleGenericSubmit(form, data);
+            }
+        } catch (error) {
+            console.error(`❌ [App] Form submission failed in ${context}:`, error);
+            this.showError(`Form submission failed: ${error.message}`);
+        }
+    });
+}
+
+getOnboardingStep() {
+    // Determine current onboarding step from URL or storage
+    const urlParams = new URLSearchParams(window.location.search);
+    const step = urlParams.get('step');
+    
+    if (step) return parseInt(step, 10);
+    
+    // Get from localStorage
+    return parseInt(localStorage.getItem('onboarding_step') || '1', 10);
+}
+
+updateOnboardingProgress(step) {
+    // Update progress indicators
+    const progressIndicators = document.querySelectorAll('.progress-step');
+    progressIndicators.forEach((indicator, index) => {
+        const stepNumber = index + 1;
+        indicator.classList.toggle('active', stepNumber === step);
+        indicator.classList.toggle('completed', stepNumber < step);
+    });
+}
+
+async handleOnboardingSubmit(form, data) {
+    console.log('🎯 [App] Handling onboarding form submission:', data);
+    // Implementation would go here
+}
+
+async handleSettingsSubmit(form, data) {
+    console.log('⚙️ [App] Handling settings form submission:', data);
+    // Implementation would go here
+}
+
+async handleGenericSubmit(form, data) {
+    console.log('📝 [App] Handling generic form submission:', data);
+    // Implementation would go here
 }
 
     // Add rate limiting for auth attempts
@@ -701,11 +1083,23 @@ setupAuthRateLimit() {
 
 async setupAuthForm() {
     const form = document.getElementById('auth-form');
-    if (!form) return;
+    if (!form) {
+        console.warn('🔐 [App] Auth form not found on page');
+        return;
+    }
     
     console.log('🔐 [App] Setting up auth form...');
     
+    // CRITICAL: Wait for auth manager to be available
+    if (!this.auth) {
+        console.error('❌ [Auth] Auth manager not initialized - cannot setup form');
+        return;
+    }
+    
     const rateLimiter = this.setupAuthRateLimit();
+    
+    // Clear any existing errors first
+    this.clearError();
     
     // CRITICAL: Remove any existing event listeners and add our own first
     const newForm = form.cloneNode(true);
@@ -718,77 +1112,97 @@ async setupAuthForm() {
         
         console.log('📧 [Auth] Form submitted, processing...');
         
+        // Clear any existing errors
+        this.clearError();
+        
         const emailInput = newForm.querySelector('#email');
+        const submitButton = newForm.querySelector('#signin-button');
+        const buttonText = submitButton.querySelector('.button-text') || submitButton;
+        const originalText = buttonText.textContent;
         const email = emailInput.value.trim();
         
         // Basic validation
         if (!email) {
             this.showError('Email is required');
+            emailInput.focus();
             return;
         }
         
-        if (!email.includes('@')) {
+        if (!email.includes('@') || email.length < 5) {
             this.showError('Please enter a valid email address');
+            emailInput.focus();
+            return;
+        }
+        
+        // Additional email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            this.showError('Please enter a valid email address');
+            emailInput.focus();
             return;
         }
         
         try {
             // Check rate limit first
-            rateLimiter.checkRateLimit();
-            
-            // Clear any previous errors
-            this.clearError();
-            
-            // Set loading state
-            const submitButton = newForm.querySelector('#signin-button');
-            const buttonText = submitButton.querySelector('.button-text');
-            const originalText = buttonText.textContent;
-            
-            buttonText.textContent = 'Sending...';
-            submitButton.disabled = true;
-            submitButton.classList.add('loading');
-            
-            console.log('📧 [Auth] Calling Supabase signInWithOtp...');
-            
-            const { data, error } = await this.supabase.auth.signInWithOtp({
-                email: email,
-                options: {
-                    emailRedirectTo: `${window.location.origin}/pages/auth/callback.html`
-                }
-            });
-            
-            if (error) {
-                console.error('❌ [Auth] Supabase error:', error);
-                throw new Error(error.message);
+            if (!rateLimiter.checkRateLimit()) {
+                return; // Error already shown by rate limiter
             }
             
-            console.log('✅ [Auth] Magic link sent successfully');
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.classList.add('loading');
+            buttonText.textContent = 'Sending...';
             
-            // Record successful attempt for rate limiting
-            rateLimiter.recordAttempt();
+            console.log('📧 [Auth] Sending magic link to:', email);
             
-            // Show success state
-            document.getElementById('main-card').style.display = 'none';
-            document.getElementById('sent-email').textContent = email;
-            document.getElementById('success-card').style.display = 'block';
+            // Use auth manager to send magic link
+            const result = await this.auth.signInWithEmail(email);
+            
+            if (result.success) {
+                console.log('✅ [Auth] Magic link sent successfully');
+                
+                // Show success state
+                this.showSuccess(email);
+                
+                // Record successful attempt for rate limiting  
+                rateLimiter.recordAttempt();
+                
+            } else {
+                throw new Error(result.error || 'Failed to send magic link');
+            }
             
         } catch (error) {
-            console.error('❌ [Auth] Failed to send magic link:', error);
+            console.error('❌ [Auth] Sign in failed:', error);
             
             // Record failed attempt for rate limiting  
             rateLimiter.recordAttempt();
             
             // Reset button state
-            const submitButton = newForm.querySelector('#signin-button');
-            const buttonText = submitButton.querySelector('.button-text');
-            buttonText.textContent = 'Send Sign-In Link';
             submitButton.disabled = false;
             submitButton.classList.remove('loading');
+            buttonText.textContent = originalText;
             
-            // Show error
-            this.showError(error.message || 'Failed to send sign-in link');
+            // Show user-friendly error message
+            let errorMessage = 'Failed to send sign-in link';
+            
+            if (error.message) {
+                if (error.message.includes('Invalid email')) {
+                    errorMessage = 'Please enter a valid email address';
+                } else if (error.message.includes('rate')) {
+                    errorMessage = 'Too many requests. Please try again later.';
+                } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage = 'Network error. Please check your connection and try again.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            this.showError(errorMessage);
+            emailInput.focus();
         }
     });
+    
+    console.log('✅ [Auth] Form event listeners attached successfully');
 }
 
 showError(message) {
@@ -796,6 +1210,39 @@ showError(message) {
     if (errorDisplay) {
         errorDisplay.textContent = message;
         errorDisplay.classList.add('show');
+        errorDisplay.style.display = 'block';
+        
+        // Auto-hide after 10 seconds
+        setTimeout(() => {
+            this.clearError();
+        }, 10000);
+    } else {
+        console.error('❌ [Auth] Error display element not found:', message);
+    }
+}
+
+showSuccess(email) {
+    // Hide the main form card
+    const mainCard = document.getElementById('main-card');
+    const successCard = document.getElementById('success-card');
+    const sentEmailElement = document.getElementById('sent-email');
+    
+    if (mainCard && successCard) {
+        mainCard.style.display = 'none';
+        successCard.style.display = 'block';
+        
+        if (sentEmailElement) {
+            sentEmailElement.textContent = email;
+        }
+    } else {
+        // Fallback: show alert if success card not found
+        console.warn('⚠️ [Auth] Success card elements not found, showing fallback message');
+        if (window.Alert && window.Alert.success) {
+            window.Alert.success({
+                message: `Sign-in link sent to ${email}`,
+                timeoutMs: 5000
+            });
+        }
     }
 }
 
@@ -803,6 +1250,7 @@ clearError() {
     const errorDisplay = document.getElementById('error-display');
     if (errorDisplay) {
         errorDisplay.classList.remove('show');
+        errorDisplay.style.display = 'none';
         errorDisplay.textContent = '';
     }
 }
