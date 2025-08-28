@@ -300,26 +300,32 @@ class OsliraScriptLoader {
         
         const coreScripts = this.dependencies.core;
         const loadOrder = [
-            // External libraries first
-            'supabase', 'sentry',
-            
-            // Security utilities
-            'staging-guard', 'alert-system',
-            
-            // Core systems in dependency order
-            'ui-manager', 'data-store', 'form-manager', 'api-client',
-            'auth-manager', 'app-initializer'
-        ];
+    // External libraries first
+    'supabase', 'sentry',
+    
+    // Security utilities
+    'staging-guard', 'alert-system',
+    
+    // Core systems in dependency order
+    'ui-manager', 'data-store', 'form-manager', 'api-client',
+    'auth-manager', 'app-initializer'
+];
+
+console.log('🔍 [ScriptLoader] Core load order:', loadOrder);
         
         for (const scriptName of loadOrder) {
-            const script = coreScripts[scriptName];
-            if (!script) continue;
-            
-            // Check environment requirements
-            if (script.environments && !script.environments.includes(this.config.environment)) {
-                console.log(`⏭️ [ScriptLoader] Skipping ${scriptName} (not required for ${this.config.environment})`);
-                continue;
-            }
+    console.log(`🔍 [ScriptLoader] Attempting to load: ${scriptName}`);
+    const script = coreScripts[scriptName];
+    if (!script) {
+        console.log(`🚫 [ScriptLoader] Script config not found for: ${scriptName}`);
+        continue;
+    }
+    
+    // Check environment requirements
+    if (script.environments && !script.environments.includes(this.config.environment)) {
+        console.log(`⏭️ [ScriptLoader] Skipping ${scriptName} (not required for ${this.config.environment})`);
+        continue;
+    }
             
             // Load dependencies first
             if (script.dependsOn) {
