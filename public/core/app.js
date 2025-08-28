@@ -1102,15 +1102,27 @@ async setupAuthForm() {
     this.clearError();
     
     // CRITICAL: Remove any existing event listeners and add our own first
-    const newForm = form.cloneNode(true);
-    form.parentNode.replaceChild(newForm, form);
+    // DEBUG: Add extensive logging before setup
+console.log('🔍 [DEBUG] setupAuthForm called');
+console.log('🔍 [DEBUG] Auth manager available:', !!this.auth);
+console.log('🔍 [DEBUG] Form element:', form);
+
+// CRITICAL: Remove any existing event listeners and add our own first
+const newForm = form.cloneNode(true);
+form.parentNode.replaceChild(newForm, form);
+
+console.log('🔍 [DEBUG] Form replaced, adding submit handler');
+
+// Add our submit handler directly to the form - NO FORM MANAGER
+newForm.addEventListener('submit', async (e) => {
+    console.log('🔍 [DEBUG] ===== SUBMIT HANDLER FIRED =====');
+    console.log('🔍 [DEBUG] Event:', e);
+    console.log('🔍 [DEBUG] Auth manager at submit time:', !!this.auth);
     
-    // Add our submit handler directly to the form - NO FORM MANAGER
-    newForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        
-        console.log('📧 [Auth] Form submitted, processing...');
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    
+    console.log('📧 [Auth] Form submitted, processing...');
         
         // Clear any existing errors
         this.clearError();
