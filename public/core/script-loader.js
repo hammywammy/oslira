@@ -397,32 +397,64 @@ class OsliraScriptLoader {
         }
     }
     
-    async performScriptLoad(scriptConfig, scriptName) {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = scriptConfig.url;
-            script.defer = true;
-            
-            // Add any additional attributes
-            if (scriptConfig.attributes) {
-                Object.entries(scriptConfig.attributes).forEach(([key, value]) => {
-                    script.setAttribute(key, value);
-                });
-            }
-            
-            script.onload = () => {
+  async performScriptLoad(scriptConfig, scriptName) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = scriptConfig.url;
+        script.defer = true;
+        
+        // Add any additional attributes
+        if (scriptConfig.attributes) {
+            Object.entries(scriptConfig.attributes).forEach(([key, value]) => {
+                script.setAttribute(key, value);
+            });
+        }
+        
+        script.onload = () => {
+            // Validate global availability for critical libraries
+            if (scriptConfig.global) {
+                let maxAttempts = 50;
+                let attempts = 0;
+                
+                const checkGlobal = () => {
+                    const globalObj = window[scriptConfig.global];
+                    
+                    // Special validation for Supabase
+                    if (scriptName === 'supabase') {
+                        if (globalObj && typeof globalObj.createClient === 'function') {
+                            console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
+                            resolve();
+                            return;
+                        }
+                    } else if (globalObj) {
+                        console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
+                        resolve();
+                        return;
+                    }
+                    
+                    attempts++;
+                    if (attempts < maxAttempts) {
+                        setTimeout(checkGlobal, 100);
+                    } else {
+                        reject(new Error(`Global object ${scriptConfig.global} not available after loading ${scriptName}`));
+                    }
+                };
+                
+                setTimeout(checkGlobal, 50);
+            } else {
                 console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
                 resolve();
-            };
-            
-            script.onerror = (error) => {
-                console.error(`❌ [ScriptLoader] Failed to load: ${scriptName}`, error);
-                reject(new Error(`Failed to load script: ${scriptName}`));
-            };
-            
-            document.head.appendChild(script);
-        });
-    }
+            }
+        };
+        
+        script.onerror = (error) => {
+            console.error(`❌ [ScriptLoader] Failed to load: ${scriptName}`, error);
+            reject(new Error(`Failed to load script: ${scriptName}`));
+        };
+        
+        document.head.appendChild(script);
+    });
+}
     
     async loadStylesheet(url) {
         return new Promise((resolve, reject) => {
