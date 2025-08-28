@@ -663,6 +663,7 @@ detectCurrentPage() {
 }
 
     // Add rate limiting for auth attempts
+// Add rate limiting for auth attempts
 setupAuthRateLimit() {
     const RATE_LIMIT_KEY = 'auth_attempts';
     const MAX_ATTEMPTS = 5;
@@ -706,70 +707,104 @@ async setupAuthForm() {
     
     const rateLimiter = this.setupAuthRateLimit();
     
-    const formManager = new window.OsliraFormManager(form, {
-        validateOnInput: true,
-        showSuccessMessages: false
-    });
+    // CRITICAL: Remove any existing event listeners and add our own first
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
     
-    formManager
-        .addValidator('email', 'email', 'Please enter a valid email address')
-        .addValidator('email', 'required', 'Email address is required')
-        .onSubmit(async (formData) => {
+    // Add our submit handler directly to the form - NO FORM MANAGER
+    newForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        
+        console.log('📧 [Auth] Form submitted, processing...');
+        
+        const emailInput = newForm.querySelector('#email');
+        const email = emailInput.value.trim();
+        
+        // Basic validation
+        if (!email) {
+            this.showError('Email is required');
+            return;
+        }
+        
+        if (!email.includes('@')) {
+            this.showError('Please enter a valid email address');
+            return;
+        }
+        
+        try {
             // Check rate limit first
             rateLimiter.checkRateLimit();
             
-            // Add loading state
-            const submitButton = document.querySelector('#signin-button');
+            // Clear any previous errors
+            this.clearError();
+            
+            // Set loading state
+            const submitButton = newForm.querySelector('#signin-button');
             const buttonText = submitButton.querySelector('.button-text');
             const originalText = buttonText.textContent;
             
-            // Visual loading state
             buttonText.textContent = 'Sending...';
             submitButton.disabled = true;
             submitButton.classList.add('loading');
             
-            try {
-                const { data, error } = await this.supabase.auth.signInWithOtp({
-                    email: formData.email,
-                    options: {
-                        emailRedirectTo: `${window.location.origin}/pages/auth/callback.html`
-                    }
-                });
-                
-                if (error) {
-                    console.error('Supabase Auth Error:', error);
-                    throw new Error(error.message || 'Failed to send magic link');
+            console.log('📧 [Auth] Calling Supabase signInWithOtp...');
+            
+            const { data, error } = await this.supabase.auth.signInWithOtp({
+                email: email,
+                options: {
+                    emailRedirectTo: `${window.location.origin}/pages/auth/callback.html`
                 }
-                
-                console.log('✅ Magic link sent successfully:', data);
-                
-                // Record successful attempt for rate limiting
-                rateLimiter.recordAttempt();
-                
-                // Show success state
-                document.getElementById('main-card').style.display = 'none';
-                document.getElementById('sent-email').textContent = formData.email;
-                document.getElementById('success-card').style.display = 'block';
-                
-            } catch (err) {
-                console.error('Auth submission error:', err);
-                // Record failed attempt for rate limiting
-                rateLimiter.recordAttempt();
-                
-                // Reset button state
-                buttonText.textContent = originalText;
-                submitButton.disabled = false;
-                submitButton.classList.remove('loading');
-                throw err; // Re-throw for form manager error handling
+            });
+            
+            if (error) {
+                console.error('❌ [Auth] Supabase error:', error);
+                throw new Error(error.message);
             }
-        })
-        .onError((error) => {
-            const errorDisplay = document.getElementById('error-display');
-            if (errorDisplay) {
-                errorDisplay.textContent = error.message || 'Sign in failed';
-                errorDisplay.classList.add('show');
-            }
-        });
+            
+            console.log('✅ [Auth] Magic link sent successfully');
+            
+            // Record successful attempt for rate limiting
+            rateLimiter.recordAttempt();
+            
+            // Show success state
+            document.getElementById('main-card').style.display = 'none';
+            document.getElementById('sent-email').textContent = email;
+            document.getElementById('success-card').style.display = 'block';
+            
+        } catch (error) {
+            console.error('❌ [Auth] Failed to send magic link:', error);
+            
+            // Record failed attempt for rate limiting  
+            rateLimiter.recordAttempt();
+            
+            // Reset button state
+            const submitButton = newForm.querySelector('#signin-button');
+            const buttonText = submitButton.querySelector('.button-text');
+            buttonText.textContent = 'Send Sign-In Link';
+            submitButton.disabled = false;
+            submitButton.classList.remove('loading');
+            
+            // Show error
+            this.showError(error.message || 'Failed to send sign-in link');
+        }
+    });
+}
+
+showError(message) {
+    const errorDisplay = document.getElementById('error-display');
+    if (errorDisplay) {
+        errorDisplay.textContent = message;
+        errorDisplay.classList.add('show');
+    }
+}
+
+clearError() {
+    const errorDisplay = document.getElementById('error-display');
+    if (errorDisplay) {
+        errorDisplay.classList.remove('show');
+        errorDisplay.textContent = '';
+    }
 }
   
     // =============================================================================
