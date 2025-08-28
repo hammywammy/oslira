@@ -94,8 +94,13 @@ class OsliraScriptLoader {
             // CORE DEPENDENCIES (Always loaded first)
             // =============================================================================
             core: {
-                // External libraries
-                'supabase': {
+    // Configuration first
+    'env-config': {
+        url: '/env-config.js',
+        critical: true
+    },
+    // External libraries
+    'supabase': {
     url: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
     global: 'supabase',
     critical: true
