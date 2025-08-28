@@ -418,6 +418,18 @@ class OsliraAppInitializer {
             console.log('⚠️ [App] Auth form or FormManager not available');
         }
     }
+    showSuccessState(email) {
+        console.log('🎉 [App] Showing success state for:', email);
+        
+        // Hide main card, show success card
+        const mainCard = document.getElementById('main-card');
+        const successCard = document.getElementById('success-card');
+        const sentEmailDiv = document.getElementById('sent-email');
+        
+        if (mainCard) mainCard.style.display = 'none';
+        if (successCard) successCard.style.display = 'block';
+        if (sentEmailDiv) sentEmailDiv.textContent = email;
+    }
     
     
     async initDashboardFeatures() {
