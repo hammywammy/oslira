@@ -4,7 +4,7 @@
 
 class OsliraScriptLoader {
     constructor() { 
-        this.loadedScripts = new Set();
+        this.loadedScripts = new Set(); 
         this.loadingScripts = new Map();
         this.config = this.detectEnvironment();
         this.currentPage = this.detectCurrentPage();
