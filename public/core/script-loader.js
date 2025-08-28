@@ -303,8 +303,11 @@ class OsliraScriptLoader {
     // External libraries first
     'supabase', 'sentry',
     
-    // Security utilities
+    // Security utilities  
     'staging-guard', 'alert-system',
+    
+    // Config must load before everything else
+    'config-manager',
     
     // Core systems in dependency order
     'ui-manager', 'data-store', 'form-manager', 'api-client',
