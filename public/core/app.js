@@ -360,6 +360,17 @@ class OsliraAppInitializer {
             this.authFormManager = new window.OsliraFormManager(authForm)
     .onSubmit(async (formData) => {
         console.log('📤 [App] Processing auth form submission...');
+        console.log('🔍 [App] Raw formData object:', formData);
+        console.log('🔍 [App] Object.keys(formData):', Object.keys(formData));
+        console.log('🔍 [App] formData.email:', formData.email);
+        
+        // Also check FormData directly
+        const nativeFormData = new FormData(authForm);
+        console.log('🔍 [App] Native FormData entries:');
+        for (const [key, value] of nativeFormData.entries()) {
+            console.log(`  ${key}: ${value}`);
+        }
+        
         const email = formData.email;
         if (!email) {
             console.log('❌ [App] No email provided');
