@@ -358,6 +358,9 @@ class OsliraAppInitializer {
             }
             
             this.authFormManager = new window.OsliraFormManager(authForm)
+    .addValidators({
+        email: window.OsliraFormManager.validators.required('Email is required')
+    })
     .onSubmit(async (formData) => {
         console.log('📤 [App] Processing auth form submission...');
         console.log('🔍 [App] Raw formData object:', formData);
@@ -383,14 +386,18 @@ class OsliraAppInitializer {
             console.log('✅ [App] Magic link sent successfully');
             
             this.showMessage('Check your email for the sign-in link!', 'success');
+            
+            // Show success state
+            this.showSuccessState(email);
+            
         } catch (error) {
-            console.error('❌ [App] Auth form submission failed:', error);
+            console.error('❌ [App] Auth error:', error.message);
             throw error;
         }
     })
     .onError((error) => {
         console.error('❌ [App] Auth form error:', error);
-        this.showMessage(error.message || 'Authentication failed', 'error');
+        this.showMessage(error.message, 'error');
     });
             
             console.log('✅ [App] Auth form handler configured');
