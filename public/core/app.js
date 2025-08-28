@@ -234,9 +234,8 @@ if (!supabaseUrl || !supabaseKey) {
             throw new Error('OsliraAuth not available after timeout');
         }
         
-        // Initialize the auth manager
-        this.auth = new window.OsliraAuth();
-        await this.auth.initialize();
+        // Initialize the auth manager - use static initialize method, not instance method
+this.auth = await window.OsliraAuth.initialize(this.config);
         
         // Also attach to window.OsliraApp for compatibility
         if (window.OsliraApp) {
