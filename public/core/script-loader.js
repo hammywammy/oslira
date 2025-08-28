@@ -337,7 +337,17 @@ console.log('🔍 [ScriptLoader] Core load order:', loadOrder);
             }
             
             // Load the script
-            await this.loadScript(script, scriptName);
+            // Load the script
+try {
+    console.log(`🔄 [ScriptLoader] Loading ${scriptName}...`);
+    await this.loadScript(script, scriptName);
+    console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
+} catch (error) {
+    console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
+    if (script.critical) {
+        throw new Error(`Critical script failed: ${scriptName} - ${error.message}`);
+    }
+}
         }
         
         console.log('✅ [ScriptLoader] Core dependencies loaded');
@@ -400,17 +410,18 @@ console.log('🔍 [ScriptLoader] Core load order:', loadOrder);
         this.loadingScripts.set(scriptName, loadPromise);
         
         try {
-            await loadPromise;
-            this.loadedScripts.add(scriptName);
-            this.loadingScripts.delete(scriptName);
-            console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
-        } catch (error) {
-            this.loadingScripts.delete(scriptName);
-            console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
-            if (scriptConfig.critical) {
-                throw new Error(`Critical script failed to load: ${scriptName}`);
-            }
-        }
+    await loadPromise;
+    this.loadedScripts.add(scriptName);
+    this.loadingScripts.delete(scriptName);
+} catch (error) {
+    this.loadingScripts.delete(scriptName);
+    console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
+    console.error(`❌ [ScriptLoader] Script URL was: ${scriptConfig.url}`);
+    console.error(`❌ [ScriptLoader] Error details:`, error);
+    if (scriptConfig.critical) {
+        throw new Error(`Critical script failed to load: ${scriptName} - ${error.message}`);
+    }
+}
     }
     
     async performScriptLoad(scriptConfig, scriptName) {
