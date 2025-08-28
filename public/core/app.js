@@ -8,6 +8,7 @@ class OsliraAppInitializer {
     constructor() {
         this.config = {};
         this.supabase = null;
+        this.auth = null;
         this.user = null;
         this.session = null;
         this.business = null;
@@ -183,39 +184,27 @@ class OsliraAppInitializer {
                 throw new Error('Supabase library not available');
             }
             
-           // Get supabase config with multiple fallback patterns
-console.log('🔍 [App] Before Supabase init - window.supabase:', window.supabase);
-console.log('🔍 [App] window.supabase?.createClient:', window.supabase?.createClient);
+            // Get supabase config with multiple fallback patterns
+            const supabaseUrl = this.config.supabaseUrl || this.config.SUPABASE_URL || window.CONFIG?.SUPABASE_URL;
+            const supabaseKey = this.config.supabaseKey || this.config.supabaseAnonKey || this.config.SUPABASE_ANON_KEY || window.CONFIG?.SUPABASE_ANON_KEY;
 
-// Get supabase config with multiple fallback patterns
-const supabaseUrl = this.config.supabaseUrl || this.config.SUPABASE_URL || window.CONFIG?.SUPABASE_URL;
-const supabaseKey = this.config.supabaseKey || this.config.supabaseAnonKey || this.config.SUPABASE_ANON_KEY || window.CONFIG?.SUPABASE_ANON_KEY;
+            if (!supabaseUrl || !supabaseKey) {
+                console.error('❌ [App] Missing Supabase config:', { 
+                    hasUrl: !!supabaseUrl, 
+                    hasKey: !!supabaseKey,
+                    configKeys: Object.keys(this.config),
+                    windowConfig: !!window.CONFIG 
+                });
+                throw new Error('Supabase configuration missing');
+            }
 
-if (!supabaseUrl || !supabaseKey) {
-    console.error('❌ [App] Missing Supabase config:', { 
-        hasUrl: !!supabaseUrl, 
-        hasKey: !!supabaseKey,
-        configKeys: Object.keys(this.config),
-        windowConfig: !!window.CONFIG 
-    });
-    throw new Error('Supabase configuration missing');
-}
+            // Create client using existing library
+            this.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-console.log('🔍 [App] About to create client - window.supabase:', window.supabase);
-
-// Create client using existing library
-this.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-console.log('🔍 [App] After creating client - window.supabase:', window.supabase);
-console.log('🔍 [App] Created client:', this.supabase);
-
-// DON'T overwrite window.supabase - just store the client separately
-window.supabaseClient = this.supabase;
-
-console.log('🔍 [App] Final check - window.supabase:', window.supabase);
-console.log('🔍 [App] Final check - window.supabase?.createClient:', window.supabase?.createClient);
+            // Store client separately, don't overwrite the library
+            window.supabaseClient = this.supabase;
             
-console.log('✅ [App] Supabase initialized');
+            console.log('✅ [App] Supabase initialized');
             
         } catch (error) {
             console.error('❌ [App] Supabase initialization failed:', error);
@@ -249,8 +238,8 @@ console.log('✅ [App] Supabase initialized');
             throw new Error('OsliraAuth not available after timeout');
         }
         
-        // Initialize the auth manager - use static initialize method, not instance method
-this.auth = await window.OsliraAuth.initialize(this.config);
+        // Initialize the auth manager
+        this.auth = await window.OsliraAuth.initialize(this.config);
         
         // Also attach to window.OsliraApp for compatibility
         if (window.OsliraApp) {
@@ -335,7 +324,7 @@ this.auth = await window.OsliraAuth.initialize(this.config);
     async setupPageSpecificFeatures() {
         // Initialize page-specific components based on current page
         const currentPage = window.OsliraScriptLoader?.currentPage || 'unknown';
-    console.log('🔧 [App] Setting up features for page:', currentPage);
+        console.log('🔧 [App] Setting up features for page:', currentPage);
         
         switch (currentPage) {
             case 'dashboard':
@@ -352,35 +341,61 @@ this.auth = await window.OsliraAuth.initialize(this.config);
         // Auth page specific setup
         console.log('🔐 [App] Setting up auth page features...');
         
-        // Setup form handling if form exists
-const authForm = document.getElementById('auth-form');
-if (authForm && window.OsliraFormManager) {
-    this.authFormManager = new window.OsliraFormManager(authForm, {
-        onSubmit: async (formData) => {
-            const email = formData.get('email');
-            if (!email) return { success: false, error: 'Email required' };
-            
-            try {
-                await this.auth.signInWithEmail(email);
-                return { 
-                    success: true, 
-                    message: 'Check your email for the sign-in link!' 
-                };
-            } catch (error) {
-                return { 
-                    success: false, 
-                    error: error.message || 'Authentication failed' 
-                };
-            }
-        },
-        onSuccess: (data) => {
-            this.showMessage(data.message || 'Check your email for the sign-in link!', 'success');
-        },
-        onError: (error) => {
-            this.showMessage(error.error || 'Authentication failed', 'error');
+        // CRITICAL: Ensure auth system is ready before setting up form
+        if (!this.auth) {
+            console.error('❌ [App] Auth system not ready for form setup');
+            return;
         }
-    });
-}
+        
+        // Setup form handling if form exists
+        const authForm = document.getElementById('auth-form');
+        if (authForm && window.OsliraFormManager) {
+            console.log('📝 [App] Setting up auth form handler...');
+            
+            // Destroy any existing form manager first
+            if (this.authFormManager) {
+                this.authFormManager.destroy?.();
+            }
+            
+            this.authFormManager = new window.OsliraFormManager(authForm, {
+                onSubmit: async (formData) => {
+                    console.log('📤 [App] Processing auth form submission...');
+                    const email = formData.get('email');
+                    if (!email) {
+                        console.log('❌ [App] No email provided');
+                        return { success: false, error: 'Email required' };
+                    }
+                    
+                    try {
+                        console.log('📧 [App] Sending magic link to:', email);
+                        const result = await this.auth.signInWithEmail(email);
+                        console.log('✅ [App] Magic link sent successfully');
+                        return { 
+                            success: true, 
+                            message: 'Check your email for the sign-in link!' 
+                        };
+                    } catch (error) {
+                        console.error('❌ [App] Auth form submission failed:', error);
+                        return { 
+                            success: false, 
+                            error: error.message || 'Authentication failed' 
+                        };
+                    }
+                },
+                onSuccess: (data) => {
+                    console.log('✅ [App] Auth form success:', data);
+                    this.showMessage(data.message || 'Check your email for the sign-in link!', 'success');
+                },
+                onError: (error) => {
+                    console.error('❌ [App] Auth form error:', error);
+                    this.showMessage(error.error || 'Authentication failed', 'error');
+                }
+            });
+            
+            console.log('✅ [App] Auth form handler configured');
+        } else {
+            console.log('⚠️ [App] Auth form or FormManager not available');
+        }
     }
     
     async initDashboardFeatures() {
