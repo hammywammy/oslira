@@ -416,34 +416,52 @@ class OsliraScriptLoader {
         }
         
         script.onload = () => {
-            // Validate global availability for critical libraries
-            if (scriptConfig.global) {
-                let maxAttempts = 50;
-                let attempts = 0;
-                
-                const checkGlobal = () => {
-                    const globalObj = window[scriptConfig.global];
-                    
-                    // Special validation for Supabase
-                    if (scriptName === 'supabase') {
-                        if (globalObj && typeof globalObj.createClient === 'function') {
-                            console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
-                            resolve();
-                            return;
-                        }
-                    } else if (globalObj) {
-                        console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
-                        resolve();
-                        return;
-                    }
-                    
-                    attempts++;
-                    if (attempts < maxAttempts) {
-                        setTimeout(checkGlobal, 100);
-                    } else {
-                        reject(new Error(`Global object ${scriptConfig.global} not available after loading ${scriptName}`));
-                    }
-                };
+    // Special debugging for Supabase
+    if (scriptName === 'supabase') {
+        console.log('🔍 [ScriptLoader] Supabase script loaded, checking globals...');
+        console.log('🔍 [ScriptLoader] window.supabase:', window.supabase);
+        console.log('🔍 [ScriptLoader] window.createClient:', window.createClient);
+        console.log('🔍 [ScriptLoader] window.Supabase:', window.Supabase);
+        console.log('🔍 [ScriptLoader] window.SupabaseClient:', window.SupabaseClient);
+        console.log('🔍 [ScriptLoader] All new window keys after load:', 
+            Object.keys(window).filter(key => key.toLowerCase().includes('supa')));
+    }
+    
+    // Validate global availability for critical libraries
+    if (scriptConfig.global) {
+        let maxAttempts = 50;
+        let attempts = 0;
+        
+        const checkGlobal = () => {
+            const globalObj = window[scriptConfig.global];
+            
+            // Special validation for Supabase
+            if (scriptName === 'supabase') {
+                if (globalObj && typeof globalObj.createClient === 'function') {
+                    console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
+                    resolve();
+                    return;
+                }
+            } else if (globalObj) {
+                console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
+                resolve();
+                return;
+            }
+            
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(checkGlobal, 100);
+            } else {
+                reject(new Error(`Global object ${scriptConfig.global} not available after loading ${scriptName}`));
+            }
+        };
+        
+        setTimeout(checkGlobal, 50);
+    } else {
+        console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
+        resolve();
+    }
+};
                 
                 setTimeout(checkGlobal, 50);
             } else {
