@@ -42,12 +42,26 @@
             }
             
             // Check if app.js auth manager is available
-            setTimeout(() => {
-                console.log('🔍 [DEBUG] Checking auth manager availability...');
-                console.log('🔍 [DEBUG] window.OsliraApp:', !!window.OsliraApp);
-                console.log('🔍 [DEBUG] window.OsliraApp?.auth:', !!window.OsliraApp?.auth);
-                console.log('🔍 [DEBUG] Script loader loaded scripts:', window.OsliraScriptLoader?.getLoadedScripts?.());
-            }, 2000);
+            // Check if app.js auth manager is available
+setTimeout(async () => {
+    console.log('🔍 [DEBUG] Checking auth manager availability...');
+    console.log('🔍 [DEBUG] window.OsliraApp:', !!window.OsliraApp);
+    console.log('🔍 [DEBUG] window.OsliraApp?.auth:', !!window.OsliraApp?.auth);
+    console.log('🔍 [DEBUG] window.OsliraAppInitializer:', !!window.OsliraAppInitializer);
+    console.log('🔍 [DEBUG] OsliraAppInitializer.getInstance():', window.OsliraAppInitializer?.getInstance?.());
+    
+    // Force initialization if not done
+    if (window.OsliraAppInitializer && !window.OsliraAppInitializer.getInstance()) {
+        console.log('🔍 [DEBUG] Force initializing OsliraAppInitializer...');
+        try {
+            await window.OsliraAppInitializer.initialize();
+            console.log('🔍 [DEBUG] Force initialization complete');
+            console.log('🔍 [DEBUG] window.OsliraApp?.auth after init:', !!window.OsliraApp?.auth);
+        } catch (error) {
+            console.error('🔍 [DEBUG] Force initialization failed:', error);
+        }
+    }
+}, 3000);
         });
     </script>
     
