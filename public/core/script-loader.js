@@ -1,11 +1,11 @@
 // =============================================================================
-// SCRIPT-LOADER.JS - Modern Dependency Management System
+// SCRIPT-LOADER.js - Fixed with proper app-initializer definition
 // =============================================================================
 
 class OsliraScriptLoader {
     constructor() { 
         this.loadedScripts = new Set();
-        this.loadingScripts = new Map(); // Track in-progress loads
+        this.loadingScripts = new Map();
         this.config = this.detectEnvironment();
         this.currentPage = this.detectCurrentPage();
         this.dependencies = this.defineDependencies();
@@ -27,30 +27,30 @@ class OsliraScriptLoader {
     }
 
     detectCurrentPage() {
-    const pathname = window.location.pathname;
-    console.log('🔍 [ScriptLoader] Detecting page for pathname:', pathname);
-    
-    const pageMap = {
-        '/': 'home',
-        '/index.html': 'home',
-        '/home': 'home',
-        '/home.html': 'home',
+        const pathname = window.location.pathname;
+        console.log('🔍 [ScriptLoader] Detecting page for pathname:', pathname);
         
-        '/auth': 'auth',
-        '/auth.html': 'auth',
-        '/auth/': 'auth',
-        '/auth/index.html': 'auth',
-        '/pages/auth/': 'auth',
-        '/pages/auth/index.html': 'auth',
-        
-        '/auth/callback': 'auth-callback',
-        '/auth/callback.html': 'auth-callback',
-        '/pages/auth/callback.html': 'auth-callback',
+        const pageMap = {
+            '/': 'home',
+            '/index.html': 'home',
+            '/home': 'home',
+            '/home.html': 'home',
+            
+            '/auth': 'auth',
+            '/auth.html': 'auth',
+            '/auth/': 'auth',
+            '/auth/index.html': 'auth',
+            '/pages/auth/': 'auth',
+            '/pages/auth/index.html': 'auth',
+            
+            '/auth/callback': 'auth-callback',
+            '/auth/callback.html': 'auth-callback',
+            '/pages/auth/callback.html': 'auth-callback',
             '/dashboard.html': 'dashboard',
-'/dashboard/': 'dashboard',
-'/dashboard': 'dashboard',
-'/pages/dashboard/': 'dashboard',
-'/pages/dashboard/index.html': 'dashboard',
+            '/dashboard/': 'dashboard',
+            '/dashboard': 'dashboard',
+            '/pages/dashboard/': 'dashboard',
+            '/pages/dashboard/index.html': 'dashboard',
             '/onboarding.html': 'onboarding',
             '/subscription.html': 'subscription',
             '/settings.html': 'settings',
@@ -59,34 +59,34 @@ class OsliraScriptLoader {
         };
         
         // Exact matches first
-       if (pageMap[pathname]) {
-        console.log('🔍 [ScriptLoader] Exact match found:', pageMap[pathname]);
-        return pageMap[pathname];
-    }
-    
-    // Partial matches for nested paths
-    for (const [path, page] of Object.entries(pageMap)) {
-        if (pathname.startsWith(path) && path !== '/') {
-            console.log('🔍 [ScriptLoader] Partial match found:', page);
-            return page;
+        if (pageMap[pathname]) {
+            console.log('🔍 [ScriptLoader] Exact match found:', pageMap[pathname]);
+            return pageMap[pathname];
         }
+        
+        // Partial matches for nested paths
+        for (const [path, page] of Object.entries(pageMap)) {
+            if (pathname.startsWith(path) && path !== '/') {
+                console.log('🔍 [ScriptLoader] Partial match found:', page);
+                return page;
+            }
+        }
+        
+        // Check for known page patterns
+        if (pathname.includes('/auth/callback')) {
+            console.log('🔍 [ScriptLoader] Pattern match: auth-callback');
+            return 'auth-callback';
+        }
+        if (pathname.includes('/auth')) {
+            console.log('🔍 [ScriptLoader] Pattern match: auth');
+            return 'auth';
+        }
+        if (pathname.includes('/dashboard')) return 'dashboard';
+        if (pathname.includes('/onboarding')) return 'onboarding';
+        
+        console.log('🔍 [ScriptLoader] No match found, using generic');
+        return 'generic';
     }
-    
-    // Check for known page patterns
-    if (pathname.includes('/auth/callback')) {
-        console.log('🔍 [ScriptLoader] Pattern match: auth-callback');
-        return 'auth-callback';
-    }
-    if (pathname.includes('/auth')) {
-        console.log('🔍 [ScriptLoader] Pattern match: auth');
-        return 'auth';
-    }
-    if (pathname.includes('/dashboard')) return 'dashboard';
-    if (pathname.includes('/onboarding')) return 'onboarding';
-    
-    console.log('🔍 [ScriptLoader] No match found, using generic');
-    return 'generic';
-}
     
     defineDependencies() {
         return {
@@ -123,6 +123,13 @@ class OsliraScriptLoader {
                     critical: false
                 },
                 
+                // Configuration system
+                'config-manager': {
+                    url: '/core/config-manager.js',
+                    global: 'OsliraConfig',
+                    critical: true
+                },
+                
                 // Core systems (load in order)
                 'ui-manager': {
                     url: '/core/ui-manager.js',
@@ -147,14 +154,15 @@ class OsliraScriptLoader {
                 'auth-manager': {
                     url: '/core/auth-manager.js',
                     global: 'OsliraAuth',
-                    critical: true
+                    critical: true,
+                    dependsOn: ['config-manager', 'supabase']
                 },
-                // REMOVED: shared-legacy dependency
+                // FIXED: Add app-initializer configuration
                 'app-initializer': {
                     url: '/core/app.js',
                     global: 'OsliraAppInitializer',
                     critical: true,
-                    dependsOn: ['ui-manager', 'data-store', 'api-client', 'auth-manager']
+                    dependsOn: ['config-manager', 'supabase', 'ui-manager', 'data-store', 'api-client', 'auth-manager']
                 }
             },
             
@@ -162,55 +170,21 @@ class OsliraScriptLoader {
             // PAGE-SPECIFIC DEPENDENCIES
             // =============================================================================
             pages: {
-                'home': {
-        scripts: ['/pages/home/home.js'],
-        styles: ['/pages/home/home.css'],
-        requiresAuth: false
-    },
-    'auth': {
-        scripts: [],
-        styles: ['/pages/auth/auth.css'],
-        requiresAuth: false
-    },
-    'auth-callback': {
-        scripts: [],
-        styles: ['/pages/auth/auth.css'],
-        requiresAuth: false
-    },
-    'generic': {
-        scripts: [],
-        styles: [],
-        requiresAuth: false
-    },
                 'dashboard': {
-    scripts: [
-        // Core modules first
-        '/pages/dashboard/modules/core/event-bus.js',
-        '/pages/dashboard/modules/core/state-manager.js', 
-        '/pages/dashboard/modules/core/dependency-container.js',
-        '/pages/dashboard/modules/core/dashboard-app.js',
-        
-        // Feature modules
-        '/pages/dashboard/modules/leads/lead-manager.js',
-        '/pages/dashboard/modules/leads/lead-renderer.js',
-        '/pages/dashboard/modules/analysis/analysis-queue.js',
-        '/pages/dashboard/modules/realtime/realtime-manager.js',
-        '/pages/dashboard/modules/stats/stats-calculator.js',
-        '/pages/dashboard/modules/business/business-manager.js',
-        '/pages/dashboard/modules/ui/modal-manager.js',
-        
-        // Main orchestrator last
-        '/pages/dashboard/dashboard.js'
-    ],
-    styles: ['/pages/dashboard/dashboard.css'],
-    requiresAuth: true,
-    requiresBusiness: true
-},
-                'admin': {
-                    scripts: ['/pages/admin/admin.js'],
-                    styles: ['/pages/admin/admin.css'],
-                    requiresAuth: true,
-                    requiresAdmin: true
+                    scripts: ['/pages/dashboard/dashboard.js'],
+                    styles: ['/pages/dashboard/dashboard.css'],
+                    additionalLibraries: ['chart-js'],
+                    requiresAuth: true
+                },
+                'auth': {
+                    scripts: [],
+                    styles: ['/pages/auth/auth.css'],
+                    requiresAuth: false
+                },
+                'auth-callback': {
+                    scripts: ['/pages/auth/callback.js'],
+                    styles: ['/pages/auth/auth.css'],
+                    requiresAuth: false
                 },
                 'onboarding': {
                     scripts: ['/pages/onboarding/onboarding.js'],
@@ -220,8 +194,6 @@ class OsliraScriptLoader {
                 'analytics': {
                     scripts: ['/pages/analytics/analytics.js'],
                     styles: ['/pages/analytics/analytics.css'],
-                    requiresAuth: true,
-                    requiresBusiness: true,
                     additionalLibraries: ['chart-js']
                 },
                 'settings': {
@@ -271,9 +243,6 @@ class OsliraScriptLoader {
             // Step 2: Load page-specific dependencies
             await this.loadPageDependencies();
             
-            // Step 3: Initialize application (handled by app.js auto-init)
-            // No manual initialization needed - app.js handles this
-            
             const duration = performance.now() - startTime;
             console.log(`✅ [ScriptLoader] All scripts loaded successfully in ${duration.toFixed(2)}ms`);
             
@@ -299,36 +268,37 @@ class OsliraScriptLoader {
         console.log('🔧 [ScriptLoader] Loading core dependencies...');
         
         const coreScripts = this.dependencies.core;
+        // FIXED: Add config-manager to load order
         const loadOrder = [
-    // External libraries first
-    'supabase', 'sentry',
-    
-    // Security utilities  
-    'staging-guard', 'alert-system',
-    
-    // Config must load before everything else
-    'config-manager',
-    
-    // Core systems in dependency order
-    'ui-manager', 'data-store', 'form-manager', 'api-client',
-    'auth-manager', 'app-initializer'
-];
+            // External libraries first
+            'supabase', 'sentry',
+            
+            // Security utilities
+            'staging-guard', 'alert-system',
+            
+            // Config must load before everything else
+            'config-manager',
+            
+            // Core systems in dependency order
+            'ui-manager', 'data-store', 'form-manager', 'api-client',
+            'auth-manager', 'app-initializer'
+        ];
 
-console.log('🔍 [ScriptLoader] Core load order:', loadOrder);
+        console.log('🔍 [ScriptLoader] Core load order:', loadOrder);
         
         for (const scriptName of loadOrder) {
-    console.log(`🔍 [ScriptLoader] Attempting to load: ${scriptName}`);
-    const script = coreScripts[scriptName];
-    if (!script) {
-        console.log(`🚫 [ScriptLoader] Script config not found for: ${scriptName}`);
-        continue;
-    }
-    
-    // Check environment requirements
-    if (script.environments && !script.environments.includes(this.config.environment)) {
-        console.log(`⏭️ [ScriptLoader] Skipping ${scriptName} (not required for ${this.config.environment})`);
-        continue;
-    }
+            console.log(`🔍 [ScriptLoader] Attempting to load: ${scriptName}`);
+            const script = coreScripts[scriptName];
+            if (!script) {
+                console.log(`🚫 [ScriptLoader] Script config not found for: ${scriptName}`);
+                continue;
+            }
+            
+            // Check environment requirements
+            if (script.environments && !script.environments.includes(this.config.environment)) {
+                console.log(`⏭️ [ScriptLoader] Skipping ${scriptName} (not required for ${this.config.environment})`);
+                continue;
+            }
             
             // Load dependencies first
             if (script.dependsOn) {
@@ -340,17 +310,16 @@ console.log('🔍 [ScriptLoader] Core load order:', loadOrder);
             }
             
             // Load the script
-            // Load the script
-try {
-    console.log(`🔄 [ScriptLoader] Loading ${scriptName}...`);
-    await this.loadScript(script, scriptName);
-    console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
-} catch (error) {
-    console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
-    if (script.critical) {
-        throw new Error(`Critical script failed: ${scriptName} - ${error.message}`);
-    }
-}
+            try {
+                console.log(`🔄 [ScriptLoader] Loading ${scriptName}...`);
+                await this.loadScript(script, scriptName);
+                console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
+            } catch (error) {
+                console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
+                if (script.critical) {
+                    throw new Error(`Critical script failed: ${scriptName} - ${error.message}`);
+                }
+            }
         }
         
         console.log('✅ [ScriptLoader] Core dependencies loaded');
@@ -413,34 +382,28 @@ try {
         this.loadingScripts.set(scriptName, loadPromise);
         
         try {
-    await loadPromise;
-    this.loadedScripts.add(scriptName);
-    this.loadingScripts.delete(scriptName);
-} catch (error) {
-    this.loadingScripts.delete(scriptName);
-    console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
-    console.error(`❌ [ScriptLoader] Script URL was: ${scriptConfig.url}`);
-    console.error(`❌ [ScriptLoader] Error details:`, error);
-    if (scriptConfig.critical) {
-        throw new Error(`Critical script failed to load: ${scriptName} - ${error.message}`);
-    }
-}
+            await loadPromise;
+            this.loadedScripts.add(scriptName);
+            this.loadingScripts.delete(scriptName);
+        } catch (error) {
+            this.loadingScripts.delete(scriptName);
+            console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
+            console.error(`❌ [ScriptLoader] Script URL was: ${scriptConfig.url}`);
+            console.error(`❌ [ScriptLoader] Error details:`, error);
+            if (scriptConfig.critical) {
+                throw new Error(`Critical script failed to load: ${scriptName} - ${error.message}`);
+            }
+            throw error;
+        }
     }
     
     async performScriptLoad(scriptConfig, scriptName) {
         return new Promise((resolve, reject) => {
-            // Check if global is already available
-            if (scriptConfig.global && window[scriptConfig.global]) {
-                console.log(`⚡ [ScriptLoader] ${scriptName} global already available`);
-                resolve();
-                return;
-            }
-            
             const script = document.createElement('script');
             script.src = scriptConfig.url;
-            script.async = true;
+            script.defer = true;
             
-            // Add custom attributes
+            // Add any additional attributes
             if (scriptConfig.attributes) {
                 Object.entries(scriptConfig.attributes).forEach(([key, value]) => {
                     script.setAttribute(key, value);
@@ -448,23 +411,13 @@ try {
             }
             
             script.onload = () => {
-                // Wait a bit for global to be available
-                if (scriptConfig.global) {
-                    const checkGlobal = () => {
-                        if (window[scriptConfig.global]) {
-                            resolve();
-                        } else {
-                            setTimeout(checkGlobal, 10);
-                        }
-                    };
-                    checkGlobal();
-                } else {
-                    resolve();
-                }
+                console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
+                resolve();
             };
             
-            script.onerror = () => {
-                reject(new Error(`Failed to load script: ${scriptConfig.url}`));
+            script.onerror = (error) => {
+                console.error(`❌ [ScriptLoader] Failed to load: ${scriptName}`, error);
+                reject(new Error(`Failed to load script: ${scriptName}`));
             };
             
             document.head.appendChild(script);
@@ -474,8 +427,7 @@ try {
     async loadStylesheet(url) {
         return new Promise((resolve, reject) => {
             // Check if already loaded
-            const existingLink = document.querySelector(`link[href="${url}"]`);
-            if (existingLink) {
+            if (document.querySelector(`link[href="${url}"]`)) {
                 resolve();
                 return;
             }
@@ -484,7 +436,7 @@ try {
             link.rel = 'stylesheet';
             link.href = url;
             
-            link.onload = () => resolve();
+            link.onload = resolve;
             link.onerror = () => reject(new Error(`Failed to load stylesheet: ${url}`));
             
             document.head.appendChild(link);
@@ -536,6 +488,29 @@ try {
     }
     
     // =============================================================================
+    // PUBLIC API
+    // =============================================================================
+    
+    async loadLibrary(libraryName) {
+        const lib = this.dependencies.libraries[libraryName];
+        if (!lib) {
+            throw new Error(`Library not found: ${libraryName}`);
+        }
+        
+        await this.loadScript(lib, libraryName);
+        return window[lib.global];
+    }
+    
+    // Check if all critical scripts are loaded
+    areAllCriticalScriptsLoaded() {
+        const criticalScripts = Object.entries(this.dependencies.core)
+            .filter(([name, config]) => config.critical)
+            .map(([name]) => name);
+        
+        return criticalScripts.every(scriptName => this.loadedScripts.has(scriptName));
+    }
+    
+    // =============================================================================
     // DEBUGGING UTILITIES
     // =============================================================================
     
@@ -563,29 +538,6 @@ try {
         } else {
             throw new Error(`Script configuration not found: ${scriptName}`);
         }
-    }
-    
-    // =============================================================================
-    // PUBLIC API
-    // =============================================================================
-    
-    async loadLibrary(libraryName) {
-        const lib = this.dependencies.libraries[libraryName];
-        if (!lib) {
-            throw new Error(`Library not found: ${libraryName}`);
-        }
-        
-        await this.loadScript(lib, libraryName);
-        return window[lib.global];
-    }
-    
-    // Check if all critical scripts are loaded
-    areAllCriticalScriptsLoaded() {
-        const criticalScripts = Object.entries(this.dependencies.core)
-            .filter(([name, config]) => config.critical)
-            .map(([name]) => name);
-        
-        return criticalScripts.every(scriptName => this.loadedScripts.has(scriptName));
     }
 }
 
