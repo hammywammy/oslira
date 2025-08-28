@@ -406,16 +406,19 @@ class OsliraAppInitializer {
             throw error;
         }
     })
+    
     .onError((error) => {
         console.error('❌ [App] Auth form error:', error);
         this.showMessage(error.message, 'error');
     });
             
             console.log('✅ [App] Auth form handler configured');
+            
         } else {
             console.log('⚠️ [App] Auth form or FormManager not available');
         }
     }
+    
     
     async initDashboardFeatures() {
         console.log('📊 [App] Setting up dashboard features...');
