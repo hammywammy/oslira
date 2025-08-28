@@ -507,14 +507,16 @@ class OsliraFormManager {
             return;
         }
         
-        // Set submitting state
-        this.setSubmittingState(true);
-        
+
         try {
-            const formData = this.getDataAsObject();
-            console.log('📤 [Form] Submitting form data:', formData);
-            
-            await this.submitHandler(formData, this);
+    // Get form data BEFORE disabling fields
+    const formData = this.getDataAsObject();
+    console.log('📤 [Form] Submitting form data:', formData);
+    
+    // Set submitting state AFTER collecting data
+    this.setSubmittingState(true);
+    
+    await this.submitHandler(formData, this);
             
             if (this.options.showSuccessMessages) {
                 this.showSuccess('Form submitted successfully!');
