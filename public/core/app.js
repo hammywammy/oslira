@@ -367,6 +367,16 @@ class OsliraAppInitializer {
         console.log('🔍 [App] Object.keys(formData):', Object.keys(formData));
         console.log('🔍 [App] formData.email:', formData.email);
         
+        // Debug form structure
+        console.log('🔍 [App] Form element:', authForm);
+        console.log('🔍 [App] Form ID:', authForm.id);
+        const emailField = authForm.querySelector('input[name="email"]');
+        console.log('🔍 [App] Email field:', emailField);
+        console.log('🔍 [App] Email field value:', emailField?.value);
+        console.log('🔍 [App] Email field name:', emailField?.name);
+        console.log('🔍 [App] Email field type:', emailField?.type);
+        console.log('🔍 [App] All form inputs:', authForm.querySelectorAll('input, select, textarea'));
+        
         // Also check FormData directly
         const nativeFormData = new FormData(authForm);
         console.log('🔍 [App] Native FormData entries:');
@@ -374,7 +384,8 @@ class OsliraAppInitializer {
             console.log(`  ${key}: ${value}`);
         }
         
-        const email = formData.email;
+        // Try direct field access
+        const email = formData.email || emailField?.value;
         if (!email) {
             console.log('❌ [App] No email provided');
             throw new Error('Email required');
