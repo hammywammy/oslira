@@ -238,19 +238,31 @@ class OsliraAppInitializer {
     }
     
     async initAuth() {
-    this.auth = await window.OsliraAuth.initialize(this.config);
+    console.log('🔐 [App] Initializing authentication system...');
     
-    // Attach to global app
-    window.OsliraApp.auth = this.auth;
+    // Wait for auth manager to be available
+    const maxAttempts = 50;
+    let attempts = 0;
     
-    // Setup auth event listeners
-    this.auth.onAuthChange((event, session) => {
-        // Update app state when auth changes
-        this.user = this.auth.getCurrentUser();
-        this.session = this.auth.getCurrentSession();
-        this.businesses = this.auth.getBusinesses();
-        this.business = this.auth.getSelectedBusiness();
-    });
+    while (!window.OsliraAuth && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    if (!window.OsliraAuth) {
+        throw new Error('OsliraAuth not available after timeout');
+    }
+    
+    // Initialize the auth manager
+    this.auth = new window.OsliraAuth();
+    await this.auth.initialize();
+    
+    // Also attach to window.OsliraApp for compatibility
+    if (window.OsliraApp) {
+        window.OsliraApp.auth = this.auth;
+    }
+    
+    console.log('✅ [App] Authentication system initialized');
 }
     
     async initBusinessContext() {
