@@ -1091,10 +1091,36 @@ async setupAuthForm() {
     console.log('🔐 [App] Setting up auth form...');
     
     // CRITICAL: Wait for auth manager to be available
-    if (!this.auth) {
-        console.error('❌ [Auth] Auth manager not initialized - cannot setup form');
-        return;
-    }
+    // CRITICAL: Wait for auth manager to be available
+if (!this.auth) {
+    console.log('⏳ [Auth] Auth manager not ready, waiting...');
+    
+    // Poll for auth manager availability
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds max wait
+    
+    const waitForAuth = () => {
+        attempts++;
+        if (this.auth) {
+            console.log('✅ [Auth] Auth manager now available, setting up form');
+            this.setupAuthFormNow();
+            return;
+        }
+        
+        if (attempts >= maxAttempts) {
+            console.error('❌ [Auth] Auth manager failed to load after 5 seconds');
+            this.showError('Authentication system failed to load. Please refresh the page.');
+            return;
+        }
+        
+        setTimeout(waitForAuth, 100);
+    };
+    
+    waitForAuth();
+    return;
+}
+
+this.setupAuthFormNow();
     
     const rateLimiter = this.setupAuthRateLimit();
     
@@ -1215,6 +1241,129 @@ newForm.addEventListener('submit', async (e) => {
     });
     
     console.log('✅ [Auth] Form event listeners attached successfully');
+}
+
+    setupAuthFormNow() {
+    const form = document.getElementById('auth-form');
+    if (!form) {
+        console.warn('🔐 [App] Auth form not found on page');
+        return;
+    }
+    
+    console.log('🔐 [App] Setting up auth form with available auth manager...');
+    
+    const rateLimiter = this.setupAuthRateLimit();
+    
+    // Clear any existing errors first
+    this.clearError();
+    
+    // CRITICAL: Remove any existing event listeners and add our own first
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+
+    console.log('🔍 [DEBUG] Form replaced, adding submit handler');
+
+    // Add our submit handler directly to the form - NO FORM MANAGER
+    newForm.addEventListener('submit', async (e) => {
+        console.log('🔍 [DEBUG] ===== SUBMIT HANDLER FIRED =====');
+        console.log('🔍 [DEBUG] Event:', e);
+        console.log('🔍 [DEBUG] Auth manager at submit time:', !!this.auth);
+        
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        
+        console.log('📧 [Auth] Form submitted, processing...');
+        
+        // Clear any existing errors
+        this.clearError();
+        
+        const emailInput = newForm.querySelector('#email');
+        const submitButton = newForm.querySelector('#signin-button');
+        const buttonText = submitButton.querySelector('.button-text') || submitButton;
+        const originalText = buttonText.textContent;
+        const email = emailInput.value.trim();
+        
+        // Basic validation
+        if (!email) {
+            this.showError('Email is required');
+            emailInput.focus();
+            return;
+        }
+        
+        if (!email.includes('@') || email.length < 5) {
+            this.showError('Please enter a valid email address');
+            emailInput.focus();
+            return;
+        }
+        
+        // Additional email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            this.showError('Please enter a valid email address');
+            emailInput.focus();
+            return;
+        }
+        
+        try {
+            // Check rate limit first
+            if (!rateLimiter.checkRateLimit()) {
+                return; // Error already shown by rate limiter
+            }
+            
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.classList.add('loading');
+            buttonText.textContent = 'Sending...';
+            
+            console.log('📧 [Auth] Sending magic link to:', email);
+            
+            // Use auth manager to send magic link
+            const result = await this.auth.signInWithEmail(email);
+            
+            if (result.success) {
+                console.log('✅ [Auth] Magic link sent successfully');
+                
+                // Show success state
+                this.showSuccess(email);
+                
+                // Record successful attempt for rate limiting  
+                rateLimiter.recordAttempt();
+                
+            } else {
+                throw new Error(result.error || 'Failed to send magic link');
+            }
+            
+        } catch (error) {
+            console.error('❌ [Auth] Sign in failed:', error);
+            
+            // Record failed attempt for rate limiting  
+            rateLimiter.recordAttempt();
+            
+            // Reset button state
+            submitButton.disabled = false;
+            submitButton.classList.remove('loading');
+            buttonText.textContent = originalText;
+            
+            // Show user-friendly error message
+            let errorMessage = 'Failed to send sign-in link';
+            
+            if (error.message) {
+                if (error.message.includes('Invalid email')) {
+                    errorMessage = 'Please enter a valid email address';
+                } else if (error.message.includes('rate')) {
+                    errorMessage = 'Too many requests. Please try again later.';
+                } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage = 'Network error. Please check your connection and try again.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
+            
+            this.showError(errorMessage);
+        }
+    });
+    
+    console.log('✅ [Auth] Form setup completed successfully');
 }
 
 showError(message) {
