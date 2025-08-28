@@ -116,6 +116,7 @@ class OsliraAppInitializer {
             await this.initUI();
             await this.setupGlobalErrorHandling();
             await this.setupKeyboardShortcuts();
+            await this.setupPageSpecificFeatures();
             await this.attachToWindow();
             
             this.performance.mark('initialization-end');
@@ -637,6 +638,67 @@ class OsliraAppInitializer {
             // Escape to close modals (handled in setupModalSystem)
         });
     }
+
+    async setupPageSpecificFeatures() {
+    const currentPage = this.detectCurrentPage();
+    
+    switch (currentPage) {
+        case 'auth':
+            await this.setupAuthForm();
+            break;
+        case 'dashboard':
+            // Dashboard has its own controller
+            break;
+        default:
+            console.log(`📄 [App] No specific setup for page: ${currentPage}`);
+    }
+}
+
+detectCurrentPage() {
+    const pathname = window.location.pathname;
+    if (pathname.includes('/auth')) return 'auth';
+    if (pathname.includes('/dashboard')) return 'dashboard';
+    if (pathname.includes('/onboarding')) return 'onboarding';
+    return 'home';
+}
+
+async setupAuthForm() {
+    const form = document.getElementById('auth-form');
+    if (!form) return;
+    
+    console.log('🔐 [App] Setting up auth form...');
+    
+    const formManager = new window.OsliraFormManager(form, {
+        validateOnInput: true,
+        showSuccessMessages: false
+    });
+    
+    formManager
+        .addValidator('email', 'email', 'Please enter a valid email address')
+        .addValidator('email', 'required', 'Email address is required')
+        .onSubmit(async (formData) => {
+            const { error } = await this.supabase.auth.signInWithOtp({
+                email: formData.email,
+                options: {
+                    emailRedirectTo: `${window.location.origin}/auth/callback`
+                }
+            });
+            
+            if (error) throw error;
+            
+            // Show success state
+            document.getElementById('main-card').style.display = 'none';
+            document.getElementById('sent-email').textContent = formData.email;
+            document.getElementById('success-card').style.display = 'block';
+        })
+        .onError((error) => {
+            const errorDisplay = document.getElementById('error-display');
+            if (errorDisplay) {
+                errorDisplay.textContent = error.message || 'Sign in failed';
+                errorDisplay.classList.add('show');
+            }
+        });
+}
     
     // =============================================================================
     // GLOBAL ATTACHMENT
