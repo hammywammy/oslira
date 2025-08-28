@@ -96,10 +96,10 @@ class OsliraScriptLoader {
             core: {
                 // External libraries
                 'supabase': {
-                    url: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-                    global: 'supabase',
-                    critical: true
-                },
+    url: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
+    global: 'supabase',
+    critical: true
+},
                 'sentry': {
                     url: 'https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js',
                     global: 'Sentry',
