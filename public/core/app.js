@@ -1470,6 +1470,7 @@ window.OsliraAppInitializer = OsliraAppInitializer;
 // Auto-initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', async () => {
+        console.log('🚀 [App] DOM ready, starting initialization...');
         try {
             await OsliraAppInitializer.initialize();
         } catch (error) {
@@ -1478,6 +1479,7 @@ if (document.readyState === 'loading') {
     });
 } else {
     // DOM already ready
+    console.log('🚀 [App] DOM already ready, starting initialization...');
     setTimeout(async () => {
         try {
             await OsliraAppInitializer.initialize();
@@ -1486,6 +1488,18 @@ if (document.readyState === 'loading') {
         }
     }, 100);
 }
+
+// Also trigger after script loading completes
+window.addEventListener('oslira:scripts:loaded', async (event) => {
+    console.log('🚀 [App] Scripts loaded event received, ensuring initialization...');
+    if (!OsliraAppInitializer.getInstance()) {
+        try {
+            await OsliraAppInitializer.initialize();
+        } catch (error) {
+            console.error('❌ App initialization failed after scripts loaded:', error);
+        }
+    }
+});
 
 console.log('📦 Modern Oslira app initializer loaded');
 console.log('🚀 Will initialize automatically when DOM is ready');
