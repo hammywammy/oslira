@@ -184,6 +184,10 @@ class OsliraAppInitializer {
             }
             
            // Get supabase config with multiple fallback patterns
+console.log('🔍 [App] Before Supabase init - window.supabase:', window.supabase);
+console.log('🔍 [App] window.supabase?.createClient:', window.supabase?.createClient);
+
+// Get supabase config with multiple fallback patterns
 const supabaseUrl = this.config.supabaseUrl || this.config.SUPABASE_URL || window.CONFIG?.SUPABASE_URL;
 const supabaseKey = this.config.supabaseKey || this.config.supabaseAnonKey || this.config.SUPABASE_ANON_KEY || window.CONFIG?.SUPABASE_ANON_KEY;
 
@@ -196,14 +200,21 @@ if (!supabaseUrl || !supabaseKey) {
     });
     throw new Error('Supabase configuration missing');
 }
-            
-            // Make globally available (preserve library)
-window.supabaseClient = this.supabase;
-// Keep library available for other components
-if (!window.supabase.createClient) {
-    window.supabase = this.supabase;
-}
 
+console.log('🔍 [App] About to create client - window.supabase:', window.supabase);
+
+// Create client using existing library
+this.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+console.log('🔍 [App] After creating client - window.supabase:', window.supabase);
+console.log('🔍 [App] Created client:', this.supabase);
+
+// DON'T overwrite window.supabase - just store the client separately
+window.supabaseClient = this.supabase;
+
+console.log('🔍 [App] Final check - window.supabase:', window.supabase);
+console.log('🔍 [App] Final check - window.supabase?.createClient:', window.supabase?.createClient);
+            
 console.log('✅ [App] Supabase initialized');
             
         } catch (error) {
