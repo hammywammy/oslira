@@ -353,18 +353,34 @@ this.auth = await window.OsliraAuth.initialize(this.config);
         console.log('🔐 [App] Setting up auth page features...');
         
         // Setup form handling if form exists
-        const authForm = document.getElementById('auth-form');
-        if (authForm && window.OsliraFormManager) {
-            this.authFormManager = new window.OsliraFormManager(authForm, {
-                apiEndpoint: '/auth/magic-link',
-                onSuccess: (data) => {
-                    this.showMessage('Check your email for the sign-in link!', 'success');
-                },
-                onError: (error) => {
-                    this.showError(error.message || 'Authentication failed');
-                }
-            });
+const authForm = document.getElementById('auth-form');
+if (authForm && window.OsliraFormManager) {
+    this.authFormManager = new window.OsliraFormManager(authForm, {
+        onSubmit: async (formData) => {
+            const email = formData.get('email');
+            if (!email) return { success: false, error: 'Email required' };
+            
+            try {
+                await this.auth.signInWithEmail(email);
+                return { 
+                    success: true, 
+                    message: 'Check your email for the sign-in link!' 
+                };
+            } catch (error) {
+                return { 
+                    success: false, 
+                    error: error.message || 'Authentication failed' 
+                };
+            }
+        },
+        onSuccess: (data) => {
+            this.showMessage(data.message || 'Check your email for the sign-in link!', 'success');
+        },
+        onError: (error) => {
+            this.showMessage(error.error || 'Authentication failed', 'error');
         }
+    });
+}
     }
     
     async initDashboardFeatures() {
