@@ -83,15 +83,32 @@ if (!window.supabase.createClient) {
     let attempts = 0;
     const maxAttempts = 100;
     
+    console.log('🔍 [Auth] Starting waitForSupabase...');
+    console.log('🔍 [Auth] Initial window.supabase:', window.supabase);
+    console.log('🔍 [Auth] Initial window.supabase?.createClient:', window.supabase?.createClient);
+    
     // Check for Supabase constructor, not client instance
     while (!window.supabase?.createClient && attempts < maxAttempts) {
+        if (attempts % 10 === 0) { // Log every 10 attempts (every second)
+            console.log(`🔍 [Auth] Attempt ${attempts}: window.supabase =`, window.supabase);
+            console.log(`🔍 [Auth] Attempt ${attempts}: typeof window.supabase =`, typeof window.supabase);
+            console.log(`🔍 [Auth] Attempt ${attempts}: window.supabase?.createClient =`, window.supabase?.createClient);
+            console.log(`🔍 [Auth] Attempt ${attempts}: Object.keys(window.supabase || {}) =`, Object.keys(window.supabase || {}));
+        }
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
     
+    console.log('🔍 [Auth] Final check - window.supabase:', window.supabase);
+    console.log('🔍 [Auth] Final check - window.supabase?.createClient:', window.supabase?.createClient);
+    
     if (!window.supabase?.createClient) {
+        console.error('❌ [Auth] Final state - window object keys:', Object.keys(window));
+        console.error('❌ [Auth] Final state - window.supabase:', window.supabase);
         throw new Error('Supabase library not available after 10 seconds');
     }
+    
+    console.log('✅ [Auth] Supabase library confirmed available');
 }
     
     async refreshSession() {
