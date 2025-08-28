@@ -462,13 +462,6 @@ class OsliraScriptLoader {
         resolve();
     }
 };
-                
-                setTimeout(checkGlobal, 50);
-            } else {
-                console.log(`✅ [ScriptLoader] Successfully loaded: ${scriptName}`);
-                resolve();
-            }
-        };
         
         script.onerror = (error) => {
             console.error(`❌ [ScriptLoader] Failed to load: ${scriptName}`, error);
