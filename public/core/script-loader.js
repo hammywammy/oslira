@@ -96,7 +96,7 @@ class OsliraScriptLoader {
             core: {
                 // External libraries
                 'supabase': {
-    url: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
+    url: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
     global: 'supabase',
     critical: true
 },
