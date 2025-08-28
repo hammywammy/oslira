@@ -197,10 +197,14 @@ if (!supabaseUrl || !supabaseKey) {
     throw new Error('Supabase configuration missing');
 }
             
-            // Make globally available
-            window.supabase = this.supabase;
-            
-            console.log('✅ [App] Supabase initialized');
+            // Make globally available (preserve library)
+window.supabaseClient = this.supabase;
+// Keep library available for other components
+if (!window.supabase.createClient) {
+    window.supabase = this.supabase;
+}
+
+console.log('✅ [App] Supabase initialized');
             
         } catch (error) {
             console.error('❌ [App] Supabase initialization failed:', error);
