@@ -161,18 +161,25 @@ class OsliraScriptLoader {
             // =============================================================================
             pages: {
                 'home': {
-                    scripts: ['/pages/home/home.js'],
-                    styles: ['/pages/home/home.css'],
-                    requiresAuth: false
-                },
-                'auth': {
-                    styles: ['/pages/auth/auth.css'],
-                    requiresAuth: false
-                },
-                'auth-callback': {
-                    scripts: ['/pages/auth/callback.js'],
-                    requiresAuth: false
-                },
+        scripts: ['/pages/home/home.js'],
+        styles: ['/pages/home/home.css'],
+        requiresAuth: false
+    },
+    'auth': {
+        scripts: [],
+        styles: ['/pages/auth/auth.css'],
+        requiresAuth: false
+    },
+    'auth-callback': {
+        scripts: [],
+        styles: ['/pages/auth/auth.css'],
+        requiresAuth: false
+    },
+    'generic': {
+        scripts: [],
+        styles: [],
+        requiresAuth: false
+    },
                 'dashboard': {
     scripts: [
         // Core modules first
