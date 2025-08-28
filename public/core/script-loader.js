@@ -101,7 +101,7 @@ class OsliraScriptLoader {
     },
     // External libraries
     'supabase': {
-    url: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    url: 'https://unpkg.com/@supabase/supabase-js@2',
     global: 'supabase',
     critical: true
 },
