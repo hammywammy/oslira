@@ -81,4 +81,4 @@ class ApiError extends Error {
     }
 }
 
-window.OsliraApi = OsliraApiClient;
+window.OsliraApiClient = OsliraApiClient;
