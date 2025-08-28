@@ -51,8 +51,12 @@ class OsliraAuthManager {
             }
         );
         
-        // Make globally available
-        window.supabase = this.supabase;
+        // Make client globally available (preserve library)
+window.supabaseClient = this.supabase;
+// Keep library available for other components
+if (!window.supabase.createClient) {
+    window.supabase = this.supabase;
+}
         
         // Get current session
         await this.refreshSession();
@@ -76,18 +80,19 @@ class OsliraAuthManager {
     }
     
     async waitForSupabase() {
-        let attempts = 0;
-        const maxAttempts = 100;
-        
-        while (!window.supabase && attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-        }
-        
-        if (!window.supabase) {
-            throw new Error('Supabase library not available after 10 seconds');
-        }
+    let attempts = 0;
+    const maxAttempts = 100;
+    
+    // Check for Supabase constructor, not client instance
+    while (!window.supabase?.createClient && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
     }
+    
+    if (!window.supabase?.createClient) {
+        throw new Error('Supabase library not available after 10 seconds');
+    }
+}
     
     async refreshSession() {
         try {
