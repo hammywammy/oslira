@@ -26,13 +26,24 @@ class OsliraScriptLoader {
         };
     }
     
-    detectCurrentPage() {
-        const pathname = window.location.pathname;
-        const pathMap = {
-            '/': 'home',
-            '/index.html': 'home',
-            '/auth.html': 'auth',
-            '/auth/callback.html': 'auth-callback',
+    console.log('🔍 [ScriptLoader] Detecting page for pathname:', pathname);
+    
+    const pageMap = {
+        '/': 'home',
+        '/index.html': 'home',
+        '/home': 'home',
+        '/home.html': 'home',
+        
+        '/auth': 'auth',
+        '/auth.html': 'auth',
+        '/auth/': 'auth',
+        '/auth/index.html': 'auth',
+        '/pages/auth/': 'auth',
+        '/pages/auth/index.html': 'auth',
+        
+        '/auth/callback': 'auth-callback',
+        '/auth/callback.html': 'auth-callback',
+        '/pages/auth/callback.html': 'auth-callback',
             '/dashboard.html': 'dashboard',
 '/dashboard/': 'dashboard',
 '/dashboard': 'dashboard',
@@ -46,20 +57,34 @@ class OsliraScriptLoader {
         };
         
         // Exact matches first
-        if (pathMap[pathname]) {
-            return pathMap[pathname];
-        }
-        
-        // Partial matches
-        for (const [path, page] of Object.entries(pathMap)) {
-            if (pathname.startsWith(path) && path !== '/') {
-                return page;
-            }
-        }
-        
-        // Default fallback
-        return 'generic';
+       if (pageMap[pathname]) {
+        console.log('🔍 [ScriptLoader] Exact match found:', pageMap[pathname]);
+        return pageMap[pathname];
     }
+    
+    // Partial matches for nested paths
+    for (const [path, page] of Object.entries(pageMap)) {
+        if (pathname.startsWith(path) && path !== '/') {
+            console.log('🔍 [ScriptLoader] Partial match found:', page);
+            return page;
+        }
+    }
+    
+    // Check for known page patterns
+    if (pathname.includes('/auth/callback')) {
+        console.log('🔍 [ScriptLoader] Pattern match: auth-callback');
+        return 'auth-callback';
+    }
+    if (pathname.includes('/auth')) {
+        console.log('🔍 [ScriptLoader] Pattern match: auth');
+        return 'auth';
+    }
+    if (pathname.includes('/dashboard')) return 'dashboard';
+    if (pathname.includes('/onboarding')) return 'onboarding';
+    
+    console.log('🔍 [ScriptLoader] No match found, using generic');
+    return 'generic';
+}
     
     defineDependencies() {
         return {
