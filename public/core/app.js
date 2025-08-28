@@ -357,40 +357,30 @@ class OsliraAppInitializer {
                 this.authFormManager.destroy?.();
             }
             
-            this.authFormManager = new window.OsliraFormManager(authForm, {
-                onSubmit: async (formData) => {
-                    console.log('📤 [App] Processing auth form submission...');
-                    const email = formData.get('email');
-                    if (!email) {
-                        console.log('❌ [App] No email provided');
-                        return { success: false, error: 'Email required' };
-                    }
-                    
-                    try {
-                        console.log('📧 [App] Sending magic link to:', email);
-                        const result = await this.auth.signInWithEmail(email);
-                        console.log('✅ [App] Magic link sent successfully');
-                        return { 
-                            success: true, 
-                            message: 'Check your email for the sign-in link!' 
-                        };
-                    } catch (error) {
-                        console.error('❌ [App] Auth form submission failed:', error);
-                        return { 
-                            success: false, 
-                            error: error.message || 'Authentication failed' 
-                        };
-                    }
-                },
-                onSuccess: (data) => {
-                    console.log('✅ [App] Auth form success:', data);
-                    this.showMessage(data.message || 'Check your email for the sign-in link!', 'success');
-                },
-                onError: (error) => {
-                    console.error('❌ [App] Auth form error:', error);
-                    this.showMessage(error.error || 'Authentication failed', 'error');
-                }
-            });
+            this.authFormManager = new window.OsliraFormManager(authForm)
+    .onSubmit(async (formData) => {
+        console.log('📤 [App] Processing auth form submission...');
+        const email = formData.email;
+        if (!email) {
+            console.log('❌ [App] No email provided');
+            throw new Error('Email required');
+        }
+        
+        try {
+            console.log('📧 [App] Sending magic link to:', email);
+            const result = await this.auth.signInWithEmail(email);
+            console.log('✅ [App] Magic link sent successfully');
+            
+            this.showMessage('Check your email for the sign-in link!', 'success');
+        } catch (error) {
+            console.error('❌ [App] Auth form submission failed:', error);
+            throw error;
+        }
+    })
+    .onError((error) => {
+        console.error('❌ [App] Auth form error:', error);
+        this.showMessage(error.message || 'Authentication failed', 'error');
+    });
             
             console.log('✅ [App] Auth form handler configured');
         } else {
