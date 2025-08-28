@@ -91,19 +91,5 @@
             </div>
         </div>
     </div>
-    <script>
-// Immediate form prevention - runs before script loader
-document.addEventListener('DOMContentLoaded', function() {
-    const authForm = document.getElementById('auth-form');
-    if (authForm) {
-        // CRITICAL: Prevent default submission immediately
-        authForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('🛑 Form submission prevented - handling with JavaScript');
-        });
-    }
-});
-</script>
 </body>
 </html>
