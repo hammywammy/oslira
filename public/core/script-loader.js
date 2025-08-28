@@ -25,7 +25,9 @@ class OsliraScriptLoader {
             isStaging
         };
     }
-    
+
+    detectCurrentPage() {
+    const pathname = window.location.pathname;
     console.log('🔍 [ScriptLoader] Detecting page for pathname:', pathname);
     
     const pageMap = {
