@@ -334,7 +334,8 @@ this.auth = await window.OsliraAuth.initialize(this.config);
     
     async setupPageSpecificFeatures() {
         // Initialize page-specific components based on current page
-        const currentPage = this.detectCurrentPage();
+        const currentPage = window.OsliraScriptLoader?.currentPage || 'unknown';
+    console.log('🔧 [App] Setting up features for page:', currentPage);
         
         switch (currentPage) {
             case 'dashboard':
