@@ -141,7 +141,6 @@ class OsliraScriptLoader {
                     requiresAuth: false
                 },
                 'auth': {
-                    scripts: ['/pages/auth/auth.js'],
                     styles: ['/pages/auth/auth.css'],
                     requiresAuth: false
                 },
