@@ -183,14 +183,19 @@ class OsliraAppInitializer {
                 throw new Error('Supabase library not available');
             }
             
-            if (!this.config.supabaseUrl || !this.config.supabaseKey) {
-                throw new Error('Supabase configuration missing');
-            }
-            
-            this.supabase = window.supabase.createClient(
-                this.config.supabaseUrl,
-                this.config.supabaseKey
-            );
+           // Get supabase config with multiple fallback patterns
+const supabaseUrl = this.config.supabaseUrl || this.config.SUPABASE_URL || window.CONFIG?.SUPABASE_URL;
+const supabaseKey = this.config.supabaseKey || this.config.supabaseAnonKey || this.config.SUPABASE_ANON_KEY || window.CONFIG?.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ [App] Missing Supabase config:', { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseKey,
+        configKeys: Object.keys(this.config),
+        windowConfig: !!window.CONFIG 
+    });
+    throw new Error('Supabase configuration missing');
+}
             
             // Make globally available
             window.supabase = this.supabase;
