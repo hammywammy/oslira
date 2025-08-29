@@ -33,19 +33,19 @@ class OsliraConfigManager {
     }
     
     static processConfig(rawConfig) {
-        const baseUrl = window.location.origin;
-        const isProduction = baseUrl.includes('oslira.com');
-        const isStaging = baseUrl.includes('osliratest.netlify.app');
+    const baseUrl = window.location.origin;
+    const isProduction = baseUrl.includes('oslira.com');
+    const isStaging = baseUrl.includes('oslira.org') || baseUrl.includes('osliratest.netlify.app');
+    
+    return {
+        // Core URLs
+        BASE_URL: baseUrl,
+        WORKER_URL: this.getWorkerUrl(baseUrl, rawConfig),
         
-        return {
-            // Core URLs
-            BASE_URL: baseUrl,
-            WORKER_URL: this.getWorkerUrl(baseUrl, rawConfig),
-            
-            // Environment
-            ENV: isProduction ? 'prod' : (isStaging ? 'staging' : 'dev'),
-            IS_PRODUCTION: isProduction,
-            IS_STAGING: isStaging,
+        // Environment
+        ENV: isProduction ? 'prod' : (isStaging ? 'staging' : 'dev'),
+        IS_PRODUCTION: isProduction,
+        IS_STAGING: isStaging,
             
             // Supabase
             SUPABASE_URL: rawConfig.supabaseUrl || rawConfig.SUPABASE_URL,
@@ -67,13 +67,13 @@ class OsliraConfigManager {
     }
     
     static getWorkerUrl(baseUrl, config) {
-        if (baseUrl.includes('oslira.com')) {
-            return 'https://api.oslira.com';
-        } else if (baseUrl.includes('osliratest.netlify.app')) {
-            return 'https://api-staging.oslira.com';
-        }
-        return config.workerUrl || config.WORKER_URL || 'https://api-staging.oslira.com';
+    if (baseUrl.includes('oslira.com')) {
+        return 'https://api.oslira.com';
+    } else if (baseUrl.includes('oslira.org') || baseUrl.includes('osliratest.netlify.app')) {
+        return 'https://api-staging.oslira.com';
     }
+    return config.workerUrl || config.WORKER_URL || 'https://api-staging.oslira.com';
+}
     
     static get() {
         if (!this.config) {
