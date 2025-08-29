@@ -239,11 +239,11 @@ if (!window.supabase.createClient) {
             console.log('📧 [Auth] Sending magic link to:', email);
             
             const { data, error } = await this.supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback.html`
-                }
-            });
+    email,
+    options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`
+    }
+});
             
             if (error) throw error;
             
