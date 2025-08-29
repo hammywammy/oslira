@@ -247,36 +247,53 @@ detectEnvironment() {
     // =============================================================================
     
     async loadAll() {
-        try {
-            console.log('📚 [ScriptLoader] Starting universal script loading...');
-            const startTime = performance.now();
-            
-            // Step 1: Load core dependencies in order
-            await this.loadCoreDependencies();
-            
-            // Step 2: Load page-specific dependencies
-            await this.loadPageDependencies();
-            
-            const duration = performance.now() - startTime;
-            console.log(`✅ [ScriptLoader] All scripts loaded successfully in ${duration.toFixed(2)}ms`);
-            
-            // Emit ready event
-            window.dispatchEvent(new CustomEvent('oslira:scripts:loaded', {
-                detail: { 
-                    page: this.currentPage,
-                    loadTime: duration,
-                    environment: this.config.environment
-                }
-            }));
-            
-            return true;
-            
-        } catch (error) {
-            console.error('❌ [ScriptLoader] Script loading failed:', error);
-            this.handleLoadingError(error);
-            throw error;
-        }
+    try {
+        console.log('📚 [ScriptLoader] Starting universal script loading...');
+        const startTime = performance.now();
+        
+        // Step 1: Load pre-core first (environment detection)
+        await this.loadPreCoreDependencies();
+        
+        // Step 2: Load core dependencies in order
+        await this.loadCoreDependencies();
+        
+        // Step 3: Load page-specific dependencies
+        await this.loadPageDependencies();
+        
+        const duration = performance.now() - startTime;
+        console.log(`✅ [ScriptLoader] All scripts loaded successfully in ${duration.toFixed(2)}ms`);
+        
+        // Emit ready event
+        window.dispatchEvent(new CustomEvent('oslira:scripts:loaded', {
+            detail: { 
+                page: this.currentPage,
+                loadTime: duration,
+                environment: this.config?.environment || 'unknown'
+            }
+        }));
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ [ScriptLoader] Script loading failed:', error);
+        this.handleLoadingError(error);
+        throw error;
     }
+}
+
+    async loadPreCoreDependencies() {
+    console.log('🔧 [ScriptLoader] Loading pre-core dependencies...');
+    
+    if (this.dependencies['pre-core']) {
+        for (const scriptUrl of this.dependencies['pre-core']) {
+            await this.loadScript({ url: scriptUrl }, `pre-core-${scriptUrl}`);
+        }
+        
+        // Now detect environment after OsliraEnv is loaded
+        this.config = this.detectEnvironment();
+        console.log(`📚 [ScriptLoader] Environment detected: ${this.config.environment}`);
+    }
+}
     
     async loadCoreDependencies() {
         console.log('🔧 [ScriptLoader] Loading core dependencies...');
@@ -343,27 +360,7 @@ async loadPageDependencies() {
     console.log(`📄 [ScriptLoader] Loading dependencies for page: ${this.currentPage}`);
     
     try {
-        // 1. Load pre-core first (environment detection)
-        if (this.dependencies['pre-core']) {
-            console.log('🔧 [ScriptLoader] Loading pre-core dependencies...');
-            for (const scriptUrl of this.dependencies['pre-core']) {
-                await this.loadScript({ url: scriptUrl }, `pre-core-${scriptUrl}`);
-            }
-        }
-        
-        // 2. Now detect environment after OsliraEnv is loaded
-        this.config = this.detectEnvironment();
-        console.log(`📚 [ScriptLoader] Environment detected: ${this.config.environment}`);
-        
-        // 3. Load core dependencies (now can use window.OsliraEnv)
-        if (this.dependencies.core) {
-            console.log('⚙️ [ScriptLoader] Loading core dependencies...');
-            for (const scriptUrl of this.dependencies.core) {
-                await this.loadScript({ url: scriptUrl }, `core-${scriptUrl}`);
-            }
-        }
-        
-        // 3. Load page-specific dependencies
+        // Load page-specific dependencies
         const pageDeps = this.dependencies.pages[this.currentPage];
         if (!pageDeps) {
             console.log('⏭️ [ScriptLoader] No page-specific dependencies');
