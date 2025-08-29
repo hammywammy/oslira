@@ -196,10 +196,10 @@ detectEnvironment() {
                     requiresAuth: false
                 },
                 'auth-callback': {
-                    scripts: ['/pages/auth/callback.js'],
-                    styles: ['/pages/auth/auth.css'],
-                    requiresAuth: false
-                },
+    scripts: [],
+    styles: ['/pages/auth/auth.css'], 
+    requiresAuth: false
+},
                 'onboarding': {
                     scripts: ['/pages/onboarding/onboarding.js'],
                     styles: ['/pages/onboarding/onboarding.css'],
