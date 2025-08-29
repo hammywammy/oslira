@@ -43,9 +43,18 @@ class OsliraConfigManager {
         WORKER_URL: this.getWorkerUrl(baseUrl, rawConfig),
         
         // Environment
-        ENV: isProduction ? 'prod' : (isStaging ? 'staging' : 'dev'),
-        IS_PRODUCTION: isProduction,
-        IS_STAGING: isStaging,
+ENV: isProduction ? 'prod' : (isStaging ? 'staging' : 'dev'),
+IS_PRODUCTION: isProduction,
+IS_STAGING: isStaging,
+
+// Log environment detection
+console.log('🌍 [Config] Environment Detection:', {
+    hostname: window.location.hostname,
+    origin: baseUrl,
+    isProduction,
+    isStaging,
+    environment: isProduction ? 'PRODUCTION' : (isStaging ? 'STAGING' : 'DEVELOPMENT')
+});
             
             // Supabase
             SUPABASE_URL: rawConfig.supabaseUrl || rawConfig.SUPABASE_URL,
