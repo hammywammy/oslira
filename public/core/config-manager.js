@@ -34,31 +34,30 @@ class OsliraConfigManager {
     
     static processConfig(rawConfig) {
     const baseUrl = window.location.origin;
-    const isProduction = baseUrl.includes('oslira.com');
-    const isStaging = baseUrl.includes('oslira.org') || baseUrl.includes('osliratest.netlify.app');
     
-    // Environment detection
-        const environment = isProduction ? 'prod' : (isStaging ? 'staging' : 'dev');
-        const environmentString = isProduction ? 'PRODUCTION' : (isStaging ? 'STAGING' : 'DEVELOPMENT');
+    // Use centralized environment detection - NO MORE DUPLICATE LOGIC
+    const environment = window.OsliraEnv.ENV === 'production' ? 'prod' : 
+                       (window.OsliraEnv.ENV === 'staging' ? 'staging' : 'dev');
+    const environmentString = window.OsliraEnv.ENV.toUpperCase();
+    
+    // Log environment detection from centralized source
+    console.log('🌍 [Config] Environment Detection:', {
+        hostname: window.OsliraEnv.hostname,
+        origin: baseUrl,
+        isProduction: window.OsliraEnv.IS_PRODUCTION,
+        isStaging: window.OsliraEnv.IS_STAGING,
+        environment: environmentString
+    });
+    
+    return {
+        // Core URLs
+        BASE_URL: baseUrl,
+        WORKER_URL: window.OsliraEnv.WORKER_URL,
         
-        // Log environment detection
-        console.log('🌍 [Config] Environment Detection:', {
-            hostname: window.location.hostname,
-            origin: baseUrl,
-            isProduction,
-            isStaging,
-            environment: environmentString
-        });
-        
-        return {
-            // Core URLs
-            BASE_URL: baseUrl,
-            WORKER_URL: this.getWorkerUrl(baseUrl, rawConfig),
-            
-            // Environment
-            ENV: environment,
-            IS_PRODUCTION: isProduction,
-            IS_STAGING: isStaging,
+        // Environment from centralized manager
+        ENV: environment,
+        IS_PRODUCTION: window.OsliraEnv.IS_PRODUCTION,
+        IS_STAGING: window.OsliraEnv.IS_STAGING,
             
             // Supabase
             SUPABASE_URL: rawConfig.supabaseUrl || rawConfig.SUPABASE_URL,
@@ -80,12 +79,8 @@ class OsliraConfigManager {
     }
     
     static getWorkerUrl(baseUrl, config) {
-    if (baseUrl.includes('oslira.com')) {
-        return 'https://api.oslira.com';
-    } else if (baseUrl.includes('oslira.org') || baseUrl.includes('osliratest.netlify.app')) {
-        return 'https://api-staging.oslira.com';
-    }
-    return config.workerUrl || config.WORKER_URL || 'https://api-staging.oslira.com';
+    // COMPLETELY REMOVE - Use centralized detection
+    return window.OsliraEnv.WORKER_URL;
 }
     
     static get() {
