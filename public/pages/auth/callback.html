@@ -99,11 +99,35 @@
             try {
                 console.log('🔗 [Callback] Starting secure authentication processing...');
                 
-                // Initialize Supabase immediately
-                const envConfig = window.getEnvConfig && window.getEnvConfig();
-                if (!envConfig || !envConfig.SUPABASE_URL || !envConfig.SUPABASE_ANON_KEY) {
-                    throw new Error('Missing configuration');
+                // Wait for configuration to be available
+let envConfig = null;
+let attempts = 0;
+const maxAttempts = 50; // 5 seconds max
+
+const waitForConfig = () => {
+    return new Promise((resolve, reject) => {
+        const checkConfig = () => {
+            if (window.getEnvConfig) {
+                envConfig = window.getEnvConfig();
+                if (envConfig && envConfig.SUPABASE_URL && envConfig.SUPABASE_ANON_KEY) {
+                    resolve(envConfig);
+                    return;
                 }
+            }
+            
+            attempts++;
+            if (attempts < maxAttempts) {
+                setTimeout(checkConfig, 100);
+            } else {
+                reject(new Error('Configuration timeout - please refresh the page'));
+            }
+        };
+        checkConfig();
+    });
+};
+
+// Wait for configuration before proceeding
+envConfig = await waitForConfig();
                 
                 const supabase = window.supabase.createClient(
                     envConfig.SUPABASE_URL,
