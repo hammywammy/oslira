@@ -37,24 +37,28 @@ class OsliraConfigManager {
     const isProduction = baseUrl.includes('oslira.com');
     const isStaging = baseUrl.includes('oslira.org') || baseUrl.includes('osliratest.netlify.app');
     
-    return {
-        // Core URLs
-        BASE_URL: baseUrl,
-        WORKER_URL: this.getWorkerUrl(baseUrl, rawConfig),
+    // Environment detection
+        const environment = isProduction ? 'prod' : (isStaging ? 'staging' : 'dev');
+        const environmentString = isProduction ? 'PRODUCTION' : (isStaging ? 'STAGING' : 'DEVELOPMENT');
         
-        // Environment
-ENV: isProduction ? 'prod' : (isStaging ? 'staging' : 'dev'),
-IS_PRODUCTION: isProduction,
-IS_STAGING: isStaging,
-
-// Log environment detection
-console.log('🌍 [Config] Environment Detection:', {
-    hostname: window.location.hostname,
-    origin: baseUrl,
-    isProduction,
-    isStaging,
-    environment: isProduction ? 'PRODUCTION' : (isStaging ? 'STAGING' : 'DEVELOPMENT')
-});
+        // Log environment detection
+        console.log('🌍 [Config] Environment Detection:', {
+            hostname: window.location.hostname,
+            origin: baseUrl,
+            isProduction,
+            isStaging,
+            environment: environmentString
+        });
+        
+        return {
+            // Core URLs
+            BASE_URL: baseUrl,
+            WORKER_URL: this.getWorkerUrl(baseUrl, rawConfig),
+            
+            // Environment
+            ENV: environment,
+            IS_PRODUCTION: isProduction,
+            IS_STAGING: isStaging,
             
             // Supabase
             SUPABASE_URL: rawConfig.supabaseUrl || rawConfig.SUPABASE_URL,
