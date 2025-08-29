@@ -341,16 +341,18 @@ detectEnvironment() {
             }
             
             // Load the script
-            try {
-                console.log(`🔄 [ScriptLoader] Loading ${scriptName}...`);
-                await this.loadScript(script, scriptName);
-                console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
-            } catch (error) {
-                console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
-                if (script.critical) {
-                    throw new Error(`Critical script failed: ${scriptName} - ${error.message}`);
-                }
-            }
+try {
+    console.log(`🔄 [ScriptLoader] Loading ${scriptName}...`);
+    await this.loadScript(script, scriptName);
+    console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
+} catch (error) {
+    console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
+    if (script.critical) {
+        throw new Error(`Critical script failed: ${scriptName} - ${error.message}`);
+    } else {
+        console.log(`⚠️ [ScriptLoader] Non-critical script ${scriptName} failed, continuing...`);
+    }
+}
         }
         
         console.log('✅ [ScriptLoader] Core dependencies loaded');
