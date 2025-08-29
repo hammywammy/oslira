@@ -87,6 +87,12 @@ class OsliraScriptLoader {
     
     defineDependencies() {
         return {
+             // =============================================================================
+        // PRE-CORE - Environment detection MUST load first
+        // =============================================================================
+        'pre-core': [
+            '/core/env-manager.js'
+        ],
             // =============================================================================
             // CORE DEPENDENCIES (Always loaded first)
             // =============================================================================
@@ -327,9 +333,27 @@ class OsliraScriptLoader {
         console.log('✅ [ScriptLoader] Core dependencies loaded');
     }
     
-    async loadPageDependencies() {
-        console.log(`📄 [ScriptLoader] Loading dependencies for page: ${this.currentPage}`);
+async loadPageDependencies() {
+    console.log(`📄 [ScriptLoader] Loading dependencies for page: ${this.currentPage}`);
+    
+    try {
+        // 1. Load pre-core first (environment detection)
+        if (this.dependencies['pre-core']) {
+            console.log('🔧 [ScriptLoader] Loading pre-core dependencies...');
+            for (const scriptUrl of this.dependencies['pre-core']) {
+                await this.loadScript({ url: scriptUrl }, `pre-core-${scriptUrl}`);
+            }
+        }
         
+        // 2. Load core dependencies (now can use window.OsliraEnv)
+        if (this.dependencies.core) {
+            console.log('⚙️ [ScriptLoader] Loading core dependencies...');
+            for (const scriptUrl of this.dependencies.core) {
+                await this.loadScript({ url: scriptUrl }, `core-${scriptUrl}`);
+            }
+        }
+        
+        // 3. Load page-specific dependencies
         const pageDeps = this.dependencies.pages[this.currentPage];
         if (!pageDeps) {
             console.log('⏭️ [ScriptLoader] No page-specific dependencies');
@@ -360,8 +384,13 @@ class OsliraScriptLoader {
             }
         }
         
-        console.log(`✅ [ScriptLoader] Page dependencies loaded for: ${this.currentPage}`);
+        console.log(`✅ [ScriptLoader] All dependencies loaded for: ${this.currentPage}`);
+        
+    } catch (error) {
+        console.error(`❌ [ScriptLoader] Failed to load dependencies for ${this.currentPage}:`, error);
+        throw error;
     }
+}
     
     // =============================================================================
     // SCRIPT LOADING UTILITIES
