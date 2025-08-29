@@ -39,17 +39,20 @@ class OsliraAuthManager {
         
         // Initialize single Supabase client
         this.supabase = window.supabase.createClient(
-            this.config.SUPABASE_URL,
-            this.config.SUPABASE_ANON_KEY,
-            {
-                auth: {
-                    autoRefreshToken: true,
-                    persistSession: true,
-                    detectSessionInUrl: true,
-                    storage: window.localStorage
-                }
-            }
-        );
+    config.SUPABASE_URL,
+    config.SUPABASE_ANON_KEY,
+    {
+        auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true,
+            storage: window.localStorage,
+            flowType: 'pkce',
+            storageKey: 'supabase.auth.token',
+            expiry: 3 * 24 * 60 * 60 // 3 days in seconds
+        }
+    }
+);
         
         // Make client globally available (preserve library)
 window.supabaseClient = this.supabase;
@@ -589,27 +592,42 @@ if (!window.supabase.createClient) {
     // =============================================================================
     
     setupTokenRotation() {
-        if (!this.session) return;
-        
-        // Refresh tokens every 15 minutes (Supabase default is 1 hour)
-        const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutes
-        
-        setInterval(async () => {
-            try {
+    // Check session validity every 4 hours, but allow 3-day sessions
+    const CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
+    const MAX_SESSION_AGE = 3 * 24 * 60 * 60 * 1000; // 3 days
+    
+    setInterval(async () => {
+        try {
+            if (this.session) {
+                // Check if session is older than 3 days
+                const sessionAge = Date.now() - (this.session.created_at ? new Date(this.session.created_at).getTime() : 0);
+                
+                if (sessionAge > MAX_SESSION_AGE) {
+                    console.log('⏰ [Auth] Session expired after 3 days, signing out');
+                    this.signOut();
+                    return;
+                }
+                
+                // Refresh token if needed (Supabase handles this automatically)
                 const { data, error } = await this.supabase.auth.refreshSession();
+                
                 if (error) {
                     console.error('❌ [Auth] Token refresh failed:', error);
-                    await this.signOut();
-                } else {
-                    console.log('🔄 [Auth] Token refreshed successfully');
+                    this.signOut();
+                    return;
+                }
+                
+                if (data.session) {
                     this.session = data.session;
+                    console.log('✅ [Auth] Session validated, expires in 3 days from login');
                     this.notifyAuthChange('TOKEN_REFRESHED', data.session, null);
                 }
-            } catch (error) {
-                console.error('❌ [Auth] Token refresh error:', error);
             }
-        }, REFRESH_INTERVAL);
-    }
+        } catch (error) {
+            console.error('❌ [Auth] Session validation error:', error);
+        }
+    }, CHECK_INTERVAL);
+}
     
     setupSecurityEventHandlers() {
         // Force logout on multiple tabs
