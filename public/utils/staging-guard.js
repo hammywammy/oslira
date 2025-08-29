@@ -6,25 +6,13 @@ const DISABLE_LOGS_IN_PRODUCTION = true;
 const DISABLE_LOGS_IN_STAGING = false;
 
 const shouldDisableLogs = (
-    (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') ||
-    (DISABLE_LOGS_IN_STAGING && (window.location.hostname === 'oslira.org' || window.location.hostname === 'osliratest.netlify.app'))
+    (DISABLE_LOGS_IN_PRODUCTION && window.OsliraEnv.IS_PRODUCTION) ||
+    (DISABLE_LOGS_IN_STAGING && window.OsliraEnv.IS_STAGING)
 );
-
-// *** DETECT ENVIRONMENT FOR DYNAMIC MESSAGE ***
-const getCurrentEnvironment = () => {
-    if (window.location.hostname === 'oslira.com') {
-        return 'production';
-    } else if (window.location.hostname === 'oslira.org' || window.location.hostname === 'osliratest.netlify.app') {
-        return 'staging';
-    } else {
-        return 'development';
-    }
-};
 
 // *** IMPLEMENT LOG DISABLING WITH DYNAMIC MESSAGE ***
 if (shouldDisableLogs) {
-    const currentEnv = getCurrentEnvironment();
-    console.log(`🔇 Disabling console logs for ${currentEnv} environment`);
+    const currentEnv = window.OsliraEnv.ENV;
     
     // Store original console methods
     const originalConsole = {
@@ -67,16 +55,14 @@ if (shouldDisableLogs) {
 (function() {
     'use strict';
     
-    // Only run on staging domains
-const isStaging = window.location.hostname.includes('test') || 
-                 window.location.hostname.includes('staging') ||
-                 window.location.hostname.includes('osliratest') ||
-                 window.location.hostname === 'oslira.org';
+// Use centralized environment detection - NO DUPLICATE LOGIC
+const isStaging = window.OsliraEnv.IS_STAGING;
 
 if (!isStaging) { 
     console.log('🔓 Production environment - no password protection needed');
     return;
 }
+
     
     console.log('🔒 Staging environment detected - secure protection check');
     
@@ -444,7 +430,7 @@ if (!isStaging) {
             "></div>
             
             <p style="margin: 20px 0 0 0; color: #9ca3af; font-size: 12px;">
-                Environment: ${window.location.hostname}<br>
+                Environment: ${window.OsliraEnv.hostname}<br>
                 Rate limited: ${MAX_ATTEMPTS} attempts per hour
             </p>
         `;
