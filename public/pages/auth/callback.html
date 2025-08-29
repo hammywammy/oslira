@@ -101,12 +101,12 @@
     const waitForApp = () => {
         return new Promise((resolve) => {
             const checkApp = () => {
-                if (window.OsliraAuth && window.OsliraAuth.handleCallback) {
-                    resolve();
-                } else {
-                    setTimeout(checkApp, 100);
-                }
-            };
+    if (window.OsliraApp && window.OsliraApp.auth && window.OsliraApp.auth.handleCallback) {
+        resolve();
+    } else {
+        setTimeout(checkApp, 100);
+    }
+};
             checkApp();
         });
     };
@@ -116,7 +116,8 @@
         console.log('🔗 [Callback] App system ready, delegating to auth manager...');
         
         // Let the auth manager handle the callback
-        await window.OsliraAuth.handleCallback();
+       // Let the auth manager handle the callback
+await window.OsliraApp.auth.handleCallback();
         
     } catch (error) {
         console.error('❌ [Callback] Authentication failed:', error);
