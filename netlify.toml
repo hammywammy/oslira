@@ -22,7 +22,7 @@
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: https: blob: https://images.weserv.nl;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://api.oslira.com https://api-staging.oslira.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://*.sentry.io https://api.oslira.com https://api-staging.oslira.com https://oslira.org;
       frame-src https://js.stripe.com;
       object-src 'none';
       base-uri 'self';
