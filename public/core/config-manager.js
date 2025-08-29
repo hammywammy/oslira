@@ -69,12 +69,12 @@ class OsliraConfigManager {
             DASHBOARD_URL: `${baseUrl}/dashboard.html`,
             
             // Feature flags
-            FEATURES: {
-                DEBUG_MODE: !isProduction,
-                ANALYTICS: true,
-                CAMPAIGNS: isProduction,
-                BULK_UPLOAD: true
-            }
+FEATURES: {
+    DEBUG_MODE: !window.OsliraEnv.IS_PRODUCTION,
+    ANALYTICS: true,
+    CAMPAIGNS: window.OsliraEnv.IS_PRODUCTION,
+    BULK_UPLOAD: true
+}
         };
     }
     
