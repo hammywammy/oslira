@@ -238,12 +238,18 @@ if (!window.supabase.createClient) {
         try {
             console.log('📧 [Auth] Sending magic link to:', email);
             
+            // Dynamic redirect URL based on current domain
+            const currentOrigin = window.location.origin;
+            const redirectUrl = `${currentOrigin}/auth/callback`;
+            
+            console.log('🔗 [Auth] Using redirect URL:', redirectUrl);
+            
             const { data, error } = await this.supabase.auth.signInWithOtp({
-    email,
-    options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`
-    }
-});
+                email,
+                options: {
+                    emailRedirectTo: redirectUrl
+                }
+            });
             
             if (error) throw error;
             
