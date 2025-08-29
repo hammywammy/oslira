@@ -361,7 +361,7 @@ if (!window.supabase.createClient) {
         return this.user?.is_admin || false;
     }
     
-    async requireAuth(redirectUrl = '/auth.html') {
+    async requireAuth(redirectUrl = '/auth') {
         if (!this.isAuthenticated()) {
             console.log('🚫 [Auth] Authentication required, redirecting...');
             window.location.href = redirectUrl;
@@ -370,7 +370,7 @@ if (!window.supabase.createClient) {
         return true;
     }
     
-    async requireOnboarding(redirectUrl = '/onboarding.html') {
+    async requireOnboarding(redirectUrl = '/onboarding') {
         if (!await this.requireAuth()) return false;
         
         if (!this.isOnboardingComplete()) {
@@ -381,7 +381,7 @@ if (!window.supabase.createClient) {
         return true;
     }
     
-    async requireBusiness(redirectUrl = '/onboarding.html') {
+    async requireBusiness(redirectUrl = '/onboarding') {
         if (!await this.requireOnboarding()) return false;
         
         if (!this.hasBusinessProfile()) {
@@ -392,7 +392,7 @@ if (!window.supabase.createClient) {
         return true;
     }
     
-    async requireAdmin(redirectUrl = '/dashboard.html') {
+    async requireAdmin(redirectUrl = '/dashboard') {
         if (!await this.requireAuth()) return false;
         
         if (!this.isAdmin()) {
@@ -411,9 +411,9 @@ if (!window.supabase.createClient) {
         // If already authenticated, redirect appropriately
         if (this.isAuthenticated()) {
             if (!this.isOnboardingComplete()) {
-                window.location.href = '/onboarding.html';
+                window.location.href = '/onboarding';
             } else {
-                window.location.href = '/dashboard.html';
+                window.location.href = '/dashboard';
             }
             return false; // Don't show auth form
         }
@@ -424,7 +424,7 @@ if (!window.supabase.createClient) {
         if (!await this.requireAuth()) return false;
         
         if (this.isOnboardingComplete()) {
-            window.location.href = '/dashboard.html';
+            window.location.href = '/dashboard';
             return false;
         }
         return true;
@@ -449,26 +449,26 @@ if (!window.supabase.createClient) {
             if (session) {
                 // Determine where to redirect
                 if (!this.isOnboardingComplete()) {
-                    window.location.href = '/onboarding.html';
+                    window.location.href = '/onboarding';
                 } else {
-                    window.location.href = '/dashboard.html';
+                    window.location.href = '/dashboard';
                 }
             } else {
                 // No session, redirect to auth
-                window.location.href = '/auth.html';
+                window.location.href = '/auth';
             }
             
         } catch (error) {
             console.error('❌ [Auth] Callback handling failed:', error);
-            window.location.href = '/auth.html';
+            window.location.href = '/auth';
         }
     }
     
     getRedirectAfterAuth() {
         if (!this.isOnboardingComplete()) {
-            return '/onboarding.html';
+            return '/onboarding';
         }
-        return '/dashboard.html';
+        return '/dashboard';
     }
     
     // =============================================================================
