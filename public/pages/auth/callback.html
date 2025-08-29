@@ -91,234 +91,53 @@
     </div>
 
     <script src="/core/script-loader.js"></script>
-    
     <script>
-        (async function() {
-            'use strict';
-            
-            try {
-                console.log('🔗 [Callback] Starting secure authentication processing...');
-                
-                // Wait for configuration to be available
-let envConfig = null;
-let attempts = 0;
-const maxAttempts = 50; // 5 seconds max
-
-const waitForConfig = () => {
-    return new Promise((resolve, reject) => {
-        const checkConfig = () => {
-            if (window.OsliraConfig) {
-                try {
-                    envConfig = window.OsliraConfig.get();
-                    if (envConfig && envConfig.SUPABASE_URL && envConfig.SUPABASE_ANON_KEY) {
-                        resolve(envConfig);
-                        return;
-                    }
-                } catch (e) {
-                    // Config not loaded yet, continue waiting
-                }
-            }
-            
-            attempts++;
-            if (attempts < maxAttempts) {
-                setTimeout(checkConfig, 100);
-            } else {
-                reject(new Error('Configuration timeout - please refresh the page'));
-            }
-        };
-        checkConfig();
-    });
-};
-
-// Wait for configuration before proceeding
-envConfig = await waitForConfig();
-                
-                const supabase = window.supabase.createClient(
-                    envConfig.SUPABASE_URL,
-                    envConfig.SUPABASE_ANON_KEY,
-                    {
-                        auth: {
-                            autoRefreshToken: true,
-                            persistSession: true,
-                            detectSessionInUrl: true,
-                            storage: window.localStorage
-                        }
-                    }
-                );
-                
-                // Process URL parameters securely
-                const urlParams = new URLSearchParams(window.location.search);
-                const hashParams = new URLSearchParams(window.location.hash.substring(1));
-                
-                // Check for error first
-                const error = hashParams.get('error') || urlParams.get('error');
-                const errorDescription = hashParams.get('error_description') || urlParams.get('error_description');
-                
-                if (error) {
-                    console.error('🔗 [Callback] Auth error:', error, errorDescription);
-                    throw new Error(errorDescription || error);
-                }
-                
-                // Get tokens
-                const accessToken = hashParams.get('access_token') || urlParams.get('access_token');
-                const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token');
-                const tokenType = hashParams.get('token_type') || urlParams.get('token_type');
-                
-                if (!accessToken || !refreshToken) {
-                    throw new Error('Missing authentication tokens');
-                }
-                
-                // Validate token format (basic security check)
-                if (!accessToken.match(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)) {
-                    throw new Error('Invalid token format');
-                }
-                
-                console.log('🔗 [Callback] Processing authentication tokens...');
-                
-                // Set session with tokens
-                const { data, error: sessionError } = await supabase.auth.setSession({
-                    access_token: accessToken,
-                    refresh_token: refreshToken
-                });
-                
-                if (sessionError) {
-                    console.error('🔗 [Callback] Session error:', sessionError);
-                    throw sessionError;
-                }
-                
-                if (!data.session || !data.user) {
-                    throw new Error('Failed to create session');
-                }
-                
-                console.log('✅ [Callback] Authentication successful for:', data.user.email);
-                
-                // Clear URL parameters immediately for security
-                if (window.history && window.history.replaceState) {
-                    window.history.replaceState(null, '', window.location.pathname);
-                }
-                
-                // Get user profile to determine redirect
-                const { data: userData, error: userError } = await supabase
-                    .from('users')
-                    .select('onboarding_completed, is_admin')
-                    .eq('id', data.user.id)
-                    .single();
-                
-                // Determine redirect URL
-                // SECURE: Complete whitelist of ALL your allowed routes
-const ALLOWED_REDIRECTS = [
-    // Main app pages
-    '/dashboard',
-    '/admin', 
-    '/analytics',
-    '/auth',
-    '/campaigns',
-    '/',
-    '/integrations',
-    '/leads',
-    '/messages', 
-    '/onboarding',
-    '/settings',
-    '/subscription',
+(async function() {
+    'use strict';
     
-    // Footer pages
-    '/footer/about',
-    '/footer/api',
-    '/footer/case-studies',
-    '/footer/guides',
-    '/footer/help',
-    '/footer/pricing',
-    '/footer/security',
-    '/footer/status',
+    console.log('🔗 [Callback] Starting authentication processing...');
     
-    // Legal pages
-    '/footer/legal/privacy',
-    '/footer/legal/terms',
-    '/footer/legal/refund',
-    '/footer/legal/disclaimer'
-];
-
-// Determine redirect URL securely
-let redirectUrl = '/dashboard';
-if (!userData?.onboarding_completed) {
-    redirectUrl = '/onboarding';
-} else if (userData?.is_admin && window.location.search.includes('admin')) {
-    redirectUrl = '/admin';
-}
-
-// SECURE: Validate return URL against your complete route list
-const returnUrl = urlParams.get('return');
-if (returnUrl) {
-    const decodedUrl = decodeURIComponent(returnUrl);
-    
-    // Multi-layer security validation:
-    // 1. Must start with / (internal path only)
-    // 2. Cannot contain // (prevents protocol smuggling)  
-    // 3. Must exactly match or be subpath of allowed routes
-    // 4. No query params that could be used for injection
-    if (decodedUrl.startsWith('/') && 
-        !decodedUrl.includes('//') &&
-        !decodedUrl.includes('<') &&
-        !decodedUrl.includes('>') &&
-        ALLOWED_REDIRECTS.some(allowed => 
-            decodedUrl === allowed || 
-            decodedUrl.startsWith(allowed + '/') ||
-            decodedUrl.startsWith(allowed + '?') ||
-            decodedUrl.startsWith(allowed + '#')
-        )) {
-        redirectUrl = decodedUrl;
-        console.log('✅ [Callback] Valid return URL accepted:', redirectUrl);
-    } else {
-        console.log('🚫 [Callback] Invalid return URL rejected:', decodedUrl, 'using default:', redirectUrl);
-    }
-    // Any invalid/suspicious URLs are ignored - user goes to safe default
-}
-
-console.log('🔗 [Callback] Final secure redirect to:', redirectUrl);
-
-// Small delay to ensure session is established
-setTimeout(() => {
-    window.location.href = redirectUrl;
-}, 500);
-                
-                console.log('🔗 [Callback] Redirecting to:', redirectUrl);
-                
-                // Small delay to ensure session is fully established
-                setTimeout(() => {
-                    window.location.href = redirectUrl;
-                }, 500);
-                
-            } catch (error) {
-                console.error('❌ [Callback] Authentication failed:', error);
-                showError(error.message || 'Authentication failed');
-                
-                // Clear any partial auth state
-                try {
-                    localStorage.removeItem('supabase.auth.token');
-                    sessionStorage.clear();
-                } catch (e) {
-                    console.warn('Could not clear auth state:', e);
+    // Wait for the app system to initialize
+    const waitForApp = () => {
+        return new Promise((resolve) => {
+            const checkApp = () => {
+                if (window.OsliraAuth && window.OsliraAuth.handleCallback) {
+                    resolve();
+                } else {
+                    setTimeout(checkApp, 100);
                 }
-            }
-        })();
+            };
+            checkApp();
+        });
+    };
+    
+    try {
+        await waitForApp();
+        console.log('🔗 [Callback] App system ready, delegating to auth manager...');
         
-        function showError(message) {
-            const loadingState = document.getElementById('loading-state');
-            const errorState = document.getElementById('error-state');
-            const errorMessage = document.getElementById('error-message');
-            
-            loadingState.style.display = 'none';
-            errorState.style.display = 'block';
-            errorState.classList.remove('error-state');
-            
-            // Sanitize error message
-            errorMessage.textContent = message.length > 200 ? 'Authentication failed' : message;
-            
-            // Auto-redirect to auth page after 5 seconds
-            setTimeout(() => {
-                window.location.href = '/auth';
-            }, 5000);
-        }
-    </script>
+        // Let the auth manager handle the callback
+        await window.OsliraAuth.handleCallback();
+        
+    } catch (error) {
+        console.error('❌ [Callback] Authentication failed:', error);
+        showError(error.message || 'Authentication failed');
+    }
+})();
+
+function showError(message) {
+    const loadingState = document.getElementById('loading-state');
+    const errorState = document.getElementById('error-state');
+    const errorMessage = document.getElementById('error-message');
+    
+    loadingState.style.display = 'none';
+    errorState.style.display = 'block';
+    errorMessage.textContent = message;
+    
+    setTimeout(() => {
+        window.location.href = '/auth';
+    }, 5000);
+}
+</script>
+
 </body>
 </html>
