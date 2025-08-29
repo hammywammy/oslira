@@ -71,7 +71,7 @@ if (!isStaging) {
     const ATTEMPTS_KEY = 'stg_attempts_' + btoa(window.location.hostname).slice(0, 8);
     const SESSION_DURATION = 60 * 60 * 1000; // 1 hours
     const RATE_LIMIT_DURATION = 60 * 60 * 1000; // 1 hour
-    const MAX_ATTEMPTS = 3;
+    const MAX_ATTEMPTS = 10;
     
     // Obfuscated key generation (makes it harder to guess localStorage keys)
     function generateSecureKey(base) {
