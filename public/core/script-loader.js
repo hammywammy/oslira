@@ -4,17 +4,23 @@
 
 class OsliraScriptLoader {
     constructor() { 
-        this.loadedScripts = new Set(); 
-        this.loadingScripts = new Map();
-        this.config = this.detectEnvironment();
-        this.currentPage = this.detectCurrentPage();
-        this.dependencies = this.defineDependencies();
-        
-        console.log(`📚 [ScriptLoader] Initialized for page: ${this.currentPage}, env: ${this.config.environment}`);
+    this.loadedScripts = new Set(); 
+    this.loadingScripts = new Map();
+    
+    // Don't call detectEnvironment() in constructor - OsliraEnv not loaded yet
+    this.config = null;
+    this.currentPage = this.detectCurrentPage();
+    this.dependencies = this.defineDependencies();
+    
+    console.log(`📚 [ScriptLoader] Initialized for page: ${this.currentPage}`);
+}
+
+detectEnvironment() {
+    // Ensure OsliraEnv is available
+    if (!window.OsliraEnv) {
+        throw new Error('OsliraEnv not loaded. env-manager.js must load before script-loader.js');
     }
     
-    detectEnvironment() {
-    // Use centralized environment detection
     return {
         environment: window.OsliraEnv.ENV,
         hostname: window.OsliraEnv.hostname,
@@ -345,7 +351,11 @@ async loadPageDependencies() {
             }
         }
         
-        // 2. Load core dependencies (now can use window.OsliraEnv)
+        // 2. Now detect environment after OsliraEnv is loaded
+        this.config = this.detectEnvironment();
+        console.log(`📚 [ScriptLoader] Environment detected: ${this.config.environment}`);
+        
+        // 3. Load core dependencies (now can use window.OsliraEnv)
         if (this.dependencies.core) {
             console.log('⚙️ [ScriptLoader] Loading core dependencies...');
             for (const scriptUrl of this.dependencies.core) {
