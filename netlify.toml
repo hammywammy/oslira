@@ -77,6 +77,11 @@
   status = 200
 
 [[redirects]]
+  from = "/auth/callback"
+  to = "pages/auth/callback.html"
+  status = 200
+  
+[[redirects]]
   from = "/campaigns"
   to = "pages/campaigns/index.html"
   status = 200
