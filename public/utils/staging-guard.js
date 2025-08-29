@@ -7,14 +7,14 @@ const DISABLE_LOGS_IN_STAGING = false;
 
 const shouldDisableLogs = (
     (DISABLE_LOGS_IN_PRODUCTION && window.location.hostname === 'oslira.com') ||
-    (DISABLE_LOGS_IN_STAGING && window.location.hostname === 'osliratest.netlify.app')
+    (DISABLE_LOGS_IN_STAGING && (window.location.hostname === 'oslira.org' || window.location.hostname === 'osliratest.netlify.app'))
 );
 
 // *** DETECT ENVIRONMENT FOR DYNAMIC MESSAGE ***
 const getCurrentEnvironment = () => {
     if (window.location.hostname === 'oslira.com') {
         return 'production';
-    } else if (window.location.hostname === 'osliratest.netlify.app') {
+    } else if (window.location.hostname === 'oslira.org' || window.location.hostname === 'osliratest.netlify.app') {
         return 'staging';
     } else {
         return 'development';
