@@ -14,17 +14,14 @@ class OsliraScriptLoader {
     }
     
     detectEnvironment() {
-        const hostname = window.location.hostname;
-        const isStaging = hostname.includes('test') || hostname.includes('staging') || hostname.includes('netlify');
-        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
-        
-        return {
-            environment: isLocal ? 'development' : (isStaging ? 'staging' : 'production'),
-            hostname,
-            isLocal,
-            isStaging
-        };
-    }
+    // Use centralized environment detection
+    return {
+        environment: window.OsliraEnv.ENV,
+        hostname: window.OsliraEnv.hostname,
+        isLocal: window.OsliraEnv.IS_DEVELOPMENT,
+        isStaging: window.OsliraEnv.IS_STAGING
+    };
+}
 
     detectCurrentPage() {
         const pathname = window.location.pathname;
