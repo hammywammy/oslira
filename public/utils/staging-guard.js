@@ -68,14 +68,15 @@ if (shouldDisableLogs) {
     'use strict';
     
     // Only run on staging domains
-    const isStaging = window.location.hostname.includes('test') || 
-                     window.location.hostname.includes('staging') ||
-                     window.location.hostname.includes('osliratest');
-    
-    if (!isStaging) { 
-        console.log('🔓 Production environment - no password protection needed');
-        return;
-    }
+const isStaging = window.location.hostname.includes('test') || 
+                 window.location.hostname.includes('staging') ||
+                 window.location.hostname.includes('osliratest') ||
+                 window.location.hostname === 'oslira.org';
+
+if (!isStaging) { 
+    console.log('🔓 Production environment - no password protection needed');
+    return;
+}
     
     console.log('🔒 Staging environment detected - secure protection check');
     
