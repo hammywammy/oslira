@@ -466,7 +466,8 @@
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Sending Code...';
                     
-                    const auth = await window.OsliraAuth.initialize();
+                    const authSystem = await waitForAuthSystem();
+                    const auth = await authSystem.initialize();
                     await auth.signInWithPhone(phone);
                     
                     currentPhone = phone;
@@ -493,7 +494,8 @@
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'Verifying...';
                     
-                    const auth = await window.OsliraAuth.initialize();
+                    const authSystem = await waitForAuthSystem();
+                    const auth = await authSystem.initialize();
                     await auth.verifyPhoneOtp(currentPhone, otp);
                     
                     // Success - will be handled by auth state change
@@ -509,7 +511,8 @@
         // Google OAuth handlers
         document.getElementById('google-signin-btn').addEventListener('click', async () => {
             try {
-                const auth = await window.OsliraAuth.initialize();
+                const authSystem = await waitForAuthSystem();
+                const auth = await authSystem.initialize();
                 await auth.signInWithGoogle();
             } catch (error) {
                 showError(error.message);
@@ -518,7 +521,8 @@
 
         document.getElementById('google-signup-btn').addEventListener('click', async () => {
             try {
-                const auth = await window.OsliraAuth.initialize();
+                const authSystem = await waitForAuthSystem();
+                const auth = await authSystem.initialize();
                 await auth.signInWithGoogle();
             } catch (error) {
                 showError(error.message);
@@ -542,7 +546,8 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Signing In...';
                 
-                const auth = await window.OsliraAuth.initialize();
+                const authSystem = await waitForAuthSystem();
+                const auth = await authSystem.initialize();
                 
                 // Try email first, then username if it fails
                 if (email.includes('@')) {
@@ -580,7 +585,8 @@
                 submitBtn.disabled = true;
                 submitBtn.textContent = 'Creating Account...';
                 
-                const auth = await window.OsliraAuth.initialize();
+                const authSystem = await waitForAuthSystem();
+                const auth = await authSystem.initialize();
                 
                 // Check username availability if provided
                 if (username) {
@@ -625,10 +631,29 @@
             }
         });
 
+        // Wait for auth system to be loaded, then initialize
+        async function waitForAuthSystem() {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds
+            
+            while (attempts < maxAttempts) {
+                if (window.OsliraAuth?.initialize) {
+                    return window.OsliraAuth;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            throw new Error('Auth system not available after timeout');
+        }
+
         // Initialize auth on page load
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                const auth = await window.OsliraAuth.initialize();
+                console.log('🔐 [Auth Page] Waiting for auth system...');
+                const authSystem = await waitForAuthSystem();
+                
+                console.log('🔐 [Auth Page] Initializing auth system...');
+                const auth = await authSystem.initialize();
                 
                 // Redirect if already authenticated
                 const shouldShowForm = await auth.handleAuthPage();
