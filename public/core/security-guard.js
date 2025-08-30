@@ -460,16 +460,19 @@ class SecurityGuard {
         
         // CRITICAL: Re-evaluate page access when auth state changes
         if (authEvent === 'SIGNED_IN' && session && user) {
-            console.log('🛡️ [SecurityGuard] User signed in, checking if redirect needed...');
-            
-            // For AUTH_ONLY pages, redirect authenticated users
-            if (this.pageClassification === 'AUTH_ONLY') {
-                const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
-                const isOnboardingComplete = authManager?.isOnboardingComplete();
-                const hasBusinessProfile = authManager?.hasBusinessProfile();
-                
-                const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ?
-                    '/dashboard' : '/onboarding';
+    console.log('🛡️ [SecurityGuard] User signed in, checking if redirect needed...');
+    
+    // For AUTH_ONLY pages, redirect authenticated users
+    if (this.pageClassification === 'AUTH_ONLY') {
+        // WAIT for AuthManager to finish loading user context before checking status
+        await this.waitForUserContextLoad(user.id);
+        
+        const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+        const isOnboardingComplete = authManager?.isOnboardingComplete();
+        const hasBusinessProfile = authManager?.hasBusinessProfile();
+        
+        const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ?
+            '/dashboard' : '/onboarding';
                 
                 console.log('🛡️ [SecurityGuard] Auth page - redirecting authenticated user to:', redirectUrl);
                 
@@ -635,15 +638,56 @@ class SecurityGuard {
     }
 }
 
-// Auto-initialize security guard as early as possible
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', async () => {
-        await SecurityGuard.initialize();
-    });
-} else {
-    // DOM already loaded, initialize immediately
-    SecurityGuard.initialize();
+async waitForUserContextLoad(userId, maxAttempts = 50) {
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+        const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+        
+        // Check if user context has been loaded (user object populated)
+        if (authManager?.user?.id === userId && 
+            authManager.user.hasOwnProperty('onboarding_completed')) {
+            console.log('🛡️ [SecurityGuard] User context loaded, proceeding with redirect logic');
+            return true;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    console.warn('🛡️ [SecurityGuard] User context load timeout, proceeding with available data');
+    return false;
 }
+
+// Initialize security guard synchronously to catch early auth events
+class SecurityGuardInitializer {
+    static async earlyInitialize() {
+        console.log('🛡️ [SecurityGuard] Early initialization starting...');
+        
+        // Set up event listeners IMMEDIATELY, before DOM ready
+        window.addEventListener('auth:change', SecurityGuard.handleAuthStateChange.bind(SecurityGuard));
+        
+        // Set up basic security properties
+        SecurityGuard.environment = window.location.hostname.includes('localhost') ? 'development' : 
+                                   window.location.hostname.includes('oslira.org') ? 'production' : 'staging';
+        SecurityGuard.currentPage = SecurityGuard.detectCurrentPage();
+        SecurityGuard.pageClassification = SecurityGuard.getPageClassification();
+        
+        console.log('🛡️ [SecurityGuard] Event listeners ready BEFORE auth initialization');
+        
+        // Complete full initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', async () => {
+                await SecurityGuard.initialize();
+            });
+        } else {
+            await SecurityGuard.initialize();
+        }
+    }
+}
+
+// Initialize immediately when script loads, not when DOM loads
+SecurityGuardInitializer.earlyInitialize();
 
 // Export for global access
 window.SecurityGuard = SecurityGuard;
