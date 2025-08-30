@@ -217,11 +217,23 @@
                 // Wait a moment for user to see success message
                 await new Promise(resolve => setTimeout(resolve, 1500));
                 
-                // Determine redirect destination
-                const redirectUrl = getRedirectUrl(session, auth.getCurrentUser());
-                
-                console.log('🚀 [Callback] Redirecting to:', redirectUrl);
-                window.location.href = redirectUrl;
+                // Get fresh user data after OAuth
+const { data: { user }, error: userError } = await auth.getSupabaseClient().auth.getUser();
+
+if (userError) {
+    throw new Error(`User fetch error: ${userError.message}`);
+}
+
+// Load user context to get onboarding status
+await auth.loadUserContext(session);
+const currentUser = auth.getCurrentUser();
+
+// Determine redirect destination
+const redirectUrl = getRedirectUrl(session, currentUser);
+
+console.log('🚀 [Callback] User onboarding status:', currentUser?.onboarding_completed);
+console.log('🚀 [Callback] Redirecting to:', redirectUrl);
+window.location.href = redirectUrl;
                 
             } catch (error) {
                 console.error('❌ [Callback] OAuth callback failed:', error);
