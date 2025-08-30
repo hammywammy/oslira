@@ -361,52 +361,7 @@ class OsliraAppInitializer {
     .addValidators({
         email: window.OsliraFormManager.validators.required('Email is required')
     })
-    .onSubmit(async (formData) => {
-        console.log('📤 [App] Processing auth form submission...');
-        console.log('🔍 [App] Raw formData object:', formData);
-        console.log('🔍 [App] Object.keys(formData):', Object.keys(formData));
-        console.log('🔍 [App] formData.email:', formData.email);
-        
-        // Debug form structure
-        console.log('🔍 [App] Form element:', authForm);
-        console.log('🔍 [App] Form ID:', authForm.id);
-        const emailField = authForm.querySelector('input[name="email"]');
-        console.log('🔍 [App] Email field:', emailField);
-        console.log('🔍 [App] Email field value:', emailField?.value);
-        console.log('🔍 [App] Email field name:', emailField?.name);
-        console.log('🔍 [App] Email field type:', emailField?.type);
-        console.log('🔍 [App] All form inputs:', authForm.querySelectorAll('input, select, textarea'));
-        
-        // Also check FormData directly
-        const nativeFormData = new FormData(authForm);
-        console.log('🔍 [App] Native FormData entries:');
-        for (const [key, value] of nativeFormData.entries()) {
-            console.log(`  ${key}: ${value}`);
-        }
-        
-        // Try direct field access
-        const email = formData.email || emailField?.value;
-        if (!email) {
-            console.log('❌ [App] No email provided');
-            throw new Error('Email required');
-        }
-        
-        try {
-            console.log('📧 [App] Sending magic link to:', email);
-            const result = await this.auth.signInWithEmail(email);
-            console.log('✅ [App] Magic link sent successfully');
-            
-            this.showMessage('Check your email for the sign-in link!', 'success');
-            
-            // Show success state
-            this.showSuccessState(email);
-            
-        } catch (error) {
-            console.error('❌ [App] Auth error:', error.message);
-            throw error;
-        }
-    })
-    
+
     .onError((error) => {
         console.error('❌ [App] Auth form error:', error);
         this.showMessage(error.message, 'error');
@@ -418,20 +373,6 @@ class OsliraAppInitializer {
             console.log('⚠️ [App] Auth form or FormManager not available');
         }
     }
-    showSuccessState(email) {
-        console.log('🎉 [App] Showing success state for:', email);
-        
-        // Hide main card, show success card
-        const mainCard = document.getElementById('main-card');
-        const successCard = document.getElementById('success-card');
-        const sentEmailDiv = document.getElementById('sent-email');
-        
-        if (mainCard) mainCard.style.display = 'none';
-        if (successCard) successCard.style.display = 'block';
-        if (sentEmailDiv) sentEmailDiv.textContent = email;
-    }
-    
-    
     async initDashboardFeatures() {
         console.log('📊 [App] Setting up dashboard features...');
         // Dashboard-specific initialization would go here
