@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signing In - Oslira</title>
+    <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
+    <script src="/core/script-loader.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            color: #333;
+        }
+
+        .callback-container {
+            background: white;
+            padding: 48px 32px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .logo-image {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            color: #1a1a1a;
+        }
+
+        .status-message {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: #4a5568;
+        }
+
+        .loading-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 24px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-state {
+            display: none;
+            color: #e53e3e;
+            background: #fed7d7;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            border: 1px solid #feb2b2;
+        }
+
+        .success-state {
+            display: none;
+            color: #38a169;
+            background: #c6f6d5;
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            border: 1px solid #9ae6b4;
+        }
+
+        .retry-button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: background-color 0.2s;
+        }
+
+        .retry-button:hover {
+            background: #5a67d8;
+        }
+
+        .help-text {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 16px;
+            line-height: 1.5;
+        }
+
+        /* Accessibility */
+        @media (prefers-reduced-motion: reduce) {
+            .loading-spinner {
+                animation: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .callback-container {
+                padding: 32px 24px;
+                margin: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="callback-container">
+        <div class="logo">
+            <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+            <h1>Oslira</h1>
+        </div>
+
+        <div id="loading-state">
+            <div class="status-message">Completing sign in...</div>
+            <div class="loading-spinner" role="status" aria-label="Loading"></div>
+            <div class="help-text">
+                Please wait while we set up your account.
+            </div>
+        </div>
+
+        <div class="error-state" id="error-state" role="alert">
+            <strong>Sign In Failed</strong>
+            <p id="error-message">Something went wrong during sign in.</p>
+            <button class="retry-button" onclick="retryAuth()">Try Again</button>
+        </div>
+
+        <div class="success-state" id="success-state">
+            <strong>Success!</strong>
+            <p>Redirecting to your dashboard...</p>
+        </div>
+    </div>
+
+    <script>
+        let authProcessed = false;
+        let retryAttempts = 0;
+        const MAX_RETRY_ATTEMPTS = 3;
+
+        async function handleAuthCallback() {
+            // Prevent multiple processing
+            if (authProcessed) return;
+            authProcessed = true;
+
+            try {
+                console.log('🔐 [Callback] Processing OAuth callback');
+                
+                // Check for error in URL parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const error = urlParams.get('error');
+                const errorDescription = urlParams.get('error_description');
+                
+                if (error) {
+                    throw new Error(errorDescription || error);
+                }
+
+                // Initialize auth manager
+                const auth = await window.OsliraAuth.initialize();
+                
+                // Get current session (should be set by Supabase after OAuth)
+                const { data: { session }, error: sessionError } = await auth.getSupabaseClient().auth.getSession();
+                
+                if (sessionError) {
+                    throw new Error(`Session error: ${sessionError.message}`);
+                }
+                
+                if (!session) {
+                    throw new Error('No session found after OAuth callback');
+                }
+
+                console.log('✅ [Callback] OAuth session established');
+                
+                // Show success state
+                showSuccessState();
+                
+                // Wait a moment for user to see success message
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Determine redirect destination
+                const redirectUrl = getRedirectUrl(session, auth.getCurrentUser());
+                
+                console.log('🚀 [Callback] Redirecting to:', redirectUrl);
+                window.location.href = redirectUrl;
+                
+            } catch (error) {
+                console.error('❌ [Callback] OAuth callback failed:', error);
+                showErrorState(error.message);
+            }
+        }
+
+        function getRedirectUrl(session, user) {
+            // Check for a stored redirect URL (from before auth)
+            const storedRedirect = sessionStorage.getItem('auth_redirect_url');
+            sessionStorage.removeItem('auth_redirect_url');
+            
+            if (storedRedirect && isValidRedirectUrl(storedRedirect)) {
+                return storedRedirect;
+            }
+            
+            // Default redirect logic
+            if (user && !user.onboarding_completed) {
+                return '/onboarding';
+            }
+            
+            return '/dashboard';
+        }
+
+        function isValidRedirectUrl(url) {
+            try {
+                const parsed = new URL(url, window.location.origin);
+                const validPaths = ['/dashboard', '/onboarding', '/admin', '/settings'];
+                return validPaths.some(path => parsed.pathname.startsWith(path));
+            } catch {
+                return false;
+            }
+        }
+
+        function showErrorState(message) {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('success-state').style.display = 'none';
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-state').style.display = 'block';
+        }
+
+        function showSuccessState() {
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('error-state').style.display = 'none';
+            document.getElementById('success-state').style.display = 'block';
+        }
+
+        function retryAuth() {
+            retryAttempts++;
+            
+            if (retryAttempts >= MAX_RETRY_ATTEMPTS) {
+                // Too many retries, redirect to auth page
+                window.location.href = '/auth';
+                return;
+            }
+            
+            // Reset states and try again
+            authProcessed = false;
+            document.getElementById('error-state').style.display = 'none';
+            document.getElementById('loading-state').style.display = 'block';
+            
+            // Retry after a short delay
+            setTimeout(() => {
+                handleAuthCallback().catch(error => {
+                    console.error('❌ [Callback] Retry failed:', error);
+                    showErrorState(`Retry ${retryAttempts} failed: ${error.message}`);
+                });
+            }, 1000);
+        }
+
+        // Handle page load
+        document.addEventListener('DOMContentLoaded', () => {
+            // Add a small delay to ensure all scripts are loaded
+            setTimeout(() => {
+                handleAuthCallback().catch(error => {
+                    console.error('❌ [Callback] Initial callback failed:', error);
+                    showErrorState(error.message);
+                });
+            }, 500);
+        });
+
+        // Handle browser back button
+        window.addEventListener('popstate', () => {
+            if (window.location.pathname === '/auth/callback') {
+                window.location.href = '/auth';
+            }
+        });
+
+        // Prevent infinite callback loops
+        window.addEventListener('beforeunload', () => {
+            // Clear any auth-related storage that might cause loops
+            sessionStorage.removeItem('supabase.auth.token');
+        });
+
+        // Security: Clear URL parameters after processing
+        setTimeout(() => {
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, document.title, '/auth/callback');
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
