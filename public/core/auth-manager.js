@@ -232,66 +232,7 @@ if (!window.supabase.createClient) {
             console.error('❌ [Auth] Failed to load user context:', error);
         }
     }
-    
-    // =============================================================================
-    // AUTHENTICATION METHODS
-    // =============================================================================
-    
-    async signInWithEmail(email) {
-        try {
-            console.log('📧 [Auth] Sending magic link to:', email);
-            
-            // Dynamic redirect URL based on current domain
-            const currentOrigin = window.location.origin;
-            const redirectUrl = `${currentOrigin}/auth/callback`;
-            
-            console.log('🔗 [Auth] Using redirect URL:', redirectUrl);
-            
-            const { data, error } = await this.supabase.auth.signInWithOtp({
-                email,
-                options: {
-                    emailRedirectTo: redirectUrl
-                }
-            });
-            
-            if (error) throw error;
-            
-            console.log('✅ [Auth] Magic link sent successfully');
-            return { success: true, data };
-            
-        } catch (error) {
-            console.error('❌ [Auth] Magic link failed:', error);
-            throw error;
-        }
-    }
-    
-    async handleMagicLinkCallback() {
-        try {
-            console.log('🔗 [Auth] Processing magic link callback...');
-            
-            // Get session from URL or storage
-            const { data: { session }, error } = await this.supabase.auth.getSession();
-            
-            if (error) throw error;
-            
-            if (session) {
-                console.log('✅ [Auth] Magic link authentication successful');
-                
-                // Clean URL
-                if (window.history && window.history.replaceState) {
-                    window.history.replaceState(null, '', window.location.pathname);
-                }
-                
-                return session;
-            } else {
-                throw new Error('No session found after magic link');
-            }
-            
-        } catch (error) {
-            console.error('❌ [Auth] Magic link callback failed:', error);
-            throw error;
-        }
-    }
+
     
     async signOut() {
         try {
@@ -441,28 +382,6 @@ if (!window.supabase.createClient) {
     // =============================================================================
     // CALLBACK & REDIRECT LOGIC
     // =============================================================================
-    
-    async handleCallback() {
-        try {
-            const session = await this.handleMagicLinkCallback();
-            
-            if (session) {
-                // Determine where to redirect
-                if (!this.isOnboardingComplete()) {
-                    window.location.href = '/onboarding';
-                } else {
-                    window.location.href = '/dashboard';
-                }
-            } else {
-                // No session, redirect to auth
-                window.location.href = '/auth';
-            }
-            
-        } catch (error) {
-            console.error('❌ [Auth] Callback handling failed:', error);
-            window.location.href = '/auth';
-        }
-    }
     
     getRedirectAfterAuth() {
         if (!this.isOnboardingComplete()) {
