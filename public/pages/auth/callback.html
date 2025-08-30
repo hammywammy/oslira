@@ -162,6 +162,20 @@
         let retryAttempts = 0;
         const MAX_RETRY_ATTEMPTS = 3;
 
+        async function waitForAuthSystem() {
+            let attempts = 0;
+            const maxAttempts = 50; // 5 seconds
+            
+            while (attempts < maxAttempts) {
+                if (window.OsliraAuth?.initialize) {
+                    return window.OsliraAuth;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            throw new Error('Auth system not available after timeout');
+        }
+
         async function handleAuthCallback() {
             // Prevent multiple processing
             if (authProcessed) return;
@@ -179,8 +193,10 @@
                     throw new Error(errorDescription || error);
                 }
 
-                // Initialize auth manager
-                const auth = await window.OsliraAuth.initialize();
+                // Wait for and initialize auth manager
+                console.log('🔐 [Callback] Waiting for auth system...');
+                const authSystem = await waitForAuthSystem();
+                const auth = await authSystem.initialize();
                 
                 // Get current session (should be set by Supabase after OAuth)
                 const { data: { session }, error: sessionError } = await auth.getSupabaseClient().auth.getSession();
