@@ -450,23 +450,44 @@ class SecurityGuard {
     // =============================================================================
     
     setupSecurityEventListeners() {
-        // Listen for auth state changes
-        window.addEventListener('auth:change', (event) => {
-            const { session, user } = event.detail;
-            console.log('🛡️ [SecurityGuard] Auth state changed, updating security context');
+    // Listen for auth state changes and RE-EVALUATE PAGE ACCESS
+    window.addEventListener('auth:change', async (event) => {
+        const { event: authEvent, session, user } = event.detail;
+        console.log('🛡️ [SecurityGuard] Auth state changed:', authEvent, 'Re-evaluating page access...');
+        
+        this.currentSession = session;
+        this.currentUser = user;
+        
+        // CRITICAL: Re-evaluate page access when auth state changes
+        if (authEvent === 'SIGNED_IN' && session && user) {
+            console.log('🛡️ [SecurityGuard] User signed in, checking if redirect needed...');
             
-            this.currentSession = session;
-            this.currentUser = user;
-            
-            if (session) {
-                this.setupTokenSecurity();
-            } else {
-                // Clear security context on signout
-                if (this.refreshTokenTimer) {
-                    clearTimeout(this.refreshTokenTimer);
-                }
+            // For AUTH_ONLY pages, redirect authenticated users
+            if (this.pageClassification === 'AUTH_ONLY') {
+                const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+                const isOnboardingComplete = authManager?.isOnboardingComplete();
+                const hasBusinessProfile = authManager?.hasBusinessProfile();
+                
+                const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ?
+                    '/dashboard' : '/onboarding';
+                
+                console.log('🛡️ [SecurityGuard] Auth page - redirecting authenticated user to:', redirectUrl);
+                
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 500);
             }
-        });
+        }
+        
+        if (session) {
+            this.setupTokenSecurity();
+        } else {
+            // Clear security context on signout
+            if (this.refreshTokenTimer) {
+                clearTimeout(this.refreshTokenTimer);
+            }
+        }
+    });
         
         // Handle tab visibility for session management
         document.addEventListener('visibilitychange', () => {
