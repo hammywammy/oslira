@@ -155,16 +155,37 @@
                     throw new Error(`User fetch error: ${userError.message}`);
                 }
 
-                // SIMPLIFIED: Process OAuth then let SecurityGuard handle navigation
-                console.log('🚀 [Callback] OAuth processed successfully');
-                console.log('🚀 [Callback] Redirecting to auth page - SecurityGuard will handle final destination');
-                
-                showSuccessState();
-                
-                // Small delay for user to see success message
-                setTimeout(() => {
-                    window.location.href = '/auth';
-                }, 1000);
+               // CRITICAL: Wait for user context to load before redirecting
+console.log('🚀 [Callback] OAuth processed successfully, loading user context...');
+
+// Wait for AuthManager to load user context
+let contextAttempts = 0;
+const maxContextAttempts = 50; // 5 seconds
+
+while (contextAttempts < maxContextAttempts) {
+    // Check if user context has been loaded
+    if (auth.user && auth.user.hasOwnProperty('onboarding_completed')) {
+        break;
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+    contextAttempts++;
+}
+
+// Now determine where to redirect based on user state
+const isOnboardingComplete = auth.isOnboardingComplete();
+const hasBusinessProfile = auth.hasBusinessProfile();
+
+const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ? 
+    '/dashboard' : '/onboarding';
+
+console.log('🚀 [Callback] User context loaded, redirecting to:', redirectUrl);
+
+showSuccessState();
+
+// Small delay for user to see success message
+setTimeout(() => {
+    window.location.href = redirectUrl;
+}, 1000);
                 
             } catch (error) {
                 console.error('❌ [Callback] OAuth callback failed:', error);
