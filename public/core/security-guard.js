@@ -1,10 +1,12 @@
 /**
- * ENTERPRISE SECURITY GUARD SYSTEM
+ * ENTERPRISE SECURITY GUARD SYSTEM - ENHANCED UNIVERSAL VERSION
  * Implements A-D from enterprise checklist:
  * A. Page Guards with role enforcement 
  * B. Token Security with rotation
  * C. RBAC Authorization 
  * D. CSRF Protection
+ * 
+ * STEP 4: Universal navigation controller - single source of truth
  */
 
 class SecurityGuard {
@@ -46,7 +48,7 @@ class SecurityGuard {
     async setup() {
         if (this.initialized) return;
         
-        console.log('🛡️ [SecurityGuard] Initializing enterprise security...');
+        console.log('🛡️ [SecurityGuard] Initializing universal security controller...');
         
         // IMMEDIATE: Block page rendering until auth verified
         this.blockPageRendering();
@@ -68,7 +70,7 @@ class SecurityGuard {
         // Generate CSRF token
         this.generateCSRFToken();
         
-        // Enforce page access rules
+        // Enforce page access rules (SINGLE SOURCE OF TRUTH)
         const accessGranted = await this.enforcePageAccess();
         
         if (accessGranted) {
@@ -80,93 +82,91 @@ class SecurityGuard {
             // Release page for rendering
             this.allowPageRendering();
             
-            console.log('✅ [SecurityGuard] Security initialized, page access granted');
+            console.log('✅ [SecurityGuard] Universal security initialized - page access granted');
         }
         
         this.initialized = true;
     }
     
     // =============================================================================
-    // A. PAGE GUARD SYSTEM
+    // A. PAGE ACCESS CONTROL - ENHANCED UNIVERSAL CONTROLLER
     // =============================================================================
     
     blockPageRendering() {
-        // Hide entire page immediately
+        // Hide entire page until security cleared
         document.documentElement.style.visibility = 'hidden';
         document.documentElement.style.opacity = '0';
         
-        // Show loading state
-        this.showSecurityLoadingState();
-    }
-    
-    allowPageRendering() {
-        // Remove security loading state
-        this.hideSecurityLoadingState();
-        
-        // Show page
-        document.documentElement.style.visibility = 'visible';
-        document.documentElement.style.opacity = '1';
-        document.documentElement.style.transition = 'opacity 0.3s ease';
-    }
-    
-    showSecurityLoadingState() {
+        // Show loading indicator
         const loadingDiv = document.createElement('div');
         loadingDiv.id = 'security-loading';
-        loadingDiv.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999999;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        `;
-        
         loadingDiv.innerHTML = `
-            <div style="text-align: center;">
+            <div style="
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 2rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                text-align: center;
+                z-index: 9999;
+                font-family: system-ui, -apple-system, sans-serif;
+            ">
                 <div style="
-                    width: 40px;
-                    height: 40px;
-                    border: 4px solid rgba(255,255,255,0.3);
-                    border-top: 4px solid white;
+                    width: 32px;
+                    height: 32px;
+                    border: 3px solid #f3f4f6;
+                    border-top: 3px solid #3b82f6;
                     border-radius: 50%;
                     animation: spin 1s linear infinite;
-                    margin: 0 auto 20px;
+                    margin: 0 auto 1rem;
                 "></div>
-                <h2 style="margin: 0 0 8px 0;">Verifying Access</h2>
-                <p style="margin: 0; opacity: 0.9;">Checking authentication...</p>
+                <div>Verifying access...</div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
             </div>
-            <style>
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            </style>
         `;
-        
         document.body.appendChild(loadingDiv);
     }
     
-    hideSecurityLoadingState() {
+    allowPageRendering() {
+        // Remove loading indicator
         const loadingDiv = document.getElementById('security-loading');
         if (loadingDiv) {
             loadingDiv.remove();
         }
+        
+        // Show page with smooth transition
+        document.documentElement.style.transition = 'opacity 0.3s ease';
+        document.documentElement.style.visibility = 'visible';
+        document.documentElement.style.opacity = '1';
+        
+        // Clean up transition after animation
+        setTimeout(() => {
+            document.documentElement.style.transition = '';
+        }, 300);
     }
     
     async enforcePageAccess() {
         try {
-            // Check if auth manager is available
+            console.log('🛡️ [SecurityGuard] Enforcing access control for:', this.pageClassification);
+            
+            // Get auth manager instance
             const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+            
             if (!authManager) {
+                // Allow public pages without auth system
                 if (this.pageClassification === 'PUBLIC') {
-                    return true; // Allow public pages without auth
+                    console.log('🛡️ [SecurityGuard] Public page access granted without auth system');
+                    return true;
                 }
+                console.log('🛡️ [SecurityGuard] Auth system not available, redirecting to home');
                 this.redirectToAuth('Auth system not available');
                 return false;
             }
@@ -188,60 +188,82 @@ class SecurityGuard {
                 pageType: this.pageClassification
             });
             
-            // Enforce access rules based on page classification
+            // UNIVERSAL ACCESS CONTROL - SINGLE SOURCE OF TRUTH
             switch (this.pageClassification) {
                 case 'PUBLIC':
+                    console.log('🛡️ [SecurityGuard] Public page - access granted');
                     return true;
                     
                 case 'AUTH_ONLY':
-                    // Auth pages - redirect if already authenticated
+                    // Auth pages - redirect if already authenticated (ENHANCED LOGIC)
                     if (isAuthenticated) {
-                        const redirectUrl = isOnboardingComplete ? '/dashboard' : '/onboarding';
-                        console.log('🛡️ [SecurityGuard] Already authenticated, redirecting to:', redirectUrl);
-                        window.location.href = redirectUrl;
+                        const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ?
+                            '/dashboard' : '/onboarding';
+                        console.log('🛡️ [SecurityGuard] User already authenticated, redirecting to:', redirectUrl);
+                        
+                        // ENHANCED: Add delay to prevent race conditions with callback processing
+                        setTimeout(() => {
+                            console.log('🛡️ [SecurityGuard] Executing delayed redirect to:', redirectUrl);
+                            window.location.href = redirectUrl;
+                        }, 500);
                         return false;
                     }
+                    console.log('🛡️ [SecurityGuard] User not authenticated - showing auth page');
                     return true;
                     
                 case 'AUTH_REQUIRED':
                     if (!isAuthenticated) {
+                        console.log('🛡️ [SecurityGuard] Authentication required - redirecting to auth');
                         this.redirectToAuth('Authentication required');
                         return false;
                     }
                     if (!isOnboardingComplete) {
-                        console.log('🛡️ [SecurityGuard] Onboarding required');
-                        window.location.href = '/onboarding';
+                        console.log('🛡️ [SecurityGuard] Onboarding required - redirecting');
+                        setTimeout(() => {
+                            window.location.href = '/onboarding';
+                        }, 100);
                         return false;
                     }
                     if (!hasBusinessProfile) {
-                        console.log('🛡️ [SecurityGuard] Business profile required');
-                        window.location.href = '/onboarding';
+                        console.log('🛡️ [SecurityGuard] Business profile required - redirecting to onboarding');
+                        setTimeout(() => {
+                            window.location.href = '/onboarding';
+                        }, 100);
                         return false;
                     }
+                    console.log('✅ [SecurityGuard] Full access granted to authenticated page');
                     return true;
                     
                 case 'ONBOARDING_REQUIRED':
                     if (!isAuthenticated) {
+                        console.log('🛡️ [SecurityGuard] Authentication required for onboarding');
                         this.redirectToAuth('Authentication required for onboarding');
                         return false;
                     }
                     if (isOnboardingComplete && hasBusinessProfile) {
-                        console.log('🛡️ [SecurityGuard] Onboarding already complete, redirecting to dashboard');
-                        window.location.href = '/dashboard';
+                        console.log('🛡️ [SecurityGuard] Onboarding already complete - redirecting to dashboard');
+                        setTimeout(() => {
+                            window.location.href = '/dashboard';
+                        }, 100);
                         return false;
                     }
+                    console.log('✅ [SecurityGuard] Onboarding page access granted');
                     return true;
                     
                 case 'ADMIN_REQUIRED':
                     if (!isAuthenticated) {
+                        console.log('🛡️ [SecurityGuard] Authentication required for admin');
                         this.redirectToAuth('Authentication required');
                         return false;
                     }
                     if (!isAdmin) {
-                        console.log('🛡️ [SecurityGuard] Admin access required');
-                        window.location.href = '/dashboard';
+                        console.log('🛡️ [SecurityGuard] Admin access required - redirecting to dashboard');
+                        setTimeout(() => {
+                            window.location.href = '/dashboard';
+                        }, 100);
                         return false;
                     }
+                    console.log('✅ [SecurityGuard] Admin access granted');
                     return true;
                     
                 default:
@@ -259,65 +281,59 @@ class SecurityGuard {
     redirectToAuth(reason) {
         console.log('🛡️ [SecurityGuard] Redirecting to auth:', reason);
         const currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/auth?return=${currentUrl}&reason=${encodeURIComponent(reason)}`;
+        
+        // Enhanced redirect with reason and return URL
+        setTimeout(() => {
+            window.location.href = `/auth?return=${currentUrl}&reason=${encodeURIComponent(reason)}`;
+        }, 100);
     }
     
     // =============================================================================
-    // B. TOKEN SECURITY WITH ROTATION  
+    // B. TOKEN SECURITY MANAGEMENT
     // =============================================================================
     
     async setupTokenSecurity() {
-        if (!this.currentSession) return;
+        if (!this.currentSession?.access_token) return;
         
-        console.log('🔐 [SecurityGuard] Setting up token security...');
+        console.log('🛡️ [SecurityGuard] Setting up token security...');
         
-        // Check token expiration
-        const expiresAt = this.currentSession.expires_at;
-        const now = Math.floor(Date.now() / 1000);
-        const timeUntilExpiry = expiresAt - now;
+        // Clear existing timer
+        if (this.refreshTokenTimer) {
+            clearTimeout(this.refreshTokenTimer);
+        }
         
-        // Refresh token when 75% of lifetime has passed (15 min = 11.25 min)
-        const refreshAt = Math.max(timeUntilExpiry * 0.25 * 1000, 60000); // Min 1 minute
+        // Calculate refresh time (refresh 5 minutes before expiry)
+        const expiresIn = this.currentSession.expires_in || 3600; // Default 1 hour
+        const refreshTime = (expiresIn - 300) * 1000; // 5 minutes before expiry
         
-        console.log('🔐 [SecurityGuard] Token expires in:', timeUntilExpiry, 'seconds, refreshing in:', refreshAt/1000, 'seconds');
+        this.refreshTokenTimer = setTimeout(async () => {
+            await this.refreshToken();
+        }, refreshTime);
         
-        // Set up auto-refresh
-        this.refreshTokenTimer = setTimeout(() => {
-            this.refreshAccessToken();
-        }, refreshAt);
+        console.log(`🔄 [SecurityGuard] Token refresh scheduled in ${refreshTime/1000} seconds`);
     }
     
-    async refreshAccessToken() {
+    async refreshToken() {
         try {
-            console.log('🔄 [SecurityGuard] Refreshing access token...');
+            console.log('🔄 [SecurityGuard] Refreshing authentication token...');
             
             const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
-            if (!authManager || !authManager.supabase) {
-                console.error('🔄 [SecurityGuard] Auth manager not available for refresh');
-                return;
+            if (!authManager?.supabase) {
+                throw new Error('Auth manager not available');
             }
             
             const { data, error } = await authManager.supabase.auth.refreshSession();
             
-            if (error) {
-                console.error('🔄 [SecurityGuard] Token refresh failed:', error);
-                this.handleTokenRefreshFailure();
-                return;
-            }
+            if (error) throw error;
             
             if (data.session) {
-                console.log('✅ [SecurityGuard] Token refreshed successfully');
                 this.currentSession = data.session;
+                console.log('✅ [SecurityGuard] Token refreshed successfully');
                 
-                // Setup next refresh
+                // Schedule next refresh
                 await this.setupTokenSecurity();
-                
-                // Emit token refresh event
-                window.dispatchEvent(new CustomEvent('security:token-refreshed', {
-                    detail: { session: data.session }
-                }));
             }
-            
+  
         } catch (error) {
             console.error('🔄 [SecurityGuard] Token refresh error:', error);
             this.handleTokenRefreshFailure();
@@ -330,6 +346,11 @@ class SecurityGuard {
         // Clear all auth data
         localStorage.clear();
         sessionStorage.clear();
+        
+        // Clear timer
+        if (this.refreshTokenTimer) {
+            clearTimeout(this.refreshTokenTimer);
+        }
         
         // Redirect to auth
         this.redirectToAuth('Session expired');
@@ -425,6 +446,67 @@ class SecurityGuard {
     }
     
     // =============================================================================
+    // ENHANCED EVENT LISTENERS
+    // =============================================================================
+    
+    setupSecurityEventListeners() {
+        // Listen for auth state changes
+        window.addEventListener('auth:change', (event) => {
+            const { session, user } = event.detail;
+            console.log('🛡️ [SecurityGuard] Auth state changed, updating security context');
+            
+            this.currentSession = session;
+            this.currentUser = user;
+            
+            if (session) {
+                this.setupTokenSecurity();
+            } else {
+                // Clear security context on signout
+                if (this.refreshTokenTimer) {
+                    clearTimeout(this.refreshTokenTimer);
+                }
+            }
+        });
+        
+        // Handle tab visibility for session management
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && this.currentSession) {
+                // Tab became visible, check if session is still valid
+                this.validateSession();
+            }
+        });
+        
+        // Enhanced session validation on focus
+        window.addEventListener('focus', () => {
+            if (this.currentSession) {
+                this.validateSession();
+            }
+        });
+        
+        console.log('🛡️ [SecurityGuard] Enhanced security event listeners setup');
+    }
+    
+    async validateSession() {
+        try {
+            const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+            if (!authManager?.supabase) return;
+            
+            const { data, error } = await authManager.supabase.auth.getSession();
+            
+            if (error || !data.session) {
+                console.log('🚨 [SecurityGuard] Session validation failed, forcing re-auth');
+                this.handleTokenRefreshFailure();
+            } else if (data.session.access_token !== this.currentSession?.access_token) {
+                console.log('🔄 [SecurityGuard] Session token changed, updating security context');
+                this.currentSession = data.session;
+                await this.setupTokenSecurity();
+            }
+        } catch (error) {
+            console.error('🚨 [SecurityGuard] Session validation error:', error);
+        }
+    }
+    
+    // =============================================================================
     // UTILITY METHODS
     // =============================================================================
     
@@ -482,6 +564,8 @@ class SecurityGuard {
         let attempts = 0;
         const maxAttempts = 100; // 10 seconds
         
+        console.log('🛡️ [SecurityGuard] Waiting for auth manager...');
+        
         while (attempts < maxAttempts) {
             if (window.OsliraApp?.auth || window.OsliraAuth?.instance) {
                 console.log('🛡️ [SecurityGuard] Auth manager found');
@@ -493,45 +577,6 @@ class SecurityGuard {
         }
         
         console.warn('🛡️ [SecurityGuard] Auth manager not available after timeout');
-    }
-    
-    setupSecurityEventListeners() {
-        // Listen for auth state changes
-        window.addEventListener('auth:change', (event) => {
-            const { session, user } = event.detail;
-            this.currentSession = session;
-            this.currentUser = user;
-            
-            if (session) {
-                this.setupTokenSecurity();
-            }
-        });
-        
-        // Handle tab visibility for session management
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && this.currentSession) {
-                // Tab became visible, check if session is still valid
-                this.validateSession();
-            }
-        });
-        
-        console.log('🛡️ [SecurityGuard] Security event listeners setup');
-    }
-    
-    async validateSession() {
-        try {
-            const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
-            if (!authManager) return;
-            
-            const { data, error } = await authManager.supabase.auth.getSession();
-            
-            if (error || !data.session) {
-                console.log('🚨 [SecurityGuard] Session validation failed, forcing re-auth');
-                this.handleTokenRefreshFailure();
-            }
-        } catch (error) {
-            console.error('🚨 [SecurityGuard] Session validation error:', error);
-        }
     }
     
     // =============================================================================
@@ -553,6 +598,20 @@ class SecurityGuard {
     isPageAccessAllowed() {
         return this.initialized && document.documentElement.style.visibility !== 'hidden';
     }
+    
+    // Enhanced debug method
+    debug() {
+        console.group('🛡️ [SecurityGuard] Debug Information');
+        console.log('Initialized:', this.initialized);
+        console.log('Environment:', this.environment);
+        console.log('Current Page:', this.currentPage);
+        console.log('Page Classification:', this.pageClassification);
+        console.log('Current Session:', this.currentSession);
+        console.log('Current User:', this.currentUser);
+        console.log('CSRF Token:', this.csrfToken ? 'Generated' : 'None');
+        console.log('Token Timer:', this.refreshTokenTimer ? 'Active' : 'None');
+        console.groupEnd();
+    }
 }
 
 // Auto-initialize security guard as early as possible
@@ -568,4 +627,4 @@ if (document.readyState === 'loading') {
 // Export for global access
 window.SecurityGuard = SecurityGuard;
 
-console.log('🛡️ Enterprise Security Guard loaded - will initialize when DOM ready');
+console.log('🛡️ Enhanced Universal Security Guard loaded - will initialize when DOM ready');
