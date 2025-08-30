@@ -596,11 +596,5 @@ window.OsliraAuth = {
     }
 };
 
-// Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.OsliraAuth.initialize().catch(console.error);
-    });
-} else {
-    window.OsliraAuth.initialize().catch(console.error);
-}
+// DO NOT auto-initialize - let app.js handle this
+// The auth system will be initialized by the main app initialization sequence
