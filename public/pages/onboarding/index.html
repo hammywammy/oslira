@@ -7,7 +7,7 @@
     <title>Setup Your AI Profile - Oslira</title>
     <script src="/env-config.js"></script>
 
-    <link rel="stylesheet" href="/onboarding/onboarding.css">
+    <link rel="stylesheet" href="/pages/onboarding/onboarding.css">
 </head>
 <body>
     <a href="#main-content" class="skip-nav">Skip to main content</a>
@@ -46,44 +46,32 @@
                 <div class="step active" id="step-1">
                     <div class="step-header">
                         <div class="step-number">1</div>
-                        <h2>What's your business?</h2>
-                        <p class="step-description">This helps our AI understand your brand and industry context for better messaging.</p>
+                        <h2>Business Identity</h2>
+                        <p class="step-description">Tell us about your business so we can personalize your outreach</p>
                     </div>
                     
                     <div class="form-group">
-                        <label for="business-name">
-                            Business Name
-                            <span class="label-help">Your company or personal brand name</span>
-                        </label>
-                        <input 
-                            type="text" 
-                            id="business-name" 
-                            required 
-                            placeholder="e.g., TechFlow Solutions"
-                            autocomplete="organization"
-                        />
-                        <div class="input-example">This will appear in your outreach messages</div>
+                        <label for="business-name">Business Name *</label>
+                        <input type="text" id="business-name" placeholder="e.g., TechFlow Solutions" required maxlength="100">
+                        <div class="input-example">The name you want leads to see</div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="business-niche">
-                            Your Industry/Niche
-                            <span class="label-help">What sector do you operate in?</span>
-                        </label>
+                        <label for="business-niche">Business Niche *</label>
                         <select id="business-niche" required>
-                            <option value="">Select your industry...</option>
-                            <option value="saas">SaaS & Software</option>
-                            <option value="ecommerce">E-commerce</option>
-                            <option value="consulting">Consulting</option>
-                            <option value="marketing">Marketing & Advertising</option>
-                            <option value="fitness">Health & Fitness</option>
-                            <option value="education">Education & Training</option>
-                            <option value="finance">Finance & Insurance</option>
-                            <option value="real-estate">Real Estate</option>
-                            <option value="healthcare">Healthcare</option>
-                            <option value="other">Other</option>
+                            <option value="">Select your niche...</option>
+                            <option value="SaaS & Tech">SaaS & Tech</option>
+                            <option value="E-commerce">E-commerce</option>
+                            <option value="Digital Marketing">Digital Marketing</option>
+                            <option value="Consulting">Consulting</option>
+                            <option value="Finance & Fintech">Finance & Fintech</option>
+                            <option value="Health & Wellness">Health & Wellness</option>
+                            <option value="Education & Training">Education & Training</option>
+                            <option value="Real Estate">Real Estate</option>
+                            <option value="Manufacturing">Manufacturing</option>
+                            <option value="Creative & Design">Creative & Design</option>
+                            <option value="Other">Other</option>
                         </select>
-                        <div class="input-example">Helps AI understand your market positioning</div>
                     </div>
                     
                     <div class="form-actions">
@@ -95,36 +83,32 @@
                 <div class="step" id="step-2">
                     <div class="step-header">
                         <div class="step-number">2</div>
-                        <h2>Who are your ideal customers?</h2>
-                        <p class="step-description">Help us identify the right prospects by describing your target audience.</p>
+                        <h2>Target Audience</h2>
+                        <p class="step-description">Who are your ideal customers?</p>
                     </div>
                     
                     <div class="form-group">
-                        <label for="target-audience">
-                            Target Audience
-                            <span class="label-help">Describe your ideal customer profile</span>
-                        </label>
+                        <label for="target-audience">Ideal Customer Profile *</label>
                         <textarea 
                             id="target-audience" 
-                            required 
-                            placeholder="e.g., B2B SaaS founders with 10-100 employees looking to scale their customer acquisition"
+                            placeholder="e.g., SaaS founders with 10-50 employees who struggle with customer acquisition and want to scale their revenue through better marketing automation..."
                             rows="4"
+                            required
+                            maxlength="500"
                         ></textarea>
-                        <div class="input-example">Be specific about demographics, company size, role, etc.</div>
+                        <div class="input-example">Be specific about demographics, company size, pain points, etc.</div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="target-problems">
-                            What Problems Do You Solve?
-                            <span class="label-help">What pain points do your customers have?</span>
-                        </label>
+                        <label for="target-problems">Main Problems You Solve *</label>
                         <textarea 
                             id="target-problems" 
-                            required 
-                            placeholder="e.g., Struggling with low conversion rates, spending too much on ads with poor ROI"
+                            placeholder="e.g., Low conversion rates, inefficient lead generation, manual processes that waste time, lack of data-driven insights..."
                             rows="3"
+                            required
+                            maxlength="400"
                         ></textarea>
-                        <div class="input-example">Focus on the main challenges your service addresses</div>
+                        <div class="input-example">What specific challenges do your customers face?</div>
                     </div>
                     
                     <div class="form-actions">
@@ -137,39 +121,35 @@
                 <div class="step" id="step-3">
                     <div class="step-header">
                         <div class="step-number">3</div>
-                        <h2>What's your unique value?</h2>
-                        <p class="step-description">Tell us what makes your solution special and different from competitors.</p>
+                        <h2>Your Solution</h2>
+                        <p class="step-description">How do you help your customers succeed?</p>
                     </div>
                     
                     <div class="form-group">
-                        <label for="value-proposition">
-                            Your Value Proposition
-                            <span class="label-help">What unique benefit do you provide?</span>
-                        </label>
+                        <label for="value-proposition">Value Proposition *</label>
                         <textarea 
                             id="value-proposition" 
-                            required 
-                            placeholder="e.g., We help SaaS companies increase conversion rates by 40% using AI-powered personalization without requiring technical expertise"
+                            placeholder="e.g., We help SaaS companies increase their conversion rates by 40% through AI-powered personalization that turns anonymous visitors into qualified leads..."
                             rows="4"
+                            required
+                            maxlength="500"
                         ></textarea>
-                        <div class="input-example">Focus on specific outcomes and what makes you different</div>
+                        <div class="input-example">What unique value do you provide? What results do you deliver?</div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="success-outcome">
-                            Ideal Success Outcome
-                            <span class="label-help">What does success look like for your clients?</span>
-                        </label>
+                        <label for="success-outcome">Success Outcome *</label>
                         <select id="success-outcome" required>
-                            <option value="">Select primary outcome...</option>
-                            <option value="increase-revenue">Increase Revenue</option>
-                            <option value="save-time">Save Time</option>
-                            <option value="reduce-costs">Reduce Costs</option>
-                            <option value="improve-efficiency">Improve Efficiency</option>
-                            <option value="scale-business">Scale Business</option>
-                            <option value="other">Other</option>
+                            <option value="">What success looks like...</option>
+                            <option value="Increased Revenue">Increased Revenue</option>
+                            <option value="More Qualified Leads">More Qualified Leads</option>
+                            <option value="Higher Conversion Rates">Higher Conversion Rates</option>
+                            <option value="Cost Reduction">Cost Reduction</option>
+                            <option value="Time Savings">Time Savings</option>
+                            <option value="Better Customer Experience">Better Customer Experience</option>
+                            <option value="Improved Efficiency">Improved Efficiency</option>
+                            <option value="Market Expansion">Market Expansion</option>
                         </select>
-                        <div class="input-example">Choose the main benefit clients get from working with you</div>
                     </div>
                     
                     <div class="form-actions">
@@ -182,41 +162,34 @@
                 <div class="step" id="step-4">
                     <div class="step-header">
                         <div class="step-number">4</div>
-                        <h2>How do you communicate?</h2>
-                        <p class="step-description">This helps our AI match your brand voice and communication style.</p>
+                        <h2>Communication Style</h2>
+                        <p class="step-description">How do you prefer to communicate with prospects?</p>
                     </div>
                     
                     <div class="form-group">
-                        <label for="communication-style">
-                            Communication Style
-                            <span class="label-help">How do you prefer to communicate with prospects?</span>
-                        </label>
+                        <label for="communication-style">Preferred Tone *</label>
                         <select id="communication-style" required>
-                            <option value="">Select your style...</option>
-                            <option value="professional">Professional & Formal</option>
-                            <option value="friendly">Friendly & Conversational</option>
-                            <option value="direct">Direct & To-the-Point</option>
-                            <option value="consultative">Consultative & Educational</option>
-                            <option value="casual">Casual & Relaxed</option>
+                            <option value="">Select communication style...</option>
+                            <option value="Professional & Direct">Professional & Direct</option>
+                            <option value="Friendly & Conversational">Friendly & Conversational</option>
+                            <option value="Data-Driven & Analytical">Data-Driven & Analytical</option>
+                            <option value="Creative & Innovative">Creative & Innovative</option>
+                            <option value="Consultative & Expert">Consultative & Expert</option>
                         </select>
-                        <div class="input-example">This affects the tone of AI-generated messages</div>
                     </div>
                     
                     <div class="form-group">
-                        <label for="call-to-action">
-                            Preferred Call-to-Action
-                            <span class="label-help">What do you want prospects to do next?</span>
-                        </label>
+                        <label for="call-to-action">Preferred Call-to-Action *</label>
                         <select id="call-to-action" required>
-                            <option value="">Select preferred CTA...</option>
-                            <option value="book-call">Book a Discovery Call</option>
-                            <option value="schedule-demo">Schedule a Demo</option>
-                            <option value="free-consultation">Free Consultation</option>
-                            <option value="download-resource">Download Resource</option>
-                            <option value="visit-website">Visit Website</option>
-                            <option value="reply-for-info">Reply for More Info</option>
+                            <option value="">What do you want prospects to do...</option>
+                            <option value="Book a Discovery Call">Book a Discovery Call</option>
+                            <option value="Schedule a Demo">Schedule a Demo</option>
+                            <option value="Download a Resource">Download a Resource</option>
+                            <option value="Start a Free Trial">Start a Free Trial</option>
+                            <option value="Join a Webinar">Join a Webinar</option>
+                            <option value="Get a Free Audit">Get a Free Audit</option>
+                            <option value="Request a Quote">Request a Quote</option>
                         </select>
-                        <div class="input-example">This will be used in outreach messages</div>
                     </div>
                     
                     <div class="form-actions">
@@ -225,26 +198,24 @@
                     </div>
                 </div>
 
-                <!-- Step 5: Message Example -->
+                <!-- Step 5: Sample Message -->
                 <div class="step" id="step-5">
                     <div class="step-header">
                         <div class="step-number">5</div>
-                        <h2>Sample outreach message</h2>
-                        <p class="step-description">Provide an example of how you typically reach out to prospects.</p>
+                        <h2>Perfect Your Approach</h2>
+                        <p class="step-description">Write your ideal outreach message</p>
                     </div>
                     
                     <div class="form-group">
-                        <label for="message-example">
-                            Example Outreach Message
-                            <span class="label-help">How would you typically introduce yourself?</span>
-                        </label>
+                        <label for="message-example">Sample Outreach Message *</label>
                         <textarea 
                             id="message-example" 
-                            required 
-                            placeholder="e.g., Hi [Name], I noticed you're growing [Company] and might be looking for ways to improve your conversion rates. We've helped similar SaaS companies increase conversions by 40% using AI personalization. Would you be open to a quick 15-minute chat to see if this could help [Company] too?"
+                            placeholder="Hi [Name], I noticed you're working on [specific challenge]. We've helped similar SaaS companies increase conversions by 40% using AI personalization. Would you be open to a quick 15-minute chat to see if this could help [Company] too?"
                             rows="5"
+                            required
+                            maxlength="800"
                         ></textarea>
-                        <div class="input-example">Keep it conversational and low-pressure</div>
+                        <div class="input-example">Keep it conversational and low-pressure. Use [Name] and [Company] placeholders.</div>
                     </div>
                     
                     <div class="form-actions">
@@ -275,7 +246,7 @@
             <h2>Setup Issue</h2>
             <p class="error-message" id="error-message">Unable to verify your session.</p>
             <div class="error-actions">
-                <button class="btn btn-primary" onclick="window.location.href='auth.html'">Back to Login</button>
+                <button class="btn btn-primary" onclick="window.location.href='/auth'">Back to Login</button>
                 <button class="btn btn-secondary" onclick="window.location.reload()">Try Again</button>
             </div>
         </div>
@@ -291,6 +262,6 @@
     </div>
 
     <script src="/core/script-loader.js"></script>
-    <script src="/onboarding/onboarding.js"></script>
+    <script src="/pages/onboarding/onboarding.js"></script>
 </body>
 </html>
