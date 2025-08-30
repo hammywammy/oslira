@@ -35,16 +35,20 @@ class OsliraAuthManager {
             );
             
             // Set up auth state listener
-            this.supabase.auth.onAuthStateChange(async (event, session) => {
-                console.log('🔐 [Auth] State change:', event, session?.user?.email);
-                await this.handleAuthStateChange(event, session);
-            });
-            
-            // Initial session load
-            const { data: { session } } = await this.supabase.auth.getSession();
-            if (session) {
-                await this.loadUserContext(session);
-            }
+this.supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log('🔐 [Auth] State change:', event, session?.user?.email);
+    await this.handleAuthStateChange(event, session);
+});
+
+// Initial session load - CRITICAL: Don't fire events until user context loaded
+const { data: { session } } = await this.supabase.auth.getSession();
+if (session) {
+    // Load user context BEFORE notifying about session
+    this.session = session;
+    await this.loadUserContext(session);
+    // NOW notify listeners after context is loaded
+    this.notifyAuthChange('INITIAL_LOAD', session, null);
+}
             
             this.initialized = true;
             console.log('✅ [Auth] Manager initialized');
@@ -72,16 +76,21 @@ class OsliraAuthManager {
     }
     
     async handleAuthStateChange(event, session) {
-        const oldSession = this.session;
-        this.session = session;
-        
-        switch (event) {
-            case 'SIGNED_IN':
-                console.log('🔐 [Auth] Processing SIGNED_IN event');
-                if (session) {
-                    await this.loadUserContext(session);
-                }
-                break;
+    const oldSession = this.session;
+    this.session = session;
+    
+    switch (event) {
+        case 'SIGNED_IN':
+            console.log('🔐 [Auth] Processing SIGNED_IN event');
+            if (session) {
+                // CRITICAL: Load context BEFORE notifying
+                await this.loadUserContext(session);
+            }
+            break;
+        case 'INITIAL_LOAD':
+            // Skip loading - already done in initialize()
+            console.log('🔐 [Auth] Initial session already loaded');
+            break;
                 
             case 'SIGNED_OUT':
                 console.log('🔐 [Auth] Processing SIGNED_OUT event');
