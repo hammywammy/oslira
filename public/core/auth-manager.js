@@ -1,178 +1,351 @@
 // =============================================================================
-// AUTH-MANAGER.JS - Centralized Authentication System
-// Replaces all scattered auth logic across pages
+// OSLIRA AUTH MANAGER - UPDATED WITH NEW AUTH METHODS
 // =============================================================================
 
 class OsliraAuthManager {
-    static instance = null;
-    
-    static async initialize(config) {
-        if (this.instance) return this.instance;
-        
-        this.instance = new OsliraAuthManager(config);
-        await this.instance.setup();
-        return this.instance;
-    }
-    
-    static getInstance() {
-        return this.instance;
-    }
-    
-    constructor(config) {
-        this.config = config;
-        this.supabase = null;
+    constructor() {
+        this.initialized = false;
         this.session = null;
         this.user = null;
         this.businesses = [];
         this.selectedBusiness = null;
-        this.initialized = false;
+        this.supabase = null;
         this.authChangeListeners = new Set();
     }
     
-    async setup() {
+    async initialize() {
         if (this.initialized) return this;
         
-        console.log('🔐 [Auth] Initializing authentication system...');
-        
-        // Wait for Supabase library
-        await this.waitForSupabase();
-        
-        // Initialize single Supabase client
-        this.supabase = window.supabase.createClient(
-    config.SUPABASE_URL,
-    config.SUPABASE_ANON_KEY,
-    {
-        auth: {
-            autoRefreshToken: true,
-            persistSession: true,
-            detectSessionInUrl: true,
-            storage: window.localStorage,
-            flowType: 'pkce',
-            storageKey: 'supabase.auth.token',
-            expiry: 3 * 24 * 60 * 60 // 3 days in seconds
-        }
-    }
-);
-        
-        // Make client globally available (preserve library)
-window.supabaseClient = this.supabase;
-// Keep library available for other components
-if (!window.supabase.createClient) {
-    window.supabase = this.supabase;
-}
-        
-        // Get current session
-        await this.refreshSession();
-        
-        // Setup auth state change listener
-        this.setupAuthStateListener();
-        
-        // Load user context if authenticated
-        if (this.session) {
-            await this.loadUserContext();
-        }
-        
-        // Setup token security features
-        this.setupTokenRotation();
-        this.setupSecurityEventHandlers();
-        
-        this.initialized = true;
-        console.log('✅ [Auth] Authentication system ready');
-        
-        return this;
-    }
-    
-    async waitForSupabase() {
-    let attempts = 0;
-    const maxAttempts = 100;
-    
-    console.log('🔍 [Auth] Starting waitForSupabase...');
-    console.log('🔍 [Auth] Initial window.supabase:', window.supabase);
-    console.log('🔍 [Auth] Initial window.supabase?.createClient:', window.supabase?.createClient);
-    
-    // Check for Supabase constructor, not client instance
-    while (!window.supabase?.createClient && attempts < maxAttempts) {
-        if (attempts % 10 === 0) { // Log every 10 attempts (every second)
-            console.log(`🔍 [Auth] Attempt ${attempts}: window.supabase =`, window.supabase);
-            console.log(`🔍 [Auth] Attempt ${attempts}: typeof window.supabase =`, typeof window.supabase);
-            console.log(`🔍 [Auth] Attempt ${attempts}: window.supabase?.createClient =`, window.supabase?.createClient);
-            console.log(`🔍 [Auth] Attempt ${attempts}: Object.keys(window.supabase || {}) =`, Object.keys(window.supabase || {}));
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    console.log('🔍 [Auth] Final check - window.supabase:', window.supabase);
-    console.log('🔍 [Auth] Final check - window.supabase?.createClient:', window.supabase?.createClient);
-    
-    if (!window.supabase?.createClient) {
-        console.error('❌ [Auth] Final state - window object keys:', Object.keys(window));
-        console.error('❌ [Auth] Final state - window.supabase:', window.supabase);
-        throw new Error('Supabase library not available after 10 seconds');
-    }
-    
-    console.log('✅ [Auth] Supabase library confirmed available');
-}
-    
-    async refreshSession() {
         try {
-            const { data: { session }, error } = await this.supabase.auth.getSession();
+            // Wait for config to be loaded
+            const config = await this.waitForConfig();
             
-            if (error) {
-                console.error('❌ [Auth] Session refresh failed:', error);
-                throw error;
-            }
+            this.supabase = supabase.createClient(
+                config.SUPABASE_URL,
+                config.SUPABASE_ANON_KEY,
+                {
+                    auth: {
+                        redirectTo: `${config.BASE_URL}/auth/callback`,
+                        persistSession: true,
+                        storageKey: 'oslira-auth',
+                        autoRefreshToken: true,
+                        detectSessionInUrl: true
+                    }
+                }
+            );
             
-            this.session = session;
+            // Set up auth state listener
+            this.supabase.auth.onAuthStateChange(async (event, session) => {
+                console.log('🔐 [Auth] State change:', event, session?.user?.email);
+                await this.handleAuthStateChange(event, session);
+            });
             
+            // Initial session load
+            const { data: { session } } = await this.supabase.auth.getSession();
             if (session) {
-                this.user = session.user;
-                console.log('✅ [Auth] Session refreshed for user:', this.user.email);
-            } else {
-                this.user = null;
-                console.log('ℹ️ [Auth] No active session');
+                await this.loadUserContext(session);
             }
             
-            return session;
+            this.initialized = true;
+            console.log('✅ [Auth] Manager initialized');
+            return this;
             
         } catch (error) {
-            console.error('❌ [Auth] Failed to refresh session:', error);
-            this.session = null;
-            this.user = null;
+            console.error('❌ [Auth] Failed to initialize:', error);
             throw error;
         }
     }
     
-    setupAuthStateListener() {
-        this.supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('🔄 [Auth] Auth state changed:', event);
-            
-            const oldSession = this.session;
-            this.session = session;
-            
-            if (session) {
-                this.user = session.user;
-                await this.loadUserContext();
-                console.log('✅ [Auth] User authenticated:', this.user.email);
-            } else {
-                this.user = null;
-                this.businesses = [];
-                this.selectedBusiness = null;
-                console.log('ℹ️ [Auth] User signed out');
+    async waitForConfig() {
+        let attempts = 0;
+        const maxAttempts = 50;
+        
+        while (attempts < maxAttempts) {
+            if (window.OsliraConfig?.get) {
+                return window.OsliraConfig.get();
             }
-            
-            // Notify listeners
-            this.notifyAuthChange(event, session, oldSession);
-        });
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        throw new Error('Config not available after timeout');
     }
     
-    async loadUserContext() {
-        if (!this.session?.user) return;
+    // =============================================================================
+    // NEW AUTHENTICATION METHODS
+    // =============================================================================
+    
+    // Google OAuth Sign In
+    async signInWithGoogle() {
+        console.log('🔐 [Auth] Starting Google OAuth sign in');
         
         try {
-            console.log('👤 [Auth] Loading user context...');
+            const { data, error } = await this.supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.OsliraConfig.get().BASE_URL}/auth/callback`,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent',
+                    }
+                }
+            });
             
-            // Load user profile with retries
+            if (error) {
+                console.error('❌ [Auth] Google OAuth error:', error);
+                throw error;
+            }
+            
+            // OAuth will redirect, so this won't be reached immediately
+            return data;
+            
+        } catch (error) {
+            console.error('❌ [Auth] Google sign in failed:', error);
+            throw new Error(`Google sign in failed: ${error.message}`);
+        }
+    }
+    
+    // Email + Password Sign Up
+    async signUpWithPassword(email, password, userData = {}) {
+        console.log('🔐 [Auth] Starting email/password sign up');
+        
+        try {
+            const { data, error } = await this.supabase.auth.signUp({
+                email: email.toLowerCase().trim(),
+                password,
+                options: {
+                    data: {
+                        full_name: userData.fullName || '',
+                        username: userData.username || null,
+                        created_via: 'email'
+                    }
+                }
+            });
+            
+            if (error) {
+                console.error('❌ [Auth] Sign up error:', error);
+                throw error;
+            }
+            
+            // Create user record in database
+            if (data.user && !data.user.email_confirmed_at) {
+                console.log('📧 [Auth] Email confirmation required');
+                return {
+                    needsEmailConfirmation: true,
+                    user: data.user
+                };
+            }
+            
+            return data;
+            
+        } catch (error) {
+            console.error('❌ [Auth] Sign up failed:', error);
+            throw new Error(`Sign up failed: ${error.message}`);
+        }
+    }
+    
+    // Email + Password Sign In
+    async signInWithPassword(email, password) {
+        console.log('🔐 [Auth] Starting email/password sign in');
+        
+        try {
+            const { data, error } = await this.supabase.auth.signInWithPassword({
+                email: email.toLowerCase().trim(),
+                password
+            });
+            
+            if (error) {
+                console.error('❌ [Auth] Sign in error:', error);
+                throw error;
+            }
+            
+            return data;
+            
+        } catch (error) {
+            console.error('❌ [Auth] Sign in failed:', error);
+            throw new Error(`Sign in failed: ${error.message}`);
+        }
+    }
+    
+    // Username + Password Sign In
+    async signInWithUsername(username, password) {
+        console.log('🔐 [Auth] Starting username/password sign in');
+        
+        try {
+            // Get user by username
+            const { data: userData, error: userError } = await this.supabase
+                .rpc('get_user_by_username', { lookup_username: username });
+                
+            if (userError || !userData || userData.length === 0) {
+                throw new Error('Username not found');
+            }
+            
+            const user = userData[0];
+            
+            // Sign in with email/password
+            const { data, error } = await this.supabase.auth.signInWithPassword({
+                email: user.email,
+                password
+            });
+            
+            if (error) {
+                console.error('❌ [Auth] Username sign in error:', error);
+                throw error;
+            }
+            
+            return data;
+            
+        } catch (error) {
+            console.error('❌ [Auth] Username sign in failed:', error);
+            throw new Error(`Username sign in failed: ${error.message}`);
+        }
+    }
+    
+    // Phone SMS OTP Sign In
+    async signInWithPhone(phone) {
+        console.log('🔐 [Auth] Starting phone OTP sign in');
+        
+        try {
+            // Format phone to E.164
+            const formattedPhone = this.formatPhoneE164(phone);
+            
+            const { data, error } = await this.supabase.auth.signInWithOtp({
+                phone: formattedPhone,
+                options: {
+                    data: {
+                        created_via: 'phone'
+                    }
+                }
+            });
+            
+            if (error) {
+                console.error('❌ [Auth] Phone OTP error:', error);
+                throw error;
+            }
+            
+            return data;
+            
+        } catch (error) {
+            console.error('❌ [Auth] Phone sign in failed:', error);
+            throw new Error(`Phone sign in failed: ${error.message}`);
+        }
+    }
+    
+    // Verify Phone OTP
+    async verifyPhoneOtp(phone, otp) {
+        console.log('🔐 [Auth] Verifying phone OTP');
+        
+        try {
+            const formattedPhone = this.formatPhoneE164(phone);
+            
+            const { data, error } = await this.supabase.auth.verifyOtp({
+                phone: formattedPhone,
+                token: otp,
+                type: 'sms'
+            });
+            
+            if (error) {
+                console.error('❌ [Auth] OTP verification error:', error);
+                throw error;
+            }
+            
+            return data;
+            
+        } catch (error) {
+            console.error('❌ [Auth] OTP verification failed:', error);
+            throw new Error(`OTP verification failed: ${error.message}`);
+        }
+    }
+    
+    // =============================================================================
+    // UTILITY METHODS
+    // =============================================================================
+    
+    formatPhoneE164(phone) {
+        // Basic E.164 formatting - add country code if missing
+        let formatted = phone.replace(/\D/g, ''); // Remove non-digits
+        
+        if (formatted.length === 10 && !formatted.startsWith('1')) {
+            formatted = '1' + formatted; // Add US country code
+        }
+        
+        return '+' + formatted;
+    }
+    
+    // Check username availability
+    async checkUsernameAvailable(username) {
+        try {
+            const { data, error } = await this.supabase
+                .rpc('get_user_by_username', { lookup_username: username });
+                
+            if (error && error.code !== 'PGRST116') {
+                throw error;
+            }
+            
+            return !data || data.length === 0;
+            
+        } catch (error) {
+            console.error('❌ [Auth] Username check failed:', error);
+            return false;
+        }
+    }
+    
+    // =============================================================================
+    // SIGN OUT
+    // =============================================================================
+    
+    async signOut() {
+        console.log('🚪 [Auth] Signing out');
+        
+        try {
+            const { error } = await this.supabase.auth.signOut();
+            
+            if (error) {
+                console.error('❌ [Auth] Sign out error:', error);
+            }
+            
+            // Clear local state
+            this.session = null;
+            this.user = null;
+            this.businesses = [];
+            this.selectedBusiness = null;
+            
+            // Clear local storage
+            localStorage.removeItem('selectedBusinessId');
+            
+            console.log('✅ [Auth] Signed out successfully');
+            
+        } catch (error) {
+            console.error('❌ [Auth] Sign out failed:', error);
+        }
+    }
+    
+    // =============================================================================
+    // SESSION MANAGEMENT
+    // =============================================================================
+    
+    async handleAuthStateChange(event, session) {
+        console.log(`🔐 [Auth] Processing ${event} event`);
+        
+        const oldSession = this.session;
+        
+        if (session) {
+            await this.loadUserContext(session);
+        } else {
+            this.session = null;
+            this.user = null;
+            this.businesses = [];
+            this.selectedBusiness = null;
+        }
+        
+        this.notifyAuthChange(event, session, oldSession);
+    }
+    
+    async loadUserContext(session) {
+        console.log('📊 [Auth] Loading user context');
+        this.session = session;
+        
+        try {
+            // Load user data with retry logic
             let userData = null;
             let attempts = 0;
             const maxAttempts = 3;
@@ -181,11 +354,11 @@ if (!window.supabase.createClient) {
                 const { data, error } = await this.supabase
                     .from('users')
                     .select('*')
-                    .eq('id', this.session.user.id)
+                    .eq('id', session.user.id)
                     .single();
                 
                 if (error && error.code !== 'PGRST116') {
-                    console.warn(`⚠️ [Auth] User profile load attempt ${attempts + 1} failed:`, error);
+                    console.warn(`⚠️ [Auth] User load attempt ${attempts + 1} failed:`, error);
                     attempts++;
                     if (attempts < maxAttempts) {
                         await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
@@ -196,13 +369,13 @@ if (!window.supabase.createClient) {
                 }
             }
             
-            this.user = { ...this.session.user, ...userData };
+            this.user = { ...session.user, ...userData };
             
             // Load business profiles
             const { data: businessData, error: businessError } = await this.supabase
                 .from('business_profiles')
                 .select('*')
-                .eq('user_id', this.session.user.id)
+                .eq('user_id', session.user.id)
                 .order('created_at', { ascending: true });
             
             if (businessError) {
@@ -223,67 +396,16 @@ if (!window.supabase.createClient) {
             
             console.log('✅ [Auth] User context loaded:', {
                 userId: this.user.id,
-                email: this.user.email,
-                businesses: this.businesses.length,
-                selectedBusiness: this.selectedBusiness?.business_name
+                businesses: this.businesses.length
             });
             
         } catch (error) {
             console.error('❌ [Auth] Failed to load user context:', error);
         }
     }
-
-    
-    async signOut() {
-        try {
-            console.log('👋 [Auth] Signing out...');
-            
-            await this.supabase.auth.signOut();
-            
-            // Clear local data
-            localStorage.removeItem('selectedBusinessId');
-            
-            console.log('✅ [Auth] Sign out successful');
-            
-            // Redirect to home
-            window.location.href = '/';
-            
-        } catch (error) {
-            console.error('❌ [Auth] Sign out failed:', error);
-            // Force redirect anyway
-            window.location.href = '/';
-        }
-    }
     
     // =============================================================================
-    // BUSINESS MANAGEMENT
-    // =============================================================================
-    
-    setSelectedBusiness(businessId) {
-        const business = this.businesses.find(b => b.id === businessId);
-        if (business) {
-            this.selectedBusiness = business;
-            localStorage.setItem('selectedBusinessId', businessId);
-            
-            // Notify listeners
-            this.notifyBusinessChange(business);
-            
-            console.log('🏢 [Auth] Selected business changed:', business.business_name);
-            return business;
-        }
-        return null;
-    }
-    
-    getSelectedBusiness() {
-        return this.selectedBusiness;
-    }
-    
-    getBusinesses() {
-        return this.businesses;
-    }
-    
-    // =============================================================================
-    // ACCESS CONTROL & GUARDS
+    // AUTH STATUS CHECKS
     // =============================================================================
     
     isAuthenticated() {
@@ -333,17 +455,6 @@ if (!window.supabase.createClient) {
         return true;
     }
     
-    async requireAdmin(redirectUrl = '/dashboard') {
-        if (!await this.requireAuth()) return false;
-        
-        if (!this.isAdmin()) {
-            console.log('🚫 [Auth] Admin access required, redirecting...');
-            window.location.href = redirectUrl;
-            return false;
-        }
-        return true;
-    }
-    
     // =============================================================================
     // PAGE-SPECIFIC AUTH HANDLING
     // =============================================================================
@@ -359,35 +470,6 @@ if (!window.supabase.createClient) {
             return false; // Don't show auth form
         }
         return true; // Show auth form
-    }
-    
-    async handleOnboardingPage() {
-        if (!await this.requireAuth()) return false;
-        
-        if (this.isOnboardingComplete()) {
-            window.location.href = '/dashboard';
-            return false;
-        }
-        return true;
-    }
-    
-    async handleDashboardPage() {
-        return await this.requireBusiness();
-    }
-    
-    async handleAdminPage() {
-        return await this.requireAdmin();
-    }
-    
-    // =============================================================================
-    // CALLBACK & REDIRECT LOGIC
-    // =============================================================================
-    
-    getRedirectAfterAuth() {
-        if (!this.isOnboardingComplete()) {
-            return '/onboarding';
-        }
-        return '/dashboard';
     }
     
     // =============================================================================
@@ -424,12 +506,6 @@ if (!window.supabase.createClient) {
         }));
     }
     
-    notifyBusinessChange(business) {
-        window.dispatchEvent(new CustomEvent('auth:business-change', {
-            detail: { business }
-        }));
-    }
-    
     // =============================================================================
     // API INTEGRATION
     // =============================================================================
@@ -462,7 +538,7 @@ if (!window.supabase.createClient) {
     }
     
     // =============================================================================
-    // UTILITY METHODS
+    // GETTERS
     // =============================================================================
     
     getCurrentUser() {
@@ -475,15 +551,6 @@ if (!window.supabase.createClient) {
     
     getSupabaseClient() {
         return this.supabase;
-    }
-    
-    // For backward compatibility
-    async getSession() {
-        return this.session;
-    }
-    
-    async getUser() {
-        return this.user;
     }
     
     // =============================================================================
@@ -505,98 +572,35 @@ if (!window.supabase.createClient) {
         });
         console.groupEnd();
     }
+}
 
-    // =============================================================================
-    // TOKEN SECURITY & ROTATION
-    // =============================================================================
+// =============================================================================
+// GLOBAL INITIALIZATION
+// =============================================================================
+
+// Create and initialize global instance
+window.OsliraAuth = {
+    instance: null,
     
-    setupTokenRotation() {
-    // Check session validity every 4 hours, but allow 3-day sessions
-    const CHECK_INTERVAL = 4 * 60 * 60 * 1000; // 4 hours
-    const MAX_SESSION_AGE = 3 * 24 * 60 * 60 * 1000; // 3 days
-    
-    setInterval(async () => {
-        try {
-            if (this.session) {
-                // Check if session is older than 3 days
-                const sessionAge = Date.now() - (this.session.created_at ? new Date(this.session.created_at).getTime() : 0);
-                
-                if (sessionAge > MAX_SESSION_AGE) {
-                    console.log('⏰ [Auth] Session expired after 3 days, signing out');
-                    this.signOut();
-                    return;
-                }
-                
-                // Refresh token if needed (Supabase handles this automatically)
-                const { data, error } = await this.supabase.auth.refreshSession();
-                
-                if (error) {
-                    console.error('❌ [Auth] Token refresh failed:', error);
-                    this.signOut();
-                    return;
-                }
-                
-                if (data.session) {
-                    this.session = data.session;
-                    console.log('✅ [Auth] Session validated, expires in 3 days from login');
-                    this.notifyAuthChange('TOKEN_REFRESHED', data.session, null);
-                }
-            }
-        } catch (error) {
-            console.error('❌ [Auth] Session validation error:', error);
+    async initialize() {
+        if (!this.instance) {
+            this.instance = new OsliraAuthManager();
+            await this.instance.initialize();
         }
-    }, CHECK_INTERVAL);
-}
+        return this.instance;
+    },
     
-    setupSecurityEventHandlers() {
-        // Force logout on multiple tabs
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'supabase.auth.token' && !event.newValue && event.oldValue) {
-                console.log('🔒 [Auth] Session cleared in another tab, logging out');
-                this.signOut();
-            }
-        });
-        
-        // Detect suspicious activity
-        this.lastActivityTime = Date.now();
-        document.addEventListener('click', () => {
-            this.lastActivityTime = Date.now();
-        });
-        
-        // Auto-logout after 4 hours of inactivity
-        setInterval(() => {
-            const inactiveTime = Date.now() - this.lastActivityTime;
-            const MAX_INACTIVE_TIME = 4 * 60 * 60 * 1000; // 4 hours
-            
-            if (inactiveTime > MAX_INACTIVE_TIME && this.session) {
-                console.log('⏰ [Auth] Auto-logout due to inactivity');
-                this.signOut();
-            }
-        }, 60000); // Check every minute
+    // Legacy access
+    async load() {
+        return await this.initialize();
     }
-    
-    // =============================================================================
-    
-    // =============================================================================
-    // CLEANUP
-    // =============================================================================
-    
-    destroy() {
-        this.authChangeListeners.clear();
-        this.session = null;
-        this.user = null;
-        this.businesses = [];
-        this.selectedBusiness = null;
-        this.initialized = false;
-        
-        console.log('🗑️ [Auth] Auth manager destroyed');
-    }
+};
+
+// Auto-initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.OsliraAuth.initialize().catch(console.error);
+    });
+} else {
+    window.OsliraAuth.initialize().catch(console.error);
 }
-
-// Export for global use
-window.OsliraAuth = OsliraAuthManager;
-
-// Backward compatibility exports
-window.OsliraAuthManager = OsliraAuthManager;
-
-console.log('🔐 Auth Manager class loaded');
