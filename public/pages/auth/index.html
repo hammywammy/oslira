@@ -617,15 +617,27 @@
             }
         });
 
-        // Auth state change handler
+        // Auth state change handler - ENHANCED LOGGING
         window.addEventListener('auth:change', (event) => {
-            const { session, user } = event.detail;
+            const { session, user, event: authEvent } = event.detail;
+            
+            console.log('🔐 [Auth Page] Auth state changed:', {
+                event: authEvent,
+                authenticated: !!session,
+                userId: user?.id,
+                onboardingComplete: user?.onboarding_completed,
+                userObject: user
+            });
             
             if (session && user) {
+                console.log('🔐 [Auth Page] User authenticated, determining redirect...');
+                
                 // Redirect based on onboarding status
                 if (!user.onboarding_completed) {
+                    console.log('🔐 [Auth Page] Redirecting to onboarding...');
                     window.location.href = '/onboarding';
                 } else {
+                    console.log('🔐 [Auth Page] Redirecting to dashboard...');
                     window.location.href = '/dashboard';
                 }
             }
@@ -656,10 +668,16 @@
                 const auth = await authSystem.initialize();
                 
                 // Redirect if already authenticated
+                console.log('🔐 [Auth Page] Checking if user is already authenticated...');
                 const shouldShowForm = await auth.handleAuthPage();
+                console.log('🔐 [Auth Page] Should show form:', shouldShowForm);
+                
                 if (!shouldShowForm) {
+                    console.log('🔐 [Auth Page] Already authenticated, should redirect...');
                     return; // Will redirect
                 }
+                
+                console.log('🔐 [Auth Page] Not authenticated, showing auth forms');
                 
             } catch (error) {
                 console.error('Auth initialization failed:', error);
