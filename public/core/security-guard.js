@@ -7,10 +7,33 @@
  * D. CSRF Protection
  * 
  * STEP 4: Universal navigation controller - single source of truth
+ * FIXED: Race condition between auth events and event listener setup
  */
 
 class SecurityGuard {
     static instance = null;
+    
+    // CRITICAL FIX: Static method to handle auth state changes before instance exists
+    static handleAuthStateChange = async (event) => {
+        const { event: authEvent, session, user } = event.detail;
+        console.log('🛡️ [SecurityGuard] EARLY Auth state changed:', {
+            event: authEvent,
+            timestamp: new Date().toISOString(),
+            hasSession: !!session,
+            hasUser: !!user,
+            userId: user?.id
+        });
+        
+        // If instance exists, delegate to instance method
+        if (SecurityGuard.instance && SecurityGuard.instance.initialized) {
+            await SecurityGuard.instance.handleInstanceAuthStateChange(event);
+        } else {
+            // Store early events for replay when instance is ready
+            SecurityGuard.earlyAuthEvents = SecurityGuard.earlyAuthEvents || [];
+            SecurityGuard.earlyAuthEvents.push(event.detail);
+            console.log('🛡️ [SecurityGuard] Stored early auth event for replay');
+        }
+    }
     
     static async initialize() {
         if (this.instance) return this.instance;
@@ -70,6 +93,12 @@ class SecurityGuard {
         // Generate CSRF token
         this.generateCSRFToken();
         
+        // Setup security event listeners (instance-level)
+        this.setupSecurityEventListeners();
+        
+        // CRITICAL FIX: Replay any early auth events that occurred before initialization
+        await this.replayEarlyAuthEvents();
+        
         // Enforce page access rules (SINGLE SOURCE OF TRUTH)
         const accessGranted = await this.enforcePageAccess();
         
@@ -77,7 +106,6 @@ class SecurityGuard {
             // Setup security features
             await this.setupTokenSecurity();
             this.setupCSRFProtection();
-            this.setupSecurityEventListeners();
             
             // Release page for rendering
             this.allowPageRendering();
@@ -86,6 +114,20 @@ class SecurityGuard {
         }
         
         this.initialized = true;
+    }
+    
+    // CRITICAL FIX: Replay early auth events
+    async replayEarlyAuthEvents() {
+        if (SecurityGuard.earlyAuthEvents && SecurityGuard.earlyAuthEvents.length > 0) {
+            console.log(`🛡️ [SecurityGuard] Replaying ${SecurityGuard.earlyAuthEvents.length} early auth events`);
+            
+            for (const eventDetail of SecurityGuard.earlyAuthEvents) {
+                await this.handleInstanceAuthStateChange({ detail: eventDetail });
+            }
+            
+            // Clear early events after replay
+            SecurityGuard.earlyAuthEvents = [];
+        }
     }
     
     // =============================================================================
@@ -166,15 +208,12 @@ class SecurityGuard {
                     console.log('🛡️ [SecurityGuard] Public page access granted without auth system');
                     return true;
                 }
-                console.log('🛡️ [SecurityGuard] Auth system not available, redirecting to home');
-                this.redirectToAuth('Auth system not available');
+                console.log('🛡️ [SecurityGuard] Auth system not available');
+                this.redirectToAuth('Authentication system unavailable');
                 return false;
             }
             
             // Get current auth state
-            this.currentSession = authManager.getCurrentSession();
-            this.currentUser = authManager.getCurrentUser();
-            
             const isAuthenticated = authManager.isAuthenticated();
             const isOnboardingComplete = authManager.isOnboardingComplete();
             const hasBusinessProfile = authManager.hasBusinessProfile();
@@ -188,15 +227,19 @@ class SecurityGuard {
                 pageType: this.pageClassification
             });
             
-            // UNIVERSAL ACCESS CONTROL - SINGLE SOURCE OF TRUTH
+            // Store current auth state
+            this.currentSession = authManager.getCurrentSession();
+            this.currentUser = authManager.getCurrentUser();
+            
+            // Apply access control rules
             switch (this.pageClassification) {
                 case 'PUBLIC':
-                    console.log('🛡️ [SecurityGuard] Public page - access granted');
+                    console.log('✅ [SecurityGuard] Public page access granted');
                     return true;
                     
                 case 'AUTH_ONLY':
-                    // Auth pages - redirect if already authenticated (ENHANCED LOGIC)
                     if (isAuthenticated) {
+                        // User is authenticated, redirect away from auth page
                         const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ?
                             '/dashboard' : '/onboarding';
                         console.log('🛡️ [SecurityGuard] User already authenticated, redirecting to:', redirectUrl);
@@ -253,38 +296,40 @@ class SecurityGuard {
                 case 'ADMIN_REQUIRED':
                     if (!isAuthenticated) {
                         console.log('🛡️ [SecurityGuard] Authentication required for admin');
-                        this.redirectToAuth('Authentication required');
+                        this.redirectToAuth('Authentication required for admin access');
                         return false;
                     }
                     if (!isAdmin) {
-                        console.log('🛡️ [SecurityGuard] Admin access required - redirecting to dashboard');
-                        setTimeout(() => {
-                            window.location.href = '/dashboard';
-                        }, 100);
+                        console.log('🛡️ [SecurityGuard] Admin privileges required - access denied');
+                        this.redirectToAuth('Admin privileges required');
                         return false;
                     }
                     console.log('✅ [SecurityGuard] Admin access granted');
                     return true;
                     
                 default:
-                    console.warn('🛡️ [SecurityGuard] Unknown page classification:', this.pageClassification);
-                    return true;
+                    console.log('⚠️ [SecurityGuard] Unknown page classification - denying access');
+                    this.redirectToAuth('Page access verification failed');
+                    return false;
             }
             
         } catch (error) {
-            console.error('🛡️ [SecurityGuard] Access enforcement failed:', error);
-            this.redirectToAuth('Security check failed');
+            console.error('❌ [SecurityGuard] Access control error:', error);
+            this.redirectToAuth('Security verification failed');
             return false;
         }
     }
     
-    redirectToAuth(reason) {
-        console.log('🛡️ [SecurityGuard] Redirecting to auth:', reason);
-        const currentUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    redirectToAuth(reason = 'Authentication required') {
+        console.log(`🔄 [SecurityGuard] Redirecting to auth: ${reason}`);
         
-        // Enhanced redirect with reason and return URL
+        // Store current page for post-auth redirect
+        if (this.currentPage && !['auth', 'auth-callback'].includes(this.currentPage)) {
+            sessionStorage.setItem('postAuthRedirect', window.location.pathname);
+        }
+        
         setTimeout(() => {
-            window.location.href = `/auth?return=${currentUrl}&reason=${encodeURIComponent(reason)}`;
+            window.location.href = '/auth';
         }, 100);
     }
     
@@ -392,12 +437,9 @@ class SecurityGuard {
     // =============================================================================
     
     generateCSRFToken() {
-        // Generate cryptographically secure random token
-        const array = new Uint8Array(32);
-        crypto.getRandomValues(array);
-        this.csrfToken = btoa(String.fromCharCode.apply(null, array));
+        this.csrfToken = this.generateRandomToken(32);
         
-        // Store in meta tag for forms to access
+        // Store in meta tag for form access
         let metaTag = document.querySelector('meta[name="csrf-token"]');
         if (!metaTag) {
             metaTag = document.createElement('meta');
@@ -409,29 +451,19 @@ class SecurityGuard {
         console.log('🛡️ [SecurityGuard] CSRF token generated');
     }
     
+    generateRandomToken(length) {
+        const array = new Uint8Array(length);
+        crypto.getRandomValues(array);
+        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    }
+    
     setupCSRFProtection() {
-        // Intercept all form submissions
-        document.addEventListener('submit', (event) => {
-            const form = event.target;
-            if (form.tagName !== 'FORM') return;
-            
-            // Skip forms that already have CSRF tokens
-            if (form.querySelector('input[name="csrf_token"]')) return;
-            
-            // Add CSRF token to form
-            const csrfInput = document.createElement('input');
-            csrfInput.type = 'hidden';
-            csrfInput.name = 'csrf_token';
-            csrfInput.value = this.csrfToken;
-            form.appendChild(csrfInput);
-        });
+        if (!this.csrfToken) return;
         
-        // Intercept fetch requests
+        // Override fetch to include CSRF token
         const originalFetch = window.fetch;
-        window.fetch = async (...args) => {
-            const [url, options = {}] = args;
-            
-            // Add CSRF token to POST/PUT/PATCH requests
+        window.fetch = (url, options = {}) => {
+            // Add CSRF token to POST/PUT/PATCH/DELETE requests
             if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
                 options.headers = {
                     ...options.headers,
@@ -450,47 +482,9 @@ class SecurityGuard {
     // =============================================================================
     
     setupSecurityEventListeners() {
-    // Listen for auth state changes and RE-EVALUATE PAGE ACCESS
-    window.addEventListener('auth:change', async (event) => {
-        const { event: authEvent, session, user } = event.detail;
-        console.log('🛡️ [SecurityGuard] Auth state changed:', authEvent, 'Re-evaluating page access...');
+        console.log('🛡️ [SecurityGuard] Setting up instance-level auth event listeners at:', new Date().toISOString());
         
-        this.currentSession = session;
-        this.currentUser = user;
-        
-        // CRITICAL: Re-evaluate page access when auth state changes
-        if (authEvent === 'SIGNED_IN' && session && user) {
-    console.log('🛡️ [SecurityGuard] User signed in, checking if redirect needed...');
-    
-    // For AUTH_ONLY pages, redirect authenticated users
-    if (this.pageClassification === 'AUTH_ONLY') {
-        // WAIT for AuthManager to finish loading user context before checking status
-        await this.waitForUserContextLoad(user.id);
-        
-        const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
-        const isOnboardingComplete = authManager?.isOnboardingComplete();
-        const hasBusinessProfile = authManager?.hasBusinessProfile();
-        
-        const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ?
-            '/dashboard' : '/onboarding';
-                
-                console.log('🛡️ [SecurityGuard] Auth page - redirecting authenticated user to:', redirectUrl);
-                
-                setTimeout(() => {
-                    window.location.href = redirectUrl;
-                }, 500);
-            }
-        }
-        
-        if (session) {
-            this.setupTokenSecurity();
-        } else {
-            // Clear security context on signout
-            if (this.refreshTokenTimer) {
-                clearTimeout(this.refreshTokenTimer);
-            }
-        }
-    });
+        // Additional security listeners (not auth:change which is handled at class level)
         
         // Handle tab visibility for session management
         document.addEventListener('visibilitychange', () => {
@@ -508,6 +502,70 @@ class SecurityGuard {
         });
         
         console.log('🛡️ [SecurityGuard] Enhanced security event listeners setup');
+    }
+    
+    // CRITICAL FIX: Instance method to handle auth state changes
+    async handleInstanceAuthStateChange(event) {
+        const { event: authEvent, session, user } = event.detail;
+        console.log('🛡️ [SecurityGuard] Instance handling auth state change:', authEvent, 'Re-evaluating page access...');
+        
+        this.currentSession = session;
+        this.currentUser = user;
+        
+        // CRITICAL: Re-evaluate page access when auth state changes
+        if (authEvent === 'SIGNED_IN' && session && user) {
+            console.log('🛡️ [SecurityGuard] User signed in, checking if redirect needed...');
+            
+            // For AUTH_ONLY pages, redirect authenticated users
+            if (this.pageClassification === 'AUTH_ONLY') {
+                // CRITICAL FIX: Wait for user context to be loaded before checking status
+                await this.waitForUserContextLoad(user.id);
+                
+                const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+                const isOnboardingComplete = authManager?.isOnboardingComplete();
+                const hasBusinessProfile = authManager?.hasBusinessProfile();
+                
+                const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ?
+                    '/dashboard' : '/onboarding';
+                
+                console.log('🛡️ [SecurityGuard] Auth page - redirecting authenticated user to:', redirectUrl);
+                
+                setTimeout(() => {
+                    window.location.href = redirectUrl;
+                }, 500);
+            }
+        }
+        
+        if (session) {
+            this.setupTokenSecurity();
+        } else {
+            // Clear security context on signout
+            if (this.refreshTokenTimer) {
+                clearTimeout(this.refreshTokenTimer);
+            }
+        }
+    }
+    
+    // CRITICAL FIX: Wait for user context to be loaded before making redirect decisions
+    async waitForUserContextLoad(userId, maxAttempts = 50) {
+        let attempts = 0;
+        
+        while (attempts < maxAttempts) {
+            const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+            
+            // Check if user context has been loaded (user object populated with onboarding status)
+            if (authManager?.user?.id === userId && 
+                authManager.user.hasOwnProperty('onboarding_completed')) {
+                console.log('🛡️ [SecurityGuard] User context loaded, proceeding with redirect logic');
+                return true;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        console.warn('🛡️ [SecurityGuard] User context load timeout, proceeding with available data');
+        return false;
     }
     
     async validateSession() {
@@ -543,6 +601,8 @@ class SecurityGuard {
     
     detectCurrentPage() {
         const pathname = window.location.pathname;
+        console.log('🔍 [ScriptLoader] Detecting page for pathname:', pathname);
+        
         const pathMap = {
             '/': 'home',
             '/index.html': 'home',
@@ -565,13 +625,20 @@ class SecurityGuard {
         };
         
         // Exact match first
-        if (pathMap[pathname]) return pathMap[pathname];
+        if (pathMap[pathname]) {
+            console.log('🔍 [ScriptLoader] Exact match found:', pathMap[pathname]);
+            return pathMap[pathname];
+        }
         
         // Partial match
         for (const [path, page] of Object.entries(pathMap)) {
-            if (pathname.includes(path) && path !== '/') return page;
+            if (pathname.includes(path) && path !== '/') {
+                console.log('🔍 [ScriptLoader] Partial match found:', page);
+                return page;
+            }
         }
         
+        console.log('🔍 [ScriptLoader] No match found, defaulting to unknown');
         return 'unknown';
     }
     
@@ -636,57 +703,21 @@ class SecurityGuard {
         console.log('Token Timer:', this.refreshTokenTimer ? 'Active' : 'None');
         console.groupEnd();
     }
-    async waitForUserContextLoad(userId, maxAttempts = 50) {
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
-        const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
-        
-        // Check if user context has been loaded (user object populated)
-        if (authManager?.user?.id === userId && 
-            authManager.user.hasOwnProperty('onboarding_completed')) {
-            console.log('🛡️ [SecurityGuard] User context loaded, proceeding with redirect logic');
-            return true;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    console.warn('🛡️ [SecurityGuard] User context load timeout, proceeding with available data');
-    return false;
-}
 }
 
-// Initialize security guard synchronously to catch early auth events
-class SecurityGuardInitializer {
-    static async earlyInitialize() {
-        console.log('🛡️ [SecurityGuard] Early initialization starting...');
-        
-        // Set up event listeners IMMEDIATELY, before DOM ready
-        window.addEventListener('auth:change', SecurityGuard.handleAuthStateChange.bind(SecurityGuard));
-        
-        // Set up basic security properties
-        SecurityGuard.environment = window.location.hostname.includes('localhost') ? 'development' : 
-                                   window.location.hostname.includes('oslira.org') ? 'production' : 'staging';
-        SecurityGuard.currentPage = SecurityGuard.detectCurrentPage();
-        SecurityGuard.pageClassification = SecurityGuard.getPageClassification();
-        
-        console.log('🛡️ [SecurityGuard] Event listeners ready BEFORE auth initialization');
-        
-        // Complete full initialization when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', async () => {
-                await SecurityGuard.initialize();
-            });
-        } else {
-            await SecurityGuard.initialize();
-        }
-    }
-}
+// CRITICAL FIX: Set up event listener IMMEDIATELY when script loads (not on DOM ready)
+console.log('🛡️ [SecurityGuard] Setting up early auth event listener...');
+window.addEventListener('auth:change', SecurityGuard.handleAuthStateChange);
 
-// Initialize immediately when script loads, not when DOM loads
-SecurityGuardInitializer.earlyInitialize();
+// Auto-initialize security guard when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', async () => {
+        await SecurityGuard.initialize();
+    });
+} else {
+    // DOM already loaded, initialize immediately
+    SecurityGuard.initialize();
+}
 
 // Export for global access
 window.SecurityGuard = SecurityGuard;
