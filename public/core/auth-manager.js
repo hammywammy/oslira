@@ -459,18 +459,52 @@ class OsliraAuthManager {
     // PAGE-SPECIFIC AUTH HANDLING
     // =============================================================================
     
-    async handleAuthPage() {
-        // If already authenticated, redirect appropriately
-        if (this.isAuthenticated()) {
-            if (!this.isOnboardingComplete()) {
-                window.location.href = '/onboarding';
-            } else {
-                window.location.href = '/dashboard';
+    // File: public/core/auth-manager.js
+// Lines: 460-480 (handleAuthPage method)
+
+async handleAuthPage() {
+    console.log('🔐 [Auth] Checking auth page access...');
+    
+    // If already authenticated, redirect appropriately
+    if (this.isAuthenticated()) {
+        console.log('🔐 [Auth] User is authenticated, checking user context...');
+        
+        // CRITICAL FIX: Ensure user context is fully loaded before checking onboarding status
+        if (!this.user) {
+            console.log('🔐 [Auth] User context still loading, waiting...');
+            let attempts = 0;
+            while (!this.user && attempts < 30) { // 3 seconds max
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
             }
-            return false; // Don't show auth form
+            
+            if (!this.user) {
+                console.warn('🔐 [Auth] User context failed to load, staying on auth page');
+                return true; // Show auth form as fallback
+            }
         }
-        return true; // Show auth form
+        
+        console.log('🔐 [Auth] User context loaded, user:', {
+            id: this.user.id,
+            email: this.user.email,
+            onboardingComplete: this.user.onboarding_completed
+        });
+        
+        // Determine redirect destination
+        if (!this.isOnboardingComplete()) {
+            console.log('🔐 [Auth] User needs onboarding, redirecting...');
+            window.location.href = '/onboarding';
+        } else {
+            console.log('🔐 [Auth] User onboarded, redirecting to dashboard...');
+            window.location.href = '/dashboard';
+        }
+        
+        return false; // Don't show auth form
     }
+    
+    console.log('🔐 [Auth] User not authenticated, showing auth form');
+    return true; // Show auth form
+}
     
     // =============================================================================
     // EVENT SYSTEM
