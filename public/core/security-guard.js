@@ -554,27 +554,26 @@ class SecurityGuard {
         }
     }
     
-    // CRITICAL FIX: Wait for user context to be loaded before making redirect decisions
-    async waitForUserContextLoad(userId, maxAttempts = 50) {
-        let attempts = 0;
+    async waitForUserContextLoad(userId, maxAttempts = 20) {
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+        const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
         
-        while (attempts < maxAttempts) {
-            const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
-            
-            // Check if user context has been loaded (user object populated with onboarding status)
-            if (authManager?.user?.id === userId && 
-                authManager.user.hasOwnProperty('onboarding_completed')) {
-                console.log('🛡️ [SecurityGuard] User context loaded, proceeding with redirect logic');
-                return true;
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
+        // CRITICAL FIX: Don't wait for full user context if session exists
+        // Just verify the session is valid for basic access control
+        if (authManager?.getCurrentSession()?.user?.id === userId) {
+            console.log('🛡️ [SecurityGuard] Session verified, proceeding');
+            return true;
         }
         
-        console.warn('🛡️ [SecurityGuard] User context load timeout, proceeding with available data');
-        return false;
+        await new Promise(resolve => setTimeout(resolve, 50)); // Reduced wait time
+        attempts++;
     }
+    
+    console.warn('🛡️ [SecurityGuard] Session verification timeout, allowing access');
+    return true; // Don't block access, let auth manager handle the flow
+}
     
     async validateSession() {
         try {
