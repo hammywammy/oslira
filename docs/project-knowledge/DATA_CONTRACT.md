@@ -3,11 +3,16 @@
 
 ---
 
-## **# SUPABASE DATABASE SCHEMA**
+## **# SUPABASE DATABASE SCHEMA - UPDATED WITH NEW AUTH SYSTEM**
 
-### **users** (RLS ✅)
+### **users** (RLS ✅) - **UPDATED SCHEMA**
 - `id` (uuid, PK, auth.uid())
 - `email` (text, unique, not null)
+- `username` (varchar(20), unique, nullable) - **NEW**
+- `phone` (varchar(20), nullable) - **NEW**  
+- `full_name` (text, nullable) - **NEW**
+- `created_via` (varchar(20), default: 'email') - **NEW**
+- `phone_verified` (boolean, default: false) - **NEW**
 - `credits` (integer, default: 5)
 - `subscription_plan` (text, default: 'free')
 - `subscription_status` (text, default: 'active')
@@ -16,7 +21,17 @@
 - `is_admin` (boolean, default: false)
 - `created_at`, `updated_at`, `last_sign_in_at`
 
-### **business_profiles** (RLS ✅)
+**NEW INDEXES:**
+- `idx_users_username_lower` (LOWER(username))
+- `idx_users_email` (email)
+- `idx_users_phone` (phone)
+- `idx_users_created_via` (created_via)
+
+**NEW FUNCTIONS:**
+- `validate_username()` - Enforces 3-20 chars, alphanumeric + underscore/hyphen
+- `get_user_by_username(text)` - Username lookup for login
+
+### **business_profiles** (RLS ✅) - **NO CHANGES**
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → users.id)
 - `business_name` (text, not null)
@@ -30,7 +45,7 @@
 - `call_to_action` (text, not null)
 - `is_active` (boolean, default: true)
 
-### **leads** (RLS ✅)
+### **leads** (RLS ✅) - **NO CHANGES**
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → users.id)
 - `business_id` (uuid, FK → business_profiles.id)
@@ -46,7 +61,7 @@
 - `quick_summary` (text, nullable)
 - `posts_count`, `following_count`, `is_private`, `is_verified`, `is_business_account`
 
-### **lead_analyses** (RLS ✅)
+### **lead_analyses** (RLS ✅) - **NO CHANGES**
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → users.id)
 - `business_id` (uuid, FK → business_profiles.id)
@@ -66,7 +81,7 @@
 - `audience_quality` (text, default: 'Medium')
 - `engagement_insights` (text, nullable)
 
-### **credit_transactions** (RLS ✅)
+### **credit_transactions** (RLS ✅) - **NO CHANGES**
 - `id` (uuid, PK)
 - `user_id` (uuid, FK → users.id)
 - `lead_id` (uuid, FK → leads.id, nullable)
@@ -76,7 +91,237 @@
 
 ---
 
-## **# API RESPONSE FORMATS**
+## **# NEW AUTHENTICATION SYSTEM - MULTI-METHOD AUTH**
+
+### **Supported Authentication Methods**
+1. **Google OAuth** - Primary method
+2. **Email + Password** - Standard signup/signin  
+3. **Username + Password** - Alternative login
+4. **Phone SMS OTP** - Optional authentication
+5. **Email Confirmation** - For email/password signups
+
+### **Authentication Flow Types**
+```typescript
+type AuthMethod = 'google' | 'email' | 'username' | 'phone';
+type AuthFlow = 'signup' | 'signin' | 'oauth_callback';
+
+interface UserCreationData {
+  email: string;
+  password?: string;
+  full_name?: string;
+  username?: string;
+  phone?: string;
+  created_via: AuthMethod;
+}
+```
+
+### **OAuth Configuration**
+- **Provider:** Google OAuth 2.0
+- **Scopes:** `email profile`
+- **Callback URL:** Dynamic based on environment
+- **Production:** `https://oslira.com/auth/callback`
+- **Staging:** `https://oslira.org/auth/callback`
+- **Development:** `http://localhost:3000/auth/callback`
+
+### **Username Validation Rules**
+- **Length:** 3-20 characters
+- **Characters:** Alphanumeric + underscore + hyphen only
+- **Case:** Stored as lowercase, case-insensitive lookup
+- **Uniqueness:** Enforced at database level
+
+### **Phone Authentication**
+- **Format:** E.164 international format
+- **Provider:** Twilio via Supabase Auth
+- **OTP Length:** 6 digits
+- **Expiry:** 5 minutes
+- **Rate Limiting:** 5 attempts per 10 minutes
+
+---
+
+## **# ENVIRONMENT & CONFIGURATION SYSTEM - CENTRALIZED**
+
+### **Environment Detection**
+```typescript
+class OsliraEnvManager {
+  domains: {
+    production: 'oslira.com',      // Primary production
+    staging: 'oslira.org',         // Testing environment  
+    netlifyStaging: 'osliratest.netlify.app'
+  };
+  
+  environments: 'production' | 'staging' | 'development';
+  workerUrls: {
+    production: 'https://api.oslira.com',
+    staging: 'https://api-staging.oslira.com'
+  };
+}
+```
+
+### **Dynamic Configuration Loading**
+1. **Production/Staging:** Netlify Edge Function (`/api/config`)
+2. **Development:** Local `env-config.js` file
+3. **Fallback:** Environment variables
+
+### **Configuration Keys - UPDATED**
+```typescript
+interface OsliraConfig {
+  // Core URLs
+  BASE_URL: string;           // Dynamic based on environment
+  WORKER_URL: string;         // Environment-specific API
+  AUTH_CALLBACK_URL: string;  // Dynamic OAuth callback
+  
+  // Supabase
+  SUPABASE_URL: string;
+  SUPABASE_ANON_KEY: string;
+  
+  // Environment
+  ENV: 'production' | 'staging' | 'development';
+  IS_PRODUCTION: boolean;
+  IS_STAGING: boolean;
+  
+  // Feature Flags
+  FEATURES: {
+    DEBUG_MODE: boolean;
+    ANALYTICS: boolean;
+    CAMPAIGNS: boolean;
+    BULK_UPLOAD: boolean;
+  };
+}
+```
+
+---
+
+## **# CENTRALIZED SCRIPT LOADING SYSTEM**
+
+### **Loading Order - CRITICAL SEQUENCE**
+```typescript
+const SCRIPT_LOAD_ORDER = [
+  // 1. Pre-core (Environment Detection)
+  'env-manager',
+  
+  // 2. External Libraries  
+  'supabase', 'sentry',
+  
+  // 3. Security & Utilities
+  'staging-guard', 'alert-system',
+  
+  // 4. Core Configuration
+  'config-manager',
+  
+  // 5. Core Systems (Dependency Order)
+  'ui-manager', 'data-store', 'form-manager', 
+  'api-client', 'auth-manager',
+  
+  // 6. Application Initializer
+  'app-initializer'
+];
+```
+
+### **Script Dependencies**
+```typescript
+interface ScriptConfig {
+  url: string;
+  global?: string;           // Global variable name
+  critical: boolean;         // Blocks app if fails
+  environments?: string[];   // Load only in specific envs
+  dependsOn?: string[];     // Must load after these
+  attributes?: object;      // Additional script attributes
+}
+```
+
+### **Loading States**
+- **Pre-core:** Environment detection must complete first
+- **Core:** Configuration loaded before auth system
+- **Page-specific:** Additional scripts based on current page
+- **Error Recovery:** Non-critical scripts can fail without blocking
+
+---
+
+## **# AUTHENTICATION MANAGER API - NEW METHODS**
+
+### **Authentication Methods**
+```typescript
+class OsliraAuthManager {
+  // Google OAuth
+  async signInWithGoogle(): Promise<AuthData>;
+  
+  // Email/Password  
+  async signUpWithPassword(email: string, password: string, userData?: UserData): Promise<AuthData>;
+  async signInWithPassword(email: string, password: string): Promise<AuthData>;
+  
+  // Username/Password
+  async signInWithUsername(username: string, password: string): Promise<AuthData>;
+  
+  // Phone Authentication
+  async signInWithPhone(phone: string): Promise<void>;
+  async verifyPhoneOtp(phone: string, otp: string): Promise<AuthData>;
+  
+  // Utilities
+  async checkUsernameAvailable(username: string): Promise<boolean>;
+  formatPhoneE164(phone: string): string;
+}
+```
+
+### **Session Management**
+```typescript
+interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;       // 1 hour
+  refresh_expires_in: number; // 3 days
+  token_type: 'bearer';
+  user: UserData;
+}
+```
+
+### **Auth State Events**
+```typescript
+// Global events
+window.addEventListener('auth:change', (event) => {
+  const { event, session, user, businesses } = event.detail;
+});
+
+window.addEventListener('auth:business-change', (event) => {
+  const { business } = event.detail;
+});
+```
+
+---
+
+## **# SECURITY & ACCESS CONTROL - UPDATED**
+
+### **Page Classifications**
+```typescript
+const PAGE_TYPES = {
+  PUBLIC: ['home', 'pricing', 'legal'],           // No auth required
+  AUTH_ONLY: ['auth', 'auth-callback'],          // Redirect if authenticated  
+  AUTH_REQUIRED: ['dashboard', 'settings'],      // Require authentication + onboarding
+  ONBOARDING_REQUIRED: ['onboarding'],           // Require auth, redirect if complete
+  ADMIN_REQUIRED: ['admin']                      // Require admin privileges
+};
+```
+
+### **Security Guard Flow**
+1. **Page Load:** Detect page type and auth requirements
+2. **Auth Check:** Verify authentication state
+3. **Access Control:** Enforce business rules
+4. **Redirect Logic:** Send to appropriate page based on state
+
+### **RLS Policies - UPDATED**
+```sql
+-- Users table policies
+CREATE POLICY "Users can view own record" ON users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own record" ON users FOR UPDATE USING (auth.uid() = id);
+
+-- Username function with RLS
+CREATE OR REPLACE FUNCTION get_user_by_username(lookup_username TEXT)
+RETURNS TABLE(user_id UUID, email TEXT, full_name TEXT) 
+SECURITY DEFINER;
+```
+
+---
+
+## **# API RESPONSE FORMATS - UNCHANGED**
 
 ### **Worker → Frontend Standard Response**
 ```typescript
@@ -89,234 +334,77 @@
 }
 ```
 
-### **Analysis Success Response**
+### **Authentication Responses**
 ```typescript
+// Successful authentication
 {
   success: true,
   data: {
-    lead: LeadData,
-    analysis?: AnalysisData,  // Only for deep
-    creditsRemaining: number,
-    processingTime: number
-  },
-  requestId: string
-}
-```
-
-### **Error Response Format**
-```typescript
-{
-  success: false,
-  error: string,
-  requestId: string,
-  statusCode?: number
-}
-```
-
----
-
-## **# APIFY SCRAPER CONTRACTS**
-
-### **Light Scraper (dSCLg0C3YEZ83HzYX)**
-**Input:**
-```typescript
-{
-  usernames: [string],           // Array format required
-  resultsType: "details",        // Fixed value
-  resultsLimit: 1               // Always 1 for light
-}
-```
-
-**Output:**
-```typescript
-{
-  username: string,
-  displayName: string,
-  bio: string,
-  followersCount: number,
-  followingCount: number,
-  postsCount: number,
-  isVerified: boolean,
-  isPrivate: boolean,
-  profilePicUrl: string,
-  externalUrl: string,
-  isBusinessAccount?: boolean,
-  latestPosts: [],              // Empty for light
-  scraperUsed?: string,
-  dataQuality?: 'medium'
-}
-```
-
-### **Deep Scraper (shu8hvrXbJbY3Eb9W)**
-**Input:**
-```typescript
-{
-  directUrls: [`https://instagram.com/${username}/`],
-  resultsLimit: 10-12,          // Number of posts
-  addParentData: boolean,
-  enhanceUserSearchWithFacebookPage: false,
-  onlyPostsNewerThan: "2024-01-01",
-  resultsType: "details"
-}
-```
-
-**Output:**
-```typescript
-{
-  username: string,
-  displayName: string,
-  bio: string,
-  followersCount: number,
-  followingCount: number,
-  postsCount: number,
-  isVerified: boolean,
-  isPrivate: boolean,
-  profilePicUrl: string,
-  externalUrl: string,
-  latestPosts: PostData[],      // Populated array
-  engagement?: {
-    avgLikes: number,
-    avgComments: number,
-    engagementRate: number,
-    totalEngagement: number,
-    postsAnalyzed: number
-  },
-  dataQuality?: 'high' | 'medium' | 'low'
-}
-```
-
----
-
-## **# BUSINESS LOGIC CONSTANTS**
-
-### **Credit Costs**
-- **Light Analysis:** 1 credit
-- **Deep Analysis:** 2 credits
-- **Bulk Processing:** Same per-analysis rates
-
-### **Analysis Types**
-```typescript
-const ANALYSIS_TYPES = {
-  LIGHT: {
-    cost: 1,
-    timeout: 30000,
-    scraper: 'dSCLg0C3YEZ83HzYX',
-    includes: ['basic_profile', 'quick_summary'],
-    excludes: ['engagement_data', 'outreach_messages']
-  },
-  DEEP: {
-    cost: 2,
-    timeout: 60000,
-    scraper: 'shu8hvrXbJbY3Eb9W',
-    includes: ['full_profile', 'posts', 'engagement', 'ai_insights'],
-    fallback: 'light_scraper_if_deep_fails'
+    session: AuthSession,
+    user: UserData,
+    needsEmailConfirmation?: boolean
   }
 }
-```
 
-### **Subscription Limits**
-```typescript
-const SUBSCRIPTION_TIERS = {
-  STARTER: { credits: 40, bulk: false },
-  GROWTH: { credits: 100, bulk_limit: 100 },
-  PROFESSIONAL: { credits: 500, bulk_limit: 500 },
-  ENTERPRISE: { credits: 2000, bulk_limit: null }
-}
-```
-
-### **Rate Limits**
-- **Bulk Upload Max:** 50 usernames per upload
-- **Auth Attempts:** 5 per 5 minutes
-- **Staging Access:** 5 per 10 minutes
-
----
-
-## **# CONFIGURATION KEYS**
-
-### **AWS Secrets Manager Keys**
-- **Oslira/OPENAI_API_KEY**
-- **Oslira/CLAUDE_API_KEY**
-- **Oslira/APIFY_API_TOKEN**
-- **Oslira/STRIPE_SECRET_KEY**
-- **Oslira/STRIPE_WEBHOOK_SECRET**
-- **Oslira/SUPABASE_SERVICE_ROLE**
-- **Oslira/SUPABASE_ANON_KEY**
-
-### **Netlify Environment Variables**
-- **SUPABASE_URL**
-- **SUPABASE_ANON_KEY**
-- **WORKER_URL**
-- **ADMIN_TOKEN**
-- **STAGING_PASSWORD**
-- **STRIPE_PUBLISHABLE_KEY**
-
-### **Supabase app_config Table**
-- **key_name** (text)
-- **key_value** (text, base64 encoded)
-- **environment** ('production' | 'staging')
-
----
-
-## **# ENVIRONMENT ROUTING**
-
-### **Domain → Worker Mapping**
-```typescript
-const ENVIRONMENT_ROUTING = {
-  'oslira.com': {
-    worker: 'https://api.oslira.com',
-    worker_name: 'ai-outreach-api',
-    env: 'production'
-  },
-  'osliratest.netlify.app': {
-    worker: 'https://api-staging.oslira.com',
-    worker_name: 'oslira-api-stg',
-    env: 'staging'
-  }
-}
-```
-
-### **Feature Flags by Environment**
-```typescript
-const FEATURES = {
-  production: {
-    DEBUG_MODE: false,
-    CAMPAIGNS: true,
-    CONSOLE_LOGS: false
-  },
-  staging: {
-    DEBUG_MODE: true,
-    CAMPAIGNS: false,
-    CONSOLE_LOGS: false,
-    STAGING_PASSWORD: true
-  }
+// OAuth callback success
+{
+  session: AuthSession,
+  redirectTo: '/dashboard' | '/onboarding'
 }
 ```
 
 ---
 
-## **# FRONTEND DATA STRUCTURES**
+## **# DEPLOYMENT & DOMAIN STRATEGY**
 
-### **Window Objects**
-- **window.EnvConfig** - Environment configuration class
-- **window.OsliraApp** - Main application object
-- **window.supabase** - Supabase client instance
+### **Domain Configuration**
+- **Production:** `oslira.com` (Primary domain)
+- **Staging:** `oslira.org` (Testing environment)
+- **Development:** `localhost:3000/8000`
 
-### **LocalStorage Keys**
-- **supabase.auth.token** - JWT session token
-- **stg_auth_[hash]** - Staging authentication
-- **stg_attempts_[hash]** - Rate limiting data
+### **Single Supabase Project Strategy**
+- **Advantage:** No schema synchronization issues
+- **Site URL:** `https://oslira.com` (primary)
+- **Additional Redirect URLs:** All domains included
+- **Dynamic Callbacks:** Environment-specific redirects
 
-### **Dashboard State Management**
-```typescript
-const DASHBOARD_STATE = {
-  currentUser: User | null,
-  leads: Lead[],
-  businessProfile: BusinessProfile | null,
-  analysisQueue: AnalysisRequest[],
-  realtimeSubscription: Subscription | null
-}
+### **OAuth Provider Configuration**
+```
+Google Console Settings:
+- App Name: "Oslira"
+- Homepage: "https://oslira.com" 
+- Authorized Domains: oslira.com, oslira.org
+- JavaScript Origins: All domains
+- Redirect URIs: Supabase + custom callbacks
 ```
 
 ---
 
-**⚠️ CRITICAL:** Any changes to these structures require updating this contract and testing all affected components.
+## **# RATE LIMITS & SECURITY CONSTRAINTS**
+
+### **Authentication Rate Limits**
+- **Login Attempts:** 5 per 5 minutes per IP
+- **Phone OTP:** 5 requests per 10 minutes per phone
+- **Username Checks:** 10 per minute per IP
+- **OAuth Attempts:** Standard Google limits
+
+### **Staging Environment Security**
+- **Password Protection:** SHA-256 hashed access
+- **Rate Limiting:** 5 attempts per 10 minutes
+- **Session Timeout:** 24 hours
+- **IP-based Blocking:** After failed attempts
+
+---
+
+**⚠️ CRITICAL MIGRATION NOTES:**
+1. **Database Migration:** Run username schema update SQL
+2. **Google OAuth:** Add Supabase callback URL to Google Console
+3. **Environment Variables:** Update Netlify configuration
+4. **Auth System:** New auth-manager.js completely replaces magic links
+5. **Testing:** Verify all auth flows on staging before production
+
+**⚠️ BREAKING CHANGES:**
+- Magic link authentication completely removed
+- New user table schema requires migration
+- Auth page completely rebuilt with new UI
+- OAuth callback handling changed
