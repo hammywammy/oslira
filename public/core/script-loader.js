@@ -298,19 +298,22 @@ detectEnvironment() {
         const coreScripts = this.dependencies.core;
         // FIXED: Add config-manager to load order
         const loadOrder = [
-            // External libraries first
-            'supabase', 'sentry',
-            
-            // Security utilities
-            'staging-guard', 'alert-system',
-            
-            // Config must load before everything else
-            'config-manager',
-            
-            // Core systems in dependency order
-            'ui-manager', 'data-store', 'form-manager', 'api-client',
-            'auth-manager', 'app-initializer'
-        ];
+    // External libraries first
+    'supabase', 'sentry',
+    
+    // Security utilities
+    'staging-guard', 'alert-system',
+    
+    // Config must load before everything else
+    'config-manager',
+    
+    // CRITICAL: Add security-guard BEFORE auth-manager
+    'security-guard',
+    
+    // Core systems in dependency order
+    'ui-manager', 'data-store', 'form-manager', 'api-client',
+    'auth-manager', 'app-initializer'
+];
 
         console.log('🔍 [ScriptLoader] Core load order:', loadOrder);
         
