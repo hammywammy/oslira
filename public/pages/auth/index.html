@@ -617,35 +617,6 @@
             }
         });
 
-        // Listen for auth state changes
-window.addEventListener('auth:change', (event) => {
-    const { event: authEvent, session, user } = event.detail;
-    
-    console.log('🔐 [Auth Page] Auth state changed:', {
-        event: authEvent,
-        hasSession: !!session,
-        userId: user?.id,
-        onboardingComplete: user?.onboarding_completed,
-        userObject: user
-    });
-    
-    // Only redirect on SIGNED_IN event to prevent loops
-    if (authEvent === 'SIGNED_IN' && session && user) {
-        console.log('🔐 [Auth Page] User authenticated, determining redirect...');
-        
-        // Add small delay to ensure state is fully synchronized
-        setTimeout(() => {
-            if (!user.onboarding_completed) {
-                console.log('🔐 [Auth Page] Redirecting to onboarding...');
-                window.location.href = '/onboarding';
-            } else {
-                console.log('🔐 [Auth Page] Redirecting to dashboard...');
-                window.location.href = '/dashboard';
-            }
-        }, 100);
-    }
-});
-
         // Wait for auth system to be loaded, then initialize
         async function waitForAuthSystem() {
             let attempts = 0;
