@@ -30,28 +30,10 @@
                 <!-- Error messages will appear here -->
             </div>
 
-            <form id="auth-form" novalidate>
-                <div class="form-group">
-                    <label for="email" class="form-label">Email Address</label>
-                    <input 
-    type="email" 
-    id="email" 
-    name="email"
-    class="form-input"
-    placeholder="Enter your email address"
-    required
-    autocomplete="email"
-    aria-describedby="email-help"
->
-                    <div id="email-help" class="form-help">
-                        We'll send you a secure sign-in link
-                    </div>
-                </div>
-
-               <button type="submit" class="auth-button" id="signin-button">
-    <span class="button-text">Send Sign-In Link</span>
-</button>
-            </form>
+           <!-- TEMPORARILY REPLACE WITH -->
+<div id="auth-form" style="text-align: center; padding: 20px;">
+    <p>Authentication system under maintenance</p>
+</div>
 
             <div class="auth-footer">
                 <p class="auth-note">
@@ -67,29 +49,6 @@
             </div>
         </div>
 
-        <!-- Success State Card -->
-        <div class="auth-card success-state" id="success-card" style="display: none;">
-            <div class="success-icon">✓</div>
-            <h2 class="success-title">Check Your Email</h2>
-            <div class="success-description">
-                We've sent a secure sign-in link to:
-            </div>
-            <div class="sent-email" id="sent-email">
-                <!-- Email will be inserted here -->
-            </div>
-            <div class="success-description" style="margin-top: 16px;">
-                Click the link in your email to sign in. The link will expire in 1 hour for security.
-            </div>
-            
-            <div class="success-actions">
-                <button type="button" class="auth-button secondary" onclick="window.location.reload()">
-                    Try Different Email
-                </button>
-                <p class="success-note">
-                    Didn't receive the email? Check your spam folder or try again in a few minutes.
-                </p>
-            </div>
-        </div>
     </div>
 </body>
 </html>
