@@ -211,6 +211,38 @@
 
                 console.log('✅ [Callback] OAuth session established');
                 
+                // Ensure user record exists in database
+                const { data: existingUser } = await auth.getSupabaseClient()
+                    .from('users')
+                    .select('id')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (!existingUser) {
+                    console.log('🔧 [Callback] Creating user record...');
+                    const { error: createError } = await auth.getSupabaseClient()
+                        .from('users')
+                        .insert({
+                            id: session.user.id,
+                            email: session.user.email,
+                            credits: 5,
+                            subscription_plan: 'free',
+                            subscription_status: 'active',
+                            onboarding_completed: false,
+                            is_admin: false,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString(),
+                            last_sign_in_at: new Date().toISOString()
+                        });
+                        
+                    if (createError) {
+                        throw new Error(`Failed to create user record: ${createError.message}`);
+                    }
+                    console.log('✅ [Callback] User record created successfully');
+                } else {
+                    console.log('✅ [Callback] User record already exists');
+                }
+                
                 // Show success state
                 showSuccessState();
                 
