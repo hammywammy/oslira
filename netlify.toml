@@ -17,16 +17,16 @@
   for = "/*"
   [headers.values]
     Content-Security-Policy = """
-      default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' https://fonts.gstatic.com;
+      default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app https://*.oslira.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com https://*.oslira.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.oslira.com;
+      font-src 'self' https://fonts.gstatic.com https://*.oslira.com;
       img-src 'self' data: https: blob: https://images.weserv.nl;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://api.oslira.com https://api-staging.oslira.com;
-      frame-src https://js.stripe.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://api.oslira.com https://api-staging.oslira.com https://*.oslira.com;
+      frame-src https://js.stripe.com https://*.oslira.com;
       object-src 'none';
       base-uri 'self';
-      form-action 'self' https://*.stripe.com;
+      form-action 'self' https://*.stripe.com https://*.oslira.com;
     """
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
