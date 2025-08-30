@@ -636,9 +636,7 @@ class SecurityGuard {
         console.log('Token Timer:', this.refreshTokenTimer ? 'Active' : 'None');
         console.groupEnd();
     }
-}
-
-async waitForUserContextLoad(userId, maxAttempts = 50) {
+    async waitForUserContextLoad(userId, maxAttempts = 50) {
     let attempts = 0;
     
     while (attempts < maxAttempts) {
@@ -657,6 +655,7 @@ async waitForUserContextLoad(userId, maxAttempts = 50) {
     
     console.warn('🛡️ [SecurityGuard] User context load timeout, proceeding with available data');
     return false;
+}
 }
 
 // Initialize security guard synchronously to catch early auth events
