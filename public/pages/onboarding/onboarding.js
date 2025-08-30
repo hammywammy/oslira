@@ -1,5 +1,6 @@
 /* =============================================================================
-   ONBOARDING.JS - FRESH MODERN SYSTEM
+   ONBOARDING.JS - INTEGRATED WITH MODERN SYSTEM
+   Uses modern auth patterns and script-loader integration
    ============================================================================= */
 
 // Initialize Sentry if available
@@ -15,36 +16,55 @@ if (typeof Sentry !== 'undefined') {
     });
 }
 
-// Application state
-let supabase = null;
+// =============================================================================
+// APPLICATION STATE
+// =============================================================================
+
+let authManager = null;
 let currentUser = null;
 let currentStep = 1;
 let isLoading = false;
 let isInitialized = false;
 
-// Initialize application when DOM loads
+// Form validation state
+const validationRules = {
+    'business-name': { required: true, minLength: 2, maxLength: 100 },
+    'business-niche': { required: true },
+    'target-audience': { required: true, minLength: 10, maxLength: 500 },
+    'target-problems': { required: true, minLength: 10, maxLength: 400 },
+    'value-proposition': { required: true, minLength: 10, maxLength: 500 },
+    'success-outcome': { required: true },
+    'communication-style': { required: true },
+    'call-to-action': { required: true },
+    'message-example': { required: true, minLength: 20, maxLength: 800 }
+};
+
+// =============================================================================
+// INITIALIZATION
+// =============================================================================
+
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Oslira onboarding loaded');
+    console.log('🚀 [Onboarding] Page loaded, initializing...');
     await initializeApp();
 });
 
-// =============================================================================
-// INITIALIZATION (Modern System Pattern)
-// =============================================================================
-
-// =============================================================================
-// INITIALIZATION (Modern System Pattern + Original Features)
-// =============================================================================
+// Listen for script-loader completion
+window.addEventListener('oslira:scripts:loaded', async (event) => {
+    console.log('📚 [Onboarding] Scripts loaded, finalizing initialization...');
+    if (!isInitialized) {
+        await initializeApp();
+    }
+});
 
 async function initializeApp() {
     try {
-        console.log('🚀 Starting onboarding initialization...');
+        console.log('🚀 [Onboarding] Starting initialization...');
         
-        // Show auth check state initially
+        // Show auth check state
         showState('auth-check');
         
-        // Initialize Supabase using modern pattern
-        await initializeSupabase();
+        // Wait for auth system
+        await waitForAuthSystem();
         
         // Check authentication
         await checkAuthentication();
@@ -53,201 +73,131 @@ async function initializeApp() {
         setupEventListeners();
         
         isInitialized = true;
-        console.log('✅ Onboarding initialized');
+        console.log('✅ [Onboarding] Initialization complete');
         
     } catch (error) {
-        console.error('❌ Onboarding initialization failed:', error);
+        console.error('❌ [Onboarding] Initialization failed:', error);
         showError(`Initialization failed: ${error.message}`);
     }
 }
 
-function initializeSupabase() {
-    return new Promise(async (resolve, reject) => {
-        try {
-            console.log('🔍 Initializing Supabase...');
-            
-            // Wait for Supabase library to be available
-            let attempts = 0;
-            while (typeof window.supabase === 'undefined' && attempts < 50) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (typeof window.supabase === 'undefined') {
-                throw new Error('Supabase library not available');
-            }
-            
-            // Use API config if window.CONFIG not available
-            let config = window.CONFIG;
-            if (!config) {
-                console.log('🔧 Loading config from API...');
-                config = await loadConfigFromAPI();
-            }
-            
-            if (!config.supabaseUrl || !config.supabaseAnonKey) {
-                throw new Error('Invalid configuration received');
-            }
-            
-            // Initialize Supabase client
-            supabase = window.supabase.createClient(
-                config.supabaseUrl, 
-                config.supabaseAnonKey,
-                {
-                    auth: {
-                        autoRefreshToken: true,
-                        persistSession: true
-                    }
-                }
-            );
-            
-            console.log('✅ Supabase initialized');
-            resolve(supabase);
-            
-        } catch (error) {
-            console.error('❌ Supabase initialization failed:', error);
-            reject(new Error('Failed to load configuration. Please check your API endpoint.'));
-        }
-    });
-}
-
-async function loadConfigFromAPI() {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+async function waitForAuthSystem() {
+    console.log('⏳ [Onboarding] Waiting for auth system...');
     
-    try {
-        const response = await fetch('/api/config', {
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-            throw new Error(`Config API failed: ${response.status}`);
+    let attempts = 0;
+    const maxAttempts = 100; // 10 seconds
+    
+    while (attempts < maxAttempts) {
+        if (window.OsliraAuth?.initialize) {
+            console.log('🔐 [Onboarding] Auth system found, initializing...');
+            authManager = await window.OsliraAuth.initialize();
+            return authManager;
         }
         
-        const config = await response.json();
-        
-        if (!config.supabaseUrl || !config.supabaseAnonKey) {
-            throw new Error('Invalid config received');
-        }
-        
-        return config;
-        
-    } catch (error) {
-        clearTimeout(timeoutId);
-        throw error;
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
     }
+    
+    throw new Error('Auth system not available after timeout');
 }
 
 async function checkAuthentication() {
     try {
-        console.log('🔍 Checking authentication...');
+        console.log('🔍 [Onboarding] Checking authentication...');
         
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-            throw new Error(`Auth check failed: ${error.message}`);
+        if (!authManager) {
+            throw new Error('Auth manager not available');
         }
         
-        if (!session || !session.user) {
-            console.log('❌ No valid session found, redirecting to auth');
+        // Get current session and user
+        const session = authManager.getCurrentSession();
+        const user = authManager.getCurrentUser();
+        
+        if (!session || !user) {
+            console.log('❌ [Onboarding] No valid session found');
             showError('Please log in first.');
             setTimeout(() => {
-                window.location.href = '/auth.html';
+                window.location.href = '/auth';
             }, 2000);
             return;
         }
         
-        currentUser = session.user;
-        console.log('✅ User authenticated:', currentUser.email);
-        
-        // Check if onboarding is already completed
-        await checkOnboardingStatus();
-        
-    } catch (error) {
-        console.error('❌ Authentication check failed:', error);
-        showError(`Authentication failed: ${error.message}`);
-    }
-}
-
-async function checkOnboardingStatus() {
-    try {
-        console.log('🔍 Checking onboarding status...');
-        
-        const { data: userData, error } = await supabase
-            .from('users')
-            .select('onboarding_completed')
-            .eq('id', currentUser.id)
-            .single();
-        
-        if (error && error.code !== 'PGRST116') {
-            console.error('❌ Error checking onboarding status:', error);
-            // Continue anyway if there's an error
-        }
-        
-        if (userData?.onboarding_completed) {
-            console.log('✅ User already completed onboarding - redirecting to dashboard');
-            window.location.href = '/dashboard.html';
+        // Check if already completed onboarding
+        if (user.onboarding_completed) {
+            console.log('✅ [Onboarding] User already onboarded, redirecting...');
+            showError('You have already completed onboarding.');
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 2000);
             return;
         }
         
-        console.log('🔍 User needs to complete onboarding');
-        showOnboardingForm();
+        currentUser = user;
+        console.log('✅ [Onboarding] Authentication verified for:', user.email);
+        
+        // Show main onboarding flow
+        showState('onboarding-main');
         
     } catch (error) {
-        console.error('💥 Onboarding status check error:', error);
-        // If error, show onboarding anyway
-        showOnboardingForm();
+        console.error('❌ [Onboarding] Auth check failed:', error);
+        showError('Authentication check failed. Please try again.');
+        setTimeout(() => {
+            window.location.href = '/auth';
+        }, 3000);
     }
 }
 
-function showOnboardingForm() {
-    showState('onboarding-main');
-}
-
 // =============================================================================
-// EVENT LISTENERS
+// EVENT LISTENERS SETUP
 // =============================================================================
 
 function setupEventListeners() {
+    console.log('🎧 [Onboarding] Setting up event listeners...');
+    
     // Form submission
     const form = document.getElementById('onboarding-form');
     if (form) {
         form.addEventListener('submit', handleFormSubmit);
     }
     
-    // Step validation on input
-    const inputs = document.querySelectorAll('input, select, textarea');
-    inputs.forEach(input => {
-        input.addEventListener('blur', validateField);
-        input.addEventListener('input', clearFieldError);
+    // Real-time validation
+    Object.keys(validationRules).forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('blur', () => validateField(fieldId));
+            field.addEventListener('input', () => clearFieldError(fieldId));
+        }
     });
     
-    // Keyboard navigation
-    document.addEventListener('keydown', handleKeyNavigation);
+    // Progress tracking
+    setupProgressTracking();
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', handleKeyPress);
     
     // Auth state changes
-    if (supabase) {
-        supabase.auth.onAuthStateChange((event, session) => {
+    if (authManager?.supabase) {
+        authManager.supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT') {
-                window.location.href = '/auth.html';
+                window.location.href = '/auth';
             }
         });
     }
 }
 
-function handleKeyNavigation(event) {
-    if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
-        event.preventDefault();
-        if (currentStep < 5) {
-            nextStep();
-        } else {
-            const form = document.getElementById('onboarding-form');
-            if (form) {
-                form.requestSubmit();
-            }
-        }
-    }
+function setupProgressTracking() {
+    // Update progress when steps change
+    const observer = new MutationObserver(() => {
+        updateProgress();
+    });
+    
+    const steps = document.querySelectorAll('.step');
+    steps.forEach(step => {
+        observer.observe(step, { 
+            attributes: true, 
+            attributeFilter: ['class'] 
+        });
+    });
 }
 
 // =============================================================================
@@ -255,45 +205,46 @@ function handleKeyNavigation(event) {
 // =============================================================================
 
 function nextStep() {
-    if (!validateCurrentStep()) {
-        return;
-    }
+    if (!validateCurrentStep()) return;
     
     if (currentStep < 5) {
+        // Hide current step
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        
+        // Show next step
         currentStep++;
-        updateStepDisplay();
-        updateProgressBar();
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        
+        // Update progress
+        updateProgress();
+        
+        // Focus first input in new step
+        focusFirstInput();
+        
+        console.log(`📈 [Onboarding] Advanced to step ${currentStep}`);
     }
 }
 
 function prevStep() {
     if (currentStep > 1) {
+        // Hide current step
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        
+        // Show previous step
         currentStep--;
-        updateStepDisplay();
-        updateProgressBar();
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        
+        // Update progress
+        updateProgress();
+        
+        // Focus first input in previous step
+        focusFirstInput();
+        
+        console.log(`📉 [Onboarding] Returned to step ${currentStep}`);
     }
 }
 
-function updateStepDisplay() {
-    // Hide all steps
-    document.querySelectorAll('.step').forEach(step => {
-        step.classList.remove('active');
-    });
-    
-    // Show current step
-    const currentStepElement = document.getElementById(`step-${currentStep}`);
-    if (currentStepElement) {
-        currentStepElement.classList.add('active');
-    }
-    
-    // Focus on first input of current step
-    const firstInput = currentStepElement?.querySelector('input, select, textarea');
-    if (firstInput) {
-        setTimeout(() => firstInput.focus(), 100);
-    }
-}
-
-function updateProgressBar() {
+function updateProgress() {
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
     
@@ -307,124 +258,106 @@ function updateProgressBar() {
     }
 }
 
-// =============================================================================
-// VALIDATION
-// =============================================================================
+function focusFirstInput() {
+    setTimeout(() => {
+        const activeStep = document.querySelector('.step.active');
+        if (activeStep) {
+            const firstInput = activeStep.querySelector('input, select, textarea');
+            if (firstInput) {
+                firstInput.focus();
+            }
+        }
+    }, 100);
+}
 
 // =============================================================================
-// VALIDATION (Enhanced with Original Features)
+// FORM VALIDATION
 // =============================================================================
 
 function validateCurrentStep() {
-    const currentStepElement = document.getElementById(`step-${currentStep}`);
-    if (!currentStepElement) return false;
+    const stepElement = document.getElementById(`step-${currentStep}`);
+    if (!stepElement) return false;
     
-    const requiredFields = currentStepElement.querySelectorAll('input[required], select[required], textarea[required]');
+    const fields = stepElement.querySelectorAll('input, select, textarea');
     let isValid = true;
     
-    requiredFields.forEach(field => {
-        if (!field.value.trim()) {
-            field.style.borderColor = '#EF4444';
+    fields.forEach(field => {
+        if (!validateField(field.id)) {
             isValid = false;
-        } else {
-            field.style.borderColor = '#10B981';
         }
     });
-    
-    if (!isValid) {
-        showMessage('Please fill in all required fields', 'error');
-    }
     
     return isValid;
 }
 
-function validateField(event) {
-    const field = event.target;
+function validateField(fieldId) {
+    const field = document.getElementById(fieldId);
+    const rules = validationRules[fieldId];
+    
+    if (!field || !rules) return true;
+    
     const value = field.value.trim();
     let isValid = true;
     let errorMessage = '';
     
-    // Required field validation
-    if (field.hasAttribute('required') && !value) {
+    // Required validation
+    if (rules.required && !value) {
         isValid = false;
         errorMessage = 'This field is required';
     }
     
-    // Specific field validations (original logic)
-    switch (field.id) {
-        case 'business-name':
-            if (value && value.length < 2) {
-                isValid = false;
-                errorMessage = 'Business name must be at least 2 characters';
-            }
-            break;
-            
-        case 'target-audience':
-            if (value && value.length < 20) {
-                isValid = false;
-                errorMessage = 'Please provide more detail (minimum 20 characters)';
-            }
-            break;
-            
-        case 'target-problems':
-            if (value && value.length < 15) {
-                isValid = false;
-                errorMessage = 'Please describe the problems in more detail';
-            }
-            break;
-            
-        case 'value-proposition':
-            if (value && value.length < 25) {
-                isValid = false;
-                errorMessage = 'Please provide a more detailed value proposition';
-            }
-            break;
-            
-        case 'message-example':
-            if (value && value.length < 50) {
-                isValid = false;
-                errorMessage = 'Message example should be at least 50 characters';
-            }
-            break;
+    // Length validation
+    if (value && rules.minLength && value.length < rules.minLength) {
+        isValid = false;
+        errorMessage = `Minimum ${rules.minLength} characters required`;
     }
     
-    // Update field styling (original behavior)
-    if (isValid) {
-        field.style.borderColor = '#10B981';
-        clearFieldError(field);
+    if (value && rules.maxLength && value.length > rules.maxLength) {
+        isValid = false;
+        errorMessage = `Maximum ${rules.maxLength} characters allowed`;
+    }
+    
+    // Update field appearance
+    if (!isValid) {
+        showFieldError(fieldId, errorMessage);
     } else {
-        field.style.borderColor = '#EF4444';
-        showFieldError(field, errorMessage);
+        clearFieldError(fieldId);
     }
     
     return isValid;
 }
 
-function showFieldError(field, message) {
-    clearFieldError(field);
+function showFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    const formGroup = field.closest('.form-group');
     
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'field-error';
-    errorDiv.style.cssText = `
-        color: var(--error);
-        font-size: 12px;
-        margin-top: 4px;
-        font-weight: 500;
-    `;
-    errorDiv.textContent = message;
+    // Add error class
+    field.classList.add('error');
+    formGroup.classList.add('error');
     
-    field.parentNode.appendChild(errorDiv);
-}
-
-function clearFieldError(field) {
-    const target = field.target || field;
-    const existingError = target.parentNode.querySelector('.field-error');
+    // Remove existing error message
+    const existingError = formGroup.querySelector('.error-message');
     if (existingError) {
         existingError.remove();
     }
     
-    if (target.value.trim()) {
-        target.style.borderColor = 'var(--border-light)';
+    // Add new error message
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'error-message';
+    errorDiv.textContent = message;
+    formGroup.appendChild(errorDiv);
+}
+
+function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const formGroup = field.closest('.form-group');
+    
+    field.classList.remove('error');
+    formGroup.classList.remove('error');
+    
+    const errorMessage = formGroup.querySelector('.error-message');
+    if (errorMessage) {
+        errorMessage.remove();
     }
 }
 
@@ -438,15 +371,21 @@ async function handleFormSubmit(event) {
     if (isLoading) return;
     
     try {
-        if (!validateCurrentStep()) return;
-        if (!currentUser || !supabase) {
-            throw new Error('Not properly authenticated');
+        // Final validation
+        if (!validateAllFields()) {
+            showMessage('Please fix the errors before submitting', 'error');
+            return;
+        }
+        
+        if (!currentUser || !authManager) {
+            throw new Error('Authentication required');
         }
         
         setLoadingState(true);
         
         // Collect form data
         const formData = collectFormData();
+        console.log('📋 [Onboarding] Form data collected:', formData);
         
         // Submit to database
         await submitToDatabase(formData);
@@ -455,10 +394,22 @@ async function handleFormSubmit(event) {
         showSuccess();
         
     } catch (error) {
-        console.error('❌ Form submission failed:', error);
+        console.error('❌ [Onboarding] Form submission failed:', error);
         showMessage(`Setup failed: ${error.message}`, 'error');
         setLoadingState(false);
     }
+}
+
+function validateAllFields() {
+    let isValid = true;
+    
+    Object.keys(validationRules).forEach(fieldId => {
+        if (!validateField(fieldId)) {
+            isValid = false;
+        }
+    });
+    
+    return isValid;
 }
 
 function collectFormData() {
@@ -477,13 +428,18 @@ function collectFormData() {
 
 async function submitToDatabase(formData) {
     try {
-        console.log('💾 Submitting to database...');
+        console.log('💾 [Onboarding] Submitting to database...');
         
-        // User table update (original structure)
+        const supabase = authManager.getSupabaseClient();
+        if (!supabase) {
+            throw new Error('Database connection not available');
+        }
+        
+        // Update user record - mark onboarding as complete
         const userUpdate = {
             id: currentUser.id,
             email: currentUser.email,
-            credits: 5,
+            credits: 5, // Give initial credits
             subscription_plan: 'free',
             subscription_status: 'active',
             onboarding_completed: true,
@@ -498,7 +454,7 @@ async function submitToDatabase(formData) {
             throw new Error(`User update failed: ${userError.message}`);
         }
         
-        // Business profiles table insertion (original structure)
+        // Create business profile
         const profileData = {
             user_id: currentUser.id,
             business_name: formData.business_name,
@@ -523,10 +479,10 @@ async function submitToDatabase(formData) {
             throw new Error(`Profile creation failed: ${profileError.message}`);
         }
         
-        console.log('✅ Onboarding data saved successfully');
+        console.log('✅ [Onboarding] Data saved successfully');
         
     } catch (error) {
-        console.error('❌ Database submission failed:', error);
+        console.error('❌ [Onboarding] Database submission failed:', error);
         throw error;
     }
 }
@@ -535,9 +491,19 @@ async function submitToDatabase(formData) {
 // UI STATE MANAGEMENT
 // =============================================================================
 
-// =============================================================================
-// UI STATE MANAGEMENT (Enhanced with Original Features)
-// =============================================================================
+function setLoadingState(loading) {
+    isLoading = loading;
+    const submitBtn = document.querySelector('button[type="submit"]');
+    
+    if (submitBtn) {
+        submitBtn.disabled = loading;
+        if (loading) {
+            submitBtn.classList.add('loading');
+        } else {
+            submitBtn.classList.remove('loading');
+        }
+    }
+}
 
 function showState(stateId) {
     const states = ['auth-check', 'onboarding-main', 'error-state', 'loading-state'];
@@ -549,69 +515,53 @@ function showState(stateId) {
     });
 }
 
-function hideAllStates() {
-    showState(''); // Hide all states
-}
-
-function showError(message) {
-    showState('error-state');
-    
-    const errorMessage = document.getElementById('error-message');
-    if (errorMessage) {
-        errorMessage.textContent = message;
-    }
-}
-
-function showLoading() {
-    showState('loading-state');
-}
-
 function showSuccess() {
-    // Hide form and show success state (original behavior)
-    document.getElementById('onboarding-form').style.display = 'none';
-    const successState = document.getElementById('success-state');
+    // Hide form
+    const form = document.getElementById('onboarding-form');
+    if (form) form.style.display = 'none';
     
+    // Show success state
+    const successState = document.getElementById('success-state');
     if (successState) {
         successState.style.display = 'block';
         
-        // Redirect after delay (original timing)
+        // Redirect after delay
         setTimeout(() => {
-            window.location.href = '/dashboard.html';
+            console.log('🎉 [Onboarding] Redirecting to dashboard...');
+            window.location.href = '/dashboard';
         }, 3000);
     }
 }
 
-function setLoadingState(loading) {
-    isLoading = loading;
-    const submitBtn = document.querySelector('button[type="submit"]');
+function showError(message) {
+    const errorState = document.getElementById('error-state');
+    const errorMessage = document.getElementById('error-message');
     
-    if (submitBtn) {
-        submitBtn.disabled = loading;
-        submitBtn.classList.toggle('loading', loading);
+    if (errorMessage) {
+        errorMessage.textContent = message;
     }
     
-    // Also show/hide loading state for major operations
-    if (loading) {
-        showLoading();
+    if (errorState) {
+        showState('error-state');
     }
 }
 
 function showMessage(text, type = 'info') {
     const message = document.createElement('div');
+    message.className = 'toast-message';
     message.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
+        background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--primary-blue)'};
+        color: white;
         padding: 16px 24px;
         border-radius: 8px;
-        color: white;
-        font-weight: 600;
+        box-shadow: var(--shadow-large);
         z-index: 10000;
         opacity: 0;
         transform: translateX(100%);
         transition: all 0.3s ease;
-        background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--primary-blue)'};
-        box-shadow: var(--shadow-large);
     `;
     
     message.textContent = text;
@@ -630,16 +580,12 @@ function showMessage(text, type = 'info') {
 }
 
 // =============================================================================
-// GLOBAL FUNCTIONS & EVENT HANDLERS (Original Functionality)
+// KEYBOARD HANDLING
 // =============================================================================
 
-window.nextStep = nextStep;
-window.prevStep = prevStep;
-
-// Handle enter key (original behavior)
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-        e.preventDefault();
+function handleKeyPress(event) {
+    if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+        event.preventDefault();
         if (currentStep < 5) {
             nextStep();
         } else {
@@ -649,65 +595,35 @@ document.addEventListener('keydown', function(e) {
             }
         }
     }
-});
-
-// Auth state listener (original functionality)
-window.addEventListener('load', () => {
-    if (supabase) {
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT') {
-                window.location.href = '/auth.html';
-            }
-        });
+    
+    // Escape key to go back
+    if (event.key === 'Escape' && currentStep > 1) {
+        prevStep();
     }
-});
+}
 
 // =============================================================================
-// ERROR HANDLING (Enhanced)
+// GLOBAL FUNCTION EXPORTS
+// =============================================================================
+
+// Export functions for HTML onclick handlers
+window.nextStep = nextStep;
+window.prevStep = prevStep;
+
+// =============================================================================
+// ERROR HANDLING
 // =============================================================================
 
 window.addEventListener('error', function(event) {
-    console.error('JavaScript error:', event.error);
+    console.error('❌ [Onboarding] JavaScript error:', event.error);
     if (!isInitialized) {
         showError('Application failed to load properly. Please refresh the page.');
     }
 });
 
 window.addEventListener('unhandledrejection', function(event) {
-    console.error('Unhandled promise rejection:', event.reason);
+    console.error('❌ [Onboarding] Unhandled promise rejection:', event.reason);
     event.preventDefault();
 });
 
-// =============================================================================
-// ENHANCED FORM SUBMISSION (Original + Modern)
-// =============================================================================
-
-async function handleFormSubmit(event) {
-    event.preventDefault();
-    
-    if (isLoading) return;
-    
-    try {
-        if (!validateCurrentStep()) return;
-        if (!currentUser || !supabase) {
-            throw new Error('Not properly authenticated');
-        }
-        
-        setLoadingState(true);
-        
-        // Collect form data
-        const formData = collectFormData();
-        
-        // Submit to database using original structure
-        await submitToDatabase(formData);
-        
-        // Show success and redirect
-        setLoadingState(false);
-        showSuccess();
-        
-    } catch (error) {
-        console.error('❌ Form submission failed:', error);
-        showMessage(`Setup failed: ${error.message}`, 'error');
-        setLoadingState(false);
-    }
-}
+console.log('📝 [Onboarding] Module loaded successfully');
