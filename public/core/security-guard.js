@@ -196,25 +196,33 @@ class SecurityGuard {
     }
     
     async enforcePageAccess() {
-        try {
-            console.log('🛡️ [SecurityGuard] Enforcing access control for:', this.pageClassification);
-            
-            // Get auth manager instance
-            const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
-            
-            if (!authManager) {
-                // Allow public pages without auth system
-                if (this.pageClassification === 'PUBLIC') {
-                    console.log('🛡️ [SecurityGuard] Public page access granted without auth system');
-                    return true;
-                }
-                console.log('🛡️ [SecurityGuard] Auth system not available');
-                this.redirectToAuth('Authentication system unavailable');
-                return false;
-            }
-            
-            // Get current auth state
-            const isAuthenticated = authManager.isAuthenticated();
+    try {
+        console.log('🛡️ [SecurityGuard] Enforcing access control for:', this.pageClassification);
+        
+        // Special handling for callback page
+        if (this.currentPage === 'auth-callback') {
+            console.log('🛡️ [SecurityGuard] Auth callback page detected - allowing temporary access');
+            return true;
+        }
+        
+        // Get auth manager reference
+        const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+        
+        if (!authManager) {
+            console.log('⚠️ [SecurityGuard] Auth system not available');
+            this.redirectToAuth('Authentication system unavailable');
+            return false;
+        }
+        
+        // CRITICAL FIX: If auth manager has a session but user context is still loading, wait for it
+        const session = authManager.getCurrentSession();
+        if (session && !authManager.user) {
+            console.log('🛡️ [SecurityGuard] Session exists but user context loading, waiting...');
+            await this.waitForUserContextLoad(session.user.id);
+        }
+        
+        // Get current auth state
+        const isAuthenticated = authManager.isAuthenticated();
             const isOnboardingComplete = authManager.isOnboardingComplete();
             const hasBusinessProfile = authManager.hasBusinessProfile();
             const isAdmin = authManager.isAdmin();
