@@ -1,324 +1,146 @@
 // =============================================================================
-// APP.JS - Unified Application Initializer 
+// APP.JS - Master Application Initializer
+// Updated to support new auth system
 // =============================================================================
 
-class OsliraAppInitializer {
+class OsliraApp {
     static instance = null;
     
-    constructor() {
-        this.config = {};
-        this.supabase = null;
-        this.auth = null;
-        this.user = null;
-        this.session = null;
-        this.business = null;
-        this.businesses = [];
-        this.initializationPromise = null;
+    static async init() {
+        if (this.instance) return this.instance;
         
-        // Feature flags
-        this.features = {
-            bulkUpload: true,
-            analytics: true,
-            campaigns: false,
-            integrations: false
-        };
+        console.log('🚀 [App] Starting Oslira application initialization...');
         
-        // UI state
-        this.modals = new Set();
-        this.loading = false;
-        
-        // Cache
-        this.cache = {
-            leads: [],
-            stats: null,
-            lastRefresh: null
-        };
-        
-        // Event system
-        this.events = new EventTarget();
-        
-        // Performance tracking
-        this.performance = {
-            marks: new Map(),
-            measures: new Map(),
-            mark: (name) => {
-                this.performance.marks.set(name, performance.now());
-                performance.mark(name);
-            },
-            measure: (name, startMark, endMark) => {
-                const startTime = this.performance.marks.get(startMark);
-                const endTime = this.performance.marks.get(endMark);
-                const duration = endTime - startTime;
-                this.performance.measures.set(name, duration);
-                performance.measure(name, startMark, endMark);
-                return duration;
-            },
-            getReport: () => {
-                const report = {};
-                for (const [name, duration] of this.performance.measures) {
-                    report[name] = `${duration.toFixed(2)}ms`;
-                }
-                return report;
-            }
-        };
-        
-        // Error handling
-        this.errorHandler = {
-            errors: [],
-            logError: (error, context = {}) => {
-                const errorEntry = {
-                    message: error.message,
-                    stack: error.stack,
-                    context,
-                    timestamp: new Date().toISOString()
-                };
-                this.errorHandler.errors.push(errorEntry);
-                console.error('🚨 [App] Error logged:', errorEntry);
-            },
-            getErrorReport: () => this.errorHandler.errors
-        };
-    }
-    
-    // =============================================================================
-    // SINGLETON INITIALIZATION - FIXED STATIC METHODS
-    // =============================================================================
-    
-    static async initialize() {
-        if (this.instance) {
-            return this.instance.initializationPromise;
-        }
-        
-        this.instance = new OsliraAppInitializer();
-        this.instance.initializationPromise = this.instance.performInitialization();
-        return this.instance.initializationPromise;
-    }
-    
-    static getInstance() {
-        return this.instance;
-    }
-    
-    // =============================================================================
-    // CORE INITIALIZATION SEQUENCE
-    // =============================================================================
-    
-    async performInitialization() {
         try {
-            console.log('🚀 [App] Starting Oslira application initialization...');
-            this.performance.mark('initialization-start');
+            this.instance = new OsliraApp();
+            await this.instance.initialize();
+            return this.instance;
+        } catch (error) {
+            console.error('❌ [App] Application initialization failed:', error);
+            this.showInitializationError(error);
+            throw error;
+        }
+    }
+    
+    constructor() {
+        this.config = null;
+        this.auth = null;
+        this.api = null;
+        this.ui = null;
+        this.store = null;
+        this.initialized = false;
+        this.authFormManager = null; // Legacy form manager reference
+    }
+    
+    async initialize() {
+        if (this.initialized) return this;
+        
+        const startTime = performance.now();
+        
+        try {
+            // Step 1: Load configuration (CRITICAL FIRST STEP)
+            console.log('🔧 [App] Loading configuration...');
+            this.config = await this.loadConfiguration();
             
-            this.showLoadingOverlay('Initializing application...');
+            // Step 2: Wait for required libraries
+            console.log('📚 [App] Waiting for required libraries...');
+            await this.waitForLibraries();
             
-            // Core initialization steps
-            await this.initConfig();
-            await this.initSupabase();
-            await this.initTimezone();
-            await this.initAuth();
-            await this.initBusinessContext();
-            await this.initUI();
-            await this.setupGlobalErrorHandling();
-            await this.setupKeyboardShortcuts();
+            // Step 3: Initialize authentication system
+            console.log('🔐 [App] Initializing authentication...');
+            this.auth = await this.initializeAuth();
+            
+            // Step 4: Initialize API client
+            console.log('🌐 [App] Initializing API client...');
+            this.api = await this.initializeApiClient();
+            
+            // Step 5: Initialize UI manager
+            console.log('🎨 [App] Initializing UI components...');
+            this.ui = await this.initializeUI();
+            
+            // Step 6: Initialize data store
+            console.log('💾 [App] Initializing data store...');
+            this.store = await this.initializeDataStore();
+            
+            // Step 7: Set up page-specific features
+            console.log('⚙️ [App] Setting up page-specific features...');
             await this.setupPageSpecificFeatures();
-            await this.attachToWindow();
             
-            this.performance.mark('initialization-end');
-            const duration = this.performance.measure('total-initialization', 'initialization-start', 'initialization-end');
+            // Step 8: Set up global event listeners
+            console.log('🎧 [App] Setting up global event listeners...');
+            await this.setupGlobalEventListeners();
             
-            console.log(`✅ [App] Application initialized successfully in ${duration.toFixed(2)}ms`);
-            this.removeLoadingOverlay();
+            this.initialized = true;
             
-            // Emit ready event
-            window.dispatchEvent(new CustomEvent('oslira:ready', {
-                detail: {
-                    app: this,
-                    initTime: duration,
-                    config: this.config,
-                    user: this.auth?.user
-                }
-            }));
+            const endTime = performance.now();
+            console.log(`✅ [App] Application initialized successfully in ${Math.round(endTime - startTime)}ms`);
+            
+            // Emit app ready event
+            window.dispatchEvent(new CustomEvent('app:ready', { detail: this }));
             
             return this;
             
         } catch (error) {
-            console.error('❌ [App] Initialization failed:', error);
-            this.showError('Application initialization failed. Please refresh the page.');
+            console.error('❌ [App] Application initialization failed:', error);
+            this.showInitializationError(error);
             throw error;
         }
     }
     
-    async initConfig() {
-        try {
-            // Wait for config manager
-            let attempts = 0;
-            const maxAttempts = 50;
-            
-            while (!window.OsliraConfig && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (!window.OsliraConfig) {
-                throw new Error('OsliraConfig not available');
-            }
-            
-            this.config = await window.OsliraConfig.load();
-            console.log('✅ [App] Configuration loaded');
-            
-        } catch (error) {
-            console.error('❌ [App] Config initialization failed:', error);
-            throw error;
+    async loadConfiguration() {
+        if (!window.OsliraConfig?.load) {
+            throw new Error('OsliraConfig not available');
         }
-    }
-    
-    async initSupabase() {
-        try {
-            // Wait for Supabase library
-            let attempts = 0;
-            const maxAttempts = 100;
-            
-            while (!window.supabase && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (!window.supabase) {
-                throw new Error('Supabase library not available');
-            }
-            
-            // Get supabase config with multiple fallback patterns
-            const supabaseUrl = this.config.supabaseUrl || this.config.SUPABASE_URL || window.CONFIG?.SUPABASE_URL;
-            const supabaseKey = this.config.supabaseKey || this.config.supabaseAnonKey || this.config.SUPABASE_ANON_KEY || window.CONFIG?.SUPABASE_ANON_KEY;
-
-            if (!supabaseUrl || !supabaseKey) {
-                console.error('❌ [App] Missing Supabase config:', { 
-                    hasUrl: !!supabaseUrl, 
-                    hasKey: !!supabaseKey,
-                    configKeys: Object.keys(this.config),
-                    windowConfig: !!window.CONFIG 
-                });
-                throw new Error('Supabase configuration missing');
-            }
-
-            // Create client using existing library
-            this.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-            // Store client separately, don't overwrite the library
-            window.supabaseClient = this.supabase;
-            
-            console.log('✅ [App] Supabase initialized');
-            
-        } catch (error) {
-            console.error('❌ [App] Supabase initialization failed:', error);
-            throw error;
-        }
-    }
-    
-    async initTimezone() {
-        try {
-            this.userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            console.log('🌍 [App] Timezone detected:', this.userTimezone);
-        } catch (error) {
-            this.userTimezone = 'UTC';
-            console.warn('⚠️ [App] Timezone detection failed, using UTC');
-        }
-    }
-    
-    async initAuth() {
-        console.log('🔐 [App] Initializing authentication system...');
         
-        // Wait for auth manager to be available
-        const maxAttempts = 50;
-        let attempts = 0;
+        await window.OsliraConfig.load();
+        return window.OsliraConfig.get();
+    }
+    
+    async waitForLibraries() {
+        const requiredLibraries = ['supabase'];
+        const timeout = 10000; // 10 seconds
+        const startTime = Date.now();
         
-        while (!window.OsliraAuth && attempts < maxAttempts) {
+        while (Date.now() - startTime < timeout) {
+            const allLoaded = requiredLibraries.every(lib => window[lib]);
+            if (allLoaded) return;
             await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
         }
         
-        if (!window.OsliraAuth) {
-            throw new Error('OsliraAuth not available after timeout');
-        }
-        
-        // Initialize the auth manager
-        this.auth = await window.OsliraAuth.initialize(this.config);
-        
-        // Also attach to window.OsliraApp for compatibility
-        if (window.OsliraApp) {
-            window.OsliraApp.auth = this.auth;
-        }
-        
-        console.log('✅ [App] Authentication system initialized');
+        const missing = requiredLibraries.filter(lib => !window[lib]);
+        throw new Error(`Required libraries not loaded: ${missing.join(', ')}`);
     }
     
-    async initBusinessContext() {
-        if (!this.user) return;
-        
-        try {
-            console.log('🏢 [App] Loading business context...');
-            await this.loadBusinesses();
-            await this.loadDefaultBusiness();
-            console.log('✅ [App] Business context loaded');
-        } catch (error) {
-            console.error('❌ [App] Business context failed:', error);
-            // Non-critical, continue initialization
+    async initializeAuth() {
+        if (!window.OsliraAuth?.initialize) {
+            throw new Error('OsliraAuth not available');
         }
-    }
-    
-    async initUI() {
-        try {
-            // Wait for UI manager
-            let attempts = 0;
-            const maxAttempts = 50;
-            
-            while (!window.OsliraUI && attempts < maxAttempts) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (window.OsliraUI) {
-                this.ui = new window.OsliraUI();
-                console.log('✅ [App] UI manager initialized');
-            } else {
-                console.warn('⚠️ [App] UI manager not available, skipping');
-            }
-            
-        } catch (error) {
-            console.error('❌ [App] UI initialization failed:', error);
-            // Non-critical, continue
-        }
-    }
-    
-    async setupGlobalErrorHandling() {
-        window.addEventListener('error', (event) => {
-            this.errorHandler.logError(event.error, {
-                type: 'javascript',
-                filename: event.filename,
-                lineno: event.lineno,
-                colno: event.colno
-            });
-        });
         
-        window.addEventListener('unhandledrejection', (event) => {
-            this.errorHandler.logError(event.reason, {
-                type: 'promise',
-                promise: event.promise
-            });
-        });
+        return await window.OsliraAuth.initialize();
     }
     
-    async setupKeyboardShortcuts() {
-        document.addEventListener('keydown', (event) => {
-            // Global keyboard shortcuts
-            if (event.ctrlKey || event.metaKey) {
-                switch (event.key) {
-                    case '/':
-                        event.preventDefault();
-                        // Focus search if available
-                        const searchInput = document.querySelector('#search, [data-search]');
-                        if (searchInput) searchInput.focus();
-                        break;
-                }
-            }
-        });
+    async initializeApiClient() {
+        if (!window.OsliraApiClient) {
+            console.warn('⚠️ [App] OsliraApiClient not available, creating basic client');
+            return new BasicApiClient(this.config, this.auth);
+        }
+        return new window.OsliraApiClient(this.config, this.auth);
+    }
+    
+    async initializeUI() {
+        if (!window.OsliraUIManager) {
+            console.warn('⚠️ [App] OsliraUIManager not available, creating basic manager');
+            return new BasicUIManager();
+        }
+        return new window.OsliraUIManager();
+    }
+    
+    async initializeDataStore() {
+        if (!window.OsliraDataStore) {
+            console.warn('⚠️ [App] OsliraDataStore not available, creating basic store');
+            return new BasicDataStore();
+        }
+        return new window.OsliraDataStore();
     }
     
     async setupPageSpecificFeatures() {
@@ -333,194 +155,207 @@ class OsliraAppInitializer {
             case 'auth':
                 await this.initAuthPageFeatures();
                 break;
+            case 'onboarding':
+                await this.initOnboardingFeatures();
+                break;
             // Add other pages as needed
         }
     }
     
     async initAuthPageFeatures() {
-        // Auth page specific setup
-        console.log('🔐 [App] Setting up auth page features...');
+        // Auth page specific setup - NEW AUTH FORMS ARE SELF-CONTAINED
+        console.log('🔐 [App] Auth page detected - new auth system is self-contained');
         
-        // CRITICAL: Ensure auth system is ready before setting up form
+        // The new auth forms handle everything internally, no app.js setup needed
+        // This is here for legacy compatibility only
+        
+        // Ensure auth system is ready for page navigation
         if (!this.auth) {
-            console.error('❌ [App] Auth system not ready for form setup');
+            console.warn('⚠️ [App] Auth system not ready');
             return;
         }
         
-        // Setup form handling if form exists
-        const authForm = document.getElementById('auth-form');
-        if (authForm && window.OsliraFormManager) {
-            console.log('📝 [App] Setting up auth form handler...');
-            
-            // Destroy any existing form manager first
-            if (this.authFormManager) {
-                this.authFormManager.destroy?.();
-            }
-            
-            this.authFormManager = new window.OsliraFormManager(authForm)
-    .addValidators({
-        email: window.OsliraFormManager.validators.required('Email is required')
-    })
-
-    .onError((error) => {
-        console.error('❌ [App] Auth form error:', error);
-        this.showMessage(error.message, 'error');
-    });
-            
-            console.log('✅ [App] Auth form handler configured');
-            
-        } else {
-            console.log('⚠️ [App] Auth form or FormManager not available');
+        // Handle any legacy auth form if it exists (backward compatibility)
+        const legacyAuthForm = document.getElementById('auth-form');
+        if (legacyAuthForm && legacyAuthForm.textContent.includes('under maintenance')) {
+            console.log('📝 [App] Legacy auth form detected (maintenance mode)');
+            // Legacy form is in maintenance mode, new forms handle everything
         }
     }
+    
     async initDashboardFeatures() {
         console.log('📊 [App] Setting up dashboard features...');
-        // Dashboard-specific initialization would go here
-    }
-    
-    // =============================================================================
-    // UTILITY METHODS
-    // =============================================================================
-    
-    showLoadingOverlay(message = 'Loading...') {
-        if (document.getElementById('loading-overlay')) return;
         
-        const overlay = document.createElement('div');
-        overlay.id = 'loading-overlay';
-        overlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(255,255,255,0.95); z-index: 9999;
-            display: flex; align-items: center; justify-content: center;
-            font-family: system-ui, -apple-system, sans-serif;
-        `;
-        overlay.innerHTML = `
-            <div style="text-align: center;">
-                <div style="width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top: 3px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
-                <p style="margin: 0; color: #6b7280;">${message}</p>
-            </div>
-            <style>
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            </style>
-        `;
-        document.body.appendChild(overlay);
-    }
-    
-    removeLoadingOverlay() {
-        const overlay = document.getElementById('loading-overlay');
-        if (overlay) overlay.remove();
-    }
-    
-    showMessage(message, type = 'info') {
-        console.log(`📢 [App] ${type.toUpperCase()}: ${message}`);
-        
-        const messageDiv = document.createElement('div');
-        messageDiv.style.cssText = `
-            position: fixed; top: 20px; right: 20px; z-index: 10000;
-            padding: 12px 16px; border-radius: 6px; color: white;
-            background: ${type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6'};
-            font-family: system-ui, -apple-system, sans-serif;
-            font-size: 14px; max-width: 300px;
-        `;
-        messageDiv.textContent = message;
-        document.body.appendChild(messageDiv);
-        
-        setTimeout(() => messageDiv.remove(), 5000);
-    }
-    
-    showError(message) {
-        this.showMessage(message, 'error');
-        
-        const errorDisplay = document.getElementById('error-display');
-        if (errorDisplay) {
-            errorDisplay.textContent = message;
-            errorDisplay.style.display = 'block';
-            errorDisplay.classList.add('show');
+        // Dashboard-specific initialization
+        if (window.OsliraDashboard?.initialize) {
+            await window.OsliraDashboard.initialize(this);
         }
     }
     
-    clearError() {
-        const errorDisplay = document.getElementById('error-display');
-        if (errorDisplay) {
-            errorDisplay.classList.remove('show');
-            errorDisplay.style.display = 'none';
-            errorDisplay.textContent = '';
+    async initOnboardingFeatures() {
+        console.log('👋 [App] Setting up onboarding features...');
+        
+        // Onboarding-specific initialization
+        if (window.OsliraOnboarding?.initialize) {
+            await window.OsliraOnboarding.initialize(this);
         }
     }
     
-    // =============================================================================
-    // GLOBAL ATTACHMENT
-    // =============================================================================
-    
-    attachToWindow() {
-        // Attach instance to window for global access
-        window.OsliraApp = this;
-        
-        // Provide commonly used methods directly
-        window.OsliraApp.showMessage = this.showMessage.bind(this);
-        window.OsliraApp.showError = this.showError.bind(this);
-        window.OsliraApp.clearError = this.clearError.bind(this);
-        
-        // Auth property for compatibility
-        if (this.auth) {
-            window.OsliraApp.auth = this.auth;
-        }
-        
-        // Logout function
-        window.OsliraApp.logout = async () => {
-            try {
-                await this.supabase.auth.signOut();
-                localStorage.clear();
-                window.location.href = '/auth.html';
-            } catch (error) {
-                console.error('Logout failed:', error);
-                window.location.href = '/auth.html';
+    async setupGlobalEventListeners() {
+        // Global keyboard shortcuts
+        document.addEventListener('keydown', (event) => {
+            // Global keyboard shortcuts
+            if (event.ctrlKey || event.metaKey) {
+                switch (event.key) {
+                    case '/':
+                        event.preventDefault();
+                        // Focus search if available
+                        const searchInput = document.querySelector('#search, [data-search]');
+                        if (searchInput) searchInput.focus();
+                        break;
+                }
             }
-        };
+        });
         
-        console.log('🌐 [App] Global window attachment completed');
+        // Handle auth state changes globally
+        window.addEventListener('auth:change', (event) => {
+            const { session, user } = event.detail;
+            console.log('🔐 [App] Auth state changed:', {
+                authenticated: !!session,
+                userId: user?.id
+            });
+            
+            // Update global state
+            this.store?.setState('auth.session', session);
+            this.store?.setState('auth.user', user);
+        });
+        
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                // Refresh session when page becomes visible
+                if (this.auth?.refreshSession) {
+                    this.auth.refreshSession().catch(console.error);
+                }
+            }
+        });
+    }
+    
+    static showInitializationError(error) {
+        // Show a user-friendly error message
+        const errorContainer = document.createElement('div');
+        errorContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c00;
+            padding: 16px 24px;
+            border-radius: 8px;
+            z-index: 9999;
+            font-family: system-ui, -apple-system, sans-serif;
+            font-size: 14px;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        `;
+        
+        errorContainer.innerHTML = `
+            <strong>Application Error</strong><br>
+            ${error.message}<br>
+            <small style="opacity: 0.7;">Please refresh the page or contact support if this persists.</small>
+        `;
+        
+        document.body.appendChild(errorContainer);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (errorContainer.parentNode) {
+                errorContainer.parentNode.removeChild(errorContainer);
+            }
+        }, 10000);
     }
 }
 
 // =============================================================================
-// AUTO-INITIALIZATION
+// BASIC FALLBACK CLASSES (for when full modules aren't available)
 // =============================================================================
 
-// Export the class to window
-window.OsliraAppInitializer = OsliraAppInitializer;
-
-// Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', async () => {
-        console.log('🚀 [App] DOM ready, starting initialization...');
-        try {
-            await OsliraAppInitializer.initialize();
-        } catch (error) {
-            console.error('❌ App initialization failed:', error);
+class BasicApiClient {
+    constructor(config, auth) {
+        this.config = config;
+        this.auth = auth;
+    }
+    
+    async makeRequest(url, options = {}) {
+        if (this.auth?.getAuthHeaders) {
+            options.headers = {
+                ...this.auth.getAuthHeaders(),
+                ...options.headers
+            };
         }
+        return fetch(url, options);
+    }
+}
+
+class BasicUIManager {
+    constructor() {
+        this.components = new Map();
+    }
+    
+    register(name, component) {
+        this.components.set(name, component);
+    }
+    
+    get(name) {
+        return this.components.get(name);
+    }
+}
+
+class BasicDataStore {
+    constructor() {
+        this.data = {};
+        this.listeners = new Map();
+    }
+    
+    setState(path, value) {
+        this.data[path] = value;
+        const listeners = this.listeners.get(path);
+        if (listeners) {
+            listeners.forEach(callback => callback(value));
+        }
+    }
+    
+    getState(path) {
+        return this.data[path];
+    }
+    
+    subscribe(path, callback) {
+        if (!this.listeners.has(path)) {
+            this.listeners.set(path, new Set());
+        }
+        this.listeners.get(path).add(callback);
+        
+        return () => {
+            this.listeners.get(path)?.delete(callback);
+        };
+    }
+}
+
+// =============================================================================
+// GLOBAL INITIALIZATION
+// =============================================================================
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        OsliraApp.init().catch(console.error);
     });
 } else {
     // DOM already ready
-    console.log('🚀 [App] DOM already ready, starting initialization...');
-    setTimeout(async () => {
-        try {
-            await OsliraAppInitializer.initialize();
-        } catch (error) {
-            console.error('❌ App initialization failed:', error);
-        }
-    }, 100);
+    OsliraApp.init().catch(console.error);
 }
 
-// Also trigger after script loading completes
-window.addEventListener('oslira:scripts:loaded', async (event) => {
-    console.log('🚀 [App] Scripts loaded event received, ensuring initialization...');
-    if (!OsliraAppInitializer.getInstance()) {
-        try {
-            await OsliraAppInitializer.initialize();
-        } catch (error) {
-            console.error('❌ App initialization failed after scripts loaded:', error);
-        }
-    }
-});
-
-console.log('📦 Unified Oslira app initializer loaded');
-console.log('🚀 Will initialize automatically when DOM is ready');
+// Make app globally available
+window.OsliraApp = OsliraApp;
