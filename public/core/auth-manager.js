@@ -25,7 +25,7 @@ class OsliraAuthManager {
                 config.SUPABASE_ANON_KEY,
                 {
                     auth: {
-                        redirectTo: `${config.BASE_URL}/auth/callback`,
+                        redirectTo: window.OsliraEnv.AUTH_CALLBACK_URL, // Dynamic callback
                         persistSession: true,
                         storageKey: 'oslira-auth',
                         autoRefreshToken: true,
@@ -82,7 +82,7 @@ class OsliraAuthManager {
             const { data, error } = await this.supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${window.OsliraConfig.get().BASE_URL}/auth/callback`,
+                    redirectTo: window.OsliraEnv.AUTH_CALLBACK_URL, // Dynamic callback
                     queryParams: {
                         access_type: 'offline',
                         prompt: 'consent',
