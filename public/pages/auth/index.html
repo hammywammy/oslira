@@ -1,209 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In - Oslira</title>
-    <script src="/core/script-loader.js"></script>
-    
-    <link rel="stylesheet" href="/pages/auth/auth.css">
-    <style>
-        /* Tab Interface Styles */
-        .auth-tabs {
-            display: flex;
-            border-bottom: 2px solid var(--border-light);
-            margin-bottom: var(--spacing-6);
-            border-radius: var(--radius-md) var(--radius-md) 0 0;
-            overflow: hidden;
-        }
-
-        .tab-button {
-            flex: 1;
-            padding: var(--spacing-4);
-            background: var(--bg-secondary);
-            border: none;
-            font-size: var(--text-base);
-            font-weight: var(--font-medium);
-            color: var(--text-secondary);
-            cursor: pointer;
-            transition: var(--transition-base);
-            border-bottom: 3px solid transparent;
-        }
-
-        .tab-button.active {
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            border-bottom-color: var(--primary-blue);
-        }
-
-        .tab-button:hover:not(.active) {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Google Button Styles */
-        .google-button {
-            width: 100%;
-            height: var(--button-height-lg);
-            padding: 0 var(--button-padding-x-lg);
-            background: #ffffff;
-            color: #1f1f1f;
-            border: 1px solid #dadce0;
-            border-radius: var(--radius-md);
-            font-size: var(--text-base);
-            font-weight: var(--font-medium);
-            cursor: pointer;
-            transition: var(--transition-base);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--spacing-3);
-            margin-bottom: var(--spacing-4);
-        }
-
-        .google-button:hover:not(:disabled) {
-            background: #f8f9fa;
-            box-shadow: 0 1px 6px 0 rgba(32,33,36,.28);
-        }
-
-        .google-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .google-icon {
-            width: 20px;
-            height: 20px;
-        }
-
-        /* Password Toggle */
-        .password-field {
-            position: relative;
-        }
-
-        .password-toggle {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: var(--text-sm);
-            padding: 4px;
-        }
-
-        .password-toggle:hover {
-            color: var(--text-primary);
-        }
-
-        /* Divider */
-        .divider {
-            position: relative;
-            text-align: center;
-            margin: var(--spacing-6) 0;
-        }
-
-        .divider::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: var(--border-light);
-        }
-
-        .divider-text {
-            background: var(--bg-primary);
-            color: var(--text-secondary);
-            font-size: var(--text-sm);
-            padding: 0 var(--spacing-4);
-        }
-
-        /* Form Options */
-        .form-options {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: var(--spacing-4) 0;
-            font-size: var(--text-sm);
-        }
-
-        .optional-field {
-            opacity: 0.7;
-        }
-
-        .optional-field label::after {
-            content: " (optional)";
-            font-size: var(--text-xs);
-            color: var(--text-tertiary);
-        }
-
-        /* Phone OTP Flow */
-        .otp-field {
-            display: none;
-            margin-top: var(--spacing-4);
-        }
-
-        .otp-field.show {
-            display: block;
-            animation: slideDown 0.3s ease-out;
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
+    <link rel="stylesheet" href="/assets/global.css">
+    <link rel="stylesheet" href="auth.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <a href="#main-content" class="skip-nav">Skip to main content</a>
-    
-    <div class="auth-container" id="main-content">
-        <div class="auth-card" id="main-card">
-            <div class="auth-header">
-                <div class="logo">
-                    <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
-                    <h1>Oslira</h1>
-                </div>
-                <div class="auth-subtitle">AI-Powered Lead Generation</div>
-                <div class="auth-description">
-                    Sign in or create your account to start analyzing leads and generating personalized outreach.
-                </div>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="/" class="nav-logo">
+                <img src="/assets/logo.svg" alt="Oslira" class="nav-logo-img">
+                <span class="nav-logo-text">Oslira</span>
+            </a>
+            <div class="nav-actions">
+                <a href="/pricing" class="nav-link">Pricing</a>
+                <a href="/auth" class="btn btn-primary">Sign In</a>
             </div>
+        </div>
+    </nav>
 
-            <div class="error-message" id="error-display" role="alert" aria-live="polite">
-                <!-- Error messages will appear here -->
-            </div>
-
+    <!-- Main Auth Container -->
+    <main class="auth-main">
+        <div class="auth-container">
             <!-- Tab Navigation -->
             <div class="auth-tabs">
-                <button class="tab-button active" data-tab="signin">Sign In</button>
-                <button class="tab-button" data-tab="signup">Sign Up</button>
+                <button class="auth-tab active" data-tab="signin">Sign In</button>
+                <button class="auth-tab" data-tab="signup">Create Account</button>
             </div>
 
             <!-- Sign In Tab -->
-            <div class="tab-content active" id="signin-tab">
-                <!-- Google Sign In -->
-                <button class="google-button" id="google-signin-btn">
-                    <svg class="google-icon" viewBox="0 0 24 24">
+            <div class="auth-tab-content active" id="signin-tab">
+                <div class="auth-header">
+                    <h1 class="auth-title">Welcome Back</h1>
+                    <p class="auth-subtitle">Sign in to your Oslira account</p>
+                </div>
+
+                <!-- Google OAuth Sign In -->
+                <button class="google-button" id="google-signin-btn" type="button">
+                    <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -270,28 +110,35 @@
                         <div class="form-help">We'll send you a verification code</div>
                     </div>
 
-                    <div class="form-group otp-field" id="signin-otp-field">
-                        <label class="form-label" for="signin-otp">Verification Code</label>
+                    <div class="form-group hidden" id="phone-otp-group">
+                        <label class="form-label" for="phone-otp">Verification Code</label>
                         <input 
                             type="text" 
-                            id="signin-otp" 
+                            id="phone-otp" 
                             class="form-input" 
-                            placeholder="Enter 6-digit code"
+                            placeholder="123456"
                             maxlength="6"
+                            autocomplete="one-time-code"
                         >
+                        <div class="form-help">Enter the 6-digit code sent to your phone</div>
                     </div>
 
-                    <button type="submit" class="auth-button" id="phone-signin-submit">
-                        Send Code
+                    <button type="submit" class="auth-button secondary" id="phone-signin-submit">
+                        Send Verification Code
                     </button>
                 </form>
             </div>
 
             <!-- Sign Up Tab -->
-            <div class="tab-content" id="signup-tab">
-                <!-- Google Sign Up -->
-                <button class="google-button" id="google-signup-btn">
-                    <svg class="google-icon" viewBox="0 0 24 24">
+            <div class="auth-tab-content" id="signup-tab">
+                <div class="auth-header">
+                    <h1 class="auth-title">Create Account</h1>
+                    <p class="auth-subtitle">Start your Oslira journey today</p>
+                </div>
+
+                <!-- Google OAuth Sign Up -->
+                <button class="google-button" id="google-signup-btn" type="button">
+                    <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
                         <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                         <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -338,26 +185,7 @@
                             placeholder="username"
                             autocomplete="username"
                         >
-                        <div class="form-help">3-20 characters, letters, numbers, underscore, hyphen</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="signup-password">Password</label>
-                        <div class="password-field">
-                            <input 
-                                type="password" 
-                                id="signup-password" 
-                                class="form-input" 
-                                placeholder="Create a password"
-                                autocomplete="new-password"
-                                minlength="8"
-                                required
-                            >
-                            <button type="button" class="password-toggle" data-target="signup-password">
-                                Show
-                            </button>
-                        </div>
-                        <div class="form-help">Minimum 8 characters</div>
+                        <div class="form-help">3-20 characters, letters, numbers, underscore, hyphen only</div>
                     </div>
 
                     <div class="form-group optional-field">
@@ -369,7 +197,25 @@
                             placeholder="+1 (555) 123-4567"
                             autocomplete="tel"
                         >
-                        <div class="form-help">For account security and notifications</div>
+                        <div class="form-help">Optional - for account security</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="signup-password">Password</label>
+                        <div class="password-field">
+                            <input 
+                                type="password" 
+                                id="signup-password" 
+                                class="form-input" 
+                                placeholder="Create a strong password"
+                                autocomplete="new-password"
+                                required
+                            >
+                            <button type="button" class="password-toggle" data-target="signup-password">
+                                Show
+                            </button>
+                        </div>
+                        <div class="form-help">Minimum 8 characters</div>
                     </div>
 
                     <button type="submit" class="auth-button" id="signup-submit">
@@ -378,275 +224,82 @@
                 </form>
             </div>
 
+            <!-- Error Display -->
+            <div class="auth-error hidden" id="auth-error">
+                <div class="error-content">
+                    <span class="error-message" id="error-message"></span>
+                    <button class="error-close" id="error-close">&times;</button>
+                </div>
+            </div>
+
+            <!-- Success Display -->
+            <div class="auth-success hidden" id="auth-success">
+                <div class="success-content">
+                    <span class="success-message" id="success-message"></span>
+                </div>
+            </div>
+
+            <!-- Terms and Privacy -->
             <div class="auth-footer">
-                <p class="auth-note">
-                    By continuing, you agree to our Terms of Service and Privacy Policy.
-                </p>
-                <p class="auth-links">
-                    <a href="/">← Back to Home</a>
-                    <span class="separator">•</span>
-                    <a href="/privacy.html">Privacy Policy</a>
-                    <span class="separator">•</span>
-                    <a href="/terms.html">Terms</a>
+                <p class="legal-text">
+                    By continuing, you agree to our 
+                    <a href="/terms" target="_blank">Terms of Service</a> and 
+                    <a href="/privacy" target="_blank">Privacy Policy</a>
                 </p>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        // Tab switching functionality
-        document.querySelectorAll('.tab-button').forEach(button => {
-            button.addEventListener('click', () => {
-                const tabName = button.dataset.tab;
-                
-                // Update active tab button
-                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
-                button.classList.add('active');
-                
-                // Update active tab content
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(`${tabName}-tab`).classList.add('active');
-                
-                // Clear error messages
-                hideError();
-            });
-        });
-
-        // Password toggle functionality
-        document.querySelectorAll('.password-toggle').forEach(toggle => {
-            toggle.addEventListener('click', () => {
-                const targetId = toggle.dataset.target;
-                const input = document.getElementById(targetId);
-                
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    toggle.textContent = 'Hide';
-                } else {
-                    input.type = 'password';
-                    toggle.textContent = 'Show';
-                }
-            });
-        });
-
-        // Error message handling
-        function showError(message) {
-            const errorDiv = document.getElementById('error-display');
-            errorDiv.textContent = message;
-            errorDiv.classList.add('show');
-        }
-
-        function hideError() {
-            const errorDiv = document.getElementById('error-display');
-            errorDiv.classList.remove('show');
-        }
-
-        // Phone OTP flow
-        let phoneOtpSent = false;
-        let currentPhone = '';
-
-        document.getElementById('phone-signin-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const phoneInput = document.getElementById('signin-phone');
-            const otpInput = document.getElementById('signin-otp');
-            const submitBtn = document.getElementById('phone-signin-submit');
-            const otpField = document.getElementById('signin-otp-field');
-            
-            if (!phoneOtpSent) {
-                // Send OTP
-                const phone = phoneInput.value.trim();
-                if (!phone) {
-                    showError('Please enter your phone number');
-                    return;
-                }
-                
-                try {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Sending Code...';
-                    
-                    const authSystem = await waitForAuthSystem();
-                    const auth = await authSystem.initialize();
-                    await auth.signInWithPhone(phone);
-                    
-                    currentPhone = phone;
-                    phoneOtpSent = true;
-                    otpField.classList.add('show');
-                    submitBtn.textContent = 'Verify Code';
-                    phoneInput.disabled = true;
-                    otpInput.focus();
-                    
-                } catch (error) {
-                    showError(error.message);
-                } finally {
-                    submitBtn.disabled = false;
-                }
-            } else {
-                // Verify OTP
-                const otp = otpInput.value.trim();
-                if (!otp) {
-                    showError('Please enter the verification code');
-                    return;
-                }
-                
-                try {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Verifying...';
-                    
-                    const authSystem = await waitForAuthSystem();
-                    const auth = await authSystem.initialize();
-                    await auth.verifyPhoneOtp(currentPhone, otp);
-                    
-                    // Success - will be handled by auth state change
-                    
-                } catch (error) {
-                    showError(error.message);
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Verify Code';
-                }
-            }
-        });
-
-        // Google OAuth handlers
-        document.getElementById('google-signin-btn').addEventListener('click', async () => {
-            try {
-                const authSystem = await waitForAuthSystem();
-                const auth = await authSystem.initialize();
-                await auth.signInWithGoogle();
-            } catch (error) {
-                showError(error.message);
-            }
-        });
-
-        document.getElementById('google-signup-btn').addEventListener('click', async () => {
-            try {
-                const authSystem = await waitForAuthSystem();
-                const auth = await authSystem.initialize();
-                await auth.signInWithGoogle();
-            } catch (error) {
-                showError(error.message);
-            }
-        });
-
-        // Email/Password Sign In
-        document.getElementById('signin-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('signin-email').value.trim();
-            const password = document.getElementById('signin-password').value;
-            const submitBtn = document.getElementById('signin-submit');
-            
-            if (!email || !password) {
-                showError('Please enter both email/username and password');
-                return;
-            }
-            
-            try {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Signing In...';
-                
-                const authSystem = await waitForAuthSystem();
-                const auth = await authSystem.initialize();
-                
-                // Try email first, then username if it fails
-                if (email.includes('@')) {
-                    await auth.signInWithPassword(email, password);
-                } else {
-                    await auth.signInWithUsername(email, password);
-                }
-                
-                // Success - will be handled by auth state change
-                
-            } catch (error) {
-                showError(error.message);
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Sign In';
-            }
-        });
-
-        // Email/Password Sign Up
-        document.getElementById('signup-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('signup-email').value.trim();
-            const password = document.getElementById('signup-password').value;
-            const fullName = document.getElementById('signup-fullname').value.trim();
-            const username = document.getElementById('signup-username').value.trim();
-            const phone = document.getElementById('signup-phone').value.trim();
-            const submitBtn = document.getElementById('signup-submit');
-            
-            if (!email || !password) {
-                showError('Please enter email and password');
-                return;
-            }
-            
-            try {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Creating Account...';
-                
-                const authSystem = await waitForAuthSystem();
-                const auth = await authSystem.initialize();
-                
-                // Check username availability if provided
-                if (username) {
-                    const available = await auth.checkUsernameAvailable(username);
-                    if (!available) {
-                        showError('Username is already taken');
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Create Account';
-                        return;
-                    }
-                }
-                
-                const result = await auth.signUpWithPassword(email, password, {
-                    fullName,
-                    username,
-                    phone
-                });
-                
-                if (result.needsEmailConfirmation) {
-                    showError('Please check your email and click the confirmation link');
-                    submitBtn.textContent = 'Email Sent';
-                }
-                
-            } catch (error) {
-                showError(error.message);
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Create Account';
-            }
-        });
-
-        // Listen for auth state changes
-window.addEventListener('auth:change', (event) => {
-    const { event: authEvent, session, user } = event.detail;
-    
-    console.log('🔐 [Auth Page] Auth state changed:', {
-        event: authEvent,
-        hasSession: !!session,
-        userId: user?.id,
-        onboardingComplete: user?.onboarding_completed,
-        userObject: user
-    });
-    
-    // Only redirect on SIGNED_IN event to prevent loops
-    if (authEvent === 'SIGNED_IN' && session && user) {
-        console.log('🔐 [Auth Page] User authenticated, determining redirect...');
+        // =============================================================================
+        // GLOBAL VARIABLES
+        // =============================================================================
         
-        // Add small delay to ensure state is fully synchronized
-        setTimeout(() => {
-            if (!user.onboarding_completed) {
-                console.log('🔐 [Auth Page] Redirecting to onboarding...');
-                window.location.href = '/onboarding';
-            } else {
-                console.log('🔐 [Auth Page] Redirecting to dashboard...');
-                window.location.href = '/dashboard';
-            }
-        }, 100);
-    }
-});
+        let currentPhone = null;
+        let otpSent = false;
 
-        // Wait for auth system to be loaded, then initialize
+        // =============================================================================
+        // UTILITY FUNCTIONS
+        // =============================================================================
+
+        function showError(message) {
+            console.error('🔐 [Auth Page] Error:', message);
+            const errorDiv = document.getElementById('auth-error');
+            const errorMessage = document.getElementById('error-message');
+            
+            errorMessage.textContent = message;
+            errorDiv.classList.remove('hidden');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                errorDiv.classList.add('hidden');
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            console.log('🔐 [Auth Page] Success:', message);
+            const successDiv = document.getElementById('auth-success');
+            const successMessage = document.getElementById('success-message');
+            
+            successMessage.textContent = message;
+            successDiv.classList.remove('hidden');
+            
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                successDiv.classList.add('hidden');
+            }, 3000);
+        }
+
+        function hideMessages() {
+            document.getElementById('auth-error').classList.add('hidden');
+            document.getElementById('auth-success').classList.add('hidden');
+        }
+
+        // =============================================================================
+        // AUTH SYSTEM INTEGRATION
+        // =============================================================================
+
+        // Wait for auth system to be loaded
         async function waitForAuthSystem() {
             let attempts = 0;
             const maxAttempts = 50; // 5 seconds
@@ -661,8 +314,12 @@ window.addEventListener('auth:change', (event) => {
             throw new Error('Auth system not available after timeout');
         }
 
-        // Initialize auth on page load
-        document.addEventListener('DOMContentLoaded', async () => {
+        // =============================================================================
+        // AUTH STATE MANAGEMENT - FIXED
+        // =============================================================================
+
+        // Enhanced auth system initialization with proper redirect handling
+        async function initializeAuthSystem() {
             try {
                 console.log('🔐 [Auth Page] Waiting for auth system...');
                 const authSystem = await waitForAuthSystem();
@@ -670,22 +327,296 @@ window.addEventListener('auth:change', (event) => {
                 console.log('🔐 [Auth Page] Initializing auth system...');
                 const auth = await authSystem.initialize();
                 
-                // Redirect if already authenticated
-                console.log('🔐 [Auth Page] Checking if user is already authenticated...');
-                const shouldShowForm = await auth.handleAuthPage();
-                console.log('🔐 [Auth Page] Should show form:', shouldShowForm);
-                
-                if (!shouldShowForm) {
-                    console.log('🔐 [Auth Page] Already authenticated, should redirect...');
-                    return; // Will redirect
+                // CRITICAL FIX: Wait for any ongoing loadUserContext to complete
+                console.log('🔐 [Auth Page] Waiting for user context to fully load...');
+                let contextLoadAttempts = 0;
+                while (contextLoadAttempts < 30) { // 3 seconds max
+                    if (auth.getCurrentUser() !== null || !auth.isAuthenticated()) {
+                        break; // User context loaded or not authenticated
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    contextLoadAttempts++;
                 }
                 
-                console.log('🔐 [Auth Page] Not authenticated, showing auth forms');
+                // Now check if we should redirect
+                console.log('🔐 [Auth Page] Checking authentication status...');
+                const isAuth = auth.isAuthenticated();
+                const user = auth.getCurrentUser();
+                
+                console.log('🔐 [Auth Page] Auth status:', {
+                    authenticated: isAuth,
+                    user: user,
+                    onboardingComplete: user?.onboarding_completed
+                });
+                
+                if (isAuth && user) {
+                    console.log('🔐 [Auth Page] User is authenticated, determining redirect...');
+                    
+                    if (!user.onboarding_completed) {
+                        console.log('🔐 [Auth Page] Redirecting to onboarding...');
+                        window.location.href = '/onboarding';
+                        return;
+                    } else {
+                        console.log('🔐 [Auth Page] Redirecting to dashboard...');
+                        window.location.href = '/dashboard';
+                        return;
+                    }
+                }
+                
+                console.log('🔐 [Auth Page] User not authenticated, showing auth forms');
+                
+                // Setup form handlers now that we know we need them
+                setupFormHandlers(auth);
                 
             } catch (error) {
-                console.error('Auth initialization failed:', error);
+                console.error('🔐 [Auth Page] Auth initialization failed:', error);
                 showError('Authentication system temporarily unavailable');
             }
+        }
+
+        // =============================================================================
+        // FORM HANDLERS
+        // =============================================================================
+
+        function setupFormHandlers(auth) {
+            // Tab switching
+            document.querySelectorAll('.auth-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const targetTab = tab.dataset.tab;
+                    
+                    // Update tabs
+                    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.auth-tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    tab.classList.add('active');
+                    document.getElementById(`${targetTab}-tab`).classList.add('active');
+                    
+                    hideMessages();
+                });
+            });
+
+            // Password toggle functionality
+            document.querySelectorAll('.password-toggle').forEach(toggle => {
+                toggle.addEventListener('click', () => {
+                    const targetId = toggle.dataset.target;
+                    const input = document.getElementById(targetId);
+                    
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        toggle.textContent = 'Hide';
+                    } else {
+                        input.type = 'password';
+                        toggle.textContent = 'Show';
+                    }
+                });
+            });
+
+            // Error close button
+            document.getElementById('error-close').addEventListener('click', () => {
+                document.getElementById('auth-error').classList.add('hidden');
+            });
+
+            // Google OAuth handlers
+            document.getElementById('google-signin-btn').addEventListener('click', async () => {
+                try {
+                    console.log('🔐 [Auth Page] Google sign in clicked');
+                    await auth.signInWithGoogle();
+                } catch (error) {
+                    showError(error.message);
+                }
+            });
+
+            document.getElementById('google-signup-btn').addEventListener('click', async () => {
+                try {
+                    console.log('🔐 [Auth Page] Google sign up clicked');
+                    await auth.signInWithGoogle();
+                } catch (error) {
+                    showError(error.message);
+                }
+            });
+
+            // Email/Password Sign In
+            document.getElementById('signin-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const email = document.getElementById('signin-email').value.trim();
+                const password = document.getElementById('signin-password').value;
+                const submitBtn = document.getElementById('signin-submit');
+                
+                if (!email || !password) {
+                    showError('Please enter both email/username and password');
+                    return;
+                }
+                
+                try {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Signing In...';
+                    
+                    // Try email first, then username if it fails
+                    if (email.includes('@')) {
+                        await auth.signInWithPassword(email, password);
+                    } else {
+                        await auth.signInWithUsername(email, password);
+                    }
+                    
+                    // Success - will be handled by redirect logic
+                    
+                } catch (error) {
+                    showError(error.message);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign In';
+                }
+            });
+
+            // Email/Password Sign Up
+            document.getElementById('signup-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const email = document.getElementById('signup-email').value.trim();
+                const password = document.getElementById('signup-password').value;
+                const fullName = document.getElementById('signup-fullname').value.trim();
+                const username = document.getElementById('signup-username').value.trim();
+                const phone = document.getElementById('signup-phone').value.trim();
+                const submitBtn = document.getElementById('signup-submit');
+                
+                if (!email || !password) {
+                    showError('Email and password are required');
+                    return;
+                }
+                
+                if (password.length < 8) {
+                    showError('Password must be at least 8 characters');
+                    return;
+                }
+                
+                try {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Creating Account...';
+                    
+                    const result = await auth.signUpWithPassword(email, password, {
+                        fullName,
+                        username: username || null,
+                        phone: phone || null
+                    });
+                    
+                    if (result.needsEmailConfirmation) {
+                        showSuccess('Check your email for a confirmation link!');
+                        setTimeout(() => {
+                            document.querySelector('[data-tab="signin"]').click();
+                        }, 2000);
+                    }
+                    
+                    // Success - will be handled by redirect logic
+                    
+                } catch (error) {
+                    showError(error.message);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Create Account';
+                }
+            });
+
+            // Phone Authentication
+            document.getElementById('phone-signin-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const phoneInput = document.getElementById('signin-phone');
+                const otpInput = document.getElementById('phone-otp');
+                const otpGroup = document.getElementById('phone-otp-group');
+                const submitBtn = document.getElementById('phone-signin-submit');
+                
+                if (!otpSent) {
+                    // Send OTP
+                    const phone = phoneInput.value.trim();
+                    if (!phone) {
+                        showError('Please enter your phone number');
+                        return;
+                    }
+                    
+                    try {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Sending Code...';
+                        
+                        await auth.signInWithPhone(phone);
+                        currentPhone = phone;
+                        otpSent = true;
+                        
+                        // Show OTP input
+                        otpGroup.classList.remove('hidden');
+                        submitBtn.textContent = 'Verify Code';
+                        
+                        showSuccess('Verification code sent!');
+                        otpInput.focus();
+                        
+                    } catch (error) {
+                        showError(error.message);
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Send Verification Code';
+                    }
+                } else {
+                    // Verify OTP
+                    const otp = otpInput.value.trim();
+                    if (!otp) {
+                        showError('Please enter the verification code');
+                        return;
+                    }
+                    
+                    try {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Verifying...';
+                        
+                        await auth.verifyPhoneOtp(currentPhone, otp);
+                        
+                        // Success - will be handled by redirect logic
+                        
+                    } catch (error) {
+                        showError(error.message);
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Verify Code';
+                    }
+                }
+            });
+        }
+
+        // =============================================================================
+        // AUTH STATE MONITORING - FIXED
+        // =============================================================================
+
+        // Listen for auth state changes and handle redirects
+        window.addEventListener('auth:change', (event) => {
+            const { event: authEvent, session, user } = event.detail;
+            
+            console.log('🔐 [Auth Page] Auth state changed:', {
+                event: authEvent,
+                hasSession: !!session,
+                userId: user?.id,
+                onboardingComplete: user?.onboarding_completed
+            });
+            
+            // Only redirect on successful authentication events
+            if ((authEvent === 'SIGNED_IN' || authEvent === 'TOKEN_REFRESHED') && session && user) {
+                console.log('🔐 [Auth Page] User authenticated via event, determining redirect...');
+                
+                // Small delay to ensure state synchronization
+                setTimeout(() => {
+                    if (!user.onboarding_completed) {
+                        console.log('🔐 [Auth Page] Redirecting to onboarding...');
+                        window.location.href = '/onboarding';
+                    } else {
+                        console.log('🔐 [Auth Page] Redirecting to dashboard...');
+                        window.location.href = '/dashboard';
+                    }
+                }, 200);
+            }
+        });
+
+        // =============================================================================
+        // PAGE INITIALIZATION - ENHANCED
+        // =============================================================================
+
+        // Initialize auth on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🔐 [Auth Page] DOM loaded, starting initialization...');
+            await initializeAuthSystem();
         });
     </script>
 </body>
