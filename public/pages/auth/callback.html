@@ -44,107 +44,70 @@
         <p>Please wait a moment</p>
     </div>
 
-    <script>
-        // SIMPLIFIED CALLBACK HANDLER - NO DEPENDENCIES
-        (async function() {
-            console.log('🔐 [Callback] Starting OAuth callback processing');
+   <script>
+(async function() {
+    console.log('🔐 [Callback] Starting OAuth callback processing');
+    
+    try {
+        // Parse URL parameters immediately - no script dependencies
+        const params = new URLSearchParams(window.location.hash.substring(1) || window.location.search);
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        const error = params.get('error');
+        const errorDescription = params.get('error_description');
+        
+        if (error) {
+            console.error('❌ OAuth error:', error, errorDescription);
+            alert('Sign in failed: ' + (errorDescription || error));
+            window.location.href = '/auth';
+            return;
+        }
+        
+        if (!accessToken) {
+            console.log('⚠️ No tokens in URL, checking session...');
+            // Load Supabase directly via CDN for immediate access
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js';
+            document.head.appendChild(script);
             
-            // Check for OAuth error
-            const urlParams = new URLSearchParams(window.location.search);
-            const error = urlParams.get('error');
+            await new Promise((resolve, reject) => {
+                script.onload = resolve;
+                script.onerror = reject;
+            });
             
-            if (error) {
-                console.error('❌ OAuth error:', error);
-                alert('Sign in failed: ' + error);
+            // Get config from localStorage (set by env-manager)
+            const config = JSON.parse(localStorage.getItem('oslira_config') || '{}');
+            if (!config.SUPABASE_URL) {
+                console.error('❌ No Supabase config available');
                 window.location.href = '/auth';
                 return;
             }
             
-            // Wait for Supabase to be available
-            let attempts = 0;
-            while (!window.supabase && attempts < 50) {
-                await new Promise(r => setTimeout(r, 100));
-                attempts++;
-            }
+            const supabaseClient = supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+            const { data: { session } } = await supabaseClient.auth.getSession();
             
-            if (!window.supabase) {
-                console.error('❌ Supabase not loaded');
-                alert('System not ready, please try again');
+            if (!session) {
+                console.log('⚠️ No session found, redirecting to auth');
                 window.location.href = '/auth';
                 return;
             }
-            
-            // Wait for config
-            attempts = 0;
-            while (!window.OsliraConfig?.get && attempts < 50) {
-                await new Promise(r => setTimeout(r, 100));
-                attempts++;
-            }
-            
-            if (!window.OsliraConfig?.get) {
-                console.error('❌ Config not loaded');
-                alert('System not ready, please try again');
-                window.location.href = '/auth';
-                return;
-            }
-            
-            try {
-                // Initialize Supabase client directly
-                const config = window.OsliraConfig.get();
-                const supabaseClient = supabase.createClient(
-                    config.SUPABASE_URL,
-                    config.SUPABASE_ANON_KEY
-                );
-                
-                // Get the session from the URL (Supabase puts it there)
-                const { data: { session }, error } = await supabaseClient.auth.getSession();
-                
-                if (error) throw error;
-                
-                if (!session) {
-                    console.log('⚠️ No session in URL, checking if already authenticated');
-                    // Maybe already authenticated, just redirect
-                    window.location.href = '/auth';
-                    return;
-                }
-                
-                console.log('✅ OAuth successful for:', session.user.email);
-                
-                // Load user data to check onboarding status
-                const { data: userData, error: userError } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
-                
-                // Determine redirect based on user state
-                let redirectUrl = '/onboarding'; // Default for new users
-                
-                if (!userError && userData) {
-                    // Check if user has completed onboarding
-                    if (userData.onboarding_completed) {
-                        // Check if they have a business profile
-                        const { data: businessData } = await supabaseClient
-                            .from('business_profiles')
-                            .select('id')
-                            .eq('user_id', session.user.id)
-                            .limit(1);
-                        
-                        if (businessData && businessData.length > 0) {
-                            redirectUrl = '/dashboard';
-                        }
-                    }
-                }
-                
-                console.log('🚀 Redirecting to:', redirectUrl);
-                window.location.href = redirectUrl;
-                
-            } catch (error) {
-                console.error('❌ Callback processing failed:', error);
-                alert('Sign in failed. Please try again.');
-                window.location.href = '/auth';
-            }
-        })();
-    </script>
+        }
+        
+        // Store success state for main app
+        sessionStorage.setItem('oauth_success', 'true');
+        sessionStorage.setItem('oauth_timestamp', Date.now().toString());
+        
+        // Simple redirect logic without waiting for user context
+        // Let the main app handle onboarding vs dashboard determination
+        console.log('✅ OAuth successful, redirecting to onboarding');
+        window.location.href = '/onboarding';
+        
+    } catch (error) {
+        console.error('❌ Callback processing failed:', error);
+        alert('Sign in failed. Please try again.');
+        window.location.href = '/auth';
+    }
+})();
+</script>
 </body>
 </html>
