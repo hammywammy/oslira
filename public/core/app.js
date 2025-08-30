@@ -1,7 +1,9 @@
 // =============================================================================
-// APP.JS - Master Application Initializer
-// Updated to support new auth system
+// APP.JS - Master Application Initializer - FIXED VERSION
 // =============================================================================
+
+// ONLY declare OsliraApp once and ensure proper initialization order
+if (!window.OsliraApp) {
 
 class OsliraApp {
     static instance = null;
@@ -343,19 +345,26 @@ class BasicDataStore {
     }
 }
 
-// =============================================================================
-// GLOBAL INITIALIZATION
-// =============================================================================
+    // =============================================================================
+    // GLOBAL INITIALIZATION - ONLY IF NOT ALREADY DECLARED
+    // =============================================================================
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        OsliraApp.init().catch(console.error);
-    });
-} else {
-    // DOM already ready
-    OsliraApp.init().catch(console.error);
-}
+    // Initialize when DOM is ready, but wait for config to be loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait a bit for config to load first
+            setTimeout(() => {
+                OsliraApp.init().catch(console.error);
+            }, 100);
+        });
+    } else {
+        // DOM already ready, wait for config
+        setTimeout(() => {
+            OsliraApp.init().catch(console.error);
+        }, 200);
+    }
 
-// Make app globally available
-window.OsliraApp = OsliraApp;
+    // Make app globally available
+    window.OsliraApp = OsliraApp;
+
+} // End of if (!window.OsliraApp) check
