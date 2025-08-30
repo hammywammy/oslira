@@ -46,9 +46,6 @@ detectEnvironment() {
             '/pages/auth/': 'auth',
             '/pages/auth/index.html': 'auth',
             
-            '/auth/callback': 'auth-callback',
-            '/auth/callback.html': 'auth-callback',
-            '/pages/auth/callback.html': 'auth-callback',
             '/dashboard.html': 'dashboard',
             '/dashboard/': 'dashboard',
             '/dashboard': 'dashboard',
