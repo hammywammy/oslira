@@ -440,36 +440,44 @@
     // UI HELPERS
     // =============================================================================
 
-    function showState(stateName) {
+   function showState(stateName) {
     console.log(`🎨 [Onboarding] Switching to state: ${stateName}`);
     
-    // Hide all states
-    document.querySelectorAll('.state').forEach(state => {
-        state.style.display = 'none';
-        console.log(`🎨 [Onboarding] Hiding state:`, state.id);
-    });
+    // Hide auth check specifically
+    const authCheck = document.getElementById('auth-check');
+    if (authCheck) {
+        authCheck.style.display = 'none';
+        console.log(`🎨 [Onboarding] Hidden auth-check`);
+    }
     
     // Show target state
     const targetState = document.getElementById(stateName);
     if (targetState) {
         targetState.style.display = 'block';
         console.log(`🎨 [Onboarding] Showing state: ${stateName}`);
+        
+        // If showing onboarding-main, ensure step 1 is active
+        if (stateName === 'onboarding-main') {
+            initializeSteps();
+        }
     } else {
         console.error(`❌ [Onboarding] State element not found: ${stateName}`);
-        
-        // Fallback: Hide the auth-check manually and show the form
-        const authCheck = document.getElementById('auth-check');
-        const onboardingMain = document.querySelector('.onboarding-container, .onboarding-form, form');
-        
-        if (authCheck) {
-            authCheck.style.display = 'none';
-            console.log(`🎨 [Onboarding] Manually hid auth-check`);
-        }
-        
-        if (onboardingMain) {
-            onboardingMain.style.display = 'block';
-            console.log(`🎨 [Onboarding] Manually showed onboarding form`);
-        }
+    }
+}
+
+function initializeSteps() {
+    // Initialize step system
+    if (typeof step === 'undefined') {
+        window.step = 1;
+        console.log(`🎨 [Onboarding] Initialized step to: ${step}`);
+    }
+    
+    // Show first step
+    const firstStep = document.getElementById('step-1');
+    if (firstStep) {
+        firstStep.classList.add('active');
+        updateProgress();
+        console.log(`🎨 [Onboarding] Activated step 1`);
     }
 }
 
