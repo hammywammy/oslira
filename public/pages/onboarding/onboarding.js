@@ -111,71 +111,55 @@
     }
 
     async function checkAuth() {
-        try {
-            console.log('🔍 [Onboarding] Checking authentication...');
+    try {
+        console.log('🔍 [Onboarding] Checking authentication...');
+        
+        if (!auth) {
+            throw new Error('Auth manager not available');
+        }
+        
+        // FIXED: Trust SecurityGuard's access decision instead of re-checking
+        if (window.SecurityGuard?.isPageAccessAllowed() !== false) {
+            console.log('✅ [Onboarding] SecurityGuard already granted access, proceeding...');
             
-            if (!auth) {
-                throw new Error('Auth manager not available');
-            }
-            
-            // Wait for authentication to be ready
-            let retryCount = 0;
-            const maxRetries = 20; // 10 seconds max wait
-            
-            while (retryCount < maxRetries) {
-                if (auth.isAuthenticated()) {
-                    console.log('✅ [Onboarding] User is authenticated');
-                    break;
-                }
-                
-                console.log(`⏳ [Onboarding] Auth context loading... (${retryCount + 1}/${maxRetries})`);
-                await new Promise(resolve => setTimeout(resolve, 500));
-                retryCount++;
-            }
-            
-            // Final auth check
-            if (!auth.isAuthenticated()) {
-                console.log('❌ [Onboarding] No valid session found after retries');
-                showError('Please log in first.');
-                setTimeout(() => {
-                    window.location.href = '/auth';
-                }, 2000);
+            // Simple session check (same logic as SecurityGuard)
+            const session = auth.getCurrentSession();
+            if (!session) {
+                console.log('❌ [Onboarding] No session found, redirecting to auth');
+                setTimeout(() => window.location.href = '/auth', 1000);
                 return;
             }
             
-            // Get user data
+            // Try to get user, but don't fail if still loading
             user = auth.getCurrentUser();
-            
-            // Handle case where user data is still loading
             if (!user) {
-                console.log('⏳ [Onboarding] User data still loading, waiting...');
-                setTimeout(() => checkAuth(), 1000);
-                return;
+                console.log('⏳ [Onboarding] User data still loading, using session info...');
+                // Use session user as fallback
+                user = session.user || { email: 'Loading...', id: session.user.id };
             }
             
-            // Check if already completed onboarding
+            // Quick onboarding check
             if (user.onboarding_completed) {
                 console.log('✅ [Onboarding] User already onboarded, redirecting...');
-                showMessage('You have already completed onboarding.', 'info');
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 2000);
+                setTimeout(() => window.location.href = '/dashboard', 1000);
                 return;
             }
             
-            console.log('✅ [Onboarding] Authentication verified for:', user.email);
-            
-            // Show main onboarding flow
+            console.log('✅ [Onboarding] Access verified, showing onboarding form');
             showState('onboarding-main');
-            
-        } catch (error) {
-            console.error('❌ [Onboarding] Auth check failed:', error);
-            showError('Authentication check failed. Please try again.');
-            setTimeout(() => {
-                window.location.href = '/auth';
-            }, 3000);
+            return;
         }
+        
+        // Fallback: SecurityGuard didn't grant access
+        console.log('❌ [Onboarding] SecurityGuard denied access, redirecting');
+        setTimeout(() => window.location.href = '/auth', 1000);
+        
+    } catch (error) {
+        console.error('❌ [Onboarding] Auth check failed:', error);
+        showError('Authentication check failed. Please try again.');
+        setTimeout(() => window.location.href = '/auth', 3000);
     }
+}
 
     // =============================================================================
     // EVENT LISTENERS
