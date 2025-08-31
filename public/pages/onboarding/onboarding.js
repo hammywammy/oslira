@@ -53,12 +53,8 @@
         try {
             console.log('🚀 [Onboarding] Starting initialization...');
             
-            // SecurityGuard has already verified access - no auth checks needed
-            // Just wait for auth system to be available for user data
-            await waitForAuthSystem();
-            
-            // Load user data for the form
-            await loadUserData();
+            // SecurityGuard verified access - get session directly from Supabase
+            await loadSessionDirectly();
             
             // Show onboarding form immediately
             showOnboardingForm();
@@ -76,59 +72,82 @@
         }
     }
 
-    async function waitForAuthSystem() {
-        console.log('⏳ [Onboarding] Waiting for auth system...');
+    async function loadSessionDirectly() {
+        console.log('📊 [Onboarding] Loading session directly...');
         
-        let attempts = 0;
-        const maxAttempts = 100;
-        
-        while (attempts < maxAttempts) {
-            if (window.OsliraAuth?.initialize) {
-                console.log('🔐 [Onboarding] Auth system found, initializing...');
-                auth = await window.OsliraAuth.initialize();
-                return auth;
+        try {
+            // Wait for Supabase to be available
+            await waitForSupabase();
+            
+            // Get config
+            const config = window.OsliraConfig?.get();
+            if (!config) {
+                throw new Error('Configuration not available');
             }
             
+            // Create Supabase client directly
+            const supabaseClient = window.supabase.createClient(
+                config.SUPABASE_URL, 
+                config.SUPABASE_ANON_KEY
+            );
+            
+            // Get current session
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            
+            if (error) {
+                throw new Error(`Session error: ${error.message}`);
+            }
+            
+            if (!session) {
+                throw new Error('No session found');
+            }
+            
+            // Store session and user data
+            auth = { 
+                session, 
+                supabase: supabaseClient,
+                getCurrentSession: () => session,
+                getCurrentUser: () => session.user,
+                makeAuthenticatedRequest: async (url, options = {}) => {
+                    return fetch(url, {
+                        ...options,
+                        headers: {
+                            'Authorization': `Bearer ${session.access_token}`,
+                            'Content-Type': 'application/json',
+                            ...options.headers
+                        }
+                    });
+                }
+            };
+            
+            user = {
+                ...session.user,
+                email: session.user.email,
+                id: session.user.id,
+                onboarding_completed: false // Default assumption for onboarding page
+            };
+            
+            console.log('✅ [Onboarding] Session loaded for:', user.email);
+            
+        } catch (error) {
+            console.error('❌ [Onboarding] Failed to load session:', error);
+            throw error;
+        }
+    }
+
+    async function waitForSupabase() {
+        let attempts = 0;
+        const maxAttempts = 50;
+        
+        while (attempts < maxAttempts) {
+            if (window.supabase?.createClient) {
+                return true;
+            }
             await new Promise(resolve => setTimeout(resolve, 100));
             attempts++;
         }
         
-        throw new Error('Auth system not available after timeout');
-    }
-
-    async function loadUserData() {
-        try {
-            console.log('📊 [Onboarding] Loading user data...');
-            
-            if (!auth) {
-                throw new Error('Auth manager not available');
-            }
-            
-            const session = auth.getCurrentSession();
-            if (!session) {
-                throw new Error('No session available');
-            }
-            
-            user = auth.getCurrentUser() || session.user || { 
-                email: session.user?.email || 'Unknown', 
-                id: session.user?.id,
-                onboarding_completed: false 
-            };
-            
-            // Check if already onboarded (SecurityGuard should handle this, but safety check)
-            if (user.onboarding_completed) {
-                console.log('✅ [Onboarding] User already onboarded, redirecting...');
-                showMessage('You have already completed onboarding.', 'info');
-                setTimeout(() => window.location.href = '/dashboard', 2000);
-                return;
-            }
-            
-            console.log('✅ [Onboarding] User data loaded for:', user.email);
-            
-        } catch (error) {
-            console.error('❌ [Onboarding] Failed to load user data:', error);
-            throw error;
-        }
+        throw new Error('Supabase not available after timeout');
     }
 
     function showOnboardingForm() {
@@ -484,58 +503,6 @@
     // =============================================================================
     // UI HELPERS
     // =============================================================================
-
-    function showOnboardingForm() {
-        console.log('🎨 [Onboarding] Showing onboarding form...');
-        
-        // Hide auth check
-        const authCheck = document.getElementById('auth-check');
-        if (authCheck) {
-            authCheck.style.display = 'none';
-        }
-        
-        // Show main onboarding
-        const onboardingMain = document.getElementById('onboarding-main');
-        if (onboardingMain) {
-            onboardingMain.style.display = 'block';
-            
-            // Initialize step system
-            initializeSteps();
-            
-            console.log('✅ [Onboarding] Form displayed successfully');
-        } else {
-            throw new Error('onboarding-main element not found');
-        }
-    }
-
-    function initializeSteps() {
-        console.log('🎨 [Onboarding] Initializing step system...');
-        
-        // Ensure step is initialized
-        window.step = 1;
-        step = 1;
-        
-        // Hide all steps first
-        document.querySelectorAll('.step').forEach(stepEl => {
-            stepEl.classList.remove('active');
-        });
-        
-        // Activate first step
-        const firstStep = document.getElementById('step-1');
-        if (firstStep) {
-            firstStep.classList.add('active');
-            updateProgress();
-            console.log('✅ [Onboarding] Step 1 activated');
-            
-            // Focus first input
-            const firstField = firstStep.querySelector('input, select, textarea');
-            if (firstField) {
-                setTimeout(() => firstField.focus(), 100);
-            }
-        } else {
-            console.error('❌ [Onboarding] step-1 element not found');
-        }
-    }
 
     function showMessage(message, type = 'info') {
         if (window.OsliraApp?.showMessage) {
