@@ -1,5 +1,5 @@
 /* =============================================================================
-   ONBOARDING.JS - INTEGRATED WITH MODERN SYSTEM
+   ONBOARDING.JS - FIXED VERSION - INTEGRATED WITH MODERN SYSTEM
    Uses modern auth patterns and script-loader integration
    ============================================================================= */
 
@@ -20,7 +20,7 @@ if (typeof Sentry !== 'undefined') {
 // APPLICATION STATE
 // =============================================================================
 
-let authManager = null;
+let authManagerInstance = null; // FIXED: Renamed to avoid conflicts
 let currentUser = null;
 let currentStep = 1;
 let isLoading = false;
@@ -66,7 +66,7 @@ async function initializeApp() {
         // Wait for auth system
         await waitForAuthSystem();
         
-        // Check authentication
+        // Check authentication - FIXED LOGIC
         await checkAuthentication();
         
         // Setup event listeners
@@ -78,6 +78,13 @@ async function initializeApp() {
     } catch (error) {
         console.error('❌ [Onboarding] Initialization failed:', error);
         showError(`Initialization failed: ${error.message}`);
+        
+        // Enhanced error reporting
+        if (typeof Sentry !== 'undefined') {
+            Sentry.captureException(error, {
+                tags: { section: 'onboarding-init' }
+            });
+        }
     }
 }
 
@@ -90,8 +97,8 @@ async function waitForAuthSystem() {
     while (attempts < maxAttempts) {
         if (window.OsliraAuth?.initialize) {
             console.log('🔐 [Onboarding] Auth system found, initializing...');
-            authManager = await window.OsliraAuth.initialize();
-            return authManager;
+            authManagerInstance = await window.OsliraAuth.initialize(); // FIXED: Use renamed variable
+            return authManagerInstance;
         }
         
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -105,16 +112,29 @@ async function checkAuthentication() {
     try {
         console.log('🔍 [Onboarding] Checking authentication...');
         
-        if (!authManager) {
+        if (!authManagerInstance) {
             throw new Error('Auth manager not available');
         }
         
-        // Get current session and user
-        const session = authManager.getCurrentSession();
-        const user = authManager.getCurrentUser();
+        // FIXED: Use proper auth detection with retry logic
+        let retryCount = 0;
+        const maxRetries = 10; // 5 seconds max wait
         
-        if (!session || !user) {
-            console.log('❌ [Onboarding] No valid session found');
+        while (retryCount < maxRetries) {
+            // Check if authenticated using the reliable method
+            if (authManagerInstance.isAuthenticated()) {
+                console.log('✅ [Onboarding] User is authenticated');
+                break;
+            }
+            
+            console.log(`⏳ [Onboarding] Auth context loading... (${retryCount + 1}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            retryCount++;
+        }
+        
+        // Final auth check
+        if (!authManagerInstance.isAuthenticated()) {
+            console.log('❌ [Onboarding] No valid session found after retries');
             showError('Please log in first.');
             setTimeout(() => {
                 window.location.href = '/auth';
@@ -122,18 +142,27 @@ async function checkAuthentication() {
             return;
         }
         
+        // Get user after confirming authentication
+        currentUser = authManagerInstance.getCurrentUser();
+        
+        // FIXED: Handle case where user data is still loading
+        if (!currentUser) {
+            console.log('⏳ [Onboarding] User data still loading, waiting...');
+            setTimeout(() => checkAuthentication(), 1000);
+            return;
+        }
+        
         // Check if already completed onboarding
-        if (user.onboarding_completed) {
+        if (currentUser.onboarding_completed) {
             console.log('✅ [Onboarding] User already onboarded, redirecting...');
-            showError('You have already completed onboarding.');
+            showMessage('You have already completed onboarding.', 'info');
             setTimeout(() => {
                 window.location.href = '/dashboard';
             }, 2000);
             return;
         }
         
-        currentUser = user;
-        console.log('✅ [Onboarding] Authentication verified for:', user.email);
+        console.log('✅ [Onboarding] Authentication verified for:', currentUser.email);
         
         // Show main onboarding flow
         showState('onboarding-main');
@@ -175,9 +204,9 @@ function setupEventListeners() {
     // Keyboard shortcuts
     document.addEventListener('keydown', handleKeyPress);
     
-    // Auth state changes
-    if (authManager?.supabase) {
-        authManager.supabase.auth.onAuthStateChange((event, session) => {
+    // Auth state changes - FIXED: Use proper instance
+    if (authManagerInstance?.supabase) {
+        authManagerInstance.supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT') {
                 window.location.href = '/auth';
             }
@@ -218,10 +247,11 @@ function nextStep() {
         // Update progress
         updateProgress();
         
-        // Focus first input in new step
-        focusFirstInput();
-        
-        console.log(`📈 [Onboarding] Advanced to step ${currentStep}`);
+        // Focus first field in new step
+        const firstField = document.querySelector(`#step-${currentStep} input, #step-${currentStep} select, #step-${currentStep} textarea`);
+        if (firstField) {
+            firstField.focus();
+        }
     }
 }
 
@@ -236,53 +266,44 @@ function prevStep() {
         
         // Update progress
         updateProgress();
-        
-        // Focus first input in previous step
-        focusFirstInput();
-        
-        console.log(`📉 [Onboarding] Returned to step ${currentStep}`);
     }
 }
 
 function updateProgress() {
-    const progressFill = document.getElementById('progress-fill');
-    const progressText = document.getElementById('progress-text');
+    const progressBar = document.querySelector('.progress-bar');
+    const progressText = document.querySelector('.progress-text');
     
-    if (progressFill) {
-        const percentage = (currentStep / 5) * 100;
-        progressFill.style.width = `${percentage}%`;
-    }
-    
-    if (progressText) {
+    if (progressBar && progressText) {
+        const progress = ((currentStep - 1) / 4) * 100;
+        progressBar.style.width = `${progress}%`;
         progressText.textContent = `Step ${currentStep} of 5`;
     }
 }
 
-function focusFirstInput() {
-    setTimeout(() => {
-        const activeStep = document.querySelector('.step.active');
-        if (activeStep) {
-            const firstInput = activeStep.querySelector('input, select, textarea');
-            if (firstInput) {
-                firstInput.focus();
-            }
-        }
-    }, 100);
-}
-
 // =============================================================================
-// FORM VALIDATION
+// VALIDATION
 // =============================================================================
 
 function validateCurrentStep() {
     const stepElement = document.getElementById(`step-${currentStep}`);
-    if (!stepElement) return false;
+    const fields = stepElement.querySelectorAll('input[required], select[required], textarea[required]');
     
-    const fields = stepElement.querySelectorAll('input, select, textarea');
     let isValid = true;
     
     fields.forEach(field => {
         if (!validateField(field.id)) {
+            isValid = false;
+        }
+    });
+    
+    return isValid;
+}
+
+function validateAllFields() {
+    let isValid = true;
+    
+    Object.keys(validationRules).forEach(fieldId => {
+        if (!validateField(fieldId)) {
             isValid = false;
         }
     });
@@ -296,9 +317,9 @@ function validateField(fieldId) {
     
     if (!field || !rules) return true;
     
-    const value = field.value.trim();
     let isValid = true;
     let errorMessage = '';
+    const value = field.value.trim();
     
     // Required validation
     if (rules.required && !value) {
@@ -377,253 +398,169 @@ async function handleFormSubmit(event) {
             return;
         }
         
-        if (!currentUser || !authManager) {
+        // FIXED: Use proper auth check
+        if (!currentUser || !authManagerInstance?.isAuthenticated()) {
             throw new Error('Authentication required');
         }
         
-        setLoadingState(true);
+        setLoading(true);
         
         // Collect form data
         const formData = collectFormData();
-        console.log('📋 [Onboarding] Form data collected:', formData);
+        console.log('📋 [Onboarding] Submitting form data:', formData);
         
-        // Submit to database
-        await submitToDatabase(formData);
+        // Submit to API
+        const response = await submitOnboardingData(formData);
         
-        // Show success and redirect
-        showSuccess();
+        if (response.success) {
+            console.log('✅ [Onboarding] Submission successful');
+            showMessage('Onboarding completed successfully!', 'success');
+            
+            // Redirect to dashboard after success
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 2000);
+        } else {
+            throw new Error(response.error || 'Submission failed');
+        }
         
     } catch (error) {
-        console.error('❌ [Onboarding] Form submission failed:', error);
-        showMessage(`Setup failed: ${error.message}`, 'error');
-        setLoadingState(false);
-    }
-}
-
-function validateAllFields() {
-    let isValid = true;
-    
-    Object.keys(validationRules).forEach(fieldId => {
-        if (!validateField(fieldId)) {
-            isValid = false;
+        console.error('❌ [Onboarding] Submission failed:', error);
+        showMessage(error.message, 'error');
+        
+        if (typeof Sentry !== 'undefined') {
+            Sentry.captureException(error, {
+                tags: { section: 'onboarding-submit' },
+                extra: { userId: currentUser?.id }
+            });
         }
-    });
-    
-    return isValid;
+    } finally {
+        setLoading(false);
+    }
 }
 
 function collectFormData() {
+    const formData = {};
+    
+    Object.keys(validationRules).forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            formData[fieldId] = field.value.trim();
+        }
+    });
+    
     return {
-        business_name: document.getElementById('business-name').value.trim(),
-        business_niche: document.getElementById('business-niche').value,
-        target_audience: document.getElementById('target-audience').value.trim(),
-        target_problems: document.getElementById('target-problems').value.trim(),
-        value_proposition: document.getElementById('value-proposition').value.trim(),
-        success_outcome: document.getElementById('success-outcome').value,
-        communication_style: document.getElementById('communication-style').value,
-        call_to_action: document.getElementById('call-to-action').value,
-        message_example: document.getElementById('message-example').value.trim()
+        ...formData,
+        userId: currentUser.id,
+        userEmail: currentUser.email
     };
 }
 
-async function submitToDatabase(formData) {
-    try {
-        console.log('💾 [Onboarding] Submitting to database...');
-        
-        const supabase = authManager.getSupabaseClient();
-        if (!supabase) {
-            throw new Error('Database connection not available');
-        }
-        
-        // Update user record - mark onboarding as complete
-        const userUpdate = {
-            id: currentUser.id,
-            email: currentUser.email,
-            credits: 5, // Give initial credits
-            subscription_plan: 'free',
-            subscription_status: 'active',
-            onboarding_completed: true,
-            updated_at: new Date().toISOString()
-        };
-        
-        const { error: userError } = await supabase
-            .from('users')
-            .upsert(userUpdate, { onConflict: 'id' });
-        
-        if (userError) {
-            throw new Error(`User update failed: ${userError.message}`);
-        }
-        
-        // Create business profile
-        const profileData = {
-            user_id: currentUser.id,
-            business_name: formData.business_name,
-            business_niche: formData.business_niche,
-            target_audience: formData.target_audience,
-            target_problems: formData.target_problems,
-            value_proposition: formData.value_proposition,
-            communication_style: formData.communication_style,
-            message_example: formData.message_example,
-            success_outcome: formData.success_outcome,
-            call_to_action: formData.call_to_action,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-        
-        const { error: profileError } = await supabase
-            .from('business_profiles')
-            .insert(profileData);
-        
-        if (profileError) {
-            throw new Error(`Profile creation failed: ${profileError.message}`);
-        }
-        
-        console.log('✅ [Onboarding] Data saved successfully');
-        
-    } catch (error) {
-        console.error('❌ [Onboarding] Database submission failed:', error);
-        throw error;
+async function submitOnboardingData(formData) {
+    const config = window.OsliraConfig?.get();
+    if (!config) {
+        throw new Error('Configuration not available');
     }
-}
-
-// =============================================================================
-// UI STATE MANAGEMENT
-// =============================================================================
-
-function setLoadingState(loading) {
-    isLoading = loading;
-    const submitBtn = document.querySelector('button[type="submit"]');
     
-    if (submitBtn) {
-        submitBtn.disabled = loading;
-        if (loading) {
-            submitBtn.classList.add('loading');
-        } else {
-            submitBtn.classList.remove('loading');
+    const response = await authManagerInstance.makeAuthenticatedRequest(
+        `${config.WORKER_URL}/onboarding/submit`,
+        {
+            method: 'POST',
+            body: JSON.stringify(formData)
         }
+    );
+    
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
+    
+    return await response.json();
 }
 
-function showState(stateId) {
-    const states = ['auth-check', 'onboarding-main', 'error-state', 'loading-state'];
-    states.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.style.display = id === stateId ? 'block' : 'none';
-        }
+// =============================================================================
+// UI HELPERS
+// =============================================================================
+
+function showState(stateName) {
+    // Hide all states
+    document.querySelectorAll('.state').forEach(state => {
+        state.style.display = 'none';
     });
+    
+    // Show target state
+    const targetState = document.getElementById(stateName);
+    if (targetState) {
+        targetState.style.display = 'block';
+    }
 }
 
-function showSuccess() {
-    // Hide form
-    const form = document.getElementById('onboarding-form');
-    if (form) form.style.display = 'none';
+function showMessage(message, type = 'info') {
+    // Use alert system if available
+    if (window.OsliraApp?.showMessage) {
+        window.OsliraApp.showMessage(message, type);
+        return;
+    }
     
-    // Show success state
-    const successState = document.getElementById('success-state');
-    if (successState) {
-        successState.style.display = 'block';
-        
-        // Redirect after delay
-        setTimeout(() => {
-            console.log('🎉 [Onboarding] Redirecting to dashboard...');
-            window.location.href = '/dashboard';
-        }, 3000);
+    // Fallback to console and basic alert
+    console.log(`${type.toUpperCase()}: ${message}`);
+    if (type === 'error') {
+        alert(`Error: ${message}`);
     }
 }
 
 function showError(message) {
-    const errorState = document.getElementById('error-state');
-    const errorMessage = document.getElementById('error-message');
-    
-    if (errorMessage) {
-        errorMessage.textContent = message;
-    }
-    
-    if (errorState) {
-        showState('error-state');
-    }
+    showMessage(message, 'error');
 }
 
-function showMessage(text, type = 'info') {
-    const message = document.createElement('div');
-    message.className = 'toast-message';
-    message.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--error)' : 'var(--primary-blue)'};
-        color: white;
-        padding: 16px 24px;
-        border-radius: 8px;
-        box-shadow: var(--shadow-large);
-        z-index: 10000;
-        opacity: 0;
-        transform: translateX(100%);
-        transition: all 0.3s ease;
-    `;
+function setLoading(loading) {
+    isLoading = loading;
+    const submitButton = document.querySelector('button[type="submit"]');
     
-    message.textContent = text;
-    document.body.appendChild(message);
-
-    setTimeout(() => {
-        message.style.opacity = '1';
-        message.style.transform = 'translateX(0)';
-    }, 100);
-
-    setTimeout(() => {
-        message.style.opacity = '0';
-        message.style.transform = 'translateX(100%)';
-        setTimeout(() => message.remove(), 300);
-    }, 5000);
+    if (submitButton) {
+        submitButton.disabled = loading;
+        submitButton.textContent = loading ? 'Submitting...' : 'Complete Onboarding';
+    }
+    
+    // Update loading state in UI
+    document.body.classList.toggle('loading', loading);
 }
 
 // =============================================================================
-// KEYBOARD HANDLING
+// KEYBOARD & ACCESSIBILITY
 // =============================================================================
 
 function handleKeyPress(event) {
+    // Enter key advances to next step (if not in textarea)
     if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
         event.preventDefault();
-        if (currentStep < 5) {
-            nextStep();
-        } else {
-            const form = document.getElementById('onboarding-form');
-            if (form) {
-                form.dispatchEvent(new Event('submit'));
-            }
-        }
+        nextStep();
     }
     
-    // Escape key to go back
-    if (event.key === 'Escape' && currentStep > 1) {
+    // Escape key goes back
+    if (event.key === 'Escape') {
         prevStep();
     }
 }
 
 // =============================================================================
-// GLOBAL FUNCTION EXPORTS
+// ERROR HANDLING & DEBUG
 // =============================================================================
 
-// Export functions for HTML onclick handlers
-window.nextStep = nextStep;
-window.prevStep = prevStep;
-
-// =============================================================================
-// ERROR HANDLING
-// =============================================================================
-
-window.addEventListener('error', function(event) {
+window.addEventListener('error', (event) => {
     console.error('❌ [Onboarding] JavaScript error:', event.error);
-    if (!isInitialized) {
-        showError('Application failed to load properly. Please refresh the page.');
+    
+    if (typeof Sentry !== 'undefined') {
+        Sentry.captureException(event.error);
     }
 });
 
-window.addEventListener('unhandledrejection', function(event) {
+window.addEventListener('unhandledrejection', (event) => {
     console.error('❌ [Onboarding] Unhandled promise rejection:', event.reason);
-    event.preventDefault();
+    
+    if (typeof Sentry !== 'undefined') {
+        Sentry.captureException(event.reason);
+    }
 });
 
 console.log('📝 [Onboarding] Module loaded successfully');
