@@ -50,15 +50,6 @@ class SecurityGuard {
         this.csrfToken = null;
         this.refreshTokenTimer = null;
         
-        // Page classification system
-        this.pageTypes = {
-            PUBLIC: ['home', 'pricing', 'privacy', 'terms', 'disclaimer', 'refund', 'security'],
-            AUTH_ONLY: ['auth', 'auth-callback'], 
-            AUTH_REQUIRED: ['dashboard', 'settings', 'analytics', 'leads', 'messages'],
-            ONBOARDING_REQUIRED: ['onboarding'],
-            ADMIN_REQUIRED: ['admin']
-        };
-        
         // Role definitions (expandable)
         this.roles = {
             OWNER: 'owner',
@@ -69,52 +60,55 @@ class SecurityGuard {
     }
     
     async setup() {
-        if (this.initialized) return;
-        
-        console.log('🛡️ [SecurityGuard] Initializing universal security controller...');
-        
-        // IMMEDIATE: Block page rendering until auth verified
+    if (this.initialized) return;
+    
+    console.log('🛡️ [SecurityGuard] Initializing universal security controller...');
+    
+    // USE CENTRALIZED DETECTION - No more local detection
+    this.environment = window.OsliraEnv.ENV;
+    this.currentPage = window.OsliraEnv.CURRENT_PAGE;
+    this.pageClassification = window.OsliraEnv.PAGE_TYPE;
+    
+    console.log('🛡️ [SecurityGuard] Context:', {
+        environment: this.environment,
+        page: this.currentPage,
+        classification: this.pageClassification
+    });
+    
+    // CRITICAL FIX: Only block rendering for protected pages
+    if (window.OsliraEnv.requiresAuth() || window.OsliraEnv.requiresAdmin()) {
+        console.log('🛡️ [SecurityGuard] Blocking page rendering for protected page');
         this.blockPageRendering();
-        
-        // Detect current environment and page
-        this.environment = this.detectEnvironment();
-        this.currentPage = this.detectCurrentPage();
-        this.pageClassification = this.classifyPage();
-        
-        console.log('🛡️ [SecurityGuard] Context:', {
-            environment: this.environment,
-            page: this.currentPage,
-            classification: this.pageClassification
-        });
-        
-        // Wait for auth manager to be available
+    } else {
+        console.log('🛡️ [SecurityGuard] Allowing immediate rendering for public/auth pages');
+    }
+    
+    // Rest of setup method stays the same...
+    if (!window.OsliraEnv.isPublicPage()) {
         await this.waitForAuthManager();
-        
-        // Generate CSRF token
-        this.generateCSRFToken();
-        
-        // Setup security event listeners (instance-level)
-        this.setupSecurityEventListeners();
-        
-        // CRITICAL FIX: Replay any early auth events that occurred before initialization
-        await this.replayEarlyAuthEvents();
-        
-        // Enforce page access rules (SINGLE SOURCE OF TRUTH)
-        const accessGranted = await this.enforcePageAccess();
-        
-        if (accessGranted) {
-            // Setup security features
+    }
+    
+    this.generateCSRFToken();
+    this.setupSecurityEventListeners();
+    await this.replayEarlyAuthEvents();
+    
+    const accessGranted = await this.enforcePageAccess();
+    
+    if (accessGranted) {
+        if (!window.OsliraEnv.isPublicPage()) {
             await this.setupTokenSecurity();
-            this.setupCSRFProtection();
-            
-            // Release page for rendering
+        }
+        this.setupCSRFProtection();
+        
+        if (window.OsliraEnv.requiresAuth() || window.OsliraEnv.requiresAdmin()) {
             this.allowPageRendering();
-            
-            console.log('✅ [SecurityGuard] Universal security initialized - page access granted');
         }
         
-        this.initialized = true;
+        console.log('✅ [SecurityGuard] Universal security initialized - page access granted');
     }
+    
+    this.initialized = true;
+}
     
     // CRITICAL FIX: Replay early auth events
     async replayEarlyAuthEvents() {
@@ -562,57 +556,6 @@ class SecurityGuard {
         return 'production';
     }
     
-    detectCurrentPage() {
-        const pathname = window.location.pathname;
-        console.log('🔍 [ScriptLoader] Detecting page for pathname:', pathname);
-        
-        const pathMap = {
-            '/': 'home',
-            '/index.html': 'home',
-            '/pages/home/index.html': 'home',
-            '/auth': 'auth',
-            '/auth.html': 'auth', 
-            '/pages/auth/index.html': 'auth',
-            '/auth/callback': 'auth-callback',
-            '/auth/callback.html': 'auth-callback',
-            '/pages/auth/callback.html': 'auth-callback',
-            '/dashboard': 'dashboard',
-            '/dashboard.html': 'dashboard',
-            '/pages/dashboard/index.html': 'dashboard',
-            '/onboarding': 'onboarding',
-            '/onboarding.html': 'onboarding',
-            '/pages/onboarding/index.html': 'onboarding',
-            '/admin': 'admin',
-            '/admin.html': 'admin',
-            '/pages/admin/index.html': 'admin'
-        };
-        
-        // Exact match first
-        if (pathMap[pathname]) {
-            console.log('🔍 [ScriptLoader] Exact match found:', pathMap[pathname]);
-            return pathMap[pathname];
-        }
-        
-        // Partial match
-        for (const [path, page] of Object.entries(pathMap)) {
-            if (pathname.includes(path) && path !== '/') {
-                console.log('🔍 [ScriptLoader] Partial match found:', page);
-                return page;
-            }
-        }
-        
-        console.log('🔍 [ScriptLoader] No match found, defaulting to unknown');
-        return 'unknown';
-    }
-    
-    classifyPage() {
-        for (const [classification, pages] of Object.entries(this.pageTypes)) {
-            if (pages.includes(this.currentPage)) {
-                return classification;
-            }
-        }
-        return 'PUBLIC'; // Default to public for unknown pages
-    }
     
     async waitForAuthManager() {
         let attempts = 0;
