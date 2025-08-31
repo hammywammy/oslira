@@ -1,49 +1,39 @@
-/* =============================================================================
-   ONBOARDING.JS - CLEAN VERSION - NO CONFLICTS
-   ============================================================================= */
+/**
+ * ONBOARDING PAGE CONTROLLER
+ * SecurityGuard-compliant implementation
+ * Handles only onboarding-specific functionality
+ */
 
-// IIFE to avoid global conflicts
 (function() {
     'use strict';
     
-    // Initialize Sentry if available
-    if (typeof Sentry !== 'undefined') {
-        Sentry.init({
-            environment: 'production',
-            beforeSend(event) {
-                if (event.exception?.values?.[0]?.value?.includes('NetworkError')) {
-                    return null;
-                }
-                return event;
-            }
-        });
-    }
-
     // =============================================================================
-    // APPLICATION STATE - SCOPED TO AVOID CONFLICTS
+    // STATE VARIABLES
     // =============================================================================
-
+    
+    let initialized = false;
     let auth = null;
     let user = null;
-    let step = 1;
     let loading = false;
-    let initialized = false;
-
-    // Form validation rules
+    let step = 1; // Initialize step counter
+    
+    // Validation rules
     const rules = {
-        'business-name': { required: true, minLength: 2, maxLength: 100 },
+        'business-name': { required: true, minLength: 2 },
         'business-niche': { required: true },
-        'target-audience': { required: true, minLength: 10, maxLength: 500 },
-        'target-problems': { required: true, minLength: 10, maxLength: 400 },
-        'value-proposition': { required: true, minLength: 10, maxLength: 500 },
+        'target-audience': { required: true, minLength: 20 },
+        'target-problems': { required: true, minLength: 10 },
+        'value-proposition': { required: true, minLength: 20 },
+        'key-results': { required: true, minLength: 10 },
         'success-outcome': { required: true },
-        'communication-style': { required: true },
-        'call-to-action': { required: true },
-        'message-example': { required: true, minLength: 20, maxLength: 800 }
+        'communication-tone': { required: true },
+        'communication-length': { required: true },
+        'preferred-cta': { required: true },
+        'message-example': { required: true, minLength: 50 }
     };
 
     // =============================================================================
-    // INITIALIZATION
+    // INITIALIZATION - SECURITYGUARD COMPLIANT
     // =============================================================================
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -63,14 +53,15 @@
         try {
             console.log('🚀 [Onboarding] Starting initialization...');
             
-            // Show auth check state
-            showState('auth-check');
+            // SecurityGuard has already verified access - no auth checks needed
+            // Just wait for auth system to be available for user data
+            await waitForAuthSystem();
             
-            // Wait for auth system
-            await waitForAuth();
+            // Load user data for the form
+            await loadUserData();
             
-            // Check authentication
-            await checkAuth();
+            // Show onboarding form immediately
+            showOnboardingForm();
             
             // Setup event listeners
             setupEvents();
@@ -80,17 +71,12 @@
             
         } catch (error) {
             console.error('❌ [Onboarding] Initialization failed:', error);
-            showError(`Initialization failed: ${error.message}`);
-            
-            if (typeof Sentry !== 'undefined') {
-                Sentry.captureException(error, {
-                    tags: { section: 'onboarding-init' }
-                });
-            }
+            showError(`Setup failed: ${error.message}`);
+            setTimeout(() => window.location.href = '/auth', 2000);
         }
     }
 
-    async function waitForAuth() {
+    async function waitForAuthSystem() {
         console.log('⏳ [Onboarding] Waiting for auth system...');
         
         let attempts = 0;
@@ -110,100 +96,85 @@
         throw new Error('Auth system not available after timeout');
     }
 
-   async function checkAuth() {
-    try {
-        console.log('🔍 [Onboarding] Checking authentication...');
-        
-        if (!auth) {
-            throw new Error('Auth manager not available');
-        }
-        
-        // SIMPLIFIED: SecurityGuard already granted access, just verify session exists
-        const session = auth.getCurrentSession();
-        if (!session) {
-            console.log('❌ [Onboarding] No session found, redirecting to auth');
-            showError('Please log in first.');
-            setTimeout(() => window.location.href = '/auth', 2000);
-            return;
-        }
-        
-        console.log('✅ [Onboarding] Session found, proceeding...');
-        
-        // Try to get user data, use session fallback if needed
-        user = auth.getCurrentUser() || session.user || { 
-            email: session.user?.email || 'Loading...', 
-            id: session.user?.id,
-            onboarding_completed: false 
-        };
-        
-        // Quick onboarding completion check
-        if (user.onboarding_completed) {
-            console.log('✅ [Onboarding] User already onboarded, redirecting...');
-            showMessage('You have already completed onboarding.', 'info');
-            setTimeout(() => window.location.href = '/dashboard', 2000);
-            return;
-        }
-        
-        console.log('✅ [Onboarding] Access verified for:', user.email);
-        showState('onboarding-main');
-        
-    } catch (error) {
-        console.error('❌ [Onboarding] Auth check failed:', error);
-        showError('Authentication check failed. Please try again.');
-        setTimeout(() => window.location.href = '/auth', 3000);
-    }
-}
-
-    // =============================================================================
-    // EVENT LISTENERS
-    // =============================================================================
-
-    function setupEvents() {
-        console.log('🎧 [Onboarding] Setting up event listeners...');
-        
-        // Form submission
-        const form = document.getElementById('onboarding-form');
-        if (form) {
-            form.addEventListener('submit', handleSubmit);
-        }
-        
-        // Field validation
-        Object.keys(rules).forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.addEventListener('blur', () => validateField(fieldId));
-                field.addEventListener('input', () => clearError(fieldId));
+    async function loadUserData() {
+        try {
+            console.log('📊 [Onboarding] Loading user data...');
+            
+            if (!auth) {
+                throw new Error('Auth manager not available');
             }
-        });
-        
-        // Progress tracking
-        setupProgress();
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', handleKeys);
-        
-        // Auth state changes
-        if (auth?.supabase) {
-            auth.supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_OUT') {
-                    window.location.href = '/auth';
-                }
-            });
+            
+            const session = auth.getCurrentSession();
+            if (!session) {
+                throw new Error('No session available');
+            }
+            
+            user = auth.getCurrentUser() || session.user || { 
+                email: session.user?.email || 'Unknown', 
+                id: session.user?.id,
+                onboarding_completed: false 
+            };
+            
+            // Check if already onboarded (SecurityGuard should handle this, but safety check)
+            if (user.onboarding_completed) {
+                console.log('✅ [Onboarding] User already onboarded, redirecting...');
+                showMessage('You have already completed onboarding.', 'info');
+                setTimeout(() => window.location.href = '/dashboard', 2000);
+                return;
+            }
+            
+            console.log('✅ [Onboarding] User data loaded for:', user.email);
+            
+        } catch (error) {
+            console.error('❌ [Onboarding] Failed to load user data:', error);
+            throw error;
         }
     }
 
-    function setupProgress() {
-        const observer = new MutationObserver(() => {
-            updateProgress();
-        });
+    function showOnboardingForm() {
+        console.log('🎨 [Onboarding] Showing onboarding form...');
         
-        const steps = document.querySelectorAll('.step');
-        steps.forEach(stepEl => {
-            observer.observe(stepEl, { 
-                attributes: true, 
-                attributeFilter: ['class'] 
-            });
-        });
+        // Hide auth check
+        const authCheck = document.getElementById('auth-check');
+        if (authCheck) {
+            authCheck.style.display = 'none';
+            console.log('🎨 [Onboarding] Hidden auth-check');
+        }
+        
+        // Show main onboarding
+        const onboardingMain = document.getElementById('onboarding-main');
+        if (onboardingMain) {
+            onboardingMain.style.display = 'block';
+            console.log('🎨 [Onboarding] Showing onboarding-main');
+            
+            // Initialize step system
+            initializeSteps();
+        } else {
+            console.error('❌ [Onboarding] onboarding-main element not found');
+        }
+    }
+
+    function initializeSteps() {
+        console.log('🎨 [Onboarding] Initializing step system...');
+        
+        // Ensure step is initialized
+        window.step = 1;
+        
+        // Activate first step
+        const firstStep = document.getElementById('step-1');
+        if (firstStep) {
+            firstStep.classList.add('active');
+            updateProgress();
+            console.log('🎨 [Onboarding] Activated step 1');
+            
+            // Focus first input
+            const firstField = firstStep.querySelector('input, select, textarea');
+            if (firstField) {
+                setTimeout(() => firstField.focus(), 100);
+            }
+        } else {
+            console.error('❌ [Onboarding] step-1 element not found');
+        }
     }
 
     // =============================================================================
@@ -211,38 +182,73 @@
     // =============================================================================
 
     function nextStep() {
-        if (!validateCurrentStep()) return;
+        console.log(`📍 [Onboarding] Next step requested from step ${step}`);
+        
+        if (!validateCurrentStep()) {
+            console.log('❌ [Onboarding] Validation failed, staying on current step');
+            return;
+        }
         
         if (step < 5) {
-            document.getElementById(`step-${step}`).classList.remove('active');
-            step++;
-            document.getElementById(`step-${step}`).classList.add('active');
-            updateProgress();
+            // Hide current step
+            const currentStep = document.getElementById(`step-${step}`);
+            if (currentStep) {
+                currentStep.classList.remove('active');
+                console.log(`🎨 [Onboarding] Deactivated step ${step}`);
+            }
             
-            const firstField = document.querySelector(`#step-${step} input, #step-${step} select, #step-${step} textarea`);
-            if (firstField) {
-                firstField.focus();
+            // Move to next step
+            step++;
+            
+            // Show next step
+            const nextStepEl = document.getElementById(`step-${step}`);
+            if (nextStepEl) {
+                nextStepEl.classList.add('active');
+                updateProgress();
+                console.log(`🎨 [Onboarding] Activated step ${step}`);
+                
+                // Focus first field in new step
+                const firstField = nextStepEl.querySelector('input, select, textarea');
+                if (firstField) {
+                    setTimeout(() => firstField.focus(), 100);
+                }
             }
         }
     }
 
     function prevStep() {
+        console.log(`📍 [Onboarding] Previous step requested from step ${step}`);
+        
         if (step > 1) {
-            document.getElementById(`step-${step}`).classList.remove('active');
+            // Hide current step
+            const currentStep = document.getElementById(`step-${step}`);
+            if (currentStep) {
+                currentStep.classList.remove('active');
+                console.log(`🎨 [Onboarding] Deactivated step ${step}`);
+            }
+            
+            // Move to previous step
             step--;
-            document.getElementById(`step-${step}`).classList.add('active');
-            updateProgress();
+            
+            // Show previous step
+            const prevStepEl = document.getElementById(`step-${step}`);
+            if (prevStepEl) {
+                prevStepEl.classList.add('active');
+                updateProgress();
+                console.log(`🎨 [Onboarding] Activated step ${step}`);
+            }
         }
     }
 
     function updateProgress() {
-        const progressBar = document.querySelector('.progress-bar');
-        const progressText = document.querySelector('.progress-text');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
         
-        if (progressBar && progressText) {
+        if (progressFill && progressText) {
             const progress = ((step - 1) / 4) * 100;
-            progressBar.style.width = `${progress}%`;
+            progressFill.style.width = `${progress}%`;
             progressText.textContent = `Step ${step} of 5`;
+            console.log(`📊 [Onboarding] Progress updated: ${progress}%`);
         }
     }
 
@@ -252,8 +258,12 @@
 
     function validateCurrentStep() {
         const stepElement = document.getElementById(`step-${step}`);
-        const fields = stepElement.querySelectorAll('input[required], select[required], textarea[required]');
+        if (!stepElement) {
+            console.error(`❌ [Onboarding] Step element not found: step-${step}`);
+            return false;
+        }
         
+        const fields = stepElement.querySelectorAll('input[required], select[required], textarea[required]');
         let valid = true;
         
         fields.forEach(field => {
@@ -262,86 +272,59 @@
             }
         });
         
-        return valid;
-    }
-
-    function validateAllFields() {
-        let valid = true;
-        
-        Object.keys(rules).forEach(fieldId => {
-            if (!validateField(fieldId)) {
-                valid = false;
-            }
-        });
-        
+        console.log(`✅ [Onboarding] Step ${step} validation: ${valid ? 'passed' : 'failed'}`);
         return valid;
     }
 
     function validateField(fieldId) {
         const field = document.getElementById(fieldId);
-        const fieldRules = rules[fieldId];
+        const rule = rules[fieldId];
         
-        if (!field || !fieldRules) return true;
+        if (!field || !rule) return true;
         
+        const value = field.value.trim();
         let valid = true;
         let errorMessage = '';
-        const value = field.value.trim();
         
-        // Required validation
-        if (fieldRules.required && !value) {
+        // Required check
+        if (rule.required && !value) {
             valid = false;
             errorMessage = 'This field is required';
         }
         
-        // Length validation
-        if (value && fieldRules.minLength && value.length < fieldRules.minLength) {
+        // Length check
+        if (valid && rule.minLength && value.length < rule.minLength) {
             valid = false;
-            errorMessage = `Minimum ${fieldRules.minLength} characters required`;
+            errorMessage = `Please enter at least ${rule.minLength} characters`;
         }
         
-        if (value && fieldRules.maxLength && value.length > fieldRules.maxLength) {
+        // Pattern check
+        if (valid && rule.pattern && !rule.pattern.test(value)) {
             valid = false;
-            errorMessage = `Maximum ${fieldRules.maxLength} characters allowed`;
+            errorMessage = rule.message || 'Invalid format';
         }
         
-        // Update field appearance
-        if (!valid) {
-            showFieldError(fieldId, errorMessage);
-        } else {
-            clearError(fieldId);
+        // Show/hide error
+        const errorElement = document.getElementById(`${fieldId}-error`);
+        if (errorElement) {
+            errorElement.textContent = errorMessage;
+            errorElement.style.display = valid ? 'none' : 'block';
         }
+        
+        // Update field styling
+        field.classList.toggle('error', !valid);
         
         return valid;
     }
 
-    function showFieldError(fieldId, message) {
-        const field = document.getElementById(fieldId);
-        const formGroup = field.closest('.form-group');
-        
-        field.classList.add('error');
-        formGroup.classList.add('error');
-        
-        const existingError = formGroup.querySelector('.error-message');
-        if (existingError) {
-            existingError.remove();
-        }
-        
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.textContent = message;
-        formGroup.appendChild(errorDiv);
-    }
-
     function clearError(fieldId) {
         const field = document.getElementById(fieldId);
-        const formGroup = field.closest('.form-group');
+        const errorElement = document.getElementById(`${fieldId}-error`);
         
-        field.classList.remove('error');
-        formGroup.classList.remove('error');
-        
-        const errorMessage = formGroup.querySelector('.error-message');
-        if (errorMessage) {
-            errorMessage.remove();
+        if (field) field.classList.remove('error');
+        if (errorElement) {
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
         }
     }
 
@@ -354,26 +337,33 @@
         
         if (loading) return;
         
+        console.log('📤 [Onboarding] Form submission started...');
+        
         try {
-            if (!validateAllFields()) {
-                showMessage('Please fix the errors before submitting', 'error');
-                return;
-            }
-            
-            if (!user || !auth?.isAuthenticated()) {
-                throw new Error('Authentication required');
-            }
-            
             setLoading(true);
             
-            const formData = collectData();
-            console.log('📋 [Onboarding] Submitting form data:', formData);
+            // Validate all fields
+            let allValid = true;
+            Object.keys(rules).forEach(fieldId => {
+                if (!validateField(fieldId)) {
+                    allValid = false;
+                }
+            });
             
+            if (!allValid) {
+                throw new Error('Please fix the errors above before continuing');
+            }
+            
+            // Collect form data
+            const formData = collectData();
+            console.log('📊 [Onboarding] Form data collected');
+            
+            // Submit to backend
             const response = await submitData(formData);
             
             if (response.success) {
                 console.log('✅ [Onboarding] Submission successful');
-                showMessage('Onboarding completed successfully!', 'success');
+                showMessage('Profile setup complete! Redirecting to dashboard...', 'success');
                 
                 setTimeout(() => {
                     window.location.href = '/dashboard';
@@ -437,49 +427,115 @@
     }
 
     // =============================================================================
+    // EVENT LISTENERS
+    // =============================================================================
+
+    function setupEvents() {
+        console.log('🎧 [Onboarding] Setting up event listeners...');
+        
+        // Form submission
+        const form = document.getElementById('onboarding-form');
+        if (form) {
+            form.addEventListener('submit', handleSubmit);
+            console.log('🎧 [Onboarding] Form submit listener added');
+        }
+        
+        // Field validation
+        Object.keys(rules).forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('blur', () => validateField(fieldId));
+                field.addEventListener('input', () => clearError(fieldId));
+            }
+        });
+        
+        // Progress tracking
+        setupProgress();
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', handleKeys);
+        
+        // Auth state changes (for signout only)
+        if (auth?.supabase) {
+            auth.supabase.auth.onAuthStateChange((event, session) => {
+                if (event === 'SIGNED_OUT') {
+                    window.location.href = '/auth';
+                }
+            });
+        }
+        
+        console.log('✅ [Onboarding] Event listeners setup complete');
+    }
+
+    function setupProgress() {
+        const observer = new MutationObserver(() => {
+            updateProgress();
+        });
+        
+        const steps = document.querySelectorAll('.step');
+        steps.forEach(stepEl => {
+            observer.observe(stepEl, { 
+                attributes: true, 
+                attributeFilter: ['class'] 
+            });
+        });
+    }
+
+    // =============================================================================
     // UI HELPERS
     // =============================================================================
 
-   function showState(stateName) {
-    console.log(`🎨 [Onboarding] Switching to state: ${stateName}`);
-    
-    // Hide auth check specifically
-    const authCheck = document.getElementById('auth-check');
-    if (authCheck) {
-        authCheck.style.display = 'none';
-        console.log(`🎨 [Onboarding] Hidden auth-check`);
-    }
-    
-    // Show target state
-    const targetState = document.getElementById(stateName);
-    if (targetState) {
-        targetState.style.display = 'block';
-        console.log(`🎨 [Onboarding] Showing state: ${stateName}`);
+    function showOnboardingForm() {
+        console.log('🎨 [Onboarding] Showing onboarding form...');
         
-        // If showing onboarding-main, ensure step 1 is active
-        if (stateName === 'onboarding-main') {
-            initializeSteps();
+        // Hide auth check
+        const authCheck = document.getElementById('auth-check');
+        if (authCheck) {
+            authCheck.style.display = 'none';
         }
-    } else {
-        console.error(`❌ [Onboarding] State element not found: ${stateName}`);
+        
+        // Show main onboarding
+        const onboardingMain = document.getElementById('onboarding-main');
+        if (onboardingMain) {
+            onboardingMain.style.display = 'block';
+            
+            // Initialize step system
+            initializeSteps();
+            
+            console.log('✅ [Onboarding] Form displayed successfully');
+        } else {
+            throw new Error('onboarding-main element not found');
+        }
     }
-}
 
-function initializeSteps() {
-    // Initialize step system
-    if (typeof step === 'undefined') {
+    function initializeSteps() {
+        console.log('🎨 [Onboarding] Initializing step system...');
+        
+        // Ensure step is initialized
         window.step = 1;
-        console.log(`🎨 [Onboarding] Initialized step to: ${step}`);
+        step = 1;
+        
+        // Hide all steps first
+        document.querySelectorAll('.step').forEach(stepEl => {
+            stepEl.classList.remove('active');
+        });
+        
+        // Activate first step
+        const firstStep = document.getElementById('step-1');
+        if (firstStep) {
+            firstStep.classList.add('active');
+            updateProgress();
+            console.log('✅ [Onboarding] Step 1 activated');
+            
+            // Focus first input
+            const firstField = firstStep.querySelector('input, select, textarea');
+            if (firstField) {
+                setTimeout(() => firstField.focus(), 100);
+            }
+        } else {
+            console.error('❌ [Onboarding] step-1 element not found');
+        }
     }
-    
-    // Show first step
-    const firstStep = document.getElementById('step-1');
-    if (firstStep) {
-        firstStep.classList.add('active');
-        updateProgress();
-        console.log(`🎨 [Onboarding] Activated step 1`);
-    }
-}
 
     function showMessage(message, type = 'info') {
         if (window.OsliraApp?.showMessage) {
@@ -503,7 +559,8 @@ function initializeSteps() {
         
         if (submitButton) {
             submitButton.disabled = isLoading;
-            submitButton.textContent = isLoading ? 'Submitting...' : 'Complete Onboarding';
+            submitButton.textContent = isLoading ? 
+                'Submitting...' : 'Complete Setup';
         }
         
         document.body.classList.toggle('loading', isLoading);
@@ -524,15 +581,15 @@ function initializeSteps() {
         }
     }
 
-// =============================================================================
-// EXPOSE GLOBAL FUNCTIONS FOR HTML ONCLICK HANDLERS  
-// =============================================================================
+    // =============================================================================
+    // EXPOSE GLOBAL FUNCTIONS FOR HTML ONCLICK HANDLERS  
+    // =============================================================================
 
-window.nextStep = nextStep;
-window.prevStep = prevStep;
-window.validateField = validateField;
-window.onboardingNextStep = nextStep; // Backup name
-window.onboardingPrevStep = prevStep; // Backup name
+    window.nextStep = nextStep;
+    window.prevStep = prevStep;
+    window.validateField = validateField;
+    window.onboardingNextStep = nextStep; // Backup name
+    window.onboardingPrevStep = prevStep; // Backup name
 
     // =============================================================================
     // ERROR HANDLING
