@@ -245,7 +245,7 @@ async loadAll() {
     }
 }
 
-    async loadPreCoreDependencies() {
+async loadPreCoreDependencies() {
     console.log('🔧 [ScriptLoader] Loading pre-core dependencies...');
     
     if (this.dependencies['pre-core']) {
@@ -253,9 +253,19 @@ async loadAll() {
             await this.loadScript({ url: scriptUrl }, `pre-core-${scriptUrl}`);
         }
         
-        // Now detect environment after OsliraEnv is loaded
-        this.config = this.detectEnvironment();
+        // Use centralized environment detection from OsliraEnv
+        this.config = {
+            environment: window.OsliraEnv.ENV,
+            isProduction: window.OsliraEnv.IS_PRODUCTION,
+            isStaging: window.OsliraEnv.IS_STAGING,
+            workerUrl: window.OsliraEnv.WORKER_URL
+        };
+        
+        // Set current page from centralized detection
+        this.currentPage = window.OsliraEnv.CURRENT_PAGE;
+        
         console.log(`📚 [ScriptLoader] Environment detected: ${this.config.environment}`);
+        console.log(`📚 [ScriptLoader] Page detected: ${this.currentPage}`);
     }
 }
     
