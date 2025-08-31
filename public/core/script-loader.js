@@ -15,78 +15,45 @@ class OsliraScriptLoader {
     console.log(`📚 [ScriptLoader] Initialized for page: ${this.currentPage}`);
 }
 
-detectEnvironment() {
-    // Ensure OsliraEnv is available
-    if (!window.OsliraEnv) {
-        throw new Error('OsliraEnv not loaded. env-manager.js must load before script-loader.js');
-    }
-    
-    return {
-        environment: window.OsliraEnv.ENV,
-        hostname: window.OsliraEnv.hostname,
-        isLocal: window.OsliraEnv.IS_DEVELOPMENT,
-        isStaging: window.OsliraEnv.IS_STAGING
-    };
-}
-
-    detectCurrentPage() {
-        const pathname = window.location.pathname;
-        console.log('🔍 [ScriptLoader] Detecting page for pathname:', pathname);
+async loadAll() {
+    try {
+        console.log('📚 [ScriptLoader] Starting universal script loading...');
+        const startTime = performance.now();
         
-        const pageMap = {
-            '/': 'home',
-            '/index.html': 'home',
-            '/home': 'home',
-            '/home.html': 'home',
-            
-            '/auth': 'auth',
-            '/auth.html': 'auth',
-            '/auth/': 'auth',
-            '/auth/index.html': 'auth',
-            '/pages/auth/': 'auth',
-            '/pages/auth/index.html': 'auth',
-            
-            '/dashboard.html': 'dashboard',
-            '/dashboard/': 'dashboard',
-            '/dashboard': 'dashboard',
-            '/pages/dashboard/': 'dashboard',
-            '/pages/dashboard/index.html': 'dashboard',
-            '/onboarding.html': 'onboarding',
-            '/subscription.html': 'subscription',
-            '/settings.html': 'settings',
-            '/analytics.html': 'analytics',
-            '/admin.html': 'admin'
-        };
+        // USE CENTRALIZED PAGE DETECTION
+        this.currentPage = window.OsliraEnv.CURRENT_PAGE;
+        console.log('📚 [ScriptLoader] Page detected:', this.currentPage);
         
-        // Exact matches first
-        if (pageMap[pathname]) {
-            console.log('🔍 [ScriptLoader] Exact match found:', pageMap[pathname]);
-            return pageMap[pathname];
-        }
+        // Step 1: Load pre-core first (environment detection)
+        await this.loadPreCoreDependencies();
         
-        // Partial matches for nested paths
-        for (const [path, page] of Object.entries(pageMap)) {
-            if (pathname.startsWith(path) && path !== '/') {
-                console.log('🔍 [ScriptLoader] Partial match found:', page);
-                return page;
+        // Step 2: Load core dependencies in order  
+        await this.loadCoreDependencies();
+        
+        // Step 3: Load page-specific dependencies
+        await this.loadPageDependencies();
+        
+        const duration = performance.now() - startTime;
+        console.log(`✅ [ScriptLoader] All scripts loaded successfully in ${duration.toFixed(2)}ms`);
+        
+        // Emit ready event with centralized page info
+        window.dispatchEvent(new CustomEvent('oslira:scripts:loaded', {
+            detail: { 
+                page: this.currentPage,
+                pageType: window.OsliraEnv.PAGE_TYPE,
+                loadTime: duration,
+                environment: window.OsliraEnv.ENV
             }
-        }
+        }));
         
-        // Check for known page patterns
-        if (pathname.includes('/auth/callback')) {
-            console.log('🔍 [ScriptLoader] Pattern match: auth-callback');
-            return 'auth-callback';
-        }
-        if (pathname.includes('/auth')) {
-            console.log('🔍 [ScriptLoader] Pattern match: auth');
-            return 'auth';
-        }
-        if (pathname.includes('/dashboard')) return 'dashboard';
-        if (pathname.includes('/onboarding')) return 'onboarding';
+        return true;
         
-        console.log('🔍 [ScriptLoader] No match found, using generic');
-        return 'generic';
+    } catch (error) {
+        console.error('❌ [ScriptLoader] Script loading failed:', error);
+        this.handleLoadingError(error);
+        throw error;
     }
+}
     
     defineDependencies() {
         return {
