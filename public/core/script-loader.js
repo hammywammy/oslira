@@ -292,71 +292,57 @@ detectEnvironment() {
     }
 }
     
-    async loadCoreDependencies() {
-        console.log('🔧 [ScriptLoader] Loading core dependencies...');
-        
-        const coreScripts = this.dependencies.core;
-        // FIXED: Add config-manager to load order
-        const loadOrder = [
-    // External libraries first
-    'supabase', 'sentry',
+   async loadCoreDependencies() {
+    console.log('🔧 [ScriptLoader] Loading core dependencies...');
     
-    // Security utilities
-    'staging-guard', 'alert-system',
+    const coreScripts = this.dependencies.core;
     
-    // Config must load before everything else
-    'config-manager',
+    // PERFORMANCE FIX: Load non-dependent scripts in parallel
+    const independentScripts = ['supabase', 'sentry', 'alert-system'];
+    const dependentScripts = [
+        'staging-guard', 'config-manager', 'security-guard', 
+        'ui-manager', 'data-store', 'form-manager', 'api-client',
+        'auth-manager', 'app-initializer'
+    ];
     
-    // CRITICAL: Add security-guard BEFORE auth-manager
-    'security-guard',
-    
-    // Core systems in dependency order
-    'ui-manager', 'data-store', 'form-manager', 'api-client',
-    'auth-manager', 'app-initializer'
-];
-
-        console.log('🔍 [ScriptLoader] Core load order:', loadOrder);
-        
-        for (const scriptName of loadOrder) {
-            console.log(`🔍 [ScriptLoader] Attempting to load: ${scriptName}`);
+    // Load independent scripts in parallel
+    console.log('🔧 [ScriptLoader] Loading independent scripts in parallel...');
+    await Promise.all(
+        independentScripts.map(async (scriptName) => {
             const script = coreScripts[scriptName];
-            if (!script) {
-                console.log(`🚫 [ScriptLoader] Script config not found for: ${scriptName}`);
-                continue;
+            if (script && (!script.environments || script.environments.includes(this.config.environment))) {
+                console.log(`🔄 [ScriptLoader] Loading ${scriptName}...`);
+                await this.loadScript(script, scriptName);
+                console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
             }
-            
-            // Check environment requirements
-            if (script.environments && !script.environments.includes(this.config.environment)) {
-                console.log(`⏭️ [ScriptLoader] Skipping ${scriptName} (not required for ${this.config.environment})`);
-                continue;
-            }
-            
-            // Load dependencies first
-            if (script.dependsOn) {
-                for (const dep of script.dependsOn) {
-                    if (!this.loadedScripts.has(dep)) {
-                        await this.loadScript(coreScripts[dep], dep);
-                    }
-                }
-            }
-            
-            // Load the script
-try {
-    console.log(`🔄 [ScriptLoader] Loading ${scriptName}...`);
-    await this.loadScript(script, scriptName);
-    console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
-} catch (error) {
-    console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
-    if (script.critical) {
-        throw new Error(`Critical script failed: ${scriptName} - ${error.message}`);
-    } else {
-        console.log(`⚠️ [ScriptLoader] Non-critical script ${scriptName} failed, continuing...`);
-    }
-}
+        })
+    );
+    
+    // Load dependent scripts sequentially but with reduced wait times
+    console.log('🔧 [ScriptLoader] Loading dependent scripts...');
+    for (const scriptName of dependentScripts) {
+        const script = coreScripts[scriptName];
+        if (!script) continue;
+        
+        if (script.environments && !script.environments.includes(this.config.environment)) {
+            console.log(`⏭️ [ScriptLoader] Skipping ${scriptName} (not required for ${this.config.environment})`);
+            continue;
         }
         
-        console.log('✅ [ScriptLoader] Core dependencies loaded');
+        try {
+            console.log(`🔄 [ScriptLoader] Loading ${scriptName}...`);
+            await this.loadScript(script, scriptName);
+            console.log(`✅ [ScriptLoader] ${scriptName} loaded successfully`);
+        } catch (error) {
+            console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
+            if (script.critical) {
+                throw new Error(`Critical script failed: ${scriptName} - ${error.message}`);
+            }
+        }
     }
+    
+    console.log('✅ [ScriptLoader] Core dependencies loaded');
+}
     
 async loadPageDependencies() {
     console.log(`📄 [ScriptLoader] Loading dependencies for page: ${this.currentPage}`);
