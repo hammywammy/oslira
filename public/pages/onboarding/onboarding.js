@@ -91,15 +91,30 @@
                 config.SUPABASE_ANON_KEY
             );
             
-            // Get current session
-            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            // Wait for session to be available (may take time after OAuth)
+            let session = null;
+            let attempts = 0;
+            const maxAttempts = 30;
             
-            if (error) {
-                throw new Error(`Session error: ${error.message}`);
+            while (attempts < maxAttempts && !session) {
+                const { data: { session: currentSession }, error } = await supabaseClient.auth.getSession();
+                
+                if (error) {
+                    console.warn(`⚠️ [Onboarding] Session check attempt ${attempts + 1} error:`, error);
+                } else if (currentSession) {
+                    session = currentSession;
+                    console.log('✅ [Onboarding] Session found on attempt:', attempts + 1);
+                    break;
+                } else {
+                    console.log(`⏳ [Onboarding] No session yet, attempt ${attempts + 1}/${maxAttempts}`);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 200));
+                attempts++;
             }
             
             if (!session) {
-                throw new Error('No session found');
+                throw new Error('Session not available after timeout');
             }
             
             // Store session and user data
