@@ -195,13 +195,13 @@ class SecurityGuard {
         }, 300);
     }
     
-    async enforcePageAccess() {
+   async enforcePageAccess() {
     try {
         console.log('🛡️ [SecurityGuard] Enforcing access control for:', this.pageClassification);
         
         // Special handling for callback page
         if (this.currentPage === 'auth-callback') {
-            console.log('🛡️ [SecurityGuard] Auth callback page detected - allowing temporary access');
+            console.log('🛡️ [SecurityGuard] Auth callback page detected - allowing access');
             return true;
         }
         
@@ -209,124 +209,80 @@ class SecurityGuard {
         const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
         
         if (!authManager) {
-            console.log('⚠️ [SecurityGuard] Auth system not available');
-            this.redirectToAuth('Authentication system unavailable');
-            return false;
-        }
-        
-        // CRITICAL FIX: If auth manager has a session but user context is still loading, wait for it
-        const session = authManager.getCurrentSession();
-        if (session && !authManager.user) {
-            console.log('🛡️ [SecurityGuard] Session exists but user context loading, waiting...');
-            await this.waitForUserContextLoad(session.user.id);
-        }
-        
-        // Get current auth state
-        const isAuthenticated = authManager.isAuthenticated();
-            const isOnboardingComplete = authManager.isOnboardingComplete();
-            const hasBusinessProfile = authManager.hasBusinessProfile();
-            const isAdmin = authManager.isAdmin();
-            
-            console.log('🛡️ [SecurityGuard] Auth state:', {
-                authenticated: isAuthenticated,
-                onboardingComplete: isOnboardingComplete,
-                businessProfile: hasBusinessProfile,
-                admin: isAdmin,
-                pageType: this.pageClassification
-            });
-            
-            // Store current auth state
-            this.currentSession = authManager.getCurrentSession();
-            this.currentUser = authManager.getCurrentUser();
-            
-            // Apply access control rules
-            switch (this.pageClassification) {
-                case 'PUBLIC':
-                    console.log('✅ [SecurityGuard] Public page access granted');
-                    return true;
-                    
-                case 'AUTH_ONLY':
-                    if (isAuthenticated) {
-                        // User is authenticated, redirect away from auth page
-                        const redirectUrl = (isOnboardingComplete && hasBusinessProfile) ?
-                            '/dashboard' : '/onboarding';
-                        console.log('🛡️ [SecurityGuard] User already authenticated, redirecting to:', redirectUrl);
-                        
-                        // ENHANCED: Add delay to prevent race conditions with callback processing
-                        setTimeout(() => {
-                            console.log('🛡️ [SecurityGuard] Executing delayed redirect to:', redirectUrl);
-                            window.location.href = redirectUrl;
-                        }, 500);
-                        return false;
-                    }
-                    console.log('🛡️ [SecurityGuard] User not authenticated - showing auth page');
-                    return true;
-                    
-                case 'AUTH_REQUIRED':
-                    if (!isAuthenticated) {
-                        console.log('🛡️ [SecurityGuard] Authentication required - redirecting to auth');
-                        this.redirectToAuth('Authentication required');
-                        return false;
-                    }
-                    if (!isOnboardingComplete) {
-                        console.log('🛡️ [SecurityGuard] Onboarding required - redirecting');
-                        setTimeout(() => {
-                            window.location.href = '/onboarding';
-                        }, 100);
-                        return false;
-                    }
-                    if (!hasBusinessProfile) {
-                        console.log('🛡️ [SecurityGuard] Business profile required - redirecting to onboarding');
-                        setTimeout(() => {
-                            window.location.href = '/onboarding';
-                        }, 100);
-                        return false;
-                    }
-                    console.log('✅ [SecurityGuard] Full access granted to authenticated page');
-                    return true;
-                    
-                case 'ONBOARDING_REQUIRED':
-                    if (!isAuthenticated) {
-                        console.log('🛡️ [SecurityGuard] Authentication required for onboarding');
-                        this.redirectToAuth('Authentication required for onboarding');
-                        return false;
-                    }
-                    if (isOnboardingComplete && hasBusinessProfile) {
-                        console.log('🛡️ [SecurityGuard] Onboarding already complete - redirecting to dashboard');
-                        setTimeout(() => {
-                            window.location.href = '/dashboard';
-                        }, 100);
-                        return false;
-                    }
-                    console.log('✅ [SecurityGuard] Onboarding page access granted');
-                    return true;
-                    
-                case 'ADMIN_REQUIRED':
-                    if (!isAuthenticated) {
-                        console.log('🛡️ [SecurityGuard] Authentication required for admin');
-                        this.redirectToAuth('Authentication required for admin access');
-                        return false;
-                    }
-                    if (!isAdmin) {
-                        console.log('🛡️ [SecurityGuard] Admin privileges required - access denied');
-                        this.redirectToAuth('Admin privileges required');
-                        return false;
-                    }
-                    console.log('✅ [SecurityGuard] Admin access granted');
-                    return true;
-                    
-                default:
-                    console.log('⚠️ [SecurityGuard] Unknown page classification - denying access');
-                    this.redirectToAuth('Page access verification failed');
-                    return false;
+            if (this.pageClassification === 'PUBLIC') {
+                console.log('✅ [SecurityGuard] Public page - no auth required');
+                return true;
             }
-            
-        } catch (error) {
-            console.error('❌ [SecurityGuard] Access control error:', error);
-            this.redirectToAuth('Security verification failed');
+            console.log('⚠️ [SecurityGuard] Auth system not available, redirecting');
+            this.redirectToAuth('Authentication system loading');
             return false;
         }
+        
+        // CRITICAL FIX: Check session first, don't wait for full user context
+        const session = authManager.getCurrentSession();
+        const isAuthenticated = !!session;
+        
+        console.log('🛡️ [SecurityGuard] Quick auth state:', {
+            authenticated: isAuthenticated,
+            pageType: this.pageClassification,
+            sessionExists: !!session
+        });
+        
+        // Apply access control rules
+        switch (this.pageClassification) {
+            case 'PUBLIC':
+                console.log('✅ [SecurityGuard] Public page access granted');
+                return true;
+                
+            case 'AUTH_ONLY':
+                if (isAuthenticated) {
+                    // Check OAuth success flag
+                    const oauthSuccess = sessionStorage.getItem('oauth_success');
+                    if (oauthSuccess) {
+                        console.log('🛡️ [SecurityGuard] OAuth just completed, redirecting to onboarding');
+                        sessionStorage.removeItem('oauth_success');
+                        setTimeout(() => window.location.href = '/onboarding', 100);
+                        return false;
+                    }
+                    
+                    // Otherwise redirect based on user state (let auth manager handle)
+                    console.log('🛡️ [SecurityGuard] User authenticated, checking redirect');
+                    setTimeout(() => {
+                        const redirectUrl = authManager.isOnboardingComplete() && authManager.hasBusinessProfile() 
+                            ? '/dashboard' : '/onboarding';
+                        console.log('🛡️ [SecurityGuard] Redirecting to:', redirectUrl);
+                        window.location.href = redirectUrl;
+                    }, 200);
+                    return false;
+                } else {
+                    console.log('✅ [SecurityGuard] Auth page access granted for unauthenticated user');
+                    return true;
+                }
+                
+            case 'AUTH_REQUIRED':
+                if (!isAuthenticated) {
+                    console.log('🚫 [SecurityGuard] Authentication required, redirecting to auth');
+                    this.redirectToAuth('Please sign in to continue');
+                    return false;
+                }
+                
+                console.log('✅ [SecurityGuard] Auth required page - access granted');
+                return true;
+                
+            default:
+                console.log('✅ [SecurityGuard] Unknown page type - allowing access');
+                return true;
+        }
+        
+    } catch (error) {
+        console.error('❌ [SecurityGuard] Access control error:', error);
+        if (this.pageClassification !== 'PUBLIC') {
+            this.redirectToAuth('Security check failed');
+            return false;
+        }
+        return true;
     }
+}
     
     redirectToAuth(reason = 'Authentication required') {
         console.log(`🔄 [SecurityGuard] Redirecting to auth: ${reason}`);
