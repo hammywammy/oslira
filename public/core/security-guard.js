@@ -189,12 +189,12 @@ class SecurityGuard {
         }, 300);
     }
     
-   async enforcePageAccess() {
+async enforcePageAccess() {
     try {
         console.log('🛡️ [SecurityGuard] Enforcing access control for:', this.pageClassification);
         
-        // Special handling for callback page
-        if (this.currentPage === 'auth-callback') {
+        // USE CENTRALIZED PAGE TYPE HELPERS
+        if (window.OsliraEnv.CURRENT_PAGE === 'auth-callback') {
             console.log('🛡️ [SecurityGuard] Auth callback page detected - allowing access');
             return true;
         }
@@ -203,7 +203,7 @@ class SecurityGuard {
         const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
         
         if (!authManager) {
-            if (this.pageClassification === 'PUBLIC') {
+            if (window.OsliraEnv.isPublicPage()) {
                 console.log('✅ [SecurityGuard] Public page - no auth required');
                 return true;
             }
@@ -212,7 +212,7 @@ class SecurityGuard {
             return false;
         }
         
-        // CRITICAL FIX: Check session first, don't wait for full user context
+        // Check session first
         const session = authManager.getCurrentSession();
         const isAuthenticated = !!session;
         
@@ -222,55 +222,70 @@ class SecurityGuard {
             sessionExists: !!session
         });
         
-        // Apply access control rules
-        switch (this.pageClassification) {
-            case 'PUBLIC':
-                console.log('✅ [SecurityGuard] Public page access granted');
-                return true;
-                
-            case 'AUTH_ONLY':
-                if (isAuthenticated) {
-                    // Check OAuth success flag
-                    const oauthSuccess = sessionStorage.getItem('oauth_success');
-                    if (oauthSuccess) {
-                        console.log('🛡️ [SecurityGuard] OAuth just completed, redirecting to onboarding');
-                        sessionStorage.removeItem('oauth_success');
-                        setTimeout(() => window.location.href = '/onboarding', 100);
-                        return false;
-                    }
-                    
-                    // Otherwise redirect based on user state (let auth manager handle)
-                    console.log('🛡️ [SecurityGuard] User authenticated, checking redirect');
-                    setTimeout(() => {
-                        const redirectUrl = authManager.isOnboardingComplete() && authManager.hasBusinessProfile() 
-                            ? '/dashboard' : '/onboarding';
-                        console.log('🛡️ [SecurityGuard] Redirecting to:', redirectUrl);
-                        window.location.href = redirectUrl;
-                    }, 200);
-                    return false;
-                } else {
-                    console.log('✅ [SecurityGuard] Auth page access granted for unauthenticated user');
-                    return true;
-                }
-                
-            case 'AUTH_REQUIRED':
-                if (!isAuthenticated) {
-                    console.log('🚫 [SecurityGuard] Authentication required, redirecting to auth');
-                    this.redirectToAuth('Please sign in to continue');
-                    return false;
-                }
-                
-                console.log('✅ [SecurityGuard] Auth required page - access granted');
-                return true;
-                
-            default:
-                console.log('✅ [SecurityGuard] Unknown page type - allowing access');
-                return true;
+        // USE CENTRALIZED PAGE TYPE CLASSIFICATION
+        if (window.OsliraEnv.isPublicPage()) {
+            console.log('✅ [SecurityGuard] Public page access granted');
+            return true;
         }
+        
+        if (window.OsliraEnv.isAuthPage()) {
+            if (isAuthenticated) {
+                const oauthSuccess = sessionStorage.getItem('oauth_success');
+                if (oauthSuccess) {
+                    console.log('🛡️ [SecurityGuard] OAuth just completed, redirecting to onboarding');
+                    sessionStorage.removeItem('oauth_success');
+                    setTimeout(() => window.location.href = '/onboarding', 100);
+                    return false;
+                }
+                
+                setTimeout(() => {
+                    const redirectUrl = authManager.isOnboardingComplete() && authManager.hasBusinessProfile() 
+                        ? '/dashboard' : '/onboarding';
+                    console.log('🛡️ [SecurityGuard] Redirecting to:', redirectUrl);
+                    window.location.href = redirectUrl;
+                }, 200);
+                return false;
+            } else {
+                console.log('✅ [SecurityGuard] Auth page access granted for unauthenticated user');
+                return true;
+            }
+        }
+        
+        if (window.OsliraEnv.requiresAuth()) {
+            if (!isAuthenticated) {
+                console.log('🚫 [SecurityGuard] Authentication required, redirecting to auth');
+                this.redirectToAuth('Please sign in to continue');
+                return false;
+            }
+            
+            if (window.OsliraEnv.requiresOnboarding()) {
+                if (authManager.isOnboardingComplete() && authManager.hasBusinessProfile()) {
+                    console.log('🛡️ [SecurityGuard] Onboarding complete - redirecting to dashboard');
+                    setTimeout(() => window.location.href = '/dashboard', 100);
+                    return false;
+                }
+                console.log('✅ [SecurityGuard] Onboarding page access granted');
+                return true;
+            }
+            
+            if (window.OsliraEnv.requiresAdmin()) {
+                if (!authManager.isAdmin()) {
+                    console.log('🛡️ [SecurityGuard] Admin privileges required - access denied');
+                    this.redirectToAuth('Admin privileges required');
+                    return false;
+                }
+            }
+            
+            console.log('✅ [SecurityGuard] Auth required page - access granted');
+            return true;
+        }
+        
+        console.log('✅ [SecurityGuard] Access granted');
+        return true;
         
     } catch (error) {
         console.error('❌ [SecurityGuard] Access control error:', error);
-        if (this.pageClassification !== 'PUBLIC') {
+        if (!window.OsliraEnv.isPublicPage()) {
             this.redirectToAuth('Security check failed');
             return false;
         }
