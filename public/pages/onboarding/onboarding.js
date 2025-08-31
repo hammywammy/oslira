@@ -110,7 +110,7 @@
         throw new Error('Auth system not available after timeout');
     }
 
-    async function checkAuth() {
+   async function checkAuth() {
     try {
         console.log('🔍 [Onboarding] Checking authentication...');
         
@@ -118,41 +118,34 @@
             throw new Error('Auth manager not available');
         }
         
-        // FIXED: Trust SecurityGuard's access decision instead of re-checking
-        if (window.SecurityGuard?.isPageAccessAllowed() !== false) {
-            console.log('✅ [Onboarding] SecurityGuard already granted access, proceeding...');
-            
-            // Simple session check (same logic as SecurityGuard)
-            const session = auth.getCurrentSession();
-            if (!session) {
-                console.log('❌ [Onboarding] No session found, redirecting to auth');
-                setTimeout(() => window.location.href = '/auth', 1000);
-                return;
-            }
-            
-            // Try to get user, but don't fail if still loading
-            user = auth.getCurrentUser();
-            if (!user) {
-                console.log('⏳ [Onboarding] User data still loading, using session info...');
-                // Use session user as fallback
-                user = session.user || { email: 'Loading...', id: session.user.id };
-            }
-            
-            // Quick onboarding check
-            if (user.onboarding_completed) {
-                console.log('✅ [Onboarding] User already onboarded, redirecting...');
-                setTimeout(() => window.location.href = '/dashboard', 1000);
-                return;
-            }
-            
-            console.log('✅ [Onboarding] Access verified, showing onboarding form');
-            showState('onboarding-main');
+        // SIMPLIFIED: SecurityGuard already granted access, just verify session exists
+        const session = auth.getCurrentSession();
+        if (!session) {
+            console.log('❌ [Onboarding] No session found, redirecting to auth');
+            showError('Please log in first.');
+            setTimeout(() => window.location.href = '/auth', 2000);
             return;
         }
         
-        // Fallback: SecurityGuard didn't grant access
-        console.log('❌ [Onboarding] SecurityGuard denied access, redirecting');
-        setTimeout(() => window.location.href = '/auth', 1000);
+        console.log('✅ [Onboarding] Session found, proceeding...');
+        
+        // Try to get user data, use session fallback if needed
+        user = auth.getCurrentUser() || session.user || { 
+            email: session.user?.email || 'Loading...', 
+            id: session.user?.id,
+            onboarding_completed: false 
+        };
+        
+        // Quick onboarding completion check
+        if (user.onboarding_completed) {
+            console.log('✅ [Onboarding] User already onboarded, redirecting...');
+            showMessage('You have already completed onboarding.', 'info');
+            setTimeout(() => window.location.href = '/dashboard', 2000);
+            return;
+        }
+        
+        console.log('✅ [Onboarding] Access verified for:', user.email);
+        showState('onboarding-main');
         
     } catch (error) {
         console.error('❌ [Onboarding] Auth check failed:', error);
