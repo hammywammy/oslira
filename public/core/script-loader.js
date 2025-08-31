@@ -3,16 +3,16 @@
 // =============================================================================
 
 class OsliraScriptLoader {
-    constructor() { 
+constructor() { 
     this.loadedScripts = new Set(); 
     this.loadingScripts = new Map();
     
     // Don't call detectEnvironment() in constructor - OsliraEnv not loaded yet
     this.config = null;
-    this.currentPage = this.detectCurrentPage();
+    this.currentPage = null; // Will be set in loadAll() after OsliraEnv loads
     this.dependencies = this.defineDependencies();
     
-    console.log(`📚 [ScriptLoader] Initialized for page: ${this.currentPage}`);
+    console.log('📚 [ScriptLoader] Initialized, waiting for environment detection...');
 }
 
 async loadAll() {
