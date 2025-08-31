@@ -441,15 +441,37 @@
     // =============================================================================
 
     function showState(stateName) {
-        document.querySelectorAll('.state').forEach(state => {
-            state.style.display = 'none';
-        });
+    console.log(`🎨 [Onboarding] Switching to state: ${stateName}`);
+    
+    // Hide all states
+    document.querySelectorAll('.state').forEach(state => {
+        state.style.display = 'none';
+        console.log(`🎨 [Onboarding] Hiding state:`, state.id);
+    });
+    
+    // Show target state
+    const targetState = document.getElementById(stateName);
+    if (targetState) {
+        targetState.style.display = 'block';
+        console.log(`🎨 [Onboarding] Showing state: ${stateName}`);
+    } else {
+        console.error(`❌ [Onboarding] State element not found: ${stateName}`);
         
-        const targetState = document.getElementById(stateName);
-        if (targetState) {
-            targetState.style.display = 'block';
+        // Fallback: Hide the auth-check manually and show the form
+        const authCheck = document.getElementById('auth-check');
+        const onboardingMain = document.querySelector('.onboarding-container, .onboarding-form, form');
+        
+        if (authCheck) {
+            authCheck.style.display = 'none';
+            console.log(`🎨 [Onboarding] Manually hid auth-check`);
+        }
+        
+        if (onboardingMain) {
+            onboardingMain.style.display = 'block';
+            console.log(`🎨 [Onboarding] Manually showed onboarding form`);
         }
     }
+}
 
     function showMessage(message, type = 'info') {
         if (window.OsliraApp?.showMessage) {
@@ -494,13 +516,15 @@
         }
     }
 
-    // =============================================================================
-    // EXPOSE GLOBAL FUNCTIONS FOR HTML ONCLICK HANDLERS
-    // =============================================================================
+// =============================================================================
+// EXPOSE GLOBAL FUNCTIONS FOR HTML ONCLICK HANDLERS  
+// =============================================================================
 
-    window.onboardingNextStep = nextStep;
-    window.onboardingPrevStep = prevStep;
-    window.onboardingValidateField = validateField;
+window.nextStep = nextStep;
+window.prevStep = prevStep;
+window.validateField = validateField;
+window.onboardingNextStep = nextStep; // Backup name
+window.onboardingPrevStep = prevStep; // Backup name
 
     // =============================================================================
     // ERROR HANDLING
