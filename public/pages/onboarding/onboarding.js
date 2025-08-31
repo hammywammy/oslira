@@ -20,7 +20,7 @@ if (typeof Sentry !== 'undefined') {
 // APPLICATION STATE
 // =============================================================================
 
-let authManagerInstance = null; // FIXED: Renamed to avoid conflicts
+let onboardingAuthManager = null; // Different name to avoid any conflicts
 let currentUser = null;
 let currentStep = 1;
 let isLoading = false;
@@ -97,8 +97,8 @@ async function waitForAuthSystem() {
     while (attempts < maxAttempts) {
         if (window.OsliraAuth?.initialize) {
             console.log('🔐 [Onboarding] Auth system found, initializing...');
-            authManagerInstance = await window.OsliraAuth.initialize(); // FIXED: Use renamed variable
-            return authManagerInstance;
+            onboardingAuthManager = await window.OsliraAuth.initialize();
+return onboardingAuthManager;
         }
         
         await new Promise(resolve => setTimeout(resolve, 100));
