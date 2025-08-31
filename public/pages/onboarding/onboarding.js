@@ -73,82 +73,76 @@
     }
 
     async function loadSessionDirectly() {
-        console.log('📊 [Onboarding] Loading session directly...');
+    console.log('📊 [Onboarding] Loading session from existing auth manager...');
+    
+    try {
+        // Wait for OsliraAuth instance (created by app.js)
+        await waitForAuthManager();
         
-        try {
-            // Wait for Supabase to be available
-            await waitForSupabase();
-            
-            // Get config
-            const config = window.OsliraConfig?.get();
-            if (!config) {
-                throw new Error('Configuration not available');
-            }
-            
-            // Create Supabase client directly
-            const supabaseClient = window.supabase.createClient(
-                config.SUPABASE_URL, 
-                config.SUPABASE_ANON_KEY
-            );
-            
-            // Wait for session to be available (may take time after OAuth)
-            let session = null;
-            let attempts = 0;
-            const maxAttempts = 30;
-            
-            while (attempts < maxAttempts && !session) {
-                const { data: { session: currentSession }, error } = await supabaseClient.auth.getSession();
-                
-                if (error) {
-                    console.warn(`⚠️ [Onboarding] Session check attempt ${attempts + 1} error:`, error);
-                } else if (currentSession) {
-                    session = currentSession;
-                    console.log('✅ [Onboarding] Session found on attempt:', attempts + 1);
-                    break;
-                } else {
-                    console.log(`⏳ [Onboarding] No session yet, attempt ${attempts + 1}/${maxAttempts}`);
-                }
-                
-                await new Promise(resolve => setTimeout(resolve, 200));
-                attempts++;
-            }
-            
-            if (!session) {
-                throw new Error('Session not available after timeout');
-            }
-            
-            // Store session and user data
-            auth = { 
-                session, 
-                supabase: supabaseClient,
-                getCurrentSession: () => session,
-                getCurrentUser: () => session.user,
-                makeAuthenticatedRequest: async (url, options = {}) => {
-                    return fetch(url, {
-                        ...options,
-                        headers: {
-                            'Authorization': `Bearer ${session.access_token}`,
-                            'Content-Type': 'application/json',
-                            ...options.headers
-                        }
-                    });
-                }
-            };
-            
-            user = {
-                ...session.user,
-                email: session.user.email,
-                id: session.user.id,
-                onboarding_completed: false // Default assumption for onboarding page
-            };
-            
-            console.log('✅ [Onboarding] Session loaded for:', user.email);
-            
-        } catch (error) {
-            console.error('❌ [Onboarding] Failed to load session:', error);
-            throw error;
+        // Get the existing auth manager instance
+        const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
+        
+        if (!authManager) {
+            throw new Error('Auth manager not available');
         }
+        
+        // Use the existing session from the auth manager
+        const session = authManager.getCurrentSession();
+        const supabaseClient = authManager.getSupabaseClient();
+        
+        if (!session) {
+            throw new Error('No authenticated session found');
+        }
+        
+        // Store session and user data using the SAME session
+        auth = { 
+            session, 
+            supabase: supabaseClient,
+            getCurrentSession: () => authManager.getCurrentSession(),
+            getCurrentUser: () => authManager.getCurrentUser(),
+            makeAuthenticatedRequest: async (url, options = {}) => {
+                const currentSession = authManager.getCurrentSession();
+                return fetch(url, {
+                    ...options,
+                    headers: {
+                        'Authorization': `Bearer ${currentSession.access_token}`,
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+            }
+        };
+        
+        user = {
+            ...session.user,
+            email: session.user.email,
+            id: session.user.id,
+            onboarding_completed: false // Default assumption for onboarding page
+        };
+        
+        console.log('✅ [Onboarding] Session loaded from auth manager for:', user.email);
+        
+    } catch (error) {
+        console.error('❌ [Onboarding] Failed to load session from auth manager:', error);
+        throw error;
     }
+}
+
+async function waitForAuthManager() {
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds
+    
+    while (attempts < maxAttempts) {
+        if (window.OsliraApp?.auth || window.OsliraAuth?.instance) {
+            console.log('✅ [Onboarding] Auth manager found');
+            return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    throw new Error('Auth manager not available after timeout');
+}
 
     async function waitForSupabase() {
         let attempts = 0;
