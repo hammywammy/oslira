@@ -39,12 +39,16 @@ class SimpleAuth {
         throw new Error('Config not available');
     }
     
-    async signInWithGoogle() {
-        const { error } = await this.supabase.auth.signInWithOAuth({
-            provider: 'google'
-        });
-        if (error) throw error;
-    }
+    // Missing this:
+async signInWithGoogle() {
+    const { error } = await this.supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: window.location.origin + '/auth/callback'  // <-- THIS IS MISSING
+        }
+    });
+    if (error) throw error;
+}
     
     getCurrentSession() {
         return this.session;
