@@ -300,17 +300,22 @@ const { data: businessProfile, error: businessError } = await supabase
             console.log('✅ [Onboarding] Business profile created:', businessProfile.id);
             
             // Update user onboarding_completed status
-            const { error: userError } = await supabase
-                .from('users')
-                .update({ 
-                    onboarding_completed: true,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', user.id);
-            
-            if (userError) {
-                throw userError;
-            }
+console.log('💾 [Onboarding] Updating user onboarding status...');
+const { data: updatedUser, error: userError } = await supabase
+    .from('users')
+    .update({ 
+        onboarding_completed: true,
+        updated_at: new Date().toISOString()
+    })
+    .eq('id', user.id)
+    .select();
+
+if (userError) {
+    console.error('❌ [Onboarding] Failed to update user status:', userError);
+    throw userError;
+}
+
+console.log('✅ [Onboarding] User onboarding status updated:', updatedUser);
             
             console.log('✅ [Onboarding] Onboarding completed successfully');
             
