@@ -70,12 +70,35 @@ class SecurityGuard {
             classification: this.pageClassification
         });
         
-        // CRITICAL: Block page rendering for protected pages until security validation
-        if (this.pageClassification !== 'PUBLIC') {
-            console.log('🛡️ [SecurityGuard] Blocking page rendering for protected page');
-            document.documentElement.style.visibility = 'hidden';
-            document.documentElement.style.transition = 'visibility 0.3s ease-in-out';
-        }
+        // Show loading state instead of hiding page completely
+if (this.pageClassification !== 'PUBLIC') {
+    console.log('🛡️ [SecurityGuard] Setting up loading state for protected page');
+    
+    // Create smooth loading overlay instead of hiding everything
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'security-loading';
+    loadingOverlay.innerHTML = `
+        <div style="
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(2px);
+        ">
+            <div style="text-align: center;">
+                <div style="
+                    width: 40px; height: 40px; border: 3px solid #f3f3f3;
+                    border-top: 3px solid #007bff; border-radius: 50%;
+                    animation: spin 1s linear infinite; margin: 0 auto 20px;
+                "></div>
+                <p style="margin: 0; color: #666; font-size: 14px;">Loading...</p>
+            </div>
+        </div>
+        <style>
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+    `;
+    document.body.appendChild(loadingOverlay);
+}
     }
     
     async setup() {
@@ -237,14 +260,18 @@ class SecurityGuard {
     }
     
     showPage() {
-        console.log('🛡️ [SecurityGuard] Showing page content...');
-        document.documentElement.style.visibility = 'visible';
-        
-        // Add smooth transition
-        setTimeout(() => {
-            document.documentElement.style.transition = '';
-        }, 300);
+    console.log('🛡️ [SecurityGuard] Showing page content...');
+    
+    // Remove loading overlay
+    const loadingOverlay = document.getElementById('security-loading');
+    if (loadingOverlay) {
+        loadingOverlay.style.opacity = '0';
+        setTimeout(() => loadingOverlay.remove(), 300);
     }
+    
+    // Show page content
+    document.documentElement.style.visibility = 'visible';
+}
     
     redirectToAuth(reason = 'Authentication required') {
         console.log('🔄 [SecurityGuard] Redirecting to auth:', reason);
