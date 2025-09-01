@@ -447,8 +447,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 2000); // Wait 2 seconds for script-loader
 });
 
-// Make app globally available
+// Make app globally available with both names for compatibility
 window.OsliraApp = OsliraApp;
+window.OsliraAppInitializer = OsliraApp; // Script loader expects this name
 
 } // End of if (!window.OsliraApp) check
 
