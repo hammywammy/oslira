@@ -1,667 +1,539 @@
-/**
- * ONBOARDING PAGE CONTROLLER - FIXED VERSION
- * SecurityGuard-compliant implementation with proper app coordination
- * Handles only onboarding-specific functionality
- */
-
-(function() {
-    'use strict';
-    
-    // =============================================================================
-    // STATE VARIABLES
-    // =============================================================================
-    
-    let initialized = false;
-    let auth = null;
-    let user = null;
-    let loading = false;
-    let step = 1; // Initialize step counter
-    
-    // Validation rules
-    const rules = {
-        'business-name': { required: true, minLength: 2 },
-        'business-niche': { required: true },
-        'target-audience': { required: true, minLength: 20 },
-        'target-problems': { required: true, minLength: 10 },
-        'value-proposition': { required: true, minLength: 20 },
-        'key-results': { required: true, minLength: 10 },
-        'success-outcome': { required: true },
-        'communication-tone': { required: true },
-        'communication-length': { required: true },
-        'preferred-cta': { required: true },
-        'message-example': { required: true, minLength: 50 }
-    };
-
-    // =============================================================================
-    // INITIALIZATION - PROPER APP COORDINATION
-    // =============================================================================
-
-// Wait for complete app initialization
-window.addEventListener('oslira:app:ready', async (event) => {
-    console.log('🚀 [Onboarding] App ready event received:', event.detail);
-    
-    if (!initialized) {
-        if (event.detail.success === false) {
-            console.warn('🚨 [Onboarding] App initialization failed, using degraded mode');
-            await initDegradedMode();
-        } else {
-            await init();
-        }
-    }
-});
-
-// Enhanced fallback with multiple retry attempts
-document.addEventListener('DOMContentLoaded', () => {
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    const tryInit = async () => {
-        attempts++;
-        console.log(`🔄 [Onboarding] Fallback attempt ${attempts}/${maxAttempts}...`);
-        
-        if (!initialized) {
-            if (window.OsliraApp?.instance) {
-                await init();
-            } else if (attempts >= maxAttempts) {
-                console.warn('🚨 [Onboarding] Max fallback attempts reached, using degraded mode');
-                await initDegradedMode();
-            } else {
-                setTimeout(tryInit, 2000 * attempts); // Exponential backoff
-            }
-        }
-    };
-    
-    setTimeout(tryInit, 1000); // Initial delay
-});
-
-    async function init() {
-        try {
-            console.log('🚀 [Onboarding] Starting initialization...');
-            
-            // Use the app's auth manager (guaranteed to exist at this point)
-            await loadSessionFromApp();
-            
-            // Show onboarding form
-            showOnboardingForm();
-            
-            // Setup event listeners
-            setupEvents();
-            
-            initialized = true;
-            console.log('✅ [Onboarding] Initialization complete');
-            
-        } catch (error) {
-            console.error('❌ [Onboarding] Initialization failed:', error);
-            showError(`Setup failed: ${error.message}`);
-            setTimeout(() => window.location.href = '/auth', 2000);
-        }
-    }
-
-    async function loadSessionFromApp() {
-        console.log('📊 [Onboarding] Loading session from app auth manager...');
-        
-        try {
-            // App is guaranteed to be initialized at this point
-            const app = window.OsliraApp.instance;
-            if (!app || !app.auth) {
-                throw new Error('App or auth manager not available');
-            }
-            
-            const authManager = app.auth;
-            const session = authManager.getCurrentSession();
-            const supabaseClient = authManager.getSupabaseClient();
-            
-            if (!session) {
-                throw new Error('No authenticated session found');
-            }
-            
-            // Use the app's auth manager directly
-            auth = { 
-                session, 
-                supabase: supabaseClient,
-                getCurrentSession: () => authManager.getCurrentSession(),
-                getCurrentUser: () => authManager.getCurrentUser(),
-                makeAuthenticatedRequest: async (url, options = {}) => {
-                    const currentSession = authManager.getCurrentSession();
-                    return fetch(url, {
-                        ...options,
-                        headers: {
-                            'Authorization': `Bearer ${currentSession.access_token}`,
-                            'Content-Type': 'application/json',
-                            ...options.headers
-                        }
-                    });
-                }
-            };
-            
-            user = {
-                ...session.user,
-                email: session.user.email,
-                id: session.user.id,
-                onboarding_completed: false
-            };
-            
-            console.log('✅ [Onboarding] Session loaded from app for:', user.email);
-            
-        } catch (error) {
-            console.error('❌ [Onboarding] Failed to load session from app:', error);
-            throw error;
-        }
-    }
-
-    function showOnboardingForm() {
-        console.log('🎨 [Onboarding] Showing onboarding form...');
-        
-        // Hide auth check
-        const authCheck = document.getElementById('auth-check');
-        if (authCheck) {
-            authCheck.style.display = 'none';
-            console.log('🎨 [Onboarding] Hidden auth-check');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Setup - Oslira</title>
+    <link rel="stylesheet" href="/pages/onboarding/onboarding.css">
+    <style>
+        /* Simple onboarding styles */
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            visibility: hidden; /* Hidden until scripts load */
         }
         
-        // Show main onboarding
-        const onboardingMain = document.getElementById('onboarding-main');
-        if (onboardingMain) {
-            onboardingMain.style.display = 'block';
-            console.log('🎨 [Onboarding] Showing onboarding-main');
+        .onboarding-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            margin: 2rem 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #4299e1;
+            border-radius: 2px;
+            width: 20%;
+            transition: width 0.3s ease;
+        }
+        
+        .step {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .step-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-description {
+            color: #718096;
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-error {
+            color: #e53e3e;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        
+        .btn-primary:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .loading-state {
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-state {
+            text-align: center;
+            padding: 3rem;
+            color: #e53e3e;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="onboarding-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">Oslira</div>
+            <div class="subtitle">Complete your account setup to start finding leads</div>
+        </div>
+        
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-state">
+            <div class="spinner"></div>
+            <div>Setting up your account...</div>
+        </div>
+        
+        <!-- Error State -->
+        <div id="error-state" class="error-state hidden">
+            <h3>Setup Failed</h3>
+            <p id="error-message">Unable to load account setup. Please try refreshing the page.</p>
+        </div>
+        
+        <!-- Onboarding Form -->
+        <div id="onboarding-form" class="hidden">
+            <!-- Progress Bar -->
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
             
-            // Initialize step system
-            initializeSteps();
-            updateProgress();
-        }
-    }
-
-    // =============================================================================
-    // STEP MANAGEMENT
-    // =============================================================================
-
-    function initializeSteps() {
-        console.log('🎯 [Onboarding] Initializing step system...');
-        
-        // Hide all steps except first
-        const steps = document.querySelectorAll('.onboarding-step');
-        steps.forEach((stepEl, index) => {
-            stepEl.style.display = index === 0 ? 'block' : 'none';
-        });
-        
-        // Initialize navigation buttons
-        setupStepNavigation();
-        
-        console.log('🎯 [Onboarding] Step system initialized');
-    }
-
-    function setupStepNavigation() {
-        // Next buttons
-        const nextButtons = document.querySelectorAll('[data-next-step]');
-        nextButtons.forEach(btn => {
-            btn.addEventListener('click', handleNextStep);
-        });
-        
-        // Previous buttons
-        const prevButtons = document.querySelectorAll('[data-prev-step]');
-        prevButtons.forEach(btn => {
-            btn.addEventListener('click', handlePrevStep);
-        });
-        
-        // Skip buttons (if any)
-        const skipButtons = document.querySelectorAll('[data-skip-step]');
-        skipButtons.forEach(btn => {
-            btn.addEventListener('click', handleSkipStep);
-        });
-    }
-
-    function handleNextStep(event) {
-        event.preventDefault();
-        
-        if (loading) return;
-        
-        // Validate current step
-        if (!validateCurrentStep()) {
-            return;
-        }
-        
-        goToStep(step + 1);
-    }
-
-    function handlePrevStep(event) {
-        event.preventDefault();
-        if (loading) return;
-        
-        goToStep(step - 1);
-    }
-
-    function handleSkipStep(event) {
-        event.preventDefault();
-        if (loading) return;
-        
-        goToStep(step + 1);
-    }
-
-    function goToStep(newStep) {
-        const totalSteps = document.querySelectorAll('.onboarding-step').length;
-        
-        if (newStep < 1 || newStep > totalSteps) {
-            return;
-        }
-        
-        console.log(`🎯 [Onboarding] Moving from step ${step} to step ${newStep}`);
-        
-        // Hide current step
-        const currentStepEl = document.querySelector(`[data-step="${step}"]`);
-        if (currentStepEl) {
-            currentStepEl.style.display = 'none';
-        }
-        
-        // Show new step
-        const newStepEl = document.querySelector(`[data-step="${newStep}"]`);
-        if (newStepEl) {
-            newStepEl.style.display = 'block';
+            <!-- Step 1: Business Info -->
+            <div class="step" id="step-1">
+                <div class="step-title">Tell us about your business</div>
+                <div class="step-description">Help us understand your business so we can find the perfect leads for you.</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="business-name">Business Name *</label>
+                    <input type="text" id="business-name" class="form-input" placeholder="Enter your business name">
+                    <div class="form-error" id="business-name-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="business-niche">Business Niche *</label>
+                    <select id="business-niche" class="form-select">
+                        <option value="">Select your niche</option>
+                        <option value="fitness">Fitness & Health</option>
+                        <option value="beauty">Beauty & Skincare</option>
+                        <option value="fashion">Fashion & Lifestyle</option>
+                        <option value="food">Food & Restaurants</option>
+                        <option value="travel">Travel & Tourism</option>
+                        <option value="technology">Technology & Apps</option>
+                        <option value="business">Business Services</option>
+                        <option value="education">Education & Courses</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <div class="form-error" id="business-niche-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="target-audience">Target Audience *</label>
+                    <textarea id="target-audience" class="form-textarea" 
+                             placeholder="Describe your ideal customer (age, interests, demographics, etc.)"></textarea>
+                    <div class="form-error" id="target-audience-error"></div>
+                </div>
+                
+                <div class="button-group">
+                    <div></div>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                </div>
+            </div>
             
-            // Focus first input in new step
-            const firstInput = newStepEl.querySelector('input, textarea, select');
-            if (firstInput) {
-                setTimeout(() => firstInput.focus(), 100);
-            }
-        }
-        
-        step = newStep;
-        updateProgress();
-    }
-
-    function updateProgress() {
-        const totalSteps = document.querySelectorAll('.onboarding-step').length;
-        const progressPercent = ((step - 1) / (totalSteps - 1)) * 100;
-        
-        // Update progress bar
-        const progressBar = document.querySelector('.progress-bar');
-        if (progressBar) {
-            progressBar.style.width = `${progressPercent}%`;
-        }
-        
-        // Update step indicator
-        const stepIndicator = document.querySelector('.step-indicator');
-        if (stepIndicator) {
-            stepIndicator.textContent = `Step ${step} of ${totalSteps}`;
-        }
-        
-        // Update step numbers in navigation
-        const stepNumbers = document.querySelectorAll('.step-number');
-        stepNumbers.forEach((el, index) => {
-            el.classList.toggle('active', index + 1 === step);
-            el.classList.toggle('completed', index + 1 < step);
-        });
-    }
-
-    function validateCurrentStep() {
-        const currentStepEl = document.querySelector(`[data-step="${step}"]`);
-        if (!currentStepEl) return true;
-        
-        const fieldsInStep = currentStepEl.querySelectorAll('input, textarea, select');
-        let isValid = true;
-        
-        fieldsInStep.forEach(field => {
-            const fieldName = field.name || field.id;
-            if (fieldName && rules[fieldName]) {
-                if (!validateField(fieldName)) {
-                    isValid = false;
-                }
-            }
-        });
-        
-        return isValid;
-    }
-
-    // =============================================================================
-    // FORM VALIDATION
-    // =============================================================================
-
-    function validateField(fieldName) {
-        const field = document.getElementById(fieldName);
-        const rule = rules[fieldName];
-        
-        if (!field || !rule) return true;
-        
-        const value = field.value.trim();
-        
-        // Required validation
-        if (rule.required && !value) {
-            showFieldError(field, `${getFieldLabel(field)} is required`);
-            return false;
-        }
-        
-        // Min length validation
-        if (rule.minLength && value.length > 0 && value.length < rule.minLength) {
-            showFieldError(field, `${getFieldLabel(field)} must be at least ${rule.minLength} characters`);
-            return false;
-        }
-        
-        // Clear any existing errors
-        clearFieldError(field);
-        return true;
-    }
-
-    function getFieldLabel(field) {
-        const label = document.querySelector(`label[for="${field.id}"]`);
-        return label ? label.textContent.replace('*', '').trim() : field.name || 'Field';
-    }
-
-    function showFieldError(field, message) {
-        clearFieldError(field);
-        
-        field.classList.add('error');
-        
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'field-error';
-        errorDiv.textContent = message;
-        
-        field.parentNode.insertBefore(errorDiv, field.nextSibling);
-    }
-
-    function clearFieldError(field) {
-        field.classList.remove('error');
-        
-        const existingError = field.parentNode.querySelector('.field-error');
-        if (existingError) {
-            existingError.remove();
-        }
-    }
-
-    function clearError(fieldName) {
-        const field = document.getElementById(fieldName);
-        if (field) {
-            clearFieldError(field);
-        }
-    }
-
-    // =============================================================================
-    // FORM SUBMISSION
-    // =============================================================================
-
-    async function handleSubmit(event) {
-        event.preventDefault();
-        
-        if (loading) {
-            console.log('🚀 [Onboarding] Already submitting, ignoring duplicate request');
-            return;
-        }
-        
-        console.log('🚀 [Onboarding] Form submission started');
-        
-        try {
-            loading = true;
-            updateSubmitButton(true);
+            <!-- Step 2: Value Proposition -->
+            <div class="step hidden" id="step-2">
+                <div class="step-title">What makes you unique?</div>
+                <div class="step-description">Help us craft personalized messages that highlight your value.</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="value-proposition">Your Value Proposition *</label>
+                    <textarea id="value-proposition" class="form-textarea" 
+                             placeholder="What unique value do you provide? What problems do you solve?"></textarea>
+                    <div class="form-error" id="value-proposition-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="key-results">Key Results/Benefits *</label>
+                    <textarea id="key-results" class="form-textarea" 
+                             placeholder="What results or benefits do your customers typically see?"></textarea>
+                    <div class="form-error" id="key-results-error"></div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                </div>
+            </div>
             
-            // Validate all fields
-            let isValid = true;
-            Object.keys(rules).forEach(fieldName => {
-                if (!validateField(fieldName)) {
-                    isValid = false;
-                }
-            });
-            
-            if (!isValid) {
-                console.log('❌ [Onboarding] Validation failed');
-                showError('Please fix the errors above');
-                return;
-            }
-            
-            // Collect form data
-            const formData = collectFormData();
-            console.log('📊 [Onboarding] Form data collected:', Object.keys(formData));
-            
-            // Submit to server
-            const result = await submitOnboarding(formData);
-            
-            console.log('✅ [Onboarding] Submission successful');
-            showSuccess('Profile created successfully!');
-            
-            // Redirect to dashboard
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 1500);
-            
-        } catch (error) {
-            console.error('❌ [Onboarding] Submission failed:', error);
-            showError(error.message || 'Failed to save profile. Please try again.');
-        } finally {
-            loading = false;
-            updateSubmitButton(false);
-        }
-    }
+            <!-- Step 3: Communication Style -->
+            <div class="step hidden" id="step-3">
+                <div class="step-title">How do you communicate?</div>
+                <div class="step-description">We'll match your brand voice in all outreach messages.</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="communication-tone">Communication Tone *</label>
+                    <select id="communication-tone" class="form-select">
+                        <option value="">Select your tone</option>
+                        <option value="professional">Professional & Formal</option>
+                        <option value="friendly">Friendly & Casual</option>
+                        <option value="enthusiastic">Enthusiastic & Energetic</option>
+                        <option value="expert">Expert & Authoritative</option>
+                        <option value="conversational">Conversational & Personal</option>
+                    </select>
+                    <div class="form-error" id="communication-tone-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="preferred-cta">Preferred Call-to-Action *</label>
+                    <select id="preferred-cta" class="form-select">
+                        <option value="">Select your preferred CTA</option>
+                        <option value="dm">Send a DM</option>
+                        <option value="comment">Comment on posts</option>
+                        <option value="website">Visit website</option>
+                        <option value="email">Email inquiry</option>
+                        <option value="call">Schedule a call</option>
+                    </select>
+                    <div class="form-error" id="preferred-cta-error"></div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    function collectFormData() {
-        const formData = {
-            user_id: user.id,
-            business_name: getValue('business-name'),
-            business_niche: getValue('business-niche'),
-            target_audience: getValue('target-audience'),
-            target_problems: getValue('target-problems'),
-            value_proposition: getValue('value-proposition'),
-            key_results: getValue('key-results'),
-            success_outcome: getValue('success-outcome'),
-            communication_tone: getValue('communication-tone'),
-            communication_length: getValue('communication-length'),
-            preferred_cta: getValue('preferred-cta'),
-            message_example: getValue('message-example')
+    <!-- Simple Script Loading -->
+    <script src="/core/script-loader.js"></script>
+    <script>
+        // Simple onboarding logic
+        console.log('📝 [Onboarding] Starting onboarding page...');
+        
+        let currentStep = 1;
+        let user = null;
+        let supabase = null;
+        
+        // Form validation rules
+        const validationRules = {
+            'business-name': { required: true, minLength: 2 },
+            'business-niche': { required: true },
+            'target-audience': { required: true, minLength: 20 },
+            'value-proposition': { required: true, minLength: 20 },
+            'key-results': { required: true, minLength: 10 },
+            'communication-tone': { required: true },
+            'preferred-cta': { required: true }
         };
         
-        return formData;
-    }
-
-    function getValue(fieldName) {
-        const field = document.getElementById(fieldName);
-        return field ? field.value.trim() : '';
-    }
-
-    function updateSubmitButton(isLoading) {
-        const submitBtn = document.getElementById('submit-btn');
-        if (!submitBtn) return;
-        
-        if (isLoading) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="loading-spinner"></span> Creating Profile...';
-        } else {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Complete Onboarding';
-        }
-    }
-
-    async function submitOnboarding(formData) {
-        console.log('🌐 [Onboarding] Submitting to server...');
-        
-        const config = window.OsliraConfig?.get();
-        if (!config?.WORKER_URL) {
-            throw new Error('Configuration not available');
-        }
-        
-        const response = await auth.makeAuthenticatedRequest(
-            `${config.WORKER_URL}/onboarding`,
-            {
-                method: 'POST',
-                body: JSON.stringify(formData)
-            }
-        );
-        
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        return await response.json();
-    }
-
-    // =============================================================================
-    // EVENT LISTENERS
-    // =============================================================================
-
-    function setupEvents() {
-        console.log('🎧 [Onboarding] Setting up event listeners...');
-        
-        // Form submission
-        const form = document.getElementById('onboarding-form');
-        if (form) {
-            form.addEventListener('submit', handleSubmit);
-            console.log('🎧 [Onboarding] Form submit listener added');
-        }
-        
-        // Field validation
-        Object.keys(rules).forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                field.addEventListener('blur', () => validateField(fieldId));
-                field.addEventListener('input', () => clearError(fieldId));
-            }
-        });
-        
-        // Progress tracking
-        setupProgress();
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', handleKeys);
-        
-        // Auth state changes (for signout only)
-        if (auth?.supabase) {
-            auth.supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_OUT') {
-                    console.log('🚪 [Onboarding] User signed out, redirecting to auth');
-                    window.location.href = '/auth';
-                }
-            });
-        }
-        
-        console.log('🎧 [Onboarding] Event listeners setup complete');
-    }
-
-    function setupProgress() {
-        // Auto-advance on certain field types
-        const selectFields = document.querySelectorAll('select');
-        selectFields.forEach(select => {
-            select.addEventListener('change', () => {
-                // Auto-advance after selection (optional)
-                setTimeout(() => {
-                    const nextBtn = select.closest('.onboarding-step').querySelector('[data-next-step]');
-                    if (nextBtn && validateCurrentStep()) {
-                        // Auto-advance logic can go here
-                    }
-                }, 500);
-            });
-        });
-    }
-
-    function handleKeys(event) {
-        if (loading) return;
-        
-        // Enter key to advance (if not in textarea)
-        if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
-            const nextBtn = document.querySelector(`[data-step="${step}"] [data-next-step]`);
-            if (nextBtn && !nextBtn.disabled) {
-                event.preventDefault();
-                nextBtn.click();
-            }
-        }
-        
-        // Escape key to go back
-        if (event.key === 'Escape') {
-            const prevBtn = document.querySelector(`[data-step="${step}"] [data-prev-step]`);
-            if (prevBtn) {
-                prevBtn.click();
-            }
-        }
-    }
-
-    // =============================================================================
-    // UI FEEDBACK
-    // =============================================================================
-
-    function showError(message) {
-        console.error('❌ [Onboarding] Error:', message);
-        
-        const errorDiv = document.getElementById('error-message') || createMessageDiv('error-message', 'error');
-        errorDiv.innerHTML = `<span class="error-icon">⚠️</span> ${message}`;
-        errorDiv.style.display = 'block';
-        
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-            errorDiv.style.display = 'none';
-        }, 5000);
-    }
-
-    function showSuccess(message) {
-        console.log('✅ [Onboarding] Success:', message);
-        
-        const successDiv = document.getElementById('success-message') || createMessageDiv('success-message', 'success');
-        successDiv.innerHTML = `<span class="success-icon">✅</span> ${message}`;
-        successDiv.style.display = 'block';
-        
-        // Auto-hide after 3 seconds
-        setTimeout(() => {
-            successDiv.style.display = 'none';
-        }, 3000);
-    }
-
-    function createMessageDiv(id, className) {
-        const div = document.createElement('div');
-        div.id = id;
-        div.className = `message ${className}`;
-        div.style.display = 'none';
-        
-        const form = document.getElementById('onboarding-form');
-        if (form) {
-            form.insertBefore(div, form.firstChild);
-        }
-        
-        return div;
-    }
-    
-    async function initDegradedMode() {
-    try {
-        console.log('🔧 [Onboarding] Starting degraded mode initialization...');
-        
-        // Try to get session directly from Supabase if app failed
-        const config = JSON.parse(localStorage.getItem('oslira_config') || '{}');
-        if (config.SUPABASE_URL) {
-            const supabaseClient = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            
-            if (session?.user) {
-                auth = { supabase: supabaseClient };
-                user = session.user;
+        // Wait for scripts to load, then initialize
+        window.addEventListener('oslira:scripts:loaded', async () => {
+            try {
+                console.log('📝 [Onboarding] Scripts loaded, initializing...');
                 
-                console.log('✅ [Onboarding] Degraded mode session loaded for:', user.email);
+                // Check authentication
+                if (!window.SimpleAuth) {
+                    throw new Error('SimpleAuth not available');
+                }
+                
+                await window.SimpleAuth.initialize();
+                const session = window.SimpleAuth.getCurrentSession();
+                
+                if (!session || !session.user) {
+                    console.log('❌ [Onboarding] No valid session, redirecting to auth');
+                    window.location.href = '/auth';
+                    return;
+                }
+                
+                user = session.user;
+                supabase = window.SimpleAuth.supabase;
+                
+                console.log('✅ [Onboarding] User authenticated:', user.email);
                 
                 // Show onboarding form
                 showOnboardingForm();
-                setupEvents();
                 
-                initialized = true;
-                console.log('✅ [Onboarding] Degraded mode initialization complete');
-            } else {
-                throw new Error('No valid session in degraded mode');
+            } catch (error) {
+                console.error('❌ [Onboarding] Initialization failed:', error);
+                showError('Failed to load account setup. Please try refreshing the page.');
             }
-        } else {
-            throw new Error('No Supabase config available');
+        });
+        
+        function showOnboardingForm() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('onboarding-form').classList.remove('hidden');
+            document.body.style.visibility = 'visible';
+            updateProgress();
         }
         
-    } catch (error) {
-        console.error('❌ [Onboarding] Degraded mode failed:', error);
-        showError('Unable to load account setup. Please try refreshing the page.');
-        setTimeout(() => window.location.href = '/auth', 3000);
-    }
-}
-
-    // =============================================================================
-    // MODULE EXPORT
-    // =============================================================================
-
-    // Export functions for HTML onclick handlers (legacy compatibility)
-    window.onboardingModule = {
-        validateField,
-        goToStep,
-        handleSubmit,
-        showError,
-        showSuccess
-    };
-
-    console.log('📝 [Onboarding] Module loaded successfully');
-
-})();
+        function showError(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-state').classList.remove('hidden');
+            document.body.style.visibility = 'visible';
+        }
+        
+        function updateProgress() {
+            const progress = (currentStep / 3) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        }
+        
+        function validateField(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorEl = document.getElementById(fieldId + '-error');
+            const rules = validationRules[fieldId];
+            
+            if (!rules) return true;
+            
+            const value = field.value.trim();
+            
+            // Required check
+            if (rules.required && !value) {
+                errorEl.textContent = 'This field is required';
+                field.style.borderColor = '#e53e3e';
+                return false;
+            }
+            
+            // Min length check
+            if (rules.minLength && value.length < rules.minLength) {
+                errorEl.textContent = `Please enter at least ${rules.minLength} characters`;
+                field.style.borderColor = '#e53e3e';
+                return false;
+            }
+            
+            // Clear error
+            errorEl.textContent = '';
+            field.style.borderColor = '#d1d5db';
+            return true;
+        }
+        
+        function validateStep(stepNum) {
+            const stepFields = {
+                1: ['business-name', 'business-niche', 'target-audience'],
+                2: ['value-proposition', 'key-results'],
+                3: ['communication-tone', 'preferred-cta']
+            };
+            
+            const fields = stepFields[stepNum] || [];
+            let isValid = true;
+            
+            fields.forEach(fieldId => {
+                if (!validateField(fieldId)) {
+                    isValid = false;
+                }
+            });
+            
+            return isValid;
+        }
+        
+        window.nextStep = function() {
+            if (!validateStep(currentStep)) {
+                console.log('❌ [Onboarding] Step validation failed');
+                return;
+            }
+            
+            if (currentStep < 3) {
+                // Hide current step
+                document.getElementById('step-' + currentStep).classList.add('hidden');
+                
+                // Show next step
+                currentStep++;
+                document.getElementById('step-' + currentStep).classList.remove('hidden');
+                
+                updateProgress();
+                
+                console.log('✅ [Onboarding] Moved to step', currentStep);
+            }
+        };
+        
+        window.prevStep = function() {
+            if (currentStep > 1) {
+                // Hide current step
+                document.getElementById('step-' + currentStep).classList.add('hidden');
+                
+                // Show previous step
+                currentStep--;
+                document.getElementById('step-' + currentStep).classList.remove('hidden');
+                
+                updateProgress();
+                
+                console.log('✅ [Onboarding] Moved to step', currentStep);
+            }
+        };
+        
+        window.submitOnboarding = async function() {
+            if (!validateStep(3)) {
+                console.log('❌ [Onboarding] Final step validation failed');
+                return;
+            }
+            
+            const submitBtn = document.querySelector('#step-3 .btn-primary');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+            
+            try {
+                console.log('💾 [Onboarding] Submitting onboarding data...');
+                
+                // Collect form data
+                const onboardingData = {
+                    business_name: document.getElementById('business-name').value.trim(),
+                    business_niche: document.getElementById('business-niche').value,
+                    target_audience: document.getElementById('target-audience').value.trim(),
+                    value_proposition: document.getElementById('value-proposition').value.trim(),
+                    key_results: document.getElementById('key-results').value.trim(),
+                    communication_tone: document.getElementById('communication-tone').value,
+                    preferred_cta: document.getElementById('preferred-cta').value,
+                    onboarding_completed: true
+                };
+                
+                console.log('💾 [Onboarding] Updating user data...', onboardingData);
+                
+                // Update user record
+                const { error } = await supabase
+                    .from('users')
+                    .update(onboardingData)
+                    .eq('id', user.id);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                console.log('✅ [Onboarding] Onboarding completed successfully');
+                
+                // Redirect to dashboard
+                submitBtn.textContent = 'Complete! Redirecting...';
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('❌ [Onboarding] Submission failed:', error);
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Complete Setup';
+                
+                // Show error
+                alert('Failed to save your setup. Please try again.');
+            }
+        };
+        
+        // Add real-time validation
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('.form-input, .form-textarea, .form-select')) {
+                validateField(e.target.id);
+            }
+        });
+        
+        console.log('📝 [Onboarding] Waiting for scripts to load...');
+    </script>
+</body>
+</html>
