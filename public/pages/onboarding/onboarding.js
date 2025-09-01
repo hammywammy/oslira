@@ -247,19 +247,49 @@
         try {
             console.log('💾 [Onboarding] Submitting onboarding data...');
             
-            // Collect form data
-            const onboardingData = collectFormData();
+            // Collect form data for business_profiles table
+            const businessProfileData = {
+                user_id: user.id,
+                business_name: getFieldValue('business-name'),
+                business_niche: getFieldValue('business-niche'),
+                target_audience: getFieldValue('target-audience'),
+                target_problems: `Common challenges faced by ${getFieldValue('target-audience')} that ${getFieldValue('business-name')} addresses.`,
+                value_proposition: getFieldValue('value-proposition'),
+                communication_style: getFieldValue('communication-tone'),
+                message_example: `Hi! I noticed you're interested in ${getFieldValue('business-niche')}. ${getFieldValue('value-proposition')} Would you like to learn more?`,
+                success_outcome: getFieldValue('key-results'),
+                call_to_action: getFieldValue('preferred-cta'),
+                is_active: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            };
             
-            console.log('💾 [Onboarding] Updating user data...', onboardingData);
+            console.log('💾 [Onboarding] Creating business profile...', businessProfileData);
             
-            // Update user record
-            const { error } = await supabase
+            // Insert business profile
+            const { data: businessProfile, error: businessError } = await supabase
+                .from('business_profiles')
+                .insert([businessProfileData])
+                .select()
+                .single();
+            
+            if (businessError) {
+                throw businessError;
+            }
+            
+            console.log('✅ [Onboarding] Business profile created:', businessProfile.id);
+            
+            // Update user onboarding_completed status
+            const { error: userError } = await supabase
                 .from('users')
-                .update(onboardingData)
+                .update({ 
+                    onboarding_completed: true,
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', user.id);
             
-            if (error) {
-                throw error;
+            if (userError) {
+                throw userError;
             }
             
             console.log('✅ [Onboarding] Onboarding completed successfully');
@@ -282,20 +312,6 @@
             // Show error
             showSubmissionError(error.message);
         }
-    }
-    
-    function collectFormData() {
-        return {
-            business_name: getFieldValue('business-name'),
-            business_niche: getFieldValue('business-niche'),
-            target_audience: getFieldValue('target-audience'),
-            value_proposition: getFieldValue('value-proposition'),
-            key_results: getFieldValue('key-results'),
-            communication_tone: getFieldValue('communication-tone'),
-            preferred_cta: getFieldValue('preferred-cta'),
-            onboarding_completed: true,
-            updated_at: new Date().toISOString()
-        };
     }
     
     function getFieldValue(fieldId) {
