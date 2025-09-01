@@ -447,10 +447,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 2000); // Wait 2 seconds for script-loader
 });
 
-// Make app globally available with both names for compatibility
+// Make app globally available
 window.OsliraApp = OsliraApp;
-window.OsliraAppInitializer = OsliraApp; // Script loader expects this name
 
 } // End of if (!window.OsliraApp) check
+
+// CRITICAL: Export for script loader (must be outside conditional)
+if (window.OsliraApp) {
+    window.OsliraAppInitializer = window.OsliraApp;
+    console.log('🏗️ [App] Application initializer exported for script loader');
+}
 
 console.log('🏗️ [App] Application initializer loaded, waiting for script-loader completion...');
