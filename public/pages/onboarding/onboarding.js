@@ -36,23 +36,43 @@
     // INITIALIZATION - PROPER APP COORDINATION
     // =============================================================================
 
-    // Wait for complete app initialization
-    window.addEventListener('oslira:app:ready', async (event) => {
-        console.log('🚀 [Onboarding] App ready, initializing onboarding...');
-        if (!initialized) {
+// Wait for complete app initialization
+window.addEventListener('oslira:app:ready', async (event) => {
+    console.log('🚀 [Onboarding] App ready event received:', event.detail);
+    
+    if (!initialized) {
+        if (event.detail.success === false) {
+            console.warn('🚨 [Onboarding] App initialization failed, using degraded mode');
+            await initDegradedMode();
+        } else {
             await init();
         }
-    });
+    }
+});
 
-    // Fallback for manual loading
-    document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(async () => {
-            if (!initialized && window.OsliraApp?.instance) {
-                console.log('🔄 [Onboarding] Fallback initialization...');
+// Enhanced fallback with multiple retry attempts
+document.addEventListener('DOMContentLoaded', () => {
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    const tryInit = async () => {
+        attempts++;
+        console.log(`🔄 [Onboarding] Fallback attempt ${attempts}/${maxAttempts}...`);
+        
+        if (!initialized) {
+            if (window.OsliraApp?.instance) {
                 await init();
+            } else if (attempts >= maxAttempts) {
+                console.warn('🚨 [Onboarding] Max fallback attempts reached, using degraded mode');
+                await initDegradedMode();
+            } else {
+                setTimeout(tryInit, 2000 * attempts); // Exponential backoff
             }
-        }, 3000);
-    });
+        }
+    };
+    
+    setTimeout(tryInit, 1000); // Initial delay
+});
 
     async function init() {
         try {
@@ -592,6 +612,42 @@
         
         return div;
     }
+    
+    async function initDegradedMode() {
+    try {
+        console.log('🔧 [Onboarding] Starting degraded mode initialization...');
+        
+        // Try to get session directly from Supabase if app failed
+        const config = JSON.parse(localStorage.getItem('oslira_config') || '{}');
+        if (config.SUPABASE_URL) {
+            const supabaseClient = window.supabase.createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            
+            if (session?.user) {
+                auth = { supabase: supabaseClient };
+                user = session.user;
+                
+                console.log('✅ [Onboarding] Degraded mode session loaded for:', user.email);
+                
+                // Show onboarding form
+                showOnboardingForm();
+                setupEvents();
+                
+                initialized = true;
+                console.log('✅ [Onboarding] Degraded mode initialization complete');
+            } else {
+                throw new Error('No valid session in degraded mode');
+            }
+        } else {
+            throw new Error('No Supabase config available');
+        }
+        
+    } catch (error) {
+        console.error('❌ [Onboarding] Degraded mode failed:', error);
+        showError('Unable to load account setup. Please try refreshing the page.');
+        setTimeout(() => window.location.href = '/auth', 3000);
+    }
+}
 
     // =============================================================================
     // MODULE EXPORT
