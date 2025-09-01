@@ -149,6 +149,18 @@ const stepFields = {
         const field = document.getElementById(fieldId);
         const errorEl = document.getElementById(fieldId + '-error');
         const rules = validationRules[fieldId];
+
+        if (fieldId === 'communication-tone') {
+        const radioButton = document.querySelector('input[name="communication-tone"]:checked');
+        const errorEl = document.getElementById(fieldId + '-error');
+        const isValid = !!radioButton;
+        
+        if (errorEl) {
+            errorEl.textContent = isValid ? '' : 'Please select a communication style';
+        }
+        
+        return isValid;
+    }
         
         if (!field || !rules) return true;
         
@@ -372,9 +384,16 @@ console.log('✅ [Onboarding] User onboarding status updated:', updatedUser);
     }
     
     function getFieldValue(fieldId) {
-        const field = document.getElementById(fieldId);
-        return field ? field.value.trim() : '';
+    // Handle radio buttons
+    if (fieldId === 'communication-tone') {
+        const radioButton = document.querySelector('input[name="communication-tone"]:checked');
+        return radioButton ? radioButton.value : '';
     }
+    
+    // Handle regular fields
+    const field = document.getElementById(fieldId);
+    return field ? field.value.trim() : '';
+}
     
     function showSubmissionError(message) {
         // Create or update error message
