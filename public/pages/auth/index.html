@@ -634,30 +634,28 @@
 
         // Initialize auth on page load
         document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                console.log('🔐 [Auth Page] Waiting for auth system...');
-                const authSystem = await waitForAuthSystem();
-                
-                console.log('🔐 [Auth Page] Initializing auth system...');
-                const auth = await authSystem.initialize();
-                
-                // Redirect if already authenticated
-                console.log('🔐 [Auth Page] Checking if user is already authenticated...');
-                const shouldShowForm = await auth.handleAuthPage();
-                console.log('🔐 [Auth Page] Should show form:', shouldShowForm);
-                
-                if (!shouldShowForm) {
-                    console.log('🔐 [Auth Page] Already authenticated, should redirect...');
-                    return; // Will redirect
-                }
-                
-                console.log('🔐 [Auth Page] Not authenticated, showing auth forms');
-                
-            } catch (error) {
-                console.error('Auth initialization failed:', error);
-                showError('Authentication system temporarily unavailable');
-            }
-        });
+    await window.SimpleAuth.initialize();
+    
+    // Show page
+    document.body.style.visibility = 'visible';
+    
+    // Simple Google OAuth only
+    document.getElementById('google-signin-btn').addEventListener('click', async () => {
+        try {
+            await window.SimpleAuth.signInWithGoogle();
+        } catch (error) {
+            alert('Login failed: ' + error.message);
+        }
+    });
+    
+    document.getElementById('google-signup-btn').addEventListener('click', async () => {
+        try {
+            await window.SimpleAuth.signInWithGoogle();
+        } catch (error) {
+            alert('Signup failed: ' + error.message);
+        }
+    });
+});
     </script>
 </body>
 </html>
