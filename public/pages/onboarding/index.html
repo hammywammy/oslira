@@ -1,267 +1,539 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Your AI Profile - Oslira</title>
-    <script src="/env-config.js"></script>
-
+    <title>Complete Your Setup - Oslira</title>
     <link rel="stylesheet" href="/pages/onboarding/onboarding.css">
+    <style>
+        /* Simple onboarding styles */
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            visibility: hidden; /* Hidden until scripts load */
+        }
+        
+        .onboarding-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        
+        .progress-bar {
+            height: 4px;
+            background: #e2e8f0;
+            border-radius: 2px;
+            margin: 2rem 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #4299e1;
+            border-radius: 2px;
+            width: 20%;
+            transition: width 0.3s ease;
+        }
+        
+        .step {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .step-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-description {
+            color: #718096;
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-error {
+            color: #e53e3e;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        
+        .btn-primary:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .loading-state {
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-state {
+            text-align: center;
+            padding: 3rem;
+            color: #e53e3e;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
-    <a href="#main-content" class="skip-nav">Skip to main content</a>
-    
-    <!-- Auth Check State -->
-    <div id="auth-check" class="onboarding-container">
-        <div class="onboarding-card auth-check">
-            <div class="loading-spinner"></div>
-            <p>Verifying your account...</p>
+    <div class="onboarding-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">Oslira</div>
+            <div class="subtitle">Complete your account setup to start finding leads</div>
         </div>
-    </div>
-    
-    <!-- Main Onboarding Flow -->
-    <div id="onboarding-main" class="onboarding-container" style="display: none;">
-        <div class="onboarding-card" id="main-content">
-            <!-- Header -->
-            <div class="onboarding-header">
-                <div class="logo">
-                    <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
-                    <h1>Welcome to Oslira</h1>
-                </div>
-                <p class="welcome-subtitle">Let's set up your AI-powered outreach profile in 5 quick steps</p>
+        
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-state">
+            <div class="spinner"></div>
+            <div>Setting up your account...</div>
+        </div>
+        
+        <!-- Error State -->
+        <div id="error-state" class="error-state hidden">
+            <h3>Setup Failed</h3>
+            <p id="error-message">Unable to load account setup. Please try refreshing the page.</p>
+        </div>
+        
+        <!-- Onboarding Form -->
+        <div id="onboarding-form" class="hidden">
+            <!-- Progress Bar -->
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
             </div>
             
-            <!-- Progress Bar -->
-            <div class="progress-section">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill"></div>
+            <!-- Step 1: Business Info -->
+            <div class="step" id="step-1">
+                <div class="step-title">Tell us about your business</div>
+                <div class="step-description">Help us understand your business so we can find the perfect leads for you.</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="business-name">Business Name *</label>
+                    <input type="text" id="business-name" class="form-input" placeholder="Enter your business name">
+                    <div class="form-error" id="business-name-error"></div>
                 </div>
-                <div class="progress-text" id="progress-text">Step 1 of 5</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="business-niche">Business Niche *</label>
+                    <select id="business-niche" class="form-select">
+                        <option value="">Select your niche</option>
+                        <option value="fitness">Fitness & Health</option>
+                        <option value="beauty">Beauty & Skincare</option>
+                        <option value="fashion">Fashion & Lifestyle</option>
+                        <option value="food">Food & Restaurants</option>
+                        <option value="travel">Travel & Tourism</option>
+                        <option value="technology">Technology & Apps</option>
+                        <option value="business">Business Services</option>
+                        <option value="education">Education & Courses</option>
+                        <option value="other">Other</option>
+                    </select>
+                    <div class="form-error" id="business-niche-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="target-audience">Target Audience *</label>
+                    <textarea id="target-audience" class="form-textarea" 
+                             placeholder="Describe your ideal customer (age, interests, demographics, etc.)"></textarea>
+                    <div class="form-error" id="target-audience-error"></div>
+                </div>
+                
+                <div class="button-group">
+                    <div></div>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                </div>
             </div>
-
-            <!-- Onboarding Form -->
-            <form id="onboarding-form" novalidate>
-                <!-- Step 1: Business Identity -->
-                <div class="step active" id="step-1">
-                    <div class="step-header">
-                        <div class="step-number">1</div>
-                        <h2>Business Identity</h2>
-                        <p class="step-description">Tell us about your business so we can personalize your outreach</p>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="business-name">Business Name *</label>
-                        <input type="text" id="business-name" placeholder="e.g., TechFlow Solutions" required maxlength="100">
-                        <div class="input-example">The name you want leads to see</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="business-niche">Business Niche *</label>
-                        <select id="business-niche" required>
-                            <option value="">Select your niche...</option>
-                            <option value="SaaS & Tech">SaaS & Tech</option>
-                            <option value="E-commerce">E-commerce</option>
-                            <option value="Digital Marketing">Digital Marketing</option>
-                            <option value="Consulting">Consulting</option>
-                            <option value="Finance & Fintech">Finance & Fintech</option>
-                            <option value="Health & Wellness">Health & Wellness</option>
-                            <option value="Education & Training">Education & Training</option>
-                            <option value="Real Estate">Real Estate</option>
-                            <option value="Manufacturing">Manufacturing</option>
-                            <option value="Creative & Design">Creative & Design</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-                    </div>
+            
+            <!-- Step 2: Value Proposition -->
+            <div class="step hidden" id="step-2">
+                <div class="step-title">What makes you unique?</div>
+                <div class="step-description">Help us craft personalized messages that highlight your value.</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="value-proposition">Your Value Proposition *</label>
+                    <textarea id="value-proposition" class="form-textarea" 
+                             placeholder="What unique value do you provide? What problems do you solve?"></textarea>
+                    <div class="form-error" id="value-proposition-error"></div>
                 </div>
-
-                <!-- Step 2: Target Audience -->
-                <div class="step" id="step-2">
-                    <div class="step-header">
-                        <div class="step-number">2</div>
-                        <h2>Target Audience</h2>
-                        <p class="step-description">Who are your ideal customers?</p>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="target-audience">Ideal Customer Profile *</label>
-                        <textarea 
-                            id="target-audience" 
-                            placeholder="e.g., SaaS founders with 10-50 employees who struggle with customer acquisition and want to scale their revenue through better marketing automation..."
-                            rows="4"
-                            required
-                            maxlength="500"
-                        ></textarea>
-                        <div class="input-example">Be specific about demographics, company size, pain points, etc.</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="target-problems">Main Problems You Solve *</label>
-                        <textarea 
-                            id="target-problems" 
-                            placeholder="e.g., Low conversion rates, inefficient lead generation, manual processes that waste time, lack of data-driven insights..."
-                            rows="3"
-                            required
-                            maxlength="400"
-                        ></textarea>
-                        <div class="input-example">What specific challenges do your customers face?</div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-                    </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="key-results">Key Results/Benefits *</label>
+                    <textarea id="key-results" class="form-textarea" 
+                             placeholder="What results or benefits do your customers typically see?"></textarea>
+                    <div class="form-error" id="key-results-error"></div>
                 </div>
-
-                <!-- Step 3: Value Proposition -->
-                <div class="step" id="step-3">
-                    <div class="step-header">
-                        <div class="step-number">3</div>
-                        <h2>Your Solution</h2>
-                        <p class="step-description">How do you help your customers succeed?</p>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="value-proposition">Value Proposition *</label>
-                        <textarea 
-                            id="value-proposition" 
-                            placeholder="e.g., We help SaaS companies increase their conversion rates by 40% through AI-powered personalization that turns anonymous visitors into qualified leads..."
-                            rows="4"
-                            required
-                            maxlength="500"
-                        ></textarea>
-                        <div class="input-example">What unique value do you provide? What results do you deliver?</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="success-outcome">Success Outcome *</label>
-                        <select id="success-outcome" required>
-                            <option value="">What success looks like...</option>
-                            <option value="Increased Revenue">Increased Revenue</option>
-                            <option value="More Qualified Leads">More Qualified Leads</option>
-                            <option value="Higher Conversion Rates">Higher Conversion Rates</option>
-                            <option value="Cost Reduction">Cost Reduction</option>
-                            <option value="Time Savings">Time Savings</option>
-                            <option value="Better Customer Experience">Better Customer Experience</option>
-                            <option value="Improved Efficiency">Improved Efficiency</option>
-                            <option value="Market Expansion">Market Expansion</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-                    </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
                 </div>
-
-                <!-- Step 4: Communication Style -->
-                <div class="step" id="step-4">
-                    <div class="step-header">
-                        <div class="step-number">4</div>
-                        <h2>Communication Style</h2>
-                        <p class="step-description">How do you prefer to communicate with prospects?</p>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="communication-style">Preferred Tone *</label>
-                        <select id="communication-style" required>
-                            <option value="">Select communication style...</option>
-                            <option value="Professional & Direct">Professional & Direct</option>
-                            <option value="Friendly & Conversational">Friendly & Conversational</option>
-                            <option value="Data-Driven & Analytical">Data-Driven & Analytical</option>
-                            <option value="Creative & Innovative">Creative & Innovative</option>
-                            <option value="Consultative & Expert">Consultative & Expert</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="call-to-action">Preferred Call-to-Action *</label>
-                        <select id="call-to-action" required>
-                            <option value="">What do you want prospects to do...</option>
-                            <option value="Book a Discovery Call">Book a Discovery Call</option>
-                            <option value="Schedule a Demo">Schedule a Demo</option>
-                            <option value="Download a Resource">Download a Resource</option>
-                            <option value="Start a Free Trial">Start a Free Trial</option>
-                            <option value="Join a Webinar">Join a Webinar</option>
-                            <option value="Get a Free Audit">Get a Free Audit</option>
-                            <option value="Request a Quote">Request a Quote</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-                    </div>
+            </div>
+            
+            <!-- Step 3: Communication Style -->
+            <div class="step hidden" id="step-3">
+                <div class="step-title">How do you communicate?</div>
+                <div class="step-description">We'll match your brand voice in all outreach messages.</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="communication-tone">Communication Tone *</label>
+                    <select id="communication-tone" class="form-select">
+                        <option value="">Select your tone</option>
+                        <option value="professional">Professional & Formal</option>
+                        <option value="friendly">Friendly & Casual</option>
+                        <option value="enthusiastic">Enthusiastic & Energetic</option>
+                        <option value="expert">Expert & Authoritative</option>
+                        <option value="conversational">Conversational & Personal</option>
+                    </select>
+                    <div class="form-error" id="communication-tone-error"></div>
                 </div>
-
-                <!-- Step 5: Sample Message -->
-                <div class="step" id="step-5">
-                    <div class="step-header">
-                        <div class="step-number">5</div>
-                        <h2>Perfect Your Approach</h2>
-                        <p class="step-description">Write your ideal outreach message</p>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="message-example">Sample Outreach Message *</label>
-                        <textarea 
-                            id="message-example" 
-                            placeholder="Hi [Name], I noticed you're working on [specific challenge]. We've helped similar SaaS companies increase conversions by 40% using AI personalization. Would you be open to a quick 15-minute chat to see if this could help [Company] too?"
-                            rows="5"
-                            required
-                            maxlength="800"
-                        ></textarea>
-                        <div class="input-example">Keep it conversational and low-pressure. Use [Name] and [Company] placeholders.</div>
-                    </div>
-                    
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                        <button type="submit" class="btn btn-primary">
-                            <span class="btn-text">Complete Setup</span>
-                            <span class="btn-loading">Setting up your profile...</span>
-                        </button>
-                    </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="preferred-cta">Preferred Call-to-Action *</label>
+                    <select id="preferred-cta" class="form-select">
+                        <option value="">Select your preferred CTA</option>
+                        <option value="dm">Send a DM</option>
+                        <option value="comment">Comment on posts</option>
+                        <option value="website">Visit website</option>
+                        <option value="email">Email inquiry</option>
+                        <option value="call">Schedule a call</option>
+                    </select>
+                    <div class="form-error" id="preferred-cta-error"></div>
                 </div>
-            </form>
-
-            <!-- Success State -->
-            <div class="success-state" id="success-state" style="display: none;">
-                <div class="success-icon">🚀</div>
-                <h2>Your AI profile is ready!</h2>
-                <p>You've been credited with <strong>5 free analysis credits</strong> to test the system.</p>
-                <p class="success-note">Redirecting to your dashboard...</p>
-                <div class="success-spinner"></div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Error State -->
-    <div id="error-state" class="onboarding-container" style="display: none;">
-        <div class="onboarding-card error-state">
-            <div class="error-icon">⚠️</div>
-            <h2>Setup Issue</h2>
-            <p class="error-message" id="error-message">Unable to verify your session.</p>
-            <div class="error-actions">
-                <button class="btn btn-primary" onclick="window.location.href='/auth'">Back to Login</button>
-                <button class="btn btn-secondary" onclick="window.location.reload()">Try Again</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loading State -->
-    <div id="loading-state" class="onboarding-container" style="display: none;">
-        <div class="onboarding-card loading-state">
-            <div class="loading-spinner"></div>
-            <h3>Setting up your AI profile...</h3>
-            <p>This may take a few moments.</p>
-        </div>
-    </div>
-
+    <!-- Simple Script Loading -->
     <script src="/core/script-loader.js"></script>
-    <!-- onboarding.js is loaded by script-loader, remove duplicate -->
+    <script>
+        // Simple onboarding logic
+        console.log('📝 [Onboarding] Starting onboarding page...');
+        
+        let currentStep = 1;
+        let user = null;
+        let supabase = null;
+        
+        // Form validation rules
+        const validationRules = {
+            'business-name': { required: true, minLength: 2 },
+            'business-niche': { required: true },
+            'target-audience': { required: true, minLength: 20 },
+            'value-proposition': { required: true, minLength: 20 },
+            'key-results': { required: true, minLength: 10 },
+            'communication-tone': { required: true },
+            'preferred-cta': { required: true }
+        };
+        
+        // Wait for scripts to load, then initialize
+        window.addEventListener('oslira:scripts:loaded', async () => {
+            try {
+                console.log('📝 [Onboarding] Scripts loaded, initializing...');
+                
+                // Check authentication
+                if (!window.SimpleAuth) {
+                    throw new Error('SimpleAuth not available');
+                }
+                
+                await window.SimpleAuth.initialize();
+                const session = window.SimpleAuth.getCurrentSession();
+                
+                if (!session || !session.user) {
+                    console.log('❌ [Onboarding] No valid session, redirecting to auth');
+                    window.location.href = '/auth';
+                    return;
+                }
+                
+                user = session.user;
+                supabase = window.SimpleAuth.supabase;
+                
+                console.log('✅ [Onboarding] User authenticated:', user.email);
+                
+                // Show onboarding form
+                showOnboardingForm();
+                
+            } catch (error) {
+                console.error('❌ [Onboarding] Initialization failed:', error);
+                showError('Failed to load account setup. Please try refreshing the page.');
+            }
+        });
+        
+        function showOnboardingForm() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('onboarding-form').classList.remove('hidden');
+            document.body.style.visibility = 'visible';
+            updateProgress();
+        }
+        
+        function showError(message) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('error-state').classList.remove('hidden');
+            document.body.style.visibility = 'visible';
+        }
+        
+        function updateProgress() {
+            const progress = (currentStep / 3) * 100;
+            document.getElementById('progress-fill').style.width = progress + '%';
+        }
+        
+        function validateField(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorEl = document.getElementById(fieldId + '-error');
+            const rules = validationRules[fieldId];
+            
+            if (!rules) return true;
+            
+            const value = field.value.trim();
+            
+            // Required check
+            if (rules.required && !value) {
+                errorEl.textContent = 'This field is required';
+                field.style.borderColor = '#e53e3e';
+                return false;
+            }
+            
+            // Min length check
+            if (rules.minLength && value.length < rules.minLength) {
+                errorEl.textContent = `Please enter at least ${rules.minLength} characters`;
+                field.style.borderColor = '#e53e3e';
+                return false;
+            }
+            
+            // Clear error
+            errorEl.textContent = '';
+            field.style.borderColor = '#d1d5db';
+            return true;
+        }
+        
+        function validateStep(stepNum) {
+            const stepFields = {
+                1: ['business-name', 'business-niche', 'target-audience'],
+                2: ['value-proposition', 'key-results'],
+                3: ['communication-tone', 'preferred-cta']
+            };
+            
+            const fields = stepFields[stepNum] || [];
+            let isValid = true;
+            
+            fields.forEach(fieldId => {
+                if (!validateField(fieldId)) {
+                    isValid = false;
+                }
+            });
+            
+            return isValid;
+        }
+        
+        window.nextStep = function() {
+            if (!validateStep(currentStep)) {
+                console.log('❌ [Onboarding] Step validation failed');
+                return;
+            }
+            
+            if (currentStep < 3) {
+                // Hide current step
+                document.getElementById('step-' + currentStep).classList.add('hidden');
+                
+                // Show next step
+                currentStep++;
+                document.getElementById('step-' + currentStep).classList.remove('hidden');
+                
+                updateProgress();
+                
+                console.log('✅ [Onboarding] Moved to step', currentStep);
+            }
+        };
+        
+        window.prevStep = function() {
+            if (currentStep > 1) {
+                // Hide current step
+                document.getElementById('step-' + currentStep).classList.add('hidden');
+                
+                // Show previous step
+                currentStep--;
+                document.getElementById('step-' + currentStep).classList.remove('hidden');
+                
+                updateProgress();
+                
+                console.log('✅ [Onboarding] Moved to step', currentStep);
+            }
+        };
+        
+        window.submitOnboarding = async function() {
+            if (!validateStep(3)) {
+                console.log('❌ [Onboarding] Final step validation failed');
+                return;
+            }
+            
+            const submitBtn = document.querySelector('#step-3 .btn-primary');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Saving...';
+            
+            try {
+                console.log('💾 [Onboarding] Submitting onboarding data...');
+                
+                // Collect form data
+                const onboardingData = {
+                    business_name: document.getElementById('business-name').value.trim(),
+                    business_niche: document.getElementById('business-niche').value,
+                    target_audience: document.getElementById('target-audience').value.trim(),
+                    value_proposition: document.getElementById('value-proposition').value.trim(),
+                    key_results: document.getElementById('key-results').value.trim(),
+                    communication_tone: document.getElementById('communication-tone').value,
+                    preferred_cta: document.getElementById('preferred-cta').value,
+                    onboarding_completed: true
+                };
+                
+                console.log('💾 [Onboarding] Updating user data...', onboardingData);
+                
+                // Update user record
+                const { error } = await supabase
+                    .from('users')
+                    .update(onboardingData)
+                    .eq('id', user.id);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                console.log('✅ [Onboarding] Onboarding completed successfully');
+                
+                // Redirect to dashboard
+                submitBtn.textContent = 'Complete! Redirecting...';
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1000);
+                
+            } catch (error) {
+                console.error('❌ [Onboarding] Submission failed:', error);
+                
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Complete Setup';
+                
+                // Show error
+                alert('Failed to save your setup. Please try again.');
+            }
+        };
+        
+        // Add real-time validation
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('.form-input, .form-textarea, .form-select')) {
+                validateField(e.target.id);
+            }
+        });
+        
+        console.log('📝 [Onboarding] Waiting for scripts to load...');
+    </script>
 </body>
 </html>
