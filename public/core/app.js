@@ -57,60 +57,79 @@ class OsliraApp {
             this.api = await this.initializeApiClient();
             
             // Step 5: Initialize UI manager
-            console.log('🎨 [App] Initializing UI components...');
+            console.log('🎨 [App] Initializing UI manager...');
             this.ui = await this.initializeUI();
             
             // Step 6: Initialize data store
-            console.log('💾 [App] Initializing data store...');
+            console.log('📊 [App] Initializing data store...');
             this.store = await this.initializeDataStore();
             
-            // Step 7: Set up page-specific features
-            console.log('⚙️ [App] Setting up page-specific features...');
+            // Step 7: Setup page-specific features
+            console.log('🔧 [App] Setting up page-specific features...');
             await this.setupPageSpecificFeatures();
             
-            // Step 8: Set up global event listeners
+            // Step 8: Setup global event listeners
             console.log('🎧 [App] Setting up global event listeners...');
             await this.setupGlobalEventListeners();
             
+            const duration = performance.now() - startTime;
             this.initialized = true;
             
-            const endTime = performance.now();
-            console.log(`✅ [App] Application initialized successfully in ${Math.round(endTime - startTime)}ms`);
-            
-            // Emit app ready event
-            window.dispatchEvent(new CustomEvent('app:ready', { detail: this }));
-            
+            console.log(`✅ [App] Application initialized successfully in ${duration.toFixed(2)}ms`);
             return this;
             
         } catch (error) {
             console.error('❌ [App] Application initialization failed:', error);
-            this.showInitializationError(error);
             throw error;
         }
     }
     
+    // =============================================================================
+    // INITIALIZATION METHODS
+    // =============================================================================
+    
     async loadConfiguration() {
-        if (!window.OsliraConfig?.load) {
-            throw new Error('OsliraConfig not available');
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds
+        
+        while (attempts < maxAttempts) {
+            if (window.OsliraConfig?.get) {
+                const config = window.OsliraConfig.get();
+                console.log('✅ [App] Configuration loaded');
+                return config;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
         }
         
-        await window.OsliraConfig.load();
-        return window.OsliraConfig.get();
+        throw new Error('Configuration not available after timeout');
     }
     
     async waitForLibraries() {
-        const requiredLibraries = ['supabase'];
-        const timeout = 10000; // 10 seconds
-        const startTime = Date.now();
+        const requiredLibraries = [
+            { name: 'supabase', global: 'supabase' },
+            { name: 'OsliraAuth', global: 'OsliraAuth' }
+        ];
         
-        while (Date.now() - startTime < timeout) {
-            const allLoaded = requiredLibraries.every(lib => window[lib]);
-            if (allLoaded) return;
-            await new Promise(resolve => setTimeout(resolve, 100));
+        for (const lib of requiredLibraries) {
+            let attempts = 0;
+            const maxAttempts = 50;
+            
+            while (attempts < maxAttempts) {
+                if (window[lib.global]) {
+                    console.log(`✅ [App] ${lib.name} library available`);
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            
+            if (!window[lib.global]) {
+                throw new Error(`${lib.name} library not available after timeout`);
+            }
         }
         
-        const missing = requiredLibraries.filter(lib => !window[lib]);
-        throw new Error(`Required libraries not loaded: ${missing.join(', ')}`);
+        console.log('✅ [App] All required libraries loaded');
     }
     
     async initializeAuth() {
@@ -118,7 +137,9 @@ class OsliraApp {
             throw new Error('OsliraAuth not available');
         }
         
-        return await window.OsliraAuth.initialize();
+        const auth = await window.OsliraAuth.initialize();
+        console.log('✅ [App] Authentication manager initialized');
+        return auth;
     }
     
     async initializeApiClient() {
@@ -126,7 +147,10 @@ class OsliraApp {
             console.warn('⚠️ [App] OsliraApiClient not available, creating basic client');
             return new BasicApiClient(this.config, this.auth);
         }
-        return new window.OsliraApiClient(this.config, this.auth);
+        
+        const api = new window.OsliraApiClient(this.config, this.auth);
+        console.log('✅ [App] API client initialized');
+        return api;
     }
     
     async initializeUI() {
@@ -134,7 +158,10 @@ class OsliraApp {
             console.warn('⚠️ [App] OsliraUIManager not available, creating basic manager');
             return new BasicUIManager();
         }
-        return new window.OsliraUIManager();
+        
+        const ui = new window.OsliraUIManager();
+        console.log('✅ [App] UI manager initialized');
+        return ui;
     }
     
     async initializeDataStore() {
@@ -142,12 +169,15 @@ class OsliraApp {
             console.warn('⚠️ [App] OsliraDataStore not available, creating basic store');
             return new BasicDataStore();
         }
-        return new window.OsliraDataStore();
+        
+        const store = new window.OsliraDataStore();
+        console.log('✅ [App] Data store initialized');
+        return store;
     }
     
     async setupPageSpecificFeatures() {
         // Initialize page-specific components based on current page
-        const currentPage = window.OsliraScriptLoader?.currentPage || 'unknown';
+        const currentPage = window.OsliraEnv?.CURRENT_PAGE || 'unknown';
         console.log('🔧 [App] Setting up features for page:', currentPage);
         
         switch (currentPage) {
@@ -226,62 +256,82 @@ class OsliraApp {
                 authenticated: !!session,
                 userId: user?.id
             });
-            
-            // Update global state
-            this.store?.setState('auth.session', session);
-            this.store?.setState('auth.user', user);
         });
         
-        // Handle page visibility changes
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') {
-                // Refresh session when page becomes visible
-                if (this.auth?.refreshSession) {
-                    this.auth.refreshSession().catch(console.error);
-                }
-            }
+        // Handle business changes
+        window.addEventListener('auth:business-change', (event) => {
+            const { business } = event.detail;
+            console.log('🏢 [App] Business changed:', business?.name || 'None selected');
         });
+        
+        console.log('🎧 [App] Global event listeners setup complete');
     }
     
+    // =============================================================================
+    // UTILITY METHODS
+    // =============================================================================
+    
     static showInitializationError(error) {
-        // Show a user-friendly error message
-        const errorContainer = document.createElement('div');
-        errorContainer.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #fee;
-            border: 1px solid #fcc;
-            color: #c00;
-            padding: 16px 24px;
-            border-radius: 8px;
-            z-index: 9999;
-            font-family: system-ui, -apple-system, sans-serif;
-            font-size: 14px;
-            max-width: 500px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        console.error('❌ [App] Initialization Error:', error);
+        
+        // Create error display
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'app-init-error';
+        errorDiv.innerHTML = `
+            <h3>Application Error</h3>
+            <p>Failed to initialize: ${error.message}</p>
+            <button onclick="window.location.reload()">Reload Page</button>
         `;
         
-        errorContainer.innerHTML = `
-            <strong>Application Error</strong><br>
-            ${error.message}<br>
-            <small style="opacity: 0.7;">Please refresh the page or contact support if this persists.</small>
+        errorDiv.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; border: 2px solid #ef4444; border-radius: 8px;
+            padding: 20px; text-align: center; z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         `;
         
-        document.body.appendChild(errorContainer);
-        
-        // Auto-remove after 10 seconds
-        setTimeout(() => {
-            if (errorContainer.parentNode) {
-                errorContainer.parentNode.removeChild(errorContainer);
-            }
-        }, 10000);
+        document.body.appendChild(errorDiv);
+    }
+    
+    showMessage(message, type = 'info', duration = 3000) {
+        if (window.OsliraAlertSystem?.show) {
+            window.OsliraAlertSystem.show(message, type, duration);
+        } else {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+    }
+    
+    // =============================================================================
+    // PUBLIC API
+    // =============================================================================
+    
+    getConfig() {
+        return this.config;
+    }
+    
+    getAuth() {
+        return this.auth;
+    }
+    
+    getApi() {
+        return this.api;
+    }
+    
+    getUI() {
+        return this.ui;
+    }
+    
+    getStore() {
+        return this.store;
+    }
+    
+    isInitialized() {
+        return this.initialized;
     }
 }
 
 // =============================================================================
-// BASIC FALLBACK CLASSES (for when full modules aren't available)
+// BASIC FALLBACK CLASSES
 // =============================================================================
 
 class BasicApiClient {
@@ -290,28 +340,30 @@ class BasicApiClient {
         this.auth = auth;
     }
     
-    async makeRequest(url, options = {}) {
-        if (this.auth?.getAuthHeaders) {
-            options.headers = {
-                ...this.auth.getAuthHeaders(),
+    async request(endpoint, options = {}) {
+        const session = this.auth?.getCurrentSession();
+        return fetch(`${this.config.WORKER_URL}${endpoint}`, {
+            ...options,
+            headers: {
+                'Authorization': session ? `Bearer ${session.access_token}` : '',
+                'Content-Type': 'application/json',
                 ...options.headers
-            };
-        }
-        return fetch(url, options);
+            }
+        });
     }
 }
 
 class BasicUIManager {
-    constructor() {
-        this.components = new Map();
+    showLoading() {
+        console.log('Loading...');
     }
     
-    register(name, component) {
-        this.components.set(name, component);
+    hideLoading() {
+        console.log('Loading complete');
     }
     
-    get(name) {
-        return this.components.get(name);
+    showError(message) {
+        console.error('UI Error:', message);
     }
 }
 
@@ -345,26 +397,59 @@ class BasicDataStore {
     }
 }
 
-    // =============================================================================
-    // GLOBAL INITIALIZATION - ONLY IF NOT ALREADY DECLARED
-    // =============================================================================
+// =============================================================================
+// PROPER INITIALIZATION SEQUENCE
+// =============================================================================
 
-    // Initialize when DOM is ready, but wait for config to be loaded
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            // Wait a bit for config to load first
-            setTimeout(() => {
-                OsliraApp.init().catch(console.error);
-            }, 100);
-        });
-    } else {
-        // DOM already ready, wait for config
-        setTimeout(() => {
-            OsliraApp.init().catch(console.error);
-        }, 200);
+// Primary: Initialize after script-loader completes ALL dependencies
+window.addEventListener('oslira:scripts:loaded', async (event) => {
+    console.log('🚀 [App] Script loader completed, starting app initialization...');
+    
+    try {
+        if (!OsliraApp.instance) {
+            const app = await OsliraApp.init();
+            console.log('✅ [App] Application ready for', event.detail.page);
+            
+            // Emit app ready event for other systems
+            window.dispatchEvent(new CustomEvent('oslira:app:ready', {
+                detail: { 
+                    app: app,
+                    page: event.detail.page,
+                    environment: event.detail.environment
+                }
+            }));
+        }
+    } catch (error) {
+        console.error('❌ [App] Initialization failed:', error);
+        OsliraApp.showInitializationError(error);
     }
+});
 
-    // Make app globally available
-    window.OsliraApp = OsliraApp;
+// Fallback: If script-loader event missed or manual script loading
+document.addEventListener('DOMContentLoaded', () => {
+    // Give script-loader time to emit its event first
+    setTimeout(async () => {
+        if (!OsliraApp.instance && !window.OsliraScriptLoader) {
+            console.log('🔄 [App] Fallback initialization (no script-loader detected)...');
+            try {
+                await OsliraApp.init();
+            } catch (error) {
+                console.error('❌ [App] Fallback initialization failed:', error);
+            }
+        } else if (!OsliraApp.instance) {
+            console.log('🔄 [App] Late initialization trigger...');
+            try {
+                await OsliraApp.init();
+            } catch (error) {
+                console.error('❌ [App] Late initialization failed:', error);
+            }
+        }
+    }, 2000); // Wait 2 seconds for script-loader
+});
+
+// Make app globally available
+window.OsliraApp = OsliraApp;
 
 } // End of if (!window.OsliraApp) check
+
+console.log('🏗️ [App] Application initializer loaded, waiting for script-loader completion...');
