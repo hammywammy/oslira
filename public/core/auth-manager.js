@@ -29,15 +29,21 @@ class SimpleAuth {
         return this;
     }
     
-    async waitForConfig() {
-        for (let i = 0; i < 50; i++) {
-            if (window.OsliraConfig?.get) {
+async waitForConfig() {
+    for (let i = 0; i < 50; i++) {
+        if (window.OsliraConfig?.get) {
+            try {
                 return window.OsliraConfig.get();
+            } catch (error) {
+                // Config manager exists but config not loaded yet
+                await new Promise(resolve => setTimeout(resolve, 100));
+                continue;
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
         }
-        throw new Error('Config not available');
+        await new Promise(resolve => setTimeout(resolve, 100));
     }
+    throw new Error('Config not available');
+}
     
     // Missing this:
 async signInWithGoogle() {
