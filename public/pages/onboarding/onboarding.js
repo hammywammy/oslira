@@ -1,539 +1,389 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete Your Setup - Oslira</title>
-    <link rel="stylesheet" href="/pages/onboarding/onboarding.css">
-    <style>
-        /* Simple onboarding styles */
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            min-height: 100vh;
-            visibility: hidden; /* Hidden until scripts load */
-        }
-        
-        .onboarding-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-        
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #1a202c;
-            margin-bottom: 0.5rem;
-        }
-        
-        .subtitle {
-            color: #718096;
-            font-size: 1.1rem;
-        }
-        
-        .progress-bar {
-            height: 4px;
-            background: #e2e8f0;
-            border-radius: 2px;
-            margin: 2rem 0;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: #4299e1;
-            border-radius: 2px;
-            width: 20%;
-            transition: width 0.3s ease;
-        }
-        
-        .step {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        
-        .step-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1a202c;
-            margin-bottom: 0.5rem;
-        }
-        
-        .step-description {
-            color: #718096;
-            margin-bottom: 2rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        .form-label {
-            display: block;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 0.5rem;
-        }
-        
-        .form-input, .form-textarea, .form-select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-            box-sizing: border-box;
-        }
-        
-        .form-input:focus, .form-textarea:focus, .form-select:focus {
-            outline: none;
-            border-color: #4299e1;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-        }
-        
-        .form-textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-        
-        .form-error {
-            color: #e53e3e;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-        
-        .button-group {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 2rem;
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn-primary {
-            background: #4299e1;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #3182ce;
-        }
-        
-        .btn-primary:disabled {
-            background: #a0aec0;
-            cursor: not-allowed;
-        }
-        
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #4a5568;
-        }
-        
-        .btn-secondary:hover {
-            background: #cbd5e0;
-        }
-        
-        .loading-state {
-            text-align: center;
-            padding: 3rem;
-        }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #4299e1;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error-state {
-            text-align: center;
-            padding: 3rem;
-            color: #e53e3e;
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-    </style>
-</head>
-<body>
-    <div class="onboarding-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="logo">Oslira</div>
-            <div class="subtitle">Complete your account setup to start finding leads</div>
-        </div>
-        
-        <!-- Loading State -->
-        <div id="loading-state" class="loading-state">
-            <div class="spinner"></div>
-            <div>Setting up your account...</div>
-        </div>
-        
-        <!-- Error State -->
-        <div id="error-state" class="error-state hidden">
-            <h3>Setup Failed</h3>
-            <p id="error-message">Unable to load account setup. Please try refreshing the page.</p>
-        </div>
-        
-        <!-- Onboarding Form -->
-        <div id="onboarding-form" class="hidden">
-            <!-- Progress Bar -->
-            <div class="progress-bar">
-                <div id="progress-fill" class="progress-fill"></div>
-            </div>
-            
-            <!-- Step 1: Business Info -->
-            <div class="step" id="step-1">
-                <div class="step-title">Tell us about your business</div>
-                <div class="step-description">Help us understand your business so we can find the perfect leads for you.</div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="business-name">Business Name *</label>
-                    <input type="text" id="business-name" class="form-input" placeholder="Enter your business name">
-                    <div class="form-error" id="business-name-error"></div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="business-niche">Business Niche *</label>
-                    <select id="business-niche" class="form-select">
-                        <option value="">Select your niche</option>
-                        <option value="fitness">Fitness & Health</option>
-                        <option value="beauty">Beauty & Skincare</option>
-                        <option value="fashion">Fashion & Lifestyle</option>
-                        <option value="food">Food & Restaurants</option>
-                        <option value="travel">Travel & Tourism</option>
-                        <option value="technology">Technology & Apps</option>
-                        <option value="business">Business Services</option>
-                        <option value="education">Education & Courses</option>
-                        <option value="other">Other</option>
-                    </select>
-                    <div class="form-error" id="business-niche-error"></div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="target-audience">Target Audience *</label>
-                    <textarea id="target-audience" class="form-textarea" 
-                             placeholder="Describe your ideal customer (age, interests, demographics, etc.)"></textarea>
-                    <div class="form-error" id="target-audience-error"></div>
-                </div>
-                
-                <div class="button-group">
-                    <div></div>
-                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-                </div>
-            </div>
-            
-            <!-- Step 2: Value Proposition -->
-            <div class="step hidden" id="step-2">
-                <div class="step-title">What makes you unique?</div>
-                <div class="step-description">Help us craft personalized messages that highlight your value.</div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="value-proposition">Your Value Proposition *</label>
-                    <textarea id="value-proposition" class="form-textarea" 
-                             placeholder="What unique value do you provide? What problems do you solve?"></textarea>
-                    <div class="form-error" id="value-proposition-error"></div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="key-results">Key Results/Benefits *</label>
-                    <textarea id="key-results" class="form-textarea" 
-                             placeholder="What results or benefits do your customers typically see?"></textarea>
-                    <div class="form-error" id="key-results-error"></div>
-                </div>
-                
-                <div class="button-group">
-                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-                </div>
-            </div>
-            
-            <!-- Step 3: Communication Style -->
-            <div class="step hidden" id="step-3">
-                <div class="step-title">How do you communicate?</div>
-                <div class="step-description">We'll match your brand voice in all outreach messages.</div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="communication-tone">Communication Tone *</label>
-                    <select id="communication-tone" class="form-select">
-                        <option value="">Select your tone</option>
-                        <option value="professional">Professional & Formal</option>
-                        <option value="friendly">Friendly & Casual</option>
-                        <option value="enthusiastic">Enthusiastic & Energetic</option>
-                        <option value="expert">Expert & Authoritative</option>
-                        <option value="conversational">Conversational & Personal</option>
-                    </select>
-                    <div class="form-error" id="communication-tone-error"></div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="preferred-cta">Preferred Call-to-Action *</label>
-                    <select id="preferred-cta" class="form-select">
-                        <option value="">Select your preferred CTA</option>
-                        <option value="dm">Send a DM</option>
-                        <option value="comment">Comment on posts</option>
-                        <option value="website">Visit website</option>
-                        <option value="email">Email inquiry</option>
-                        <option value="call">Schedule a call</option>
-                    </select>
-                    <div class="form-error" id="preferred-cta-error"></div>
-                </div>
-                
-                <div class="button-group">
-                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                    <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
-                </div>
-            </div>
-        </div>
-    </div>
+// =============================================================================
+// ONBOARDING.JS - Simple Onboarding Controller
+// =============================================================================
 
-    <!-- Simple Script Loading -->
-    <script src="/core/script-loader.js"></script>
-    <script>
-        // Simple onboarding logic
-        console.log('📝 [Onboarding] Starting onboarding page...');
+(function() {
+    'use strict';
+    
+    // =============================================================================
+    // STATE VARIABLES
+    // =============================================================================
+    
+    let initialized = false;
+    let user = null;
+    let supabase = null;
+    let currentStep = 1;
+    const totalSteps = 3;
+    
+    // Form validation rules
+    const validationRules = {
+        'business-name': { required: true, minLength: 2 },
+        'business-niche': { required: true },
+        'target-audience': { required: true, minLength: 20 },
+        'value-proposition': { required: true, minLength: 20 },
+        'key-results': { required: true, minLength: 10 },
+        'communication-tone': { required: true },
+        'preferred-cta': { required: true }
+    };
+    
+    // =============================================================================
+    // INITIALIZATION
+    // =============================================================================
+    
+    // Wait for scripts to load, then initialize
+    window.addEventListener('oslira:scripts:loaded', async () => {
+        try {
+            console.log('📝 [Onboarding] Scripts loaded, initializing...');
+            await initialize();
+        } catch (error) {
+            console.error('❌ [Onboarding] Initialization failed:', error);
+            showError('Failed to load account setup. Please try refreshing the page.');
+        }
+    });
+    
+    async function initialize() {
+        if (initialized) return;
         
-        let currentStep = 1;
-        let user = null;
-        let supabase = null;
+        // Check authentication
+        if (!window.SimpleAuth) {
+            throw new Error('SimpleAuth not available');
+        }
         
-        // Form validation rules
-        const validationRules = {
-            'business-name': { required: true, minLength: 2 },
-            'business-niche': { required: true },
-            'target-audience': { required: true, minLength: 20 },
-            'value-proposition': { required: true, minLength: 20 },
-            'key-results': { required: true, minLength: 10 },
-            'communication-tone': { required: true },
-            'preferred-cta': { required: true }
+        await window.SimpleAuth.initialize();
+        const session = window.SimpleAuth.getCurrentSession();
+        
+        if (!session || !session.user) {
+            console.log('❌ [Onboarding] No valid session, redirecting to auth');
+            window.location.href = '/auth';
+            return;
+        }
+        
+        user = session.user;
+        supabase = window.SimpleAuth.supabase;
+        
+        console.log('✅ [Onboarding] User authenticated:', user.email);
+        
+        // Show onboarding form
+        showOnboardingForm();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        initialized = true;
+        console.log('✅ [Onboarding] Initialization complete');
+    }
+    
+    // =============================================================================
+    // UI MANAGEMENT
+    // =============================================================================
+    
+    function showOnboardingForm() {
+        hideElement('loading-state');
+        showElement('onboarding-form');
+        document.body.style.visibility = 'visible';
+        updateProgress();
+        console.log('✅ [Onboarding] Onboarding form displayed');
+    }
+    
+    function showError(message) {
+        hideElement('loading-state');
+        hideElement('onboarding-form');
+        document.getElementById('error-message').textContent = message;
+        showElement('error-state');
+        document.body.style.visibility = 'visible';
+    }
+    
+    function hideElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    }
+    
+    function showElement(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('hidden');
+    }
+    
+    function updateProgress() {
+        const progress = (currentStep / totalSteps) * 100;
+        const progressFill = document.getElementById('progress-fill');
+        if (progressFill) {
+            progressFill.style.width = progress + '%';
+        }
+    }
+    
+    // =============================================================================
+    // FORM VALIDATION
+    // =============================================================================
+    
+    function validateField(fieldId) {
+        const field = document.getElementById(fieldId);
+        const errorEl = document.getElementById(fieldId + '-error');
+        const rules = validationRules[fieldId];
+        
+        if (!field || !rules) return true;
+        
+        const value = field.value.trim();
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Required check
+        if (rules.required && !value) {
+            isValid = false;
+            errorMessage = 'This field is required';
+        }
+        // Min length check
+        else if (rules.minLength && value.length < rules.minLength) {
+            isValid = false;
+            errorMessage = `Please enter at least ${rules.minLength} characters`;
+        }
+        
+        // Update UI
+        if (errorEl) {
+            errorEl.textContent = errorMessage;
+        }
+        
+        if (field) {
+            field.style.borderColor = isValid ? '#d1d5db' : '#e53e3e';
+            field.classList.toggle('error', !isValid);
+        }
+        
+        return isValid;
+    }
+    
+    function validateStep(stepNum) {
+        const stepFields = {
+            1: ['business-name', 'business-niche', 'target-audience'],
+            2: ['value-proposition', 'key-results'],
+            3: ['communication-tone', 'preferred-cta']
         };
         
-        // Wait for scripts to load, then initialize
-        window.addEventListener('oslira:scripts:loaded', async () => {
-            try {
-                console.log('📝 [Onboarding] Scripts loaded, initializing...');
-                
-                // Check authentication
-                if (!window.SimpleAuth) {
-                    throw new Error('SimpleAuth not available');
-                }
-                
-                await window.SimpleAuth.initialize();
-                const session = window.SimpleAuth.getCurrentSession();
-                
-                if (!session || !session.user) {
-                    console.log('❌ [Onboarding] No valid session, redirecting to auth');
-                    window.location.href = '/auth';
-                    return;
-                }
-                
-                user = session.user;
-                supabase = window.SimpleAuth.supabase;
-                
-                console.log('✅ [Onboarding] User authenticated:', user.email);
-                
-                // Show onboarding form
-                showOnboardingForm();
-                
-            } catch (error) {
-                console.error('❌ [Onboarding] Initialization failed:', error);
-                showError('Failed to load account setup. Please try refreshing the page.');
+        const fields = stepFields[stepNum] || [];
+        let isValid = true;
+        
+        fields.forEach(fieldId => {
+            if (!validateField(fieldId)) {
+                isValid = false;
             }
         });
         
-        function showOnboardingForm() {
-            document.getElementById('loading-state').classList.add('hidden');
-            document.getElementById('onboarding-form').classList.remove('hidden');
-            document.body.style.visibility = 'visible';
+        return isValid;
+    }
+    
+    // =============================================================================
+    // STEP NAVIGATION
+    // =============================================================================
+    
+    function nextStep() {
+        if (!validateStep(currentStep)) {
+            console.log('❌ [Onboarding] Step validation failed');
+            return;
+        }
+        
+        if (currentStep < totalSteps) {
+            // Hide current step
+            hideElement('step-' + currentStep);
+            
+            // Show next step
+            currentStep++;
+            showElement('step-' + currentStep);
+            
             updateProgress();
+            
+            // Focus first input in new step
+            focusFirstInput(currentStep);
+            
+            console.log('✅ [Onboarding] Moved to step', currentStep);
         }
-        
-        function showError(message) {
-            document.getElementById('loading-state').classList.add('hidden');
-            document.getElementById('error-message').textContent = message;
-            document.getElementById('error-state').classList.remove('hidden');
-            document.body.style.visibility = 'visible';
+    }
+    
+    function prevStep() {
+        if (currentStep > 1) {
+            // Hide current step
+            hideElement('step-' + currentStep);
+            
+            // Show previous step
+            currentStep--;
+            showElement('step-' + currentStep);
+            
+            updateProgress();
+            
+            // Focus first input in previous step
+            focusFirstInput(currentStep);
+            
+            console.log('✅ [Onboarding] Moved to step', currentStep);
         }
-        
-        function updateProgress() {
-            const progress = (currentStep / 3) * 100;
-            document.getElementById('progress-fill').style.width = progress + '%';
-        }
-        
-        function validateField(fieldId) {
-            const field = document.getElementById(fieldId);
-            const errorEl = document.getElementById(fieldId + '-error');
-            const rules = validationRules[fieldId];
-            
-            if (!rules) return true;
-            
-            const value = field.value.trim();
-            
-            // Required check
-            if (rules.required && !value) {
-                errorEl.textContent = 'This field is required';
-                field.style.borderColor = '#e53e3e';
-                return false;
-            }
-            
-            // Min length check
-            if (rules.minLength && value.length < rules.minLength) {
-                errorEl.textContent = `Please enter at least ${rules.minLength} characters`;
-                field.style.borderColor = '#e53e3e';
-                return false;
-            }
-            
-            // Clear error
-            errorEl.textContent = '';
-            field.style.borderColor = '#d1d5db';
-            return true;
-        }
-        
-        function validateStep(stepNum) {
-            const stepFields = {
-                1: ['business-name', 'business-niche', 'target-audience'],
-                2: ['value-proposition', 'key-results'],
-                3: ['communication-tone', 'preferred-cta']
-            };
-            
-            const fields = stepFields[stepNum] || [];
-            let isValid = true;
-            
-            fields.forEach(fieldId => {
-                if (!validateField(fieldId)) {
-                    isValid = false;
+    }
+    
+    function focusFirstInput(stepNum) {
+        setTimeout(() => {
+            const stepEl = document.getElementById('step-' + stepNum);
+            if (stepEl) {
+                const firstInput = stepEl.querySelector('.form-input, .form-textarea, .form-select');
+                if (firstInput) {
+                    firstInput.focus();
                 }
-            });
-            
-            return isValid;
+            }
+        }, 100);
+    }
+    
+    // =============================================================================
+    // FORM SUBMISSION
+    // =============================================================================
+    
+    async function submitOnboarding() {
+        if (!validateStep(totalSteps)) {
+            console.log('❌ [Onboarding] Final step validation failed');
+            return;
         }
         
-        window.nextStep = function() {
-            if (!validateStep(currentStep)) {
-                console.log('❌ [Onboarding] Step validation failed');
-                return;
+        const submitBtn = document.querySelector('#step-' + totalSteps + ' .btn-primary');
+        if (!submitBtn) return;
+        
+        // Show loading state
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+        
+        try {
+            console.log('💾 [Onboarding] Submitting onboarding data...');
+            
+            // Collect form data
+            const onboardingData = collectFormData();
+            
+            console.log('💾 [Onboarding] Updating user data...', onboardingData);
+            
+            // Update user record
+            const { error } = await supabase
+                .from('users')
+                .update(onboardingData)
+                .eq('id', user.id);
+            
+            if (error) {
+                throw error;
             }
             
-            if (currentStep < 3) {
-                // Hide current step
-                document.getElementById('step-' + currentStep).classList.add('hidden');
-                
-                // Show next step
-                currentStep++;
-                document.getElementById('step-' + currentStep).classList.remove('hidden');
-                
-                updateProgress();
-                
-                console.log('✅ [Onboarding] Moved to step', currentStep);
-            }
-        };
-        
-        window.prevStep = function() {
-            if (currentStep > 1) {
-                // Hide current step
-                document.getElementById('step-' + currentStep).classList.add('hidden');
-                
-                // Show previous step
-                currentStep--;
-                document.getElementById('step-' + currentStep).classList.remove('hidden');
-                
-                updateProgress();
-                
-                console.log('✅ [Onboarding] Moved to step', currentStep);
-            }
-        };
-        
-        window.submitOnboarding = async function() {
-            if (!validateStep(3)) {
-                console.log('❌ [Onboarding] Final step validation failed');
-                return;
-            }
+            console.log('✅ [Onboarding] Onboarding completed successfully');
             
-            const submitBtn = document.querySelector('#step-3 .btn-primary');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Saving...';
+            // Show success state
+            submitBtn.textContent = 'Complete! Redirecting...';
             
-            try {
-                console.log('💾 [Onboarding] Submitting onboarding data...');
-                
-                // Collect form data
-                const onboardingData = {
-                    business_name: document.getElementById('business-name').value.trim(),
-                    business_niche: document.getElementById('business-niche').value,
-                    target_audience: document.getElementById('target-audience').value.trim(),
-                    value_proposition: document.getElementById('value-proposition').value.trim(),
-                    key_results: document.getElementById('key-results').value.trim(),
-                    communication_tone: document.getElementById('communication-tone').value,
-                    preferred_cta: document.getElementById('preferred-cta').value,
-                    onboarding_completed: true
-                };
-                
-                console.log('💾 [Onboarding] Updating user data...', onboardingData);
-                
-                // Update user record
-                const { error } = await supabase
-                    .from('users')
-                    .update(onboardingData)
-                    .eq('id', user.id);
-                
-                if (error) {
-                    throw error;
-                }
-                
-                console.log('✅ [Onboarding] Onboarding completed successfully');
-                
-                // Redirect to dashboard
-                submitBtn.textContent = 'Complete! Redirecting...';
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 1000);
-                
-            } catch (error) {
-                console.error('❌ [Onboarding] Submission failed:', error);
-                
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Complete Setup';
-                
-                // Show error
-                alert('Failed to save your setup. Please try again.');
-            }
+            // Redirect to dashboard
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1500);
+            
+        } catch (error) {
+            console.error('❌ [Onboarding] Submission failed:', error);
+            
+            // Reset button
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            
+            // Show error
+            showSubmissionError(error.message);
+        }
+    }
+    
+    function collectFormData() {
+        return {
+            business_name: getFieldValue('business-name'),
+            business_niche: getFieldValue('business-niche'),
+            target_audience: getFieldValue('target-audience'),
+            value_proposition: getFieldValue('value-proposition'),
+            key_results: getFieldValue('key-results'),
+            communication_tone: getFieldValue('communication-tone'),
+            preferred_cta: getFieldValue('preferred-cta'),
+            onboarding_completed: true,
+            updated_at: new Date().toISOString()
         };
+    }
+    
+    function getFieldValue(fieldId) {
+        const field = document.getElementById(fieldId);
+        return field ? field.value.trim() : '';
+    }
+    
+    function showSubmissionError(message) {
+        // Create or update error message
+        let errorEl = document.getElementById('submission-error');
+        if (!errorEl) {
+            errorEl = document.createElement('div');
+            errorEl.id = 'submission-error';
+            errorEl.style.cssText = `
+                background: #fee;
+                border: 1px solid #fcc;
+                color: #c33;
+                padding: 12px;
+                border-radius: 8px;
+                margin-top: 1rem;
+                font-size: 14px;
+            `;
+            
+            const stepEl = document.getElementById('step-' + totalSteps);
+            if (stepEl) {
+                stepEl.appendChild(errorEl);
+            }
+        }
         
-        // Add real-time validation
+        errorEl.textContent = `Failed to save: ${message}. Please try again.`;
+        errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // =============================================================================
+    // EVENT LISTENERS
+    // =============================================================================
+    
+    function setupEventListeners() {
+        // Real-time validation
         document.addEventListener('input', (e) => {
             if (e.target.matches('.form-input, .form-textarea, .form-select')) {
                 validateField(e.target.id);
             }
         });
         
-        console.log('📝 [Onboarding] Waiting for scripts to load...');
-    </script>
-</body>
-</html>
+        // Form submission prevention
+        document.addEventListener('submit', (e) => {
+            e.preventDefault();
+        });
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                const activeEl = document.activeElement;
+                if (activeEl && activeEl.matches('.form-input, .form-select')) {
+                    e.preventDefault();
+                    
+                    if (currentStep < totalSteps) {
+                        nextStep();
+                    } else {
+                        submitOnboarding();
+                    }
+                }
+            }
+        });
+        
+        console.log('✅ [Onboarding] Event listeners setup complete');
+    }
+    
+    // =============================================================================
+    // GLOBAL EXPORTS (for HTML onclick handlers)
+    // =============================================================================
+    
+    // Export functions to global scope for HTML onclick handlers
+    window.nextStep = nextStep;
+    window.prevStep = prevStep;
+    window.submitOnboarding = submitOnboarding;
+    
+    // Export validation functions for external use
+    window.onboardingModule = {
+        validateField,
+        validateStep,
+        nextStep,
+        prevStep,
+        submitOnboarding,
+        isInitialized: () => initialized
+    };
+    
+    console.log('📝 [Onboarding] Module loaded successfully');
+    
+})();
