@@ -155,16 +155,17 @@
                     console.log('🔐 [Callback] User:', session.user.email);
                     
                     // Update auth state
-                    window.SimpleAuth.session = session;
-                    
-                    // Success - let simple-app.js determine where to redirect
-                    updateStatus('Sign-in successful! Redirecting...');
-                    
-                    // Trigger a page reload to let simple-app.js handle the redirect
-                    setTimeout(() => {
-                        console.log('🔐 [Callback] Reloading to trigger access control...');
-                        window.location.href = '/auth'; // Will immediately redirect via simple-app.js
-                    }, 1000);
+                    // Update auth state
+window.SimpleAuth.session = session;
+
+// Success - let simple-app.js determine where to redirect
+updateStatus('Sign-in successful! Redirecting...');
+
+// Wait longer for Supabase to fully process the session
+setTimeout(() => {
+    console.log('🔐 [Callback] Redirecting to let simple-app.js handle routing...');
+    window.location.href = '/auth'; 
+}, 3000); // Increased from 1000ms to 3000ms
                     
                 } else {
                     console.log('❌ [Callback] No valid session found');
