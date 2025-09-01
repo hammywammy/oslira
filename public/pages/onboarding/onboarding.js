@@ -13,18 +13,29 @@
     let user = null;
     let supabase = null;
     let currentStep = 1;
-    const totalSteps = 3;
-    
-    // Form validation rules
-    const validationRules = {
-        'business-name': { required: true, minLength: 2 },
-        'business-niche': { required: true },
-        'target-audience': { required: true, minLength: 20 },
-        'value-proposition': { required: true, minLength: 20 },
-        'key-results': { required: true, minLength: 10 },
-        'communication-tone': { required: true },
-        'preferred-cta': { required: true }
-    };
+const totalSteps = 7; // Changed from 3 to 7
+
+// Reorganize validation by new single-question steps
+const validationRules = {
+    'business-name': { required: true, minLength: 2 },
+    'business-niche': { required: true },
+    'target-audience': { required: true, minLength: 20 },
+    'value-proposition': { required: true, minLength: 20 },
+    'key-results': { required: true, minLength: 10 },
+    'communication-tone': { required: true },
+    'preferred-cta': { required: true }
+};
+
+// New step-field mapping for single questions
+const stepFields = {
+    1: ['business-name'],
+    2: ['business-niche'], 
+    3: ['target-audience'],
+    4: ['value-proposition'],
+    5: ['key-results'],
+    6: ['communication-tone'],
+    7: ['preferred-cta']
+};
     
     // =============================================================================
     // INITIALIZATION
@@ -151,23 +162,18 @@
     }
     
     function validateStep(stepNum) {
-        const stepFields = {
-            1: ['business-name', 'business-niche', 'target-audience'],
-            2: ['value-proposition', 'key-results'],
-            3: ['communication-tone', 'preferred-cta']
-        };
-        
-        const fields = stepFields[stepNum] || [];
-        let isValid = true;
-        
-        fields.forEach(fieldId => {
-            if (!validateField(fieldId)) {
-                isValid = false;
-            }
-        });
-        
-        return isValid;
-    }
+    // Use the new single-question stepFields mapping defined above
+    const fields = stepFields[stepNum] || [];
+    let isValid = true;
+    
+    fields.forEach(fieldId => {
+        if (!validateField(fieldId)) {
+            isValid = false;
+        }
+    });
+    
+    return isValid;
+}
     
     // =============================================================================
     // STEP NAVIGATION
