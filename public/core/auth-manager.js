@@ -22,22 +22,9 @@ class SimpleAuth {
         }
     );
     
-    // Get current session with retry logic
-    let session = null;
-    let attempts = 0;
-    
-    while (!session && attempts < 5) {
-        const { data: { session: currentSession } } = await this.supabase.auth.getSession();
-        session = currentSession;
-        
-        if (!session && attempts < 4) {
-            await new Promise(resolve => setTimeout(resolve, 200));
-        }
-        attempts++;
-    }
-    
+    // Get current session
+    const { data: { session } } = await this.supabase.auth.getSession();
     this.session = session;
-    console.log('🔐 [SimpleAuth] Session loaded:', !!session);
     
     return this;
 }
