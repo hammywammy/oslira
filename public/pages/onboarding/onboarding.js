@@ -13,28 +13,31 @@
     let user = null;
     let supabase = null;
     let currentStep = 1;
-const totalSteps = 7; // Changed from 3 to 7
+const totalSteps = 8; // Expanded from 3 to 8 steps
 
-// Reorganize validation by new single-question steps
 const validationRules = {
+    'primary-objective': { required: true },
+    'full-name': { required: true, minLength: 2 },
     'business-name': { required: true, minLength: 2 },
     'business-niche': { required: true },
     'target-audience': { required: true, minLength: 20 },
     'value-proposition': { required: true, minLength: 20 },
-    'key-results': { required: true, minLength: 10 },
     'communication-tone': { required: true },
-    'preferred-cta': { required: true }
+    'preferred-cta': { required: true },
+    'phone': { required: false }, // Optional
+    'message-example': { required: false } // Optional
 };
 
-// New step-field mapping for single questions
+// New step-field mapping for single questions  
 const stepFields = {
-    1: ['business-name'],
-    2: ['business-niche'], 
-    3: ['target-audience'],
-    4: ['value-proposition'],
-    5: ['key-results'],
-    6: ['communication-tone'],
-    7: ['preferred-cta']
+    1: ['primary-objective'],
+    2: ['full-name'], 
+    3: ['business-name'],
+    4: ['business-niche'],
+    5: ['target-audience'],
+    6: ['value-proposition'],
+    7: ['communication-tone'],
+    8: ['preferred-cta']
 };
     
     // =============================================================================
