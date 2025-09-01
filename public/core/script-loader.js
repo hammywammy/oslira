@@ -36,14 +36,22 @@ async loadAll() {
 console.log('🚀 [ScriptLoader] Emitting scripts loaded event...');
 
 setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('oslira:scripts:loaded', {
-        detail: { 
-            page: this.currentPage || window.OsliraEnv?.CURRENT_PAGE,
-            pageType: window.OsliraEnv?.PAGE_TYPE,
-            loadTime: duration,
-            environment: window.OsliraEnv?.ENV
-        }
-    }));
+    console.log('🚀 [ScriptLoader] About to emit scripts loaded event...');
+console.log('🔍 [ScriptLoader] Event detail:', {
+    page: this.currentPage,
+    loadTime: duration,
+    environment: this.config?.environment || 'unknown'
+});
+
+window.dispatchEvent(new CustomEvent('oslira:scripts:loaded', {
+    detail: { 
+        page: this.currentPage,
+        loadTime: duration,
+        environment: this.config?.environment || 'unknown'
+    }
+}));
+
+console.log('✅ [ScriptLoader] Scripts loaded event emitted successfully');
     
     console.log('✅ [ScriptLoader] Scripts loaded event emitted');
 }, 100);
