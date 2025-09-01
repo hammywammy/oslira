@@ -44,6 +44,7 @@
 - `success_outcome` (text, not null)
 - `call_to_action` (text, not null)
 - `is_active` (boolean, default: true)
+- "primary_objective" (text)
 
 ### **leads** (RLS ✅) - **NO CHANGES**
 - `id` (uuid, PK)
