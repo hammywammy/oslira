@@ -410,17 +410,36 @@ window.addEventListener('oslira:scripts:loaded', async (event) => {
             const app = await OsliraApp.init();
             console.log('✅ [App] Application ready for', event.detail.page);
             
-            // Emit app ready event for other systems
-            window.dispatchEvent(new CustomEvent('oslira:app:ready', {
-                detail: { 
-                    app: app,
-                    page: event.detail.page,
-                    environment: event.detail.environment
-                }
-            }));
+            // CRITICAL FIX: Always emit app ready event, even on errors
+            setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('oslira:app:ready', {
+                    detail: { 
+                        app: app,
+                        page: event.detail.page,
+                        environment: event.detail.environment,
+                        success: true
+                    }
+                }));
+                console.log('✅ [App] App ready event emitted');
+            }, 50); // Small delay to ensure all listeners are ready
         }
     } catch (error) {
         console.error('❌ [App] Initialization failed:', error);
+        
+        // CRITICAL FIX: Emit event even on failure to unblock waiting components
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('oslira:app:ready', {
+                detail: { 
+                    app: null,
+                    page: event.detail.page,
+                    environment: event.detail.environment,
+                    success: false,
+                    error: error.message
+                }
+            }));
+            console.log('🚨 [App] App ready event emitted with error state');
+        }, 50);
+        
         OsliraApp.showInitializationError(error);
     }
 });
