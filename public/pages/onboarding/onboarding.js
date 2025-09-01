@@ -1,6 +1,6 @@
 /**
- * ONBOARDING PAGE CONTROLLER
- * SecurityGuard-compliant implementation
+ * ONBOARDING PAGE CONTROLLER - FIXED VERSION
+ * SecurityGuard-compliant implementation with proper app coordination
  * Handles only onboarding-specific functionality
  */
 
@@ -33,30 +33,35 @@
     };
 
     // =============================================================================
-    // INITIALIZATION - SECURITYGUARD COMPLIANT
+    // INITIALIZATION - PROPER APP COORDINATION
     // =============================================================================
 
-    document.addEventListener('DOMContentLoaded', async () => {
-        console.log('🚀 [Onboarding] Page loaded, initializing...');
-        await init();
-    });
-
-    // Listen for script-loader completion
-    window.addEventListener('oslira:scripts:loaded', async (event) => {
-        console.log('📚 [Onboarding] Scripts loaded, finalizing initialization...');
+    // Wait for complete app initialization
+    window.addEventListener('oslira:app:ready', async (event) => {
+        console.log('🚀 [Onboarding] App ready, initializing onboarding...');
         if (!initialized) {
             await init();
         }
+    });
+
+    // Fallback for manual loading
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(async () => {
+            if (!initialized && window.OsliraApp?.instance) {
+                console.log('🔄 [Onboarding] Fallback initialization...');
+                await init();
+            }
+        }, 3000);
     });
 
     async function init() {
         try {
             console.log('🚀 [Onboarding] Starting initialization...');
             
-            // SecurityGuard verified access - get session directly from Supabase
-            await loadSessionDirectly();
+            // Use the app's auth manager (guaranteed to exist at this point)
+            await loadSessionFromApp();
             
-            // Show onboarding form immediately
+            // Show onboarding form
             showOnboardingForm();
             
             // Setup event listeners
@@ -72,91 +77,56 @@
         }
     }
 
-    async function loadSessionDirectly() {
-    console.log('📊 [Onboarding] Loading session from existing auth manager...');
-    
-    try {
-        // Wait for OsliraAuth instance (created by app.js)
-        await waitForAuthManager();
+    async function loadSessionFromApp() {
+        console.log('📊 [Onboarding] Loading session from app auth manager...');
         
-        // Get the existing auth manager instance
-        const authManager = window.OsliraApp?.auth || window.OsliraAuth?.instance;
-        
-        if (!authManager) {
-            throw new Error('Auth manager not available');
-        }
-        
-        // Use the existing session from the auth manager
-        const session = authManager.getCurrentSession();
-        const supabaseClient = authManager.getSupabaseClient();
-        
-        if (!session) {
-            throw new Error('No authenticated session found');
-        }
-        
-        // Store session and user data using the SAME session
-        auth = { 
-            session, 
-            supabase: supabaseClient,
-            getCurrentSession: () => authManager.getCurrentSession(),
-            getCurrentUser: () => authManager.getCurrentUser(),
-            makeAuthenticatedRequest: async (url, options = {}) => {
-                const currentSession = authManager.getCurrentSession();
-                return fetch(url, {
-                    ...options,
-                    headers: {
-                        'Authorization': `Bearer ${currentSession.access_token}`,
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    }
-                });
+        try {
+            // App is guaranteed to be initialized at this point
+            const app = window.OsliraApp.instance;
+            if (!app || !app.auth) {
+                throw new Error('App or auth manager not available');
             }
-        };
-        
-        user = {
-            ...session.user,
-            email: session.user.email,
-            id: session.user.id,
-            onboarding_completed: false // Default assumption for onboarding page
-        };
-        
-        console.log('✅ [Onboarding] Session loaded from auth manager for:', user.email);
-        
-    } catch (error) {
-        console.error('❌ [Onboarding] Failed to load session from auth manager:', error);
-        throw error;
-    }
-}
-
-async function waitForAuthManager() {
-    let attempts = 0;
-    const maxAttempts = 50; // 5 seconds
-    
-    while (attempts < maxAttempts) {
-        if (window.OsliraApp?.auth || window.OsliraAuth?.instance) {
-            console.log('✅ [Onboarding] Auth manager found');
-            return;
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-    }
-    
-    throw new Error('Auth manager not available after timeout');
-}
-
-    async function waitForSupabase() {
-        let attempts = 0;
-        const maxAttempts = 50;
-        
-        while (attempts < maxAttempts) {
-            if (window.supabase?.createClient) {
-                return true;
+            
+            const authManager = app.auth;
+            const session = authManager.getCurrentSession();
+            const supabaseClient = authManager.getSupabaseClient();
+            
+            if (!session) {
+                throw new Error('No authenticated session found');
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
+            
+            // Use the app's auth manager directly
+            auth = { 
+                session, 
+                supabase: supabaseClient,
+                getCurrentSession: () => authManager.getCurrentSession(),
+                getCurrentUser: () => authManager.getCurrentUser(),
+                makeAuthenticatedRequest: async (url, options = {}) => {
+                    const currentSession = authManager.getCurrentSession();
+                    return fetch(url, {
+                        ...options,
+                        headers: {
+                            'Authorization': `Bearer ${currentSession.access_token}`,
+                            'Content-Type': 'application/json',
+                            ...options.headers
+                        }
+                    });
+                }
+            };
+            
+            user = {
+                ...session.user,
+                email: session.user.email,
+                id: session.user.id,
+                onboarding_completed: false
+            };
+            
+            console.log('✅ [Onboarding] Session loaded from app for:', user.email);
+            
+        } catch (error) {
+            console.error('❌ [Onboarding] Failed to load session from app:', error);
+            throw error;
         }
-        
-        throw new Error('Supabase not available after timeout');
     }
 
     function showOnboardingForm() {
@@ -177,182 +147,209 @@ async function waitForAuthManager() {
             
             // Initialize step system
             initializeSteps();
-        } else {
-            console.error('❌ [Onboarding] onboarding-main element not found');
+            updateProgress();
         }
     }
+
+    // =============================================================================
+    // STEP MANAGEMENT
+    // =============================================================================
 
     function initializeSteps() {
-        console.log('🎨 [Onboarding] Initializing step system...');
+        console.log('🎯 [Onboarding] Initializing step system...');
         
-        // Ensure step is initialized
-        window.step = 1;
+        // Hide all steps except first
+        const steps = document.querySelectorAll('.onboarding-step');
+        steps.forEach((stepEl, index) => {
+            stepEl.style.display = index === 0 ? 'block' : 'none';
+        });
         
-        // Activate first step
-        const firstStep = document.getElementById('step-1');
-        if (firstStep) {
-            firstStep.classList.add('active');
-            updateProgress();
-            console.log('🎨 [Onboarding] Activated step 1');
-            
-            // Focus first input
-            const firstField = firstStep.querySelector('input, select, textarea');
-            if (firstField) {
-                setTimeout(() => firstField.focus(), 100);
-            }
-        } else {
-            console.error('❌ [Onboarding] step-1 element not found');
-        }
+        // Initialize navigation buttons
+        setupStepNavigation();
+        
+        console.log('🎯 [Onboarding] Step system initialized');
     }
 
-    // =============================================================================
-    // NAVIGATION
-    // =============================================================================
-
-    function nextStep() {
-        console.log(`📍 [Onboarding] Next step requested from step ${step}`);
+    function setupStepNavigation() {
+        // Next buttons
+        const nextButtons = document.querySelectorAll('[data-next-step]');
+        nextButtons.forEach(btn => {
+            btn.addEventListener('click', handleNextStep);
+        });
         
+        // Previous buttons
+        const prevButtons = document.querySelectorAll('[data-prev-step]');
+        prevButtons.forEach(btn => {
+            btn.addEventListener('click', handlePrevStep);
+        });
+        
+        // Skip buttons (if any)
+        const skipButtons = document.querySelectorAll('[data-skip-step]');
+        skipButtons.forEach(btn => {
+            btn.addEventListener('click', handleSkipStep);
+        });
+    }
+
+    function handleNextStep(event) {
+        event.preventDefault();
+        
+        if (loading) return;
+        
+        // Validate current step
         if (!validateCurrentStep()) {
-            console.log('❌ [Onboarding] Validation failed, staying on current step');
             return;
         }
         
-        if (step < 5) {
-            // Hide current step
-            const currentStep = document.getElementById(`step-${step}`);
-            if (currentStep) {
-                currentStep.classList.remove('active');
-                console.log(`🎨 [Onboarding] Deactivated step ${step}`);
-            }
-            
-            // Move to next step
-            step++;
-            
-            // Show next step
-            const nextStepEl = document.getElementById(`step-${step}`);
-            if (nextStepEl) {
-                nextStepEl.classList.add('active');
-                updateProgress();
-                console.log(`🎨 [Onboarding] Activated step ${step}`);
-                
-                // Focus first field in new step
-                const firstField = nextStepEl.querySelector('input, select, textarea');
-                if (firstField) {
-                    setTimeout(() => firstField.focus(), 100);
-                }
-            }
-        }
+        goToStep(step + 1);
     }
 
-    function prevStep() {
-        console.log(`📍 [Onboarding] Previous step requested from step ${step}`);
+    function handlePrevStep(event) {
+        event.preventDefault();
+        if (loading) return;
         
-        if (step > 1) {
-            // Hide current step
-            const currentStep = document.getElementById(`step-${step}`);
-            if (currentStep) {
-                currentStep.classList.remove('active');
-                console.log(`🎨 [Onboarding] Deactivated step ${step}`);
-            }
+        goToStep(step - 1);
+    }
+
+    function handleSkipStep(event) {
+        event.preventDefault();
+        if (loading) return;
+        
+        goToStep(step + 1);
+    }
+
+    function goToStep(newStep) {
+        const totalSteps = document.querySelectorAll('.onboarding-step').length;
+        
+        if (newStep < 1 || newStep > totalSteps) {
+            return;
+        }
+        
+        console.log(`🎯 [Onboarding] Moving from step ${step} to step ${newStep}`);
+        
+        // Hide current step
+        const currentStepEl = document.querySelector(`[data-step="${step}"]`);
+        if (currentStepEl) {
+            currentStepEl.style.display = 'none';
+        }
+        
+        // Show new step
+        const newStepEl = document.querySelector(`[data-step="${newStep}"]`);
+        if (newStepEl) {
+            newStepEl.style.display = 'block';
             
-            // Move to previous step
-            step--;
-            
-            // Show previous step
-            const prevStepEl = document.getElementById(`step-${step}`);
-            if (prevStepEl) {
-                prevStepEl.classList.add('active');
-                updateProgress();
-                console.log(`🎨 [Onboarding] Activated step ${step}`);
+            // Focus first input in new step
+            const firstInput = newStepEl.querySelector('input, textarea, select');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 100);
             }
         }
+        
+        step = newStep;
+        updateProgress();
     }
 
     function updateProgress() {
-        const progressFill = document.getElementById('progress-fill');
-        const progressText = document.getElementById('progress-text');
+        const totalSteps = document.querySelectorAll('.onboarding-step').length;
+        const progressPercent = ((step - 1) / (totalSteps - 1)) * 100;
         
-        if (progressFill && progressText) {
-            const progress = ((step - 1) / 4) * 100;
-            progressFill.style.width = `${progress}%`;
-            progressText.textContent = `Step ${step} of 5`;
-            console.log(`📊 [Onboarding] Progress updated: ${progress}%`);
+        // Update progress bar
+        const progressBar = document.querySelector('.progress-bar');
+        if (progressBar) {
+            progressBar.style.width = `${progressPercent}%`;
         }
+        
+        // Update step indicator
+        const stepIndicator = document.querySelector('.step-indicator');
+        if (stepIndicator) {
+            stepIndicator.textContent = `Step ${step} of ${totalSteps}`;
+        }
+        
+        // Update step numbers in navigation
+        const stepNumbers = document.querySelectorAll('.step-number');
+        stepNumbers.forEach((el, index) => {
+            el.classList.toggle('active', index + 1 === step);
+            el.classList.toggle('completed', index + 1 < step);
+        });
     }
 
-    // =============================================================================
-    // VALIDATION
-    // =============================================================================
-
     function validateCurrentStep() {
-        const stepElement = document.getElementById(`step-${step}`);
-        if (!stepElement) {
-            console.error(`❌ [Onboarding] Step element not found: step-${step}`);
-            return false;
-        }
+        const currentStepEl = document.querySelector(`[data-step="${step}"]`);
+        if (!currentStepEl) return true;
         
-        const fields = stepElement.querySelectorAll('input[required], select[required], textarea[required]');
-        let valid = true;
+        const fieldsInStep = currentStepEl.querySelectorAll('input, textarea, select');
+        let isValid = true;
         
-        fields.forEach(field => {
-            if (!validateField(field.id)) {
-                valid = false;
+        fieldsInStep.forEach(field => {
+            const fieldName = field.name || field.id;
+            if (fieldName && rules[fieldName]) {
+                if (!validateField(fieldName)) {
+                    isValid = false;
+                }
             }
         });
         
-        console.log(`✅ [Onboarding] Step ${step} validation: ${valid ? 'passed' : 'failed'}`);
-        return valid;
+        return isValid;
     }
 
-    function validateField(fieldId) {
-        const field = document.getElementById(fieldId);
-        const rule = rules[fieldId];
+    // =============================================================================
+    // FORM VALIDATION
+    // =============================================================================
+
+    function validateField(fieldName) {
+        const field = document.getElementById(fieldName);
+        const rule = rules[fieldName];
         
         if (!field || !rule) return true;
         
         const value = field.value.trim();
-        let valid = true;
-        let errorMessage = '';
         
-        // Required check
+        // Required validation
         if (rule.required && !value) {
-            valid = false;
-            errorMessage = 'This field is required';
+            showFieldError(field, `${getFieldLabel(field)} is required`);
+            return false;
         }
         
-        // Length check
-        if (valid && rule.minLength && value.length < rule.minLength) {
-            valid = false;
-            errorMessage = `Please enter at least ${rule.minLength} characters`;
+        // Min length validation
+        if (rule.minLength && value.length > 0 && value.length < rule.minLength) {
+            showFieldError(field, `${getFieldLabel(field)} must be at least ${rule.minLength} characters`);
+            return false;
         }
         
-        // Pattern check
-        if (valid && rule.pattern && !rule.pattern.test(value)) {
-            valid = false;
-            errorMessage = rule.message || 'Invalid format';
-        }
-        
-        // Show/hide error
-        const errorElement = document.getElementById(`${fieldId}-error`);
-        if (errorElement) {
-            errorElement.textContent = errorMessage;
-            errorElement.style.display = valid ? 'none' : 'block';
-        }
-        
-        // Update field styling
-        field.classList.toggle('error', !valid);
-        
-        return valid;
+        // Clear any existing errors
+        clearFieldError(field);
+        return true;
     }
 
-    function clearError(fieldId) {
-        const field = document.getElementById(fieldId);
-        const errorElement = document.getElementById(`${fieldId}-error`);
+    function getFieldLabel(field) {
+        const label = document.querySelector(`label[for="${field.id}"]`);
+        return label ? label.textContent.replace('*', '').trim() : field.name || 'Field';
+    }
+
+    function showFieldError(field, message) {
+        clearFieldError(field);
         
-        if (field) field.classList.remove('error');
-        if (errorElement) {
-            errorElement.style.display = 'none';
-            errorElement.textContent = '';
+        field.classList.add('error');
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'field-error';
+        errorDiv.textContent = message;
+        
+        field.parentNode.insertBefore(errorDiv, field.nextSibling);
+    }
+
+    function clearFieldError(field) {
+        field.classList.remove('error');
+        
+        const existingError = field.parentNode.querySelector('.field-error');
+        if (existingError) {
+            existingError.remove();
+        }
+    }
+
+    function clearError(fieldName) {
+        const field = document.getElementById(fieldName);
+        if (field) {
+            clearFieldError(field);
         }
     }
 
@@ -363,83 +360,102 @@ async function waitForAuthManager() {
     async function handleSubmit(event) {
         event.preventDefault();
         
-        if (loading) return;
+        if (loading) {
+            console.log('🚀 [Onboarding] Already submitting, ignoring duplicate request');
+            return;
+        }
         
-        console.log('📤 [Onboarding] Form submission started...');
+        console.log('🚀 [Onboarding] Form submission started');
         
         try {
-            setLoading(true);
+            loading = true;
+            updateSubmitButton(true);
             
             // Validate all fields
-            let allValid = true;
-            Object.keys(rules).forEach(fieldId => {
-                if (!validateField(fieldId)) {
-                    allValid = false;
+            let isValid = true;
+            Object.keys(rules).forEach(fieldName => {
+                if (!validateField(fieldName)) {
+                    isValid = false;
                 }
             });
             
-            if (!allValid) {
-                throw new Error('Please fix the errors above before continuing');
+            if (!isValid) {
+                console.log('❌ [Onboarding] Validation failed');
+                showError('Please fix the errors above');
+                return;
             }
             
             // Collect form data
-            const formData = collectData();
-            console.log('📊 [Onboarding] Form data collected');
+            const formData = collectFormData();
+            console.log('📊 [Onboarding] Form data collected:', Object.keys(formData));
             
-            // Submit to backend
-            const response = await submitData(formData);
+            // Submit to server
+            const result = await submitOnboarding(formData);
             
-            if (response.success) {
-                console.log('✅ [Onboarding] Submission successful');
-                showMessage('Profile setup complete! Redirecting to dashboard...', 'success');
-                
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 2000);
-            } else {
-                throw new Error(response.error || 'Submission failed');
-            }
+            console.log('✅ [Onboarding] Submission successful');
+            showSuccess('Profile created successfully!');
+            
+            // Redirect to dashboard
+            setTimeout(() => {
+                window.location.href = '/dashboard';
+            }, 1500);
             
         } catch (error) {
             console.error('❌ [Onboarding] Submission failed:', error);
-            showMessage(error.message, 'error');
-            
-            if (typeof Sentry !== 'undefined') {
-                Sentry.captureException(error, {
-                    tags: { section: 'onboarding-submit' },
-                    extra: { userId: user?.id }
-                });
-            }
+            showError(error.message || 'Failed to save profile. Please try again.');
         } finally {
-            setLoading(false);
+            loading = false;
+            updateSubmitButton(false);
         }
     }
 
-    function collectData() {
-        const data = {};
-        
-        Object.keys(rules).forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                data[fieldId] = field.value.trim();
-            }
-        });
-        
-        return {
-            ...data,
-            userId: user.id,
-            userEmail: user.email
+    function collectFormData() {
+        const formData = {
+            user_id: user.id,
+            business_name: getValue('business-name'),
+            business_niche: getValue('business-niche'),
+            target_audience: getValue('target-audience'),
+            target_problems: getValue('target-problems'),
+            value_proposition: getValue('value-proposition'),
+            key_results: getValue('key-results'),
+            success_outcome: getValue('success-outcome'),
+            communication_tone: getValue('communication-tone'),
+            communication_length: getValue('communication-length'),
+            preferred_cta: getValue('preferred-cta'),
+            message_example: getValue('message-example')
         };
+        
+        return formData;
     }
 
-    async function submitData(formData) {
+    function getValue(fieldName) {
+        const field = document.getElementById(fieldName);
+        return field ? field.value.trim() : '';
+    }
+
+    function updateSubmitButton(isLoading) {
+        const submitBtn = document.getElementById('submit-btn');
+        if (!submitBtn) return;
+        
+        if (isLoading) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span> Creating Profile...';
+        } else {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Complete Onboarding';
+        }
+    }
+
+    async function submitOnboarding(formData) {
+        console.log('🌐 [Onboarding] Submitting to server...');
+        
         const config = window.OsliraConfig?.get();
-        if (!config) {
+        if (!config?.WORKER_URL) {
             throw new Error('Configuration not available');
         }
         
         const response = await auth.makeAuthenticatedRequest(
-            `${config.WORKER_URL}/onboarding/submit`,
+            `${config.WORKER_URL}/onboarding`,
             {
                 method: 'POST',
                 body: JSON.stringify(formData)
@@ -487,106 +503,109 @@ async function waitForAuthManager() {
         if (auth?.supabase) {
             auth.supabase.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_OUT') {
+                    console.log('🚪 [Onboarding] User signed out, redirecting to auth');
                     window.location.href = '/auth';
                 }
             });
         }
         
-        console.log('✅ [Onboarding] Event listeners setup complete');
+        console.log('🎧 [Onboarding] Event listeners setup complete');
     }
 
     function setupProgress() {
-        const observer = new MutationObserver(() => {
-            updateProgress();
-        });
-        
-        const steps = document.querySelectorAll('.step');
-        steps.forEach(stepEl => {
-            observer.observe(stepEl, { 
-                attributes: true, 
-                attributeFilter: ['class'] 
+        // Auto-advance on certain field types
+        const selectFields = document.querySelectorAll('select');
+        selectFields.forEach(select => {
+            select.addEventListener('change', () => {
+                // Auto-advance after selection (optional)
+                setTimeout(() => {
+                    const nextBtn = select.closest('.onboarding-step').querySelector('[data-next-step]');
+                    if (nextBtn && validateCurrentStep()) {
+                        // Auto-advance logic can go here
+                    }
+                }, 500);
             });
         });
     }
 
-    // =============================================================================
-    // UI HELPERS
-    // =============================================================================
-
-    function showMessage(message, type = 'info') {
-        if (window.OsliraApp?.showMessage) {
-            window.OsliraApp.showMessage(message, type);
-            return;
+    function handleKeys(event) {
+        if (loading) return;
+        
+        // Enter key to advance (if not in textarea)
+        if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
+            const nextBtn = document.querySelector(`[data-step="${step}"] [data-next-step]`);
+            if (nextBtn && !nextBtn.disabled) {
+                event.preventDefault();
+                nextBtn.click();
+            }
         }
         
-        console.log(`${type.toUpperCase()}: ${message}`);
-        if (type === 'error') {
-            alert(`Error: ${message}`);
+        // Escape key to go back
+        if (event.key === 'Escape') {
+            const prevBtn = document.querySelector(`[data-step="${step}"] [data-prev-step]`);
+            if (prevBtn) {
+                prevBtn.click();
+            }
         }
     }
+
+    // =============================================================================
+    // UI FEEDBACK
+    // =============================================================================
 
     function showError(message) {
-        showMessage(message, 'error');
+        console.error('❌ [Onboarding] Error:', message);
+        
+        const errorDiv = document.getElementById('error-message') || createMessageDiv('error-message', 'error');
+        errorDiv.innerHTML = `<span class="error-icon">⚠️</span> ${message}`;
+        errorDiv.style.display = 'block';
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
     }
 
-    function setLoading(isLoading) {
-        loading = isLoading;
-        const submitButton = document.querySelector('button[type="submit"]');
+    function showSuccess(message) {
+        console.log('✅ [Onboarding] Success:', message);
         
-        if (submitButton) {
-            submitButton.disabled = isLoading;
-            submitButton.textContent = isLoading ? 
-                'Submitting...' : 'Complete Setup';
+        const successDiv = document.getElementById('success-message') || createMessageDiv('success-message', 'success');
+        successDiv.innerHTML = `<span class="success-icon">✅</span> ${message}`;
+        successDiv.style.display = 'block';
+        
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            successDiv.style.display = 'none';
+        }, 3000);
+    }
+
+    function createMessageDiv(id, className) {
+        const div = document.createElement('div');
+        div.id = id;
+        div.className = `message ${className}`;
+        div.style.display = 'none';
+        
+        const form = document.getElementById('onboarding-form');
+        if (form) {
+            form.insertBefore(div, form.firstChild);
         }
         
-        document.body.classList.toggle('loading', isLoading);
+        return div;
     }
 
     // =============================================================================
-    // KEYBOARD HANDLING
+    // MODULE EXPORT
     // =============================================================================
 
-    function handleKeys(event) {
-        if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
-            event.preventDefault();
-            nextStep();
-        }
-        
-        if (event.key === 'Escape') {
-            prevStep();
-        }
-    }
-
-    // =============================================================================
-    // EXPOSE GLOBAL FUNCTIONS FOR HTML ONCLICK HANDLERS  
-    // =============================================================================
-
-    window.nextStep = nextStep;
-    window.prevStep = prevStep;
-    window.validateField = validateField;
-    window.onboardingNextStep = nextStep; // Backup name
-    window.onboardingPrevStep = prevStep; // Backup name
-
-    // =============================================================================
-    // ERROR HANDLING
-    // =============================================================================
-
-    window.addEventListener('error', (event) => {
-        console.error('❌ [Onboarding] JavaScript error:', event.error);
-        
-        if (typeof Sentry !== 'undefined') {
-            Sentry.captureException(event.error);
-        }
-    });
-
-    window.addEventListener('unhandledrejection', (event) => {
-        console.error('❌ [Onboarding] Unhandled promise rejection:', event.reason);
-        
-        if (typeof Sentry !== 'undefined') {
-            Sentry.captureException(event.reason);
-        }
-    });
+    // Export functions for HTML onclick handlers (legacy compatibility)
+    window.onboardingModule = {
+        validateField,
+        goToStep,
+        handleSubmit,
+        showError,
+        showSuccess
+    };
 
     console.log('📝 [Onboarding] Module loaded successfully');
 
-})(); // End IIFE
+})();
