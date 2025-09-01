@@ -118,12 +118,28 @@ const stepFields = {
     }
     
     function updateProgress() {
-        const progress = (currentStep / totalSteps) * 100;
-        const progressFill = document.getElementById('progress-fill');
-        if (progressFill) {
-            progressFill.style.width = progress + '%';
-        }
+    const progress = (currentStep / totalSteps) * 100;
+    const progressFill = document.getElementById('progress-fill');
+    const progressStep = document.getElementById('progress-step');
+    const progressPercent = document.getElementById('progress-percent');
+    
+    // Update progress bar width
+    if (progressFill) {
+        progressFill.style.width = progress + '%';
     }
+    
+    // Update step text
+    if (progressStep) {
+        progressStep.textContent = `Step ${currentStep} of ${totalSteps}`;
+    }
+    
+    // Update percentage text  
+    if (progressPercent) {
+        progressPercent.textContent = `${Math.round(progress)}% complete`;
+    }
+    
+    console.log(`📊 [Onboarding] Progress: ${currentStep}/${totalSteps} (${Math.round(progress)}%)`);
+}
     
     // =============================================================================
     // FORM VALIDATION
