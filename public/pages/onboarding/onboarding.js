@@ -150,13 +150,26 @@ const stepFields = {
         const errorEl = document.getElementById(fieldId + '-error');
         const rules = validationRules[fieldId];
 
-        if (fieldId === 'communication-tone') {
+    if (fieldId === 'communication-tone') {
         const radioButton = document.querySelector('input[name="communication-tone"]:checked');
         const errorEl = document.getElementById(fieldId + '-error');
         const isValid = !!radioButton;
         
         if (errorEl) {
             errorEl.textContent = isValid ? '' : 'Please select a communication style';
+        }
+        
+        return isValid;
+    }
+    
+    // Add CTA validation
+    if (fieldId === 'preferred-cta') {
+        const radioButton = document.querySelector('input[name="preferred-cta"]:checked');
+        const errorEl = document.getElementById(fieldId + '-error');
+        const isValid = !!radioButton;
+        
+        if (errorEl) {
+            errorEl.textContent = isValid ? '' : 'Please select a call-to-action';
         }
         
         return isValid;
@@ -387,6 +400,11 @@ console.log('✅ [Onboarding] User onboarding status updated:', updatedUser);
     // Handle radio buttons
     if (fieldId === 'communication-tone') {
         const radioButton = document.querySelector('input[name="communication-tone"]:checked');
+        return radioButton ? radioButton.value : '';
+    }
+    
+    if (fieldId === 'preferred-cta') {
+        const radioButton = document.querySelector('input[name="preferred-cta"]:checked');
         return radioButton ? radioButton.value : '';
     }
     
