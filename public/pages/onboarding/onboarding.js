@@ -264,12 +264,32 @@
                 updated_at: new Date().toISOString()
             };
             
-            console.log('💾 [Onboarding] Creating business profile...', businessProfileData);
-            
-            // Insert business profile
-            const { data: businessProfile, error: businessError } = await supabase
-                .from('business_profiles')
-                .insert([businessProfileData])
+            console.log('💾 [Onboarding] Ensuring user record exists...');
+
+// First, ensure user record exists in custom users table
+const { error: userInsertError } = await supabase
+    .from('users')
+    .upsert([{
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+        created_via: 'google',
+        onboarding_completed: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+    }])
+    .select();
+
+if (userInsertError) {
+    console.log('⚠️ [Onboarding] User record issue (might already exist):', userInsertError);
+}
+
+console.log('💾 [Onboarding] Creating business profile...', businessProfileData);
+
+// Insert business profile
+const { data: businessProfile, error: businessError } = await supabase
+    .from('business_profiles')
+    .insert([businessProfileData])
                 .select()
                 .single();
             
