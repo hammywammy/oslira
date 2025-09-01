@@ -20,14 +20,10 @@ async loadAll() {
         console.log('📚 [ScriptLoader] Starting universal script loading...');
         const startTime = performance.now();
         
-        // USE CENTRALIZED PAGE DETECTION
-        this.currentPage = window.OsliraEnv.CURRENT_PAGE;
-        console.log('📚 [ScriptLoader] Page detected:', this.currentPage);
-        
         // Step 1: Load pre-core first (environment detection)
         await this.loadPreCoreDependencies();
         
-        // Step 2: Load core dependencies in order  
+        // Step 2: Load core dependencies in order
         await this.loadCoreDependencies();
         
         // Step 3: Load page-specific dependencies
@@ -35,30 +31,20 @@ async loadAll() {
         
         const duration = performance.now() - startTime;
         console.log(`✅ [ScriptLoader] All scripts loaded successfully in ${duration.toFixed(2)}ms`);
-        console.log('🚀 [ScriptLoader] Emitting scripts loaded event...');
-
-// Emit ready event with centralized page info
-window.dispatchEvent(new CustomEvent('oslira:scripts:loaded', {
-    detail: { 
-        page: this.currentPage,
-        pageType: window.OsliraEnv?.PAGE_TYPE,
-        loadTime: duration,
-        environment: window.OsliraEnv?.ENV
-    }
-}));
-
-console.log('✅ [ScriptLoader] Scripts loaded event emitted');
         
-        // Emit ready event with centralized page info
+        // CRITICAL: Emit the event that triggers app initialization
+        console.log('🚀 [ScriptLoader] Emitting scripts loaded event...');
+        
         window.dispatchEvent(new CustomEvent('oslira:scripts:loaded', {
             detail: { 
                 page: this.currentPage,
-                pageType: window.OsliraEnv.PAGE_TYPE,
+                pageType: window.OsliraEnv?.PAGE_TYPE,
                 loadTime: duration,
-                environment: window.OsliraEnv.ENV
+                environment: window.OsliraEnv?.ENV
             }
         }));
         
+        console.log('✅ [ScriptLoader] Scripts loaded event emitted');
         return true;
         
     } catch (error) {
