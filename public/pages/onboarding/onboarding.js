@@ -13,7 +13,7 @@
     let user = null;
     let supabase = null;
     let currentStep = 1;
-const totalSteps = 8; // Expanded from 3 to 8 steps
+const totalSteps = 7; // Expanded from 3 to 8 steps
 
 const validationRules = {
     'primary-objective': { required: true },
@@ -165,8 +165,15 @@ const stepFields = {
     }
     
     function validateStep(stepNum) {
-    // Use the new single-question stepFields mapping defined above
+    // Add safety checks
+    if (!stepFields || typeof stepFields !== 'object') {
+        console.error('❌ stepFields not defined properly');
+        return false;
+    }
+    
     const fields = stepFields[stepNum] || [];
+    console.log(`🔍 Validating step ${stepNum}, fields:`, fields);
+    
     let isValid = true;
     
     fields.forEach(fieldId => {
