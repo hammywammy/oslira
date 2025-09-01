@@ -453,17 +453,65 @@
     <div class="step-description">How should prospects reach out to you?</div>
     
     <div class="form-group">
-        <label class="form-label" for="preferred-cta">Preferred Call-to-Action *</label>
-        <select id="preferred-cta" class="form-select">
-            <option value="">Select your preferred CTA</option>
-            <option value="dm">Send a DM</option>
-            <option value="comment">Comment on posts</option>
-            <option value="website">Visit website</option>
-            <option value="email">Email inquiry</option>
-            <option value="call">Schedule a call</option>
-        </select>
-        <div class="form-error" id="preferred-cta-error"></div>
+    <label class="form-label">What's your preferred call-to-action? *</label>
+    <div class="radio-group" id="preferred-cta-group">
+        <div class="radio-option">
+            <input type="radio" id="cta-call" name="preferred-cta" value="book-call">
+            <label for="cta-call" class="radio-label">
+                <span class="radio-icon">📞</span>
+                <div class="radio-text">
+                    <strong>Book a Call</strong>
+                    <small>Schedule meetings or consultations</small>
+                </div>
+            </label>
+        </div>
+        
+        <div class="radio-option">
+            <input type="radio" id="cta-website" name="preferred-cta" value="visit-website">
+            <label for="cta-website" class="radio-label">
+                <span class="radio-icon">🌐</span>
+                <div class="radio-text">
+                    <strong>Visit Website</strong>
+                    <small>Drive traffic to your site</small>
+                </div>
+            </label>
+        </div>
+        
+        <div class="radio-option">
+            <input type="radio" id="cta-email" name="preferred-cta" value="send-email">
+            <label for="cta-email" class="radio-label">
+                <span class="radio-icon">✉️</span>
+                <div class="radio-text">
+                    <strong>Send Email</strong>
+                    <small>Direct email inquiries</small>
+                </div>
+            </label>
+        </div>
+        
+        <div class="radio-option">
+            <input type="radio" id="cta-dm" name="preferred-cta" value="send-dm">
+            <label for="cta-dm" class="radio-label">
+                <span class="radio-icon">💬</span>
+                <div class="radio-text">
+                    <strong>Send a DM</strong>
+                    <small>Instagram direct message</small>
+                </div>
+            </label>
+        </div>
+        
+        <div class="radio-option">
+            <input type="radio" id="cta-follow" name="preferred-cta" value="follow-up">
+            <label for="cta-follow" class="radio-label">
+                <span class="radio-icon">🔄</span>
+                <div class="radio-text">
+                    <strong>Follow & Engage</strong>
+                    <small>Build relationship first</small>
+                </div>
+            </label>
+        </div>
     </div>
+    <div class="form-error" id="preferred-cta-error"></div>
+</div>
     
     <div class="button-group">
         <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
