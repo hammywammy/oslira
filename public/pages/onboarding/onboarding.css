@@ -3,7 +3,7 @@
    ============================================================================= */
 
 /* Import Design System */
-@import url('/styles/design-system.css');
+@import url('../core/design-system.css');
 
 /* Page-specific overrides */
 body {
