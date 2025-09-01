@@ -161,11 +161,16 @@ window.SimpleAuth.session = session;
 // Success - let simple-app.js determine where to redirect
 updateStatus('Sign-in successful! Redirecting...');
 
-// Wait longer for Supabase to fully process the session
+// Don't redirect to auth - let simple-app handle routing directly
 setTimeout(() => {
-    console.log('🔐 [Callback] Redirecting to let simple-app.js handle routing...');
-    window.location.href = '/auth'; 
-}, 3000); // Increased from 1000ms to 3000ms
+    console.log('🔐 [Callback] Triggering access control check...');
+    // Force simple-app to re-run access control
+    if (window.OsliraSimpleApp) {
+        window.location.reload();
+    } else {
+        window.location.href = '/onboarding';
+    }
+}, 1500);
                     
                 } else {
                     console.log('❌ [Callback] No valid session found');
