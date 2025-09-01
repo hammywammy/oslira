@@ -31,6 +31,22 @@ async loadAll() {
         
         const duration = performance.now() - startTime;
         console.log(`✅ [ScriptLoader] All scripts loaded successfully in ${duration.toFixed(2)}ms`);
+
+        // CRITICAL: Emit the event that triggers everything else
+console.log('🚀 [ScriptLoader] Emitting scripts loaded event...');
+
+setTimeout(() => {
+    window.dispatchEvent(new CustomEvent('oslira:scripts:loaded', {
+        detail: { 
+            page: this.currentPage || window.OsliraEnv?.CURRENT_PAGE,
+            pageType: window.OsliraEnv?.PAGE_TYPE,
+            loadTime: duration,
+            environment: window.OsliraEnv?.ENV
+        }
+    }));
+    
+    console.log('✅ [ScriptLoader] Scripts loaded event emitted');
+}, 100);
         
         // CRITICAL: Emit the event that triggers app initialization
         console.log('🚀 [ScriptLoader] Emitting scripts loaded event...');
