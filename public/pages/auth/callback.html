@@ -161,16 +161,11 @@ window.SimpleAuth.session = session;
 // Success - let simple-app.js determine where to redirect
 updateStatus('Sign-in successful! Redirecting...');
 
-// Don't redirect to auth - let simple-app handle routing directly
+// Direct redirect - no reload needed
 setTimeout(() => {
-    console.log('🔐 [Callback] Triggering access control check...');
-    // Force simple-app to re-run access control
-    if (window.OsliraSimpleApp) {
-        window.location.reload();
-    } else {
-        window.location.href = '/onboarding';
-    }
-}, 1500);
+    console.log('🔐 [Callback] Redirecting to onboarding...');
+    window.location.href = '/onboarding';
+}, 1000);
                     
                 } else {
                     console.log('❌ [Callback] No valid session found');
