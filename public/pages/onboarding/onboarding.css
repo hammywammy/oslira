@@ -1,486 +1,295 @@
 /* =============================================================================
-   ONBOARDING.CSS - INTEGRATED WITH DESIGN SYSTEM
-   Uses centralized design system variables from /core/design-system.css
+   ONBOARDING.CSS - Simple, Clean Onboarding Styles
    ============================================================================= */
 
-@import url('/core/design-system.css');
+/* Import Design System */
+@import url('/styles/design-system.css');
 
-/* =============================================================================
-   ONBOARDING LAYOUT
-   ============================================================================= */
-
+/* Page-specific overrides */
 body {
-    background: var(--bg-gradient);
+    background: linear-gradient(135deg, var(--gradient-primary-start), var(--gradient-primary-end));
     min-height: 100vh;
-    color: var(--text-primary);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-6);
+    visibility: hidden; /* Hidden until scripts load */
 }
 
 /* =============================================================================
-   ONBOARDING CONTAINER
+   LAYOUT & CONTAINER
    ============================================================================= */
 
 .onboarding-container {
-    width: 100%;
-    max-width: 600px;
+    max-width: var(--container-md);
     margin: 0 auto;
-}
-
-.onboarding-card {
-    background: var(--bg-primary);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-2xl);
-    padding: var(--spacing-12);
-    border: 1px solid rgba(45, 108, 223, 0.1);
-    position: relative;
-    overflow: hidden;
-}
-
-.onboarding-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--gradient-primary);
+    padding: var(--spacing-8);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 /* =============================================================================
    HEADER SECTION
    ============================================================================= */
 
-.onboarding-header {
+.header {
     text-align: center;
-    margin-bottom: var(--spacing-10);
+    margin-bottom: var(--spacing-12);
+    color: var(--color-white);
 }
 
 .logo {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacing-4);
-    margin-bottom: var(--spacing-5);
-}
-
-.logo-image {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-    object-fit: contain;
-}
-
-.logo h1 {
     font-size: var(--text-4xl);
-    font-weight: var(--font-extrabold);
-    color: var(--primary-blue);
-    letter-spacing: var(--tracking-tight);
-    margin: 0;
+    font-weight: var(--font-bold);
+    margin-bottom: var(--spacing-2);
+    text-shadow: var(--shadow-text);
 }
 
-.welcome-subtitle {
-    color: var(--text-secondary);
+.subtitle {
     font-size: var(--text-lg);
-    line-height: var(--leading-normal);
-    max-width: 400px;
-    margin: 0 auto;
+    opacity: 0.9;
+    font-weight: var(--font-normal);
 }
 
 /* =============================================================================
-   PROGRESS BAR SYSTEM
+   PROGRESS BAR
    ============================================================================= */
 
-.progress-section {
-    margin-bottom: var(--spacing-10);
-}
-
 .progress-bar {
-    width: 100%;
-    height: 8px;
-    background: var(--bg-light);
-    border-radius: var(--radius-sm);
+    height: 6px;
+    background: var(--color-white-alpha-20);
+    border-radius: var(--border-radius-sm);
+    margin: var(--spacing-8) 0 var(--spacing-12);
     overflow: hidden;
-    margin-bottom: var(--spacing-3);
+    backdrop-filter: blur(10px);
 }
 
 .progress-fill {
     height: 100%;
     background: var(--gradient-primary);
-    width: 20%;
-    transition: width var(--duration-normal) var(--ease-out);
-    border-radius: var(--radius-sm);
-}
-
-.progress-text {
-    text-align: center;
-    font-size: var(--text-sm);
-    color: var(--text-secondary);
-    font-weight: var(--font-medium);
+    border-radius: var(--border-radius-sm);
+    width: 33.33%;
+    transition: width 0.4s var(--timing-smooth);
+    box-shadow: var(--shadow-glow-blue);
 }
 
 /* =============================================================================
-   STEP SYSTEM
+   STEP CARDS
    ============================================================================= */
 
 .step {
-    display: none;
-    animation: fadeInUp var(--duration-normal) var(--ease-out);
-}
-
-.step.active {
-    display: block;
-}
-
-@keyframes fadeInUp {
-    from { 
-        opacity: 0; 
-        transform: translateY(var(--spacing-5)); 
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0); 
-    }
-}
-
-.step-header {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-4);
+    background: var(--color-white-alpha-95);
+    backdrop-filter: var(--blur-xl);
+    border-radius: var(--border-radius-xl);
+    padding: var(--spacing-10);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--color-white-alpha-20);
+    transition: all 0.3s var(--timing-ease);
     margin-bottom: var(--spacing-8);
 }
 
-.step-number {
-    width: 48px;
-    height: 48px;
-    background: var(--gradient-primary);
-    color: var(--text-inverse);
-    border-radius: var(--radius-full);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--text-lg);
-    font-weight: var(--font-bold);
-    flex-shrink: 0;
-    box-shadow: var(--shadow-md);
+.step:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-2xl);
 }
 
-.step-header div:last-child {
-    flex: 1;
-}
-
-.step-header h2 {
+.step-title {
     font-size: var(--text-2xl);
-    font-weight: var(--font-bold);
-    color: var(--text-primary);
-    margin: 0 0 var(--spacing-2) 0;
-    line-height: var(--leading-tight);
+    font-weight: var(--font-semibold);
+    color: var(--color-gray-900);
+    margin-bottom: var(--spacing-2);
 }
 
 .step-description {
-    color: var(--text-secondary);
+    color: var(--color-gray-600);
+    margin-bottom: var(--spacing-8);
     font-size: var(--text-base);
-    line-height: var(--leading-normal);
-    margin: 0;
 }
 
 /* =============================================================================
-   FORM SYSTEM
+   FORM ELEMENTS
    ============================================================================= */
 
 .form-group {
     margin-bottom: var(--spacing-6);
 }
 
-.form-group label {
+.form-label {
     display: block;
-    font-size: var(--text-sm);
-    font-weight: var(--font-semibold);
-    color: var(--text-primary);
+    font-weight: var(--font-medium);
+    color: var(--color-gray-700);
     margin-bottom: var(--spacing-2);
-    line-height: var(--leading-tight);
+    font-size: var(--text-sm);
 }
 
-.form-group label:after {
-    content: ' *';
-    color: var(--error);
-}
-
-.form-group label[for$="-business-id"]:after,
-.form-group label[for*="optional"]:after {
-    content: '';
-}
-
-/* Input Elements */
-input[type="text"],
-input[type="email"],
-select,
-textarea {
+.form-input, .form-textarea, .form-select {
     width: 100%;
-    padding: var(--spacing-3-5) var(--spacing-4);
-    border: 2px solid var(--border-light);
-    border-radius: var(--radius-md);
+    padding: var(--spacing-3) var(--spacing-4);
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--border-radius-lg);
     font-size: var(--text-base);
-    font-family: inherit;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
-    transition: var(--transition-base);
-    line-height: var(--leading-normal);
+    transition: all 0.2s var(--timing-ease);
+    background: var(--color-white);
+    color: var(--color-gray-900);
 }
 
-input[type="text"]:focus,
-input[type="email"]:focus,
-select:focus,
-textarea:focus {
+.form-input:focus, .form-textarea:focus, .form-select:focus {
     outline: none;
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(45, 108, 223, 0.1);
-    transform: translateY(-1px);
+    border-color: var(--color-primary-500);
+    box-shadow: var(--focus-ring-primary);
+    background: var(--color-white);
 }
 
-input[type="text"]:invalid,
-input[type="email"]:invalid,
-select:invalid,
-textarea:invalid {
-    border-color: var(--error);
+.form-input:hover, .form-textarea:hover, .form-select:hover {
+    border-color: var(--color-gray-400);
 }
 
-textarea {
+.form-textarea {
     resize: vertical;
     min-height: 100px;
+    font-family: inherit;
 }
 
-select {
-    cursor: pointer;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right var(--spacing-3) center;
-    background-size: 16px;
-    padding-right: var(--spacing-10);
-    appearance: none;
-}
-
-/* Input Helper Text */
-.input-example {
-    margin-top: var(--spacing-2);
+.form-error {
+    color: var(--color-red-500);
     font-size: var(--text-sm);
-    color: var(--text-tertiary);
-    line-height: var(--leading-normal);
+    margin-top: var(--spacing-1);
+    font-weight: var(--font-medium);
 }
 
-/* Placeholder Styling */
-::placeholder {
-    color: var(--text-tertiary);
-    font-style: italic;
+.form-input.error, .form-textarea.error, .form-select.error {
+    border-color: var(--color-red-500);
+    box-shadow: var(--focus-ring-red);
 }
 
 /* =============================================================================
-   BUTTON SYSTEM
+   BUTTONS
    ============================================================================= */
 
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--spacing-8);
+    gap: var(--spacing-4);
+}
+
 .btn {
+    padding: var(--spacing-3) var(--spacing-6);
+    border: none;
+    border-radius: var(--border-radius-lg);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    transition: all 0.2s var(--timing-ease);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-3-5) var(--spacing-6);
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: var(--text-base);
-    font-weight: var(--font-semibold);
-    text-decoration: none;
-    cursor: pointer;
-    transition: var(--transition-base);
-    position: relative;
-    overflow: hidden;
-    min-height: var(--button-height-md);
-    line-height: 1;
-}
-
-.btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none !important;
+    min-width: 120px;
 }
 
 .btn-primary {
-    background: var(--gradient-primary);
-    color: var(--text-inverse);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
-.btn-primary:active:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-secondary {
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border: 2px solid var(--border-medium);
+    background: var(--color-primary-600);
+    color: var(--color-white);
     box-shadow: var(--shadow-sm);
 }
 
-.btn-secondary:hover:not(:disabled) {
-    background: var(--bg-secondary);
-    border-color: var(--primary-blue);
+.btn-primary:hover {
+    background: var(--color-primary-700);
     transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
-/* Button Loading States */
-.btn .btn-text {
-    display: inline;
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
 }
 
-.btn .btn-loading {
-    display: none;
+.btn-primary:disabled {
+    background: var(--color-gray-400);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
-.btn.loading .btn-text {
-    display: none;
+.btn-secondary {
+    background: var(--color-white);
+    color: var(--color-gray-700);
+    border: 1px solid var(--color-gray-300);
+    box-shadow: var(--shadow-sm);
 }
 
-.btn.loading .btn-loading {
-    display: inline;
+.btn-secondary:hover {
+    background: var(--color-gray-50);
+    border-color: var(--color-gray-400);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
-.btn.loading::after {
-    content: '';
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top: 2px solid var(--text-inverse);
-    border-radius: 50%;
-    animation: spin var(--duration-slow) linear infinite;
-    margin-left: var(--spacing-2);
-}
-
-/* =============================================================================
-   FORM ACTIONS
-   ============================================================================= */
-
-.form-actions {
-    display: flex;
-    gap: var(--spacing-3);
-    justify-content: flex-end;
-    margin-top: var(--spacing-8);
-    padding-top: var(--spacing-6);
-    border-top: 1px solid var(--border-light);
+.btn-secondary:active {
+    transform: translateY(0);
+    background: var(--color-gray-100);
 }
 
 /* =============================================================================
-   SUCCESS STATE
+   STATE COMPONENTS
    ============================================================================= */
 
-.success-state {
+.loading-state, .error-state {
     text-align: center;
-    padding: var(--spacing-8) 0;
-    animation: fadeInUp var(--duration-normal) var(--ease-out);
+    padding: var(--spacing-12);
+    background: var(--color-white-alpha-95);
+    backdrop-filter: var(--blur-xl);
+    border-radius: var(--border-radius-xl);
+    box-shadow: var(--shadow-xl);
+    border: 1px solid var(--color-white-alpha-20);
 }
 
-.success-icon {
-    width: 80px;
-    height: 80px;
-    background: var(--gradient-success);
-    border-radius: var(--radius-full);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--text-4xl);
-    margin: 0 auto var(--spacing-6);
-    box-shadow: var(--shadow-lg);
+.loading-state {
+    color: var(--color-gray-700);
 }
 
-.success-state h2 {
-    font-size: var(--text-3xl);
-    font-weight: var(--font-bold);
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-4);
-}
-
-.success-state p {
-    color: var(--text-secondary);
-    font-size: var(--text-lg);
-    line-height: var(--leading-normal);
-    margin-bottom: var(--spacing-3);
-}
-
-.success-note {
-    font-size: var(--text-base) !important;
-    font-style: italic;
-}
-
-.success-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--border-light);
-    border-top: 3px solid var(--primary-blue);
-    border-radius: 50%;
-    animation: spin var(--duration-slow) linear infinite;
-    margin: var(--spacing-6) auto 0;
-}
-
-/* =============================================================================
-   ERROR & LOADING STATES
-   ============================================================================= */
-
-.auth-check,
-.loading-state,
 .error-state {
-    text-align: center;
-    padding: var(--spacing-8) var(--spacing-4);
+    color: var(--color-red-600);
 }
 
-.loading-spinner {
+.error-state h3 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-semibold);
+    margin-bottom: var(--spacing-2);
+}
+
+.spinner {
     width: 40px;
     height: 40px;
-    border: 4px solid var(--border-light);
-    border-top: 4px solid var(--primary-blue);
+    border: 4px solid var(--color-gray-200);
+    border-top: 4px solid var(--color-primary-500);
     border-radius: 50%;
-    animation: spin var(--duration-slow) linear infinite;
+    animation: spin 1s linear infinite;
     margin: 0 auto var(--spacing-4);
 }
 
-.error-state {
-    color: var(--text-secondary);
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.error-icon {
-    font-size: var(--text-6xl);
-    margin-bottom: var(--spacing-4);
+/* =============================================================================
+   UTILITY CLASSES
+   ============================================================================= */
+
+.hidden {
+    display: none !important;
 }
 
-.error-state h2 {
-    font-size: var(--text-2xl);
-    font-weight: var(--font-bold);
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-3);
-}
-
-.error-message {
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-6);
-    line-height: var(--leading-normal);
-}
-
-.error-actions {
-    display: flex;
-    gap: var(--spacing-3);
-    justify-content: center;
-    flex-wrap: wrap;
-}
-
-.error-actions .btn {
-    min-width: 140px;
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 /* =============================================================================
@@ -488,145 +297,72 @@ select {
    ============================================================================= */
 
 @media (max-width: 768px) {
-    body {
+    .onboarding-container {
         padding: var(--spacing-4);
     }
     
-    .onboarding-card {
-        padding: var(--spacing-8) var(--spacing-6);
+    .step {
+        padding: var(--spacing-6);
     }
     
-    .logo h1 {
+    .logo {
         font-size: var(--text-3xl);
     }
     
-    .welcome-subtitle {
+    .subtitle {
         font-size: var(--text-base);
     }
     
-    .step-header {
-        flex-direction: column;
-        text-align: center;
-        gap: var(--spacing-3);
-    }
-    
-    .step-header h2 {
+    .step-title {
         font-size: var(--text-xl);
     }
     
-    .step-description {
-        font-size: var(--text-sm);
-    }
-    
-    .form-actions {
+    .button-group {
         flex-direction: column;
-        gap: var(--spacing-2);
+        gap: var(--spacing-3);
     }
     
     .btn {
-        padding: var(--spacing-4) var(--spacing-6);
-        font-size: var(--text-sm);
-    }
-    
-    input, select, textarea {
-        padding: var(--spacing-4);
-        font-size: var(--text-sm);
-    }
-    
-    .error-actions {
-        flex-direction: column;
-    }
-    
-    .error-actions .btn {
-        min-width: auto;
+        width: 100%;
     }
 }
 
 @media (max-width: 480px) {
-    .onboarding-card {
-        padding: var(--spacing-6) var(--spacing-4);
-    }
-    
-    .step-number {
-        width: 36px;
-        height: 36px;
-        font-size: var(--text-base);
-    }
-    
-    .progress-bar {
-        height: 6px;
-    }
-    
-    .success-icon {
-        width: 60px;
-        height: 60px;
-        font-size: var(--text-2xl);
-    }
-}
-
-/* =============================================================================
-   ACCESSIBILITY & MOTION
-   ============================================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-    * {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
+    .onboarding-container {
+        padding: var(--spacing-3);
     }
     
     .step {
-        animation: none;
+        padding: var(--spacing-4);
     }
     
-    .success-state {
-        animation: none;
-    }
-}
-
-@media (prefers-contrast: high) {
-    :root {
-        --border-light: #000000;
-        --text-secondary: #000000;
-    }
-    
-    .btn-primary {
-        background: #000000;
-        border: 2px solid #000000;
-    }
-    
-    .btn-secondary {
-        background: #ffffff;
-        color: #000000;
-        border: 2px solid #000000;
+    .form-input, .form-textarea, .form-select {
+        font-size: 16px; /* Prevent zoom on iOS */
     }
 }
 
 /* =============================================================================
-   ANIMATIONS
+   ACCESSIBILITY
    ============================================================================= */
 
-@keyframes spin {
-    from { 
-        transform: rotate(0deg); 
+@media (prefers-reduced-motion: reduce) {
+    .step, .btn, .progress-fill {
+        transition: none;
     }
-    to { 
-        transform: rotate(360deg); 
-    }
-}
-
-/* Loading shimmer effect for enhanced UX */
-@keyframes shimmer {
-    0% {
-        background-position: -468px 0;
-    }
-    100% {
-        background-position: 468px 0;
+    
+    .spinner {
+        animation: none;
     }
 }
 
-.shimmer {
-    background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-light) 50%, var(--bg-secondary) 75%);
-    background-size: 400% 100%;
-    animation: shimmer 1.2s ease-in-out infinite;
+.btn:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+}
+
+.form-input:focus-visible, 
+.form-textarea:focus-visible, 
+.form-select:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
 }
