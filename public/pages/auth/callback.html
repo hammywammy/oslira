@@ -154,19 +154,33 @@
                     console.log('✅ [Callback] Authentication successful');
                     console.log('🔐 [Callback] User:', session.user.email);
                     
-                    // Update auth state
-                    // Update auth state
+// Update auth state
 window.SimpleAuth.session = session;
 
 // Success - let simple-app.js determine where to redirect
 updateStatus('Sign-in successful! Redirecting...');
 
-// Direct redirect - no reload needed
-setTimeout(() => {
-    console.log('🔐 [Callback] Redirecting to onboarding...');
-    window.location.href = '/onboarding';
-}, 1000);
-                    
+// Use proper redirect logic that checks onboarding status
+setTimeout(async () => {
+    try {
+        // Initialize SimpleApp if not already done
+        if (!window.OsliraSimpleApp) {
+            console.log('🔐 [Callback] SimpleApp not available, defaulting to onboarding');
+            window.location.href = '/onboarding';
+            return;
+        }
+
+        await window.OsliraSimpleApp.initialize();
+        const redirectUrl = await window.OsliraSimpleApp.determinePostAuthRedirect();
+        console.log('🔐 [Callback] Redirecting to:', redirectUrl);
+        window.location.href = redirectUrl;
+        
+    } catch (error) {
+        console.error('❌ [Callback] Error determining redirect:', error);
+        // Fallback to onboarding if logic fails
+        window.location.href = '/onboarding';
+    }
+}, 1000); 
                 } else {
                     console.log('❌ [Callback] No valid session found');
                     throw new Error('No valid session found after authentication');
