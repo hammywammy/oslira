@@ -38,21 +38,38 @@
             font-size: 1.1rem;
         }
         
-        .progress-bar {
-            height: 4px;
-            background: #e2e8f0;
-            border-radius: 2px;
-            margin: 2rem 0;
-            overflow: hidden;
-        }
-        
-        .progress-fill {
-            height: 100%;
-            background: #4299e1;
-            border-radius: 2px;
-            width: 14.28%;
-            transition: width 0.3s ease;
-        }
+        .progress-section {
+    margin: 2rem 0 3rem;
+}
+
+.progress-text {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+
+.progress-text span {
+    font-weight: 500;
+}
+
+.progress-bar {
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4299e1, #63b3ed);
+    border-radius: 3px;
+    width: 14.28%;
+    transition: width 0.4s ease;
+    box-shadow: 0 1px 3px rgba(66, 153, 225, 0.3);
+}
         
         .step {
             background: white;
@@ -204,10 +221,16 @@
         
         <!-- Onboarding Form -->
         <div id="onboarding-form" class="hidden">
-            <!-- Progress Bar -->
-            <div class="progress-bar">
-                <div id="progress-fill" class="progress-fill"></div>
-            </div>
+            <!-- Enhanced Progress Indicators -->
+<div class="progress-section">
+    <div class="progress-text">
+        <span id="progress-step">Step 1 of 7</span>
+        <span id="progress-percent">14% complete</span>
+    </div>
+    <div class="progress-bar">
+        <div id="progress-fill" class="progress-fill"></div>
+    </div>
+</div>
             <!-- Step 1: Business Name -->
 <div class="step" id="step-1">
     <div class="step-title">What's your business name?</div>
