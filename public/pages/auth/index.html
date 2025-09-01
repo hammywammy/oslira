@@ -172,16 +172,12 @@
             try {
                 console.log('🔐 [Auth] Scripts loaded, initializing...');
                 
-                // Check if already authenticated (simple-app.js handles this automatically)
+                // simple-app.js handles all authentication redirects
+                // If we're still here, user needs to authenticate
+                
+                // Initialize auth system
                 if (window.SimpleAuth) {
                     await window.SimpleAuth.initialize();
-                    
-                    if (window.SimpleAuth.isAuthenticated()) {
-                        console.log('✅ [Auth] Already logged in, redirecting...');
-                        showLoading('Already signed in, redirecting...');
-                        window.location.href = '/onboarding';
-                        return;
-                    }
                 }
                 
                 // Show auth interface
