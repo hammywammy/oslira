@@ -1,5 +1,5 @@
 // =============================================================================
-// ONBOARDING.JS - Complete Enhanced Onboarding Controller
+// ONBOARDING.JS - Complete Enhanced Onboarding Controller with Character Limits
 // =============================================================================
 
 (function() {
@@ -28,6 +28,42 @@
         'key-results': { required: false } // Optional (moved to end)
     };
     
+    // Character limits for each field (optimized for AI summary generation)
+    const CHARACTER_LIMITS = {
+        // Text inputs
+        'business-name': {
+            min: 2,
+            max: 100,
+            reason: 'Business names are typically 2-100 characters'
+        },
+        
+        // Textareas  
+        'target-audience': {
+            min: 20,
+            max: 500,
+            reason: 'Detailed audience description for AI analysis'
+        },
+        
+        'value-proposition': {
+            min: 20,
+            max: 300,
+            reason: 'Concise but detailed value prop (2-3 sentences ideal)'
+        },
+        
+        'key-results': {
+            min: 0,  // Optional field
+            max: 800,
+            reason: 'Detailed success outcomes for AI summary generation'
+        },
+        
+        // Phone number
+        'phone-number': {
+            min: 10,
+            max: 20,
+            reason: 'International phone numbers with formatting'
+        }
+    };
+    
     // New step-field mapping for 9 steps with reordering
     const stepFields = {
         1: ['primary-objective'],    // Primary Objective
@@ -42,6 +78,249 @@
     };
     
     // =============================================================================
+    // CHARACTER LIMIT FUNCTIONS
+    // =============================================================================
+    
+    function addCharacterLimitStyles() {
+        const styles = `
+            <style>
+            /* Character Counter Styles */
+            .character-counter {
+                font-size: 0.875rem;
+                color: var(--text-secondary, #6b7280);
+                text-align: right;
+                margin-top: 0.25rem;
+                font-family: monospace;
+            }
+            
+            .character-counter.warning {
+                color: var(--color-orange-600, #ea580c);
+                font-weight: 500;
+            }
+            
+            .character-counter.limit-reached {
+                color: var(--color-red-600, #dc2626);
+                font-weight: 600;
+            }
+            
+            .character-counter .current {
+                font-weight: 600;
+            }
+            
+            /* Field Warning States */
+            .form-input.warning,
+            .form-textarea.warning,
+            .form-select.warning {
+                border-color: var(--color-orange-500, #f97316);
+                box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+            }
+            
+            /* Enhanced Error States */
+            .form-input.error,
+            .form-textarea.error,
+            .form-select.error {
+                border-color: var(--color-red-500, #ef4444);
+                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+            }
+            
+            /* Character Counter Animations */
+            .character-counter {
+                transition: all 0.2s ease;
+            }
+            
+            .character-counter.warning,
+            .character-counter.limit-reached {
+                animation: pulse 0.5s ease-in-out;
+            }
+            
+            @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.7; }
+                100% { opacity: 1; }
+            }
+            
+            /* Helper Text with Limits */
+            .helper-text.with-limit {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .helper-text .limit-hint {
+                font-size: 0.8rem;
+                color: var(--text-secondary, #6b7280);
+                font-style: italic;
+            }
+            </style>
+        `;
+        
+        document.head.insertAdjacentHTML('beforeend', styles);
+    }
+    
+    function addCharacterLimits() {
+        console.log('🔢 [Onboarding] Adding character limits to form fields...');
+        
+        Object.keys(CHARACTER_LIMITS).forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            const limits = CHARACTER_LIMITS[fieldId];
+            
+            if (!field) return;
+            
+            // Add maxlength attribute
+            field.setAttribute('maxlength', limits.max);
+            
+            // Add character counter
+            addCharacterCounter(fieldId, limits.max);
+            
+            // Add real-time validation
+            field.addEventListener('input', () => {
+                validateCharacterLimit(fieldId);
+                updateCharacterCounter(fieldId);
+            });
+            
+            // Add paste handling (prevent massive paste)
+            field.addEventListener('paste', (e) => {
+                setTimeout(() => validateCharacterLimit(fieldId), 10);
+            });
+        });
+        
+        console.log('✅ [Onboarding] Character limits added successfully');
+    }
+    
+    function addCharacterCounter(fieldId, maxLength) {
+        const field = document.getElementById(fieldId);
+        const fieldContainer = field.closest('.form-group');
+        
+        if (!fieldContainer) return;
+        
+        // Create character counter element
+        const counter = document.createElement('div');
+        counter.id = `${fieldId}-counter`;
+        counter.className = 'character-counter';
+        counter.innerHTML = `<span class="current">0</span>/<span class="max">${maxLength}</span>`;
+        
+        // Insert after the field
+        field.parentNode.insertBefore(counter, field.nextSibling);
+    }
+    
+    function updateCharacterCounter(fieldId) {
+        const field = document.getElementById(fieldId);
+        const counter = document.getElementById(`${fieldId}-counter`);
+        const limits = CHARACTER_LIMITS[fieldId];
+        
+        if (!field || !counter || !limits) return;
+        
+        const currentLength = field.value.length;
+        const currentSpan = counter.querySelector('.current');
+        
+        if (currentSpan) {
+            currentSpan.textContent = currentLength;
+            
+            // Color coding
+            const percentage = currentLength / limits.max;
+            if (percentage >= 0.9) {
+                counter.classList.add('warning');
+            } else {
+                counter.classList.remove('warning');
+            }
+            
+            if (currentLength >= limits.max) {
+                counter.classList.add('limit-reached');
+            } else {
+                counter.classList.remove('limit-reached');
+            }
+        }
+    }
+    
+    function validateCharacterLimit(fieldId) {
+        const field = document.getElementById(fieldId);
+        const limits = CHARACTER_LIMITS[fieldId];
+        const errorElement = document.getElementById(`${fieldId}-error`);
+        
+        if (!field || !limits) return true;
+        
+        const currentLength = field.value.length;
+        
+        // Clear previous styling
+        field.classList.remove('error', 'warning');
+        if (errorElement) {
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+        }
+        
+        // Check minimum length (for required fields)
+        if (limits.min > 0 && currentLength > 0 && currentLength < limits.min) {
+            field.classList.add('warning');
+            if (errorElement) {
+                errorElement.textContent = `Minimum ${limits.min} characters required`;
+                errorElement.style.display = 'block';
+            }
+            return false;
+        }
+        
+        // Check maximum length
+        if (currentLength > limits.max) {
+            field.classList.add('error');
+            if (errorElement) {
+                errorElement.textContent = `Maximum ${limits.max} characters allowed`;
+                errorElement.style.display = 'block';
+            }
+            
+            // Trim to max length
+            field.value = field.value.substring(0, limits.max);
+            updateCharacterCounter(fieldId);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    function addPasteProtection() {
+        Object.keys(CHARACTER_LIMITS).forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            const limits = CHARACTER_LIMITS[fieldId];
+            
+            if (!field) return;
+            
+            field.addEventListener('paste', (e) => {
+                // Get pasted content
+                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+                
+                // If paste would exceed limit, truncate it
+                const currentText = field.value;
+                const maxAllowed = limits.max - currentText.length;
+                
+                if (pastedText.length > maxAllowed) {
+                    e.preventDefault();
+                    
+                    // Insert truncated version
+                    const truncatedText = pastedText.substring(0, maxAllowed);
+                    const cursorPos = field.selectionStart;
+                    
+                    field.value = currentText.substring(0, cursorPos) + 
+                                 truncatedText + 
+                                 currentText.substring(field.selectionEnd);
+                    
+                    // Show warning
+                    const errorElement = document.getElementById(`${fieldId}-error`);
+                    if (errorElement) {
+                        errorElement.textContent = `Pasted text was truncated to ${limits.max} characters`;
+                        errorElement.style.display = 'block';
+                        
+                        // Clear warning after 3 seconds
+                        setTimeout(() => {
+                            errorElement.style.display = 'none';
+                        }, 3000);
+                    }
+                    
+                    // Update counter
+                    setTimeout(() => updateCharacterCounter(fieldId), 10);
+                }
+            });
+        });
+    }
+    
+    // =============================================================================
     // INITIALIZATION
     // =============================================================================
     
@@ -50,6 +329,12 @@
         try {
             console.log('📝 [Onboarding] Scripts loaded, initializing...');
             await initialize();
+            
+            // Add character limit functionality
+            addCharacterLimitStyles();
+            addCharacterLimits();
+            addPasteProtection();
+            
         } catch (error) {
             console.error('❌ [Onboarding] Initialization failed:', error);
             showError('Failed to load account setup. Please try refreshing the page.');
@@ -128,266 +413,220 @@
         const progressStep = document.getElementById('progress-step');
         const progressPercent = document.getElementById('progress-percent');
         
-        // Update progress bar width
         if (progressFill) {
-            progressFill.style.width = progress + '%';
+            progressFill.style.width = `${progress}%`;
         }
         
-        // Update step text
         if (progressStep) {
-            progressStep.textContent = `Step ${currentStep} of ${totalSteps}`;
+            progressStep.textContent = currentStep;
         }
         
-        // Update percentage text  
         if (progressPercent) {
-            progressPercent.textContent = `${Math.round(progress)}% complete`;
+            progressPercent.textContent = `${Math.round(progress)}%`;
         }
         
-        console.log(`📊 [Onboarding] Progress: ${currentStep}/${totalSteps} (${Math.round(progress)}%)`);
-    }
-    
-    // =============================================================================
-    // FORM VALIDATION
-    // =============================================================================
-    
-    function validateField(fieldId) {
-        // Handle radio button validation
-        if (fieldId === 'primary-objective') {
-            const radioButton = document.querySelector('input[name="primary-objective"]:checked');
-            const errorEl = document.getElementById(fieldId + '-error');
-            const isValid = !!radioButton;
-            
-            if (errorEl) {
-                errorEl.textContent = isValid ? '' : 'Please select your main goal';
-            }
-            
-            return isValid;
-        }
-        
-        if (fieldId === 'communication-tone') {
-            const radioButton = document.querySelector('input[name="communication-tone"]:checked');
-            const errorEl = document.getElementById(fieldId + '-error');
-            const isValid = !!radioButton;
-            
-            if (errorEl) {
-                errorEl.textContent = isValid ? '' : 'Please select a communication style';
-            }
-            
-            return isValid;
-        }
-        
-        if (fieldId === 'preferred-cta') {
-            const radioButton = document.querySelector('input[name="preferred-cta"]:checked');
-            const errorEl = document.getElementById(fieldId + '-error');
-            const isValid = !!radioButton;
-            
-            if (errorEl) {
-                errorEl.textContent = isValid ? '' : 'Please select a call-to-action';
-            }
-            
-            return isValid;
-        }
-        
-        // Handle phone number validation (optional)
-        if (fieldId === 'phone-number') {
-            const field = document.getElementById(fieldId);
-            const errorEl = document.getElementById(fieldId + '-error');
-            const value = field ? field.value.trim() : '';
-            
-            // Phone is optional, so empty is valid
-            if (!value) {
-                if (errorEl) errorEl.textContent = '';
-                return true;
-            }
-            
-            // If provided, validate format
-            const cleanPhone = value.replace(/\D/g, '');
-            const isValid = cleanPhone.length >= 10;
-            
-            if (errorEl) {
-                errorEl.textContent = isValid ? '' : 'Please enter a valid phone number';
-            }
-            
-            if (field) {
-                field.style.borderColor = isValid ? '#d1d5db' : '#e53e3e';
-                field.classList.toggle('error', !isValid);
-            }
-            
-            return isValid;
-        }
-        
-        // Handle regular field validation
-        const field = document.getElementById(fieldId);
-        const errorEl = document.getElementById(fieldId + '-error');
-        const rules = validationRules[fieldId];
-        
-        if (!field || !rules) return true;
-        
-        const value = field.value.trim();
-        let isValid = true;
-        let errorMessage = '';
-        
-        // Required check
-        if (rules.required && !value) {
-            isValid = false;
-            errorMessage = 'This field is required';
-        }
-        // Min length check
-        else if (rules.minLength && value.length < rules.minLength) {
-            isValid = false;
-            errorMessage = `Please enter at least ${rules.minLength} characters`;
-        }
-        
-        // Update UI
-        if (errorEl) {
-            errorEl.textContent = errorMessage;
-        }
-        
-        if (field) {
-            field.style.borderColor = isValid ? '#d1d5db' : '#e53e3e';
-            field.classList.toggle('error', !isValid);
-        }
-        
-        return isValid;
-    }
-    
-    function validateStep(stepNum) {
-        // Add safety checks
-        if (!stepFields || typeof stepFields !== 'object') {
-            console.error('❌ stepFields not defined properly');
-            return false;
-        }
-        
-        const fields = stepFields[stepNum] || [];
-        console.log(`🔍 Validating step ${stepNum}, fields:`, fields);
-        
-        let isValid = true;
-        
-        fields.forEach(fieldId => {
-            if (!validateField(fieldId)) {
-                isValid = false;
-            }
-        });
-        
-        return isValid;
+        console.log(`📊 [Onboarding] Progress updated: Step ${currentStep}/${totalSteps} (${Math.round(progress)}%)`);
     }
     
     // =============================================================================
     // STEP NAVIGATION
     // =============================================================================
     
+    function showStep(stepNumber) {
+        // Hide all steps
+        for (let i = 1; i <= totalSteps; i++) {
+            hideElement(`step-${i}`);
+        }
+        
+        // Show current step
+        showElement(`step-${stepNumber}`);
+        
+        // Update progress
+        currentStep = stepNumber;
+        updateProgress();
+        
+        // Focus on first input
+        setTimeout(() => {
+            const firstInput = document.querySelector(`#step-${stepNumber} input, #step-${stepNumber} select, #step-${stepNumber} textarea`);
+            if (firstInput) {
+                firstInput.focus();
+            }
+        }, 100);
+        
+        console.log(`👀 [Onboarding] Showing step ${stepNumber}`);
+    }
+    
     function nextStep() {
         if (!validateStep(currentStep)) {
-            console.log('❌ [Onboarding] Step validation failed');
+            console.log(`❌ [Onboarding] Step ${currentStep} validation failed`);
             return;
         }
         
+        // Handle smart defaults
+        if (currentStep === 3) { // After business niche selection
+            setSmartDefaults();
+        }
+        
         if (currentStep < totalSteps) {
-            // Hide current step
-            hideElement('step-' + currentStep);
-            
-            // Show next step
-            currentStep++;
-            showElement('step-' + currentStep);
-            
-            updateProgress();
-            
-            // Set smart defaults when reaching certain steps
-            if (currentStep === 6) { // Communication Tone step
-                setTimeout(setSmartDefaults, 100);
-            }
-            if (currentStep === 7) { // CTA step  
-                setTimeout(setSmartDefaults, 100);
-            }
-            
-            // Focus first input in new step
-            focusFirstInput(currentStep);
-            
-            console.log('✅ [Onboarding] Moved to step', currentStep);
+            showStep(currentStep + 1);
+        } else {
+            submitOnboarding();
         }
     }
     
     function prevStep() {
         if (currentStep > 1) {
-            // Hide current step
-            hideElement('step-' + currentStep);
-            
-            // Show previous step
-            currentStep--;
-            showElement('step-' + currentStep);
-            
-            updateProgress();
-            
-            // Focus first input in previous step
-            focusFirstInput(currentStep);
-            
-            console.log('✅ [Onboarding] Moved to step', currentStep);
+            showStep(currentStep - 1);
         }
     }
     
-    function focusFirstInput(stepNum) {
-        setTimeout(() => {
-            const stepEl = document.getElementById('step-' + stepNum);
-            if (stepEl) {
-                const firstInput = stepEl.querySelector('.form-input, .form-textarea, .form-select, input[type="radio"]');
-                if (firstInput) {
-                    firstInput.focus();
-                }
-            }
-        }, 100);
-    }
-    
     // =============================================================================
-    // SKIP FUNCTIONALITY
+    // VALIDATION WITH CHARACTER LIMITS
     // =============================================================================
     
-    function skipPhoneStep() {
-        console.log('⏭️ [Onboarding] Skipping phone step');
+    function validateStep(stepNumber) {
+        const fields = stepFields[stepNumber] || [];
+        let isValid = true;
         
-        // Clear any phone errors
-        clearPhoneErrors();
+        console.log(`🔍 [Onboarding] Validating step ${stepNumber} with fields:`, fields);
         
-        // Move to next step
-        nextStep();
-    }
-    
-    function skipStep() {
-        console.log('⏭️ [Onboarding] Skipping optional step:', currentStep);
-        
-        // Clear any validation errors for this step
-        const fields = stepFields[currentStep] || [];
         fields.forEach(fieldId => {
-            const errorEl = document.getElementById(fieldId + '-error');
-            if (errorEl) {
-                errorEl.textContent = '';
+            const field = document.getElementById(fieldId);
+            const rules = validationRules[fieldId] || {};
+            const limits = CHARACTER_LIMITS[fieldId];
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            
+            if (!field) return;
+            
+            // Clear previous errors
+            field.classList.remove('error');
+            if (errorElement) {
+                errorElement.style.display = 'none';
+                errorElement.textContent = '';
             }
-            const field = document.getElementById(fieldId) || document.querySelector(`input[name="${fieldId}"]`);
-            if (field) {
-                field.style.borderColor = '';
-                field.classList.remove('error');
+            
+            const value = getFieldValue(fieldId);
+            
+            // Required field validation
+            if (rules.required && !value) {
+                showFieldError(fieldId, 'This field is required');
+                isValid = false;
+                return;
+            }
+            
+            // Character limit validation
+            if (limits && value.length > limits.max) {
+                showFieldError(fieldId, `Maximum ${limits.max} characters allowed`);
+                isValid = false;
+                return;
+            }
+            
+            if (limits && limits.min > 0 && value.length > 0 && value.length < limits.min) {
+                showFieldError(fieldId, `Minimum ${limits.min} characters required`);
+                isValid = false;
+                return;
+            }
+            
+            // Existing validation rules
+            if (rules.minLength && value.length > 0 && value.length < rules.minLength) {
+                showFieldError(fieldId, `Minimum ${rules.minLength} characters required`);
+                isValid = false;
+                return;
+            }
+            
+            // Phone number specific validation
+            if (fieldId === 'phone-number' && value) {
+                if (!validatePhoneNumber(value)) {
+                    showFieldError(fieldId, 'Please enter a valid phone number');
+                    isValid = false;
+                    return;
+                }
             }
         });
         
-        // If this is the last step, submit with skipped fields
-        if (currentStep === totalSteps) {
-            console.log('⏭️ [Onboarding] Skipping final step and submitting...');
-            submitOnboarding();
-        } else {
-            // Move to next step without validation
-            nextStep();
+        return isValid;
+    }
+    
+    function showFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const errorElement = document.getElementById(`${fieldId}-error`);
+        
+        if (field) {
+            field.classList.add('error');
+        }
+        
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
         }
     }
     
-    function clearPhoneErrors() {
-        const errorEl = document.getElementById('phone-number-error');
-        if (errorEl) errorEl.textContent = '';
+    function validatePhoneNumber(phone) {
+        // Remove all non-digits
+        const cleaned = phone.replace(/\D/g, '');
         
-        const field = document.getElementById('phone-number');
-        if (field) field.classList.remove('error');
+        // Check if it's a reasonable phone number length
+        return cleaned.length >= 10 && cleaned.length <= 15;
     }
     
     // =============================================================================
-    // DATA COLLECTION
+    // EVENT LISTENERS
+    // =============================================================================
+    
+    function setupEventListeners() {
+        console.log('🔗 [Onboarding] Setting up event listeners...');
+        
+        // Step navigation
+        window.nextStep = nextStep;
+        window.prevStep = prevStep;
+        window.submitOnboarding = submitOnboarding;
+        
+        // Phone number input formatting and SMS opt-in visibility
+        const phoneInput = document.getElementById('phone-number');
+        const smsOptInGroup = document.getElementById('sms-opt-in-group');
+        
+        if (phoneInput && smsOptInGroup) {
+            phoneInput.addEventListener('input', (e) => {
+                const value = e.target.value.trim();
+                
+                // Show/hide SMS opt-in based on phone input
+                if (value.length > 0) {
+                    smsOptInGroup.style.display = 'block';
+                } else {
+                    smsOptInGroup.style.display = 'none';
+                }
+                
+                // Format phone number (simple US formatting)
+                const cleaned = value.replace(/\D/g, '');
+                if (cleaned.length <= 10) {
+                    if (cleaned.length >= 6) {
+                        e.target.value = cleaned.replace(/(\d{3})(\d{3})(\d{0,4})/, '($1) $2-$3');
+                    } else if (cleaned.length >= 3) {
+                        e.target.value = cleaned.replace(/(\d{3})(\d{0,3})/, '($1) $2');
+                    }
+                }
+            });
+        }
+        
+        // Real-time validation for all character-limited fields
+        Object.keys(CHARACTER_LIMITS).forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                // Update character counter on input
+                field.addEventListener('input', () => {
+                    updateCharacterCounter(fieldId);
+                });
+                
+                // Initialize counter
+                updateCharacterCounter(fieldId);
+            }
+        });
+        
+        console.log('✅ [Onboarding] Event listeners setup complete');
+    }
+    
+    // =============================================================================
+    // DATA COLLECTION & UTILITIES
     // =============================================================================
     
     function getFieldValue(fieldId) {
@@ -481,43 +720,20 @@
         const defaultCta = ctaDefaults[businessNiche];
         
         if (defaultCta) {
-            // Set the default radio button when user reaches CTA step
-            const radioButton = document.getElementById(`cta-${defaultCta.split('-')[0]}`);
-            if (radioButton && !document.querySelector('input[name="preferred-cta"]:checked')) {
-                radioButton.checked = true;
-                console.log(`🎯 [Onboarding] Auto-selected CTA: ${defaultCta} for niche: ${businessNiche}`);
-            }
+            // Set the default radio button when user reaches step 7
+            setTimeout(() => {
+                const radioButton = document.querySelector(`input[name="preferred-cta"][value="${defaultCta}"]`);
+                if (radioButton && !document.querySelector('input[name="preferred-cta"]:checked')) {
+                    radioButton.checked = true;
+                }
+            }, 100);
         }
         
-        // Smart communication tone defaults
-        const toneDefaults = {
-            'business': 'professional',
-            'finance': 'professional', 
-            'real-estate': 'professional',
-            'technology': 'direct',
-            'coaching': 'friendly',
-            'fitness': 'enthusiastic',
-            'beauty': 'friendly',
-            'fashion': 'enthusiastic',
-            'food': 'friendly',
-            'travel': 'enthusiastic',
-            'education': 'professional',
-            'marketing': 'direct'
-        };
-        
-        const defaultTone = toneDefaults[businessNiche];
-        
-        if (defaultTone) {
-            const toneButton = document.getElementById(`tone-${defaultTone}`);
-            if (toneButton && !document.querySelector('input[name="communication-tone"]:checked')) {
-                toneButton.checked = true;
-                console.log(`🗣️ [Onboarding] Auto-selected tone: ${defaultTone} for niche: ${businessNiche}`);
-            }
-        }
+        console.log(`🧠 [Onboarding] Smart defaults set for niche: ${businessNiche} → CTA: ${defaultCta}`);
     }
     
     // =============================================================================
-    // FORM SUBMISSION
+    // ONBOARDING SUBMISSION
     // =============================================================================
     
     async function submitOnboarding() {
@@ -633,55 +849,83 @@
             submitBtn.textContent = originalText;
             
             // Show error
-            showSubmissionError(error.message);
+            let errorMessage = 'Failed to save your information. Please try again.';
+            if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            // Show error at bottom of form
+            const errorContainer = document.getElementById('submission-error') || createSubmissionError();
+            errorContainer.textContent = errorMessage;
+            errorContainer.style.display = 'block';
+            
+            // Scroll to error
+            errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
     
-    function showSubmissionError(message) {
-        // Create error display if it doesn't exist
-        let errorDiv = document.getElementById('submission-error');
-        if (!errorDiv) {
-            errorDiv = document.createElement('div');
-            errorDiv.id = 'submission-error';
-            errorDiv.style.cssText = `
-                background: #fef2f2;
-                border: 1px solid #fecaca;
-                color: #dc2626;
-                padding: 12px;
-                border-radius: 8px;
-                margin: 16px 0;
-                font-size: 14px;
-            `;
-            
-            const currentStep = document.getElementById('step-' + totalSteps);
-            if (currentStep) {
-                currentStep.insertBefore(errorDiv, currentStep.querySelector('.button-group'));
-            }
+    function createSubmissionError() {
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'submission-error';
+        errorDiv.className = 'form-error';
+        errorDiv.style.display = 'none';
+        errorDiv.style.marginTop = '1rem';
+        
+        const currentStep = document.getElementById(`step-${totalSteps}`);
+        if (currentStep) {
+            currentStep.appendChild(errorDiv);
         }
         
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
+        return errorDiv;
     }
     
     // =============================================================================
-    // EVENT LISTENERS
+    // UTILITY FUNCTIONS
     // =============================================================================
     
-    function setupEventListeners() {
-        // Add any additional event listeners if needed
-        console.log('✅ [Onboarding] Event listeners setup complete');
+    function getFieldUsageStats() {
+        const stats = {};
+        
+        Object.keys(CHARACTER_LIMITS).forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            const limits = CHARACTER_LIMITS[fieldId];
+            
+            if (field && limits) {
+                const currentLength = field.value.length;
+                const percentage = (currentLength / limits.max * 100).toFixed(1);
+                
+                stats[fieldId] = {
+                    current: currentLength,
+                    max: limits.max,
+                    percentage: parseFloat(percentage),
+                    utilization: percentage >= 80 ? 'high' : percentage >= 50 ? 'medium' : 'low'
+                };
+            }
+        });
+        
+        return stats;
     }
     
-    // =============================================================================
-    // GLOBAL FUNCTIONS (for HTML onclick handlers)
-    // =============================================================================
+    // Log usage stats (helpful for optimization)
+    function logFieldUsage() {
+        const stats = getFieldUsageStats();
+        console.log('📊 [Onboarding] Field usage statistics:', stats);
+        
+        // Track high-utilization fields
+        const highUtilizationFields = Object.entries(stats)
+            .filter(([_, data]) => data.utilization === 'high')
+            .map(([fieldId, _]) => fieldId);
+        
+        if (highUtilizationFields.length > 0) {
+            console.log('⚠️ [Onboarding] High character utilization fields:', highUtilizationFields);
+        }
+    }
     
-    // Make functions globally available for HTML onclick handlers
-    window.nextStep = nextStep;
-    window.prevStep = prevStep;
-    window.skipStep = skipStep;
-    window.skipPhoneStep = skipPhoneStep;
-    window.submitOnboarding = submitOnboarding;
+    // Initialize the form
+    showStep(1);
     
-    console.log('📝 [Onboarding] Enhanced onboarding controller loaded');
+    console.log('📝 [Onboarding] Controller loaded successfully');
+    console.log('🔢 Character limits configured:', CHARACTER_LIMITS);
+    console.log('📋 Step fields mapping:', stepFields);
+
 })();
