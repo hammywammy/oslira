@@ -599,22 +599,42 @@ function hideLoading() {
 }
 
 function showError(message) {
-    document.getElementById('error-message').innerHTML = message;
-    document.getElementById('error-state').classList.remove('hidden');
+    const errorMsgEl = document.getElementById('error-message');
+    const errorStateEl = document.getElementById('error-state');
+    
+    if (errorMsgEl) {
+        errorMsgEl.innerHTML = message;
+    }
+    if (errorStateEl) {
+        errorStateEl.classList.remove('hidden');
+    }
 }
 
 function hideError() {
-    document.getElementById('error-state').classList.add('hidden');
+    const errorEl = document.getElementById('error-state');
+    if (errorEl) {
+        errorEl.classList.add('hidden');
+    }
 }
 
 function showSuccess(message) {
-    document.getElementById('success-message').innerHTML = message;
-    document.getElementById('success-state').classList.remove('hidden');
+    const successMsgEl = document.getElementById('success-message');
+    const successStateEl = document.getElementById('success-state');
+    
+    if (successMsgEl) {
+        successMsgEl.innerHTML = message;
+    }
+    if (successStateEl) {
+        successStateEl.classList.remove('hidden');
+    }
 }
 
 function hideSuccess() {
-    document.getElementById('success-state').classList.add('hidden');
-}        
+    const successEl = document.getElementById('success-state');
+    if (successEl) {
+        successEl.classList.add('hidden');
+    }
+}       
     </script>
 </body>
 </html>
