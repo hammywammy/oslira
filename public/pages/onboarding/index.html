@@ -6,18 +6,344 @@
     <title>Complete Your Setup - Oslira</title>
     <link rel="stylesheet" href="/pages/onboarding/onboarding.css">
     <style>
-        /* Additional styles ONLY for character limits - keeping your existing design */
-        .helper-text.with-limit {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* Simple onboarding styles */
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            visibility: hidden; /* Hidden until scripts load */
         }
         
-        .helper-text .limit-hint {
-            font-size: 0.75rem;
-            color: #9ca3af;
+        .onboarding-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+        
+        .progress-section {
+            margin: 2rem 0 3rem;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: #4a5568;
+        }
+
+        .progress-text span {
+            font-weight: 500;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4299e1, #63b3ed);
+            border-radius: 3px;
+            width: 11.11%; /* 100% / 9 steps */
+            transition: width 0.4s ease;
+            box-shadow: 0 1px 3px rgba(66, 153, 225, 0.3);
+        }
+        
+        .motivation-text {
+            background: linear-gradient(135deg, #ebf8ff, #f0fff4);
+            border: 1px solid #bee3f8;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .motivation-text p {
+            margin: 0;
+            color: #2d3748;
+            font-size: 15px;
+        }
+
+        .motivation-text strong {
+            color: #2b6cb0;
+        }
+        
+        .step {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .step-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-description {
+            color: #718096;
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .helper-text {
+            color: #6b7280;
+            font-size: 14px;
+            margin: 0 0 8px 0;
             font-style: italic;
-            font-weight: normal;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .helper-text::before {
+            content: '';
+            width: 4px;
+            height: 4px;
+            background: #4299e1;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-error {
+            color: #e53e3e;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        .radio-group {
+            display: grid;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .radio-option {
+            position: relative;
+        }
+
+        .radio-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .radio-label:hover {
+            border-color: #4299e1;
+            background: #f7faff;
+        }
+
+        .radio-option input[type="radio"]:checked + .radio-label {
+            border-color: #4299e1;
+            background: #ebf8ff;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+
+        .radio-icon {
+            font-size: 24px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .radio-text strong {
+            display: block;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 2px;
+        }
+
+        .radio-text small {
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .phone-input-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .country-select {
+            width: 100px;
+            padding: 12px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: #4299e1;
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.4;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #3182ce;
+        }
+        
+        .btn-primary:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+        
+        .btn-secondary:hover {
+            background: #cbd5e0;
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: #4299e1;
+            border: 1px solid #4299e1;
+        }
+
+        .btn-outline:hover {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .loading-state {
+            text-align: center;
+            padding: 3rem;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #4299e1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-state {
+            text-align: center;
+            padding: 3rem;
+            color: #e53e3e;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+
+        .button-group > div {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
     </style>
 </head>
@@ -128,13 +454,8 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="business-name">Business Name *</label>
-                    <div class="helper-text with-limit">
-                        <span>The name of your business or brand</span>
-                        <span class="limit-hint">max 100</span>
-                    </div>
                     <input type="text" id="business-name" class="form-input" 
-                           placeholder="Enter your business name (e.g. 'Smith Marketing Agency')"
-                           maxlength="100">
+                           placeholder="Enter your business name (e.g. 'Smith Marketing Agency')">
                     <div class="form-error" id="business-name-error"></div>
                 </div>
                 
@@ -185,13 +506,9 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="target-audience">Target Audience *</label>
-                    <div class="helper-text with-limit">
-                        <span>Helps us identify the right prospects for your business</span>
-                        <span class="limit-hint">20-500</span>
-                    </div>
+                    <p class="helper-text">Helps us identify the right prospects for your business</p>
                     <textarea id="target-audience" class="form-textarea" 
-                             placeholder="Example: Small business owners aged 30-50 who struggle with social media marketing"
-                             maxlength="500"></textarea>
+                             placeholder="Example: Small business owners aged 30-50 who struggle with social media marketing"></textarea>
                     <div class="form-error" id="target-audience-error"></div>
                 </div>
                 
@@ -208,13 +525,9 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="value-proposition">Your Value Proposition *</label>
-                    <div class="helper-text with-limit">
-                        <span>One sentence that makes your business unique</span>
-                        <span class="limit-hint">20-300</span>
-                    </div>
+                    <p class="helper-text">One sentence that makes your business unique</p>
                     <textarea id="value-proposition" class="form-textarea" 
-                             placeholder="Example: We help small businesses get 10x more leads through automated Instagram outreach"
-                             maxlength="300"></textarea>
+                             placeholder="Example: We help small businesses get 10x more leads through automated Instagram outreach"></textarea>
                     <div class="form-error" id="value-proposition-error"></div>
                 </div>
                 
@@ -366,10 +679,7 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="phone-number">Phone Number</label>
-                    <div class="helper-text with-limit">
-                        <span>Get VIP alerts for new features and exclusive offers</span>
-                        <span class="limit-hint">max 20</span>
-                    </div>
+                    <p class="helper-text">Get VIP alerts for new features and exclusive offers</p>
                     <div class="phone-input-container">
                         <select id="country-code" class="country-select">
                             <option value="+1">🇺🇸 +1</option>
@@ -380,8 +690,7 @@
                             <option value="+61">🇦🇺 +61</option>
                         </select>
                         <input type="tel" id="phone-number" class="form-input" 
-                               placeholder="(555) 123-4567"
-                               maxlength="20">
+                               placeholder="(555) 123-4567">
                     </div>
                     <div class="form-error" id="phone-number-error"></div>
                 </div>
@@ -410,14 +719,10 @@
                 <div class="step-description">What benefits do your customers see?</div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="key-results">Key Results/Benefits</label>
-                    <div class="helper-text with-limit">
-                        <span>This helps us craft compelling outreach messages</span>
-                        <span class="limit-hint">max 800</span>
-                    </div>
+                    <label class="form-label" for="key-results">Key Results/Benefits *</label>
+                    <p class="helper-text">This helps us craft compelling outreach messages</p>
                     <textarea id="key-results" class="form-textarea" 
-                             placeholder="Example: Clients typically see 50% more leads within 30 days"
-                             maxlength="800"></textarea>
+                             placeholder="Example: Clients typically see 50% more leads within 30 days"></textarea>
                     <div class="form-error" id="key-results-error"></div>
                 </div>
                 
