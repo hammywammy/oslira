@@ -583,8 +583,16 @@ function clearFieldErrors() {
 
 function showLoading(message) {
     isLoading = true;
-    document.getElementById('loading-message').textContent = message;
-    document.getElementById('loading-state').classList.remove('hidden');
+    
+    const loadingMsgEl = document.getElementById('loading-message');
+    const loadingStateEl = document.getElementById('loading-state');
+    
+    if (loadingMsgEl) {
+        loadingMsgEl.textContent = message;
+    }
+    if (loadingStateEl) {
+        loadingStateEl.classList.remove('hidden');
+    }
     
     // Disable all form elements
     document.querySelectorAll('input, button').forEach(el => el.disabled = true);
@@ -592,7 +600,11 @@ function showLoading(message) {
 
 function hideLoading() {
     isLoading = false;
-    document.getElementById('loading-state').classList.add('hidden');
+    
+    const loadingStateEl = document.getElementById('loading-state');
+    if (loadingStateEl) {
+        loadingStateEl.classList.add('hidden');
+    }
     
     // Re-enable all form elements  
     document.querySelectorAll('input, button').forEach(el => el.disabled = false);
