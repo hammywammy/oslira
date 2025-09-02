@@ -50,10 +50,52 @@ async signInWithGoogle() {
     const { error } = await this.supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: window.location.origin + '/auth/callback'  // <-- THIS IS MISSING
+            redirectTo: window.location.origin + '/auth/callback'
         }
     });
     if (error) throw error;
+}
+
+// ADD THESE NEW METHODS:
+async signUpWithPassword(email, password, userData = {}) {
+    const { data, error } = await this.supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: userData
+        }
+    });
+    
+    if (error) throw error;
+    
+    return {
+        user: data.user,
+        session: data.session,
+        needsEmailConfirmation: !data.session
+    };
+}
+
+async signInWithPassword(email, password) {
+    const { data, error } = await this.supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+    
+    if (error) throw error;
+    
+    this.session = data.session;
+    return data;
+}
+
+async checkUserExists(email) {
+    try {
+        // Use Supabase auth admin method or a simple signin attempt
+        // Since we can't directly query auth.users, we'll use a different approach
+        const { data, error } = await this.supabase.rpc('check_user_exists', { email });
+        return !error && data;
+    } catch {
+        return false;
+    }
 }
     
     getCurrentSession() {
