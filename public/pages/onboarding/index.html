@@ -66,7 +66,7 @@
             height: 100%;
             background: linear-gradient(90deg, #4299e1, #63b3ed);
             border-radius: 3px;
-            width: 12.5%;
+            width: 11.11%; /* 100% / 9 steps */
             transition: width 0.4s ease;
             box-shadow: 0 1px 3px rgba(66, 153, 225, 0.3);
         }
@@ -224,6 +224,42 @@
             font-size: 14px;
         }
         
+        .phone-input-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .country-select {
+            width: 100px;
+            padding: 12px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: #4299e1;
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.4;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+        
         .button-group {
             display: flex;
             justify-content: space-between;
@@ -263,6 +299,17 @@
             background: #cbd5e0;
         }
         
+        .btn-outline {
+            background: transparent;
+            color: #4299e1;
+            border: 1px solid #4299e1;
+        }
+
+        .btn-outline:hover {
+            background: #4299e1;
+            color: white;
+        }
+        
         .loading-state {
             text-align: center;
             padding: 3rem;
@@ -292,6 +339,12 @@
         .hidden {
             display: none !important;
         }
+
+        .button-group > div {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
     </style>
 </head>
 <body>
@@ -319,8 +372,8 @@
             <!-- Enhanced Progress Indicators -->
             <div class="progress-section">
                 <div class="progress-text">
-                    <span id="progress-step">Step 1 of 8</span>
-                    <span id="progress-percent">12% complete</span>
+                    <span id="progress-step">Step 1 of 9</span>
+                    <span id="progress-percent">11% complete</span>
                 </div>
                 <div class="progress-bar">
                     <div id="progress-fill" class="progress-fill"></div>
@@ -329,72 +382,73 @@
 
             <!-- Motivation Sidebar -->
             <div class="motivation-text">
-                <p>👍 <strong>Tip:</strong> The more accurate your answers, the better your results.</p>
+                <p><strong>Tip:</strong> The more accurate your answers, the better your results.</p>
             </div>
-
+            
             <!-- Step 1: Primary Objective -->
-<div class="step" id="step-1">
-    <div class="step-title">What's your main goal with Oslira?</div>
-    <div class="step-description">Help us understand what success looks like for you.</div>
-    
-    <div class="form-group">
-        <label class="form-label">Primary Objective *</label>
-        <p class="helper-text">🎯 This helps us customize your experience</p>
-        <div class="radio-group" id="primary-objective-group">
-            <div class="radio-option">
-                <input type="radio" id="obj-meetings" name="primary-objective" value="book-meetings">
-                <label for="obj-meetings" class="radio-label">
-                    <span class="radio-icon">📅</span>
-                    <div class="radio-text">
-                        <strong>Book More Meetings</strong>
-                        <small>Schedule calls and consultations</small>
+            <div class="step" id="step-1">
+                <div class="step-title">What's your main goal with Oslira?</div>
+                <div class="step-description">Help us understand what success looks like for you.</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Primary Objective *</label>
+                    <p class="helper-text">This helps us customize your experience</p>
+                    <div class="radio-group" id="primary-objective-group">
+                        <div class="radio-option">
+                            <input type="radio" id="obj-meetings" name="primary-objective" value="book-meetings">
+                            <label for="obj-meetings" class="radio-label">
+                                <span class="radio-icon">📅</span>
+                                <div class="radio-text">
+                                    <strong>Book More Meetings</strong>
+                                    <small>Schedule calls and consultations</small>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="obj-leads" name="primary-objective" value="generate-leads">
+                            <label for="obj-leads" class="radio-label">
+                                <span class="radio-icon">🎣</span>
+                                <div class="radio-text">
+                                    <strong>Generate More Leads</strong>
+                                    <small>Find potential customers</small>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="obj-automate" name="primary-objective" value="automate-outreach">
+                            <label for="obj-automate" class="radio-label">
+                                <span class="radio-icon">🤖</span>
+                                <div class="radio-text">
+                                    <strong>Automate Outreach</strong>
+                                    <small>Save time on manual prospecting</small>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="obj-scale" name="primary-objective" value="scale-business">
+                            <label for="obj-scale" class="radio-label">
+                                <span class="radio-icon">📈</span>
+                                <div class="radio-text">
+                                    <strong>Scale My Business</strong>
+                                    <small>Grow revenue and reach</small>
+                                </div>
+                            </label>
+                        </div>
                     </div>
-                </label>
+                    <div class="form-error" id="primary-objective-error"></div>
+                </div>
+                
+                <div class="button-group">
+                    <div></div>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                </div>
             </div>
             
-            <div class="radio-option">
-                <input type="radio" id="obj-leads" name="primary-objective" value="generate-leads">
-                <label for="obj-leads" class="radio-label">
-                    <span class="radio-icon">🎣</span>
-                    <div class="radio-text">
-                        <strong>Generate More Leads</strong>
-                        <small>Find potential customers</small>
-                    </div>
-                </label>
-            </div>
-            
-            <div class="radio-option">
-                <input type="radio" id="obj-automate" name="primary-objective" value="automate-outreach">
-                <label for="obj-automate" class="radio-label">
-                    <span class="radio-icon">🤖</span>
-                    <div class="radio-text">
-                        <strong>Automate Outreach</strong>
-                        <small>Save time on manual prospecting</small>
-                    </div>
-                </label>
-            </div>
-            
-            <div class="radio-option">
-                <input type="radio" id="obj-scale" name="primary-objective" value="scale-business">
-                <label for="obj-scale" class="radio-label">
-                    <span class="radio-icon">📈</span>
-                    <div class="radio-text">
-                        <strong>Scale My Business</strong>
-                        <small>Grow revenue and reach</small>
-                    </div>
-                </label>
-            </div>
-        </div>
-        <div class="form-error" id="primary-objective-error"></div>
-    </div>
-    
-    <div class="button-group">
-        <div></div>
-        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-    </div>
-</div>
-            <!-- Step 1: Business Name -->
-            <div class="step" id="step-2">
+            <!-- Step 2: Business Name -->
+            <div class="step hidden" id="step-2">
                 <div class="step-title">What's your business name?</div>
                 <div class="step-description">Let's start with the basics.</div>
                 
@@ -406,19 +460,19 @@
                 </div>
                 
                 <div class="button-group">
-                    <div></div>
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
                     <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
                 </div>
             </div>
 
-            <!-- Step 2: Business Niche -->
+            <!-- Step 3: Business Niche -->
             <div class="step hidden" id="step-3">
                 <div class="step-title">What's your business niche?</div>
                 <div class="step-description">Help us understand your industry.</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="business-niche">Business Niche *</label>
-                    <p class="helper-text">🏢 This helps us find prospects in your industry</p>
+                    <p class="helper-text">This helps us find prospects in your industry</p>
                     <select id="business-niche" class="form-select">
                         <option value="">Select your niche</option>
                         <option value="fitness">💪 Fitness & Health</option>
@@ -445,14 +499,14 @@
                 </div>
             </div>
 
-            <!-- Step 3: Target Audience -->
+            <!-- Step 4: Target Audience -->
             <div class="step hidden" id="step-4">
                 <div class="step-title">Who is your target audience?</div>
                 <div class="step-description">Describe your ideal customer.</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="target-audience">Target Audience *</label>
-                    <p class="helper-text">🎯 Helps us identify the right prospects for your business</p>
+                    <p class="helper-text">Helps us identify the right prospects for your business</p>
                     <textarea id="target-audience" class="form-textarea" 
                              placeholder="Example: Small business owners aged 30-50 who struggle with social media marketing"></textarea>
                     <div class="form-error" id="target-audience-error"></div>
@@ -464,36 +518,17 @@
                 </div>
             </div>
 
-            <!-- Step 4: Value Proposition -->
+            <!-- Step 5: Value Proposition -->
             <div class="step hidden" id="step-5">
                 <div class="step-title">What makes you unique?</div>
                 <div class="step-description">What unique value do you provide?</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="value-proposition">Your Value Proposition *</label>
-                    <p class="helper-text">💡 One sentence that makes your business unique</p>
+                    <p class="helper-text">One sentence that makes your business unique</p>
                     <textarea id="value-proposition" class="form-textarea" 
                              placeholder="Example: We help small businesses get 10x more leads through automated Instagram outreach"></textarea>
                     <div class="form-error" id="value-proposition-error"></div>
-                </div>
-                
-                <div class="button-group">
-                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-                </div>
-            </div>
-
-            <!-- Step 5: Key Results -->
-            <div class="step hidden" id="step-8">
-                <div class="step-title">What results do you deliver?</div>
-                <div class="step-description">What benefits do your customers see?</div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="key-results">Key Results/Benefits *</label>
-                    <p class="helper-text">📈 This helps us craft compelling outreach messages</p>
-                    <textarea id="key-results" class="form-textarea" 
-                             placeholder="Example: Clients typically see 50% more leads within 30 days"></textarea>
-                    <div class="form-error" id="key-results-error"></div>
                 </div>
                 
                 <div class="button-group">
@@ -509,7 +544,7 @@
                 
                 <div class="form-group">
                     <label class="form-label">Communication Tone *</label>
-                    <p class="helper-text">🗣️ We'll match your tone in all outreach messages</p>
+                    <p class="helper-text">We'll match your tone in all outreach messages</p>
                     <div class="radio-group" id="communication-tone-group">
                         <div class="radio-option">
                             <input type="radio" id="tone-professional" name="communication-tone" value="professional">
@@ -571,7 +606,7 @@
                 
                 <div class="form-group">
                     <label class="form-label">What's your preferred call-to-action? *</label>
-                    <p class="helper-text">📞 This determines how prospects will be encouraged to contact you</p>
+                    <p class="helper-text">This determines how prospects will be encouraged to contact you</p>
                     <div class="radio-group" id="preferred-cta-group">
                         <div class="radio-option">
                             <input type="radio" id="cta-call" name="preferred-cta" value="book-call">
@@ -633,7 +668,70 @@
                 
                 <div class="button-group">
                     <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                    <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                </div>
+            </div>
+
+            <!-- Step 8: Phone Number (Optional) -->
+            <div class="step hidden" id="step-8">
+                <div class="step-title">Phone number (optional)</div>
+                <div class="step-description">Used only for important alerts and special promotions – we'll never spam.</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="phone-number">Phone Number</label>
+                    <p class="helper-text">Get VIP alerts for new features and exclusive offers</p>
+                    <div class="phone-input-container">
+                        <select id="country-code" class="country-select">
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+44">🇬🇧 +44</option>
+                            <option value="+33">🇫🇷 +33</option>
+                            <option value="+49">🇩🇪 +49</option>
+                            <option value="+1">🇨🇦 +1</option>
+                            <option value="+61">🇦🇺 +61</option>
+                        </select>
+                        <input type="tel" id="phone-number" class="form-input" 
+                               placeholder="(555) 123-4567">
+                    </div>
+                    <div class="form-error" id="phone-number-error"></div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="opt-in-sms" checked>
+                        <label for="opt-in-sms" class="checkbox-label">
+                            I'd like to receive promotional SMS updates
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-outline" onclick="skipPhoneStep()">Skip</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 9: Key Results -->
+            <div class="step hidden" id="step-9">
+                <div class="step-title">What results do you deliver?</div>
+                <div class="step-description">What benefits do your customers see?</div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="key-results">Key Results/Benefits *</label>
+                    <p class="helper-text">This helps us craft compelling outreach messages</p>
+                    <textarea id="key-results" class="form-textarea" 
+                             placeholder="Example: Clients typically see 50% more leads within 30 days"></textarea>
+                    <div class="form-error" id="key-results-error"></div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-outline" onclick="skipStep()">Skip for now</button>
+                        <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
+                    </div>
                 </div>
             </div>
         </div>
