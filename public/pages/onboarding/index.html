@@ -7,50 +7,6 @@
     <link rel="stylesheet" href="/pages/onboarding/onboarding.css">
     <style>
         /* Additional styles for character limits and phone input */
-        .phone-input-group {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .country-select {
-            width: 80px;
-            padding: 0.75rem 0.5rem;
-            border: 2px solid var(--border-light, #e5e7eb);
-            border-radius: var(--radius-md, 0.5rem);
-            font-size: 0.875rem;
-            background: white;
-        }
-        
-        .phone-input {
-            flex: 1;
-        }
-        
-        .checkbox-group {
-            margin-top: 1rem;
-            padding: 1rem;
-            background: var(--bg-secondary, #f9fafb);
-            border-radius: var(--radius-md, 0.5rem);
-            border: 1px solid var(--border-light, #e5e7eb);
-        }
-        
-        .checkbox-label {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            cursor: pointer;
-        }
-        
-        .checkbox-label input[type="checkbox"] {
-            margin: 0;
-            accent-color: var(--primary-blue, #3b82f6);
-        }
-        
-        .label-text small {
-            color: var(--text-secondary, #6b7280);
-            font-style: italic;
-            line-height: 1.4;
-        }
-        
         .helper-text.with-limit {
             display: flex;
             justify-content: space-between;
@@ -62,52 +18,115 @@
             color: var(--text-secondary, #6b7280);
             font-style: italic;
         }
+
+        .phone-input-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .country-select {
+            width: 100px;
+            padding: 12px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(66, 153, 225, 0.05);
+            border-radius: 8px;
+            border: 1px solid rgba(66, 153, 225, 0.1);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: #4299e1;
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.4;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        .checkbox-label strong {
+            color: #1a202c;
+        }
+
+        .checkbox-label small {
+            color: #718096;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
-    <!-- Loading State (shown initially) -->
-    <div id="loading-state" class="loading-state">
-        <div class="spinner"></div>
-        <p>Setting up your account...</p>
-    </div>
-
-    <!-- Error State (hidden initially) -->
-    <div id="error-state" class="error-state hidden">
-        <h3>Setup Failed</h3>
-        <p id="error-message">Something went wrong. Please try again.</p>
-        <button class="btn btn-primary" onclick="window.location.reload()">Try Again</button>
-    </div>
-
-    <!-- Main Onboarding Form (hidden initially) -->
-    <div id="onboarding-form" class="onboarding-container hidden">
+    <div class="onboarding-container">
         <!-- Header -->
         <div class="header">
             <div class="logo">Oslira</div>
             <div class="subtitle">Complete your business setup</div>
         </div>
 
-        <!-- Progress Bar -->
-        <div class="progress-section">
-            <div class="progress-text">
-                <span>Step <span id="progress-step">1</span> of 9</span>
-                <span id="progress-percent">11%</span>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
-            </div>
+        <!-- Loading State -->
+        <div id="loading-state" class="loading-state">
+            <div class="spinner"></div>
+            <p>Setting up your account...</p>
         </div>
 
-        <!-- Onboarding Steps -->
-        <div class="steps-container">
+        <!-- Error State -->
+        <div id="error-state" class="error-state hidden">
+            <h3>Setup Failed</h3>
+            <p id="error-message">Something went wrong. Please try refreshing the page.</p>
+        </div>
+        
+        <!-- Onboarding Form -->
+        <div id="onboarding-form" class="hidden">
+            <!-- Enhanced Progress Indicators -->
+            <div class="progress-section">
+                <div class="progress-text">
+                    <span id="progress-step">Step 1 of 9</span>
+                    <span id="progress-percent">11% complete</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Motivation Sidebar -->
+            <div class="motivation-text">
+                <p><strong>Tip:</strong> The more accurate your answers, the better your results.</p>
+            </div>
             
             <!-- Step 1: Primary Objective -->
             <div class="step" id="step-1">
-                <div class="step-title">What's your primary goal?</div>
-                <div class="step-description">Help us understand what you want to achieve.</div>
+                <div class="step-title">What's your main goal with Oslira?</div>
+                <div class="step-description">Help us understand what success looks like for you.</div>
                 
                 <div class="form-group">
-                    <label class="form-label">Choose your main objective *</label>
-                    <div class="radio-group">
+                    <label class="form-label">Primary Objective *</label>
+                    <p class="helper-text">This helps us customize your experience</p>
+                    <div class="radio-group" id="primary-objective-group">
+                        <div class="radio-option">
+                            <input type="radio" id="obj-meetings" name="primary-objective" value="book-meetings">
+                            <label for="obj-meetings" class="radio-label">
+                                <span class="radio-icon">📅</span>
+                                <div class="radio-text">
+                                    <strong>Book More Meetings</strong>
+                                    <small>Get qualified prospects on sales calls</small>
+                                </div>
+                            </label>
+                        </div>
+                        
                         <div class="radio-option">
                             <input type="radio" id="obj-leads" name="primary-objective" value="generate-leads">
                             <label for="obj-leads" class="radio-label">
@@ -115,17 +134,6 @@
                                 <div class="radio-text">
                                     <strong>Generate More Leads</strong>
                                     <small>Find and connect with potential customers</small>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <div class="radio-option">
-                            <input type="radio" id="obj-sales" name="primary-objective" value="increase-sales">
-                            <label for="obj-sales" class="radio-label">
-                                <span class="radio-icon">💰</span>
-                                <div class="radio-text">
-                                    <strong>Increase Sales</strong>
-                                    <small>Convert more prospects into paying customers</small>
                                 </div>
                             </label>
                         </div>
@@ -192,9 +200,7 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="business-niche">Business Niche *</label>
-                    <div class="helper-text">
-                        <span>This helps us find prospects in your industry</span>
-                    </div>
+                    <p class="helper-text">This helps us find prospects in your industry</p>
                     <select id="business-niche" class="form-select">
                         <option value="">Select your niche</option>
                         <option value="fitness">💪 Fitness & Health</option>
@@ -276,6 +282,7 @@
                 
                 <div class="form-group">
                     <label class="form-label">Choose your preferred tone *</label>
+                    <p class="helper-text">This affects how we craft your outreach messages</p>
                     <div class="radio-group">
                         <div class="radio-option">
                             <input type="radio" id="tone-professional" name="communication-tone" value="professional">
@@ -337,6 +344,7 @@
                 
                 <div class="form-group">
                     <label class="form-label">Choose your main CTA *</label>
+                    <p class="helper-text">We'll optimize outreach messages for this goal</p>
                     <div class="radio-group">
                         <div class="radio-option">
                             <input type="radio" id="cta-book-call" name="preferred-cta" value="book-call">
@@ -402,7 +410,7 @@
                         <span>For important account alerts and exclusive offers</span>
                         <span class="limit-hint">Optional • 10-20 chars</span>
                     </div>
-                    <div class="phone-input-group">
+                    <div class="phone-input-container">
                         <select id="country-code" class="country-select">
                             <option value="+1">🇺🇸 +1</option>
                             <option value="+44">🇬🇧 +44</option>
@@ -411,7 +419,7 @@
                             <option value="+33">🇫🇷 +33</option>
                             <option value="+49">🇩🇪 +49</option>
                         </select>
-                        <input type="tel" id="phone-number" class="form-input phone-input" 
+                        <input type="tel" id="phone-number" class="form-input" 
                                placeholder="(555) 123-4567"
                                maxlength="20">
                     </div>
@@ -420,12 +428,10 @@
                     
                     <!-- SMS Opt-in (only show if phone entered) -->
                     <div class="checkbox-group" id="sms-opt-in-group" style="display: none;">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="opt-in-sms" checked>
-                            <span class="label-text">
-                                <strong>Yes, send me SMS updates!</strong><br>
-                                <small>Get instant notifications for lead analysis results and exclusive promotions.</small>
-                            </span>
+                        <input type="checkbox" id="opt-in-sms" checked>
+                        <label for="opt-in-sms" class="checkbox-label">
+                            <strong>Yes, send me SMS updates!</strong><br>
+                            <small>Get instant notifications for lead analysis results and exclusive promotions.</small>
                         </label>
                     </div>
                 </div>
@@ -439,7 +445,7 @@
             <!-- Step 9: Key Results (Optional) -->
             <div class="step hidden" id="step-9">
                 <div class="step-title">What success looks like (Optional)</div>
-                <div class="step-description">Help us understand your goals.</div>
+                <div class="step-description">Help us understand your goals for better AI-generated outreach.</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="key-results">Success Outcomes</label>
