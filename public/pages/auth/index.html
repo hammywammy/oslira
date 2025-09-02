@@ -314,33 +314,27 @@
     </div>
 </div>
 
-<div id="email-verification-step" class="auth-step" style="display: none;">
-    <div class="verification-message">
-        <p>We sent a verification code to <strong id="verify-email"></strong></p>
-        <p>Enter the 6-digit code to confirm your email address:</p>
+<!-- Email Sent Step -->
+<div id="email-sent-step" class="auth-step" style="display: none;">
+    <div class="email-sent-message">
+        <div class="email-icon">✉️</div>
+        <h3>Check your email</h3>
+        <p>We sent a confirmation link to <strong id="confirm-email"></strong></p>
+        <p>Click the link in the email to complete your signup, then return here to sign in.</p>
     </div>
     
-    <form id="verification-form">
-        <div class="form-group">
-            <input 
-                type="text" 
-                id="verification-code" 
-                name="code" 
-                class="form-input" 
-                placeholder="000000"
-                maxlength="6"
-                required
-            >
-            <div class="form-error" id="verification-code-error"></div>
-        </div>
-        
-        <button type="submit" class="auth-method primary">
-            Verify Email
+    <div class="email-actions">
+        <button type="button" class="auth-method secondary" id="resend-email">
+            Resend email
         </button>
-    </form>
+        
+        <button type="button" class="auth-method primary" id="email-confirmed">
+            I confirmed my email
+        </button>
+    </div>
     
     <div class="back-to-options">
-        <a href="#" class="back-link" id="back-to-email-verify">← Use different email</a>
+        <a href="#" class="back-link" id="back-to-start">← Use different email</a>
     </div>
 </div>
 
@@ -392,6 +386,11 @@ function showStep(stepName) {
             updatePasswordStepUI();
             setTimeout(() => document.getElementById('auth-password').focus(), 100);
             break;
+
+            case 'email-sent':
+    document.getElementById('email-sent-step').style.display = 'block';
+    document.getElementById('confirm-email').textContent = currentEmail;
+    break;
     }
 }
 
@@ -460,13 +459,18 @@ if (userExists) {
 
 async function sendEmailVerification(email) {
     try {
-        showLoading('Sending verification code...');
+        showLoading('Creating account...');
         
-        // Send verification email through Supabase
-        const { error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
+        // Create user with temporary password, which will send confirmation email
+        const tempPassword = generateTempPassword();
+        const { data, error } = await window.SimpleAuth.supabase.auth.signUp({
             email: email,
+            password: tempPassword,
             options: {
-                shouldCreateUser: false  // Don't create user yet
+                data: {
+                    email_verified: false,
+                    temp_signup: true
+                }
             }
         });
         
@@ -475,11 +479,25 @@ async function sendEmailVerification(email) {
         hideLoading();
         currentEmail = email;
         
+        // Show email confirmation message
+        showEmailSent(email);
+        
     } catch (error) {
         console.error('❌ [Auth] Email verification failed:', error);
         hideLoading();
         showError('Failed to send verification email. Please try again.');
     }
+}
+
+function generateTempPassword() {
+    return Math.random().toString(36).slice(-12) + 'A1!';
+}
+
+function showEmailSent(email) {
+    document.getElementById('auth-title').textContent = 'Check your email';
+    document.getElementById('auth-subtitle').textContent = '';
+    
+    showStep('email-sent');
 }
 
 async function handlePasswordSubmit(e) {
