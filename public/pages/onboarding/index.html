@@ -66,7 +66,7 @@
             height: 100%;
             background: linear-gradient(90deg, #4299e1, #63b3ed);
             border-radius: 3px;
-            width: 14.28%;
+            width: 12.5%;
             transition: width 0.4s ease;
             box-shadow: 0 1px 3px rgba(66, 153, 225, 0.3);
         }
@@ -319,8 +319,8 @@
             <!-- Enhanced Progress Indicators -->
             <div class="progress-section">
                 <div class="progress-text">
-                    <span id="progress-step">Step 1 of 7</span>
-                    <span id="progress-percent">14% complete</span>
+                    <span id="progress-step">Step 1 of 8</span>
+                    <span id="progress-percent">12% complete</span>
                 </div>
                 <div class="progress-bar">
                     <div id="progress-fill" class="progress-fill"></div>
@@ -331,9 +331,70 @@
             <div class="motivation-text">
                 <p>👍 <strong>Tip:</strong> The more accurate your answers, the better your results.</p>
             </div>
+
+            <!-- Step 1: Primary Objective -->
+<div class="step" id="step-1">
+    <div class="step-title">What's your main goal with Oslira?</div>
+    <div class="step-description">Help us understand what success looks like for you.</div>
+    
+    <div class="form-group">
+        <label class="form-label">Primary Objective *</label>
+        <p class="helper-text">🎯 This helps us customize your experience</p>
+        <div class="radio-group" id="primary-objective-group">
+            <div class="radio-option">
+                <input type="radio" id="obj-meetings" name="primary-objective" value="book-meetings">
+                <label for="obj-meetings" class="radio-label">
+                    <span class="radio-icon">📅</span>
+                    <div class="radio-text">
+                        <strong>Book More Meetings</strong>
+                        <small>Schedule calls and consultations</small>
+                    </div>
+                </label>
+            </div>
             
+            <div class="radio-option">
+                <input type="radio" id="obj-leads" name="primary-objective" value="generate-leads">
+                <label for="obj-leads" class="radio-label">
+                    <span class="radio-icon">🎣</span>
+                    <div class="radio-text">
+                        <strong>Generate More Leads</strong>
+                        <small>Find potential customers</small>
+                    </div>
+                </label>
+            </div>
+            
+            <div class="radio-option">
+                <input type="radio" id="obj-automate" name="primary-objective" value="automate-outreach">
+                <label for="obj-automate" class="radio-label">
+                    <span class="radio-icon">🤖</span>
+                    <div class="radio-text">
+                        <strong>Automate Outreach</strong>
+                        <small>Save time on manual prospecting</small>
+                    </div>
+                </label>
+            </div>
+            
+            <div class="radio-option">
+                <input type="radio" id="obj-scale" name="primary-objective" value="scale-business">
+                <label for="obj-scale" class="radio-label">
+                    <span class="radio-icon">📈</span>
+                    <div class="radio-text">
+                        <strong>Scale My Business</strong>
+                        <small>Grow revenue and reach</small>
+                    </div>
+                </label>
+            </div>
+        </div>
+        <div class="form-error" id="primary-objective-error"></div>
+    </div>
+    
+    <div class="button-group">
+        <div></div>
+        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+    </div>
+</div>
             <!-- Step 1: Business Name -->
-            <div class="step" id="step-1">
+            <div class="step" id="step-2">
                 <div class="step-title">What's your business name?</div>
                 <div class="step-description">Let's start with the basics.</div>
                 
@@ -351,7 +412,7 @@
             </div>
 
             <!-- Step 2: Business Niche -->
-            <div class="step hidden" id="step-2">
+            <div class="step hidden" id="step-3">
                 <div class="step-title">What's your business niche?</div>
                 <div class="step-description">Help us understand your industry.</div>
                 
@@ -385,7 +446,7 @@
             </div>
 
             <!-- Step 3: Target Audience -->
-            <div class="step hidden" id="step-3">
+            <div class="step hidden" id="step-4">
                 <div class="step-title">Who is your target audience?</div>
                 <div class="step-description">Describe your ideal customer.</div>
                 
@@ -404,7 +465,7 @@
             </div>
 
             <!-- Step 4: Value Proposition -->
-            <div class="step hidden" id="step-4">
+            <div class="step hidden" id="step-5">
                 <div class="step-title">What makes you unique?</div>
                 <div class="step-description">What unique value do you provide?</div>
                 
@@ -423,7 +484,7 @@
             </div>
 
             <!-- Step 5: Key Results -->
-            <div class="step hidden" id="step-5">
+            <div class="step hidden" id="step-8">
                 <div class="step-title">What results do you deliver?</div>
                 <div class="step-description">What benefits do your customers see?</div>
                 
