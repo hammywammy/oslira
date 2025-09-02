@@ -6,7 +6,7 @@
     <title>Complete Your Setup - Oslira</title>
     <link rel="stylesheet" href="/pages/onboarding/onboarding.css">
     <style>
-        /* Additional styles for character limits and phone input */
+        /* Additional styles ONLY for character limits - keeping your existing design */
         .helper-text.with-limit {
             display: flex;
             justify-content: space-between;
@@ -14,58 +14,10 @@
         }
         
         .helper-text .limit-hint {
-            font-size: 0.8rem;
-            color: var(--text-secondary, #6b7280);
+            font-size: 0.75rem;
+            color: #9ca3af;
             font-style: italic;
-        }
-
-        .phone-input-container {
-            display: flex;
-            gap: 8px;
-        }
-
-        .country-select {
-            width: 100px;
-            padding: 12px 8px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 16px;
-            background: white;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            margin-top: 12px;
-            padding: 12px;
-            background: rgba(66, 153, 225, 0.05);
-            border-radius: 8px;
-            border: 1px solid rgba(66, 153, 225, 0.1);
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            margin-top: 2px;
-            accent-color: #4299e1;
-        }
-
-        .checkbox-label {
-            font-size: 14px;
-            color: #374151;
-            line-height: 1.4;
-            margin-bottom: 0;
-            cursor: pointer;
-        }
-
-        .checkbox-label strong {
-            color: #1a202c;
-        }
-
-        .checkbox-label small {
-            color: #718096;
-            font-style: italic;
+            font-weight: normal;
         }
     </style>
 </head>
@@ -74,19 +26,19 @@
         <!-- Header -->
         <div class="header">
             <div class="logo">Oslira</div>
-            <div class="subtitle">Complete your business setup</div>
+            <div class="subtitle">Complete your account setup to start finding leads</div>
         </div>
-
+        
         <!-- Loading State -->
         <div id="loading-state" class="loading-state">
             <div class="spinner"></div>
-            <p>Setting up your account...</p>
+            <div>Setting up your account...</div>
         </div>
-
+        
         <!-- Error State -->
         <div id="error-state" class="error-state hidden">
             <h3>Setup Failed</h3>
-            <p id="error-message">Something went wrong. Please try refreshing the page.</p>
+            <p id="error-message">Unable to load account setup. Please try refreshing the page.</p>
         </div>
         
         <!-- Onboarding Form -->
@@ -122,7 +74,7 @@
                                 <span class="radio-icon">📅</span>
                                 <div class="radio-text">
                                     <strong>Book More Meetings</strong>
-                                    <small>Get qualified prospects on sales calls</small>
+                                    <small>Schedule calls and consultations</small>
                                 </div>
                             </label>
                         </div>
@@ -130,21 +82,21 @@
                         <div class="radio-option">
                             <input type="radio" id="obj-leads" name="primary-objective" value="generate-leads">
                             <label for="obj-leads" class="radio-label">
-                                <span class="radio-icon">🎯</span>
+                                <span class="radio-icon">🎣</span>
                                 <div class="radio-text">
                                     <strong>Generate More Leads</strong>
-                                    <small>Find and connect with potential customers</small>
+                                    <small>Find potential customers</small>
                                 </div>
                             </label>
                         </div>
                         
                         <div class="radio-option">
-                            <input type="radio" id="obj-brand" name="primary-objective" value="build-brand">
-                            <label for="obj-brand" class="radio-label">
-                                <span class="radio-icon">🏆</span>
+                            <input type="radio" id="obj-automate" name="primary-objective" value="automate-outreach">
+                            <label for="obj-automate" class="radio-label">
+                                <span class="radio-icon">🤖</span>
                                 <div class="radio-text">
-                                    <strong>Build My Brand</strong>
-                                    <small>Increase awareness and recognition</small>
+                                    <strong>Automate Outreach</strong>
+                                    <small>Save time on manual prospecting</small>
                                 </div>
                             </label>
                         </div>
@@ -178,12 +130,11 @@
                     <label class="form-label" for="business-name">Business Name *</label>
                     <div class="helper-text with-limit">
                         <span>The name of your business or brand</span>
-                        <span class="limit-hint">Max 100 chars</span>
+                        <span class="limit-hint">max 100</span>
                     </div>
                     <input type="text" id="business-name" class="form-input" 
-                           placeholder="Enter your business name (e.g. Smith Marketing Agency)"
+                           placeholder="Enter your business name (e.g. 'Smith Marketing Agency')"
                            maxlength="100">
-                    <!-- Character counter will be inserted here automatically -->
                     <div class="form-error" id="business-name-error"></div>
                 </div>
                 
@@ -230,18 +181,17 @@
             <!-- Step 4: Target Audience -->
             <div class="step hidden" id="step-4">
                 <div class="step-title">Who is your target audience?</div>
-                <div class="step-description">Describe your ideal customer in detail.</div>
+                <div class="step-description">Describe your ideal customer.</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="target-audience">Target Audience *</label>
                     <div class="helper-text with-limit">
-                        <span>Be specific - this helps our AI find the right prospects</span>
-                        <span class="limit-hint">20-500 chars</span>
+                        <span>Helps us identify the right prospects for your business</span>
+                        <span class="limit-hint">20-500</span>
                     </div>
-                    <textarea id="target-audience" class="form-textarea" rows="4"
-                              placeholder="Example: Small business owners aged 30-50 who struggle with social media marketing and have 10-50 employees. They're tech-savvy but don't have time for content creation."
-                              maxlength="500"></textarea>
-                    <!-- Character counter will be inserted here automatically -->
+                    <textarea id="target-audience" class="form-textarea" 
+                             placeholder="Example: Small business owners aged 30-50 who struggle with social media marketing"
+                             maxlength="500"></textarea>
                     <div class="form-error" id="target-audience-error"></div>
                 </div>
                 
@@ -254,18 +204,17 @@
             <!-- Step 5: Value Proposition -->
             <div class="step hidden" id="step-5">
                 <div class="step-title">What makes you unique?</div>
-                <div class="step-description">Your unique value in 1-2 sentences.</div>
+                <div class="step-description">What unique value do you provide?</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="value-proposition">Your Value Proposition *</label>
                     <div class="helper-text with-limit">
-                        <span>What unique value do you provide? Keep it concise but compelling.</span>
-                        <span class="limit-hint">20-300 chars</span>
+                        <span>One sentence that makes your business unique</span>
+                        <span class="limit-hint">20-300</span>
                     </div>
-                    <textarea id="value-proposition" class="form-textarea" rows="3"
-                              placeholder="Example: We help small businesses get 10x more qualified leads through AI-powered social media targeting, without spending more on ads."
-                              maxlength="300"></textarea>
-                    <!-- Character counter will be inserted here automatically -->
+                    <textarea id="value-proposition" class="form-textarea" 
+                             placeholder="Example: We help small businesses get 10x more leads through automated Instagram outreach"
+                             maxlength="300"></textarea>
                     <div class="form-error" id="value-proposition-error"></div>
                 </div>
                 
@@ -277,20 +226,20 @@
 
             <!-- Step 6: Communication Tone -->
             <div class="step hidden" id="step-6">
-                <div class="step-title">What's your communication style?</div>
-                <div class="step-description">How do you prefer to communicate with prospects?</div>
+                <div class="step-title">How do you communicate?</div>
+                <div class="step-description">We'll match your brand voice.</div>
                 
                 <div class="form-group">
-                    <label class="form-label">Choose your preferred tone *</label>
-                    <p class="helper-text">This affects how we craft your outreach messages</p>
-                    <div class="radio-group">
+                    <label class="form-label">Communication Tone *</label>
+                    <p class="helper-text">We'll match your tone in all outreach messages</p>
+                    <div class="radio-group" id="communication-tone-group">
                         <div class="radio-option">
                             <input type="radio" id="tone-professional" name="communication-tone" value="professional">
                             <label for="tone-professional" class="radio-label">
                                 <span class="radio-icon">👔</span>
                                 <div class="radio-text">
                                     <strong>Professional</strong>
-                                    <small>Formal, business-focused approach</small>
+                                    <small>Formal & business-focused</small>
                                 </div>
                             </label>
                         </div>
@@ -298,10 +247,21 @@
                         <div class="radio-option">
                             <input type="radio" id="tone-friendly" name="communication-tone" value="friendly">
                             <label for="tone-friendly" class="radio-label">
-                                <span class="radio-icon">😊</span>
+                                <span class="radio-icon">🙂</span>
                                 <div class="radio-text">
                                     <strong>Friendly</strong>
-                                    <small>Casual, approachable, and warm</small>
+                                    <small>Casual & approachable</small>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="tone-enthusiastic" name="communication-tone" value="enthusiastic">
+                            <label for="tone-enthusiastic" class="radio-label">
+                                <span class="radio-icon">⚡</span>
+                                <div class="radio-text">
+                                    <strong>Enthusiastic</strong>
+                                    <small>Energetic & exciting</small>
                                 </div>
                             </label>
                         </div>
@@ -309,21 +269,10 @@
                         <div class="radio-option">
                             <input type="radio" id="tone-direct" name="communication-tone" value="direct">
                             <label for="tone-direct" class="radio-label">
-                                <span class="radio-icon">🎯</span>
+                                <span class="radio-icon">🚀</span>
                                 <div class="radio-text">
                                     <strong>Direct</strong>
-                                    <small>Straight to the point, no fluff</small>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <div class="radio-option">
-                            <input type="radio" id="tone-consultative" name="communication-tone" value="consultative">
-                            <label for="tone-consultative" class="radio-label">
-                                <span class="radio-icon">🤝</span>
-                                <div class="radio-text">
-                                    <strong>Consultative</strong>
-                                    <small>Advisory, helpful, solution-focused</small>
+                                    <small>Straight to the point</small>
                                 </div>
                             </label>
                         </div>
@@ -340,52 +289,63 @@
             <!-- Step 7: Preferred CTA -->
             <div class="step hidden" id="step-7">
                 <div class="step-title">What's your preferred call-to-action?</div>
-                <div class="step-description">How do you want prospects to connect with you?</div>
+                <div class="step-description">How should prospects reach out to you?</div>
                 
                 <div class="form-group">
-                    <label class="form-label">Choose your main CTA *</label>
-                    <p class="helper-text">We'll optimize outreach messages for this goal</p>
-                    <div class="radio-group">
+                    <label class="form-label">What's your preferred call-to-action? *</label>
+                    <p class="helper-text">This determines how prospects will be encouraged to contact you</p>
+                    <div class="radio-group" id="preferred-cta-group">
                         <div class="radio-option">
-                            <input type="radio" id="cta-book-call" name="preferred-cta" value="book-call">
-                            <label for="cta-book-call" class="radio-label">
+                            <input type="radio" id="cta-call" name="preferred-cta" value="book-call">
+                            <label for="cta-call" class="radio-label">
                                 <span class="radio-icon">📞</span>
                                 <div class="radio-text">
                                     <strong>Book a Call</strong>
-                                    <small>Schedule a consultation or discovery call</small>
+                                    <small>Schedule meetings or consultations</small>
                                 </div>
                             </label>
                         </div>
                         
                         <div class="radio-option">
-                            <input type="radio" id="cta-visit-website" name="preferred-cta" value="visit-website">
-                            <label for="cta-visit-website" class="radio-label">
+                            <input type="radio" id="cta-website" name="preferred-cta" value="visit-website">
+                            <label for="cta-website" class="radio-label">
                                 <span class="radio-icon">🌐</span>
                                 <div class="radio-text">
                                     <strong>Visit Website</strong>
-                                    <small>Drive traffic to your website or landing page</small>
+                                    <small>Drive traffic to your site</small>
                                 </div>
                             </label>
                         </div>
                         
                         <div class="radio-option">
-                            <input type="radio" id="cta-send-email" name="preferred-cta" value="send-email">
-                            <label for="cta-send-email" class="radio-label">
+                            <input type="radio" id="cta-email" name="preferred-cta" value="send-email">
+                            <label for="cta-email" class="radio-label">
                                 <span class="radio-icon">✉️</span>
                                 <div class="radio-text">
                                     <strong>Send Email</strong>
-                                    <small>Get prospects to email you directly</small>
+                                    <small>Direct email inquiries</small>
                                 </div>
                             </label>
                         </div>
                         
                         <div class="radio-option">
-                            <input type="radio" id="cta-send-dm" name="preferred-cta" value="send-dm">
-                            <label for="cta-send-dm" class="radio-label">
+                            <input type="radio" id="cta-dm" name="preferred-cta" value="send-dm">
+                            <label for="cta-dm" class="radio-label">
                                 <span class="radio-icon">💬</span>
                                 <div class="radio-text">
-                                    <strong>Send DM</strong>
-                                    <small>Encourage direct messages on social media</small>
+                                    <strong>Send a DM</strong>
+                                    <small>Instagram direct message</small>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="cta-follow" name="preferred-cta" value="follow-up">
+                            <label for="cta-follow" class="radio-label">
+                                <span class="radio-icon">🔄</span>
+                                <div class="radio-text">
+                                    <strong>Follow & Engage</strong>
+                                    <small>Build relationship first</small>
                                 </div>
                             </label>
                         </div>
@@ -401,68 +361,72 @@
 
             <!-- Step 8: Phone Number (Optional) -->
             <div class="step hidden" id="step-8">
-                <div class="step-title">Stay connected (Optional)</div>
-                <div class="step-description">Get VIP alerts when your lead analysis is ready!</div>
+                <div class="step-title">Phone number (optional)</div>
+                <div class="step-description">Used only for important alerts and special promotions – we'll never spam.</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="phone-number">Phone Number</label>
                     <div class="helper-text with-limit">
-                        <span>For important account alerts and exclusive offers</span>
-                        <span class="limit-hint">Optional • 10-20 chars</span>
+                        <span>Get VIP alerts for new features and exclusive offers</span>
+                        <span class="limit-hint">max 20</span>
                     </div>
                     <div class="phone-input-container">
                         <select id="country-code" class="country-select">
                             <option value="+1">🇺🇸 +1</option>
                             <option value="+44">🇬🇧 +44</option>
-                            <option value="+1">🇨🇦 +1</option>
-                            <option value="+61">🇦🇺 +61</option>
                             <option value="+33">🇫🇷 +33</option>
                             <option value="+49">🇩🇪 +49</option>
+                            <option value="+1">🇨🇦 +1</option>
+                            <option value="+61">🇦🇺 +61</option>
                         </select>
                         <input type="tel" id="phone-number" class="form-input" 
                                placeholder="(555) 123-4567"
                                maxlength="20">
                     </div>
-                    <!-- Character counter will be inserted here automatically -->
                     <div class="form-error" id="phone-number-error"></div>
-                    
-                    <!-- SMS Opt-in (only show if phone entered) -->
-                    <div class="checkbox-group" id="sms-opt-in-group" style="display: none;">
+                </div>
+                
+                <div class="form-group">
+                    <div class="checkbox-group">
                         <input type="checkbox" id="opt-in-sms" checked>
                         <label for="opt-in-sms" class="checkbox-label">
-                            <strong>Yes, send me SMS updates!</strong><br>
-                            <small>Get instant notifications for lead analysis results and exclusive promotions.</small>
+                            I'd like to receive promotional SMS updates
                         </label>
                     </div>
                 </div>
                 
                 <div class="button-group">
                     <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-outline" onclick="skipPhoneStep()">Skip</button>
+                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Step 9: Key Results (Optional) -->
+            <!-- Step 9: Key Results -->
             <div class="step hidden" id="step-9">
-                <div class="step-title">What success looks like (Optional)</div>
-                <div class="step-description">Help us understand your goals for better AI-generated outreach.</div>
+                <div class="step-title">What results do you deliver?</div>
+                <div class="step-description">What benefits do your customers see?</div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="key-results">Success Outcomes</label>
+                    <label class="form-label" for="key-results">Key Results/Benefits</label>
                     <div class="helper-text with-limit">
-                        <span>What would make this lead generation effort a success?</span>
-                        <span class="limit-hint">Optional • Max 800 chars</span>
+                        <span>This helps us craft compelling outreach messages</span>
+                        <span class="limit-hint">max 800</span>
                     </div>
-                    <textarea id="key-results" class="form-textarea" rows="4"
-                              placeholder="Example: I want to book 5-10 qualified sales calls per month from Instagram leads. Success would be closing 2-3 new clients worth $2,000+ each from social media outreach."
-                              maxlength="800"></textarea>
-                    <!-- Character counter will be inserted here automatically -->
+                    <textarea id="key-results" class="form-textarea" 
+                             placeholder="Example: Clients typically see 50% more leads within 30 days"
+                             maxlength="800"></textarea>
                     <div class="form-error" id="key-results-error"></div>
                 </div>
                 
                 <div class="button-group">
                     <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                    <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-outline" onclick="skipStep()">Skip for now</button>
+                        <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -470,6 +434,5 @@
 
     <!-- Script Loading -->
     <script src="/core/script-loader.js"></script>
-    <script src="/pages/onboarding/onboarding.js"></script>
 </body>
 </html>
