@@ -13,31 +13,29 @@
     let user = null;
     let supabase = null;
     let currentStep = 1;
-const totalSteps = 7; // Expanded from 3 to 8 steps
+const totalSteps = 8; // Expanded from 3 to 8 steps
 
 const validationRules = {
     'primary-objective': { required: true },
-    'full-name': { required: true, minLength: 2 },
     'business-name': { required: true, minLength: 2 },
     'business-niche': { required: true },
     'target-audience': { required: true, minLength: 20 },
     'value-proposition': { required: true, minLength: 20 },
+    'key-results': { required: true, minLength: 10 },
     'communication-tone': { required: true },
-    'preferred-cta': { required: true },
-    'phone': { required: false }, // Optional
-    'message-example': { required: false } // Optional
+    'preferred-cta': { required: true }
 };
 
-// New step-field mapping for single questions  
+// New step-field mapping for 8 steps with reordering
 const stepFields = {
-    1: ['primary-objective'],
-    2: ['full-name'], 
-    3: ['business-name'],
-    4: ['business-niche'],
-    5: ['target-audience'],
-    6: ['value-proposition'],
-    7: ['communication-tone'],
-    8: ['preferred-cta']
+    1: ['primary-objective'],    // NEW - Primary Objective
+    2: ['business-name'],        // Business Name
+    3: ['business-niche'],       // Business Niche  
+    4: ['target-audience'],      // Target Audience
+    5: ['value-proposition'],    // Value Proposition
+    6: ['communication-tone'],   // Communication Style
+    7: ['preferred-cta'],        // CTA Preference
+    8: ['key-results']           // Key Results (moved to end)
 };
     
     // =============================================================================
@@ -149,6 +147,18 @@ const stepFields = {
         const field = document.getElementById(fieldId);
         const errorEl = document.getElementById(fieldId + '-error');
         const rules = validationRules[fieldId];
+
+    if (fieldId === 'primary-objective') {
+        const radioButton = document.querySelector('input[name="primary-objective"]:checked');
+        const errorEl = document.getElementById(fieldId + '-error');
+        const isValid = !!radioButton;
+        
+        if (errorEl) {
+            errorEl.textContent = isValid ? '' : 'Please select your main goal';
+        }
+        
+        return isValid;
+    }
 
     if (fieldId === 'communication-tone') {
         const radioButton = document.querySelector('input[name="communication-tone"]:checked');
@@ -316,6 +326,7 @@ const stepFields = {
                 message_example: `Hi! I noticed you're interested in ${getFieldValue('business-niche')}. ${getFieldValue('value-proposition')} Would you like to learn more?`,
                 success_outcome: getFieldValue('key-results'),
                 call_to_action: getFieldValue('preferred-cta'),
+                primary_objective: getFieldValue('primary-objective'),
                 is_active: true,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -398,6 +409,11 @@ console.log('✅ [Onboarding] User onboarding status updated:', updatedUser);
     
     function getFieldValue(fieldId) {
     // Handle radio buttons
+    if (fieldId === 'primary-objective') {
+        const radioButton = document.querySelector('input[name="primary-objective"]:checked');
+        return radioButton ? radioButton.value : '';
+    }
+    
     if (fieldId === 'communication-tone') {
         const radioButton = document.querySelector('input[name="communication-tone"]:checked');
         return radioButton ? radioButton.value : '';
