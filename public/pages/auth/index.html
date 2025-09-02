@@ -314,6 +314,36 @@
     </div>
 </div>
 
+<div id="email-verification-step" class="auth-step" style="display: none;">
+    <div class="verification-message">
+        <p>We sent a verification code to <strong id="verify-email"></strong></p>
+        <p>Enter the 6-digit code to confirm your email address:</p>
+    </div>
+    
+    <form id="verification-form">
+        <div class="form-group">
+            <input 
+                type="text" 
+                id="verification-code" 
+                name="code" 
+                class="form-input" 
+                placeholder="000000"
+                maxlength="6"
+                required
+            >
+            <div class="form-error" id="verification-code-error"></div>
+        </div>
+        
+        <button type="submit" class="auth-method primary">
+            Verify Email
+        </button>
+    </form>
+    
+    <div class="back-to-options">
+        <a href="#" class="back-link" id="back-to-email-verify">← Use different email</a>
+    </div>
+</div>
+
         <!-- Footer -->
         <div class="footer">
             By continuing, you agree to our 
@@ -405,11 +435,19 @@ async function handleEmailSubmit(e) {
         currentEmail = email;
         
         // Check if user exists
-        const userExists = await window.SimpleAuth.checkUserExists(email);
-        
-        hideLoading();
-        authMode = userExists ? 'signin' : 'signup';
-        showStep('password');
+// Check if user exists
+const userExists = await window.SimpleAuth.checkUserExists(email);
+
+hideLoading();
+if (userExists) {
+    authMode = 'signin';
+    showStep('password');
+} else {
+    // New user - send verification email first
+    authMode = 'email-verify';
+    await sendEmailVerification(email);
+    showStep('email-verification');
+}
         
     } catch (error) {
         console.error('❌ [Auth] Email check failed:', error);
@@ -417,6 +455,30 @@ async function handleEmailSubmit(e) {
         // If check fails, default to signup flow
         authMode = 'signup';
         showStep('password');
+    }
+}
+
+async function sendEmailVerification(email) {
+    try {
+        showLoading('Sending verification code...');
+        
+        // Send verification email through Supabase
+        const { error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
+            email: email,
+            options: {
+                shouldCreateUser: false  // Don't create user yet
+            }
+        });
+        
+        if (error) throw error;
+        
+        hideLoading();
+        currentEmail = email;
+        
+    } catch (error) {
+        console.error('❌ [Auth] Email verification failed:', error);
+        hideLoading();
+        showError('Failed to send verification email. Please try again.');
     }
 }
 
