@@ -6,423 +6,137 @@
     <title>Complete Your Setup - Oslira</title>
     <link rel="stylesheet" href="/pages/onboarding/onboarding.css">
     <style>
-        /* Simple onboarding styles */
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            min-height: 100vh;
-            visibility: hidden; /* Hidden until scripts load */
-        }
-        
-        .onboarding-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-        
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #1a202c;
-            margin-bottom: 0.5rem;
-        }
-        
-        .subtitle {
-            color: #718096;
-            font-size: 1.1rem;
-        }
-        
-        .progress-section {
-            margin: 2rem 0 3rem;
-        }
-
-        .progress-text {
+        /* Additional styles for character limits and phone input */
+        .phone-input-group {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-            color: #4a5568;
-        }
-
-        .progress-text span {
-            font-weight: 500;
-        }
-
-        .progress-bar {
-            height: 6px;
-            background: #e2e8f0;
-            border-radius: 3px;
-            overflow: hidden;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4299e1, #63b3ed);
-            border-radius: 3px;
-            width: 11.11%; /* 100% / 9 steps */
-            transition: width 0.4s ease;
-            box-shadow: 0 1px 3px rgba(66, 153, 225, 0.3);
+            gap: 0.5rem;
         }
         
-        .motivation-text {
-            background: linear-gradient(135deg, #ebf8ff, #f0fff4);
-            border: 1px solid #bee3f8;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 24px;
-            text-align: center;
-        }
-
-        .motivation-text p {
-            margin: 0;
-            color: #2d3748;
-            font-size: 15px;
-        }
-
-        .motivation-text strong {
-            color: #2b6cb0;
-        }
-        
-        .step {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 2rem;
-        }
-        
-        .step-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1a202c;
-            margin-bottom: 0.5rem;
-        }
-        
-        .step-description {
-            color: #718096;
-            margin-bottom: 2rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        
-        .form-label {
-            display: block;
-            font-weight: 500;
-            color: #374151;
-            margin-bottom: 0.5rem;
-        }
-        
-        .helper-text {
-            color: #6b7280;
-            font-size: 14px;
-            margin: 0 0 8px 0;
-            font-style: italic;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .helper-text::before {
-            content: '';
-            width: 4px;
-            height: 4px;
-            background: #4299e1;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-        
-        .form-input, .form-textarea, .form-select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-            box-sizing: border-box;
-        }
-        
-        .form-input:focus, .form-textarea:focus, .form-select:focus {
-            outline: none;
-            border-color: #4299e1;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-        }
-        
-        .form-textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-        
-        .form-error {
-            color: #e53e3e;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-        
-        .radio-group {
-            display: grid;
-            gap: 12px;
-            margin-top: 8px;
-        }
-
-        .radio-option {
-            position: relative;
-        }
-
-        .radio-option input[type="radio"] {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .radio-label {
-            display: flex;
-            align-items: center;
-            padding: 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: white;
-        }
-
-        .radio-label:hover {
-            border-color: #4299e1;
-            background: #f7faff;
-        }
-
-        .radio-option input[type="radio"]:checked + .radio-label {
-            border-color: #4299e1;
-            background: #ebf8ff;
-            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
-        }
-
-        .radio-icon {
-            font-size: 24px;
-            margin-right: 12px;
-            flex-shrink: 0;
-        }
-
-        .radio-text strong {
-            display: block;
-            font-weight: 600;
-            color: #1a202c;
-            margin-bottom: 2px;
-        }
-
-        .radio-text small {
-            color: #718096;
-            font-size: 14px;
-        }
-        
-        .phone-input-container {
-            display: flex;
-            gap: 8px;
-        }
-
         .country-select {
-            width: 100px;
-            padding: 12px 8px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 16px;
+            width: 80px;
+            padding: 0.75rem 0.5rem;
+            border: 2px solid var(--border-light, #e5e7eb);
+            border-radius: var(--radius-md, 0.5rem);
+            font-size: 0.875rem;
             background: white;
         }
-
+        
+        .phone-input {
+            flex: 1;
+        }
+        
         .checkbox-group {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary, #f9fafb);
+            border-radius: var(--radius-md, 0.5rem);
+            border: 1px solid var(--border-light, #e5e7eb);
+        }
+        
+        .checkbox-label {
             display: flex;
             align-items: flex-start;
-            gap: 8px;
-            margin-top: 12px;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            margin-top: 2px;
-            accent-color: #4299e1;
-        }
-
-        .checkbox-label {
-            font-size: 14px;
-            color: #374151;
-            line-height: 1.4;
-            margin-bottom: 0;
+            gap: 0.75rem;
             cursor: pointer;
         }
         
-        .button-group {
+        .checkbox-label input[type="checkbox"] {
+            margin: 0;
+            accent-color: var(--primary-blue, #3b82f6);
+        }
+        
+        .label-text small {
+            color: var(--text-secondary, #6b7280);
+            font-style: italic;
+            line-height: 1.4;
+        }
+        
+        .helper-text.with-limit {
             display: flex;
             justify-content: space-between;
-            margin-top: 2rem;
-        }
-        
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .btn-primary {
-            background: #4299e1;
-            color: white;
-        }
-        
-        .btn-primary:hover {
-            background: #3182ce;
-        }
-        
-        .btn-primary:disabled {
-            background: #a0aec0;
-            cursor: not-allowed;
-        }
-        
-        .btn-secondary {
-            background: #e2e8f0;
-            color: #4a5568;
-        }
-        
-        .btn-secondary:hover {
-            background: #cbd5e0;
-        }
-        
-        .btn-outline {
-            background: transparent;
-            color: #4299e1;
-            border: 1px solid #4299e1;
-        }
-
-        .btn-outline:hover {
-            background: #4299e1;
-            color: white;
-        }
-        
-        .loading-state {
-            text-align: center;
-            padding: 3rem;
-        }
-        
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid #e2e8f0;
-            border-top: 4px solid #4299e1;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .error-state {
-            text-align: center;
-            padding: 3rem;
-            color: #e53e3e;
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-
-        .button-group > div {
-            display: flex;
             align-items: center;
-            gap: 12px;
+        }
+        
+        .helper-text .limit-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary, #6b7280);
+            font-style: italic;
         }
     </style>
 </head>
 <body>
-    <div class="onboarding-container">
+    <!-- Loading State (shown initially) -->
+    <div id="loading-state" class="loading-state">
+        <div class="spinner"></div>
+        <p>Setting up your account...</p>
+    </div>
+
+    <!-- Error State (hidden initially) -->
+    <div id="error-state" class="error-state hidden">
+        <h3>Setup Failed</h3>
+        <p id="error-message">Something went wrong. Please try again.</p>
+        <button class="btn btn-primary" onclick="window.location.reload()">Try Again</button>
+    </div>
+
+    <!-- Main Onboarding Form (hidden initially) -->
+    <div id="onboarding-form" class="onboarding-container hidden">
         <!-- Header -->
         <div class="header">
             <div class="logo">Oslira</div>
-            <div class="subtitle">Complete your account setup to start finding leads</div>
+            <div class="subtitle">Complete your business setup</div>
         </div>
-        
-        <!-- Loading State -->
-        <div id="loading-state" class="loading-state">
-            <div class="spinner"></div>
-            <div>Setting up your account...</div>
-        </div>
-        
-        <!-- Error State -->
-        <div id="error-state" class="error-state hidden">
-            <h3>Setup Failed</h3>
-            <p id="error-message">Unable to load account setup. Please try refreshing the page.</p>
-        </div>
-        
-        <!-- Onboarding Form -->
-        <div id="onboarding-form" class="hidden">
-            <!-- Enhanced Progress Indicators -->
-            <div class="progress-section">
-                <div class="progress-text">
-                    <span id="progress-step">Step 1 of 9</span>
-                    <span id="progress-percent">11% complete</span>
-                </div>
-                <div class="progress-bar">
-                    <div id="progress-fill" class="progress-fill"></div>
-                </div>
-            </div>
 
-            <!-- Motivation Sidebar -->
-            <div class="motivation-text">
-                <p><strong>Tip:</strong> The more accurate your answers, the better your results.</p>
+        <!-- Progress Bar -->
+        <div class="progress-section">
+            <div class="progress-text">
+                <span>Step <span id="progress-step">1</span> of 9</span>
+                <span id="progress-percent">11%</span>
             </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <!-- Onboarding Steps -->
+        <div class="steps-container">
             
             <!-- Step 1: Primary Objective -->
             <div class="step" id="step-1">
-                <div class="step-title">What's your main goal with Oslira?</div>
-                <div class="step-description">Help us understand what success looks like for you.</div>
+                <div class="step-title">What's your primary goal?</div>
+                <div class="step-description">Help us understand what you want to achieve.</div>
                 
                 <div class="form-group">
-                    <label class="form-label">Primary Objective *</label>
-                    <p class="helper-text">This helps us customize your experience</p>
-                    <div class="radio-group" id="primary-objective-group">
-                        <div class="radio-option">
-                            <input type="radio" id="obj-meetings" name="primary-objective" value="book-meetings">
-                            <label for="obj-meetings" class="radio-label">
-                                <span class="radio-icon">📅</span>
-                                <div class="radio-text">
-                                    <strong>Book More Meetings</strong>
-                                    <small>Schedule calls and consultations</small>
-                                </div>
-                            </label>
-                        </div>
-                        
+                    <label class="form-label">Choose your main objective *</label>
+                    <div class="radio-group">
                         <div class="radio-option">
                             <input type="radio" id="obj-leads" name="primary-objective" value="generate-leads">
                             <label for="obj-leads" class="radio-label">
-                                <span class="radio-icon">🎣</span>
+                                <span class="radio-icon">🎯</span>
                                 <div class="radio-text">
                                     <strong>Generate More Leads</strong>
-                                    <small>Find potential customers</small>
+                                    <small>Find and connect with potential customers</small>
                                 </div>
                             </label>
                         </div>
                         
                         <div class="radio-option">
-                            <input type="radio" id="obj-automate" name="primary-objective" value="automate-outreach">
-                            <label for="obj-automate" class="radio-label">
-                                <span class="radio-icon">🤖</span>
+                            <input type="radio" id="obj-sales" name="primary-objective" value="increase-sales">
+                            <label for="obj-sales" class="radio-label">
+                                <span class="radio-icon">💰</span>
                                 <div class="radio-text">
-                                    <strong>Automate Outreach</strong>
-                                    <small>Save time on manual prospecting</small>
+                                    <strong>Increase Sales</strong>
+                                    <small>Convert more prospects into paying customers</small>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="obj-brand" name="primary-objective" value="build-brand">
+                            <label for="obj-brand" class="radio-label">
+                                <span class="radio-icon">🏆</span>
+                                <div class="radio-text">
+                                    <strong>Build My Brand</strong>
+                                    <small>Increase awareness and recognition</small>
                                 </div>
                             </label>
                         </div>
@@ -454,8 +168,14 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="business-name">Business Name *</label>
+                    <div class="helper-text with-limit">
+                        <span>The name of your business or brand</span>
+                        <span class="limit-hint">Max 100 chars</span>
+                    </div>
                     <input type="text" id="business-name" class="form-input" 
-                           placeholder="Enter your business name (e.g. 'Smith Marketing Agency')">
+                           placeholder="Enter your business name (e.g. Smith Marketing Agency)"
+                           maxlength="100">
+                    <!-- Character counter will be inserted here automatically -->
                     <div class="form-error" id="business-name-error"></div>
                 </div>
                 
@@ -472,7 +192,9 @@
                 
                 <div class="form-group">
                     <label class="form-label" for="business-niche">Business Niche *</label>
-                    <p class="helper-text">This helps us find prospects in your industry</p>
+                    <div class="helper-text">
+                        <span>This helps us find prospects in your industry</span>
+                    </div>
                     <select id="business-niche" class="form-select">
                         <option value="">Select your niche</option>
                         <option value="fitness">💪 Fitness & Health</option>
@@ -502,13 +224,18 @@
             <!-- Step 4: Target Audience -->
             <div class="step hidden" id="step-4">
                 <div class="step-title">Who is your target audience?</div>
-                <div class="step-description">Describe your ideal customer.</div>
+                <div class="step-description">Describe your ideal customer in detail.</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="target-audience">Target Audience *</label>
-                    <p class="helper-text">Helps us identify the right prospects for your business</p>
-                    <textarea id="target-audience" class="form-textarea" 
-                             placeholder="Example: Small business owners aged 30-50 who struggle with social media marketing"></textarea>
+                    <div class="helper-text with-limit">
+                        <span>Be specific - this helps our AI find the right prospects</span>
+                        <span class="limit-hint">20-500 chars</span>
+                    </div>
+                    <textarea id="target-audience" class="form-textarea" rows="4"
+                              placeholder="Example: Small business owners aged 30-50 who struggle with social media marketing and have 10-50 employees. They're tech-savvy but don't have time for content creation."
+                              maxlength="500"></textarea>
+                    <!-- Character counter will be inserted here automatically -->
                     <div class="form-error" id="target-audience-error"></div>
                 </div>
                 
@@ -521,13 +248,18 @@
             <!-- Step 5: Value Proposition -->
             <div class="step hidden" id="step-5">
                 <div class="step-title">What makes you unique?</div>
-                <div class="step-description">What unique value do you provide?</div>
+                <div class="step-description">Your unique value in 1-2 sentences.</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="value-proposition">Your Value Proposition *</label>
-                    <p class="helper-text">One sentence that makes your business unique</p>
-                    <textarea id="value-proposition" class="form-textarea" 
-                             placeholder="Example: We help small businesses get 10x more leads through automated Instagram outreach"></textarea>
+                    <div class="helper-text with-limit">
+                        <span>What unique value do you provide? Keep it concise but compelling.</span>
+                        <span class="limit-hint">20-300 chars</span>
+                    </div>
+                    <textarea id="value-proposition" class="form-textarea" rows="3"
+                              placeholder="Example: We help small businesses get 10x more qualified leads through AI-powered social media targeting, without spending more on ads."
+                              maxlength="300"></textarea>
+                    <!-- Character counter will be inserted here automatically -->
                     <div class="form-error" id="value-proposition-error"></div>
                 </div>
                 
@@ -539,20 +271,19 @@
 
             <!-- Step 6: Communication Tone -->
             <div class="step hidden" id="step-6">
-                <div class="step-title">How do you communicate?</div>
-                <div class="step-description">We'll match your brand voice.</div>
+                <div class="step-title">What's your communication style?</div>
+                <div class="step-description">How do you prefer to communicate with prospects?</div>
                 
                 <div class="form-group">
-                    <label class="form-label">Communication Tone *</label>
-                    <p class="helper-text">We'll match your tone in all outreach messages</p>
-                    <div class="radio-group" id="communication-tone-group">
+                    <label class="form-label">Choose your preferred tone *</label>
+                    <div class="radio-group">
                         <div class="radio-option">
                             <input type="radio" id="tone-professional" name="communication-tone" value="professional">
                             <label for="tone-professional" class="radio-label">
                                 <span class="radio-icon">👔</span>
                                 <div class="radio-text">
                                     <strong>Professional</strong>
-                                    <small>Formal & business-focused</small>
+                                    <small>Formal, business-focused approach</small>
                                 </div>
                             </label>
                         </div>
@@ -560,21 +291,10 @@
                         <div class="radio-option">
                             <input type="radio" id="tone-friendly" name="communication-tone" value="friendly">
                             <label for="tone-friendly" class="radio-label">
-                                <span class="radio-icon">🙂</span>
+                                <span class="radio-icon">😊</span>
                                 <div class="radio-text">
                                     <strong>Friendly</strong>
-                                    <small>Casual & approachable</small>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <div class="radio-option">
-                            <input type="radio" id="tone-enthusiastic" name="communication-tone" value="enthusiastic">
-                            <label for="tone-enthusiastic" class="radio-label">
-                                <span class="radio-icon">⚡</span>
-                                <div class="radio-text">
-                                    <strong>Enthusiastic</strong>
-                                    <small>Energetic & exciting</small>
+                                    <small>Casual, approachable, and warm</small>
                                 </div>
                             </label>
                         </div>
@@ -582,10 +302,21 @@
                         <div class="radio-option">
                             <input type="radio" id="tone-direct" name="communication-tone" value="direct">
                             <label for="tone-direct" class="radio-label">
-                                <span class="radio-icon">🚀</span>
+                                <span class="radio-icon">🎯</span>
                                 <div class="radio-text">
                                     <strong>Direct</strong>
-                                    <small>Straight to the point</small>
+                                    <small>Straight to the point, no fluff</small>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <div class="radio-option">
+                            <input type="radio" id="tone-consultative" name="communication-tone" value="consultative">
+                            <label for="tone-consultative" class="radio-label">
+                                <span class="radio-icon">🤝</span>
+                                <div class="radio-text">
+                                    <strong>Consultative</strong>
+                                    <small>Advisory, helpful, solution-focused</small>
                                 </div>
                             </label>
                         </div>
@@ -602,63 +333,51 @@
             <!-- Step 7: Preferred CTA -->
             <div class="step hidden" id="step-7">
                 <div class="step-title">What's your preferred call-to-action?</div>
-                <div class="step-description">How should prospects reach out to you?</div>
+                <div class="step-description">How do you want prospects to connect with you?</div>
                 
                 <div class="form-group">
-                    <label class="form-label">What's your preferred call-to-action? *</label>
-                    <p class="helper-text">This determines how prospects will be encouraged to contact you</p>
-                    <div class="radio-group" id="preferred-cta-group">
+                    <label class="form-label">Choose your main CTA *</label>
+                    <div class="radio-group">
                         <div class="radio-option">
-                            <input type="radio" id="cta-call" name="preferred-cta" value="book-call">
-                            <label for="cta-call" class="radio-label">
+                            <input type="radio" id="cta-book-call" name="preferred-cta" value="book-call">
+                            <label for="cta-book-call" class="radio-label">
                                 <span class="radio-icon">📞</span>
                                 <div class="radio-text">
                                     <strong>Book a Call</strong>
-                                    <small>Schedule meetings or consultations</small>
+                                    <small>Schedule a consultation or discovery call</small>
                                 </div>
                             </label>
                         </div>
                         
                         <div class="radio-option">
-                            <input type="radio" id="cta-website" name="preferred-cta" value="visit-website">
-                            <label for="cta-website" class="radio-label">
+                            <input type="radio" id="cta-visit-website" name="preferred-cta" value="visit-website">
+                            <label for="cta-visit-website" class="radio-label">
                                 <span class="radio-icon">🌐</span>
                                 <div class="radio-text">
                                     <strong>Visit Website</strong>
-                                    <small>Drive traffic to your site</small>
+                                    <small>Drive traffic to your website or landing page</small>
                                 </div>
                             </label>
                         </div>
                         
                         <div class="radio-option">
-                            <input type="radio" id="cta-email" name="preferred-cta" value="send-email">
-                            <label for="cta-email" class="radio-label">
+                            <input type="radio" id="cta-send-email" name="preferred-cta" value="send-email">
+                            <label for="cta-send-email" class="radio-label">
                                 <span class="radio-icon">✉️</span>
                                 <div class="radio-text">
                                     <strong>Send Email</strong>
-                                    <small>Direct email inquiries</small>
+                                    <small>Get prospects to email you directly</small>
                                 </div>
                             </label>
                         </div>
                         
                         <div class="radio-option">
-                            <input type="radio" id="cta-dm" name="preferred-cta" value="send-dm">
-                            <label for="cta-dm" class="radio-label">
+                            <input type="radio" id="cta-send-dm" name="preferred-cta" value="send-dm">
+                            <label for="cta-send-dm" class="radio-label">
                                 <span class="radio-icon">💬</span>
                                 <div class="radio-text">
-                                    <strong>Send a DM</strong>
-                                    <small>Instagram direct message</small>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <div class="radio-option">
-                            <input type="radio" id="cta-follow" name="preferred-cta" value="follow-up">
-                            <label for="cta-follow" class="radio-label">
-                                <span class="radio-icon">🔄</span>
-                                <div class="radio-text">
-                                    <strong>Follow & Engage</strong>
-                                    <small>Build relationship first</small>
+                                    <strong>Send DM</strong>
+                                    <small>Encourage direct messages on social media</small>
                                 </div>
                             </label>
                         </div>
@@ -674,64 +393,70 @@
 
             <!-- Step 8: Phone Number (Optional) -->
             <div class="step hidden" id="step-8">
-                <div class="step-title">Phone number (optional)</div>
-                <div class="step-description">Used only for important alerts and special promotions – we'll never spam.</div>
+                <div class="step-title">Stay connected (Optional)</div>
+                <div class="step-description">Get VIP alerts when your lead analysis is ready!</div>
                 
                 <div class="form-group">
                     <label class="form-label" for="phone-number">Phone Number</label>
-                    <p class="helper-text">Get VIP alerts for new features and exclusive offers</p>
-                    <div class="phone-input-container">
+                    <div class="helper-text with-limit">
+                        <span>For important account alerts and exclusive offers</span>
+                        <span class="limit-hint">Optional • 10-20 chars</span>
+                    </div>
+                    <div class="phone-input-group">
                         <select id="country-code" class="country-select">
                             <option value="+1">🇺🇸 +1</option>
                             <option value="+44">🇬🇧 +44</option>
-                            <option value="+33">🇫🇷 +33</option>
-                            <option value="+49">🇩🇪 +49</option>
                             <option value="+1">🇨🇦 +1</option>
                             <option value="+61">🇦🇺 +61</option>
+                            <option value="+33">🇫🇷 +33</option>
+                            <option value="+49">🇩🇪 +49</option>
                         </select>
-                        <input type="tel" id="phone-number" class="form-input" 
-                               placeholder="(555) 123-4567">
+                        <input type="tel" id="phone-number" class="form-input phone-input" 
+                               placeholder="(555) 123-4567"
+                               maxlength="20">
                     </div>
+                    <!-- Character counter will be inserted here automatically -->
                     <div class="form-error" id="phone-number-error"></div>
-                </div>
-                
-                <div class="form-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="opt-in-sms" checked>
-                        <label for="opt-in-sms" class="checkbox-label">
-                            I'd like to receive promotional SMS updates
+                    
+                    <!-- SMS Opt-in (only show if phone entered) -->
+                    <div class="checkbox-group" id="sms-opt-in-group" style="display: none;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="opt-in-sms" checked>
+                            <span class="label-text">
+                                <strong>Yes, send me SMS updates!</strong><br>
+                                <small>Get instant notifications for lead analysis results and exclusive promotions.</small>
+                            </span>
                         </label>
                     </div>
                 </div>
                 
                 <div class="button-group">
                     <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                    <div style="display: flex; gap: 12px;">
-                        <button type="button" class="btn btn-outline" onclick="skipPhoneStep()">Skip</button>
-                        <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
-                    </div>
+                    <button type="button" class="btn btn-primary" onclick="nextStep()">Continue</button>
                 </div>
             </div>
 
-            <!-- Step 9: Key Results -->
+            <!-- Step 9: Key Results (Optional) -->
             <div class="step hidden" id="step-9">
-                <div class="step-title">What results do you deliver?</div>
-                <div class="step-description">What benefits do your customers see?</div>
+                <div class="step-title">What success looks like (Optional)</div>
+                <div class="step-description">Help us understand your goals.</div>
                 
                 <div class="form-group">
-                    <label class="form-label" for="key-results">Key Results/Benefits *</label>
-                    <p class="helper-text">This helps us craft compelling outreach messages</p>
-                    <textarea id="key-results" class="form-textarea" 
-                             placeholder="Example: Clients typically see 50% more leads within 30 days"></textarea>
+                    <label class="form-label" for="key-results">Success Outcomes</label>
+                    <div class="helper-text with-limit">
+                        <span>What would make this lead generation effort a success?</span>
+                        <span class="limit-hint">Optional • Max 800 chars</span>
+                    </div>
+                    <textarea id="key-results" class="form-textarea" rows="4"
+                              placeholder="Example: I want to book 5-10 qualified sales calls per month from Instagram leads. Success would be closing 2-3 new clients worth $2,000+ each from social media outreach."
+                              maxlength="800"></textarea>
+                    <!-- Character counter will be inserted here automatically -->
                     <div class="form-error" id="key-results-error"></div>
                 </div>
                 
                 <div class="button-group">
                     <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
-                    <div style="display: flex; gap: 12px;">
-                        <button type="button" class="btn btn-outline" onclick="skipStep()">Skip for now</button>
-                        <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
-                    </div>
+                    <button type="button" class="btn btn-primary" onclick="submitOnboarding()">Complete Setup</button>
                 </div>
             </div>
         </div>
@@ -739,5 +464,6 @@
 
     <!-- Script Loading -->
     <script src="/core/script-loader.js"></script>
+    <script src="/pages/onboarding/onboarding.js"></script>
 </body>
 </html>
