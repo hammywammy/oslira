@@ -161,16 +161,19 @@ class OsliraAuth {
             this.showLoading('Checking account...');
             this.currentEmail = email;
             
-            const userExists = await window.SimpleAuth.checkUserExists(email);
-            
-            this.hideLoading();
-            
-            if (userExists) {
-                this.authMode = 'signin';
-                this.showStep('password');
-            } else {
-                await this.sendEmailVerification(email);
-            }
+const userCheck = await window.SimpleAuth.checkUserExists(email);
+
+if (userCheck.exists && userCheck.completed) {
+    console.log('✅ [Auth] User exists with completed signup, switching to signin');
+    this.authMode = 'signin';
+    this.showStep('password');
+} else if (userCheck.exists && !userCheck.completed) {
+    console.log('📧 [Auth] User has OTP but incomplete signup, sending new OTP');
+    await this.sendEmailVerification(email);
+} else {
+    console.log('📧 [Auth] New user, sending OTP');
+    await this.sendEmailVerification(email);
+}
             
         } catch (error) {
             console.error('❌ [Auth] Email check failed:', error);
@@ -198,12 +201,32 @@ class OsliraAuth {
             this.hideLoading();
             this.showStep('otp-verification');
             
-        } catch (error) {
-            console.error('❌ [Auth] Email verification failed:', error);
-            this.hideLoading();
-            this.authMode = 'signup';
-            this.showStep('password');
-        }
+} catch (error) {
+    console.error('❌ [Auth] Email verification failed:', error);
+    this.hideLoading();
+    
+    // Handle rate limiting specifically
+    if (error.message?.includes('rate limit') || 
+        error.message?.includes('too many') ||
+        error.message?.includes('Email rate limit exceeded')) {
+        
+        // Calculate retry time (default 60 seconds if not specified)
+        const retryMatch = error.message.match(/try again in (\d+)/);
+        const retryTime = retryMatch ? retryMatch[1] : '60';
+        
+        this.showAlert(
+            `Email rate limit exceeded. Please try again in ${retryTime} seconds.`, 
+            'error'
+        );
+        
+        // Stay on current step, don't advance to password
+        return;
+    }
+    
+    // For other errors, proceed to password step
+    this.authMode = 'signup';
+    this.showStep('password');
+}
     }
 
     async handleOtpSubmit(e) {
@@ -279,16 +302,23 @@ class OsliraAuth {
                 await this.handleSignup(password);
             }
             
-        } catch (error) {
-            console.error(`❌ [Auth] ${this.authMode} failed:`, error);
-            this.hideLoading();
-            
-            if (this.authMode === 'signin') {
-                this.showAlert('Incorrect email or password. Please try again.', 'error');
-            } else {
-                this.showAlert(error.message || 'Authentication failed. Please try again.', 'error');
-            }
+} catch (error) {
+    console.error(`❌ [Auth] ${this.authMode} failed:`, error);
+    this.hideLoading();
+    
+    if (this.authMode === 'signin') {
+        // Show specific error for authentication failures
+        if (error.message?.includes('Invalid login credentials') || 
+            error.message?.includes('invalid_grant') ||
+            error.message?.includes('Email not confirmed')) {
+            this.showAlert('Incorrect email or password. Please try again.', 'error');
+        } else {
+            this.showAlert('Sign in failed. Please try again.', 'error');
         }
+    } else {
+        this.showAlert(error.message || 'Authentication failed. Please try again.', 'error');
+    }
+}
     }
 
     async handleSignin(password) {
@@ -348,6 +378,26 @@ class OsliraAuth {
             this.showAlert('Google sign-in failed. Please try again.', 'error');
         }
     }
+
+    showAlert(message, type = 'info') {
+    // Force authentication errors to be critical (not suppressed)
+    if (window.Alert) {
+        if (type === 'error') {
+            window.Alert.error(message, {
+                timeout: null, // Sticky
+                suppressNonCritical: false, // Force show
+                priority: 'critical'
+            });
+        } else if (type === 'success') {
+            window.Alert.success(message);
+        } else {
+            window.Alert.info(message);
+        }
+    } else {
+        // Fallback if alert system not loaded
+        console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+}
 
     // =============================================================================
     // EVENT LISTENERS
