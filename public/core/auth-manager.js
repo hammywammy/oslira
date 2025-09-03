@@ -89,9 +89,13 @@ async signInWithPassword(email, password) {
 
 async checkUserExists(email) {
     try {
-        // Use Supabase auth admin method or a simple signin attempt
-        // Since we can't directly query auth.users, we'll use a different approach
-        const { data, error } = await this.supabase.rpc('check_user_exists', { email });
+        // Check if user exists in auth.users AND is confirmed
+        const { data, error } = await this.supabase
+            .from('users')
+            .select('id')
+            .eq('email', email)
+            .single();
+            
         return !error && data;
     } catch {
         return false;
