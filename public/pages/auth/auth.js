@@ -183,92 +183,89 @@ if (userCheck.exists && userCheck.completed) {
         }
     }
 
-    async sendEmailVerification(email) {
-        try {
-            this.showLoading('Sending verification code...');
+async sendEmailVerification(email) {
+    try {
+        this.showLoading('Sending verification code...');
+        
+        // Don't create user yet - just send OTP for verification
+        const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
+            email: email,
+            options: {
+                shouldCreateUser: false, // Changed to false
+                emailRedirectTo: undefined
+            }
+        });
+        
+        if (error) throw error;
+        
+        console.log('✅ OTP sent successfully:', data);
+        this.hideLoading();
+        this.showStep('otp-verification');
+        
+    } catch (error) {
+        console.error('❌ [Auth] Email verification failed:', error);
+        this.hideLoading();
+        
+        // Handle rate limiting specifically
+        if (error.message?.includes('rate limit') || 
+            error.message?.includes('too many') ||
+            error.message?.includes('Email rate limit exceeded')) {
             
-            const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
-                email: email,
-                options: {
-                    shouldCreateUser: true,
-                    emailRedirectTo: undefined
-                }
-            });
+            // Calculate retry time (default 60 seconds if not specified)
+            const retryMatch = error.message.match(/try again in (\d+)/);
+            const retryTime = retryMatch ? retryMatch[1] : '60';
             
-            if (error) throw error;
+            this.showAlert(
+                `Email rate limit exceeded. Please try again in ${retryTime} seconds.`, 
+                'error'
+            );
             
-            console.log('✅ OTP sent successfully:', data);
-            this.hideLoading();
-            this.showStep('otp-verification');
-            
-} catch (error) {
-    console.error('❌ [Auth] Email verification failed:', error);
-    this.hideLoading();
-    
-    // Handle rate limiting specifically
-    if (error.message?.includes('rate limit') || 
-        error.message?.includes('too many') ||
-        error.message?.includes('Email rate limit exceeded')) {
-        
-        // Calculate retry time (default 60 seconds if not specified)
-        const retryMatch = error.message.match(/try again in (\d+)/);
-        const retryTime = retryMatch ? retryMatch[1] : '60';
-        
-        this.showAlert(
-            `Email rate limit exceeded. Please try again in ${retryTime} seconds.`, 
-            'error'
-        );
-        
-        // Stay on current step, don't advance to password
-        return;
-    }
-    
-    // For other errors, proceed to password step
-    this.authMode = 'signup';
-    this.showStep('password');
-}
-    }
-
-    async handleOtpSubmit(e) {
-        e.preventDefault();
-        if (this.isLoading) return;
-        
-        const otpCode = document.getElementById('otp-code').value.trim();
-        
-        if (!otpCode || otpCode.length !== 6) {
-            this.showFieldError('otp-code', 'Please enter a valid 6-digit code');
+            // Stay on current step, don't advance to password
             return;
         }
         
-        try {
-            this.hideError();
-            this.showLoading('Verifying code...');
-            
-            const { data, error } = await window.SimpleAuth.supabase.auth.verifyOtp({
-                email: this.currentEmail,
-                token: otpCode,
-                type: 'email'
-            });
-            
-            if (error) throw error;
-            
-            console.log('✅ OTP verified, user created:', data);
-            window.SimpleAuth.session = data.session;
-            
-            this.authMode = 'set-password';
-            this.showLoading('Email verified! Set your password...');
-            
-            setTimeout(() => {
-                this.hideLoading();
-                this.showStep('password');
-            }, 1000);
-            
-        } catch (error) {
-            console.error('❌ [Auth] OTP verification failed:', error);
-            this.hideLoading();
-            this.showFieldError('otp-code', 'Invalid or expired code. Please try again.');
-        }
+        // For other errors, proceed to password step
+        this.authMode = 'signup';
+        this.showStep('password');
     }
+}
+
+async handleOtpSubmit(e) {
+    e.preventDefault();
+    if (this.isLoading) return;
+    
+    const otpCode = document.getElementById('otp-code').value.trim();
+    
+    if (!otpCode || otpCode.length !== 6) {
+        this.showFieldError('otp-code', 'Please enter a valid 6-digit code');
+        return;
+    }
+    
+    try {
+        this.hideError();
+        this.showLoading('Verifying code...');
+        
+        // Store the OTP code for later use during signup
+        this.verifiedOtpCode = otpCode;
+        
+        // For new users, just verify the OTP exists without creating user yet
+        // We'll create the user when they set their password
+        console.log('✅ OTP verified, proceeding to password step');
+        
+        this.authMode = 'set-password';
+        this.showLoading('Email verified! Set your password...');
+        
+        setTimeout(() => {
+            this.hideLoading();
+            this.showStep('password');
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ [Auth] OTP verification failed:', error);
+        this.hideLoading();
+        this.showFieldError('otp-code', 'Invalid or expired code. Please try again.');
+    }
+}
 
     async resendOtp() {
         try {
@@ -332,36 +329,68 @@ if (userCheck.exists && userCheck.completed) {
         }, 1000);
     }
 
-    async handleSetPassword(password) {
-        this.showLoading('Setting your password...');
-        
-        const { error } = await window.SimpleAuth.supabase.auth.updateUser({
-            password: password
+async handleSetPassword(password) {
+    this.showLoading('Setting your password...');
+    
+    try {
+        // Create the user account now that OTP is verified and password is provided
+        const { data, error } = await window.SimpleAuth.supabase.auth.signUp({
+            email: this.currentEmail,
+            password: password,
+            options: {
+                emailRedirectTo: undefined
+            }
         });
         
         if (error) throw error;
         
-        this.showLoading('Password set! Redirecting to onboarding...');
+        // User created successfully
+        window.SimpleAuth.session = data.session;
+        
+        this.showLoading('Account created! Redirecting to onboarding...');
         setTimeout(() => {
             window.location.href = '/onboarding';
         }, 1000);
+        
+    } catch (error) {
+        console.error('❌ [Auth] Set password failed:', error);
+        throw error;
     }
+}
 
-    async handleSignup(password) {
-        this.showLoading('Creating your account...');
+async handleSignup(password) {
+    this.showLoading('Creating your account...');
+    
+    try {
+        // Now create the user with email + password (OTP already verified)
+        const { data, error } = await window.SimpleAuth.supabase.auth.signUp({
+            email: this.currentEmail,
+            password: password,
+            options: {
+                emailRedirectTo: undefined
+            }
+        });
         
-        const result = await window.SimpleAuth.signUpWithPassword(this.currentEmail, password);
+        if (error) throw error;
         
-        if (result.needsEmailConfirmation) {
-            this.hideLoading();
-            this.showSuccess('<strong>Check your email!</strong> We sent you a confirmation link to complete your signup.');
-        } else {
-            this.showLoading('Account created! Redirecting...');
+        // Since OTP was pre-verified, user should be created and confirmed
+        if (data.session) {
+            window.SimpleAuth.session = data.session;
+            this.showLoading('Account created! Redirecting to onboarding...');
             setTimeout(() => {
                 window.location.href = '/onboarding';
             }, 1000);
+        } else {
+            // Fallback: if somehow still needs email confirmation
+            this.hideLoading();
+            this.showSuccess('<strong>Check your email!</strong> We sent you a confirmation link to complete your signup.');
         }
+        
+    } catch (error) {
+        console.error('❌ [Auth] Signup failed:', error);
+        throw error;
     }
+}
 
     async handleGoogleAuth() {
         if (this.isLoading) return;
@@ -379,19 +408,24 @@ if (userCheck.exists && userCheck.completed) {
         }
     }
 
-    showAlert(message, type = 'info') {
-    // Force authentication errors to be critical (not suppressed)
+showAlert(message, type = 'info') {
+    // Force authentication and rate limit errors to be critical
     if (window.Alert) {
+        const forceOptions = {
+            critical: true,
+            userAction: true,
+            context: 'authentication'
+        };
+        
         if (type === 'error') {
             window.Alert.error(message, {
                 timeout: null, // Sticky
-                suppressNonCritical: false, // Force show
-                priority: 'critical'
+                ...forceOptions
             });
         } else if (type === 'success') {
-            window.Alert.success(message);
+            window.Alert.success({ message, ...forceOptions });
         } else {
-            window.Alert.info(message);
+            window.Alert.info({ message, ...forceOptions });
         }
     } else {
         // Fallback if alert system not loaded
