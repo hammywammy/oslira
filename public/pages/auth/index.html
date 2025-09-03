@@ -524,11 +524,11 @@ function updatePasswordStepUI() {
         userContext.innerHTML = `<p class="welcome-back">Welcome back, <strong>${currentEmail}</strong></p>`;
         submitBtn.textContent = 'Sign in';
         document.getElementById('auth-password').setAttribute('autocomplete', 'current-password');
-    } else if (authMode === 'signup-verified') {
-        document.getElementById('auth-title').textContent = 'Create your password';  
+    } else if (authMode === 'set-password') {
+        document.getElementById('auth-title').textContent = 'Set your password';  
         document.getElementById('auth-subtitle').textContent = 'Email verified ✓';
-        userContext.innerHTML = `<p class="create-account">Create password for <strong>${currentEmail}</strong></p>`;
-        submitBtn.textContent = 'Create account';
+        userContext.innerHTML = `<p class="create-account">Set password for <strong>${currentEmail}</strong></p>`;
+        submitBtn.textContent = 'Set password';
         document.getElementById('auth-password').setAttribute('autocomplete', 'new-password');
     } else {
         document.getElementById('auth-title').textContent = 'Create your account';  
@@ -585,11 +585,11 @@ async function sendEmailVerification(email) {
     try {
         showLoading('Sending verification code...');
         
-        // Send OTP for email verification
+        // Send OTP for new user signup - explicitly allow user creation
         const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
             email: email,
             options: {
-                shouldCreateUser: false
+                shouldCreateUser: true  // This fixes the 422 error
             }
         });
         
@@ -630,7 +630,7 @@ async function handleOtpSubmit(e) {
         hideError();
         showLoading('Verifying code...');
         
-        // Verify the OTP
+        // Verify the OTP - this creates the user account
         const { data, error } = await window.SimpleAuth.supabase.auth.verifyOtp({
             email: currentEmail,
             token: otpCode,
@@ -639,11 +639,14 @@ async function handleOtpSubmit(e) {
         
         if (error) throw error;
         
-        console.log('✅ OTP verified:', data);
+        console.log('✅ OTP verified, user created:', data);
         
-        // Email is now verified, user can create password
-        authMode = 'signup-verified';
-        showLoading('Email verified! Create your password...');
+        // Update auth state
+        window.SimpleAuth.session = data.session;
+        
+        // Now user needs to set their password
+        authMode = 'set-password';
+        showLoading('Email verified! Set your password...');
         
         setTimeout(() => {
             hideLoading();
@@ -691,7 +694,23 @@ async function handlePasswordSubmit(e) {
                 window.location.href = '/dashboard';
             }, 1000);
             
+        } else if (authMode === 'set-password') {
+            // User is already authenticated via OTP, just set their password
+            showLoading('Setting your password...');
+            
+            const { error } = await window.SimpleAuth.supabase.auth.updateUser({
+                password: password
+            });
+            
+            if (error) throw error;
+            
+            showLoading('Password set! Redirecting to onboarding...');
+            setTimeout(() => {
+                window.location.href = '/onboarding';
+            }, 1000);
+            
         } else {
+            // Regular signup without OTP
             showLoading('Creating your account...');
             
             const result = await window.SimpleAuth.signUpWithPassword(currentEmail, password);
@@ -714,11 +733,10 @@ async function handlePasswordSubmit(e) {
         if (authMode === 'signin') {
             showError('Incorrect email or password. Please try again.');
         } else {
-            showError(error.message || 'Account creation failed. Please try again.');
+            showError(error.message || 'Authentication failed. Please try again.');
         }
     }
 }
-
 async function handleGoogleAuth() {
     if (isLoading) return;
     
