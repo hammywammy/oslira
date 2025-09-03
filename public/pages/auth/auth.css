@@ -413,6 +413,286 @@ body {
     box-shadow: 0 0 0 1px var(--success);
 }
 
+
+ /* Enhanced auth styles for multiple methods */
+        .auth-method {
+            width: 100%;
+            margin-bottom: 1rem;
+            padding: 1rem 1.5rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background: #ffffff;
+            color: #374151;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+        
+        .auth-method:hover {
+            background: #f9fafb;
+            border-color: #4299e1;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .auth-method:active {
+            transform: translateY(0);
+        }
+        
+        .auth-method.primary {
+            background: linear-gradient(135deg, #4299e1, #3182ce);
+            color: white;
+            border-color: transparent;
+            font-weight: 600;
+        }
+        
+        .auth-method.primary:hover {
+            background: linear-gradient(135deg, #3182ce, #2c5aa0);
+            transform: translateY(-1px);
+        }
+        
+        .auth-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .google-icon {
+            background: #4285f4;
+            color: white;
+            border-radius: 3px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .email-form {
+            margin-top: 1.5rem;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .email-form.active {
+            display: block;
+        }
+        
+        .otp-message {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.email-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.otp-message h3 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+}
+
+.otp-message p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.otp-input {
+    text-align: center;
+    font-size: 1.5rem !important;
+    letter-spacing: 0.5rem;
+    font-weight: 600;
+    padding: 1rem !important;
+}
+
+.otp-actions {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.resend-link {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0.5rem;
+}
+
+.resend-link:hover {
+    color: var(--primary-dark);
+}
+
+.user-context {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.user-context p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.user-context strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.welcome-back {
+    color: var(--success) !important;
+}
+
+.create-account {
+    color: var(--primary) !important;
+}
+
+.auth-step {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+        
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+            font-size: 0.875rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+        }
+        
+        .form-input.error {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+        }
+        
+        .form-error {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e5e7eb;
+        }
+        
+        .divider span {
+            padding: 0 1rem;
+            background: white;
+        }
+        
+        .back-to-options {
+            margin-top: 1rem;
+            text-align: center;
+        }
+        
+        .back-link {
+            color: #4299e1;
+            text-decoration: none;
+            font-size: 0.875rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .auth-toggle {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        
+        .auth-toggle a {
+            color: #4299e1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+        
+        .password-hint {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        .form-input:disabled,
+        .auth-method:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        
+        .success-message {
+            background: #ecfdf5;
+            border: 1px solid #d1fae5;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            color: #065f46;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .success-message.active {
+            display: block;
+        }
+
 /* =============================================================================
    RESPONSIVE DESIGN
    ============================================================================= */
