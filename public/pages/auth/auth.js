@@ -189,18 +189,39 @@ async sendEmailVerification(email) {
     try {
         this.showLoading('Sending verification code...');
         
-        // Don't create user yet - just send OTP for verification
-        const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
+        // Generate 6-digit OTP code
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Store OTP temporarily (expires in 5 minutes)
+        const otpData = {
             email: email,
-            options: {
-                shouldCreateUser: true, // Changed to false
-                emailRedirectTo: undefined
-            }
+            code: otpCode,
+            expires: Date.now() + (5 * 60 * 1000), // 5 minutes
+            attempts: 0
+        };
+        
+        sessionStorage.setItem(`otp_${email}`, JSON.stringify(otpData));
+        
+        // Send OTP via your worker API
+        const config = await window.OsliraConfig.get();
+        
+        const response = await fetch(`${config.WORKER_URL}/v1/send-otp`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: email,
+                code: otpCode
+            })
         });
         
-        if (error) throw error;
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to send verification code');
+        }
         
-        console.log('✅ OTP sent successfully:', data);
+        console.log('✅ Custom OTP sent successfully');
         this.hideLoading();
         this.showStep('otp-verification');
         
@@ -211,24 +232,18 @@ async sendEmailVerification(email) {
         // Handle rate limiting specifically
         if (error.message?.includes('rate limit') || 
             error.message?.includes('too many') ||
-            error.message?.includes('Email rate limit exceeded')) {
+            error.status === 429) {
             
-            // Calculate retry time (default 60 seconds if not specified)
-            const retryMatch = error.message.match(/try again in (\d+)/);
-            const retryTime = retryMatch ? retryMatch[1] : '60';
-            
+            const retryTime = '60'; // Default retry time
             this.showAlert(
                 `Email rate limit exceeded. Please try again in ${retryTime} seconds.`, 
                 'error'
             );
-            
-            // Stay on current step, don't advance to password
             return;
         }
         
-        // For other errors, proceed to password step
-        this.authMode = 'signup';
-        this.showStep('password');
+        // For other errors, show specific message
+        this.showAlert(error.message || 'Failed to send verification code. Please try again.', 'error');
     }
 }
 
@@ -275,16 +290,34 @@ async handleOtpSubmit(e) {
         this.hideError();
         this.showLoading('Verifying code...');
         
-        const { data, error } = await window.SimpleAuth.supabase.auth.verifyOtp({
-            email: this.currentEmail,
-            token: otpCode,
-            type: 'email'
-        });
+        // Get stored OTP data
+        const otpData = JSON.parse(sessionStorage.getItem(`otp_${this.currentEmail}`) || '{}');
         
-        if (error) throw error;
+        // Check if OTP expired
+        if (!otpData.code || Date.now() > otpData.expires) {
+            throw new Error('Verification code has expired. Please request a new one.');
+        }
         
-        console.log('✅ OTP verified, user created:', data);
-        window.SimpleAuth.session = data.session;
+        // Check attempts limit (max 3 attempts)
+        if (otpData.attempts >= 3) {
+            sessionStorage.removeItem(`otp_${this.currentEmail}`);
+            throw new Error('Too many failed attempts. Please request a new verification code.');
+        }
+        
+        // Verify OTP code
+        if (otpCode !== otpData.code) {
+            // Increment attempts
+            otpData.attempts = (otpData.attempts || 0) + 1;
+            sessionStorage.setItem(`otp_${this.currentEmail}`, JSON.stringify(otpData));
+            
+            const remainingAttempts = 3 - otpData.attempts;
+            throw new Error(`Invalid verification code. ${remainingAttempts} attempts remaining.`);
+        }
+        
+        // OTP verified successfully - clear from storage
+        sessionStorage.removeItem(`otp_${this.currentEmail}`);
+        
+        console.log('✅ Custom OTP verified successfully');
         
         this.authMode = 'set-password';
         this.showLoading('Email verified! Set your password...');
@@ -297,10 +330,9 @@ async handleOtpSubmit(e) {
     } catch (error) {
         console.error('❌ [Auth] OTP verification failed:', error);
         this.hideLoading();
-        this.showFieldError('otp-code', 'Invalid or expired code. Please try again.');
+        this.showFieldError('otp-code', error.message || 'Invalid or expired code. Please try again.');
     }
 }
-
     async resendOtp() {
         try {
             this.showLoading('Resending code...');
@@ -372,16 +404,46 @@ async handleSetPassword(password) {
     
     if (error) throw error;
     
-    // Now create the user record in our custom users table
+    // NOW create the user record in custom users table
     const { data: { user } } = await window.SimpleAuth.supabase.auth.getUser();
+    
     if (user) {
-        await this.createUserRecord(user);
+        const { error: insertError } = await window.SimpleAuth.supabase
+            .from('users')
+            .insert([{
+                id: user.id,
+                email: user.email,
+                full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+                created_via: 'email',
+                phone_verified: false,
+                onboarding_completed: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }]);
+            
+        if (insertError) {
+            console.error('❌ [Auth] Failed to create user record:', insertError);
+            // Continue anyway since auth user was created successfully
+        }
     }
     
     this.showLoading('Password set! Redirecting to onboarding...');
     setTimeout(() => {
         window.location.href = '/onboarding';
     }, 1000);
+}
+
+async resendOtp() {
+    try {
+        // Clear any existing OTP
+        sessionStorage.removeItem(`otp_${this.currentEmail}`);
+        
+        this.showLoading('Resending code...');
+        await this.sendEmailVerification(this.currentEmail);
+    } catch (error) {
+        this.hideLoading();
+        this.showAlert('Failed to resend code. Please try again.', 'error');
+    }
 }
 
 async handleSignup(password) {
@@ -435,26 +497,20 @@ async handleSignup(password) {
     }
 
 showAlert(message, type = 'info') {
-    // Force authentication and rate limit errors to be critical
     if (window.Alert) {
-        const forceOptions = {
-            critical: true,
-            userAction: true,
-            context: 'authentication'
-        };
-        
         if (type === 'error') {
-            window.Alert.error(message, {
-                timeout: null, // Sticky
-                ...forceOptions
+            // Force authentication errors to show as critical
+            window.Alert.error(message, { 
+                critical: true, 
+                context: 'authentication',
+                timeout: null 
             });
         } else if (type === 'success') {
-            window.Alert.success({ message, ...forceOptions });
+            window.Alert.success({ message });
         } else {
-            window.Alert.info({ message, ...forceOptions });
+            window.Alert.info({ message });
         }
     } else {
-        // Fallback if alert system not loaded
         console.log(`[${type.toUpperCase()}] ${message}`);
     }
 }
