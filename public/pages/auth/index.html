@@ -726,16 +726,25 @@ async function handlePasswordSubmit(e) {
             }
         }
         
-    } catch (error) {
-        console.error(`❌ [Auth] ${authMode} failed:`, error);
-        hideLoading();
-        
-        if (authMode === 'signin') {
+} catch (error) {
+    console.error(`❌ [Auth] ${authMode} failed:`, error);
+    hideLoading();
+    
+    if (authMode === 'signin') {
+        // Use your alert system instead of showError
+        if (window.Alert && window.Alert.error) {
+            window.Alert.error('Incorrect email or password. Please try again.');
+        } else {
             showError('Incorrect email or password. Please try again.');
+        }
+    } else {
+        if (window.Alert && window.Alert.error) {
+            window.Alert.error(error.message || 'Authentication failed. Please try again.');
         } else {
             showError(error.message || 'Authentication failed. Please try again.');
         }
     }
+}
 }
 async function handleGoogleAuth() {
     if (isLoading) return;
