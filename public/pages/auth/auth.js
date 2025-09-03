@@ -191,7 +191,7 @@ async sendEmailVerification(email) {
         const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
             email: email,
             options: {
-                shouldCreateUser: false, // Changed to false
+                shouldCreateUser: true, // Changed to false
                 emailRedirectTo: undefined
             }
         });
@@ -245,12 +245,16 @@ async handleOtpSubmit(e) {
         this.hideError();
         this.showLoading('Verifying code...');
         
-        // Store the OTP code for later use during signup
-        this.verifiedOtpCode = otpCode;
+        const { data, error } = await window.SimpleAuth.supabase.auth.verifyOtp({
+            email: this.currentEmail,
+            token: otpCode,
+            type: 'email'
+        });
         
-        // For new users, just verify the OTP exists without creating user yet
-        // We'll create the user when they set their password
-        console.log('✅ OTP verified, proceeding to password step');
+        if (error) throw error;
+        
+        console.log('✅ OTP verified, user created:', data);
+        window.SimpleAuth.session = data.session;
         
         this.authMode = 'set-password';
         this.showLoading('Email verified! Set your password...');
@@ -332,30 +336,16 @@ async handleOtpSubmit(e) {
 async handleSetPassword(password) {
     this.showLoading('Setting your password...');
     
-    try {
-        // Create the user account now that OTP is verified and password is provided
-        const { data, error } = await window.SimpleAuth.supabase.auth.signUp({
-            email: this.currentEmail,
-            password: password,
-            options: {
-                emailRedirectTo: undefined
-            }
-        });
-        
-        if (error) throw error;
-        
-        // User created successfully
-        window.SimpleAuth.session = data.session;
-        
-        this.showLoading('Account created! Redirecting to onboarding...');
-        setTimeout(() => {
-            window.location.href = '/onboarding';
-        }, 1000);
-        
-    } catch (error) {
-        console.error('❌ [Auth] Set password failed:', error);
-        throw error;
-    }
+    const { error } = await window.SimpleAuth.supabase.auth.updateUser({
+        password: password
+    });
+    
+    if (error) throw error;
+    
+    this.showLoading('Password set! Redirecting to onboarding...');
+    setTimeout(() => {
+        window.location.href = '/onboarding';
+    }, 1000);
 }
 
 async handleSignup(password) {
