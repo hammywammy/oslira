@@ -226,11 +226,7 @@ const CRITICAL_PATTERNS = [
         
 error(error, options = {}) {
     // Authentication context is always critical
-    if (options.context === 'authentication' || options.critical || options.userAction) {
-        if (this.originalConsole?.log) {
-            this.originalConsole.log('🔴 Forcing critical auth error to display:', error);
-        }
-        
+    if (options.context === 'authentication' || options.critical) {
         let errorOptions = options;
         
         if (error instanceof Error || typeof error === 'string') {
@@ -245,7 +241,7 @@ error(error, options = {}) {
         return this.notify('error', errorOptions);
     }
     
-    // Critical error filtering for other contexts
+    // Normal critical error filtering for other contexts
     if (!this.isErrorCritical(error, options.context)) {
         if (this.originalConsole?.log) {
             this.originalConsole.log('🔇 Non-critical error suppressed:', error);
