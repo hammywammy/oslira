@@ -77,50 +77,37 @@ class OsliraSimpleApp {
     }
     
     async determinePostAuthRedirect() {
-        try {
-            // Get current user session
-            const session = this.auth.getCurrentSession();
-            if (!session || !session.user) {
-                console.log('❌ [SimpleApp] No session found');
-                return '/auth';
-            }
+    try {
+        const session = this.auth.getCurrentSession();
+        if (!session || !session.user) {
+            return '/auth';
+        }
+        
+        // Check if user has completed onboarding
+        const { data: userData, error } = await this.auth.supabase
+            .from('users')
+            .select('onboarding_completed')
+            .eq('id', session.user.id)
+            .single();
             
-            console.log('🔍 [SimpleApp] Checking onboarding status for user:', session.user.id);
-            
-            // Check onboarding_completed status from users table
-            const { data: userData, error } = await this.auth.supabase
-                .from('users')
-                .select('onboarding_completed')
-                .eq('id', session.user.id)
-                .single();
-            
-            if (error) {
-                console.error('❌ [SimpleApp] Error fetching user data:', error);
-                // Default to onboarding if we can't check
-                return '/onboarding';
-            }
-            
-            if (!userData) {
-                console.log('⚠️ [SimpleApp] No user data found, sending to onboarding');
-                return '/onboarding';
-            }
-            
-            // Check onboarding status
-            const isOnboardingComplete = userData.onboarding_completed;
-            console.log('🔍 [SimpleApp] Onboarding completed:', isOnboardingComplete);
-            
-            if (isOnboardingComplete) {
-                return '/dashboard';
-            } else {
-                return '/onboarding';
-            }
-            
-        } catch (error) {
-            console.error('❌ [SimpleApp] Error determining redirect:', error);
-            // Default to onboarding on error
+        if (error) {
+            console.error('Error checking onboarding status:', error);
+            return '/onboarding'; // Default to onboarding if error
+        }
+        
+        // Force onboarding if not completed
+        if (!userData.onboarding_completed) {
+            console.log('🔄 [SimpleApp] User has not completed onboarding, redirecting...');
             return '/onboarding';
         }
+        
+        return '/dashboard';
+        
+    } catch (error) {
+        console.error('Error determining redirect:', error);
+        return '/onboarding';
     }
+}
     
     isInitialized() {
         return this.initialized;
