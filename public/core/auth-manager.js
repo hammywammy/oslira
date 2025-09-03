@@ -89,52 +89,28 @@ async signInWithPassword(email, password) {
 
 async checkUserExists(email) {
     try {
-        // Check if user has completed full signup (exists in custom users table)
+        // Check if user completed full signup (exists in custom users table)
         const { data: userData, error: userError } = await this.supabase
             .from('users')
-            .select('id, onboarding_completed')
+            .select('id, email')
             .eq('email', email)
             .single();
             
-        // User exists in users table = completed full signup
         if (!userError && userData) {
-            console.log('✅ [Auth] User found in users table - completed signup');
+            // User completed full signup
             return { exists: true, completed: true };
         }
         
-        console.log('🔍 [Auth] User not in users table, checking auth.users...');
+        // Check if user exists in auth.users (incomplete signup)
+        const { data, error } = await this.supabase.auth.admin.listUsers();
+        const authUser = data?.users?.find(u => u.email === email);
         
-        // Check if user exists in auth.users (OTP sent, but no password/incomplete)
-        try {
-            const { data: { user: authUser }, error: authError } = await this.supabase.auth.getUser();
-            
-            // If we have a current session but no users table record, they're incomplete
-            if (authUser && authUser.email === email) {
-                console.log('⚠️ [Auth] User in auth.users but not users table - incomplete signup');
-                return { exists: true, completed: false };
-            }
-        } catch (authCheckError) {
-            console.log('🔍 [Auth] No current session, checking if email exists in auth...');
+        if (authUser) {
+            // User exists in auth but not in custom table (incomplete)
+            return { exists: true, completed: false };
         }
         
-        // Try to sign in to see if email exists in auth.users
-        // This won't actually sign them in, just check if the email exists
-        try {
-            const { error: signInError } = await this.supabase.auth.signInWithPassword({
-                email: email,
-                password: 'dummy-password-to-check-existence'
-            });
-            
-            // If error is about invalid password, user exists in auth
-            if (signInError?.message?.includes('Invalid login credentials')) {
-                console.log('⚠️ [Auth] User exists in auth.users but incomplete - email exists');
-                return { exists: true, completed: false };
-            }
-        } catch (checkError) {
-            console.log('🔍 [Auth] Error checking auth existence:', checkError);
-        }
-        
-        console.log('✅ [Auth] New user - does not exist anywhere');
+        // User doesn't exist anywhere (new user)
         return { exists: false, completed: false };
         
     } catch (error) {
