@@ -164,15 +164,13 @@ class OsliraAuth {
 const userCheck = await window.SimpleAuth.checkUserExists(email);
 
 if (userCheck.exists && userCheck.completed) {
+    // User completed signup - go to signin
     console.log('✅ [Auth] User exists with completed signup, switching to signin');
     this.authMode = 'signin';
     this.showStep('password');
-} else if (userCheck.exists && !userCheck.completed) {
-    console.log('📧 [Auth] User started signup but incomplete - continuing with OTP flow');
-    this.authMode = 'signup';
-    await this.sendEmailVerification(email);
 } else {
-    console.log('📧 [Auth] New user, sending OTP');
+    // User doesn't exist in custom table - send OTP (new signup or restart)
+    console.log('📧 [Auth] New user or incomplete signup, sending OTP');
     this.authMode = 'signup';
     await this.sendEmailVerification(email);
 }
@@ -189,39 +187,17 @@ async sendEmailVerification(email) {
     try {
         this.showLoading('Sending verification code...');
         
-        // Generate 6-digit OTP code
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        
-        // Store OTP temporarily (expires in 5 minutes)
-        const otpData = {
+        const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
             email: email,
-            code: otpCode,
-            expires: Date.now() + (5 * 60 * 1000), // 5 minutes
-            attempts: 0
-        };
-        
-        sessionStorage.setItem(`otp_${email}`, JSON.stringify(otpData));
-        
-        // Send OTP via your worker API
-        const config = await window.OsliraConfig.get();
-        
-        const response = await fetch(`${config.WORKER_URL}/v1/send-otp`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                email: email,
-                code: otpCode
-            })
+            options: {
+                shouldCreateUser: true,
+                emailRedirectTo: undefined
+            }
         });
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to send verification code');
-        }
+        if (error) throw error;
         
-        console.log('✅ Custom OTP sent successfully');
+        console.log('✅ OTP sent successfully:', data);
         this.hideLoading();
         this.showStep('otp-verification');
         
@@ -232,9 +208,11 @@ async sendEmailVerification(email) {
         // Handle rate limiting specifically
         if (error.message?.includes('rate limit') || 
             error.message?.includes('too many') ||
-            error.status === 429) {
+            error.message?.includes('Email rate limit exceeded')) {
             
-            const retryTime = '60'; // Default retry time
+            const retryMatch = error.message.match(/try again in (\d+)/);
+            const retryTime = retryMatch ? retryMatch[1] : '60';
+            
             this.showAlert(
                 `Email rate limit exceeded. Please try again in ${retryTime} seconds.`, 
                 'error'
@@ -242,7 +220,7 @@ async sendEmailVerification(email) {
             return;
         }
         
-        // For other errors, show specific message
+        // For other errors, show the actual error message
         this.showAlert(error.message || 'Failed to send verification code. Please try again.', 'error');
     }
 }
@@ -290,34 +268,16 @@ async handleOtpSubmit(e) {
         this.hideError();
         this.showLoading('Verifying code...');
         
-        // Get stored OTP data
-        const otpData = JSON.parse(sessionStorage.getItem(`otp_${this.currentEmail}`) || '{}');
+        const { data, error } = await window.SimpleAuth.supabase.auth.verifyOtp({
+            email: this.currentEmail,
+            token: otpCode,
+            type: 'email'
+        });
         
-        // Check if OTP expired
-        if (!otpData.code || Date.now() > otpData.expires) {
-            throw new Error('Verification code has expired. Please request a new one.');
-        }
+        if (error) throw error;
         
-        // Check attempts limit (max 3 attempts)
-        if (otpData.attempts >= 3) {
-            sessionStorage.removeItem(`otp_${this.currentEmail}`);
-            throw new Error('Too many failed attempts. Please request a new verification code.');
-        }
-        
-        // Verify OTP code
-        if (otpCode !== otpData.code) {
-            // Increment attempts
-            otpData.attempts = (otpData.attempts || 0) + 1;
-            sessionStorage.setItem(`otp_${this.currentEmail}`, JSON.stringify(otpData));
-            
-            const remainingAttempts = 3 - otpData.attempts;
-            throw new Error(`Invalid verification code. ${remainingAttempts} attempts remaining.`);
-        }
-        
-        // OTP verified successfully - clear from storage
-        sessionStorage.removeItem(`otp_${this.currentEmail}`);
-        
-        console.log('✅ Custom OTP verified successfully');
+        console.log('✅ OTP verified, user in auth.users:', data);
+        window.SimpleAuth.session = data.session;
         
         this.authMode = 'set-password';
         this.showLoading('Email verified! Set your password...');
@@ -330,7 +290,7 @@ async handleOtpSubmit(e) {
     } catch (error) {
         console.error('❌ [Auth] OTP verification failed:', error);
         this.hideLoading();
-        this.showFieldError('otp-code', error.message || 'Invalid or expired code. Please try again.');
+        this.showFieldError('otp-code', 'Invalid or expired code. Please try again.');
     }
 }
     async resendOtp() {
@@ -384,53 +344,64 @@ async handleOtpSubmit(e) {
 }
     }
 
-    async handleSignin(password) {
-        this.showLoading('Signing you in...');
-        
-        const result = await window.SimpleAuth.signInWithPassword(this.currentEmail, password);
-        
-        this.showLoading('Welcome back! Redirecting...');
-        setTimeout(() => {
-            window.location.href = '/dashboard';
-        }, 1000);
-    }
-
+async handleSignin(password) {
+    this.showLoading('Signing you in...');
+    
+    const result = await window.SimpleAuth.signInWithPassword(this.currentEmail, password);
+    
+    this.showLoading('Welcome back! Redirecting...');
+    setTimeout(() => {
+        window.location.href = '/dashboard';
+    }, 1000);
+}
+    
 async handleSetPassword(password) {
     this.showLoading('Setting your password...');
     
-    const { error } = await window.SimpleAuth.supabase.auth.updateUser({
-        password: password
-    });
-    
-    if (error) throw error;
-    
-    // NOW create the user record in custom users table
-    const { data: { user } } = await window.SimpleAuth.supabase.auth.getUser();
-    
-    if (user) {
-        const { error: insertError } = await window.SimpleAuth.supabase
-            .from('users')
-            .insert([{
-                id: user.id,
-                email: user.email,
-                full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
-                created_via: 'email',
-                phone_verified: false,
-                onboarding_completed: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }]);
+    try {
+        // Set password for existing auth user
+        const { error } = await window.SimpleAuth.supabase.auth.updateUser({
+            password: password
+        });
+        
+        if (error) throw error;
+        
+        // NOW create the user record in custom users table
+        const { data: { user } } = await window.SimpleAuth.supabase.auth.getUser();
+        
+        if (user) {
+            console.log('💾 [Auth] Creating user record in custom users table...');
             
-        if (insertError) {
-            console.error('❌ [Auth] Failed to create user record:', insertError);
-            // Continue anyway since auth user was created successfully
+            const { error: insertError } = await window.SimpleAuth.supabase
+                .from('users')
+                .insert([{
+                    id: user.id,
+                    email: user.email,
+                    full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+                    created_via: 'email',
+                    phone_verified: false,
+                    onboarding_completed: false,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString()
+                }]);
+                
+            if (insertError) {
+                console.error('❌ [Auth] Failed to create user record:', insertError);
+                // Continue anyway since auth user was created successfully
+            } else {
+                console.log('✅ [Auth] User record created in custom table');
+            }
         }
+        
+        this.showLoading('Password set! Redirecting to onboarding...');
+        setTimeout(() => {
+            window.location.href = '/onboarding';
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ [Auth] Set password failed:', error);
+        throw error;
     }
-    
-    this.showLoading('Password set! Redirecting to onboarding...');
-    setTimeout(() => {
-        window.location.href = '/onboarding';
-    }, 1000);
 }
 
 async resendOtp() {
