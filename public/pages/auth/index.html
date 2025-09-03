@@ -81,10 +81,87 @@
             display: block;
         }
         
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        .otp-message {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.email-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.otp-message h3 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 1.5rem;
+}
+
+.otp-message p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.otp-input {
+    text-align: center;
+    font-size: 1.5rem !important;
+    letter-spacing: 0.5rem;
+    font-weight: 600;
+    padding: 1rem !important;
+}
+
+.otp-actions {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.resend-link {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0.5rem;
+}
+
+.resend-link:hover {
+    color: var(--primary-dark);
+}
+
+.user-context {
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.user-context p {
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.user-context strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.welcome-back {
+    color: var(--success) !important;
+}
+
+.create-account {
+    color: var(--primary) !important;
+}
+
+.auth-step {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
         
         .form-group {
             margin-bottom: 1.25rem;
@@ -285,6 +362,46 @@
     </div>
 </div>
 
+<!-- OTP Verification Step -->
+<div id="otp-verification-step" class="auth-step" style="display: none;">
+    <div class="otp-message">
+        <div class="email-icon">📧</div>
+        <h3>Enter verification code</h3>
+        <p>We sent a 6-digit code to <strong id="otp-email"></strong></p>
+    </div>
+    
+    <form id="otp-form">
+        <div class="form-group">
+            <input 
+                type="text" 
+                id="otp-code" 
+                name="code" 
+                class="form-input otp-input" 
+                placeholder="000000"
+                maxlength="6"
+                pattern="[0-9]{6}"
+                required
+                autocomplete="one-time-code"
+            >
+            <div class="form-error" id="otp-code-error"></div>
+        </div>
+        
+        <button type="submit" class="auth-method primary">
+            Verify Code
+        </button>
+    </form>
+    
+    <div class="otp-actions">
+        <button type="button" class="resend-link" id="resend-otp">
+            Didn't receive code? Resend
+        </button>
+    </div>
+    
+    <div class="back-to-options">
+        <a href="#" class="back-link" id="back-to-email-otp">← Use different email</a>
+    </div>
+</div>
+
 <!-- Password Input Step -->
 <div id="password-input-step" class="auth-step" style="display: none;">
     <div id="user-context" class="user-context"></div>
@@ -313,7 +430,6 @@
         <a href="#" class="back-link" id="back-to-email">← Back</a>
     </div>
 </div>
-
 <!-- Email Sent Step -->
 <div id="email-sent-step" class="auth-step" style="display: none;">
     <div class="email-sent-message">
@@ -350,18 +466,19 @@
     <script src="/core/script-loader.js"></script>
     <script>
 // =============================================================================
-// AUTH PAGE STATE MANAGEMENT - SMART FLOW
+// AUTH PAGE STATE MANAGEMENT - OTP FLOW
 // =============================================================================
 
-let currentStep = 'options'; // 'options', 'email', 'password'
+let currentStep = 'options'; // 'options', 'email', 'otp-verification', 'password'
 let currentEmail = '';
-let authMode = null; // 'signin' or 'signup'
+let authMode = null; // 'signin' or 'signup' or 'signup-verified'
 let isLoading = false;
 
 function showStep(stepName) {
     // Hide all steps
     document.getElementById('auth-options').style.display = 'none';
     document.getElementById('email-input-step').style.display = 'none';
+    document.getElementById('otp-verification-step').style.display = 'none';
     document.getElementById('password-input-step').style.display = 'none';
     
     // Show requested step
@@ -381,16 +498,19 @@ function showStep(stepName) {
             setTimeout(() => document.getElementById('auth-email').focus(), 100);
             break;
             
+        case 'otp-verification':
+            document.getElementById('otp-verification-step').style.display = 'block';
+            document.getElementById('otp-email').textContent = currentEmail;
+            document.getElementById('auth-title').textContent = 'Verify your email';
+            document.getElementById('auth-subtitle').textContent = 'Enter the code we sent you';
+            setTimeout(() => document.getElementById('otp-code').focus(), 100);
+            break;
+            
         case 'password':
             document.getElementById('password-input-step').style.display = 'block';
             updatePasswordStepUI();
             setTimeout(() => document.getElementById('auth-password').focus(), 100);
             break;
-
-            case 'email-sent':
-    document.getElementById('email-sent-step').style.display = 'block';
-    document.getElementById('confirm-email').textContent = currentEmail;
-    break;
     }
 }
 
@@ -404,6 +524,12 @@ function updatePasswordStepUI() {
         userContext.innerHTML = `<p class="welcome-back">Welcome back, <strong>${currentEmail}</strong></p>`;
         submitBtn.textContent = 'Sign in';
         document.getElementById('auth-password').setAttribute('autocomplete', 'current-password');
+    } else if (authMode === 'signup-verified') {
+        document.getElementById('auth-title').textContent = 'Create your password';  
+        document.getElementById('auth-subtitle').textContent = 'Email verified ✓';
+        userContext.innerHTML = `<p class="create-account">Create password for <strong>${currentEmail}</strong></p>`;
+        submitBtn.textContent = 'Create account';
+        document.getElementById('auth-password').setAttribute('autocomplete', 'new-password');
     } else {
         document.getElementById('auth-title').textContent = 'Create your account';  
         document.getElementById('auth-subtitle').textContent = '';
@@ -434,19 +560,17 @@ async function handleEmailSubmit(e) {
         currentEmail = email;
         
         // Check if user exists
-// Check if user exists
-const userExists = await window.SimpleAuth.checkUserExists(email);
-
-hideLoading();
-if (userExists) {
-    authMode = 'signin';
-    showStep('password');
-} else {
-    // New user - send verification email first
-    authMode = 'email-verify';
-    await sendEmailVerification(email);
-    showStep('email-verification');
-}
+        const userExists = await window.SimpleAuth.checkUserExists(email);
+        
+        hideLoading();
+        
+        if (userExists) {
+            authMode = 'signin';
+            showStep('password');
+        } else {
+            // New user - send OTP for verification
+            await sendEmailVerification(email);
+        }
         
     } catch (error) {
         console.error('❌ [Auth] Email check failed:', error);
@@ -459,45 +583,88 @@ if (userExists) {
 
 async function sendEmailVerification(email) {
     try {
-        showLoading('Creating account...');
+        showLoading('Sending verification code...');
         
-        // Create user with temporary password, which will send confirmation email
-        const tempPassword = generateTempPassword();
-        const { data, error } = await window.SimpleAuth.supabase.auth.signUp({
+        // Send OTP for email verification
+        const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
             email: email,
-            password: tempPassword,
             options: {
-                data: {
-                    email_verified: false,
-                    temp_signup: true
-                }
+                shouldCreateUser: false
             }
         });
         
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase OTP Error:', error);
+            throw error;
+        }
         
+        console.log('✅ OTP sent successfully:', data);
         hideLoading();
-        currentEmail = email;
         
-        // Show email confirmation message
-        showEmailSent(email);
+        // Show OTP input step
+        showStep('otp-verification');
         
     } catch (error) {
         console.error('❌ [Auth] Email verification failed:', error);
         hideLoading();
-        showError('Failed to send verification email. Please try again.');
+        
+        // If OTP fails, fall back to password step
+        console.log('📝 Falling back to direct signup without OTP');
+        authMode = 'signup';
+        showStep('password');
     }
 }
 
-function generateTempPassword() {
-    return Math.random().toString(36).slice(-12) + 'A1!';
+async function handleOtpSubmit(e) {
+    e.preventDefault();
+    if (isLoading) return;
+    
+    const otpCode = document.getElementById('otp-code').value.trim();
+    
+    if (!otpCode || otpCode.length !== 6) {
+        showFieldError('otp-code', 'Please enter a valid 6-digit code');
+        return;
+    }
+    
+    try {
+        hideError();
+        showLoading('Verifying code...');
+        
+        // Verify the OTP
+        const { data, error } = await window.SimpleAuth.supabase.auth.verifyOtp({
+            email: currentEmail,
+            token: otpCode,
+            type: 'email'
+        });
+        
+        if (error) throw error;
+        
+        console.log('✅ OTP verified:', data);
+        
+        // Email is now verified, user can create password
+        authMode = 'signup-verified';
+        showLoading('Email verified! Create your password...');
+        
+        setTimeout(() => {
+            hideLoading();
+            showStep('password');
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ [Auth] OTP verification failed:', error);
+        hideLoading();
+        showFieldError('otp-code', 'Invalid or expired code. Please try again.');
+    }
 }
 
-function showEmailSent(email) {
-    document.getElementById('auth-title').textContent = 'Check your email';
-    document.getElementById('auth-subtitle').textContent = '';
-    
-    showStep('email-sent');
+async function resendOtp() {
+    try {
+        showLoading('Resending code...');
+        await sendEmailVerification(currentEmail);
+    } catch (error) {
+        hideLoading();
+        showError('Failed to resend code. Please try again.');
+    }
 }
 
 async function handlePasswordSubmit(e) {
@@ -574,7 +741,7 @@ async function handleGoogleAuth() {
 
 window.addEventListener('oslira:scripts:loaded', async () => {
     try {
-        console.log('🔐 [Auth] Scripts loaded, initializing smart auth...');
+        console.log('🔐 [Auth] Scripts loaded, initializing OTP auth...');
         
         if (window.SimpleAuth) {
             await window.SimpleAuth.initialize();
@@ -584,7 +751,7 @@ window.addEventListener('oslira:scripts:loaded', async () => {
         showStep('options');
         document.body.style.visibility = 'visible';
         
-        console.log('✅ [Auth] Smart auth ready');
+        console.log('✅ [Auth] OTP auth ready');
         
     } catch (error) {
         console.error('❌ [Auth] Initialization failed:', error);
@@ -614,10 +781,21 @@ function setupEventListeners() {
         showStep('email');
     });
     
+    document.getElementById('back-to-email-otp').addEventListener('click', (e) => {
+        e.preventDefault();
+        hideError();
+        clearFieldErrors();
+        showStep('email');
+    });
+    
     // Form submissions
     document.getElementById('email-form').addEventListener('submit', handleEmailSubmit);
+    document.getElementById('otp-form').addEventListener('submit', handleOtpSubmit);
     document.getElementById('password-form').addEventListener('submit', handlePasswordSubmit);
     document.getElementById('google-signin-btn').addEventListener('click', handleGoogleAuth);
+    
+    // OTP actions
+    document.getElementById('resend-otp').addEventListener('click', resendOtp);
     
     // Clear errors on input
     document.querySelectorAll('.form-input').forEach(input => {
@@ -664,7 +842,6 @@ function clearFieldErrors() {
 
 function showLoading(message) {
     isLoading = true;
-    
     const loadingMsgEl = document.getElementById('loading-message');
     const loadingStateEl = document.getElementById('loading-state');
     
@@ -675,19 +852,16 @@ function showLoading(message) {
         loadingStateEl.classList.remove('hidden');
     }
     
-    // Disable all form elements
     document.querySelectorAll('input, button').forEach(el => el.disabled = true);
 }
 
 function hideLoading() {
     isLoading = false;
-    
     const loadingStateEl = document.getElementById('loading-state');
     if (loadingStateEl) {
         loadingStateEl.classList.add('hidden');
     }
     
-    // Re-enable all form elements  
     document.querySelectorAll('input, button').forEach(el => el.disabled = false);
 }
 
@@ -727,7 +901,9 @@ function hideSuccess() {
     if (successEl) {
         successEl.classList.add('hidden');
     }
-}       
+}
+
+console.log('🔐 [Auth] OTP authentication system loaded');
     </script>
 </body>
 </html>
