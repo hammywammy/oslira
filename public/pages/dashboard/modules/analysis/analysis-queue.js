@@ -532,38 +532,4 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = { AnalysisQueue };
 } else {
     window.AnalysisQueue = AnalysisQueue;
-} FROM dashboard.js lines 3200-3280
-    addAnalysis(username, analysisType, businessId) {
-        const analysisId = this.generateId();
-        const analysisInfo = {
-            id: analysisId,
-            username: username.replace('@', ''),
-            analysisType,
-            businessId,
-            status: 'starting', // starting, analyzing, completed, failed
-            progress: 0,
-            startTime: Date.now(),
-            message: 'Initializing analysis...',
-            credits: analysisType === 'deep' ? 2 : 1
-        };
-        
-        this.activeAnalyses.set(analysisId, analysisInfo);
-        
-        // Update state
-        this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
-        
-        // Update UI
-        this.renderQueue();
-        this.showQueue();
-        
-        // Emit event
-        this.eventBus.emit(DASHBOARD_EVENTS.QUEUE_ITEM_ADDED, {
-            analysisId,
-            analysis: analysisInfo
-        });
-        
-        console.log(`✅ [AnalysisQueue] Added ${username} to analysis queue (${analysisType})`);
-        return analysisId;
-    }
-    
-    // EXTRACTED
+}
