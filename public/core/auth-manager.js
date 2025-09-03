@@ -89,16 +89,29 @@ async signInWithPassword(email, password) {
 
 async checkUserExists(email) {
     try {
-        // Check if user exists in auth.users AND is confirmed
+        // First check if user exists in custom users table (completed signup)
         const { data, error } = await this.supabase
             .from('users')
-            .select('id')
+            .select('id, onboarding_completed')
             .eq('email', email)
             .single();
             
-        return !error && data;
+        // User exists in users table (completed full signup)
+        if (!error && data) {
+            return { exists: true, completed: true };
+        }
+        
+        // If not in users table, check if they're in auth.users (OTP sent but not completed)
+        const { data: authData } = await this.supabase.auth.admin.getUserByEmail(email);
+        
+        // User exists in auth but not in users table (OTP sent, no password set)
+        if (authData?.user) {
+            return { exists: true, completed: false };
+        }
+        
+        return { exists: false, completed: false };
     } catch {
-        return false;
+        return { exists: false, completed: false };
     }
 }
     
