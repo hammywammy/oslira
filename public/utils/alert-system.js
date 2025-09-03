@@ -55,21 +55,25 @@
     // =========================================================================
     // CRITICAL ERROR PATTERNS
     // =========================================================================
-    const CRITICAL_PATTERNS = [
-        /unauthorized|forbidden|401|403/i,
-        /session\s*expired|jwt\s*expired/i,
-        /not\s*authenticated|not\s*logged/i,
-        /insufficient|credits|payment|stripe/i,
-        /subscription|billing/i,
-        /failed\s*to\s*save|could\s*not\s*save/i,
-        /data\s*loss|lost\s*data/i,
-        /critical|fatal|severe/i,
-        /database|connection\s*failed/i,
-        /api\s*error|server\s*error|500|502|503/i,
-        /analysis\s*failed|failed\s*to\s*analyze/i,
-        /export\s*failed|download\s*failed/i,
-        /could\s*not\s*load|failed\s*to\s*load/i
-    ];
+const CRITICAL_PATTERNS = [
+    /unauthorized|forbidden|401|403/i,
+    /session\s*expired|jwt\s*expired/i,
+    /not\s*authenticated|not\s*logged/i,
+    /insufficient|credits|payment|stripe/i,
+    /subscription|billing/i,
+    /failed\s*to\s*save|could\s*not\s*save/i,
+    /data\s*loss|lost\s*data/i,
+    /critical|fatal|severe/i,
+    /database|connection\s*failed/i,
+    /api\s*error|server\s*error|500|502|503/i,
+    /analysis\s*failed|failed\s*to\s*analyze/i,
+    /export\s*failed|download\s*failed/i,
+    /could\s*not\s*load|failed\s*to\s*load/i,
+    /rate\s*limit|too\s*many\s*requests|429/i,
+    /email\s*rate\s*limit/i,
+    /authentication\s*failed|login\s*failed|signin\s*failed/i,
+    /incorrect\s*password|invalid\s*login|invalid\s*credentials/i
+];
 
     // =========================================================================
     // IGNORE PATTERNS
