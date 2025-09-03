@@ -116,10 +116,28 @@ class OsliraScriptLoader {
             // Page-specific dependencies
             pages: {
                 'dashboard': {
-                    scripts: ['/pages/dashboard/dashboard.js'],
-                    styles: ['/pages/dashboard/dashboard.css'],
-                    requiresAuth: true
-                },
+    scripts: [
+        // Core infrastructure FIRST (dependency order critical)
+        '/pages/dashboard/modules/core/event-bus.js',
+        '/pages/dashboard/modules/core/state-manager.js', 
+        '/pages/dashboard/modules/core/dependency-container.js',
+        '/pages/dashboard/modules/core/dashboard-app.js',
+        
+        // Feature modules (parallel loading safe)
+        '/pages/dashboard/modules/analysis/analysis-queue.js',
+        '/pages/dashboard/modules/business/business-manager.js',
+        '/pages/dashboard/modules/leads/lead-manager.js',
+        '/pages/dashboard/modules/leads/lead-renderer.js',
+        '/pages/dashboard/modules/realtime/realtime-manager.js',
+        '/pages/dashboard/modules/stats/stats-calculator.js',
+        '/pages/dashboard/modules/ui/modal-manager.js',
+        
+        // Main controller LAST
+        '/pages/dashboard/dashboard.js'
+    ],
+    styles: ['/pages/dashboard/dashboard.css'],
+    requiresAuth: true
+},
                 'auth': {
                     scripts: [],
                     styles: ['/pages/auth/auth.css'],
