@@ -224,29 +224,48 @@ const CRITICAL_PATTERNS = [
         info(options) { return this.notify('info', options); }
         warning(options) { return this.notify('warning', options); }
         
-        error(error, options = {}) {
-            // Critical error filtering
-            if (!this.isErrorCritical(error, options.context)) {
-                if (this.originalConsole?.log) {
-                    this.originalConsole.log('🔇 Non-critical error suppressed:', error);
-                }
-                return null;
-            }
-            
-            let errorOptions = options;
-            
-            if (error instanceof Error || typeof error === 'string') {
-                const transformed = this.transformError(error);
-                errorOptions = {
-                    ...transformed,
-                    ...options,
-                    details: options.details || error.stack || error.toString()
-                };
-            }
-            
-            return this.notify('error', errorOptions);
+error(error, options = {}) {
+    // Authentication context is always critical
+    if (options.context === 'authentication' || options.critical || options.userAction) {
+        if (this.originalConsole?.log) {
+            this.originalConsole.log('🔴 Forcing critical auth error to display:', error);
         }
-
+        
+        let errorOptions = options;
+        
+        if (error instanceof Error || typeof error === 'string') {
+            const transformed = this.transformError(error);
+            errorOptions = {
+                ...transformed,
+                ...options,
+                details: options.details || error
+            };
+        }
+        
+        return this.notify('error', errorOptions);
+    }
+    
+    // Critical error filtering for other contexts
+    if (!this.isErrorCritical(error, options.context)) {
+        if (this.originalConsole?.log) {
+            this.originalConsole.log('🔇 Non-critical error suppressed:', error);
+        }
+        return null;
+    }
+    
+    let errorOptions = options;
+    
+    if (error instanceof Error || typeof error === 'string') {
+        const transformed = this.transformError(error);
+        errorOptions = {
+            ...transformed,
+            ...options,
+            details: options.details || error
+        };
+    }
+    
+    return this.notify('error', errorOptions);
+}
         // ---------------------------------------------------------------------
         // DOM CREATION
         // ---------------------------------------------------------------------
