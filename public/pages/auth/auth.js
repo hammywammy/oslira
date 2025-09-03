@@ -168,10 +168,12 @@ if (userCheck.exists && userCheck.completed) {
     this.authMode = 'signin';
     this.showStep('password');
 } else if (userCheck.exists && !userCheck.completed) {
-    console.log('📧 [Auth] User has OTP but incomplete signup, sending new OTP');
+    console.log('📧 [Auth] User started signup but incomplete - continuing with OTP flow');
+    this.authMode = 'signup';
     await this.sendEmailVerification(email);
 } else {
     console.log('📧 [Auth] New user, sending OTP');
+    this.authMode = 'signup';
     await this.sendEmailVerification(email);
 }
             
@@ -227,6 +229,34 @@ async sendEmailVerification(email) {
         // For other errors, proceed to password step
         this.authMode = 'signup';
         this.showStep('password');
+    }
+}
+
+async createUserRecord(authUser) {
+    try {
+        console.log('💾 [Auth] Creating user record in users table...');
+        
+        const { error } = await window.SimpleAuth.supabase
+            .from('users')
+            .insert([{
+                id: authUser.id,
+                email: authUser.email,
+                full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
+                phone: authUser.user_metadata?.phone || null,
+                created_via: 'email',
+                phone_verified: false,
+                onboarding_completed: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }]);
+            
+        if (error) {
+            console.error('❌ [Auth] Failed to create user record:', error);
+        } else {
+            console.log('✅ [Auth] User record created successfully');
+        }
+    } catch (error) {
+        console.error('❌ [Auth] Error creating user record:', error);
     }
 }
 
@@ -341,6 +371,12 @@ async handleSetPassword(password) {
     });
     
     if (error) throw error;
+    
+    // Now create the user record in our custom users table
+    const { data: { user } } = await window.SimpleAuth.supabase.auth.getUser();
+    if (user) {
+        await this.createUserRecord(user);
+    }
     
     this.showLoading('Password set! Redirecting to onboarding...');
     setTimeout(() => {
