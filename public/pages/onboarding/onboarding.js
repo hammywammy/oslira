@@ -776,28 +776,27 @@
                 updated_at: new Date().toISOString()
             };
             
-            console.log('💾 [Onboarding] Ensuring user record exists...');
+console.log('💾 [Onboarding] Verifying user record exists (should already exist from auth)...');
 
-            // First, ensure user record exists in custom users table
-            const { error: userInsertError } = await supabase
-                .from('users')
-                .upsert([{
-                    id: user.id,
-                    email: user.email,
-                    full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
-                    phone: phoneData?.phone || null,
-                    created_via: 'google',
-                    phone_verified: false,
-                    opt_in_sms: phoneData?.opt_in_sms || false,
-                    onboarding_completed: false,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }])
-                .select();
+// Verify user record exists - DO NOT CREATE, only check
+const { data: existingUser, error: checkError } = await supabase
+    .from('users')
+    .select('id, email, onboarding_completed')
+    .eq('id', user.id)
+    .single();
 
-            if (userInsertError) {
-                console.log('⚠️ [Onboarding] User record issue (might already exist):', userInsertError);
-            }
+if (checkError || !existingUser) {
+    console.error('❌ [Onboarding] User record missing - this should not happen:', checkError);
+    throw new Error('User record not found. Please complete signup first.');
+}
+
+if (existingUser.onboarding_completed) {
+    console.log('⚠️ [Onboarding] User already completed onboarding, redirecting...');
+    window.location.href = '/dashboard';
+    return;
+}
+
+console.log('✅ [Onboarding] User record verified, proceeding with onboarding...');  
 
             console.log('💾 [Onboarding] Creating business profile...', businessProfileData);
 
