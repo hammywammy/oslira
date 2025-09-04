@@ -330,16 +330,19 @@ async resendOtp() {
             return;
         }
         
-        try {
-            this.hideError();
-            
-            if (this.authMode === 'signin') {
-                await this.handleSignin(password);
-            } else if (this.authMode === 'set-password') {
-                await this.handleSetPassword(password);
-            } else {
-                await this.handleSignup(password);
-            }
+try {
+    this.hideError();
+    
+    if (this.authMode === 'signin') {
+        await this.handleSignin(password);
+    } else if (this.authMode === 'set-password') {
+        await this.handleSetPassword(password);
+    } else {
+        // This should never happen in OTP flow - all signups go through set-password
+        console.error('❌ [Auth] Invalid auth mode:', this.authMode);
+        this.showAlert('Authentication flow error. Please refresh and try again.', 'error');
+        return;
+    }
             
 } catch (error) {
     console.error(`❌ [Auth] ${this.authMode} failed:`, error);
@@ -424,37 +427,10 @@ async resendOtp() {
 }
 
 async handleSignup(password) {
-    this.showLoading('Creating your account...');
-    
-    try {
-        // Now create the user with email + password (OTP already verified)
-        const { data, error } = await window.SimpleAuth.supabase.auth.signUp({
-            email: this.currentEmail,
-            password: password,
-            options: {
-                emailRedirectTo: undefined
-            }
-        });
-        
-        if (error) throw error;
-        
-        // Since OTP was pre-verified, user should be created and confirmed
-        if (data.session) {
-            window.SimpleAuth.session = data.session;
-            this.showLoading('Account created! Redirecting to onboarding...');
-            setTimeout(() => {
-                window.location.href = '/onboarding';
-            }, 1000);
-        } else {
-            // Fallback: if somehow still needs email confirmation
-            this.hideLoading();
-            this.showSuccess('<strong>Check your email!</strong> We sent you a confirmation link to complete your signup.');
-        }
-        
-    } catch (error) {
-        console.error('❌ [Auth] Signup failed:', error);
-        throw error;
-    }
+    // THIS FUNCTION SHOULD NEVER BE CALLED
+    // All new signups go through OTP → handleSetPassword flow
+    console.error('❌ [Auth] handleSignup() called - this should not happen in OTP flow');
+    this.showAlert('Invalid signup flow detected. Please refresh and try again.', 'error');
 }
 
     async handleGoogleAuth() {
