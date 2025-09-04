@@ -451,44 +451,6 @@ showAlert(message, type = 'info') {
     }
 }
 
-// =============================================================================
-// DEBUGGING - TRACK ALL USER CREATION ATTEMPTS
-// =============================================================================
-
-// Override console.log to catch any unexpected user creation
-const originalConsoleLog = console.log;
-console.log = function(...args) {
-    if (args.some(arg => typeof arg === 'string' && arg.includes('Creating user record'))) {
-        console.trace('🐛 [DEBUG] User creation attempted at:');
-    }
-    originalConsoleLog.apply(console, args);
-};
-
-// Monitor all Supabase calls to users table
-if (window.SimpleAuth?.supabase) {
-    const originalFrom = window.SimpleAuth.supabase.from;
-    window.SimpleAuth.supabase.from = function(tableName) {
-        const tableRef = originalFrom.call(this, tableName);
-        
-        if (tableName === 'users') {
-            const originalInsert = tableRef.insert;
-            const originalUpsert = tableRef.upsert;
-            
-            tableRef.insert = function(...args) {
-                console.trace('🐛 [DEBUG] Users table INSERT attempted:');
-                return originalInsert.apply(this, args);
-            };
-            
-            tableRef.upsert = function(...args) {
-                console.trace('🐛 [DEBUG] Users table UPSERT attempted:');
-                return originalUpsert.apply(this, args);
-            };
-        }
-        
-        return tableRef;
-    };
-}
-
     // =============================================================================
     // EVENT LISTENERS
     // =============================================================================
