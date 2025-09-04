@@ -172,6 +172,10 @@ if (userCheck.exists && userCheck.completed) {
     // User doesn't exist in custom table - send OTP (new signup or restart)
     console.log('📧 [Auth] New user or incomplete signup, sending OTP');
     this.authMode = 'signup';
+    
+    // Clear any existing session before starting new signup
+    await window.SimpleAuth.supabase.auth.signOut();
+    
     await this.sendEmailVerification(email);
 }
             
@@ -187,13 +191,16 @@ async sendEmailVerification(email) {
     try {
         this.showLoading('Sending verification code...');
         
-        const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
-            email: email,
-            options: {
-                shouldCreateUser: true,
-                emailRedirectTo: undefined
-            }
-        });
+const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
+    email: email,
+    options: {
+        shouldCreateUser: true,
+        emailRedirectTo: undefined,
+        data: {
+            force_otp: true  // Force OTP instead of magic link
+        }
+    }
+});
         
         if (error) throw error;
         
@@ -229,6 +236,7 @@ async createUserRecord(authUser) {
     try {
         console.log('💾 [Auth] Creating user record in users table...');
         
+        // ONLY create after password is confirmed and user explicitly submits
         const { error } = await window.SimpleAuth.supabase
             .from('users')
             .insert([{
@@ -237,7 +245,7 @@ async createUserRecord(authUser) {
                 full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
                 phone: authUser.user_metadata?.phone || null,
                 created_via: 'email',
-                phone_verified: false,
+                phone_verified: true,  // OTP was verified
                 onboarding_completed: false,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
@@ -245,11 +253,13 @@ async createUserRecord(authUser) {
             
         if (error) {
             console.error('❌ [Auth] Failed to create user record:', error);
+            throw error;  // Stop the process if user record creation fails
         } else {
             console.log('✅ [Auth] User record created successfully');
         }
     } catch (error) {
         console.error('❌ [Auth] Error creating user record:', error);
+        throw error;
     }
 }
 
@@ -293,15 +303,21 @@ async handleOtpSubmit(e) {
         this.showFieldError('otp-code', 'Invalid or expired code. Please try again.');
     }
 }
-    async resendOtp() {
-        try {
-            this.showLoading('Resending code...');
-            await this.sendEmailVerification(this.currentEmail);
-        } catch (error) {
-            this.hideLoading();
-            this.showError('Failed to resend code. Please try again.');
-        }
+async resendOtp() {
+    try {
+        this.showLoading('Resending code...');
+        await this.sendEmailVerification(this.currentEmail);
+        
+        // Ensure success alert shows after loading is hidden
+        setTimeout(() => {
+            this.showAlert('Verification code resent! Check your email.', 'success');
+        }, 100);
+        
+    } catch (error) {
+        this.hideLoading();
+        this.showAlert('Failed to resend code. Please try again.', 'error');
     }
+}
 
     async handlePasswordSubmit(e) {
         e.preventDefault();
@@ -366,24 +382,14 @@ async handleSetPassword(password) {
         
         if (error) throw error;
         
-        // NOW create the user record in custom users table
-        const { data: { user } } = await window.SimpleAuth.supabase.auth.getUser();
-        
-        if (user) {
-            console.log('💾 [Auth] Creating user record in custom users table...');
-            
-            const { error: insertError } = await window.SimpleAuth.supabase
-                .from('users')
-                .insert([{
-                    id: user.id,
-                    email: user.email,
-                    full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
-                    created_via: 'email',
-                    phone_verified: false,
-                    onboarding_completed: false,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
-                }]);
+// ONLY create user record AFTER password is successfully set
+const { data: { user } } = await window.SimpleAuth.supabase.auth.getUser();
+
+if (user) {
+    console.log('💾 [Auth] Creating user record in custom users table after password confirmation...');
+    
+    // Use the improved createUserRecord method
+    await this.createUserRecord(user);
                 
             if (insertError) {
                 console.error('❌ [Auth] Failed to create user record:', insertError);
