@@ -101,9 +101,9 @@ async checkUserExists(email) {
             return { exists: true, completed: true };
         }
         
-        // Check if user exists in auth.users (incomplete signup)
-        const { data, error } = await this.supabase.auth.admin.listUsers();
-        const authUser = data?.users?.find(u => u.email === email);
+// Can't use admin API with anon key - skip this check
+// Just return based on public.users table result
+console.log('⚠️ [Auth] Cannot check auth.users with anon key - assuming new user');
         
         if (authUser) {
             // User exists in auth but not in custom table (incomplete)
