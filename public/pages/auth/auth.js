@@ -232,36 +232,6 @@ const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
     }
 }
 
-async createUserRecord(authUser) {
-    try {
-        console.log('💾 [Auth] Creating user record in users table...');
-        
-        // ONLY create after password is confirmed and user explicitly submits
-        const { error } = await window.SimpleAuth.supabase
-            .from('users')
-            .insert([{
-                id: authUser.id,
-                email: authUser.email,
-                full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
-                phone: authUser.user_metadata?.phone || null,
-                created_via: 'email',
-                phone_verified: true,  // OTP was verified
-                onboarding_completed: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }]);
-            
-        if (error) {
-            console.error('❌ [Auth] Failed to create user record:', error);
-            throw error;  // Stop the process if user record creation fails
-        } else {
-            console.log('✅ [Auth] User record created successfully');
-        }
-    } catch (error) {
-        console.error('❌ [Auth] Error creating user record:', error);
-        throw error;
-    }
-}
 
 async handleOtpSubmit(e) {
     e.preventDefault();
@@ -385,22 +355,35 @@ async handleSetPassword(password) {
         
         if (error) throw error;
         
-// ONLY create user record AFTER password is successfully set
+// NOW create the user record in custom users table - THIS IS THE ONLY PLACE
 const { data: { user } } = await window.SimpleAuth.supabase.auth.getUser();
 
 if (user) {
-    console.log('💾 [Auth] Creating user record in custom users table after password confirmation...');
+    console.log('💾 [Auth] Creating user record in custom users table (ONLY after password set)...');
     
-    // Use the improved createUserRecord method
-    await this.createUserRecord(user);
-                
-            if (insertError) {
-                console.error('❌ [Auth] Failed to create user record:', insertError);
-                // Continue anyway since auth user was created successfully
-            } else {
-                console.log('✅ [Auth] User record created in custom table');
-            }
-        }
+    const { error: insertError } = await window.SimpleAuth.supabase
+        .from('users')
+        .insert([{
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
+            created_via: 'email',
+            phone_verified: true,  // OTP was verified
+            onboarding_completed: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }]);
+        
+    if (insertError) {
+        console.error('❌ [Auth] Failed to create user record:', insertError);
+        // If user creation fails, this is a critical error
+        throw new Error('Failed to create user account. Please try again.');
+    } else {
+        console.log('✅ [Auth] User record created in custom table - SIGNUP COMPLETE');
+    }
+} else {
+    throw new Error('User session not found after password set');
+}
         
         this.showLoading('Password set! Redirecting to onboarding...');
         setTimeout(() => {
@@ -466,6 +449,44 @@ showAlert(message, type = 'info') {
     } else {
         console.log(`[${type.toUpperCase()}] ${message}`);
     }
+}
+
+// =============================================================================
+// DEBUGGING - TRACK ALL USER CREATION ATTEMPTS
+// =============================================================================
+
+// Override console.log to catch any unexpected user creation
+const originalConsoleLog = console.log;
+console.log = function(...args) {
+    if (args.some(arg => typeof arg === 'string' && arg.includes('Creating user record'))) {
+        console.trace('🐛 [DEBUG] User creation attempted at:');
+    }
+    originalConsoleLog.apply(console, args);
+};
+
+// Monitor all Supabase calls to users table
+if (window.SimpleAuth?.supabase) {
+    const originalFrom = window.SimpleAuth.supabase.from;
+    window.SimpleAuth.supabase.from = function(tableName) {
+        const tableRef = originalFrom.call(this, tableName);
+        
+        if (tableName === 'users') {
+            const originalInsert = tableRef.insert;
+            const originalUpsert = tableRef.upsert;
+            
+            tableRef.insert = function(...args) {
+                console.trace('🐛 [DEBUG] Users table INSERT attempted:');
+                return originalInsert.apply(this, args);
+            };
+            
+            tableRef.upsert = function(...args) {
+                console.trace('🐛 [DEBUG] Users table UPSERT attempted:');
+                return originalUpsert.apply(this, args);
+            };
+        }
+        
+        return tableRef;
+    };
 }
 
     // =============================================================================
