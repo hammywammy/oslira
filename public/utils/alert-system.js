@@ -71,6 +71,8 @@ const CRITICAL_PATTERNS = [
     /could\s*not\s*load|failed\s*to\s*load/i,
     /rate\s*limit|too\s*many\s*requests|429/i,
     /email\s*rate\s*limit/i,
+    /for\s*security\s*purposes.*after\s*\d+\s*seconds/i,  // ← Add this line
+    /you\s*can\s*only\s*request\s*this\s*after/i, 
     /authentication\s*failed|login\s*failed|signin\s*failed/i,
     /incorrect\s*password|invalid\s*login|invalid\s*credentials/i
 ];
