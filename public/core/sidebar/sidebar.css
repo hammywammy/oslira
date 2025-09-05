@@ -12,16 +12,10 @@
 
 .sidebar {
     width: var(--sidebar-width);
-    background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
-    box-shadow: 
-        2px 0 20px rgba(45, 108, 223, 0.08),
-        0 0 0 1px rgba(45, 108, 223, 0.05);
-    padding: 0;
     position: fixed;
     height: 100vh;
     overflow-y: auto;
     z-index: var(--z-docked);
-    border-right: 1px solid rgba(45, 108, 223, 0.1);
 }
 
 /* =============================================================================
