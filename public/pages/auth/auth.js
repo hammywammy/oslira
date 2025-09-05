@@ -191,20 +191,21 @@ async sendEmailVerification(email) {
     try {
         this.showLoading('Sending verification code...');
         
-const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
-    email: email,
-    options: {
-        shouldCreateUser: true,
-        emailRedirectTo: undefined,
-        data: {
-            force_otp: true  // Force OTP instead of magic link
-        }
-    }
-});
+        // Use the signup method instead of signInWithOtp to force OTP
+        const { data, error } = await window.SimpleAuth.supabase.auth.signUp({
+            email: email,
+            password: 'temp_password_' + Math.random(), // Temporary password
+            options: {
+                emailRedirectTo: undefined,
+                data: {
+                    temp_signup: true // Mark as temporary
+                }
+            }
+        });
         
         if (error) throw error;
         
-        console.log('✅ OTP sent successfully:', data);
+        console.log('✅ Signup OTP sent successfully:', data);
         this.hideLoading();
         this.showStep('otp-verification');
         
@@ -212,7 +213,7 @@ const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
         console.error('❌ [Auth] Email verification failed:', error);
         this.hideLoading();
         
-        // Handle rate limiting specifically
+        // Your existing error handling...
         if (error.message?.includes('rate limit') || 
             error.message?.includes('too many') ||
             error.message?.includes('Email rate limit exceeded')) {
@@ -227,11 +228,9 @@ const { data, error } = await window.SimpleAuth.supabase.auth.signInWithOtp({
             return;
         }
         
-        // For other errors, show the actual error message
         this.showAlert(error.message || 'Failed to send verification code. Please try again.', 'error');
     }
 }
-
 
 async handleOtpSubmit(e) {
     e.preventDefault();
