@@ -89,28 +89,27 @@ async signInWithPassword(email, password) {
 
 async checkUserExists(email) {
     try {
-        // Check if user completed full signup (exists in custom users table)
-        const { data: userData, error: userError } = await this.supabase
-            .from('users')
-            .select('id, email')
-            .eq('email', email)
-            .single();
+        // Use Supabase RPC function to bypass RLS for email checking
+        const { data, error } = await this.supabase
+            .rpc('check_user_exists_by_email', { 
+                lookup_email: email 
+            });
             
-        if (!userError && userData) {
-            // User completed full signup
-            return { exists: true, completed: true };
+        if (error) {
+            console.log('📧 [Auth] RPC function not found - treating as new signup');
+            return { exists: false, completed: false };
         }
         
-        // Cannot check auth.users with anon key - assume new user
-        console.log('📧 [Auth] User not found in public.users - treating as new signup');
-        return { exists: false, completed: false };
+        return { 
+            exists: !!data, 
+            completed: !!data 
+        };
         
     } catch (error) {
         console.error('❌ [Auth] checkUserExists failed:', error);
         return { exists: false, completed: false };
     }
-}
-    
+} 
     getCurrentSession() {
         return this.session;
     }
