@@ -37,7 +37,7 @@ class SidebarManager {
             
 // Inject sidebar HTML
 targetElement.innerHTML = this.getSidebarHTML();
-targetElement.className = 'sidebar fixed left-0 top-0 w-80 h-screen overflow-y-auto z-50';
+targetElement.className = 'sidebar fixed left-0 top-0 w-80 h-screen z-50';
             
             // Initialize functionality
             this.initializeSidebar();
@@ -61,7 +61,7 @@ targetElement.className = 'sidebar fixed left-0 top-0 w-80 h-screen overflow-y-a
 getSidebarHTML() {
     return `
         <!-- Collapsible Sidebar Container -->
-        <div id="sidebar-container" class="sidebar-expanded h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10 transition-all duration-300">
+        <div id="sidebar-container" class="sidebar-expanded h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10 transition-all duration-300 flex flex-col overflow-hidden">
             
             <!-- Header with Toggle -->
             <div class="flex items-center justify-between p-4 border-b border-white/20">
@@ -83,7 +83,7 @@ getSidebarHTML() {
             </div>
             
             <!-- Navigation -->
-            <nav class="px-4 py-6 space-y-6">
+            <nav class="px-4 py-6 space-y-6 flex-1 overflow-y-auto">
                 
                 <!-- Main Section -->
                 <div class="nav-section">
@@ -166,7 +166,7 @@ getSidebarHTML() {
             </nav>
             
             <!-- User Info Section -->
-            <div class="sidebar-user-section mt-auto p-4">
+            <div class="sidebar-user-section flex-shrink-0 p-4">
                 <!-- Expanded User Info -->
                 <div class="sidebar-text relative bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-lg overflow-hidden">
                     <div class="p-4">
@@ -291,10 +291,13 @@ setupSidebarToggle() {
                 }
                 
                 isCollapsed = false;
-            } else {
-                // Collapse sidebar
-                sidebarContainer.style.width = '70px';
-                mainContent.style.marginLeft = '70px';
+} else {
+    // Collapse sidebar
+    sidebarContainer.style.width = '70px';
+    sidebarContainer.style.overflow = 'hidden';
+    sidebarContainer.style.minWidth = '70px';
+    sidebarContainer.style.maxWidth = '70px';
+    mainContent.style.marginLeft = '70px';
                 
                 // Hide expanded elements
                 document.querySelectorAll('.sidebar-text').forEach(el => {
