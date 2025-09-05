@@ -45,9 +45,9 @@ class TailwindManager {
                 return;
             }
             
-            const script = document.createElement('script');
-            script.src = 'https://cdn.tailwindcss.com';
-            script.defer = true;
+const script = document.createElement('script');
+script.src = 'https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/src/index.js';
+script.defer = true;
             
             script.onload = () => {
                 console.log('✅ [TailwindManager] Tailwind script loaded');
