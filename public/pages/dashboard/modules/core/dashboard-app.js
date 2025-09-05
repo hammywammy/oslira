@@ -91,33 +91,33 @@ class DashboardApp {
         // Register feature modules
         console.log('📋 [DashboardApp] Registering feature modules...');
         
-        container.registerFactory('leadManager', (container) => {
-            return new LeadManager(container);
-        }, []);
+container.registerFactory('leadManager', () => {
+    return new LeadManager(container);
+}, []);
         
-        container.registerFactory('analysisQueue', (container) => {
-            return new AnalysisQueue(container);
-        }, []);
-        
-        container.registerFactory('realtimeManager', (container) => {
-            return new RealtimeManager(container);
-        }, []);
-        
-        container.registerFactory('leadRenderer', (container) => {
-            return new LeadRenderer(container);
-        }, []);
-        
-        container.registerFactory('statsCalculator', (container) => {
-            return new StatsCalculator(container);
-        }, []);
-        
-        container.registerFactory('businessManager', (container) => {
-            return new BusinessManager(container);
-        }, []);
-        
-        container.registerFactory('modalManager', (container) => {
-            return new ModalManager(container);
-        }, []);
+container.registerFactory('analysisQueue', () => {
+    return new AnalysisQueue(container);
+}, []);
+
+container.registerFactory('realtimeManager', () => {
+    return new RealtimeManager(container);
+}, []);
+
+container.registerFactory('leadRenderer', () => {
+    return new LeadRenderer(container);
+}, []);
+
+container.registerFactory('statsCalculator', () => {
+    return new StatsCalculator(container);
+}, []);
+
+container.registerFactory('businessManager', () => {
+    return new BusinessManager(container);
+}, []);
+
+container.registerFactory('modalManager', () => {
+    return new ModalManager(container);
+}, []);
         
         console.log('✅ [DashboardApp] All dependencies registered');
         return container;
