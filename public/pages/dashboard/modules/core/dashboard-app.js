@@ -174,16 +174,17 @@ container.registerFactory('modalManager', () => {
             let attempts = 0;
             const maxAttempts = timeout / 100;
             
-            const checkAuth = () => {
-                const osliraApp = this.container.get('osliraApp');
-                const user = osliraApp?.user;
-                const supabase = this.container.get('supabase');
-                
-                if (user && supabase) {
-                    console.log('✅ [DashboardApp] Authentication verified');
-                    resolve(true);
-                    return;
-                }
+const checkAuth = () => {
+        // Check window.OsliraApp directly instead of cached dependency
+        const osliraApp = window.OsliraApp;
+        const user = osliraApp?.user;
+        const supabase = this.container.get('supabase');
+        
+        if (user && supabase) {
+            console.log('✅ [DashboardApp] Authentication verified');
+            resolve(true);
+            return;
+        }
                 
                 attempts++;
                 if (attempts >= maxAttempts) {
