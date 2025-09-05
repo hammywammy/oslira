@@ -36,9 +36,9 @@ class DashboardApp {
             console.log('🔧 [DashboardApp] Pre-resolving async dependencies...');
             await this.preResolveAsyncDependencies();
             
-            // Initialize all modules
-            console.log('🔄 [DashboardApp] Initializing modules...');
-            await this.container.init();
+// Initialize all modules
+console.log('🔄 [DashboardApp] Initializing modules...');
+await this.container.initialize();
             
             // Setup global event handlers
             this.setupGlobalEventHandlers();
