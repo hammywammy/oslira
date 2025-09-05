@@ -804,3 +804,24 @@ body {
         margin-top: var(--spacing-4);
     }
 }
+
+/* =============================================================================
+   LOADING AND ERROR STATES - FORCE HIDDEN BY DEFAULT
+   ============================================================================= */
+
+#loading-state,
+#error-state, 
+#success-state {
+    display: none !important;
+}
+
+#loading-state.show,
+#error-state.show,
+#success-state.show {
+    display: block !important;
+}
+
+/* Remove the .hidden class dependency */
+.hidden {
+    display: none !important;
+}
