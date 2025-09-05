@@ -310,15 +310,23 @@ this.pollingInterval = setInterval(() => {
             let attempts = 0;
             const maxAttempts = timeout / 100;
             
-            const checkAuth = () => {
-                const user = this.osliraApp?.user;
-                const session = this.supabase?.auth?.session;
-                
-                if (user && session) {
-                    console.log('✅ [RealtimeManager] Authentication ready');
-                    resolve(true);
-                    return;
-                }
+const checkAuth = async () => {
+    const user = this.osliraApp?.user;
+    let session = null;
+    
+    try {
+        const { data: { session: currentSession } } = await this.supabase.auth.getSession();
+        session = currentSession;
+    } catch (error) {
+        // Fallback check
+        session = this.supabase?.auth?.session;
+    }
+    
+    if (user && session) {
+        console.log('✅ [RealtimeManager] Authentication ready');
+        resolve(true);
+        return;
+    }
                 
                 attempts++;
                 if (attempts >= maxAttempts) {
