@@ -32,9 +32,12 @@ class DashboardApp {
                 throw new Error('Dependency validation failed: ' + JSON.stringify(validation.issues));
             }
             
-            // Initialize all modules
-            console.log('🔄 [DashboardApp] Initializing modules...');
-            await this.container.initialize();
+// Pre-resolve async dependencies before initializing modules
+console.log('🔧 [DashboardApp] Pre-resolving async dependencies...');
+await container.getAsync('supabase');
+
+// Initialize all modules
+await container.init();
             
             // Setup global event handlers
             this.setupGlobalEventHandlers();
