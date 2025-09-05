@@ -534,24 +534,42 @@ showAlert(message, type = 'info') {
         });
     }
 
-    showLoading(message) {
-        this.isLoading = true;
-        const loadingMsgEl = document.getElementById('loading-message');
-        const loadingStateEl = document.getElementById('loading-state');
-        
-        if (loadingMsgEl) loadingMsgEl.textContent = message;
-        if (loadingStateEl) loadingStateEl.classList.remove('hidden');
-        
-        document.querySelectorAll('input, button').forEach(el => el.disabled = true);
+showLoading(message) {
+    this.isLoading = true;
+    
+    // Hide global UI manager loading if it exists
+    if (window.UI && window.UI.loading) {
+        window.UI.loading.hide();
     }
+    
+    // Use local loading state within auth container
+    const loadingStateEl = document.getElementById('loading-state');
+    const loadingTextEl = document.getElementById('loading-text');
+    
+    if (loadingStateEl) {
+        loadingStateEl.classList.remove('hidden');
+    }
+    
+    if (loadingTextEl && message) {
+        loadingTextEl.textContent = message;
+    }
+    
+    // Disable form elements
+    document.querySelectorAll('.auth-container input, .auth-container button').forEach(el => {
+        el.disabled = true;
+    });
+}
 
-    hideLoading() {
-        this.isLoading = false;
-        const loadingStateEl = document.getElementById('loading-state');
-        if (loadingStateEl) loadingStateEl.classList.add('hidden');
-        
-        document.querySelectorAll('input, button').forEach(el => el.disabled = false);
-    }
+hideLoading() {
+    this.isLoading = false;
+    const loadingStateEl = document.getElementById('loading-state');
+    if (loadingStateEl) loadingStateEl.classList.add('hidden');
+    
+    // Re-enable form elements
+    document.querySelectorAll('.auth-container input, .auth-container button').forEach(el => {
+        el.disabled = false;
+    });
+}
 
     showAlert(message, type = 'error') {
         if (window.Alert && window.Alert[type]) {
