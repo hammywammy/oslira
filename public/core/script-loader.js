@@ -273,11 +273,11 @@ getDependencies() {
         
         const coreScripts = this.dependencies.core;
         
-        // SIMPLIFIED: Load independent scripts in parallel
-        const independentScripts = ['supabase', 'sentry', 'alert-system'];
-        const dependentScripts = [
-            'staging-guard', 'config-manager', 'auth-manager', 'simple-app'
-        ];
+// Load independent scripts in parallel
+const independentScripts = ['supabase', 'sentry', 'alert-system', 'tailwind-manager'];
+const dependentScripts = [
+    'staging-guard', 'config-manager', 'auth-manager', 'simple-app'
+];
         
         // Load independent scripts in parallel
         console.log('🔧 [ScriptLoader] Loading independent scripts...');
@@ -376,6 +376,15 @@ async initializeTailwind() {
     try {
         console.log('🎨 [ScriptLoader] Initializing Tailwind for page:', this.currentPage);
         
+        // Ensure TailwindManager is loaded first
+        if (!this.loadedScripts.has('tailwind-manager')) {
+            console.log('🔄 [ScriptLoader] Loading TailwindManager first...');
+            const tailwindConfig = this.dependencies.core['tailwind-manager'];
+            if (tailwindConfig) {
+                await this.loadScript(tailwindConfig, 'tailwind-manager');
+            }
+        }
+        
         // Wait for TailwindManager to be available
         let attempts = 0;
         while (!window.OsliraTailwind && attempts < 50) {
@@ -384,7 +393,7 @@ async initializeTailwind() {
         }
         
         if (!window.OsliraTailwind) {
-            console.warn('⚠️ [ScriptLoader] TailwindManager not available, skipping Tailwind initialization');
+            console.error('❌ [ScriptLoader] TailwindManager not available after loading, skipping Tailwind initialization');
             return;
         }
         
