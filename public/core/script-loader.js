@@ -339,16 +339,17 @@ async loadPageDependencies() {
         }
         
         // Initialize Tailwind if enabled for this page
-        if (pageDeps.enableTailwind) {
-            await this.initializeTailwind();
-        }
-        
-        // Load page styles
-        if (pageDeps.styles) {
-            await Promise.all(
-                pageDeps.styles.map(styleUrl => this.loadStylesheet(styleUrl))
-            );
-        }
+// Load page styles FIRST
+if (pageDeps.styles) {
+    await Promise.all(
+        pageDeps.styles.map(styleUrl => this.loadStylesheet(styleUrl))
+    );
+}
+
+// Initialize Tailwind AFTER page styles (so it can override)
+if (pageDeps.enableTailwind) {
+    await this.initializeTailwind();
+}
         
         // Load page scripts
         if (pageDeps.scripts) {
