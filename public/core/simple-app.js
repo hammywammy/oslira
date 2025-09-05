@@ -73,7 +73,57 @@ class OsliraSimpleApp {
             return;
         }
         
-        console.log('✅ [SimpleApp] Access control passed');
+console.log('✅ [SimpleApp] Access control passed');
+        
+        // Create global OsliraApp object for dashboard compatibility
+        if (isAuthenticated) {
+            await this.createOsliraAppGlobal();
+        }
+    }
+    
+    async createOsliraAppGlobal() {
+        try {
+            const session = this.auth.getCurrentSession();
+            if (!session || !session.user) {
+                console.warn('⚠️ [SimpleApp] No session available for OsliraApp creation');
+                return;
+            }
+
+            // Fetch full user data from database
+            const userData = await this.getCurrentUserData();
+            
+            // Create the global OsliraApp object that dashboard expects
+            window.OsliraApp = {
+                user: userData || session.user,
+                session: session,
+                isAuthenticated: true,
+                events: new EventTarget(),
+                
+                // Legacy API methods dashboard might need
+                showMessage: (message, type = 'info') => {
+                    if (window.Alert && window.Alert[type]) {
+                        window.Alert[type](message);
+                    } else {
+                        console.log(`[${type.toUpperCase()}] ${message}`);
+                    }
+                },
+                
+                // Auth state helpers
+                getCurrentUser: () => window.OsliraApp.user,
+                getSession: () => window.OsliraApp.session,
+                isAuth: () => window.OsliraApp.isAuthenticated
+            };
+            
+            console.log('✅ [SimpleApp] OsliraApp global object created');
+            
+            // Emit authentication event for dashboard
+            window.OsliraApp.events.dispatchEvent(new CustomEvent('userAuthenticated', {
+                detail: window.OsliraApp.user
+            }));
+            
+        } catch (error) {
+            console.error('❌ [SimpleApp] Failed to create OsliraApp global:', error);
+        }
     }
     
     async determinePostAuthRedirect() {
