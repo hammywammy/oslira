@@ -46,7 +46,7 @@ class TailwindManager {
             }
             
 const script = document.createElement('script');
-script.src = 'https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.js';
+script.src = 'https://unpkg.com/tailwindcss@3.4.1/src/index.js';
 script.defer = true;
             
             script.onload = () => {
