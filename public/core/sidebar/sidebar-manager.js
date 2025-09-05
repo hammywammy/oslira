@@ -317,18 +317,56 @@ formatPlanName(plan) {
     // NAVIGATION CONTROL
     // =========================================================================
     
-    setActiveMenuItem(pageId) {
-        // Remove active class from all menu items
-        const menuItems = document.querySelectorAll('.sidebar .menu a');
-        menuItems.forEach(item => item.classList.remove('active'));
+// File: public/core/sidebar/sidebar-manager.js
+// Replace the setActiveMenuItem method (around line 200-220) with this version
+
+setActiveMenuItem(pageId) {
+    console.log(`🎯 [SidebarManager] Setting active menu item: ${pageId}`);
+    
+    // Remove active class from all menu items
+    const menuItems = document.querySelectorAll('.sidebar nav a[data-page]');
+    menuItems.forEach(item => {
+        // Remove active styling
+        item.classList.remove('active');
         
-        // Add active class to current page
-        const activeItem = document.querySelector(`.sidebar .menu a[data-page="${pageId}"]`);
-        if (activeItem) {
-            activeItem.classList.add('active');
-            console.log(`🎯 [SidebarManager] Active menu item set: ${pageId}`);
+        // Reset to default hover styles
+        item.className = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden';
+        
+        // Re-add the glow div if it doesn't exist
+        if (!item.querySelector('.absolute.inset-0.bg-gradient-to-r')) {
+            const glowDiv = document.createElement('div');
+            glowDiv.className = 'absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg';
+            item.appendChild(glowDiv);
         }
+    });
+    
+    // Add active class to current page
+    const activeItem = document.querySelector(`.sidebar nav a[data-page="${pageId}"]`);
+    if (activeItem) {
+        // Add active class for CSS styling
+        activeItem.classList.add('active');
+        
+        // Override with active styles (white text, gradient background)
+        activeItem.classList.remove('text-gray-700', 'hover:text-blue-600');
+        activeItem.classList.add('text-white');
+        
+        // Update text color for child elements
+        const textSpan = activeItem.querySelector('span:last-child');
+        if (textSpan) {
+            textSpan.classList.remove('text-gray-700');
+            textSpan.classList.add('text-white');
+        }
+        
+        const iconSpan = activeItem.querySelector('span:first-child');
+        if (iconSpan) {
+            iconSpan.classList.add('text-white');
+        }
+        
+        console.log(`✅ [SidebarManager] Active menu item set: ${pageId}`);
+    } else {
+        console.warn(`⚠️ [SidebarManager] Menu item not found: ${pageId}`);
     }
+}
     
     // =========================================================================
     // EVENT LISTENERS
