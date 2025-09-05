@@ -54,20 +54,23 @@ async initializeApp() {
         throw new Error('OsliraApp not available or no user data');
     }
     
-    // Try to import and initialize the main dashboard app
-    try {
-        const { DashboardApp } = await import('./modules/core/dashboard-app.js');
-        this.app = new DashboardApp();
-        await this.app.init();
-        console.log('✅ [Dashboard] Dashboard app initialized');
-    } catch (error) {
-        console.warn('⚠️ [Dashboard] DashboardApp not available, continuing without it:', error.message);
-        // Create minimal app placeholder
-        this.app = {
-            container: null,
-            initialized: true
-        };
-    }
+// Try to import and initialize the main dashboard app
+try {
+    // Use global reference if available, otherwise try import
+    const DashboardAppClass = window.DashboardApp || 
+        (await import('/pages/dashboard/modules/core/dashboard-app.js')).DashboardApp;
+    
+    this.app = new DashboardAppClass();
+    await this.app.init();
+    console.log('✅ [Dashboard] Dashboard app initialized');
+} catch (error) {
+    console.warn('⚠️ [Dashboard] DashboardApp not available, continuing without it:', error.message);
+    // Create minimal app placeholder
+    this.app = {
+        container: null,
+        initialized: true
+    };
+}
 }
     
 async initializeSidebar() {
