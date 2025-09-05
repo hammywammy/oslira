@@ -105,6 +105,12 @@ class OsliraScriptLoader {
                     critical: true,
                     dependsOn: ['config-manager', 'supabase']
                 },
+                'sidebar-manager': {
+                url: '/core/sidebar/sidebar-manager.js',
+                global: 'SidebarManager',
+                critical: false,
+                dependsOn: ['config-manager']
+            },
                 'simple-app': {
                     url: '/core/simple-app.js',
                     global: 'OsliraSimpleApp',
