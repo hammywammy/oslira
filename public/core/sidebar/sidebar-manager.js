@@ -35,9 +35,9 @@ class SidebarManager {
                 throw new Error(`Container element not found: ${container}`);
             }
             
-            // Inject sidebar HTML
-            targetElement.innerHTML = this.getSidebarHTML();
-            targetElement.className = 'sidebar';
+// Inject sidebar HTML
+targetElement.innerHTML = this.getSidebarHTML();
+targetElement.className = 'sidebar fixed left-0 top-0 w-80 h-screen overflow-y-auto z-50';
             
             // Initialize functionality
             this.initializeSidebar();
