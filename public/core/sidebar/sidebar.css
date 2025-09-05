@@ -1,178 +1,145 @@
 /* =============================================================================
-   SIDEBAR.CSS - Extracted Modular Sidebar Styles
+   SIDEBAR.CSS - MINIMAL TAILWIND COMPANION
+   File: public/core/sidebar/sidebar.css
+   Replace entire file content with this minimal version
    ============================================================================= */
 
 @import url('/core/design-system.css');
 
 /* =============================================================================
-   SIDEBAR
+   SIDEBAR BASE (Using Tailwind classes in HTML)
    ============================================================================= */
 
 .sidebar {
     width: var(--sidebar-width);
-    background: var(--bg-primary);
-    box-shadow: 2px 0 10px rgba(45, 108, 223, 0.1);
-    padding: var(--spacing-6);
+    background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
+    box-shadow: 
+        2px 0 20px rgba(45, 108, 223, 0.08),
+        0 0 0 1px rgba(45, 108, 223, 0.05);
+    padding: 0;
     position: fixed;
     height: 100vh;
     overflow-y: auto;
     z-index: var(--z-docked);
-}
-
-.logo {
-    font-size: var(--text-3xl);
-    font-weight: var(--font-bold);
-    color: var(--primary-blue);
-    margin-bottom: var(--spacing-10);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-2);
-}
-
-.menu {
-    margin-bottom: var(--spacing-8);
-}
-
-.menu-section {
-    margin-bottom: var(--spacing-6);
-}
-
-.menu-section h4 {
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-2);
-    font-weight: var(--font-semibold);
-    letter-spacing: var(--tracking-wide);
-}
-
-.menu a {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-3);
-    padding: var(--spacing-3) var(--spacing-4);
-    text-decoration: none;
-    color: var(--text-secondary);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--spacing-1);
-    transition: var(--transition-base);
-    font-weight: var(--font-medium);
-}
-
-.menu a:hover,
-.menu a.active {
-    background-color: var(--primary-blue);
-    color: var(--text-inverse);
-    transform: translateX(2px);
-}
-
-.menu a .icon {
-    font-size: var(--text-lg);
-    width: var(--spacing-5);
+    border-right: 1px solid rgba(45, 108, 223, 0.1);
 }
 
 /* =============================================================================
-   BUSINESS SELECTOR
+   CUSTOM GLOW EFFECTS (Can't be done with Tailwind)
    ============================================================================= */
 
-.business-selector {
-    background: var(--gradient-primary);
-    padding: var(--spacing-4);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--spacing-6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+/* Credits text glow effect */
+.credits-glow {
+    filter: drop-shadow(0 0 6px rgba(45, 108, 223, 0.3));
+    transition: filter 0.3s ease;
 }
 
-.business-selector h4 {
-    font-size: var(--text-xs);
-    color: var(--text-inverse);
-    margin-bottom: var(--spacing-2);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-    font-weight: var(--font-semibold);
+.credits-glow:hover {
+    filter: drop-shadow(0 0 12px rgba(45, 108, 223, 0.5));
 }
 
-.business-selector select {
-    width: 100%;
-    padding: var(--spacing-2) var(--spacing-3);
-    background: var(--bg-primary);
-    border: 1px solid var(--border-default);
-    border-radius: var(--radius-md);
-    color: var(--text-primary);
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
+/* Low credits warning animation */
+.credits-low {
+    background: linear-gradient(135deg, #F59E0B, #EF4444) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    animation: pulse-warning 2s ease-in-out infinite;
+}
+
+@keyframes pulse-warning {
+    0%, 100% {
+        filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.3));
+        transform: scale(1);
+    }
+    50% {
+        filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.6)) drop-shadow(0 0 20px rgba(239, 68, 68, 0.4));
+        transform: scale(1.05);
+    }
+}
+
+/* Active menu item styling */
+.menu-item.active {
+    background: linear-gradient(135deg, var(--primary-blue), var(--secondary-purple)) !important;
+    color: white !important;
+    box-shadow: 
+        0 4px 12px rgba(45, 108, 223, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.1) inset !important;
+    transform: translateX(0) !important;
+}
+
+.menu-item.active span {
+    color: white !important;
+}
+
+/* Active item glow effect */
+.menu-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(45, 108, 223, 0.4), rgba(139, 109, 241, 0.4));
+    filter: blur(8px);
+    opacity: 0.6;
+    z-index: -1;
+    border-radius: 8px;
+}
+
+/* Enhanced hover glow for logo */
+.logo-hover-glow:hover {
+    filter: drop-shadow(0 0 15px rgba(45, 108, 223, 0.4)) drop-shadow(0 0 25px rgba(139, 109, 241, 0.2));
+}
+
+/* Business selector focus glow */
+select:focus {
+    box-shadow: 
+        0 0 0 3px rgba(45, 108, 223, 0.1),
+        0 0 20px rgba(45, 108, 223, 0.2) !important;
+}
+
+/* Subtle animation for loading states */
+@keyframes shimmer {
+    0% { opacity: 0.5; }
+    50% { opacity: 1; }
+    100% { opacity: 0.5; }
+}
+
+.loading {
+    animation: shimmer 1.5s ease-in-out infinite;
 }
 
 /* =============================================================================
-   USER INFO
+   MOBILE RESPONSIVE
    ============================================================================= */
 
-.user-info {
-    position: absolute;
-    bottom: 80px; /* Make room for logout button */
-    left: var(--spacing-6);
-    right: var(--spacing-6);
-    padding: var(--spacing-5);
-    background: var(--bg-secondary);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-default);
-    box-shadow: var(--shadow-sm);
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        width: 280px;
+        box-shadow: none;
+    }
+    
+    .sidebar.mobile-open {
+        transform: translateX(0);
+        box-shadow: 
+            10px 0 30px rgba(45, 108, 223, 0.15),
+            0 0 0 1px rgba(45, 108, 223, 0.1);
+    }
 }
 
-.user-email {
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-3);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+/* =============================================================================
+   HIGH CONTRAST MODE SUPPORT
+   ============================================================================= */
 
-.user-credits-display {
-    text-align: center;
-}
-
-.credits-label {
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: var(--tracking-wide);
-    margin-bottom: var(--spacing-1);
-}
-
-.credits-amount {
-    font-size: var(--text-2xl);
-    font-weight: var(--font-bold);
-    color: var(--success-green);
-    line-height: 1;
-}
-
-.credits-amount.low-credits {
-    color: var(--warning-orange);
-}
-
-.logout-btn-bottom {
-    position: absolute;
-    bottom: var(--spacing-6);
-    right: var(--spacing-6);
-    background: var(--error);
-    color: white;
-    border: none;
-    padding: var(--spacing-2) var(--spacing-4);
-    border-radius: var(--radius-md);
-    font-size: var(--text-sm);
-    font-weight: var(--font-medium);
-    cursor: pointer;
-    transition: var(--transition-base);
-}
-
-.logout-btn-bottom:hover {
-    background: var(--error-dark, #dc2626);
-    transform: translateY(-1px);
-}
-
-/* Remove old logout button styles */
-.logout-btn {
-    display: none;
+@media (prefers-contrast: high) {
+    .sidebar {
+        border-right: 2px solid var(--text-primary);
+    }
+    
+    .menu-item.active {
+        border: 2px solid white !important;
+    }
 }
