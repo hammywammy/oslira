@@ -51,10 +51,25 @@ class OsliraSimpleApp {
         
         console.log(`🔐 [SimpleApp] Page: ${this.currentPage}, Authenticated: ${isAuthenticated}`);
         
-        // Create global OsliraApp object for dashboard compatibility FIRST
-        if (isAuthenticated) {
-            await this.createOsliraAppGlobal();
+// Create global OsliraApp object for dashboard compatibility FIRST
+if (isAuthenticated) {
+    try {
+        await this.createOsliraAppGlobal();
+        
+        // Verify user data is available
+        if (!window.OsliraApp?.user) {
+            console.error('❌ [SimpleApp] OsliraApp created but no user data available');
+            throw new Error('User data not loaded in OsliraApp');
         }
+        
+        console.log('✅ [SimpleApp] OsliraApp ready with user data');
+    } catch (error) {
+        console.error('❌ [SimpleApp] Failed to create OsliraApp with user data:', error);
+        // Redirect to auth if user data can't be loaded
+        window.location.href = '/auth';
+        return;
+    }
+}
         
         // Define page requirements
         const authRequiredPages = ['dashboard', 'onboarding', 'analytics', 'settings', 'subscription'];
@@ -81,50 +96,71 @@ class OsliraSimpleApp {
         console.log('✅ [SimpleApp] Access control passed');
     }
     
-    async createOsliraAppGlobal() {
-        try {
-            const session = this.auth.getCurrentSession();
-            if (!session || !session.user) {
-                console.warn('⚠️ [SimpleApp] No session available for OsliraApp creation');
-                return;
-            }
-
-            // Fetch full user data from database
-            const userData = await this.getCurrentUserData();
-            
-            // Create the global OsliraApp object that dashboard expects
-            window.OsliraApp = {
-                user: userData || session.user,
-                session: session,
-                isAuthenticated: true,
-                events: new EventTarget(),
-                
-                // Legacy API methods dashboard might need
-                showMessage: (message, type = 'info') => {
-                    if (window.Alert && window.Alert[type]) {
-                        window.Alert[type](message);
-                    } else {
-                        console.log(`[${type.toUpperCase()}] ${message}`);
-                    }
-                },
-                
-                // Auth state helpers
-                getCurrentUser: () => window.OsliraApp.user,
-                getSession: () => window.OsliraApp.session,
-                isAuth: () => window.OsliraApp.isAuthenticated
-            };
-            
-            console.log('✅ [SimpleApp] OsliraApp global object created');
-            
-            // Emit authentication event for dashboard
-            window.OsliraApp.events.dispatchEvent(new CustomEvent('userAuthenticated', {
-                detail: window.OsliraApp.user
-            }));
-            
-        } catch (error) {
-            console.error('❌ [SimpleApp] Failed to create OsliraApp global:', error);
+async createOsliraAppGlobal() {
+    try {
+        const session = this.auth.getCurrentSession();
+        if (!session || !session.user) {
+            console.warn('⚠️ [SimpleApp] No session available for OsliraApp creation');
+            return;
         }
+
+        console.log('🔍 [SimpleApp] Fetching user data for OsliraApp...');
+        
+        // Fetch full user data from database with error handling
+        let userData = null;
+        try {
+            userData = await this.getCurrentUserData();
+            if (userData) {
+                console.log('✅ [SimpleApp] User data loaded from database:', userData.email);
+            } else {
+                console.warn('⚠️ [SimpleApp] No user data returned from database, using session user');
+                userData = session.user;
+            }
+        } catch (error) {
+            console.error('❌ [SimpleApp] Error fetching user data, using session user:', error);
+            userData = session.user;
+        }
+        
+        // Ensure we have user data
+        if (!userData) {
+            console.error('❌ [SimpleApp] No user data available from session or database');
+            throw new Error('No user data available');
+        }
+        
+        // Create the global OsliraApp object that dashboard expects
+        window.OsliraApp = {
+            user: userData,
+            session: session,
+            isAuthenticated: true,
+            events: new EventTarget(),
+            
+            // Legacy API methods dashboard might need
+            showMessage: (message, type = 'info') => {
+                if (window.Alert && window.Alert[type]) {
+                    window.Alert[type](message);
+                } else {
+                    console.log(`[${type.toUpperCase()}] ${message}`);
+                }
+            },
+            
+            // Auth state helpers
+            getCurrentUser: () => window.OsliraApp.user,
+            getSession: () => window.OsliraApp.session,
+            isAuth: () => window.OsliraApp.isAuthenticated
+        };
+        
+        console.log('✅ [SimpleApp] OsliraApp global object created with user:', userData.email);
+        
+        // Emit authentication event for dashboard
+        window.OsliraApp.events.dispatchEvent(new CustomEvent('userAuthenticated', {
+            detail: window.OsliraApp.user
+        }));
+        
+    } catch (error) {
+        console.error('❌ [SimpleApp] Failed to create OsliraApp global:', error);
+        throw error; // Let the caller handle this
     }
+}
     
     async determinePostAuthRedirect() {
         try {
