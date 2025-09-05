@@ -105,11 +105,6 @@ async checkUserExists(email) {
 // Just return based on public.users table result
 console.log('⚠️ [Auth] Cannot check auth.users with anon key - assuming new user');
         
-        if (authUser) {
-            // User exists in auth but not in custom table (incomplete)
-            return { exists: true, completed: false };
-        }
-        
         // User doesn't exist anywhere (new user)
         return { exists: false, completed: false };
         
