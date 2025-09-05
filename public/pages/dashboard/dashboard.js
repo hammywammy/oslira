@@ -38,29 +38,37 @@ await this.initializeSidebar();
         }
     }
     
-    async initializeApp() {
-        console.log('📱 [Dashboard] Initializing dashboard app...');
-        
-        // Wait for OsliraApp to be available
-        for (let i = 0; i < 50; i++) {
-            if (window.OsliraApp?.user) {
-                console.log('👤 [Dashboard] OsliraApp available with user data');
-                break;
-            }
-            await new Promise(resolve => setTimeout(resolve, 100));
+async initializeApp() {
+    console.log('📱 [Dashboard] Initializing dashboard app...');
+    
+    // Wait for OsliraApp to be available
+    for (let i = 0; i < 50; i++) {
+        if (window.OsliraApp?.user) {
+            console.log('👤 [Dashboard] OsliraApp available with user data');
+            break;
         }
-        
-        if (!window.OsliraApp?.user) {
-            throw new Error('OsliraApp not available or no user data');
-        }
-        
-        // Import and initialize the main dashboard app
-        const { DashboardApp } = await import('./dashboard-app.js');
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    if (!window.OsliraApp?.user) {
+        throw new Error('OsliraApp not available or no user data');
+    }
+    
+    // Try to import and initialize the main dashboard app
+    try {
+        const { DashboardApp } = await import('./modules/core/dashboard-app.js');
         this.app = new DashboardApp();
         await this.app.init();
-        
         console.log('✅ [Dashboard] Dashboard app initialized');
+    } catch (error) {
+        console.warn('⚠️ [Dashboard] DashboardApp not available, continuing without it:', error.message);
+        // Create minimal app placeholder
+        this.app = {
+            container: null,
+            initialized: true
+        };
     }
+}
     
 async initializeSidebar() {
     try {
