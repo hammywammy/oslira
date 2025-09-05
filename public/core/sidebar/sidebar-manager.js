@@ -60,154 +60,150 @@ targetElement.className = 'sidebar fixed left-0 top-0 w-80 h-screen overflow-y-a
 
 getSidebarHTML() {
     return `
-        <!-- Sidebar Toggle Button -->
-        <button id="sidebar-toggle" class="fixed left-80 top-6 z-50 bg-black/20 backdrop-blur-sm border border-white/20 rounded-r-lg p-2 shadow-xl hover:bg-black/30 transition-all duration-200 group" style="transform: translateX(-1px);">
-            <svg class="w-4 h-4 text-white group-hover:text-blue-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-        </button>
-
-        <!-- Modern Glassmorphism Container -->
-        <div class="h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10">
+        <!-- Collapsible Sidebar Container -->
+        <div id="sidebar-container" class="sidebar-expanded h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10 transition-all duration-300">
             
-            <!-- Logo Section with Advanced Effects -->
-            <div class="relative p-6 border-b border-gradient-to-r from-blue-200/30 to-purple-200/30 group">
-                <div class="flex items-center gap-4 relative z-10">
-                    <div class="relative">
-                        <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
-                             class="w-10 h-10 object-contain drop-shadow-lg group-hover:drop-shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-12">
-                        <!-- Logo glow ring -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-0 group-hover:opacity-20 blur-md scale-150 transition-all duration-500"></div>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-2xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent tracking-tight group-hover:from-blue-500 group-hover:via-purple-500 group-hover:to-pink-400 transition-all duration-300">
+            <!-- Header with Toggle -->
+            <div class="flex items-center justify-between p-4 border-b border-white/20">
+                <div class="sidebar-logo flex items-center gap-3">
+                    <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
+                         class="w-8 h-8 object-contain transition-all duration-300">
+                    <div class="sidebar-text flex flex-col">
+                        <span class="text-lg font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
                             Oslira
                         </span>
                         <span class="text-xs text-gray-600 font-medium opacity-80">Lead Research</span>
                     </div>
                 </div>
+                <button id="sidebar-toggle" class="p-2 rounded-lg hover:bg-white/50 transition-all duration-200 group">
+                    <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                    </svg>
+                </button>
             </div>
             
             <!-- Navigation -->
-            <nav class="px-6 py-8 space-y-8">
+            <nav class="px-4 py-6 space-y-6">
                 
                 <!-- Main Section -->
-                <div>
-                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                <div class="nav-section">
+                    <h4 class="sidebar-text px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
                         <span class="relative z-10">Main</span>
-                        <div class="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
+                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-60"></div>
                     </h4>
                     
-                    <div class="space-y-2">
+                    <div class="space-y-1">
                         <a href="/dashboard" data-page="dashboard" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:shadow-xl hover:shadow-blue-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">📊</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Dashboard</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">📊</span>
+                            <span class="sidebar-text font-semibold">Dashboard</span>
+                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                         
                         <a href="/leads" data-page="leads" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:shadow-xl hover:shadow-emerald-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">🔍</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Lead Research</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">🔍</span>
+                            <span class="sidebar-text font-semibold">Lead Research</span>
+                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                         
                         <a href="/analytics" data-page="analytics" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-violet-500 hover:to-indigo-600 hover:shadow-xl hover:shadow-violet-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">📈</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Analytics</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-violet-500 hover:to-indigo-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">📈</span>
+                            <span class="sidebar-text font-semibold">Analytics</span>
+                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                     </div>
                 </div>
                 
                 <!-- Tools Section -->
-                <div>
-                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                <div class="nav-section">
+                    <h4 class="sidebar-text px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
                         <span class="relative z-10">Tools</span>
-                        <div class="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full"></div>
+                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full opacity-60"></div>
                     </h4>
                     
-                    <div class="space-y-2">
+                    <div class="space-y-1">
                         <a href="/campaigns" data-page="campaigns" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-600 hover:shadow-xl hover:shadow-pink-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">🎯</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Campaigns</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">🎯</span>
+                            <span class="sidebar-text font-semibold">Campaigns</span>
+                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                         
                         <a href="/automations" data-page="automations" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-orange-500 hover:to-amber-600 hover:shadow-xl hover:shadow-orange-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">⚡</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Automations</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-orange-500 hover:to-amber-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">⚡</span>
+                            <span class="sidebar-text font-semibold">Automations</span>
+                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                     </div>
                 </div>
                 
                 <!-- Account Section -->
-                <div>
-                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                <div class="nav-section">
+                    <h4 class="sidebar-text px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
                         <span class="relative z-10">Account</span>
-                        <div class="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full"></div>
+                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full opacity-60"></div>
                     </h4>
                     
-                    <div class="space-y-2">
+                    <div class="space-y-1">
                         <a href="/settings" data-page="settings" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-slate-500 hover:to-gray-600 hover:shadow-xl hover:shadow-slate-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">⚙️</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Settings</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-slate-500 hover:to-gray-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">⚙️</span>
+                            <span class="sidebar-text font-semibold">Settings</span>
+                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                     </div>
                 </div>
                 
             </nav>
             
-            <!-- Ultra Modern User Info Section -->
-            <div class="p-6 m-4 relative">
-                <div class="relative bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl shadow-blue-500/10 overflow-hidden">
-                    
-                    <!-- Animated background pattern -->
-                    <div class="absolute inset-0 opacity-20">
-                        <div class="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-2xl animate-pulse"></div>
-                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full blur-2xl animate-pulse delay-1000"></div>
-                    </div>
-                    
-                    <div class="relative z-10 p-6">
+            <!-- User Info Section -->
+            <div class="sidebar-user-section mt-auto p-4">
+                <div class="sidebar-text relative bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-lg overflow-hidden">
+                    <div class="p-4">
                         <!-- User Details -->
-                        <div class="mb-6">
-                            <div id="sidebar-email" class="text-sm font-bold text-gray-900 mb-2 truncate">Loading...</div>
-                            <div id="sidebar-plan" class="inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-xs font-bold text-blue-700 uppercase tracking-wider rounded-full border border-blue-200/50">
+                        <div class="mb-3">
+                            <div id="sidebar-email" class="text-sm font-bold text-gray-900 mb-1 truncate">Loading...</div>
+                            <div id="sidebar-plan" class="inline-flex items-center px-2 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-xs font-bold text-blue-700 uppercase tracking-wider rounded-full border border-blue-200/50">
                                 Free Plan
                             </div>
                         </div>
                         
-                        <!-- Credits Display with Advanced Styling -->
-                        <div class="relative group">
-                            <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-xl text-white shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <span class="text-xs font-bold uppercase tracking-widest opacity-90">Credits</span>
-                                        <div id="sidebar-credits" class="text-3xl font-black mt-1 drop-shadow-lg">--</div>
-                                    </div>
-                                    <div class="text-2xl opacity-80 group-hover:scale-110 transition-transform duration-300">⚡</div>
+                        <!-- Credits Display -->
+                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg text-white shadow-lg">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="text-xs font-bold uppercase tracking-wide opacity-90">Credits</span>
+                                    <div id="sidebar-credits" class="text-xl font-black">--</div>
                                 </div>
-                                
-                                <!-- Shine animation -->
-                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12 rounded-xl"></div>
+                                <div class="text-xl opacity-80">⚡</div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Subtle Logout Button -->
-            <div class="absolute bottom-4 left-6 right-6">
+                
+                <!-- Collapsed User Icon -->
+                <div class="sidebar-collapsed-user hidden">
+                    <div class="flex flex-col items-center p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white shadow-lg">
+                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
+                            <span id="sidebar-user-initial">U</span>
+                        </div>
+                        <div id="sidebar-credits-collapsed" class="text-xs font-bold mt-1">--</div>
+                    </div>
+                </div>
+                
+                <!-- Logout Button -->
                 <button onclick="handleLogout()" 
-                        class="text-xs text-gray-500 hover:text-red-600 transition-colors duration-200 font-medium py-1">
+                        class="sidebar-text w-full text-xs text-gray-500 hover:text-red-600 transition-colors duration-200 font-medium py-2 mt-2">
                     Sign out
+                </button>
+                
+                <!-- Collapsed Logout -->
+                <button onclick="handleLogout()" 
+                        class="sidebar-collapsed-logout hidden w-full p-2 text-gray-500 hover:text-red-600 transition-colors duration-200 mt-2 rounded-lg hover:bg-red-50">
+                    <span class="text-lg">🚪</span>
                 </button>
             </div>
             
@@ -225,13 +221,13 @@ initializeSidebar() {
         this.setupSidebarToggle();
         
         // Set up logout functionality
-        const logoutBtn = document.querySelector('button[onclick="handleLogout()"]');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
+        const logoutBtns = document.querySelectorAll('button[onclick="handleLogout()"]');
+        logoutBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.logout();
             });
-        }
+        });
         
         // Wait for dependencies and update user info
         this.waitForDependencies().then(() => {
@@ -251,28 +247,54 @@ initializeSidebar() {
 
 setupSidebarToggle() {
     const toggleBtn = document.getElementById('sidebar-toggle');
-    const sidebar = document.querySelector('.sidebar');
+    const sidebarContainer = document.getElementById('sidebar-container');
     const mainContent = document.querySelector('.main-content');
+    const toggleIcon = toggleBtn?.querySelector('.toggle-icon');
     
-    if (toggleBtn && sidebar && mainContent) {
+    if (toggleBtn && sidebarContainer && mainContent) {
         let isCollapsed = false;
         
         toggleBtn.addEventListener('click', () => {
             if (isCollapsed) {
                 // Expand sidebar
-                sidebar.style.transform = 'translateX(0)';
+                sidebarContainer.classList.remove('sidebar-collapsed');
+                sidebarContainer.classList.add('sidebar-expanded');
                 mainContent.style.marginLeft = 'var(--sidebar-width)';
-                toggleBtn.style.left = '320px';
-                toggleBtn.style.transform = 'translateX(-1px)';
-                toggleBtn.querySelector('svg').style.transform = 'rotate(0deg)';
+                
+                // Show expanded elements
+                document.querySelectorAll('.sidebar-text').forEach(el => {
+                    el.classList.remove('hidden');
+                });
+                document.querySelectorAll('.sidebar-collapsed-user, .sidebar-collapsed-logout').forEach(el => {
+                    el.classList.add('hidden');
+                });
+                document.querySelector('.sidebar-user-section .sidebar-text').classList.remove('hidden');
+                
+                // Rotate toggle icon
+                if (toggleIcon) {
+                    toggleIcon.style.transform = 'rotate(0deg)';
+                }
+                
                 isCollapsed = false;
             } else {
                 // Collapse sidebar
-                sidebar.style.transform = 'translateX(-100%)';
-                mainContent.style.marginLeft = '0';
-                toggleBtn.style.left = '10px';
-                toggleBtn.style.transform = 'translateX(0)';
-                toggleBtn.querySelector('svg').style.transform = 'rotate(180deg)';
+                sidebarContainer.classList.remove('sidebar-expanded');
+                sidebarContainer.classList.add('sidebar-collapsed');
+                mainContent.style.marginLeft = '70px';
+                
+                // Hide expanded elements
+                document.querySelectorAll('.sidebar-text').forEach(el => {
+                    el.classList.add('hidden');
+                });
+                document.querySelectorAll('.sidebar-collapsed-user, .sidebar-collapsed-logout').forEach(el => {
+                    el.classList.remove('hidden');
+                });
+                
+                // Rotate toggle icon
+                if (toggleIcon) {
+                    toggleIcon.style.transform = 'rotate(180deg)';
+                }
+                
                 isCollapsed = true;
             }
         });
