@@ -109,57 +109,70 @@
 
 .user-info {
     position: absolute;
-    bottom: var(--spacing-6);
+    bottom: 80px; /* Make room for logout button */
     left: var(--spacing-6);
     right: var(--spacing-6);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--spacing-4);
+    padding: var(--spacing-5);
     background: var(--bg-secondary);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-default);
-}
-
-.user-details {
-    flex: 1;
+    box-shadow: var(--shadow-sm);
 }
 
 .user-email {
     font-size: var(--text-sm);
     font-weight: var(--font-medium);
     color: var(--text-primary);
+    margin-bottom: var(--spacing-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-credits-display {
+    text-align: center;
+}
+
+.credits-label {
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
     margin-bottom: var(--spacing-1);
 }
 
-.user-credits {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-1);
-    font-size: var(--text-xs);
-    color: var(--text-secondary);
-}
-
 .credits-amount {
+    font-size: var(--text-2xl);
     font-weight: var(--font-bold);
     color: var(--success-green);
+    line-height: 1;
 }
 
 .credits-amount.low-credits {
     color: var(--warning-orange);
 }
 
-.logout-btn {
-    background: none;
+.logout-btn-bottom {
+    position: absolute;
+    bottom: var(--spacing-6);
+    right: var(--spacing-6);
+    background: var(--error);
+    color: white;
     border: none;
-    padding: var(--spacing-2);
-    color: var(--text-secondary);
-    cursor: pointer;
+    padding: var(--spacing-2) var(--spacing-4);
     border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
     transition: var(--transition-base);
 }
 
-.logout-btn:hover {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+.logout-btn-bottom:hover {
+    background: var(--error-dark, #dc2626);
+    transform: translateY(-1px);
+}
+
+/* Remove old logout button styles */
+.logout-btn {
+    display: none;
 }
