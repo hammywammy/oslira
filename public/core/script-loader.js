@@ -271,7 +271,7 @@ getDependencies() {
         const coreScripts = this.dependencies.core;
         
 // Load independent scripts in parallel
-const independentScripts = ['supabase', 'sentry', 'alert-system', 'tailwind-manager'];
+const independentScripts = ['supabase', 'sentry', 'alert-system', 'tailwind-config'];
 const dependentScripts = [
     'staging-guard', 'config-manager', 'auth-manager', 'simple-app'
 ];
@@ -374,13 +374,13 @@ async initializeTailwind() {
         console.log('🎨 [ScriptLoader] Initializing Tailwind for page:', this.currentPage);
         
         // Ensure TailwindManager is loaded first
-        if (!this.loadedScripts.has('tailwind-manager')) {
-            console.log('🔄 [ScriptLoader] Loading TailwindManager first...');
-            const tailwindConfig = this.dependencies.core['tailwind-manager'];
-            if (tailwindConfig) {
-                await this.loadScript(tailwindConfig, 'tailwind-manager');
-            }
-        }
+if (!this.loadedScripts.has('tailwind-config')) {
+    console.log('🔄 [ScriptLoader] Loading TailwindManager first...');
+    const tailwindConfig = this.dependencies.core['tailwind-config'];
+    if (tailwindConfig) {
+        await this.loadScript(tailwindConfig, 'tailwind-config');
+    }
+}
         
         // Wait for TailwindManager to be available
         let attempts = 0;
