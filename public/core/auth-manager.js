@@ -101,11 +101,8 @@ async checkUserExists(email) {
             return { exists: true, completed: true };
         }
         
-// Can't use admin API with anon key - skip this check
-// Just return based on public.users table result
-console.log('⚠️ [Auth] Cannot check auth.users with anon key - assuming new user');
-        
-        // User doesn't exist anywhere (new user)
+        // Cannot check auth.users with anon key - assume new user
+        console.log('📧 [Auth] User not found in public.users - treating as new signup');
         return { exists: false, completed: false };
         
     } catch (error) {
