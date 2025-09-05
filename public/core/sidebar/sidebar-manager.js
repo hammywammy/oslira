@@ -55,83 +55,150 @@ class SidebarManager {
     // HTML TEMPLATE
     // =========================================================================
     
-    getSidebarHTML() {
-        return `
-            <div class="logo">
-                <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+// File: public/core/sidebar/sidebar-manager.js
+// Replace the getSidebarHTML() method (around line 50-150) with this Tailwind version
+
+getSidebarHTML() {
+    return `
+        <!-- Logo Section -->
+        <div class="flex items-center gap-3 p-6 border-b border-blue-100 relative group">
+            <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
+                 class="w-8 h-8 object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300">
+            <span class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Oslira
-            </div>
-            
-            <!-- Business Selector -->
-            <div class="business-selector">
-                <h4>Active Business</h4>
-                <select id="business-select" aria-label="Select active business">
+            </span>
+            <!-- Subtle glow effect -->
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
+        </div>
+        
+        <!-- Business Selector -->
+        <div class="p-4 border-b border-gray-100">
+            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                Active Business
+            </label>
+            <div class="relative group">
+                <select id="business-select" 
+                        aria-label="Select active business"
+                        class="w-full px-3 py-2 bg-gradient-to-r from-white to-gray-50 border border-blue-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 appearance-none">
                     <option value="">Loading businesses...</option>
                 </select>
+                <!-- Glow effect on focus/hover -->
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-5 group-focus-within:opacity-10 transition-opacity duration-200 -z-10 blur-sm"></div>
+                <!-- Custom dropdown arrow -->
+                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Navigation Menu -->
+        <nav class="flex-1 p-4 space-y-2">
+            <!-- Main Section -->
+            <div class="mb-6">
+                <h4 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Main</h4>
+                
+                <a href="/dashboard" data-page="dashboard" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">📊</span>
+                    <span class="z-10">Dashboard</span>
+                    <!-- Subtle glow -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+                </a>
+                
+                <a href="/leads" data-page="leads" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">🔍</span>
+                    <span class="z-10">Lead Research</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+                </a>
+                
+                <a href="/analytics" data-page="analytics" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">📈</span>
+                    <span class="z-10">Analytics</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+                </a>
             </div>
             
-            <!-- Navigation Menu -->
-            <nav class="menu">
-                <div class="menu-section">
-                    <h4>Main</h4>
-                    <a href="/dashboard" data-page="dashboard">
-                        <span class="icon">📊</span>
-                        Dashboard
-                    </a>
-                    <a href="/leads" data-page="leads">
-                        <span class="icon">🔍</span>
-                        Lead Research
-                    </a>
-                    <a href="/analytics" data-page="analytics">
-                        <span class="icon">📈</span>
-                        Analytics
-                    </a>
-                </div>
+            <!-- Tools Section -->
+            <div class="mb-6">
+                <h4 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Tools</h4>
                 
-                <div class="menu-section">
-                    <h4>Tools</h4>
-                    <a href="/campaigns" data-page="campaigns">
-                        <span class="icon">🚀</span>
-                        Campaigns
-                    </a>
-                    <a href="/messages" data-page="messages">
-                        <span class="icon">💬</span>
-                        Messages
-                    </a>
-                    <a href="/integrations" data-page="integrations">
-                        <span class="icon">🔗</span>
-                        Integrations
-                    </a>
-                </div>
+                <a href="/campaigns" data-page="campaigns" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">🚀</span>
+                    <span class="z-10">Campaigns</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+                </a>
                 
-<div class="menu-section">
-    <h4>Account</h4>
-    <a href="/subscription" data-page="subscription">
-        <span class="icon">💳</span>
-        Subscription
-    </a>
-    <a href="/settings" data-page="settings">
-        <span class="icon">⚙️</span>
-        Settings
-    </a>
-</div>
-            </nav>
+                <a href="/messages" data-page="messages" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">💬</span>
+                    <span class="z-10">Messages</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+                </a>
+                
+                <a href="/integrations" data-page="integrations" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">🔗</span>
+                    <span class="z-10">Integrations</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+                </a>
+            </div>
             
-<!-- User Info -->
-<div class="user-info">
-    <div class="user-email" id="sidebar-email">Loading...</div>
-    <div class="user-credits-display">
-        <div class="credits-label">Available Credits</div>
-        <div class="credits-amount" id="sidebar-credits">--</div>
-    </div>
-</div>
-
-<!-- Logout Button -->
-<button onclick="window.SimpleAuth?.signOut()" class="logout-btn-bottom" aria-label="Sign out">
-    Logout
-</button>
-        `;
-    }
+            <!-- Account Section -->
+            <div class="mb-6">
+                <h4 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Account</h4>
+                
+                <a href="/subscription" data-page="subscription" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">💳</span>
+                    <span class="z-10">Subscription</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+                </a>
+                
+                <a href="/settings" data-page="settings" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">⚙️</span>
+                    <span class="z-10">Settings</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+                </a>
+            </div>
+        </nav>
+        
+        <!-- User Info Section -->
+        <div class="p-5 m-4 bg-gradient-to-br from-blue-50/50 to-purple-50/50 border border-blue-100 rounded-xl backdrop-blur-sm relative group overflow-hidden">
+            <div class="relative z-10">
+                <div class="mb-4">
+                    <div id="sidebar-email" class="text-sm font-semibold text-gray-900 mb-1 truncate">Loading...</div>
+                    <div id="sidebar-plan" class="text-xs text-gray-500 uppercase tracking-wide font-medium">Free Plan</div>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-gradient-to-r from-blue-100/70 to-purple-100/70 rounded-lg border border-blue-200/50 relative group">
+                    <span class="text-xs text-gray-600 font-medium uppercase tracking-wide">Credits</span>
+                    <span id="sidebar-credits" class="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent credits-glow">--</span>
+                    <!-- Credits glow effect -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                </div>
+            </div>
+            <!-- User info background glow -->
+            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
+        </div>
+        
+        <!-- Logout Button -->
+        <div class="p-4">
+            <button onclick="window.SimpleAuth?.signOut()" 
+                    class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg text-gray-600 text-sm font-medium hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 hover:text-blue-600 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/20 transition-all duration-200 group relative overflow-hidden"
+                    aria-label="Sign out">
+                <span class="text-base group-hover:rotate-12 group-hover:scale-110 transition-transform duration-200 z-10">⚡</span>
+                <span class="z-10">Logout</span>
+                <!-- Logout button glow -->
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
+            </button>
+        </div>
+    `;
+}
     
     // =========================================================================
     // INITIALIZATION
