@@ -167,6 +167,7 @@ if (userCheck.exists && userCheck.completed) {
     // User completed signup - go to signin
     console.log('✅ [Auth] User exists with completed signup, switching to signin');
     this.authMode = 'signin';
+    this.hideLoading(); // Fix: Enable inputs before showing password step
     this.showStep('password');
 } else {
     // User doesn't exist in custom table - send OTP (new signup or restart)
