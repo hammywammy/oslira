@@ -46,7 +46,7 @@ class TailwindManager {
             }
             
 const script = document.createElement('script');
-script.src = 'https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/src/index.js';
+script.src = 'https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.js';
 script.defer = true;
             
             script.onload = () => {
@@ -177,8 +177,8 @@ script.defer = true;
 // Create global instance
 window.OsliraTailwind = new TailwindManager();
 
-// Export for module systems if needed
-if (typeof module !== 'undefined' && module.exports) {
+// Export for module systems if needed (browser-safe check)
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
     module.exports = TailwindManager;
 }
 
