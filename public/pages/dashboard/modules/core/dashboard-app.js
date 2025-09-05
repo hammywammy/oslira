@@ -130,7 +130,6 @@ container.registerFactory('modalManager', () => {
     async setupInitialData() {
         try {
             console.log('📊 [DashboardApp] Setting up initial data...');
-            
             // Wait for authentication
             const isAuthReady = await this.waitForAuth(10000);
             
@@ -748,6 +747,58 @@ async processBulkUpload() {
     // If missing, delegate to modal manager
     return this.container.get('modalManager').processBulkUpload();
 }
+// ===============================================================================
+    // GLOBAL COMPATIBILITY METHODS - FOR HTML ONCLICK HANDLERS
+    // ===============================================================================
+    
+    showAnalysisModal(username = null) {
+        return this.container.get('modalManager').showAnalysisModal(username);
+    }
+    
+    showBulkModal() {
+        return this.container.get('modalManager').showBulkModal();
+    }
+    
+    closeModal(modalId) {
+        return this.container.get('modalManager').closeModal(modalId);
+    }
+    
+    filterLeads(filter) {
+        return this.container.get('leadManager').filterLeads(filter);
+    }
+    
+    searchLeads(term) {
+        return this.container.get('leadManager').searchLeads(term);
+    }
+    
+    refreshStats() {
+        return this.container.get('statsCalculator').refreshStats();
+    }
+    
+    refreshInsights() {
+        // For now, just reload dashboard data
+        return this.container.get('leadManager').loadDashboardData();
+    }
+    
+    handleAnalysisTypeChange() {
+        return this.container.get('modalManager').handleAnalysisTypeChange();
+    }
+    
+    handleFileUpload(event) {
+        return this.container.get('modalManager').handleFileUpload(event);
+    }
+    
+    validateBulkForm() {
+        return this.container.get('modalManager').validateBulkForm();
+    }
+    
+    processAnalysisForm(event) {
+        return this.container.get('modalManager').processAnalysisForm(event);
+    }
+    
+    processBulkUpload() {
+        return this.container.get('modalManager').processBulkUpload();
+    }
 }
 
 // Export for global use
