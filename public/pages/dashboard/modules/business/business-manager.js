@@ -494,10 +494,21 @@ updateBusinessIndicators() {
 updateSidebarBusinessSelector() {
     const businessSelect = document.getElementById('business-select');
     if (!businessSelect) {
-        console.warn('⚠️ [BusinessManager] Sidebar business select element not found');
+        // Retry after sidebar is rendered
+        setTimeout(() => {
+            const retrySelect = document.getElementById('business-select');
+            if (retrySelect) {
+                this.populateBusinessSelector(retrySelect);
+            } else {
+                console.warn('⚠️ [BusinessManager] Sidebar business select element not found after retry');
+            }
+        }, 500);
         return;
     }
+    this.populateBusinessSelector(businessSelect);
+}
 
+populateBusinessSelector(businessSelect) {
     const businesses = this.stateManager.getState('businesses') || [];
     const currentBusiness = this.stateManager.getState('selectedBusiness');
 
