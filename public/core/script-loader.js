@@ -60,143 +60,185 @@ class OsliraScriptLoader {
     // SIMPLIFIED DEPENDENCY DEFINITIONS
     // =============================================================================
     
-    defineDependencies() {
-        return {
-            // Pre-core - Environment detection MUST load first
-            'pre-core': [
-                '/core/env-manager.js'
-            ],
+    // File: public/core/script-loader.js
+// Update the core dependencies section around line 50-80
+
+getDependencies() {
+    return {
+        'pre-core': [
+            '/core/env-manager.js'
+        ],
+        
+        core: {
+            // External Libraries FIRST
+            'supabase': {
+                url: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js',
+                global: 'supabase',
+                critical: true
+            },
             
-            // Core dependencies - SIMPLIFIED (removed complex systems)
-            core: {
-                // External libraries (load in parallel)
-                'supabase': {
-                    url: 'https://unpkg.com/@supabase/supabase-js@2',
-                    global: 'supabase',
-                    critical: true
-                },
-                'sentry': {
-                    url: 'https://js.sentry-cdn.com/7b59f19d521441c8aec15ac32ff07da8.min.js',
-                    global: 'Sentry',
-                    critical: false,
-                    attributes: { crossorigin: 'anonymous' }
-                },
-                
-                // Utilities
-                'staging-guard': {
-                    url: '/utils/staging-guard.js',
-                    critical: true,
-                    environments: ['staging', 'development']
-                },
-                'alert-system': {
-                    url: '/utils/alert-system.js',
-                    critical: false
-                },
-                
-                // Core systems (simplified chain)
-                'config-manager': {
-                    url: '/core/config-manager.js',
-                    global: 'OsliraConfig',
-                    critical: true
-                },
-                'auth-manager': {
-                    url: '/core/auth-manager.js',
-                    global: 'SimpleAuth',
-                    critical: true,
-                    dependsOn: ['config-manager', 'supabase']
-                },
-                'sidebar-manager': {
-                url: '/core/sidebar/sidebar-manager.js',
-                global: 'SidebarManager',
+            'sentry': {
+                url: 'https://browser.sentry-cdn.com/7.100.1/bundle.tracing.min.js',
+                global: 'Sentry',
                 critical: false,
-                dependsOn: ['config-manager']
+                environments: ['production', 'staging']
             },
-                'simple-app': {
-                    url: '/core/simple-app.js',
-                    global: 'OsliraSimpleApp',
-                    critical: true,
-                    dependsOn: ['auth-manager']
+            
+            // Security & Utilities
+            'staging-guard': {
+                url: '/core/staging-guard.js',
+                critical: false,
+                environments: ['staging']
+            },
+            
+            'alert-system': {
+                url: '/core/alert-system.js',
+                global: 'Alert',
+                critical: false
+            },
+            
+            // ADD TAILWIND CONFIG MANAGER
+            'tailwind-config': {
+                url: '/core/tailwind-config.js',
+                global: 'OsliraTailwind',
+                critical: false, // Don't block app if Tailwind fails
+                attributes: {
+                    'data-component': 'tailwind-manager'
                 }
             },
             
-            // Page-specific dependencies
-            pages: {
-'dashboard': {
-    scripts: [
-        // Core infrastructure FIRST (dependency order critical)
-        '/pages/dashboard/modules/core/event-bus.js',
-        '/pages/dashboard/modules/core/state-manager.js', 
-        '/pages/dashboard/modules/core/dependency-container.js',
-        '/pages/dashboard/modules/core/dashboard-app.js',
-        
-        // UI Components (load before feature modules)
-        '/core/sidebar/sidebar-manager.js',
-        
-        // Feature modules (parallel loading safe)
-        '/pages/dashboard/modules/analysis/analysis-queue.js',
-        '/pages/dashboard/modules/business/business-manager.js',
-        '/pages/dashboard/modules/leads/lead-manager.js',
-        '/pages/dashboard/modules/leads/lead-renderer.js',
-        '/pages/dashboard/modules/realtime/realtime-manager.js',
-        '/pages/dashboard/modules/stats/stats-calculator.js',
-        '/pages/dashboard/modules/ui/modal-manager.js',
-        
-        // Main controller LAST
-        '/pages/dashboard/dashboard.js'
-    ],
-    styles: ['/pages/dashboard/dashboard.css'],
-    requiresAuth: true
-},
-                'auth': {
-                    scripts: [],
-                    styles: ['/pages/auth/auth.css'],
-                    requiresAuth: false
-                },
-                'auth-callback': {
-                    scripts: [],
-                    styles: ['/pages/auth/auth.css'], 
-                    requiresAuth: false
-                },
-                'onboarding': {
-                    scripts: ['/pages/onboarding/onboarding.js'],
-                    styles: ['/pages/onboarding/onboarding.css'],
-                    requiresAuth: true
-                },
-                'analytics': {
-                    scripts: ['/pages/analytics/analytics.js'],
-                    styles: ['/pages/analytics/analytics.css'],
-                    additionalLibraries: ['chart-js'],
-                    requiresAuth: true
-                },
-                'settings': {
-                    scripts: ['/pages/settings/settings.js'],
-                    styles: ['/pages/settings/settings.css'],
-                    requiresAuth: true
-                },
-                'subscription': {
-                    scripts: ['/pages/subscription/subscription.js'],
-                    styles: ['/pages/subscription/subscription.css'],
-                    requiresAuth: true
-                },
-                'generic': {
-                    scripts: [],
-                    requiresAuth: false
-                }
+            // Core Systems
+            'config-manager': {
+                url: '/core/config-manager.js',
+                global: 'OsliraConfig',
+                critical: true
             },
             
-            // Optional libraries (loaded on demand)
-            libraries: {
-                'chart-js': {
-                    url: 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js',
-                    global: 'Chart'
-                },
-                'stripe': {
-                    url: 'https://js.stripe.com/v3/',
-                    global: 'Stripe'
-                }
+            'ui-manager': {
+                url: '/core/ui-manager.js',
+                global: 'UIManager',
+                critical: false
+            },
+            
+            'data-store': {
+                url: '/core/data-store.js',
+                global: 'DataStore',
+                critical: false
+            },
+            
+            'form-manager': {
+                url: '/core/form-form-manager.js',
+                global: 'FormManager',
+                critical: false
+            },
+            
+            'api-client': {
+                url: '/core/api-client.js',
+                global: 'APIClient',
+                critical: true
+            },
+            
+            'auth-manager': {
+                url: '/core/auth-manager.js',
+                global: 'SimpleAuth',
+                critical: true
+            },
+            
+            'simple-app': {
+                url: '/core/simple-app.js',
+                global: 'OsliraApp',
+                critical: true
             }
-        };
-    }
+        },
+        
+        // Page-specific dependencies
+        pages: {
+            'dashboard': {
+                scripts: [
+                    // Core infrastructure FIRST (dependency order critical)
+                    '/pages/dashboard/modules/core/event-bus.js',
+                    '/pages/dashboard/modules/core/state-manager.js', 
+                    '/pages/dashboard/modules/core/dependency-container.js',
+                    '/pages/dashboard/modules/core/dashboard-app.js',
+                    
+                    // UI Components (load before feature modules)
+                    '/core/sidebar/sidebar-manager.js',
+                    
+                    // Feature modules (parallel loading safe)
+                    '/pages/dashboard/modules/analysis/analysis-queue.js',
+                    '/pages/dashboard/modules/business/business-manager.js',
+                    '/pages/dashboard/modules/leads/lead-manager.js',
+                    '/pages/dashboard/modules/leads/lead-renderer.js',
+                    '/pages/dashboard/modules/realtime/realtime-manager.js',
+                    '/pages/dashboard/modules/stats/stats-calculator.js',
+                    '/pages/dashboard/modules/ui/modal-manager.js',
+                    
+                    // Main controller LAST
+                    '/pages/dashboard/dashboard.js'
+                ],
+                styles: ['/pages/dashboard/dashboard.css'],
+                requiresAuth: true,
+                // ENABLE TAILWIND FOR DASHBOARD
+                enableTailwind: true
+            },
+            
+            'auth': {
+                scripts: [],
+                styles: ['/pages/auth/auth.css'],
+                requiresAuth: false,
+                enableTailwind: true  // Enable for auth pages too
+            },
+            
+            'onboarding': {
+                scripts: ['/pages/onboarding/onboarding.js'],
+                styles: ['/pages/onboarding/onboarding.css'],
+                requiresAuth: true,
+                enableTailwind: true
+            },
+            
+            // Other pages...
+            'analytics': {
+                scripts: ['/pages/analytics/analytics.js'],
+                styles: ['/pages/analytics/analytics.css'],
+                additionalLibraries: ['chart-js'],
+                requiresAuth: true,
+                enableTailwind: true
+            },
+            
+            'settings': {
+                scripts: ['/pages/settings/settings.js'],
+                styles: ['/pages/settings/settings.css'],
+                requiresAuth: true,
+                enableTailwind: true
+            },
+            
+            'subscription': {
+                scripts: ['/pages/subscription/subscription.js'],
+                styles: ['/pages/subscription/subscription.css'],
+                requiresAuth: true,
+                enableTailwind: true
+            },
+            
+            'generic': {
+                scripts: [],
+                requiresAuth: false
+                // No Tailwind for generic pages
+            }
+        },
+        
+        // Optional libraries (loaded on demand)
+        libraries: {
+            'chart-js': {
+                url: 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js',
+                global: 'Chart'
+            },
+            'stripe': {
+                url: 'https://js.stripe.com/v3/',
+                global: 'Stripe'
+            }
+        }
+    };
+}
 
     // =============================================================================
     // LOADING METHODS
@@ -276,47 +318,167 @@ class OsliraScriptLoader {
         console.log('✅ [ScriptLoader] Core dependencies loaded');
     }
     
-    async loadPageDependencies() {
-        console.log(`📄 [ScriptLoader] Loading page dependencies: ${this.currentPage}`);
-        
-        try {
-            const pageDeps = this.dependencies.pages[this.currentPage];
-            if (!pageDeps) {
-                console.log('⏭️ [ScriptLoader] No page-specific dependencies');
-                return;
-            }
-            
-            // Load additional libraries
-            if (pageDeps.additionalLibraries) {
-                for (const libName of pageDeps.additionalLibraries) {
-                    const lib = this.dependencies.libraries[libName];
-                    if (lib) {
-                        await this.loadScript(lib, libName);
-                    }
-                }
-            }
-            
-            // Load page styles
-            if (pageDeps.styles) {
-                await Promise.all(
-                    pageDeps.styles.map(styleUrl => this.loadStylesheet(styleUrl))
-                );
-            }
-            
-            // Load page scripts
-            if (pageDeps.scripts) {
-                for (const scriptUrl of pageDeps.scripts) {
-                    await this.loadScript({ url: scriptUrl }, `page-${scriptUrl}`);
-                }
-            }
-            
-            console.log(`✅ [ScriptLoader] Page dependencies loaded: ${this.currentPage}`);
-            
-        } catch (error) {
-            console.error(`❌ [ScriptLoader] Page dependencies failed for ${this.currentPage}:`, error);
-            throw error;
+// File: public/core/script-loader.js
+// Add this method after loadPageDependencies() around line 150-200
+
+async loadPageDependencies() {
+    console.log(`📄 [ScriptLoader] Loading page dependencies: ${this.currentPage}`);
+    
+    try {
+        const pageDeps = this.dependencies.pages[this.currentPage];
+        if (!pageDeps) {
+            console.log('⏭️ [ScriptLoader] No page-specific dependencies');
+            return;
         }
+        
+        // Load additional libraries
+        if (pageDeps.additionalLibraries) {
+            for (const libName of pageDeps.additionalLibraries) {
+                const lib = this.dependencies.libraries[libName];
+                if (lib) {
+                    await this.loadScript(lib, libName);
+                }
+            }
+        }
+        
+        // Initialize Tailwind if enabled for this page
+        if (pageDeps.enableTailwind) {
+            await this.initializeTailwind();
+        }
+        
+        // Load page styles
+        if (pageDeps.styles) {
+            await Promise.all(
+                pageDeps.styles.map(styleUrl => this.loadStylesheet(styleUrl))
+            );
+        }
+        
+        // Load page scripts
+        if (pageDeps.scripts) {
+            for (const scriptUrl of pageDeps.scripts) {
+                await this.loadScript({ url: scriptUrl }, `page-${scriptUrl}`);
+            }
+        }
+        
+        console.log(`✅ [ScriptLoader] Page dependencies loaded: ${this.currentPage}`);
+        
+    } catch (error) {
+        console.error(`❌ [ScriptLoader] Page dependencies failed for ${this.currentPage}:`, error);
+        throw error;
     }
+}
+
+// =============================================================================
+// TAILWIND INITIALIZATION
+// =============================================================================
+
+async initializeTailwind() {
+    try {
+        console.log('🎨 [ScriptLoader] Initializing Tailwind for page:', this.currentPage);
+        
+        // Wait for TailwindManager to be available
+        let attempts = 0;
+        while (!window.OsliraTailwind && attempts < 50) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (!window.OsliraTailwind) {
+            console.warn('⚠️ [ScriptLoader] TailwindManager not available, skipping Tailwind initialization');
+            return;
+        }
+        
+        // Initialize Tailwind
+        await window.OsliraTailwind.init();
+        
+        // Add page-specific Tailwind utilities if needed
+        this.addPageTailwindUtilities();
+        
+        console.log('✅ [ScriptLoader] Tailwind initialized for page:', this.currentPage);
+        
+    } catch (error) {
+        console.error('❌ [ScriptLoader] Tailwind initialization failed:', error);
+        // Don't throw - page should work without Tailwind
+    }
+}
+
+addPageTailwindUtilities() {
+    // Add any page-specific Tailwind customizations
+    const pageCustomizations = {
+        'dashboard': () => {
+            // Dashboard-specific Tailwind utilities
+            console.log('🎨 [ScriptLoader] Applying dashboard Tailwind customizations');
+            
+            // Add dashboard-specific CSS if needed
+            const customCSS = `
+                .dashboard-glow {
+                    @apply shadow-lg shadow-blue-500/20;
+                }
+                .sidebar-item-active {
+                    @apply bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg;
+                }
+            `;
+            
+            this.injectCustomCSS(customCSS, 'dashboard-tailwind-utils');
+        },
+        
+        'auth': () => {
+            console.log('🎨 [ScriptLoader] Applying auth Tailwind customizations');
+            // Auth-specific utilities
+        },
+        
+        'onboarding': () => {
+            console.log('🎨 [ScriptLoader] Applying onboarding Tailwind customizations');
+            // Onboarding-specific utilities
+        }
+    };
+    
+    const customization = pageCustomizations[this.currentPage];
+    if (customization) {
+        customization();
+    }
+}
+
+injectCustomCSS(cssText, id) {
+    // Remove existing if present
+    const existing = document.getElementById(id);
+    if (existing) {
+        existing.remove();
+    }
+    
+    // Inject new CSS
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = cssText;
+    document.head.appendChild(style);
+}
+
+// =============================================================================
+// UTILITY METHODS
+// =============================================================================
+
+// Add to existing utility methods section
+
+getTailwindStatus() {
+    return {
+        managerLoaded: !!window.OsliraTailwind,
+        tailwindLoaded: window.OsliraTailwind?.isLoaded?.() || false,
+        currentPageEnabled: this.dependencies.pages[this.currentPage]?.enableTailwind || false
+    };
+}
+
+async waitForTailwind(timeout = 5000) {
+    const start = Date.now();
+    
+    while (Date.now() - start < timeout) {
+        if (window.OsliraTailwind?.isLoaded?.()) {
+            return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    return false;
+}
 
     // =============================================================================
     // SCRIPT LOADING UTILITIES
