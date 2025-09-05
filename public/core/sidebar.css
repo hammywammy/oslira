@@ -1,0 +1,165 @@
+/* =============================================================================
+   SIDEBAR.CSS - Extracted Modular Sidebar Styles
+   ============================================================================= */
+
+@import url('/core/design-system.css');
+
+/* =============================================================================
+   SIDEBAR
+   ============================================================================= */
+
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--bg-primary);
+    box-shadow: 2px 0 10px rgba(45, 108, 223, 0.1);
+    padding: var(--spacing-6);
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: var(--z-docked);
+}
+
+.logo {
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
+    color: var(--primary-blue);
+    margin-bottom: var(--spacing-10);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.menu {
+    margin-bottom: var(--spacing-8);
+}
+
+.menu-section {
+    margin-bottom: var(--spacing-6);
+}
+
+.menu-section h4 {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-2);
+    font-weight: var(--font-semibold);
+    letter-spacing: var(--tracking-wide);
+}
+
+.menu a {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-3);
+    padding: var(--spacing-3) var(--spacing-4);
+    text-decoration: none;
+    color: var(--text-secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-1);
+    transition: var(--transition-base);
+    font-weight: var(--font-medium);
+}
+
+.menu a:hover,
+.menu a.active {
+    background-color: var(--primary-blue);
+    color: var(--text-inverse);
+    transform: translateX(2px);
+}
+
+.menu a .icon {
+    font-size: var(--text-lg);
+    width: var(--spacing-5);
+}
+
+/* =============================================================================
+   BUSINESS SELECTOR
+   ============================================================================= */
+
+.business-selector {
+    background: var(--gradient-primary);
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.business-selector h4 {
+    font-size: var(--text-xs);
+    color: var(--text-inverse);
+    margin-bottom: var(--spacing-2);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    font-weight: var(--font-semibold);
+}
+
+.business-selector select {
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    background: var(--bg-primary);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+}
+
+/* =============================================================================
+   USER INFO
+   ============================================================================= */
+
+.user-info {
+    position: absolute;
+    bottom: var(--spacing-6);
+    left: var(--spacing-6);
+    right: var(--spacing-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-4);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-default);
+}
+
+.user-details {
+    flex: 1;
+}
+
+.user-email {
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-1);
+}
+
+.user-credits {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+}
+
+.credits-amount {
+    font-weight: var(--font-bold);
+    color: var(--success-green);
+}
+
+.credits-amount.low-credits {
+    color: var(--warning-orange);
+}
+
+.logout-btn {
+    background: none;
+    border: none;
+    padding: var(--spacing-2);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: var(--transition-base);
+}
+
+.logout-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
