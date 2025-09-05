@@ -236,15 +236,15 @@ connectToBusinessManager() {
         }
     }
     
-    formatPlanName(plan) {
-        const planMap = {
-            'free': 'Free',
-            'starter': 'Starter',
-            'professional': 'Pro',
-            'enterprise': 'Enterprise'
-        };
-        return planMap[plan] || 'Plan';
-    }
+formatPlanName(plan) {
+    const planMap = {
+        'free': 'Free Plan',
+        'starter': 'Starter Plan',
+        'professional': 'Pro Plan',
+        'enterprise': 'Enterprise Plan'
+    };
+    return planMap[plan] || 'Subscription';
+}
     
     // =========================================================================
     // NAVIGATION CONTROL
