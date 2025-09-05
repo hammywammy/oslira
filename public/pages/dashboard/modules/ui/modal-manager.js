@@ -106,8 +106,14 @@ class ModalManager {
             inputContainer.style.display = 'none';
         }
         
-        // Load business profiles
-        this.container.get('businessManager')?.loadBusinessProfilesForModal();
+// Load business profiles (async)
+setTimeout(async () => {
+    try {
+        await this.container.get('businessManager')?.loadBusinessProfilesForModal();
+    } catch (error) {
+        console.error('❌ [ModalManager] Failed to load business profiles:', error);
+    }
+}, 100);
         
         // Focus on analysis type dropdown
         setTimeout(() => {
@@ -168,8 +174,14 @@ class ModalManager {
         // Reset form and state
         this.resetBulkModal();
         
-        // Load business profiles for bulk
-        this.container.get('businessManager')?.loadBusinessProfilesForBulkModal();
+// Load business profiles for bulk modal
+setTimeout(async () => {
+    try {
+        await this.container.get('businessManager')?.loadBusinessProfilesForBulkModal();
+    } catch (error) {
+        console.error('❌ [ModalManager] Failed to load bulk business profiles:', error);
+    }
+}, 100);
         
         console.log('✅ [ModalManager] Bulk modal opened');
     }
