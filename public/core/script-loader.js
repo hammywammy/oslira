@@ -10,7 +10,7 @@ class OsliraScriptLoader {
         // Don't call detectEnvironment() in constructor - OsliraEnv not loaded yet
         this.config = null;
         this.currentPage = null; // Will be set after OsliraEnv loads
-        this.dependencies = this.defineDependencies();
+        this.dependencies = this.getDependencies();
         
         console.log('📚 [ScriptLoader] Simple loader initialized');
     }
