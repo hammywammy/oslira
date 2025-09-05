@@ -20,8 +20,8 @@ class DashboardInitializer {
             // Initialize the dashboard application
             await this.initializeApp();
             
-            // Initialize modular sidebar
-            this.initializeSidebar();
+// Initialize modular sidebar
+await this.initializeSidebar();
             
             // Setup global compatibility
             this.setupGlobalCompatibility();
@@ -62,30 +62,38 @@ class DashboardInitializer {
         console.log('✅ [Dashboard] Dashboard app initialized');
     }
     
-    initializeSidebar() {
-        try {
-            console.log('📋 [Dashboard] Initializing modular sidebar...');
-            
-            // Check if SidebarManager is available
-            if (!window.SidebarManager) {
-                console.warn('⚠️ [Dashboard] SidebarManager not available, skipping sidebar');
-                return;
+async initializeSidebar() {
+    try {
+        console.log('📋 [Dashboard] Initializing modular sidebar...');
+        
+        // Wait for SidebarManager to be available
+        for (let i = 0; i < 50; i++) {
+            if (window.SidebarManager) {
+                console.log('✅ [Dashboard] SidebarManager found');
+                break;
             }
-            
-            // Render sidebar with dashboard configuration
-            window.SidebarManager.render('sidebar-container', {
-                activePage: 'dashboard',
-                showBusinessSelector: true,
-                theme: 'default'
-            });
-            
-            console.log('✅ [Dashboard] Sidebar initialized successfully');
-            
-        } catch (error) {
-            console.error('❌ [Dashboard] Sidebar initialization failed:', error);
-            // Don't throw - dashboard can work without sidebar
+            await new Promise(resolve => setTimeout(resolve, 100));
         }
+        
+        if (!window.SidebarManager) {
+            console.warn('⚠️ [Dashboard] SidebarManager not available after waiting, skipping sidebar');
+            return;
+        }
+        
+        // Render sidebar with dashboard configuration
+        window.SidebarManager.render('sidebar-container', {
+            activePage: 'dashboard',
+            showBusinessSelector: true,
+            theme: 'default'
+        });
+        
+        console.log('✅ [Dashboard] Sidebar initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ [Dashboard] Sidebar initialization failed:', error);
+        // Don't throw - dashboard can work without sidebar
     }
+}
     
     verifyModules() {
         const requiredModules = [
