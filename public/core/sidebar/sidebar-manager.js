@@ -221,45 +221,61 @@ getSidebarHTML() {
     
 initializeSidebar() {
     try {
-        // Set up logout functionality
-        const logoutBtn = document.getElementById('sidebar-logout');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => this.logout());
-        }
-        
         // Set up sidebar toggle functionality
-        const toggleBtn = document.getElementById('sidebar-toggle');
-        const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content');
+        this.setupSidebarToggle();
         
-        if (toggleBtn && sidebar && mainContent) {
-            toggleBtn.addEventListener('click', () => {
-                const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
-                
-                if (isCollapsed) {
-                    // Expand sidebar
-                    sidebar.classList.remove('sidebar-collapsed');
-                    mainContent.style.marginLeft = 'var(--sidebar-width)';
-                    toggleBtn.style.left = '320px';
-                    toggleBtn.querySelector('svg').style.transform = 'rotate(0deg)';
-                } else {
-                    // Collapse sidebar
-                    sidebar.classList.add('sidebar-collapsed');
-                    mainContent.style.marginLeft = '0';
-                    toggleBtn.style.left = '0px';
-                    toggleBtn.querySelector('svg').style.transform = 'rotate(180deg)';
-                }
+        // Set up logout functionality
+        const logoutBtn = document.querySelector('button[onclick="handleLogout()"]');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.logout();
             });
         }
         
-        // Initialize active menu item
-        const currentPage = this.getCurrentPage();
-        this.setActiveMenuItem(currentPage);
+        // Wait for dependencies and update user info
+        this.waitForDependencies().then(() => {
+            this.connectToBusinessManager();
+            this.updateUserInfo();
+            this.setActiveMenuItem(this.currentConfig.activePage);
+            this.setupEventListeners();
+            this.initializeBusinessSelector();
+        });
         
         console.log('✅ [SidebarManager] Sidebar initialized successfully');
         
     } catch (error) {
         console.error('❌ [SidebarManager] Initialization failed:', error);
+    }
+}
+
+setupSidebarToggle() {
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    const sidebar = document.querySelector('.sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (toggleBtn && sidebar && mainContent) {
+        let isCollapsed = false;
+        
+        toggleBtn.addEventListener('click', () => {
+            if (isCollapsed) {
+                // Expand sidebar
+                sidebar.style.transform = 'translateX(0)';
+                mainContent.style.marginLeft = 'var(--sidebar-width)';
+                toggleBtn.style.left = '320px';
+                toggleBtn.style.transform = 'translateX(-1px)';
+                toggleBtn.querySelector('svg').style.transform = 'rotate(0deg)';
+                isCollapsed = false;
+            } else {
+                // Collapse sidebar
+                sidebar.style.transform = 'translateX(-100%)';
+                mainContent.style.marginLeft = '0';
+                toggleBtn.style.left = '10px';
+                toggleBtn.style.transform = 'translateX(0)';
+                toggleBtn.querySelector('svg').style.transform = 'rotate(180deg)';
+                isCollapsed = true;
+            }
+        });
     }
 }
     
