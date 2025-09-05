@@ -54,13 +54,13 @@ async initializeApp() {
         throw new Error('OsliraApp not available or no user data');
     }
     
-// Try to import and initialize the main dashboard app
+// Use the global DashboardApp (loaded via script loader)
 try {
-    // Use global reference if available, otherwise try import
-    const DashboardAppClass = window.DashboardApp || 
-        (await import('/pages/dashboard/modules/core/dashboard-app.js')).DashboardApp;
+    if (!window.DashboardApp) {
+        throw new Error('DashboardApp not available on window object');
+    }
     
-    this.app = new DashboardAppClass();
+    this.app = new window.DashboardApp();
     await this.app.init();
     console.log('✅ [Dashboard] Dashboard app initialized');
 } catch (error) {
