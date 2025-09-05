@@ -99,53 +99,50 @@ getDependencies() {
             
             // ADD TAILWIND CONFIG MANAGER
             'tailwind-config': {
-                url: '/core/tailwind-config.js',
+                url: '/../core/tailwind-config.js',
                 global: 'OsliraTailwind',
-                critical: false, // Don't block app if Tailwind fails
-                attributes: {
-                    'data-component': 'tailwind-manager'
-                }
+                critical: false
             },
             
             // Core Systems
             'config-manager': {
-                url: '/core/config-manager.js',
+                url: '/../core/config-manager.js',
                 global: 'OsliraConfig',
                 critical: true
             },
             
             'ui-manager': {
-                url: '/core/ui-manager.js',
+                url: '/../core/ui-manager.js',
                 global: 'UIManager',
                 critical: false
             },
             
             'data-store': {
-                url: '/core/data-store.js',
+                url: '/../core/data-store.js',
                 global: 'DataStore',
                 critical: false
             },
             
             'form-manager': {
-                url: '/core/form-form-manager.js',
+                url: '/../core/form-form-manager.js',
                 global: 'FormManager',
                 critical: false
             },
             
             'api-client': {
-                url: '/core/api-client.js',
+                url: '/../core/api-client.js',
                 global: 'APIClient',
                 critical: true
             },
             
             'auth-manager': {
-                url: '/core/auth-manager.js',
+                url: '/../core/auth-manager.js',
                 global: 'SimpleAuth',
                 critical: true
             },
             
             'simple-app': {
-                url: '/core/simple-app.js',
+                url: '/../core/simple-app.js',
                 global: 'OsliraApp',
                 critical: true
             }
