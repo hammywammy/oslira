@@ -81,7 +81,7 @@ header::before {
 }
 
 header h1 {
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
     font-size: var(--text-3xl);
     font-weight: var(--font-bold);
 }
@@ -1080,4 +1080,28 @@ header h1 {
         opacity: 1;
         transform: translateX(0);
     }
+}
+
+/* =============================================================================
+   TAILWIND OVERRIDES - LOAD AFTER EXISTING STYLES
+   ============================================================================= */
+
+/* Ensure text is visible */
+.main-content h1,
+.main-content h2,
+.main-content h3,
+.main-content p,
+.main-content span {
+    color: var(--text-primary) !important;
+}
+
+/* Let Tailwind classes override existing styles */
+[class*="bg-"],
+[class*="text-"],
+[class*="border-"],
+[class*="shadow-"] {
+    color: unset !important;
+    background: unset !important;
+    border: unset !important;
+    box-shadow: unset !important;
 }
