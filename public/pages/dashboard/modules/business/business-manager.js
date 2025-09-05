@@ -10,7 +10,6 @@ class BusinessManager {
         this.container = container;
         this.eventBus = container.get('eventBus');
         this.stateManager = container.get('stateManager');
-        this.supabase = container.get('supabase');
         this.osliraApp = container.get('osliraApp');
         
         // Business data cache
@@ -19,6 +18,10 @@ class BusinessManager {
         
         console.log('🚀 [BusinessManager] Initialized');
     }
+
+    get supabase() {
+    return this.container.get('supabase');
+}
     
     async init() {
         // Listen for auth changes
