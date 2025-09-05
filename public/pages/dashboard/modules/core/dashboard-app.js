@@ -82,20 +82,21 @@ class DashboardApp {
 // Register external dependencies
         container.registerSingleton('supabase', window.supabase);
         
-// Register OsliraApp with proper initialization check
+// Register OsliraApp with proper initialization wait
 container.registerFactory('osliraApp', async () => {
     // Wait for OsliraApp to be fully initialized with user data
     let attempts = 0;
-    while (attempts < 50) {
+    while (attempts < 100) { // Increased from 50 to 100 attempts
         if (window.OsliraApp?.user && window.OsliraApp?.isAuthenticated) {
+            console.log('✅ [DependencyContainer] OsliraApp found with user data:', window.OsliraApp.user.email);
             return window.OsliraApp;
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50)); // Check every 50ms
         attempts++;
     }
     
-    console.warn('⚠️ [DependencyContainer] OsliraApp not ready, returning partial object');
-    return window.OsliraApp || {};
+    console.error('❌ [DependencyContainer] OsliraApp timeout - no user data after 5 seconds');
+    throw new Error('OsliraApp initialization timeout');
 }, []);
         
         // Register API wrapper if available
