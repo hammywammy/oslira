@@ -79,9 +79,20 @@ class DashboardApp {
             return new DashboardStateManager(eventBus);
         }, ['eventBus']);
         
-// Register external dependencies
-        container.registerSingleton('supabase', window.supabase);
-        
+// Register external dependencies with proper initialization wait
+container.registerFactory('supabase', () => {
+    // Get the initialized Supabase client from SimpleAuth
+    if (window.SimpleAuth?.supabase) {
+        return window.SimpleAuth.supabase;
+    }
+    // Fallback to raw library if SimpleAuth not ready
+    if (window.supabase?.createClient) {
+        console.warn('⚠️ [DependencyContainer] Using raw Supabase library - SimpleAuth not ready');
+        return window.supabase;
+    }
+    throw new Error('Supabase not available');
+}, []);
+
 // Register OsliraApp as a getter that always checks the global
 container.registerSingleton('osliraApp', new Proxy({}, {
     get(target, prop) {
