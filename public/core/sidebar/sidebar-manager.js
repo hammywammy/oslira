@@ -104,33 +104,32 @@ class SidebarManager {
                     </a>
                 </div>
                 
-                <div class="menu-section">
-                    <h4>Account</h4>
-                    <a href="/subscription" data-page="subscription">
-                        <span class="icon">💳</span>
-                        <span id="sidebar-plan">Plan</span>
-                    </a>
-                    <a href="/settings" data-page="settings">
-                        <span class="icon">⚙️</span>
-                        Settings
-                    </a>
-                </div>
+<div class="menu-section">
+    <h4>Account</h4>
+    <a href="/subscription" data-page="subscription">
+        <span class="icon">💳</span>
+        Subscription
+    </a>
+    <a href="/settings" data-page="settings">
+        <span class="icon">⚙️</span>
+        Settings
+    </a>
+</div>
             </nav>
             
-            <!-- User Info -->
-            <div class="user-info">
-                <div class="user-details">
-                    <div class="user-email" id="sidebar-email">Loading...</div>
-                    <div class="user-credits" id="sidebar-billing">
-                        <span class="credits-amount" id="sidebar-credits">--</span>
-                        <span class="credits-label">credits</span>
-                    </div>
-                </div>
-                
-                <button onclick="window.SimpleAuth?.signOut()" class="logout-btn" aria-label="Sign out">
-                    <span class="icon">🚪</span>
-                </button>
-            </div>
+<!-- User Info -->
+<div class="user-info">
+    <div class="user-email" id="sidebar-email">Loading...</div>
+    <div class="user-credits-display">
+        <div class="credits-label">Available Credits</div>
+        <div class="credits-amount" id="sidebar-credits">--</div>
+    </div>
+</div>
+
+<!-- Logout Button -->
+<button onclick="window.SimpleAuth?.signOut()" class="logout-btn-bottom" aria-label="Sign out">
+    Logout
+</button>
         `;
     }
     
