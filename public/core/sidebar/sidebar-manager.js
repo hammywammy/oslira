@@ -60,186 +60,132 @@ targetElement.className = 'sidebar fixed left-0 top-0 w-80 h-screen overflow-y-a
 
 getSidebarHTML() {
     return `
-        <!-- Modern Glassmorphism Container -->
-        <div class="h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10">
+        <!-- Sidebar Toggle Button -->
+        <button id="sidebar-toggle" class="fixed left-80 top-6 z-50 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-r-lg p-2 shadow-lg hover:bg-white transition-all duration-200 group" style="transform: translateX(-1px);">
+            <svg class="w-4 h-4 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+        </button>
+
+        <!-- Sidebar Container with Border -->
+        <div class="h-full bg-white/98 backdrop-blur-xl border-r-2 border-gray-200/50 shadow-xl shadow-gray-500/5 relative">
             
-            <!-- Logo Section with Advanced Effects -->
-            <div class="relative p-6 border-b border-gradient-to-r from-blue-200/30 to-purple-200/30 group">
-                <div class="flex items-center gap-4 relative z-10">
-                    <div class="relative">
-                        <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
-                             class="w-10 h-10 object-contain drop-shadow-lg group-hover:drop-shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-12">
-                        <!-- Logo glow ring -->
-                        <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-0 group-hover:opacity-20 blur-md scale-150 transition-all duration-500"></div>
-                    </div>
+            <!-- Logo Section -->
+            <div class="p-6 border-b border-gray-100 group">
+                <div class="flex items-center gap-3">
+                    <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
+                         class="w-8 h-8 object-contain transition-transform duration-300 group-hover:scale-110">
                     <div class="flex flex-col">
-                        <span class="text-2xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent tracking-tight group-hover:from-blue-500 group-hover:via-purple-500 group-hover:to-pink-400 transition-all duration-300">
+                        <span class="text-xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
                             Oslira
                         </span>
-                        <span class="text-xs font-medium text-gray-500 uppercase tracking-widest opacity-80">
-                            AI Platform
-                        </span>
+                        <span class="text-xs text-gray-500 font-medium">Lead Research</span>
                     </div>
-                </div>
-                <!-- Animated background -->
-                <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse"></div>
-            </div>
-            
-            <!-- Business Selector with Modern Styling -->
-            <div class="p-6 border-b border-gray-100/50">
-                <label class="block text-xs font-bold text-gray-600 uppercase tracking-widest mb-4 relative">
-                    <span class="relative z-10">Active Business</span>
-                    <div class="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
-                </label>
-                <div class="relative group">
-                    <select id="business-select" 
-                            aria-label="Select active business"
-                            class="w-full px-4 py-3 bg-gradient-to-r from-white/80 to-blue-50/50 border-2 border-blue-200/50 rounded-xl text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-0.5 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer">
-                        <option value="">Loading businesses...</option>
-                    </select>
-                    <!-- Custom Dropdown Arrow -->
-                    <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
-                        <svg class="w-5 h-5 text-blue-500 group-hover:text-purple-500 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </div>
-                    <!-- Glow effect on focus -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl opacity-0 group-focus-within:opacity-10 transition-opacity duration-300 -z-10 blur-md"></div>
                 </div>
             </div>
             
-            <!-- Navigation with Ultra Modern Styling -->
-            <nav class="flex-1 px-4 py-6 space-y-8 overflow-y-auto">
+            <!-- Navigation -->
+            <nav class="px-4 py-6 space-y-8">
                 
                 <!-- Main Section -->
                 <div>
-                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                    <h4 class="px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
                         <span class="relative z-10">Main</span>
-                        <div class="absolute bottom-0 left-4 w-6 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
+                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-60"></div>
                     </h4>
                     
-                    <div class="space-y-2">
+                    <div class="space-y-1">
                         <a href="/dashboard" data-page="dashboard" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:shadow-xl hover:shadow-blue-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">📊</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Dashboard</span>
-                            <!-- Shine effect -->
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-800 bg-gray-50/50 hover:text-blue-600 hover:bg-blue-50 hover:shadow-sm hover:translate-x-1 transition-all duration-200 group border border-transparent hover:border-blue-100">
+                            <span class="text-lg transition-transform duration-200 group-hover:scale-110">📊</span>
+                            <span class="font-semibold">Dashboard</span>
                         </a>
                         
                         <a href="/leads" data-page="leads" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:shadow-xl hover:shadow-emerald-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">🔍</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Lead Research</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-800 bg-gray-50/50 hover:text-emerald-600 hover:bg-emerald-50 hover:shadow-sm hover:translate-x-1 transition-all duration-200 group border border-transparent hover:border-emerald-100">
+                            <span class="text-lg transition-transform duration-200 group-hover:scale-110">🔍</span>
+                            <span class="font-semibold">Lead Research</span>
                         </a>
                         
                         <a href="/analytics" data-page="analytics" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-violet-500 hover:to-purple-600 hover:shadow-xl hover:shadow-violet-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">📈</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Analytics</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-800 bg-gray-50/50 hover:text-purple-600 hover:bg-purple-50 hover:shadow-sm hover:translate-x-1 transition-all duration-200 group border border-transparent hover:border-purple-100">
+                            <span class="text-lg transition-transform duration-200 group-hover:scale-110">📈</span>
+                            <span class="font-semibold">Analytics</span>
                         </a>
                     </div>
                 </div>
                 
                 <!-- Tools Section -->
                 <div>
-                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                    <h4 class="px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
                         <span class="relative z-10">Tools</span>
-                        <div class="absolute bottom-0 left-4 w-6 h-0.5 bg-gradient-to-r from-orange-400 to-red-400 rounded-full"></div>
+                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full opacity-60"></div>
                     </h4>
                     
-                    <div class="space-y-2">
+                    <div class="space-y-1">
                         <a href="/campaigns" data-page="campaigns" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-rose-500 hover:to-pink-600 hover:shadow-xl hover:shadow-rose-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">🎯</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Campaigns</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-800 bg-gray-50/50 hover:text-indigo-600 hover:bg-indigo-50 hover:shadow-sm hover:translate-x-1 transition-all duration-200 group border border-transparent hover:border-indigo-100">
+                            <span class="text-lg transition-transform duration-200 group-hover:scale-110">🎯</span>
+                            <span class="font-semibold">Campaigns</span>
                         </a>
                         
-                        <a href="/messages" data-page="messages" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500 hover:to-blue-600 hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">💬</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Messages</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        <a href="/automations" data-page="automations" 
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-800 bg-gray-50/50 hover:text-orange-600 hover:bg-orange-50 hover:shadow-sm hover:translate-x-1 transition-all duration-200 group border border-transparent hover:border-orange-100">
+                            <span class="text-lg transition-transform duration-200 group-hover:scale-110">⚡</span>
+                            <span class="font-semibold">Automations</span>
                         </a>
                     </div>
                 </div>
                 
-                <!-- Account Section -->
+                <!-- Accounts Section -->
                 <div>
-                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                    <h4 class="px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
                         <span class="relative z-10">Account</span>
-                        <div class="absolute bottom-0 left-4 w-6 h-0.5 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full"></div>
+                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-pink-400 to-rose-400 rounded-full opacity-60"></div>
                     </h4>
                     
-                    <div class="space-y-2">
-                        <a href="/subscription" data-page="subscription" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-amber-500 hover:to-orange-600 hover:shadow-xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">💳</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Subscription</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
-                        </a>
-                        
+                    <div class="space-y-1">
                         <a href="/settings" data-page="settings" 
-                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-slate-500 hover:to-gray-600 hover:shadow-xl hover:shadow-slate-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">⚙️</span>
-                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Settings</span>
-                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-800 bg-gray-50/50 hover:text-gray-600 hover:bg-gray-100 hover:shadow-sm hover:translate-x-1 transition-all duration-200 group border border-transparent hover:border-gray-200">
+                            <span class="text-lg transition-transform duration-200 group-hover:scale-110">⚙️</span>
+                            <span class="font-semibold">Settings</span>
                         </a>
                     </div>
                 </div>
                 
             </nav>
             
-            <!-- Ultra Modern User Info Section -->
-            <div class="p-6 m-4 relative">
-                <div class="relative bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl shadow-blue-500/10 overflow-hidden">
-                    
-                    <!-- Animated background pattern -->
-                    <div class="absolute inset-0 opacity-20">
-                        <div class="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-2xl animate-pulse"></div>
-                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full blur-2xl animate-pulse delay-1000"></div>
+            <!-- Clean User Info Section -->
+            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100 bg-white/80 backdrop-blur-sm">
+                
+                <!-- User Details -->
+                <div class="mb-3">
+                    <div id="sidebar-email" class="text-sm font-medium text-gray-900 mb-1 truncate">Loading...</div>
+                    <div id="sidebar-plan" class="inline-flex items-center px-2 py-1 bg-blue-50 text-xs font-medium text-blue-700 rounded border border-blue-100">
+                        Free Plan
                     </div>
-                    
-                    <div class="relative z-10 p-6">
-                        <!-- User Details -->
-                        <div class="mb-6">
-                            <div id="sidebar-email" class="text-sm font-bold text-gray-900 mb-2 truncate">Loading...</div>
-                            <div id="sidebar-plan" class="inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-xs font-bold text-blue-700 uppercase tracking-wider rounded-full border border-blue-200/50">
-                                Free Plan
-                            </div>
+                </div>
+                
+                <!-- Credits Display -->
+                <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200 mb-3">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-xs font-medium text-gray-600 uppercase tracking-wide">Credits</span>
+                            <div id="sidebar-credits" class="text-lg font-bold text-gray-900">50</div>
                         </div>
-                        
-                        <!-- Credits Display with Advanced Styling -->
-                        <div class="relative group">
-                            <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-xl text-white shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105">
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <span class="text-xs font-bold uppercase tracking-widest opacity-90">Credits</span>
-                                        <div id="sidebar-credits" class="text-3xl font-black mt-1 drop-shadow-lg">--</div>
-                                    </div>
-                                    <div class="text-2xl opacity-80 group-hover:scale-110 transition-transform duration-300">⚡</div>
-                                </div>
-                                
-                                <!-- Shine animation -->
-                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12 rounded-xl"></div>
-                            </div>
+                        <div class="text-right">
+                            <a href="/billing" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                                Upgrade
+                            </a>
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Modern Logout Button -->
-            <div class="p-6">
-                <button onclick="handleLogout()" 
-                        class="w-full group flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 hover:scale-105 transition-all duration-300 relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-300 relative z-10">🚪</span>
-                    <span class="relative z-10">Logout</span>
-                    <!-- Shine effect -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                
+                <!-- Subtle Logout -->
+                <button id="sidebar-logout" class="text-xs text-gray-500 hover:text-red-600 transition-colors duration-200 font-medium">
+                    Sign out
                 </button>
+                
             </div>
             
         </div>
@@ -250,27 +196,49 @@ getSidebarHTML() {
     // INITIALIZATION
     // =========================================================================
     
-    async initializeSidebar() {
-        // Wait for required systems
-        await this.waitForDependencies();
+initializeSidebar() {
+    try {
+        // Set up logout functionality
+        const logoutBtn = document.getElementById('sidebar-logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => this.logout());
+        }
         
-        // Connect to business manager
-        this.connectToBusinessManager();
+        // Set up sidebar toggle functionality
+        const toggleBtn = document.getElementById('sidebar-toggle');
+        const sidebar = document.querySelector('.sidebar');
+        const mainContent = document.querySelector('.main-content');
         
-        // Update user info
-        this.updateUserInfo();
+        if (toggleBtn && sidebar && mainContent) {
+            toggleBtn.addEventListener('click', () => {
+                const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
+                
+                if (isCollapsed) {
+                    // Expand sidebar
+                    sidebar.classList.remove('sidebar-collapsed');
+                    mainContent.style.marginLeft = 'var(--sidebar-width)';
+                    toggleBtn.style.left = '320px';
+                    toggleBtn.querySelector('svg').style.transform = 'rotate(0deg)';
+                } else {
+                    // Collapse sidebar
+                    sidebar.classList.add('sidebar-collapsed');
+                    mainContent.style.marginLeft = '0';
+                    toggleBtn.style.left = '0px';
+                    toggleBtn.querySelector('svg').style.transform = 'rotate(180deg)';
+                }
+            });
+        }
         
-        // Set active menu item
-        this.setActiveMenuItem(this.currentConfig.activePage);
+        // Initialize active menu item
+        const currentPage = this.getCurrentPage();
+        this.setActiveMenuItem(currentPage);
         
-        // Setup event listeners
-        this.setupEventListeners();
+        console.log('✅ [SidebarManager] Sidebar initialized successfully');
         
-        this.initialized = true;
-        console.log('✅ [SidebarManager] Initialization complete');
-
-        this.initializeBusinessSelector();
+    } catch (error) {
+        console.error('❌ [SidebarManager] Initialization failed:', error);
     }
+}
     
     async waitForDependencies() {
         // Wait for OsliraApp
@@ -372,41 +340,19 @@ setActiveMenuItem(pageId) {
     // Remove active class from all menu items
     const menuItems = document.querySelectorAll('.sidebar nav a[data-page]');
     menuItems.forEach(item => {
-        // Remove active styling
         item.classList.remove('active');
-        
-        // Reset to default hover styles
-        item.className = 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden';
-        
-        // Re-add the glow div if it doesn't exist
-        if (!item.querySelector('.absolute.inset-0.bg-gradient-to-r')) {
-            const glowDiv = document.createElement('div');
-            glowDiv.className = 'absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg';
-            item.appendChild(glowDiv);
-        }
+        // Reset to default styles
+        item.classList.remove('bg-blue-500', 'text-white', 'shadow-lg');
+        item.classList.add('text-gray-800', 'bg-gray-50/50');
     });
     
     // Add active class to current page
     const activeItem = document.querySelector(`.sidebar nav a[data-page="${pageId}"]`);
     if (activeItem) {
-        // Add active class for CSS styling
         activeItem.classList.add('active');
-        
-        // Override with active styles (white text, gradient background)
-        activeItem.classList.remove('text-gray-700', 'hover:text-blue-600');
-        activeItem.classList.add('text-white');
-        
-        // Update text color for child elements
-        const textSpan = activeItem.querySelector('span:last-child');
-        if (textSpan) {
-            textSpan.classList.remove('text-gray-700');
-            textSpan.classList.add('text-white');
-        }
-        
-        const iconSpan = activeItem.querySelector('span:first-child');
-        if (iconSpan) {
-            iconSpan.classList.add('text-white');
-        }
+        // Apply active styles - dark text on light background for readability
+        activeItem.classList.remove('text-gray-800', 'bg-gray-50/50');
+        activeItem.classList.add('bg-blue-500', 'text-white', 'shadow-lg');
         
         console.log(`✅ [SidebarManager] Active menu item set: ${pageId}`);
     } else {
