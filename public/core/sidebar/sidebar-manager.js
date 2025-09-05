@@ -93,22 +93,25 @@ getSidebarHTML() {
                     </h4>
                     
                     <div class="space-y-1">
-                        <a href="/dashboard" data-page="dashboard" 
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                        <a href="/dashboard" data-page="dashboard" title="Dashboard"
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
+                           style="min-height: 44px;">
                             <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">📊</span>
                             <span class="sidebar-text font-semibold">Dashboard</span>
                             <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                         
-                        <a href="/leads" data-page="leads" 
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                        <a href="/leads" data-page="leads" title="Lead Research"
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
+                           style="min-height: 44px;">
                             <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">🔍</span>
                             <span class="sidebar-text font-semibold">Lead Research</span>
                             <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                         
-                        <a href="/analytics" data-page="analytics" 
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-violet-500 hover:to-indigo-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                        <a href="/analytics" data-page="analytics" title="Analytics"
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-violet-500 hover:to-indigo-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
+                           style="min-height: 44px;">
                             <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">📈</span>
                             <span class="sidebar-text font-semibold">Analytics</span>
                             <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
@@ -124,15 +127,17 @@ getSidebarHTML() {
                     </h4>
                     
                     <div class="space-y-1">
-                        <a href="/campaigns" data-page="campaigns" 
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                        <a href="/campaigns" data-page="campaigns" title="Campaigns"
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
+                           style="min-height: 44px;">
                             <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">🎯</span>
                             <span class="sidebar-text font-semibold">Campaigns</span>
                             <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
                         </a>
                         
-                        <a href="/automations" data-page="automations" 
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-orange-500 hover:to-amber-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                        <a href="/automations" data-page="automations" title="Automations"
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-orange-500 hover:to-amber-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
+                           style="min-height: 44px;">
                             <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">⚡</span>
                             <span class="sidebar-text font-semibold">Automations</span>
                             <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
@@ -148,8 +153,9 @@ getSidebarHTML() {
                     </h4>
                     
                     <div class="space-y-1">
-                        <a href="/settings" data-page="settings" 
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-slate-500 hover:to-gray-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden">
+                        <a href="/settings" data-page="settings" title="Settings"
+                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-slate-500 hover:to-gray-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
+                           style="min-height: 44px;">
                             <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">⚙️</span>
                             <span class="sidebar-text font-semibold">Settings</span>
                             <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
@@ -161,6 +167,7 @@ getSidebarHTML() {
             
             <!-- User Info Section -->
             <div class="sidebar-user-section mt-auto p-4">
+                <!-- Expanded User Info -->
                 <div class="sidebar-text relative bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-lg overflow-hidden">
                     <div class="p-4">
                         <!-- User Details -->
@@ -181,30 +188,30 @@ getSidebarHTML() {
                                 <div class="text-xl opacity-80">⚡</div>
                             </div>
                         </div>
+                        
+                        <!-- Logout Button -->
+                        <button onclick="handleLogout()" 
+                                class="w-full text-xs text-gray-500 hover:text-red-600 transition-colors duration-200 font-medium py-2 mt-3 text-left">
+                            Sign out
+                        </button>
                     </div>
                 </div>
                 
-                <!-- Collapsed User Icon -->
-                <div class="sidebar-collapsed-user hidden">
-                    <div class="flex flex-col items-center p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg text-white shadow-lg">
-                        <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-sm font-bold">
+                <!-- Collapsed User Section -->
+                <div class="sidebar-collapsed-user" style="display: none;">
+                    <div class="flex flex-col items-center space-y-3">
+                        <!-- User Avatar -->
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
                             <span id="sidebar-user-initial">U</span>
                         </div>
-                        <div id="sidebar-credits-collapsed" class="text-xs font-bold mt-1">--</div>
+                        
+                        <!-- Credits -->
+                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-2 py-1 rounded text-white text-center min-w-[50px]">
+                            <div id="sidebar-credits-collapsed" class="text-xs font-bold">--</div>
+                            <div class="text-[10px] opacity-80">credits</div>
+                        </div>
                     </div>
                 </div>
-                
-                <!-- Logout Button -->
-                <button onclick="handleLogout()" 
-                        class="sidebar-text w-full text-xs text-gray-500 hover:text-red-600 transition-colors duration-200 font-medium py-2 mt-2">
-                    Sign out
-                </button>
-                
-                <!-- Collapsed Logout -->
-                <button onclick="handleLogout()" 
-                        class="sidebar-collapsed-logout hidden w-full p-2 text-gray-500 hover:text-red-600 transition-colors duration-200 mt-2 rounded-lg hover:bg-red-50">
-                    <span class="text-lg">🚪</span>
-                </button>
             </div>
             
         </div>
@@ -257,18 +264,26 @@ setupSidebarToggle() {
         toggleBtn.addEventListener('click', () => {
             if (isCollapsed) {
                 // Expand sidebar
-                sidebarContainer.classList.remove('sidebar-collapsed');
-                sidebarContainer.classList.add('sidebar-expanded');
+                sidebarContainer.style.width = 'var(--sidebar-width)';
                 mainContent.style.marginLeft = 'var(--sidebar-width)';
                 
                 // Show expanded elements
                 document.querySelectorAll('.sidebar-text').forEach(el => {
-                    el.classList.remove('hidden');
+                    el.style.display = '';
                 });
+                document.querySelectorAll('.nav-section h4').forEach(el => {
+                    el.style.display = '';
+                });
+                document.querySelector('.sidebar-user-section .sidebar-text').style.display = '';
                 document.querySelectorAll('.sidebar-collapsed-user, .sidebar-collapsed-logout').forEach(el => {
-                    el.classList.add('hidden');
+                    el.style.display = 'none';
                 });
-                document.querySelector('.sidebar-user-section .sidebar-text').classList.remove('hidden');
+                
+                // Reset nav items to normal layout
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.style.justifyContent = '';
+                    item.style.padding = '';
+                });
                 
                 // Rotate toggle icon
                 if (toggleIcon) {
@@ -278,16 +293,25 @@ setupSidebarToggle() {
                 isCollapsed = false;
             } else {
                 // Collapse sidebar
-                sidebarContainer.classList.remove('sidebar-expanded');
-                sidebarContainer.classList.add('sidebar-collapsed');
+                sidebarContainer.style.width = '70px';
                 mainContent.style.marginLeft = '70px';
                 
                 // Hide expanded elements
                 document.querySelectorAll('.sidebar-text').forEach(el => {
-                    el.classList.add('hidden');
+                    el.style.display = 'none';
                 });
+                document.querySelectorAll('.nav-section h4').forEach(el => {
+                    el.style.display = 'none';
+                });
+                document.querySelector('.sidebar-user-section .sidebar-text').style.display = 'none';
                 document.querySelectorAll('.sidebar-collapsed-user, .sidebar-collapsed-logout').forEach(el => {
-                    el.classList.remove('hidden');
+                    el.style.display = 'block';
+                });
+                
+                // Adjust nav items for collapsed layout
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.style.justifyContent = 'center';
+                    item.style.padding = '0.75rem';
                 });
                 
                 // Rotate toggle icon
@@ -337,46 +361,64 @@ connectToBusinessManager() {
     // USER INFO UPDATE
     // =========================================================================
     
-    updateUserInfo() {
-        try {
-            const user = window.OsliraApp?.user;
-            if (!user) {
-                console.warn('⚠️ [SidebarManager] No user data available');
-                return;
-            }
-
-            console.log('🔄 [SidebarManager] Updating user info...');
-
-            // Update email
-            const emailElement = document.getElementById('sidebar-email');
-            if (emailElement) {
-                emailElement.textContent = user.email || 'No email';
-            }
-
-            // Update subscription plan
-            const planElement = document.getElementById('sidebar-plan');
-            if (planElement) {
-                const planName = this.formatPlanName(user.subscription_plan || 'free');
-                planElement.textContent = planName;
-            }
-
-            // Update credits display
-            const creditsElement = document.getElementById('sidebar-credits');
-            if (creditsElement) {
-                const credits = user.credits || 0;
-                creditsElement.textContent = credits;
-                
-                // Add warning class for low credits
-                const creditClass = credits < 5 ? 'low-credits' : '';
-                creditsElement.className = `credits-amount ${creditClass}`;
-            }
-
-            console.log('✅ [SidebarManager] User info updated');
-            
-        } catch (error) {
-            console.error('❌ [SidebarManager] Failed to update user info:', error);
+updateUserInfo() {
+    try {
+        const user = window.OsliraApp?.user;
+        if (!user) {
+            console.warn('⚠️ [SidebarManager] No user data available');
+            return;
         }
+
+        console.log('🔄 [SidebarManager] Updating user info...');
+
+        // Update email
+        const emailElement = document.getElementById('sidebar-email');
+        if (emailElement) {
+            emailElement.textContent = user.email || 'No email';
+        }
+
+        // Update user initial (first letter of email)
+        const userInitialElement = document.getElementById('sidebar-user-initial');
+        if (userInitialElement && user.email) {
+            userInitialElement.textContent = user.email.charAt(0).toUpperCase();
+        }
+
+        // Update subscription plan
+        const planElement = document.getElementById('sidebar-plan');
+        if (planElement) {
+            const planName = this.formatPlanName(user.subscription_plan || 'free');
+            planElement.textContent = planName;
+        }
+
+        // Update credits display (both expanded and collapsed)
+        const creditsElement = document.getElementById('sidebar-credits');
+        const creditsCollapsedElement = document.getElementById('sidebar-credits-collapsed');
+        if (creditsElement || creditsCollapsedElement) {
+            const credits = user.credits || 0;
+            
+            if (creditsElement) {
+                creditsElement.textContent = credits;
+            }
+            if (creditsCollapsedElement) {
+                creditsCollapsedElement.textContent = credits;
+            }
+            
+            // Add warning class for low credits
+            const creditClass = credits < 5 ? 'low-credits' : '';
+            if (creditsElement) {
+                creditsElement.className = `text-xl font-black ${creditClass}`;
+            }
+            if (creditsCollapsedElement) {
+                creditsCollapsedElement.className = `text-xs font-bold mt-1 ${creditClass}`;
+            }
+        }
+
+        console.log('✅ [SidebarManager] User info updated');
+        
+    } catch (error) {
+        console.error('❌ [SidebarManager] Failed to update user info:', error);
     }
+}
     
 formatPlanName(plan) {
     const planMap = {
