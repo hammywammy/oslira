@@ -60,25 +60,27 @@ class DependencyContainer {
     /**
      * Get dependency instance
      */
-    get(name) {
-        // Check if it's a singleton
-        if (this.singletons.has(name)) {
-            return this.singletons.get(name);
-        }
+get(name) {
+    // Check if it's a factory
+    if (this.factories.has(name)) {
+        const factoryInfo = this.factories.get(name);
         
-        // Check if it's a factory
-        if (this.factories.has(name)) {
-            const factoryInfo = this.factories.get(name);
+        // Create instance if not already created
+        if (!factoryInfo.instance) {
+            const deps = factoryInfo.dependencies.map(dep => this.get(dep));
+            const result = factoryInfo.factory(...deps);
             
-            // Create instance if not already created
-            if (!factoryInfo.instance) {
-                const deps = factoryInfo.dependencies.map(dep => this.get(dep));
-                factoryInfo.instance = factoryInfo.factory(...deps);
-                console.log(`🏗️ [DependencyContainer] Factory instance created: ${name}`);
+            // Handle async factories
+            if (result && typeof result.then === 'function') {
+                throw new Error(`Async factory '${name}' must be resolved before use. Use getAsync() or ensure factory is pre-resolved.`);
             }
             
-            return factoryInfo.instance;
+            factoryInfo.instance = result;
+            console.log(`🏗️ [DependencyContainer] Factory instance created: ${name}`);
         }
+        
+        return factoryInfo.instance;
+    }
         
         // Check regular dependencies
         if (this.dependencies.has(name)) {
@@ -87,6 +89,39 @@ class DependencyContainer {
         
         throw new Error(`Dependency '${name}' not found. Available: ${Array.from(this.dependencies.keys()).join(', ')}`);
     }
+
+    /**
+ * Get dependency instance (async version for async factories)
+ */
+async getAsync(name) {
+    // Check if it's a singleton
+    if (this.singletons.has(name)) {
+        return this.singletons.get(name);
+    }
+    
+    // Check if it's a factory
+    if (this.factories.has(name)) {
+        const factoryInfo = this.factories.get(name);
+        
+        // Create instance if not already created
+        if (!factoryInfo.instance) {
+            const deps = await Promise.all(
+                factoryInfo.dependencies.map(dep => this.getAsync(dep))
+            );
+            factoryInfo.instance = await factoryInfo.factory(...deps);
+            console.log(`🏗️ [DependencyContainer] Async factory instance created: ${name}`);
+        }
+        
+        return factoryInfo.instance;
+    }
+    
+    // Check regular dependencies
+    if (this.dependencies.has(name)) {
+        return this.dependencies.get(name);
+    }
+    
+    throw new Error(`Dependency '${name}' not found. Available: ${Array.from(this.dependencies.keys()).join(', ')}`);
+}
     
     /**
      * Check if dependency exists
