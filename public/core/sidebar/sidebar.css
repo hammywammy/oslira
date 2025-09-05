@@ -5,15 +5,40 @@
 .sidebar {
     width: var(--sidebar-width);
     transition: width 0.3s ease;
+    overflow: hidden; /* Prevent horizontal scroll */
+    display: flex;
+    flex-direction: column;
 }
 
 /* Override inline styles with important */
 .sidebar-collapsed {
     width: 70px !important;
+    overflow: hidden !important; /* Force no scroll in collapsed state */
 }
 
 .sidebar-expanded {
     width: var(--sidebar-width) !important;
+    overflow-y: auto !important; /* Allow vertical scroll only when expanded */
+}
+
+/* Fix collapsed state container overflow */
+.sidebar-collapsed #sidebar-container {
+    overflow: hidden !important;
+    min-width: 70px;
+    max-width: 70px;
+}
+
+/* Fix navigation in collapsed mode */
+.sidebar-collapsed nav {
+    overflow: hidden;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* Ensure user section stays at bottom */
+.sidebar-user-section {
+    margin-top: auto;
+    flex-shrink: 0;
 }
 
 /* Ensure proper layout in collapsed state */
