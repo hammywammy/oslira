@@ -60,142 +60,188 @@ class SidebarManager {
 
 getSidebarHTML() {
     return `
-        <!-- Logo Section -->
-        <div class="flex items-center gap-3 p-6 border-b border-blue-100 relative group">
-            <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
-                 class="w-8 h-8 object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300">
-            <span class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Oslira
-            </span>
-            <!-- Subtle glow effect -->
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
-        </div>
-        
-        <!-- Business Selector -->
-        <div class="p-4 border-b border-gray-100">
-            <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                Active Business
-            </label>
-            <div class="relative group">
-                <select id="business-select" 
-                        aria-label="Select active business"
-                        class="w-full px-3 py-2 bg-gradient-to-r from-white to-gray-50 border border-blue-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-blue-300 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-200 appearance-none">
-                    <option value="">Loading businesses...</option>
-                </select>
-                <!-- Glow effect on focus/hover -->
-                <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-5 group-focus-within:opacity-10 transition-opacity duration-200 -z-10 blur-sm"></div>
-                <!-- Custom dropdown arrow -->
-                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
+        <!-- Modern Glassmorphism Container -->
+        <div class="h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10">
+            
+            <!-- Logo Section with Advanced Effects -->
+            <div class="relative p-6 border-b border-gradient-to-r from-blue-200/30 to-purple-200/30 group">
+                <div class="flex items-center gap-4 relative z-10">
+                    <div class="relative">
+                        <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
+                             class="w-10 h-10 object-contain drop-shadow-lg group-hover:drop-shadow-2xl transition-all duration-500 group-hover:scale-110 group-hover:rotate-12">
+                        <!-- Logo glow ring -->
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-0 group-hover:opacity-20 blur-md scale-150 transition-all duration-500"></div>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-2xl font-black bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 bg-clip-text text-transparent tracking-tight group-hover:from-blue-500 group-hover:via-purple-500 group-hover:to-pink-400 transition-all duration-300">
+                            Oslira
+                        </span>
+                        <span class="text-xs font-medium text-gray-500 uppercase tracking-widest opacity-80">
+                            AI Platform
+                        </span>
+                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Navigation Menu -->
-        <nav class="flex-1 p-4 space-y-2">
-            <!-- Main Section -->
-            <div class="mb-6">
-                <h4 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Main</h4>
-                
-                <a href="/dashboard" data-page="dashboard" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">📊</span>
-                    <span class="z-10">Dashboard</span>
-                    <!-- Subtle glow -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-                </a>
-                
-                <a href="/leads" data-page="leads" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">🔍</span>
-                    <span class="z-10">Lead Research</span>
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-                </a>
-                
-                <a href="/analytics" data-page="analytics" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">📈</span>
-                    <span class="z-10">Analytics</span>
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-                </a>
+                <!-- Animated background -->
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-all duration-700 animate-pulse"></div>
             </div>
             
-            <!-- Tools Section -->
-            <div class="mb-6">
-                <h4 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Tools</h4>
-                
-                <a href="/campaigns" data-page="campaigns" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">🚀</span>
-                    <span class="z-10">Campaigns</span>
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-                </a>
-                
-                <a href="/messages" data-page="messages" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">💬</span>
-                    <span class="z-10">Messages</span>
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-                </a>
-                
-                <a href="/integrations" data-page="integrations" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">🔗</span>
-                    <span class="z-10">Integrations</span>
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-                </a>
+            <!-- Business Selector with Modern Styling -->
+            <div class="p-6 border-b border-gray-100/50">
+                <label class="block text-xs font-bold text-gray-600 uppercase tracking-widest mb-4 relative">
+                    <span class="relative z-10">Active Business</span>
+                    <div class="absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                </label>
+                <div class="relative group">
+                    <select id="business-select" 
+                            aria-label="Select active business"
+                            class="w-full px-4 py-3 bg-gradient-to-r from-white/80 to-blue-50/50 border-2 border-blue-200/50 rounded-xl text-sm font-medium text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 hover:-translate-y-0.5 transition-all duration-300 backdrop-blur-sm appearance-none cursor-pointer">
+                        <option value="">Loading businesses...</option>
+                    </select>
+                    <!-- Custom Dropdown Arrow -->
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                        <svg class="w-5 h-5 text-blue-500 group-hover:text-purple-500 transition-colors duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
+                    <!-- Glow effect on focus -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl opacity-0 group-focus-within:opacity-10 transition-opacity duration-300 -z-10 blur-md"></div>
+                </div>
             </div>
             
-            <!-- Account Section -->
-            <div class="mb-6">
-                <h4 class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Account</h4>
+            <!-- Navigation with Ultra Modern Styling -->
+            <nav class="flex-1 px-4 py-6 space-y-8 overflow-y-auto">
                 
-                <a href="/subscription" data-page="subscription" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">💳</span>
-                    <span class="z-10">Subscription</span>
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-                </a>
+                <!-- Main Section -->
+                <div>
+                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                        <span class="relative z-10">Main</span>
+                        <div class="absolute bottom-0 left-4 w-6 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
+                    </h4>
+                    
+                    <div class="space-y-2">
+                        <a href="/dashboard" data-page="dashboard" 
+                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:shadow-xl hover:shadow-blue-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">📊</span>
+                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Dashboard</span>
+                            <!-- Shine effect -->
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        </a>
+                        
+                        <a href="/leads" data-page="leads" 
+                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:shadow-xl hover:shadow-emerald-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">🔍</span>
+                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Lead Research</span>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        </a>
+                        
+                        <a href="/analytics" data-page="analytics" 
+                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-violet-500 hover:to-purple-600 hover:shadow-xl hover:shadow-violet-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">📈</span>
+                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Analytics</span>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        </a>
+                    </div>
+                </div>
                 
-                <a href="/settings" data-page="settings" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 hover:shadow-lg hover:shadow-blue-500/10 hover:translate-x-1 transition-all duration-200 group relative overflow-hidden">
-                    <span class="text-lg group-hover:scale-110 transition-transform duration-200 z-10">⚙️</span>
-                    <span class="z-10">Settings</span>
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-                </a>
-            </div>
-        </nav>
-        
-        <!-- User Info Section -->
-        <div class="p-5 m-4 bg-gradient-to-br from-blue-50/50 to-purple-50/50 border border-blue-100 rounded-xl backdrop-blur-sm relative group overflow-hidden">
-            <div class="relative z-10">
-                <div class="mb-4">
-                    <div id="sidebar-email" class="text-sm font-semibold text-gray-900 mb-1 truncate">Loading...</div>
-                    <div id="sidebar-plan" class="text-xs text-gray-500 uppercase tracking-wide font-medium">Free Plan</div>
+                <!-- Tools Section -->
+                <div>
+                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                        <span class="relative z-10">Tools</span>
+                        <div class="absolute bottom-0 left-4 w-6 h-0.5 bg-gradient-to-r from-orange-400 to-red-400 rounded-full"></div>
+                    </h4>
+                    
+                    <div class="space-y-2">
+                        <a href="/campaigns" data-page="campaigns" 
+                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-rose-500 hover:to-pink-600 hover:shadow-xl hover:shadow-rose-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">🎯</span>
+                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Campaigns</span>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        </a>
+                        
+                        <a href="/messages" data-page="messages" 
+                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-indigo-500 hover:to-blue-600 hover:shadow-xl hover:shadow-indigo-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">💬</span>
+                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Messages</span>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        </a>
+                    </div>
                 </div>
-                <div class="flex justify-between items-center p-3 bg-gradient-to-r from-blue-100/70 to-purple-100/70 rounded-lg border border-blue-200/50 relative group">
-                    <span class="text-xs text-gray-600 font-medium uppercase tracking-wide">Credits</span>
-                    <span id="sidebar-credits" class="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent credits-glow">--</span>
-                    <!-- Credits glow effect -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                
+                <!-- Account Section -->
+                <div>
+                    <h4 class="px-4 text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-6 relative">
+                        <span class="relative z-10">Account</span>
+                        <div class="absolute bottom-0 left-4 w-6 h-0.5 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full"></div>
+                    </h4>
+                    
+                    <div class="space-y-2">
+                        <a href="/subscription" data-page="subscription" 
+                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-amber-500 hover:to-orange-600 hover:shadow-xl hover:shadow-amber-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">💳</span>
+                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Subscription</span>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        </a>
+                        
+                        <a href="/settings" data-page="settings" 
+                           class="group flex items-center gap-4 px-4 py-3 rounded-xl text-sm font-semibold text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-slate-500 hover:to-gray-600 hover:shadow-xl hover:shadow-slate-500/25 hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                            <span class="text-xl group-hover:scale-125 transition-transform duration-300 relative z-10">⚙️</span>
+                            <span class="relative z-10 group-hover:translate-x-1 transition-transform duration-300">Settings</span>
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        </a>
+                    </div>
+                </div>
+                
+            </nav>
+            
+            <!-- Ultra Modern User Info Section -->
+            <div class="p-6 m-4 relative">
+                <div class="relative bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl shadow-blue-500/10 overflow-hidden">
+                    
+                    <!-- Animated background pattern -->
+                    <div class="absolute inset-0 opacity-20">
+                        <div class="absolute top-0 left-0 w-20 h-20 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full blur-2xl animate-pulse"></div>
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-gradient-to-br from-purple-400 to-pink-500 rounded-full blur-2xl animate-pulse delay-1000"></div>
+                    </div>
+                    
+                    <div class="relative z-10 p-6">
+                        <!-- User Details -->
+                        <div class="mb-6">
+                            <div id="sidebar-email" class="text-sm font-bold text-gray-900 mb-2 truncate">Loading...</div>
+                            <div id="sidebar-plan" class="inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-xs font-bold text-blue-700 uppercase tracking-wider rounded-full border border-blue-200/50">
+                                Free Plan
+                            </div>
+                        </div>
+                        
+                        <!-- Credits Display with Advanced Styling -->
+                        <div class="relative group">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-xl text-white shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:scale-105">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <span class="text-xs font-bold uppercase tracking-widest opacity-90">Credits</span>
+                                        <div id="sidebar-credits" class="text-3xl font-black mt-1 drop-shadow-lg">--</div>
+                                    </div>
+                                    <div class="text-2xl opacity-80 group-hover:scale-110 transition-transform duration-300">⚡</div>
+                                </div>
+                                
+                                <!-- Shine animation -->
+                                <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12 rounded-xl"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <!-- User info background glow -->
-            <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl"></div>
-        </div>
-        
-        <!-- Logout Button -->
-        <div class="p-4">
-            <button onclick="window.SimpleAuth?.signOut()" 
-                    class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg text-gray-600 text-sm font-medium hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 hover:text-blue-600 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-blue-500/20 transition-all duration-200 group relative overflow-hidden"
-                    aria-label="Sign out">
-                <span class="text-base group-hover:rotate-12 group-hover:scale-110 transition-transform duration-200 z-10">⚡</span>
-                <span class="z-10">Logout</span>
-                <!-- Logout button glow -->
-                <div class="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-lg"></div>
-            </button>
+            
+            <!-- Modern Logout Button -->
+            <div class="p-6">
+                <button onclick="handleLogout()" 
+                        class="w-full group flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/40 hover:scale-105 transition-all duration-300 relative overflow-hidden">
+                    <span class="text-lg group-hover:scale-110 transition-transform duration-300 relative z-10">🚪</span>
+                    <span class="relative z-10">Logout</span>
+                    <!-- Shine effect -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                </button>
+            </div>
+            
         </div>
     `;
 }
