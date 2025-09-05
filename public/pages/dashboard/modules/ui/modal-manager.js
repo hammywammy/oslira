@@ -93,7 +93,7 @@ class ModalManager {
         
         // Reset form fields
         const analysisType = document.getElementById('analysis-type');
-        const profileInput = document.getElementById('profile-input');
+        const profileInput = document.getElementById('username');
         const inputContainer = document.getElementById('input-field-container');
         
         if (analysisType) {
@@ -106,21 +106,24 @@ class ModalManager {
             inputContainer.style.display = 'none';
         }
         
-// Load business profiles (async)
-setTimeout(async () => {
-    try {
-        await this.container.get('businessManager')?.loadBusinessProfilesForModal();
-    } catch (error) {
-        console.error('❌ [ModalManager] Failed to load business profiles:', error);
-    }
-}, 100);
+        // Load business profiles (async with proper error handling)
+        setTimeout(async () => {
+            try {
+                const businessManager = this.container.get('businessManager');
+                if (businessManager) {
+                    await businessManager.loadBusinessProfilesForModal();
+                }
+            } catch (error) {
+                console.error('❌ [ModalManager] Failed to load business profiles:', error);
+            }
+        }, 100);
         
         // Focus on analysis type dropdown
         setTimeout(() => {
             if (analysisType) {
                 analysisType.focus();
             }
-        }, 100);
+        }, 200);
         
         console.log('✅ [ModalManager] Analysis modal opened');
     }
@@ -129,7 +132,7 @@ setTimeout(async () => {
     handleAnalysisTypeChange() {
         const analysisType = document.getElementById('analysis-type')?.value;
         const inputContainer = document.getElementById('input-field-container');
-        const profileInput = document.getElementById('profile-input');
+        const profileInput = document.getElementById('username');
         
         if (analysisType && inputContainer) {
             inputContainer.style.display = 'block';
@@ -144,20 +147,81 @@ setTimeout(async () => {
         
         // Update credit cost display
         this.updateCreditCostDisplay(analysisType);
+        
+        // Update submit button
+        this.updateAnalysisSubmitButton(analysisType);
     }
     
     updateCreditCostDisplay(analysisType) {
-        const costDisplay = document.getElementById('analysis-cost');
+        const costDisplay = document.getElementById('analysis-cost-display');
         if (costDisplay) {
             const cost = analysisType === 'deep' ? 2 : 1;
             costDisplay.textContent = `${cost} credit${cost > 1 ? 's' : ''}`;
         }
-        
-        // Update submit button text
+    }
+    
+    updateAnalysisSubmitButton(analysisType) {
         const submitBtn = document.getElementById('analysis-submit-btn');
         if (submitBtn) {
-            const cost = analysisType === 'deep' ? 2 : 1;
-            submitBtn.textContent = `Start Analysis (${cost} credit${cost > 1 ? 's' : ''})`;
+            if (analysisType) {
+                const cost = analysisType === 'deep' ? 2 : 1;
+                submitBtn.textContent = `Start Analysis (${cost} credit${cost > 1 ? 's' : ''})`;
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.textContent = 'Select Analysis Type';
+                submitBtn.disabled = true;
+            }
+        }
+    }
+    
+    // Process analysis form submission
+    async processAnalysisForm(event) {
+        event.preventDefault();
+        
+        try {
+            console.log('🔍 [ModalManager] Processing analysis form...');
+            
+            // Get form data
+            const formData = new FormData(event.target);
+            const username = formData.get('username')?.trim();
+            const analysisType = formData.get('analysisType');
+            const businessId = formData.get('businessId');
+            
+            // Validate inputs
+            if (!username || !analysisType || !businessId) {
+                throw new Error('Please fill in all required fields');
+            }
+            
+            // Clean username
+            const cleanUsername = this.cleanUsername(username);
+            if (!this.isValidUsername(cleanUsername)) {
+                throw new Error('Please enter a valid Instagram username');
+            }
+            
+            // Close modal
+            this.closeModal('analysisModal');
+            
+            // Start analysis
+            const analysisQueue = this.container.get('analysisQueue');
+            const result = await analysisQueue.startSingleAnalysis({
+                username: cleanUsername,
+                analysisType,
+                businessId
+            });
+            
+            this.osliraApp?.showMessage(
+                `Analysis started for @${cleanUsername}`,
+                'success'
+            );
+            
+            console.log('✅ [ModalManager] Analysis form processed:', result);
+            
+        } catch (error) {
+            console.error('❌ [ModalManager] Analysis form processing failed:', error);
+            this.osliraApp?.showMessage(
+                `Analysis failed: ${error.message}`,
+                'error'
+            );
         }
     }
     
@@ -174,14 +238,17 @@ setTimeout(async () => {
         // Reset form and state
         this.resetBulkModal();
         
-// Load business profiles for bulk modal
-setTimeout(async () => {
-    try {
-        await this.container.get('businessManager')?.loadBusinessProfilesForBulkModal();
-    } catch (error) {
-        console.error('❌ [ModalManager] Failed to load bulk business profiles:', error);
-    }
-}, 100);
+        // Load business profiles for bulk modal (async with proper error handling)
+        setTimeout(async () => {
+            try {
+                const businessManager = this.container.get('businessManager');
+                if (businessManager) {
+                    await businessManager.loadBusinessProfilesForBulkModal();
+                }
+            } catch (error) {
+                console.error('❌ [ModalManager] Failed to load bulk business profiles:', error);
+            }
+        }, 100);
         
         console.log('✅ [ModalManager] Bulk modal opened');
     }
@@ -269,62 +336,59 @@ setTimeout(async () => {
         return true;
     }
     
-    async readFileAsText(file) {
+    readFileAsText(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = (e) => {
-                this.osliraApp?.showMessage('Failed to read file', 'error');
+            
+            reader.onload = (e) => {
+                resolve(e.target.result);
+            };
+            
+            reader.onerror = () => {
                 reject(new Error('Failed to read file'));
             };
+            
             reader.readAsText(file);
         });
     }
     
     parseUsernamesFromContent(content, fileType) {
-        let usernames = [];
+        let lines = [];
         
         if (fileType === 'text/csv' || content.includes(',')) {
-            // Parse CSV
-            const lines = content.split('\n');
-            lines.forEach(line => {
-                const columns = line.split(',').map(col => col.trim().replace(/"/g, ''));
-                columns.forEach(col => {
-                    const username = this.extractUsername(col);
-                    if (username) {
-                        usernames.push(username);
-                    }
-                });
+            // Parse as CSV
+            lines = content.split('\n').map(line => {
+                // Take first column if CSV, otherwise whole line
+                return line.split(',')[0];
             });
         } else {
-            // Parse plain text (line by line)
-            const lines = content.split('\n');
-            lines.forEach(line => {
-                const username = this.extractUsername(line.trim());
-                if (username) {
-                    usernames.push(username);
-                }
-            });
+            // Parse as plain text
+            lines = content.split('\n');
         }
         
-        // Remove duplicates and filter valid usernames
-        return [...new Set(usernames)].filter(username => this.isValidUsername(username));
+        // Clean and validate usernames
+        const usernames = lines
+            .map(line => this.cleanUsername(line))
+            .filter(username => username && this.isValidUsername(username))
+            .filter((username, index, arr) => arr.indexOf(username) === index); // Remove duplicates
+        
+        return usernames;
     }
     
-    extractUsername(text) {
-        if (!text) return null;
+    cleanUsername(input) {
+        if (!input || typeof input !== 'string') return '';
         
-        // Remove @ symbol and clean
-        let username = text.replace(/^@/, '').trim();
+        // Remove whitespace, @, and common prefixes
+        let username = input.trim()
+            .replace(/^@/, '')
+            .replace(/^https?:\/\//, '')
+            .replace(/^(www\.)?instagram\.com\//, '')
+            .replace(/\/$/, '');
         
-        // Extract from Instagram URLs
-        const instagramMatch = username.match(/instagram\.com\/([a-zA-Z0-9._]+)/);
-        if (instagramMatch) {
-            username = instagramMatch[1];
+        // Extract username from Instagram URL if present
+        if (username.includes('/')) {
+            username = username.split('/')[0];
         }
-        
-        // Clean up any remaining URL parts
-        username = username.split('/')[0].split('?')[0];
         
         return username;
     }
@@ -397,92 +461,247 @@ setTimeout(async () => {
     }
     
     checkBulkCredits() {
-        const analysisType = document.getElementById('bulk-analysis-type')?.value;
-        const usernameCount = this.bulkUsernames?.length || 0;
-        const currentCredits = this.getCurrentUserCredits();
+        const creditCost = this.calculateBulkCreditCost();
+        const availableCredits = this.osliraApp?.credits || 0;
         
-        if (!analysisType || usernameCount === 0) {
-            return false;
-        }
-        
-        const creditPerAnalysis = analysisType === 'deep' ? 2 : 1;
-        const totalCost = usernameCount * creditPerAnalysis;
-        
-        return currentCredits >= totalCost;
+        return availableCredits >= creditCost;
     }
     
     calculateBulkCreditCost() {
         const analysisType = document.getElementById('bulk-analysis-type')?.value;
         const usernameCount = this.bulkUsernames?.length || 0;
+        const costPerAnalysis = analysisType === 'deep' ? 2 : 1;
         
-        if (!analysisType) return 0;
-        
-        const creditPerAnalysis = analysisType === 'deep' ? 2 : 1;
-        return usernameCount * creditPerAnalysis;
+        return usernameCount * costPerAnalysis;
     }
     
-    getCurrentUserCredits() {
-        // Get current user credits from global state
-        const credits = this.osliraApp?.user?.credits;
-        
-        if (typeof credits === 'number') {
-            return credits;
+    // Process bulk upload
+    async processBulkUpload() {
+        try {
+            console.log('📁 [ModalManager] Processing bulk upload');
+            
+            const analysisType = document.getElementById('bulk-analysis-type')?.value;
+            const businessId = document.getElementById('bulk-business-id')?.value;
+            const usernames = this.bulkUsernames || [];
+            
+            if (!analysisType || !businessId || usernames.length === 0) {
+                throw new Error('Please complete all required fields');
+            }
+            
+            // Close modal
+            this.closeModal('bulkModal');
+            
+            // Convert usernames to lead objects
+            const leads = usernames.map(username => ({ username }));
+            
+            // Use the analysis queue for bulk processing
+            const analysisQueue = this.container.get('analysisQueue');
+            const result = await analysisQueue.startBulkAnalysis(leads, analysisType, businessId);
+            
+            this.osliraApp?.showMessage(
+                `Bulk analysis started: ${leads.length} profiles queued`,
+                'success'
+            );
+            
+            console.log('✅ [ModalManager] Bulk upload initiated:', result);
+            
+        } catch (error) {
+            console.error('❌ [ModalManager] Bulk upload failed:', error);
+            this.osliraApp?.showMessage(
+                `Bulk upload failed: ${error.message}`,
+                'error'
+            );
         }
-        
-        // Fallback: try to get from UI if available
-        const currentCreditsEl = document.getElementById('current-credits');
-        if (currentCreditsEl && currentCreditsEl.textContent !== 'Loading...') {
-            const uiCredits = parseInt(currentCreditsEl.textContent.replace(/,/g, ''));
-            return isNaN(uiCredits) ? 0 : uiCredits;
-        }
-        
-        return 0;
     }
     
     // ===============================================================================
     // LEAD DETAILS MODAL
     // ===============================================================================
     
-    showLeadDetailsModal(leadId) {
-        console.log('👁️ [ModalManager] Opening lead details modal for:', leadId);
+    async showLeadDetailsModal(leadId) {
+        console.log('📊 [ModalManager] Opening lead details modal for:', leadId);
         
         const modal = this.openModal('leadDetailsModal');
         if (!modal) return;
         
+        const contentContainer = document.getElementById('lead-details-content');
+        if (!contentContainer) return;
+        
         // Show loading state
-        const detailsContainer = document.getElementById('lead-details-content');
-        if (detailsContainer) {
-            detailsContainer.innerHTML = `
-                <div style="text-align: center; padding: 60px;">
-                    <div style="font-size: 32px; margin-bottom: 16px;">⏳</div>
-                    <h3 style="margin: 0; color: var(--text-primary);">Loading lead details...</h3>
+        contentContainer.innerHTML = `
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p>Loading lead details...</p>
+            </div>
+        `;
+        
+        try {
+            // Get lead details
+            const leadManager = this.container.get('leadManager');
+            const leadData = await leadManager.getLeadDetails(leadId);
+            
+            if (!leadData) {
+                throw new Error('Lead not found');
+            }
+            
+            // Render lead details
+            this.renderLeadDetails(leadData, contentContainer);
+            
+            console.log('✅ [ModalManager] Lead details loaded');
+            
+        } catch (error) {
+            console.error('❌ [ModalManager] Failed to load lead details:', error);
+            
+            contentContainer.innerHTML = `
+                <div class="error-state">
+                    <h3 style="margin: 0; color: var(--error);">Error Loading Lead</h3>
+                    <p style="color: var(--text-secondary);">${error.message}</p>
+                    <button onclick="modalManager.showLeadDetailsModal('${leadId}')" 
+                            class="btn btn-primary" style="margin-top: 16px;">
+                        Try Again
+                    </button>
                 </div>
             `;
         }
+    }
+    
+    renderLeadDetails(leadData, container) {
+        const { lead, analysis } = leadData;
         
-        // Load lead details
-        this.container.get('leadManager')?.viewLead(leadId)
-            .then(({ lead, analysisData }) => {
-                if (detailsContainer) {
-                    const detailsHtml = this.container.get('leadRenderer')?.buildLeadDetailsHTML(lead, analysisData);
-                    detailsContainer.innerHTML = detailsHtml;
-                }
-            })
-            .catch(error => {
-                if (detailsContainer) {
-                    detailsContainer.innerHTML = `
-                        <div style="text-align: center; padding: 60px;">
-                            <div style="font-size: 32px; margin-bottom: 16px;">❌</div>
-                            <h3 style="margin: 0; color: var(--error);">Error Loading Lead</h3>
-                            <p style="color: var(--text-secondary);">${error.message}</p>
-                            <button onclick="modalManager.showLeadDetailsModal('${leadId}')" 
-                                    class="btn btn-primary" style="margin-top: 16px;">
-                                Try Again
-                            </button>
+        container.innerHTML = `
+            <div class="lead-details">
+                <div class="lead-header">
+                    <div class="lead-avatar">
+                        <img src="${lead.profile_pic_url || '/assets/default-avatar.png'}" 
+                             alt="@${lead.username}" />
+                    </div>
+                    <div class="lead-info">
+                        <h2>@${lead.username}</h2>
+                        <p class="platform">${lead.platform || 'Instagram'}</p>
+                        <p class="score">Score: ${lead.score || 0}/100</p>
+                    </div>
+                </div>
+                
+                ${analysis ? this.renderAnalysisDetails(analysis) : ''}
+                
+                <div class="lead-actions">
+                    <button class="btn btn-primary" onclick="modalManager.copyText('outreach-message')">
+                        Copy Message
+                    </button>
+                    <button class="btn btn-secondary" onclick="modalManager.closeModal('leadDetailsModal')">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    renderAnalysisDetails(analysis) {
+        return `
+            <div class="analysis-details">
+                <div class="analysis-scores">
+                    <div class="score-item">
+                        <span class="score-label">Engagement</span>
+                        <span class="score-value">${analysis.engagement_score || 0}/100</span>
+                    </div>
+                    <div class="score-item">
+                        <span class="score-label">Niche Fit</span>
+                        <span class="score-value">${analysis.score_niche_fit || 0}/100</span>
+                    </div>
+                </div>
+                
+                ${analysis.outreach_message ? `
+                    <div class="outreach-message">
+                        <h4>Personalized Message</h4>
+                        <div id="outreach-message" class="message-content">
+                            ${analysis.outreach_message}
                         </div>
-                    `;
-                }
-            });
+                    </div>
+                ` : ''}
+                
+                ${analysis.selling_points && analysis.selling_points.length > 0 ? `
+                    <div class="selling-points">
+                        <h4>Key Selling Points</h4>
+                        <ul>
+                            ${analysis.selling_points.map(point => `<li>${point}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+    
+    // ===============================================================================
+    // MESSAGE EDITING
+    // ===============================================================================
+    
+    editMessage(leadId) {
+        console.log('✏️ [ModalManager] Editing message for lead:', leadId);
+        
+        const messageElement = document.querySelector(`[data-lead-id="${leadId}"] .outreach-message`);
+        if (!messageElement) return;
+        
+        const currentMessage = messageElement.textContent.trim();
+        
+        // Create textarea for editing
+        const textarea = document.createElement('textarea');
+        textarea.value = currentMessage;
+        textarea.className = 'message-editor';
+        textarea.rows = 4;
+        
+        // Create save/cancel buttons
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'edit-buttons';
+        buttonContainer.innerHTML = `
+            <button class="btn btn-primary btn-small" onclick="dashboard.saveEditedMessage('${leadId}')">
+                Save
+            </button>
+            <button class="btn btn-secondary btn-small" onclick="dashboard.cancelEditMessage('${leadId}')">
+                Cancel
+            </button>
+        `;
+        
+        // Replace message content with editor
+        messageElement.innerHTML = '';
+        messageElement.appendChild(textarea);
+        messageElement.appendChild(buttonContainer);
+        
+        // Focus on textarea
+        textarea.focus();
+        textarea.select();
+    }
+    
+    async saveEditedMessage(leadId) {
+        console.log('💾 [ModalManager] Saving edited message for lead:', leadId);
+        
+        const messageElement = document.querySelector(`[data-lead-id="${leadId}"] .outreach-message`);
+        const textarea = messageElement?.querySelector('textarea');
+        
+        if (!textarea) return;
+        
+        const newMessage = textarea.value.trim();
+        
+        try {
+            // Save to database
+            const leadManager = this.container.get('leadManager');
+            await leadManager.updateLeadMessage(leadId, newMessage);
+            
+            // Update UI
+            messageElement.innerHTML = `<p>${newMessage}</p>`;
+            
+            this.osliraApp?.showMessage('Message updated successfully', 'success');
+            
+        } catch (error) {
+            console.error('❌ [ModalManager] Failed to save message:', error);
+            this.osliraApp?.showMessage('Failed to save message', 'error');
+        }
+    }
+    
+    cancelEditMessage(leadId) {
+        console.log('❌ [ModalManager] Cancelling message edit for lead:', leadId);
+        
+        // Reload the original message
+        this.showLeadDetailsModal(leadId);
     }
     
     // ===============================================================================
@@ -521,32 +740,23 @@ setTimeout(async () => {
     setupModalEventListeners() {
         // Close modals when clicking outside
         document.addEventListener('click', (event) => {
-            if (event.target.classList.contains('modal') && 
-                event.target === event.currentTarget) {
+            if (event.target.classList.contains('modal-overlay')) {
                 const modalId = event.target.id;
-                this.closeModal(modalId);
+                if (modalId) {
+                    this.closeModal(modalId);
+                }
             }
         });
         
-        // Close modals on Escape key
+        // Close modals with Escape key
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && this.activeModals.size > 0) {
-                this.closeAllModals();
+                const activeModal = Array.from(this.activeModals)[0];
+                this.closeModal(activeModal);
             }
         });
         
         console.log('✅ [ModalManager] Global modal event listeners setup');
-    }
-    
-    isModalOpen(modalId = null) {
-        if (modalId) {
-            return this.activeModals.has(modalId);
-        }
-        return this.activeModals.size > 0;
-    }
-    
-    getActiveModal() {
-        return this.stateManager.getState('activeModal');
     }
     
     // ===============================================================================
@@ -556,13 +766,11 @@ setTimeout(async () => {
     async cleanup() {
         console.log('🧹 [ModalManager] Cleaning up...');
         
-        // Close all open modals
+        // Close all modals
         this.closeAllModals();
         
-        // Clear bulk usernames
+        // Clear state
         this.bulkUsernames = [];
-        
-        // Clear active modals set
         this.activeModals.clear();
         
         console.log('✅ [ModalManager] Cleanup completed');
