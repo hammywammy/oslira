@@ -209,29 +209,61 @@ async initializeSidebar() {
 
 const dashboardInitializer = new DashboardInitializer();
 
-// Initialize when page loads
-document.addEventListener('DOMContentLoaded', async () => {
+// Initialize immediately if DOM is ready, or when it becomes ready
+const startDashboard = async () => {
     try {
-        console.log('📄 [Dashboard] DOM loaded, starting dashboard...');
+        console.log('📄 [Dashboard] Starting dashboard auto-initialization...');
         
-        // Wait for required scripts to be loaded
-        if (window.OsliraEnv?.SCRIPT_LOADER_COMPLETE) {
-            await dashboardInitializer.init();
-        } else {
-            // Wait for scripts to load
-            window.addEventListener('oslira:scripts:loaded', async () => {
-                try {
-                    await dashboardInitializer.init();
-                } catch (error) {
-                    console.error('❌ [Dashboard] Auto-initialization failed:', error);
+        const initializeDashboard = async () => {
+            try {
+                if (dashboardInitializer.initialized) {
+                    console.log('📄 [Dashboard] Already initialized, skipping');
+                    return;
                 }
-            });
+                console.log('📄 [Dashboard] Auto-initializing dashboard...');
+                await dashboardInitializer.init();
+            } catch (error) {
+                console.error('❌ [Dashboard] Auto-initialization failed:', error);
+            }
+        };
+
+        // 1. Check if everything is already ready
+        if (window.OsliraApp && window.SimpleAuth) {
+            console.log('📄 [Dashboard] All dependencies ready, initializing immediately');
+            await initializeDashboard();
+            return;
         }
         
+        // 2. Polling with shorter interval for faster response
+        console.log('📄 [Dashboard] Setting up dependency polling...');
+        const pollForDependencies = setInterval(async () => {
+            if (window.OsliraApp && window.SimpleAuth && !dashboardInitializer.initialized) {
+                console.log('📄 [Dashboard] Dependencies detected via polling, initializing...');
+                clearInterval(pollForDependencies);
+                await initializeDashboard();
+            }
+        }, 100); // Check every 100ms instead of 500ms
+        
+        // 3. Cleanup timeout after 10 seconds
+        setTimeout(() => {
+            clearInterval(pollForDependencies);
+            if (!dashboardInitializer.initialized) {
+                console.log('📄 [Dashboard] Polling timeout reached without initialization');
+            }
+        }, 10000);
+        
     } catch (error) {
-        console.error('❌ [Dashboard] Failed to start initialization:', error);
+        console.error('❌ [Dashboard] Failed to start dashboard:', error);
     }
-});
+};
+
+// Start immediately if DOM is ready, otherwise wait for it
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startDashboard);
+} else {
+    // DOM already ready - start immediately
+    startDashboard();
+}
 
 // Make dashboardInitializer available globally for debugging
 window.dashboardInitializer = dashboardInitializer;
