@@ -156,6 +156,8 @@ class SidebarManager {
         
         this.initialized = true;
         console.log('✅ [SidebarManager] Initialization complete');
+
+        this.initializeBusinessSelector();
     }
     
     async waitForDependencies() {
@@ -172,15 +174,23 @@ class SidebarManager {
         }
     }
     
-    connectToBusinessManager() {
-        // Try to get BusinessManager from dashboard container
-        if (window.dashboard?._app?.container) {
-            this.businessManager = window.dashboard._app.container.get('businessManager');
-            console.log('✅ [SidebarManager] Connected to BusinessManager');
-        } else {
-            console.warn('⚠️ [SidebarManager] BusinessManager not available');
+connectToBusinessManager() {
+    // Try to get BusinessManager from dashboard container
+    if (window.dashboard?._app?.container) {
+        this.businessManager = window.dashboard._app.container.get('businessManager');
+        console.log('✅ [SidebarManager] Connected to BusinessManager');
+        
+        // Notify BusinessManager that sidebar is ready
+        if (this.businessManager && this.businessManager.updateSidebarBusinessSelector) {
+            setTimeout(() => {
+                console.log('🔄 [SidebarManager] Triggering business selector update...');
+                this.businessManager.updateSidebarBusinessSelector();
+            }, 100); // Small delay to ensure DOM is ready
         }
+    } else {
+        console.warn('⚠️ [SidebarManager] BusinessManager not available');
     }
+}
     
     // =========================================================================
     // USER INFO UPDATE
@@ -306,6 +316,50 @@ class SidebarManager {
             planElement.textContent = this.formatPlanName(planName);
         }
     }
+
+    // =========================================================================
+// BUSINESS SELECTOR INITIALIZATION
+// =========================================================================
+
+initializeBusinessSelector() {
+    try {
+        const businessSelect = document.getElementById('business-select');
+        if (!businessSelect) {
+            console.warn('⚠️ [SidebarManager] Business selector element not found');
+            return;
+        }
+
+        // Check if we have business data available
+        if (window.OsliraApp?.businesses && window.OsliraApp.businesses.length > 0) {
+            console.log('🏢 [SidebarManager] Populating business selector with existing data');
+            
+            const businesses = window.OsliraApp.businesses;
+            const currentBusiness = window.OsliraApp.business;
+            
+            const optionsHTML = businesses.map(business => 
+                `<option value="${business.id}" ${business.id === currentBusiness?.id ? 'selected' : ''}>
+                    ${business.business_name || business.name || 'Unnamed Business'}
+                </option>`
+            ).join('');
+            
+            businessSelect.innerHTML = `
+                <option value="">Select business profile...</option>
+                ${optionsHTML}
+            `;
+            
+            // Add change handler
+            businessSelect.addEventListener('change', (e) => {
+                if (e.target.value && this.businessManager?.switchBusiness) {
+                    this.businessManager.switchBusiness(e.target.value);
+                }
+            });
+            
+            console.log('✅ [SidebarManager] Business selector initialized');
+        }
+    } catch (error) {
+        console.error('❌ [SidebarManager] Failed to initialize business selector:', error);
+    }
+}
     
     // =========================================================================
     // CLEANUP
