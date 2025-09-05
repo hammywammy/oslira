@@ -19,18 +19,28 @@ class DependencyContainer {
     /**
      * Register a singleton instance
      */
-    registerSingleton(name, instance) {
-        if (this.dependencies.has(name)) {
-            throw new Error(`Dependency '${name}' already registered`);
-        }
-        
-        this.dependencies.set(name, instance);
-        this.singletons.set(name, instance);
-        this.initializationOrder.push(name);
-        
-        console.log(`📋 [DependencyContainer] Singleton registered: ${name}`);
-        return this;
+registerSingleton(name, instance) {
+    if (this.dependencies.has(name) && !this.factories.has(name)) {
+        throw new Error(`Dependency '${name}' already registered`);
     }
+    
+    // Clean up factory if we're replacing it with a singleton
+    if (this.factories.has(name)) {
+        this.factories.delete(name);
+        console.log(`🔄 [DependencyContainer] Replaced factory with singleton: ${name}`);
+    }
+    
+    this.dependencies.set(name, instance);
+    this.singletons.set(name, instance);
+    
+    // Only add to initialization order if not already present
+    if (!this.initializationOrder.includes(name)) {
+        this.initializationOrder.push(name);
+    }
+    
+    console.log(`📋 [DependencyContainer] Singleton registered: ${name}`);
+    return this;
+}
     
     /**
      * Register a factory function
