@@ -222,17 +222,20 @@ class RealtimeManager {
         
         console.log('🔄 [RealtimeManager] Starting polling fallback...');
         
-        this.pollingInterval = setInterval(() => {
-            if (!document.hidden && !this.isRealtimeActive) {
-                console.log('📊 [RealtimeManager] Polling for updates...');
-                
-                // Emit refresh event
-                this.eventBus.emit(DASHBOARD_EVENTS.DATA_REFRESH, {
-                    reason: 'polling',
-                    timestamp: Date.now()
-                });
-            }
-        }, this.pollingIntervalMs);
+this.pollingInterval = setInterval(() => {
+    if (!document.hidden && !this.isRealtimeActive) {
+        // Only log every 5th poll to reduce spam
+        if (Date.now() % 150000 < 30000) { // Log roughly every 5 minutes
+            console.log('📊 [RealtimeManager] Polling for updates...');
+        }
+        
+        // Emit refresh event
+        this.eventBus.emit(DASHBOARD_EVENTS.DATA_REFRESH, {
+            reason: 'polling',
+            timestamp: Date.now()
+        });
+    }
+}, this.pollingIntervalMs);
         
         this.stateManager.setState('connectionStatus', 'polling');
         console.log(`✅ [RealtimeManager] Polling started (${this.pollingIntervalMs}ms intervals)`);
