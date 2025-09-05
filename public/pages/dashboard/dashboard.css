@@ -1094,14 +1094,3 @@ header h1 {
 .main-content span {
     color: var(--text-primary) !important;
 }
-
-/* Let Tailwind classes override existing styles */
-[class*="bg-"],
-[class*="text-"],
-[class*="border-"],
-[class*="shadow-"] {
-    color: unset !important;
-    background: unset !important;
-    border: unset !important;
-    box-shadow: unset !important;
-}
