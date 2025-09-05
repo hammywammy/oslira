@@ -536,25 +536,18 @@ showAlert(message, type = 'info') {
 
 showLoading(message) {
     this.isLoading = true;
-    
-    // Hide global UI manager loading if it exists
-    if (window.UI && window.UI.loading) {
-        window.UI.loading.hide();
-    }
-    
-    // Use local loading state within auth container
     const loadingStateEl = document.getElementById('loading-state');
-    const loadingTextEl = document.getElementById('loading-text');
-    
-    if (loadingStateEl) {
-        loadingStateEl.classList.remove('hidden');
-    }
+    const loadingTextEl = document.getElementById('loading-message');
     
     if (loadingTextEl && message) {
         loadingTextEl.textContent = message;
     }
     
-    // Disable form elements
+    if (loadingStateEl) {
+        loadingStateEl.classList.remove('hidden');
+        loadingStateEl.classList.add('show');
+    }
+    
     document.querySelectorAll('.auth-container input, .auth-container button').forEach(el => {
         el.disabled = true;
     });
@@ -563,9 +556,11 @@ showLoading(message) {
 hideLoading() {
     this.isLoading = false;
     const loadingStateEl = document.getElementById('loading-state');
-    if (loadingStateEl) loadingStateEl.classList.add('hidden');
+    if (loadingStateEl) {
+        loadingStateEl.classList.add('hidden');
+        loadingStateEl.classList.remove('show');
+    }
     
-    // Re-enable form elements
     document.querySelectorAll('.auth-container input, .auth-container button').forEach(el => {
         el.disabled = false;
     });
@@ -583,18 +578,24 @@ hideLoading() {
         }
     }
 
-    showError(message) {
-        const errorMsgEl = document.getElementById('error-message');
-        const errorStateEl = document.getElementById('error-state');
-        
-        if (errorMsgEl) errorMsgEl.innerHTML = message;
-        if (errorStateEl) errorStateEl.classList.remove('hidden');
+showError(message) {
+    const errorMsgEl = document.getElementById('error-message');
+    const errorStateEl = document.getElementById('error-state');
+    
+    if (errorMsgEl) errorMsgEl.innerHTML = message;
+    if (errorStateEl) {
+        errorStateEl.classList.remove('hidden');
+        errorStateEl.classList.add('show');
     }
+}
 
-    hideError() {
-        const errorEl = document.getElementById('error-state');
-        if (errorEl) errorEl.classList.add('hidden');
+hideError() {
+    const errorEl = document.getElementById('error-state');
+    if (errorEl) {
+        errorEl.classList.add('hidden');
+        errorEl.classList.remove('show');
     }
+}
 
     showSuccess(message) {
         const successMsgEl = document.getElementById('success-message');
