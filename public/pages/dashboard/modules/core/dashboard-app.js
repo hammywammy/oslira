@@ -629,10 +629,10 @@ async preResolveAsyncDependencies() {
         console.log('✅ [DashboardApp] Cleanup completed');
     }
 }
-
-// Export for ES6 modules and global use
-export { DashboardApp, DASHBOARD_EVENTS };
-
-// Also make available globally for compatibility
-window.DashboardApp = DashboardApp;
-window.DASHBOARD_EVENTS = DASHBOARD_EVENTS;
+// Export for use in other modules - restore original pattern
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { DashboardApp, DASHBOARD_EVENTS };
+} else {
+    window.DashboardApp = DashboardApp;
+    window.DASHBOARD_EVENTS = DASHBOARD_EVENTS;
+}
