@@ -10,7 +10,6 @@ class LeadManager {
         this.container = container;
         this.eventBus = container.get('eventBus');
         this.stateManager = container.get('stateManager');
-        this.supabase = container.get('supabase');
         this.osliraApp = container.get('osliraApp');
         
         // Cache for lead data
@@ -538,6 +537,10 @@ class LeadManager {
         console.log('🏢 [LeadManager] Business changed, reloading leads');
         this.loadDashboardData();
     }
+
+    get supabase() {
+    return this.container.get('supabase');
+}
     
     // ===============================================================================
     // UTILITY METHODS
