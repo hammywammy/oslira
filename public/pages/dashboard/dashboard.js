@@ -32,20 +32,20 @@ class Dashboard {
             this.app = new DashboardApp();
             await this.app.init();
             
-// Setup global compatibility for HTML onclick handlers
-this.setupGlobalCompatibility();
-
-// Update sidebar with user information
-this.updateSidebarUserInfo();
-
-this.initialized = true;
-const totalTime = Date.now() - this.initStartTime;
-
-console.log(`✅ [Dashboard] Dashboard initialized successfully in ${totalTime}ms`);
-
-if (window.OsliraApp?.showMessage) {
-    window.OsliraApp.showMessage('Dashboard loaded successfully', 'success');
-}
+            // Setup global compatibility for HTML onclick handlers
+            this.setupGlobalCompatibility();
+            
+            // Update sidebar with user information
+            this.updateSidebarUserInfo();
+            
+            this.initialized = true;
+            const totalTime = Date.now() - this.initStartTime;
+            
+            console.log(`✅ [Dashboard] Dashboard initialized successfully in ${totalTime}ms`);
+            
+            if (window.OsliraApp?.showMessage) {
+                window.OsliraApp.showMessage('Dashboard loaded successfully', 'success');
+            }
             
         } catch (error) {
             console.error('❌ [Dashboard] Initialization failed:', error);
@@ -105,108 +105,165 @@ if (window.OsliraApp?.showMessage) {
         console.log('✅ [Dashboard] Global compatibility established');
     }
     
-updateSidebarUserInfo() {
-    try {
-        const user = window.OsliraApp?.user;
-        if (!user) {
-            console.warn('⚠️ [Dashboard] No user data available for sidebar update');
-            return;
+    updateSidebarUserInfo() {
+        try {
+            const user = window.OsliraApp?.user;
+            if (!user) {
+                console.warn('⚠️ [Dashboard] No user data available for sidebar update');
+                return;
+            }
+
+            console.log('🔄 [Dashboard] Updating sidebar with user info...');
+
+            // Update subscription plan
+            const planElement = document.getElementById('sidebar-plan');
+            if (planElement) {
+                const planName = this.formatPlanName(user.subscription_plan || 'free');
+                planElement.textContent = planName;
+            }
+
+            // Update credits display
+            const creditsElement = document.getElementById('sidebar-billing');
+            if (creditsElement) {
+                const credits = user.credits || 0;
+                const creditClass = credits < 5 ? 'credits-free' : 'credits-paid';
+                creditsElement.innerHTML = `
+                    <span class="${creditClass}">${credits} credits remaining</span>
+                `;
+            }
+
+            // Update user email
+            const emailElement = document.getElementById('user-email');
+            if (emailElement) {
+                emailElement.textContent = user.email || 'No email';
+            }
+
+            // Setup logout functionality
+            const logoutLink = document.getElementById('logout-link');
+            if (logoutLink && !logoutLink.hasAttribute('data-handler-added')) {
+                logoutLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.handleLogout();
+                });
+                logoutLink.setAttribute('data-handler-added', 'true');
+            }
+
+            console.log('✅ [Dashboard] Sidebar user info updated');
+
+        } catch (error) {
+            console.error('❌ [Dashboard] Failed to update sidebar user info:', error);
         }
-
-        console.log('🔄 [Dashboard] Updating sidebar with user info...');
-
-        // Update subscription plan
-        const planElement = document.getElementById('sidebar-plan');
-        if (planElement) {
-            const planName = this.formatPlanName(user.subscription_plan || 'free');
-            planElement.textContent = planName;
-        }
-
-        // Update credits display
-        const creditsElement = document.getElementById('sidebar-billing');
-        if (creditsElement) {
-            const credits = user.credits || 0;
-            const creditClass = credits < 5 ? 'credits-free' : 'credits-paid';
-            creditsElement.innerHTML = `
-                <span class="${creditClass}">${credits} credits remaining</span>
-            `;
-        }
-
-        // Update user email
-        const emailElement = document.getElementById('user-email');
-        if (emailElement) {
-            emailElement.textContent = user.email || 'No email';
-        }
-
-        // Setup logout functionality
-        const logoutLink = document.getElementById('logout-link');
-        if (logoutLink) {
-            logoutLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleLogout();
-            });
-        }
-
-        console.log('✅ [Dashboard] Sidebar user info updated');
-
-    } catch (error) {
-        console.error('❌ [Dashboard] Failed to update sidebar user info:', error);
     }
-}
 
-formatPlanName(plan) {
-    const planNames = {
-        'free': 'Free Plan',
-        'basic': 'Basic Plan', 
-        'pro': 'Pro Plan',
-        'premium': 'Premium Plan',
-        'enterprise': 'Enterprise Plan'
-    };
-    
-    return planNames[plan.toLowerCase()] || 'Free Plan';
-}
-
-async handleLogout() {
-    try {
-        console.log('🚪 [Dashboard] Logging out user...');
+    formatPlanName(plan) {
+        const planNames = {
+            'free': 'Free Plan',
+            'basic': 'Basic Plan', 
+            'pro': 'Pro Plan',
+            'premium': 'Premium Plan',
+            'enterprise': 'Enterprise Plan'
+        };
         
-        if (window.SimpleAuth) {
-            await window.SimpleAuth.signOut();
-        }
-        
-        // Clear any cached data
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Redirect to auth page
-        window.location.href = '/auth';
-        
-    } catch (error) {
-        console.error('❌ [Dashboard] Logout failed:', error);
-        // Force redirect anyway
-        window.location.href = '/auth';
+        return planNames[plan.toLowerCase()] || 'Free Plan';
     }
-}
 
-handleInitializationFailure(error) {
-    console.error('🚨 [Dashboard] Initialization failed:', error);
+    async handleLogout() {
+        try {
+            console.log('🚪 [Dashboard] Logging out user...');
+            
+            // Show loading state
+            if (window.OsliraApp?.showMessage) {
+                window.OsliraApp.showMessage('Signing out...', 'info');
+            }
+            
+            // Use SimpleAuth to sign out
+            if (window.SimpleAuth) {
+                await window.SimpleAuth.signOut();
+            }
+            
+            // Clear any cached data
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Clear global objects
+            if (window.OsliraApp) {
+                window.OsliraApp = null;
+            }
+            
+            // Redirect to auth page
+            window.location.href = '/auth';
+            
+        } catch (error) {
+            console.error('❌ [Dashboard] Logout failed:', error);
+            // Force redirect anyway
+            window.location.href = '/auth';
+        }
+    }
     
-    const errorDiv = document.createElement('div');
-    errorDiv.style.cssText = `
-        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        background: #ef4444; color: white; padding: 24px; border-radius: 12px;
-        max-width: 500px; text-align: center; z-index: 10000;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    `;
-    errorDiv.innerHTML = `
-        <h3 style="margin: 0 0 12px 0;">Dashboard Failed to Load</h3>
-        <p style="margin: 0 0 16px 0;">${error.message}</p>
-        <button onclick="window.location.reload()" style="
-            background: white; color: #ef4444; border: none;
-            padding: 8px 16px; border-radius: 6px; cursor: pointer;
-        ">Reload Page</button>
-    `;
-    document.body.appendChild(errorDiv);
+    handleInitializationFailure(error) {
+        console.error('🚨 [Dashboard] Initialization failed:', error);
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #ef4444; color: white; padding: 24px; border-radius: 12px;
+            max-width: 500px; text-align: center; z-index: 10000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        `;
+        errorDiv.innerHTML = `
+            <h3 style="margin: 0 0 12px 0; font-size: 18px;">Dashboard Failed to Load</h3>
+            <p style="margin: 0 0 16px 0; font-size: 14px; opacity: 0.9;">${error.message}</p>
+            <button onclick="window.location.reload()" style="
+                background: white; color: #ef4444; border: none;
+                padding: 8px 16px; border-radius: 6px; cursor: pointer;
+                font-size: 14px; font-weight: 500;
+            ">Reload Page</button>
+        `;
+        document.body.appendChild(errorDiv);
+    }
+
+    // Utility method to refresh user info if needed
+    async refreshUserInfo() {
+        try {
+            console.log('🔄 [Dashboard] Refreshing user info...');
+            
+            // Refresh user data from SimpleApp
+            if (window.OsliraSimpleApp) {
+                await window.OsliraSimpleApp.refreshUserData();
+            }
+            
+            // Update sidebar
+            this.updateSidebarUserInfo();
+            
+            console.log('✅ [Dashboard] User info refreshed');
+            
+        } catch (error) {
+            console.error('❌ [Dashboard] Failed to refresh user info:', error);
+        }
+    }
+
+    // Method to handle credit updates from other parts of the app
+    updateCreditsDisplay(newCredits) {
+        try {
+            const creditsElement = document.getElementById('sidebar-billing');
+            if (creditsElement) {
+                const creditClass = newCredits < 5 ? 'credits-free' : 'credits-paid';
+                creditsElement.innerHTML = `
+                    <span class="${creditClass}">${newCredits} credits remaining</span>
+                `;
+                
+                // Update OsliraApp object if it exists
+                if (window.OsliraApp?.user) {
+                    window.OsliraApp.user.credits = newCredits;
+                }
+                
+                console.log(`💳 [Dashboard] Credits updated to ${newCredits}`);
+            }
+        } catch (error) {
+            console.error('❌ [Dashboard] Failed to update credits display:', error);
+        }
+    }
 }
 
 // Initialize when script loader is done
