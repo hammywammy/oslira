@@ -5,7 +5,7 @@
    ============================================================================= */
 
 @import url('/core/design-system.css');
-@import url('/core/sidebar.css');
+@import url('/core/sidebar/sidebar.css');
 
 /* =============================================================================
    DASHBOARD LAYOUT
