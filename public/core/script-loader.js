@@ -121,13 +121,16 @@ class OsliraScriptLoader {
             
             // Page-specific dependencies
             pages: {
-                'dashboard': {
+'dashboard': {
     scripts: [
         // Core infrastructure FIRST (dependency order critical)
         '/pages/dashboard/modules/core/event-bus.js',
         '/pages/dashboard/modules/core/state-manager.js', 
         '/pages/dashboard/modules/core/dependency-container.js',
         '/pages/dashboard/modules/core/dashboard-app.js',
+        
+        // UI Components (load before feature modules)
+        '/core/sidebar/sidebar-manager.js',
         
         // Feature modules (parallel loading safe)
         '/pages/dashboard/modules/analysis/analysis-queue.js',
