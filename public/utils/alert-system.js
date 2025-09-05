@@ -30,6 +30,16 @@
     // ERROR MAPPINGS
     // =========================================================================
     const ERROR_MAPPINGS = {
+            'Token has expired or is invalid': {
+        title: 'Invalid Code',
+        message: 'The verification code you entered is incorrect or has expired. Please try again.',
+        suggestions: ['Double-check the 6-digit code', 'Request a new code if needed']
+    },
+    'For security purposes': {
+        title: 'Rate Limited',
+        message: 'Please wait before requesting another code.',
+        suggestions: ['Wait a moment', 'Try again in a few seconds']
+    },
         'Failed to fetch': {
             title: 'Connection Problem',
             message: 'Unable to connect. Please check your internet connection.',
@@ -163,21 +173,32 @@ const CRITICAL_PATTERNS = [
         // ---------------------------------------------------------------------
         // ERROR TRANSFORMATION
         // ---------------------------------------------------------------------
-        transformError(error) {
-            const errorStr = typeof error === 'string' ? error : error?.message || '';
-            
-            for (const [pattern, mapping] of Object.entries(ERROR_MAPPINGS)) {
-                if (errorStr.includes(pattern)) {
-                    return mapping;
-                }
-            }
-            
-            return {
-                title: 'Something Went Wrong',
-                message: 'An unexpected error occurred. Please try again.',
-                details: errorStr
-            };
+transformError(error) {
+    const errorStr = typeof error === 'string' ? error : error?.message || '';
+    
+    // Handle specific rate limit messages FIRST (before generic mappings)
+    if (errorStr.includes('For security purposes, you can only request this after')) {
+        const match = errorStr.match(/after (\d+) seconds?/);
+        const seconds = match ? match[1] : 'a few';
+        return {
+            title: 'Too Many Requests',
+            message: `Please wait ${seconds} seconds before requesting another code.`,
+            details: errorStr
+        };
+    }
+    
+    for (const [pattern, mapping] of Object.entries(ERROR_MAPPINGS)) {
+        if (errorStr.includes(pattern)) {
+            return mapping;
         }
+    }
+    
+    return {
+        title: 'Something Went Wrong',
+        message: 'An unexpected error occurred. Please try again.',
+        details: errorStr
+    };
+}
 
         // ---------------------------------------------------------------------
         // MAIN API METHODS
