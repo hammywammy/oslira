@@ -86,13 +86,13 @@ getDependencies() {
             
             // Security & Utilities
             'staging-guard': {
-                url: '/core/staging-guard.js',
+                url: '../utils/staging-guard.js',
                 critical: false,
                 environments: ['staging']
             },
             
             'alert-system': {
-                url: '/core/alert-system.js',
+                url: '/../utils/alert-system.js',
                 global: 'Alert',
                 critical: false
             },
