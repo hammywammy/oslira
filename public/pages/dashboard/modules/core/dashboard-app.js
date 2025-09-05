@@ -79,18 +79,19 @@ class DashboardApp {
             return new DashboardStateManager(eventBus);
         }, ['eventBus']);
         
-// Register external dependencies with proper initialization wait
-container.registerFactory('supabase', () => {
-    // Get the initialized Supabase client from SimpleAuth
-    if (window.SimpleAuth?.supabase) {
-        return window.SimpleAuth.supabase;
+// Register external dependencies - delay Supabase until SimpleAuth is ready
+container.registerFactory('supabase', async () => {
+    // Wait for SimpleAuth to initialize its Supabase client
+    let attempts = 0;
+    while (attempts < 50) {
+        if (window.SimpleAuth?.supabase?.from) {
+            console.log('✅ [DependencyContainer] Got initialized Supabase client from SimpleAuth');
+            return window.SimpleAuth.supabase;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
     }
-    // Fallback to raw library if SimpleAuth not ready
-    if (window.supabase?.createClient) {
-        console.warn('⚠️ [DependencyContainer] Using raw Supabase library - SimpleAuth not ready');
-        return window.supabase;
-    }
-    throw new Error('Supabase not available');
+    throw new Error('SimpleAuth Supabase client not ready');
 }, []);
 
 // Register OsliraApp as a getter that always checks the global
