@@ -630,36 +630,6 @@ async preResolveAsyncDependencies() {
     }
 }
 
-// ===============================================================================
-// DASHBOARD EVENTS CONSTANTS
-// ===============================================================================
-const DASHBOARD_EVENTS = {
-    // Initialization
-    INIT_COMPLETE: 'dashboard:init:complete',
-    
-    // Data events
-    DATA_REFRESH: 'dashboard:data:refresh',
-    DATA_LOADED: 'dashboard:data:loaded',
-    DATA_ERROR: 'dashboard:data:error',
-    
-    // Loading states
-    LOADING_START: 'dashboard:loading:start',
-    LOADING_END: 'dashboard:loading:end',
-    
-    // Analysis events
-    ANALYSIS_COMPLETED: 'analysis:completed',
-    ANALYSIS_FAILED: 'analysis:failed',
-    
-    // Business events
-    BUSINESS_CHANGED: 'business:changed',
-    
-    // General error
-    ERROR: 'dashboard:error',
-    
-    // Cleanup
-    CLEANUP: 'dashboard:cleanup'
-};
-
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { DashboardApp, DASHBOARD_EVENTS };
