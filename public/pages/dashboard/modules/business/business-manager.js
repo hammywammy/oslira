@@ -24,10 +24,13 @@ class BusinessManager {
         // Listen for auth changes
         this.eventBus.on('auth:changed', this.handleAuthChange.bind(this));
         
-        // Load businesses if user is already authenticated
-        if (this.osliraApp?.user) {
-            await this.loadBusinesses();
-        }
+// Load businesses if user is already authenticated
+if (this.osliraApp?.user) {
+    console.log('👤 [BusinessManager] User available at init:', this.osliraApp.user.email);
+    await this.loadBusinesses();
+} else {
+    console.warn('⚠️ [BusinessManager] No user data available at init');
+}
         
         console.log('✅ [BusinessManager] Event listeners initialized');
     }
