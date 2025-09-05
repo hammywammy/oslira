@@ -79,9 +79,13 @@ class DashboardApp {
             return new DashboardStateManager(eventBus);
         }, ['eventBus']);
         
-        // Register external dependencies
+// Register external dependencies
         container.registerSingleton('supabase', window.supabase);
-        container.registerSingleton('osliraApp', window.OsliraApp);
+        
+        // Register OsliraApp with lazy getter to handle timing
+        container.registerFactory('osliraApp', () => {
+            return window.OsliraApp;
+        }, []);
         
         // Register API wrapper if available
         if (window.OsliraApp?.api) {
