@@ -86,13 +86,17 @@ if (this.osliraApp?.user) {
             // Set active business if not already set
             await this.setActiveBusinessFromStorage(businesses || []);
             
-            // Emit event
-            this.eventBus.emit(DASHBOARD_EVENTS.BUSINESS_LOADED, {
-                businesses: businesses || [],
-                count: businesses?.length || 0
-            });
-            
-            return businesses || [];
+// Update sidebar selector after loading
+this.updateSidebarBusinessSelector();
+
+// Emit loaded event
+this.eventBus.emit(DASHBOARD_EVENTS.BUSINESS_LOADED, {
+    businesses,
+    count: businesses.length
+});
+
+console.log(`✅ [BusinessManager] Loaded ${businesses.length} business profiles`);
+return businesses;
             
         } catch (error) {
             console.error('❌ [BusinessManager] Error loading businesses:', error);
@@ -120,21 +124,24 @@ if (this.osliraApp?.user) {
             localStorage.setItem('selectedBusinessId', selectedBusiness.id);
         }
         
-        if (selectedBusiness) {
-            this.stateManager.setState('selectedBusiness', selectedBusiness);
-            
-            // Also update global OsliraApp for backward compatibility
-            if (this.osliraApp) {
-                this.osliraApp.business = selectedBusiness;
-            }
-            
-            console.log('✅ [BusinessManager] Active business set:', selectedBusiness.business_name);
-            
-            this.eventBus.emit(DASHBOARD_EVENTS.BUSINESS_CHANGED, {
-                business: selectedBusiness,
-                businessId: selectedBusiness.id
-            });
-        }
+if (selectedBusiness) {
+    this.stateManager.setState('selectedBusiness', selectedBusiness);
+    
+    // Also update global OsliraApp for backward compatibility
+    if (this.osliraApp) {
+        this.osliraApp.business = selectedBusiness;
+    }
+    
+    console.log('✅ [BusinessManager] Active business set:', selectedBusiness.business_name);
+    
+    // Update sidebar business selector UI
+    this.updateSidebarBusinessSelector();
+    
+    this.eventBus.emit(DASHBOARD_EVENTS.BUSINESS_CHANGED, {
+        business: selectedBusiness,
+        businessId: selectedBusiness.id
+    });
+}
     }
     
     // ===============================================================================
@@ -464,22 +471,73 @@ if (this.osliraApp?.user) {
         container.innerHTML = selectHTML;
     }
     
-    updateBusinessIndicators() {
-        // Update any business name displays
-        const indicators = document.querySelectorAll('.current-business-name');
-        const currentBusiness = this.stateManager.getState('selectedBusiness');
-        
-        indicators.forEach(indicator => {
-            indicator.textContent = currentBusiness?.business_name || 'No Business Selected';
-        });
-        
-        // Update business profile badges
-        const badges = document.querySelectorAll('.business-badge');
-        badges.forEach(badge => {
-            badge.style.display = currentBusiness ? 'inline-block' : 'none';
-            badge.textContent = currentBusiness?.business_name || '';
-        });
+updateBusinessIndicators() {
+    // Update any business name displays
+    const indicators = document.querySelectorAll('.current-business-name');
+    const currentBusiness = this.stateManager.getState('selectedBusiness');
+    
+    indicators.forEach(indicator => {
+        indicator.textContent = currentBusiness?.business_name || 'No Business Selected';
+    });
+    
+    // Update business profile badges
+    const badges = document.querySelectorAll('.business-badge');
+    badges.forEach(badge => {
+        badge.style.display = currentBusiness ? 'inline-block' : 'none';
+        badge.textContent = currentBusiness?.business_name || '';
+    });
+    
+    // Update sidebar selector
+    this.updateSidebarBusinessSelector();
+}
+
+updateSidebarBusinessSelector() {
+    const businessSelect = document.getElementById('business-select');
+    if (!businessSelect) {
+        console.warn('⚠️ [BusinessManager] Sidebar business select element not found');
+        return;
     }
+
+    const businesses = this.stateManager.getState('businesses') || [];
+    const currentBusiness = this.stateManager.getState('selectedBusiness');
+
+    if (businesses.length === 0) {
+        businessSelect.innerHTML = '<option value="">No business profiles available</option>';
+        businessSelect.disabled = true;
+        return;
+    }
+
+    // Build options HTML
+    const optionsHTML = businesses.map(business => 
+        `<option value="${business.id}" ${business.id === currentBusiness?.id ? 'selected' : ''}>
+            ${business.business_name || business.name || 'Unnamed Business'}
+        </option>`
+    ).join('');
+
+    businessSelect.innerHTML = `
+        <option value="">Select business profile...</option>
+        ${optionsHTML}
+    `;
+
+    // Set current business as selected
+    if (currentBusiness) {
+        businessSelect.value = currentBusiness.id;
+    }
+
+    businessSelect.disabled = false;
+
+    // Add change handler if not already added
+    if (!businessSelect.hasAttribute('data-handler-added')) {
+        businessSelect.addEventListener('change', (e) => {
+            if (e.target.value) {
+                this.switchBusiness(e.target.value);
+            }
+        });
+        businessSelect.setAttribute('data-handler-added', 'true');
+    }
+
+    console.log('✅ [BusinessManager] Sidebar business selector updated');
+}
     
     // ===============================================================================
     // EVENT HANDLERS
