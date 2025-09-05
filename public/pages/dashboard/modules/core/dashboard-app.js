@@ -82,10 +82,21 @@ class DashboardApp {
 // Register external dependencies
         container.registerSingleton('supabase', window.supabase);
         
-        // Register OsliraApp with lazy getter to handle timing
-        container.registerFactory('osliraApp', () => {
+// Register OsliraApp with proper initialization check
+container.registerFactory('osliraApp', async () => {
+    // Wait for OsliraApp to be fully initialized with user data
+    let attempts = 0;
+    while (attempts < 50) {
+        if (window.OsliraApp?.user && window.OsliraApp?.isAuthenticated) {
             return window.OsliraApp;
-        }, []);
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    console.warn('⚠️ [DependencyContainer] OsliraApp not ready, returning partial object');
+    return window.OsliraApp || {};
+}, []);
         
         // Register API wrapper if available
         if (window.OsliraApp?.api) {
@@ -131,41 +142,51 @@ container.registerFactory('modalManager', () => {
     // INITIALIZATION HELPERS
     // ===============================================================================
     
-    async setupInitialData() {
-        try {
-            console.log('📊 [DashboardApp] Setting up initial data...');
-            // Wait for authentication
-            const isAuthReady = await this.waitForAuth(10000);
-            
-            if (isAuthReady) {
-                console.log('🔐 [DashboardApp] Authentication ready');
-                
-                // Load business profiles first
-                const businessManager = this.container.get('businessManager');
-                await businessManager.loadBusinesses();
-                
-                // Setup real-time connections
-                const realtimeManager = this.container.get('realtimeManager');
-                await realtimeManager.setupRealtimeSubscription();
-                
-                // Load dashboard data
-                const leadManager = this.container.get('leadManager');
-                await leadManager.loadDashboardData();
-                
-                // Calculate initial stats
-                const statsCalculator = this.container.get('statsCalculator');
-                await statsCalculator.refreshStats();
-                
-            } else {
-                console.warn('⚠️ [DashboardApp] Authentication not ready, showing empty state');
-                this.displayDemoState();
-            }
-            
-        } catch (error) {
-            console.error('❌ [DashboardApp] Initial data setup failed:', error);
-            this.displayErrorState(error);
+async setupInitialData() {
+    try {
+        console.log('📊 [DashboardApp] Setting up initial data...');
+        
+        // Wait for authentication AND user data
+        const isAuthReady = await this.waitForAuth(10000);
+        
+        if (!isAuthReady) {
+            console.warn('⚠️ [DashboardApp] Authentication not ready, showing empty state');
+            this.displayDemoState();
+            return;
         }
+        
+        // Ensure OsliraApp is properly initialized with user data
+        const osliraApp = this.container.get('osliraApp');
+        if (!osliraApp?.user) {
+            console.warn('⚠️ [DashboardApp] User data not available in OsliraApp');
+            throw new Error('User data not loaded');
+        }
+        
+        console.log('✅ [DashboardApp] Authentication verified');
+        console.log('🔐 [DashboardApp] Authentication ready');
+        console.log('👤 [DashboardApp] User data available:', osliraApp.user.email);
+        
+        // Load business profiles first
+        const businessManager = this.container.get('businessManager');
+        await businessManager.loadBusinesses();
+        
+        // Setup real-time connections
+        const realtimeManager = this.container.get('realtimeManager');
+        await realtimeManager.setupRealtimeSubscription();
+        
+        // Load dashboard data
+        const leadManager = this.container.get('leadManager');
+        await leadManager.loadDashboardData();
+        
+        // Calculate initial stats
+        const statsCalculator = this.container.get('statsCalculator');
+        await statsCalculator.refreshStats();
+        
+    } catch (error) {
+        console.error('❌ [DashboardApp] Initial data setup failed:', error);
+        this.displayErrorState(error);
     }
+}
     
     async waitForAuth(timeout = 10000) {
         console.log('🔐 [DashboardApp] Waiting for authentication...');
@@ -174,7 +195,7 @@ container.registerFactory('modalManager', () => {
             let attempts = 0;
             const maxAttempts = timeout / 100;
             
-const checkAuth = () => {
+        const checkAuth = () => {
         // Check window.OsliraApp directly instead of cached dependency
         const osliraApp = window.OsliraApp;
         const user = osliraApp?.user;
