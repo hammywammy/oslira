@@ -1,5 +1,5 @@
 /* =============================================================================
-   SIDEBAR.CSS - LIGHT/DARK MODE COMPATIBLE
+   SIDEBAR.CSS - DARK MODE READY
    ============================================================================= */
 
 @import url('/core/design-system.css');
@@ -17,40 +17,14 @@
     transition: transform 0.3s ease;
 }
 
-.sidebar-collapsed {
-    transform: translateX(-100%);
-}
-
 /* =============================================================================
-   DARK MODE SUPPORT
+   DARK MODE SUPPORT (Future Implementation Structure)
    ============================================================================= */
 
-@media (prefers-color-scheme: dark) {
-    .sidebar {
-        background: linear-gradient(145deg, #1f2937 0%, #111827 100%) !important;
-        border-color: #374151 !important;
-    }
-    
-    .sidebar .text-gray-800 {
-        color: #f9fafb !important;
-    }
-    
-    .sidebar .bg-gray-50\/50 {
-        background: rgba(55, 65, 81, 0.5) !important;
-    }
-    
-    .sidebar .border-gray-100 {
-        border-color: #374151 !important;
-    }
-    
-    .sidebar .text-gray-500 {
-        color: #9ca3af !important;
-    }
-    
-    .sidebar .bg-white\/80 {
-        background: rgba(31, 41, 55, 0.9) !important;
-    }
-}
+/* .dark .sidebar {
+    background: linear-gradient(145deg, #1f2937 0%, #111827 100%) !important;
+    border-color: #374151 !important;
+} */
 
 /* =============================================================================
    ACTIVE MENU ITEM OVERRIDES
