@@ -408,9 +408,59 @@ async preResolveAsyncDependencies() {
                     return username.includes(searchTerm) || fullName.includes(searchTerm);
                 });
                 
-                stateManager.setState('filteredLeads', filtered);
+stateManager.setState('filteredLeads', filtered);
+                
+                // Update clear button state
+                this.updateClearButtonState();
             },
             filterLeads: (filter) => this.filterLeads(filter),
+            clearFilters: () => {
+                // Clear all form inputs
+                const searchInput = document.getElementById('lead-search-input');
+                const platformFilter = document.getElementById('platform-filter');
+                const typeFilter = document.getElementById('type-filter');
+                
+                if (searchInput) searchInput.value = '';
+                if (platformFilter) platformFilter.value = '';
+                if (typeFilter) typeFilter.value = '';
+                
+                // Reset filter buttons
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector('.filter-btn[data-filter="all"]')?.classList.add('active');
+                
+                // Reset state to show all leads
+                const stateManager = this.container.get('stateManager');
+                const allLeads = stateManager.getState('leads') || [];
+                stateManager.setState('filteredLeads', allLeads);
+                
+                // Update clear button state
+                this.updateClearButtonState();
+                
+                console.log('🧹 [Dashboard] All filters cleared');
+            },
+            updateClearButtonState: () => {
+                const clearBtn = document.getElementById('clear-filters');
+                const searchInput = document.getElementById('lead-search-input');
+                const platformFilter = document.getElementById('platform-filter');
+                const typeFilter = document.getElementById('type-filter');
+                
+                const hasFilters = (searchInput?.value) || 
+                                 (platformFilter?.value) || 
+                                 (typeFilter?.value) ||
+                                 document.querySelector('.filter-btn.active:not([data-filter="all"])');
+                
+                if (clearBtn) {
+                    if (hasFilters) {
+                        clearBtn.disabled = false;
+                        clearBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    } else {
+                        clearBtn.disabled = true;
+                        clearBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    }
+                }
+            },
             
             // Analysis form
             processAnalysisForm: (event) => this.processAnalysisForm(event),
