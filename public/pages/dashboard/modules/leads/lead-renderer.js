@@ -171,24 +171,24 @@ return `
                            onchange="dashboard.toggleLeadSelection('${lead.id}', this.checked)">
                 </td>
                 
-                <!-- Lead Profile -->
+<!-- Lead Profile - Improved styling and spacing -->
                 <td class="px-6 py-4">
-                    <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-3">
                         <div class="flex-shrink-0 relative">
                             ${profilePicHtml}
                             ${fallbackHtml}
                             ${lead.is_verified ? '<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center"><svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></div>' : ''}
                         </div>
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-2 mb-1">
                                 <button onclick="dashboard.openProfile('${lead.profile_url || `https://instagram.com/${username}`}')" 
-                                        class="font-semibold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer text-left">
+                                        class="font-semibold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer text-left truncate">
                                     @${username}
                                 </button>
-                                ${lead.is_business_account ? '<span class="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded border border-orange-200">Business</span>' : ''}
+                                ${lead.is_business_account ? '<span class="inline-flex items-center px-1.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-md border border-orange-200 flex-shrink-0">Business</span>' : ''}
                             </div>
-                            ${fullName ? `<div class="text-sm text-slate-600 truncate">${fullName}</div>` : ''}
-                            ${lead.followers_count ? `<div class="text-xs text-slate-500">${this.formatFollowerCount(lead.followers_count)} followers</div>` : ''}
+                            ${fullName ? `<div class="text-sm text-slate-600 truncate mb-0.5">${fullName}</div>` : ''}
+                            ${lead.followers_count ? `<div class="text-xs text-slate-500">${this.formatNumber(lead.followers_count)} followers</div>` : ''}
                         </div>
                     </div>
                 </td>
