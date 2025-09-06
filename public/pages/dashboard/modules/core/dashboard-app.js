@@ -380,6 +380,12 @@ async preResolveAsyncDependencies() {
                     // Show bulk actions
                     toolbar.classList.remove('hidden');
                 }
+},
+            openLeadDetails: (leadId) => {
+                console.log(`🔍 [Dashboard] Opening lead details for: ${leadId}`);
+                // Future: Open lead details modal/page
+                const modalManager = this.container.get('modalManager');
+                return modalManager.showLeadDetailsModal(leadId);
             },
             editMessage: (leadId) => this.editMessage(leadId),
             saveEditedMessage: (leadId) => this.saveEditedMessage(leadId),
