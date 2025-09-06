@@ -116,13 +116,21 @@ class RealtimeManager {
                     }
                 });
                 
-            // Timeout fallback
-            setTimeout(() => {
-                if (!this.isRealtimeActive) {
-                    console.warn('⚠️ [RealtimeManager] Real-time connection timeout, using polling');
-                    this.setupPollingFallback();
-                }
-            }, 5000);
+// Connection timeout with cleanup
+this.connectionTimeout = setTimeout(() => {
+    if (!this.isRealtimeActive) {
+        console.warn('⚠️ [RealtimeManager] Real-time connection timeout, using polling');
+        this.cleanup().then(() => {
+            this.setupPollingFallback();
+        });
+    }
+}, 10000); // Increased to 10 seconds
+
+// Clear timeout if connection succeeds
+if (this.isRealtimeActive && this.connectionTimeout) {
+    clearTimeout(this.connectionTimeout);
+    this.connectionTimeout = null;
+}
             
         } catch (error) {
             console.error('❌ [RealtimeManager] Failed to setup real-time subscription:', error);
@@ -138,6 +146,31 @@ class RealtimeManager {
             });
         }
     }
+
+    // ===============================================================================
+// CONNECTION STATE MANAGEMENT
+// ===============================================================================
+
+resetConnectionState() {
+    console.log('🔄 [RealtimeManager] Resetting connection state...');
+    
+    this.isRealtimeActive = false;
+    this.connectionAttempts = 0;
+    this.lastUpdateTimestamp = null;
+    
+    if (this.connectionTimeout) {
+        clearTimeout(this.connectionTimeout);
+        this.connectionTimeout = null;
+    }
+    
+    this.stateManager.batchUpdate({
+        'isRealtimeActive': false,
+        'connectionStatus': 'disconnected',
+        'lastUpdateTimestamp': null
+    });
+    
+    console.log('✅ [RealtimeManager] Connection state reset');
+}
     
     // ===============================================================================
     // REALTIME UPDATE HANDLER - EXTRACTED FROM dashboard.js lines 5200-5350
@@ -260,24 +293,29 @@ this.pollingInterval = setInterval(() => {
     // CONNECTION MANAGEMENT
     // ===============================================================================
     
-    handleConnectionFailure() {
-        this.connectionAttempts++;
+handleConnectionFailure() {
+    this.connectionAttempts++;
+    
+    if (this.connectionAttempts < this.maxConnectionAttempts) {
+        console.log(`🔄 [RealtimeManager] Retrying connection (${this.connectionAttempts}/${this.maxConnectionAttempts})...`);
         
-        if (this.connectionAttempts < this.maxConnectionAttempts) {
-            console.log(`🔄 [RealtimeManager] Retrying connection (${this.connectionAttempts}/${this.maxConnectionAttempts})...`);
-            
-            // Exponential backoff
-            const retryDelay = Math.min(1000 * Math.pow(2, this.connectionAttempts), 10000);
-            
+        // Exponential backoff with maximum delay
+        const retryDelay = Math.min(1000 * Math.pow(2, this.connectionAttempts), 30000);
+        
+        // Clear any existing subscription before retrying
+        this.cleanup().then(() => {
             setTimeout(() => {
                 this.setupRealtimeSubscription();
             }, retryDelay);
-            
-        } else {
-            console.warn('⚠️ [RealtimeManager] Max connection attempts reached, falling back to polling');
+        });
+        
+    } else {
+        console.warn('⚠️ [RealtimeManager] Max connection attempts reached, falling back to polling');
+        this.cleanup().then(() => {
             this.setupPollingFallback();
-        }
+        });
     }
+}
     
     // EXTRACTED FROM dashboard.js lines 5600-5680
     handleVisibilityChange() {
