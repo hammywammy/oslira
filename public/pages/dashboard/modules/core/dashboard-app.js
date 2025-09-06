@@ -386,6 +386,30 @@ async preResolveAsyncDependencies() {
                 // Future: Open lead details modal/page
                 const modalManager = this.container.get('modalManager');
                 return modalManager.showLeadDetailsModal(leadId);
+},
+            // Pagination functionality
+            changePageSize: (size) => {
+                const stateManager = this.container.get('stateManager');
+                stateManager.setState('pageSize', parseInt(size));
+                stateManager.setState('currentPage', 1); // Reset to first page
+                this.updatePagination();
+            },
+            previousPage: () => {
+                const stateManager = this.container.get('stateManager');
+                const currentPage = stateManager.getState('currentPage') || 1;
+                if (currentPage > 1) {
+                    stateManager.setState('currentPage', currentPage - 1);
+                    this.updatePagination();
+                }
+            },
+            nextPage: () => {
+                const stateManager = this.container.get('stateManager');
+                const currentPage = stateManager.getState('currentPage') || 1;
+                const totalPages = this.calculateTotalPages();
+                if (currentPage < totalPages) {
+                    stateManager.setState('currentPage', currentPage + 1);
+                    this.updatePagination();
+                }
             },
             editMessage: (leadId) => this.editMessage(leadId),
             saveEditedMessage: (leadId) => this.saveEditedMessage(leadId),
@@ -697,16 +721,49 @@ stateManager.setState('filteredLeads', filtered);
         return statsCalculator.refreshStats();
     }
     
-    debugDashboard() {
-        console.log('🔍 [DashboardApp] Debug Info:', {
-            initialized: this.initialized,
-            container: this.container.getStatus(),
-            state: this.container.get('stateManager').getAllState(),
-            osliraApp: window.OsliraApp,
-            supabase: this.container.get('supabase')
-        });
+debugDashboard() {
+        const stateManager = this.container.get('stateManager');
+        return stateManager.debugState();
+    }
+    
+    calculateTotalPages() {
+        const stateManager = this.container.get('stateManager');
+        const filteredLeads = stateManager.getState('filteredLeads') || [];
+        const pageSize = stateManager.getState('pageSize') || 25;
+        return Math.ceil(filteredLeads.length / pageSize);
+    }
+    
+    updatePagination() {
+        const stateManager = this.container.get('stateManager');
+        const filteredLeads = stateManager.getState('filteredLeads') || [];
+        const pageSize = stateManager.getState('pageSize') || 25;
+        const currentPage = stateManager.getState('currentPage') || 1;
         
-        return this.container.getStatus();
+        const totalPages = this.calculateTotalPages();
+        const startIndex = (currentPage - 1) * pageSize;
+        const visibleLeads = filteredLeads.slice(startIndex, startIndex + pageSize);
+        
+        // Update visible leads
+        stateManager.setState('visibleLeads', visibleLeads);
+        
+        // Update UI elements
+        const currentPageEl = document.getElementById('current-page');
+        const totalPagesEl = document.getElementById('total-pages');
+        const prevBtn = document.getElementById('prev-page');
+        const nextBtn = document.getElementById('next-page');
+        
+        if (currentPageEl) currentPageEl.textContent = currentPage;
+        if (totalPagesEl) totalPagesEl.textContent = totalPages;
+        
+        // Update button states
+        if (prevBtn) {
+            prevBtn.disabled = currentPage <= 1;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = currentPage >= totalPages;
+        }
+        
+        console.log(`📄 [Dashboard] Pagination updated: Page ${currentPage}/${totalPages}, showing ${visibleLeads.length} leads`);
     }
     
     // ===============================================================================
