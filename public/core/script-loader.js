@@ -318,52 +318,30 @@ const dependentScripts = [
 // File: public/core/script-loader.js
 // Add this method after loadPageDependencies() around line 150-200
 
-async loadPageDependencies() {
-    console.log(`📄 [ScriptLoader] Loading page dependencies: ${this.currentPage}`);
+async loadPageDependencies(pageName) {
+    console.log(`📄 [ScriptLoader] Loading page dependencies: ${pageName}`);
     
-    try {
-        const pageDeps = this.dependencies.pages[this.currentPage];
-        if (!pageDeps) {
-            console.log('⏭️ [ScriptLoader] No page-specific dependencies');
-            return;
-        }
-        
-        // Load additional libraries
-        if (pageDeps.additionalLibraries) {
-            for (const libName of pageDeps.additionalLibraries) {
-                const lib = this.dependencies.libraries[libName];
-                if (lib) {
-                    await this.loadScript(lib, libName);
-                }
-            }
-        }
-        
-        // Initialize Tailwind if enabled for this page
-// Load page styles FIRST
-if (pageDeps.styles) {
-    await Promise.all(
-        pageDeps.styles.map(styleUrl => this.loadStylesheet(styleUrl))
-    );
-}
-
-// Initialize Tailwind AFTER page styles (so it can override)
-if (pageDeps.enableTailwind) {
-    await this.initializeTailwind();
-}
-        
-        // Load page scripts
-        if (pageDeps.scripts) {
-            for (const scriptUrl of pageDeps.scripts) {
-                await this.loadScript({ url: scriptUrl }, `page-${scriptUrl}`);
-            }
-        }
-        
-        console.log(`✅ [ScriptLoader] Page dependencies loaded: ${this.currentPage}`);
-        
-    } catch (error) {
-        console.error(`❌ [ScriptLoader] Page dependencies failed for ${this.currentPage}:`, error);
-        throw error;
+    const pageConfig = this.dependencies.pages[pageName];
+    if (!pageConfig || !pageConfig.scripts) {
+        console.log(`📄 [ScriptLoader] No page-specific dependencies for: ${pageName}`);
+        return;
     }
+
+    const scripts = pageConfig.scripts;
+    
+    // Prevent duplicate dashboard.js loading
+    const filteredScripts = scripts.filter(script => {
+        const scriptName = script.src || script;
+        if (scriptName.includes('dashboard.js') && window.DashboardInitializer) {
+            console.log(`⚠️ [ScriptLoader] Skipping duplicate dashboard.js - already loaded`);
+            return false;
+        }
+        return true;
+    });
+    
+    await this.loadScriptsInOrder(filteredScripts, 'page');
+    
+    console.log(`✅ [ScriptLoader] Page dependencies loaded: ${pageName}`);
 }
 
 // =============================================================================
