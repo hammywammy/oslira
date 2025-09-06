@@ -20,14 +20,14 @@ class OsliraEnvManager {
         this.initEnvironment();
         this.initPageDetection();
         
-        console.log('🌍 [Env] Environment & Page Setup:', {
-            environment: this.environment,
-            hostname: this.hostname,
-            currentPage: this.currentPage,
-            pageType: this.pageType,
-            workerUrl: this.workerUrl,
-            authCallback: this.authCallbackUrl
-        });
+console.log('🌍 [Env] Environment & Page Setup:', {
+    environment: this.environment,
+    hostname: this.hostname,
+    currentPage: this._currentPage,
+    pageType: this._pageType,
+    workerUrl: this.workerUrl,
+    authCallback: this.authCallbackUrl
+});
     }
     
     // =============================================================================
@@ -116,9 +116,9 @@ class OsliraEnvManager {
             ADMIN_REQUIRED: ['admin']
         };
         
-        // Detect current page
-        this.currentPage = this.detectCurrentPage();
-        this.pageType = this.classifyPage(this.currentPage);
+// Detect current page - use private properties for storage
+this._currentPage = this.detectCurrentPage();
+this._pageType = this.classifyPage(this._currentPage);
     }
     
     detectCurrentPage() {
@@ -156,16 +156,16 @@ class OsliraEnvManager {
         return 'home';
     }
     
-    classifyPage(pageName) {
-        for (const [classification, pages] of Object.entries(this.pageTypes)) {
-            if (pages.includes(pageName)) {
-                console.log('🔍 [Env] Page classification:', classification);
-                return classification;
-            }
+classifyPage(pageName) {
+    for (const [classification, pages] of Object.entries(this.pageTypes)) {
+        if (pages.includes(pageName)) {
+            console.log('🔍 [Env] Page classification:', classification);
+            return classification;
         }
-        console.log('🔍 [Env] Unknown page, defaulting to PUBLIC');
-        return 'PUBLIC';
     }
+    console.log('🔍 [Env] Unknown page, defaulting to PUBLIC');
+    return 'PUBLIC';
+}
     
     // =============================================================================
     // PUBLIC API - Used by all other components
@@ -181,38 +181,37 @@ class OsliraEnvManager {
     get AUTH_CALLBACK_URL() { return this.authCallbackUrl; }
     
 // Page getters - NEW CENTRALIZED  
-get CURRENT_PAGE() { return this.currentPage; }
-get PAGE_TYPE() { return this.pageType; }
+get CURRENT_PAGE() { return this._currentPage; }
+get PAGE_TYPE() { return this._pageType; }
+get PATHNAME() { return this.pathname; }
 
-// Make properties directly accessible (for backward compatibility)
-get currentPage() { return this.currentPage; }
-get pageType() { return this.pageType; }
-    get PATHNAME() { return this.pathname; }
-    
+// Direct property access (for backward compatibility)
+get currentPage() { return this._currentPage; }
+get pageType() { return this._pageType; }
     // Helper methods
     isPrimaryDomain() {
         return this.isProduction;
     }
     
-    isPublicPage() {
-        return this.pageType === 'PUBLIC';
-    }
-    
-    isAuthPage() {
-        return this.pageType === 'AUTH_ONLY';
-    }
-    
-    requiresAuth() {
-        return ['AUTH_REQUIRED', 'ONBOARDING_REQUIRED', 'ADMIN_REQUIRED'].includes(this.pageType);
-    }
-    
-    requiresOnboarding() {
-        return this.pageType === 'ONBOARDING_REQUIRED';
-    }
-    
-    requiresAdmin() {
-        return this.pageType === 'ADMIN_REQUIRED';
-    }
+isPublicPage() {
+    return this._pageType === 'PUBLIC';
+}
+
+isAuthPage() {
+    return this._pageType === 'AUTH_ONLY';
+}
+
+requiresAuth() {
+    return ['AUTH_REQUIRED', 'ONBOARDING_REQUIRED', 'ADMIN_REQUIRED'].includes(this._pageType);
+}
+
+requiresOnboarding() {
+    return this._pageType === 'ONBOARDING_REQUIRED';
+}
+
+requiresAdmin() {
+    return this._pageType === 'ADMIN_REQUIRED';
+}
     
     getEnvironmentColor() {
         if (this.isProduction) return '#10b981'; // green
@@ -221,17 +220,17 @@ get pageType() { return this.pageType; }
     }
     
     // Debug method
-    debug() {
-        console.group('🌍 [Env] Debug Information');
-        console.log('Environment:', this.environment);
-        console.log('Hostname:', this.hostname);
-        console.log('Pathname:', this.pathname);
-        console.log('Current Page:', this.currentPage);
-        console.log('Page Type:', this.pageType);
-        console.log('Worker URL:', this.workerUrl);
-        console.log('Auth Callback:', this.authCallbackUrl);
-        console.groupEnd();
-    }
+debug() {
+    console.group('🌍 [Env] Debug Information');
+    console.log('Environment:', this.environment);
+    console.log('Hostname:', this.hostname);
+    console.log('Pathname:', this.pathname);
+    console.log('Current Page:', this._currentPage);
+    console.log('Page Type:', this._pageType);
+    console.log('Worker URL:', this.workerUrl);
+    console.log('Auth Callback:', this.authCallbackUrl);
+    console.groupEnd();
+}
 }
 
 // =============================================================================
