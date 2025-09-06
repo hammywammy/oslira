@@ -79,11 +79,17 @@ class ModalManager {
     // ANALYSIS MODAL - EXTRACTED FROM dashboard.js
     // ===============================================================================
     
-    showAnalysisModal(prefillUsername = '') {
-        console.log('🔍 [ModalManager] Opening analysis modal...');
-        
+showAnalysisModal(prefillUsername = '') {
+    console.log('🔍 [ModalManager] Opening analysis modal with username:', prefillUsername);
+    
+    try {
         const modal = this.openModal('analysisModal');
-        if (!modal) return;
+        if (!modal) {
+            console.error('❌ [ModalManager] Failed to open analysisModal');
+            return;
+        }
+        
+        console.log('✅ [ModalManager] Analysis modal opened successfully');
         
         // Reset form
         const form = document.getElementById('analysisForm');
