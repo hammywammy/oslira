@@ -1,0 +1,370 @@
+/* =============================================================================
+   DASHBOARD-TAILWIND-EXTENSIONS.CSS
+   Custom Tailwind utilities and brand-specific enhancements
+   Extends Tailwind with Oslira design system integration
+   ============================================================================= */
+
+/* =============================================================================
+   OSLIRA BRAND UTILITIES
+   Custom utilities that extend Tailwind's default palette
+   ============================================================================= */
+
+@layer utilities {
+    /* Brand gradient utilities */
+    .bg-gradient-oslira-primary {
+        background: linear-gradient(135deg, #2D6CDF 0%, #8A6DF1 100%);
+    }
+    
+    .bg-gradient-oslira-success {
+        background: linear-gradient(135deg, #10B981 0%, #06B6D4 100%);
+    }
+    
+    .bg-gradient-oslira-warning {
+        background: linear-gradient(135deg, #F59E0B 0%, #EF4444 100%);
+    }
+    
+    .bg-gradient-oslira-surface {
+        background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+    }
+
+    /* Brand text gradients */
+    .text-gradient-primary {
+        @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+    }
+    
+    .text-gradient-success {
+        @apply bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent;
+    }
+
+    /* Enhanced shadow utilities with brand colors */
+    .shadow-oslira-primary {
+        box-shadow: 0 10px 25px -3px rgba(45, 108, 223, 0.1), 0 4px 6px -2px rgba(45, 108, 223, 0.05);
+    }
+    
+    .shadow-oslira-primary-lg {
+        box-shadow: 0 25px 50px -12px rgba(45, 108, 223, 0.25), 0 0 0 1px rgba(45, 108, 223, 0.05);
+    }
+    
+    .shadow-oslira-success {
+        box-shadow: 0 10px 25px -3px rgba(16, 185, 129, 0.1), 0 4px 6px -2px rgba(16, 185, 129, 0.05);
+    }
+
+    /* Glass morphism effects */
+    .glass-card {
+        @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl;
+    }
+    
+    .glass-sidebar {
+        @apply bg-white/95 backdrop-blur-xl border-r border-white/20 shadow-2xl;
+    }
+
+    /* Enhanced hover transformations */
+    .hover-lift {
+        @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
+    }
+    
+    .hover-lift-subtle {
+        @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+    }
+
+    /* Interactive button effects */
+    .btn-glow {
+        @apply transition-all duration-200 hover:shadow-lg;
+    }
+    
+    .btn-glow:hover {
+        box-shadow: 0 0 20px rgba(45, 108, 223, 0.4);
+    }
+
+    /* Status indicator utilities */
+    .status-dot {
+        @apply w-2 h-2 rounded-full;
+    }
+    
+    .status-online {
+        @apply bg-emerald-500 shadow-sm shadow-emerald-500/50;
+    }
+    
+    .status-away {
+        @apply bg-yellow-500 shadow-sm shadow-yellow-500/50;
+    }
+    
+    .status-offline {
+        @apply bg-gray-400 shadow-sm shadow-gray-400/50;
+    }
+
+    /* Lead score utilities */
+    .score-high {
+        @apply bg-gradient-to-r from-emerald-500 to-emerald-600 text-white;
+    }
+    
+    .score-medium {
+        @apply bg-gradient-to-r from-yellow-500 to-orange-500 text-white;
+    }
+    
+    .score-low {
+        @apply bg-gradient-to-r from-gray-400 to-gray-500 text-white;
+    }
+
+    /* Dashboard-specific spacing */
+    .dashboard-container {
+        @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    }
+    
+    .dashboard-section {
+        @apply space-y-6;
+    }
+
+    /* Enhanced border utilities */
+    .border-gradient-primary {
+        border-image: linear-gradient(90deg, #2D6CDF, #8A6DF1) 1;
+    }
+    
+    .border-glow {
+        @apply border border-blue-200 shadow-sm shadow-blue-500/10;
+    }
+    
+    .border-glow:hover {
+        @apply border-blue-300 shadow-md shadow-blue-500/20;
+    }
+}
+
+/* =============================================================================
+   COMPONENT VARIANTS
+   Tailwind component variants for consistent styling
+   ============================================================================= */
+
+@layer components {
+    /* Enhanced card variants */
+    .card-dashboard {
+        @apply bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1;
+    }
+    
+    .card-stat {
+        @apply card-dashboard p-6 text-center;
+    }
+    
+    .card-action {
+        @apply card-dashboard p-6 cursor-pointer group relative overflow-hidden;
+    }
+    
+    .card-action::before {
+        @apply absolute inset-0 bg-gradient-to-br from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300;
+        content: '';
+    }
+
+    /* Enhanced button variants */
+    .btn-dashboard-primary {
+        @apply inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 transform hover:-translate-y-0.5;
+    }
+    
+    .btn-dashboard-secondary {
+        @apply inline-flex items-center px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5;
+    }
+    
+    .btn-dashboard-small {
+        @apply px-3 py-2 text-sm rounded-lg;
+    }
+
+    /* Filter button variants */
+    .filter-button {
+        @apply px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-200;
+    }
+    
+    .filter-button-active {
+        @apply filter-button bg-blue-600 text-white border-blue-600;
+    }
+    
+    .filter-button-inactive {
+        @apply filter-button bg-white text-slate-700 border border-slate-200 hover:bg-slate-50;
+    }
+
+    /* Table variants */
+    .table-dashboard {
+        @apply w-full divide-y divide-slate-200/60;
+    }
+    
+    .table-header {
+        @apply bg-slate-50/50;
+    }
+    
+    .table-header-cell {
+        @apply px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider;
+    }
+    
+    .table-cell {
+        @apply px-6 py-4 whitespace-nowrap text-sm text-slate-900;
+    }
+    
+    .table-row:hover {
+        @apply bg-slate-50/50;
+    }
+
+    /* Input variants */
+    .input-dashboard {
+        @apply block w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+    }
+    
+    .input-search {
+        @apply input-dashboard pl-10;
+    }
+
+    /* Modal variants */
+    .modal-overlay {
+        @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4;
+    }
+    
+    .modal-content {
+        @apply bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-auto;
+    }
+    
+    .modal-header {
+        @apply px-6 py-4 border-b border-slate-200 flex items-center justify-between;
+    }
+    
+    .modal-body {
+        @apply px-6 py-4;
+    }
+    
+    .modal-footer {
+        @apply px-6 py-4 border-t border-slate-200 flex items-center justify-end space-x-3;
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE VARIANTS
+   Custom responsive utilities for dashboard layouts
+   ============================================================================= */
+
+@layer utilities {
+    /* Dashboard grid variants */
+    .grid-dashboard-stats {
+        @apply grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6;
+    }
+    
+    .grid-dashboard-actions {
+        @apply grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6;
+    }
+    
+    .grid-dashboard-leads {
+        @apply grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6;
+    }
+
+    /* Responsive text utilities */
+    .text-dashboard-title {
+        @apply text-xl sm:text-2xl font-bold text-slate-900;
+    }
+    
+    .text-dashboard-subtitle {
+        @apply text-sm sm:text-base text-slate-600;
+    }
+    
+    .text-dashboard-stat {
+        @apply text-2xl sm:text-3xl font-bold text-slate-900;
+    }
+
+    /* Responsive spacing */
+    .spacing-dashboard-section {
+        @apply space-y-6 lg:space-y-8;
+    }
+    
+    .padding-dashboard-container {
+        @apply px-4 sm:px-6 lg:px-8 py-6;
+    }
+}
+
+/* =============================================================================
+   ANIMATION UTILITIES
+   Custom animations for dashboard interactions
+   ============================================================================= */
+
+@layer utilities {
+    .animate-fade-in-up {
+        animation: fadeInUp 0.5s ease-out both;
+    }
+    
+    .animate-slide-in-left {
+        animation: slideInLeft 0.3s ease-out;
+    }
+    
+    .animate-slide-in-right {
+        animation: slideInRight 0.3s ease-out 150ms both;
+    }
+    
+    .animate-pulse-slow {
+        animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    .animate-bounce-subtle {
+        animation: bounceSubtle 2s infinite;
+    }
+}
+
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(1.5rem);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeft {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    0% {
+        opacity: 0;
+        transform: translateX(2rem);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes bounceSubtle {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-4px);
+    }
+}
+
+/* =============================================================================
+   DARK MODE VARIANTS (Future Implementation)
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+    .dark {
+        /* Dark mode variants will be added here */
+        /* Following the existing design system dark mode patterns */
+    }
+}
+
+/* =============================================================================
+   PRINT OPTIMIZATIONS
+   ============================================================================= */
+
+@media print {
+    .no-print {
+        @apply hidden;
+    }
+    
+    .print-full-width {
+        @apply w-full;
+    }
+    
+    .print-break-inside-avoid {
+        break-inside: avoid;
+    }
+}
