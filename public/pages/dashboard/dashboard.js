@@ -230,12 +230,20 @@ const startDashboard = async () => {
             }
         };
 
-        // 1. Check if everything is already ready
-        if (window.OsliraApp && window.SimpleAuth) {
-            console.log('📄 [Dashboard] All dependencies ready, initializing immediately');
-            await initializeDashboard();
-            return;
-        }
+// Enhanced dependency and DOM ready check
+const checkReady = () => {
+    const hasRequiredGlobals = window.OsliraApp && window.SimpleAuth;
+    const isDOMReady = document.readyState === 'complete' || 
+                       (document.readyState === 'interactive' && document.querySelector('.dashboard'));
+    
+    return hasRequiredGlobals && isDOMReady;
+};
+
+if (checkReady()) {
+    console.log('📄 [Dashboard] All dependencies and DOM ready, initializing immediately');
+    await initializeDashboard();
+    return;
+}
         
         // 2. Polling with shorter interval for faster response
         console.log('📄 [Dashboard] Setting up dependency polling...');
