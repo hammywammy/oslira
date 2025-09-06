@@ -694,10 +694,31 @@ stateManager.setState('filteredLeads', filtered);
     // PUBLIC METHODS - Legacy compatibility methods
     // ===============================================================================
     
-    async showAnalysisModal(username) {
+async showAnalysisModal(username) {
+    console.log('🔍 [DashboardApp] showAnalysisModal called with:', username);
+    try {
         const modalManager = this.container.get('modalManager');
+        if (!modalManager) {
+            console.error('❌ [DashboardApp] modalManager not found in container');
+            // Fallback: open modal directly
+            const modal = document.getElementById('analysisModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                console.log('✅ [DashboardApp] Opened modal via fallback');
+            }
+            return;
+        }
         return modalManager.showAnalysisModal(username);
+    } catch (error) {
+        console.error('❌ [DashboardApp] showAnalysisModal failed:', error);
+        // Emergency fallback
+        const modal = document.getElementById('analysisModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            console.log('✅ [DashboardApp] Emergency fallback modal opened');
+        }
     }
+}
     
     async showBulkModal() {
         const modalManager = this.container.get('modalManager');
