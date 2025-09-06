@@ -238,12 +238,12 @@ class LeadRenderer {
             </div>
         `;
 
-        return `
-            <tr class="group relative hover:bg-slate-50/30 transition-all duration-200 ${isSelected ? 'bg-blue-50/50' : ''} border-l-4 ${this.getRowAccentColor(score)} odd:bg-slate-25/20" 
-                data-lead-id="${lead.id}">
-                
-                <!-- Hidden selection checkbox that appears on hover at far left -->
-                <div class="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+return `
+    <tr class="table-row relative hover:bg-purple-50 hover:shadow-md transition-all duration-200 ${isSelected ? 'bg-blue-50/50' : ''} border-l-4 ${this.getRowAccentColor(score)} odd:bg-slate-25/20" 
+        data-lead-id="${lead.id}">
+    
+    <!-- Hidden selection checkbox that appears on hover at far left -->
+    <div class="absolute left-1 top-1/2 transform -translate-y-1/2 opacity-0 table-row:hover opacity-100 transition-all duration-200 z-20 pointer-events-auto">
                     <input type="checkbox" 
                            class="lead-checkbox w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 bg-white shadow-md"
                            data-lead-id="${lead.id}"
@@ -276,8 +276,8 @@ class LeadRenderer {
                 <!-- Platform - Centered -->
                 <td class="px-6 py-4 border-r border-slate-100/60" style="width: 160px;">
                     <div class="flex items-center justify-center">
-                        <div class="relative platform-group">
-                            <div class="absolute -inset-0.5 bg-gradient-to-r ${platformConfig.gradient} rounded-lg blur opacity-0 platform-group:hover:opacity-100 transition duration-300"></div>
+<div class="relative platform-hover-group">
+    <div class="absolute -inset-0.5 bg-gradient-to-r ${platformConfig.gradient} rounded-lg blur opacity-0 transition duration-300"></div>
                             <div class="relative inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold ${platformConfig.class} shadow-sm hover:shadow-md transition-all duration-200 border-0">
                                 <div class="flex items-center space-x-2">
                                     <div class="w-5 h-5 flex items-center justify-center ${platformConfig.iconBg} rounded-full">
@@ -326,8 +326,8 @@ class LeadRenderer {
                 <!-- Analysis Type - Centered -->
                 <td class="px-6 py-4 border-r border-slate-100/60" style="width: 180px;">
                     <div class="flex items-center justify-center">
-                        <div class="relative analysis-group">
-                            <div class="absolute -inset-0.5 bg-gradient-to-r ${analysisConfig.gradient} rounded-lg blur opacity-0 analysis-group:hover:opacity-100 transition duration-300"></div>
+<div class="relative analysis-hover-group">
+    <div class="absolute -inset-0.5 bg-gradient-to-r ${analysisConfig.gradient} rounded-lg blur opacity-0 transition duration-300"></div>
                             <div class="relative inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold ${analysisConfig.class} shadow-sm hover:shadow-md transition-all duration-200 border-0">
                                 <div class="flex items-center space-x-2">
                                     <div class="w-5 h-5 flex items-center justify-center ${analysisConfig.iconBg} rounded-full">
