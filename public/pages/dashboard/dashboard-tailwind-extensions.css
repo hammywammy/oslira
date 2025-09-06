@@ -1025,3 +1025,35 @@ select:focus-visible {
     background: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+/* Component-specific hover effects - NOT row hover */
+.platform-hover-group:hover .absolute {
+    opacity: 1 !important;
+}
+
+.analysis-hover-group:hover .absolute {
+    opacity: 1 !important;
+}
+
+/* Row hover effects */
+.table-row:hover {
+    background-color: rgb(245 243 255) !important; /* purple-50 */
+    box-shadow: 0 4px 6px -1px rgba(139, 92, 246, 0.1);
+}
+
+/* Checkbox visibility on row hover */
+.table-row:hover .absolute {
+    opacity: 1 !important;
+}
+
+/* Ensure checkbox is clickable */
+.table-row .absolute input[type="checkbox"] {
+    background: white;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+    border: 2px solid rgb(139, 92, 246);
+    pointer-events: auto;
+}
+
+/* Remove any global group hover effects */
+.group:hover * {
+    /* Reset any inherited hover effects */
+}
