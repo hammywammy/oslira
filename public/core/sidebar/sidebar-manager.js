@@ -60,117 +60,96 @@ targetElement.className = 'sidebar fixed left-0 top-0 w-80 h-screen z-50';
 
 getSidebarHTML() {
     return `
-        <!-- Collapsible Sidebar Container -->
-        <div id="sidebar-container" class="sidebar-expanded h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10 transition-all duration-300 flex flex-col overflow-hidden">
+        <div id="sidebar-container" class="h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10 transition-all duration-300">
             
-            <!-- Header with Toggle -->
-            <div class="flex items-center justify-between p-4 border-b border-white/20">
-                <div class="sidebar-logo flex items-center gap-3">
-                    <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
-                         class="w-8 h-8 object-contain transition-all duration-300">
-                    <div class="sidebar-text flex flex-col">
-                        <span class="text-lg font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
-                            Oslira
-                        </span>
-                        <span class="text-xs text-gray-600 font-medium opacity-80">Lead Research</span>
+            <!-- Header -->
+            <div class="sidebar-header">
+                <div class="flex items-center justify-between">
+                    <div class="sidebar-logo flex items-center gap-3">
+                        <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
+                             class="w-8 h-8 object-contain">
+                        <div class="sidebar-logo-text flex flex-col">
+                            <span class="text-lg font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                Oslira
+                            </span>
+                            <span class="text-xs text-gray-600 font-medium opacity-80">Lead Research</span>
+                        </div>
                     </div>
+                    <button id="sidebar-toggle" class="sidebar-toggle p-2 rounded-lg hover:bg-white/50 transition-all duration-200 group">
+                        <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                        </svg>
+                    </button>
                 </div>
-                <button id="sidebar-toggle" class="p-2 rounded-lg hover:bg-white/50 transition-all duration-200 group">
-                    <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
-                    </svg>
-                </button>
             </div>
             
             <!-- Navigation -->
-            <nav class="px-4 py-6 space-y-6 flex-1 overflow-y-auto">
+            <nav class="sidebar-nav">
                 
                 <!-- Main Section -->
                 <div class="nav-section">
-                    <h4 class="sidebar-text px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
-                        <span class="relative z-10">Main</span>
-                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full opacity-60"></div>
+                    <h4 class="nav-section-header px-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        Main
                     </h4>
                     
-                    <div class="space-y-1">
-                        <a href="/dashboard" data-page="dashboard" title="Dashboard"
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
-                           style="min-height: 44px;">
-                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">📊</span>
-                            <span class="sidebar-text font-semibold">Dashboard</span>
-                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                    <div class="nav-items">
+                        <a href="/dashboard" data-page="dashboard" data-tooltip="Dashboard" class="nav-item">
+                            <span class="nav-icon">📊</span>
+                            <span class="nav-text">Dashboard</span>
                         </a>
                         
-                        <a href="/leads" data-page="leads" title="Lead Research"
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-emerald-500 hover:to-teal-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
-                           style="min-height: 44px;">
-                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">🔍</span>
-                            <span class="sidebar-text font-semibold">Lead Research</span>
-                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        <a href="/leads" data-page="leads" data-tooltip="Lead Research" class="nav-item">
+                            <span class="nav-icon">🔍</span>
+                            <span class="nav-text">Lead Research</span>
                         </a>
                         
-                        <a href="/analytics" data-page="analytics" title="Analytics"
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-violet-500 hover:to-indigo-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
-                           style="min-height: 44px;">
-                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">📈</span>
-                            <span class="sidebar-text font-semibold">Analytics</span>
-                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        <a href="/analytics" data-page="analytics" data-tooltip="Analytics" class="nav-item">
+                            <span class="nav-icon">📈</span>
+                            <span class="nav-text">Analytics</span>
                         </a>
                     </div>
                 </div>
                 
                 <!-- Tools Section -->
                 <div class="nav-section">
-                    <h4 class="sidebar-text px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
-                        <span class="relative z-10">Tools</span>
-                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full opacity-60"></div>
+                    <h4 class="nav-section-header px-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        Tools
                     </h4>
                     
-                    <div class="space-y-1">
-                        <a href="/campaigns" data-page="campaigns" title="Campaigns"
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
-                           style="min-height: 44px;">
-                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">🎯</span>
-                            <span class="sidebar-text font-semibold">Campaigns</span>
-                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                    <div class="nav-items">
+                        <a href="/campaigns" data-page="campaigns" data-tooltip="Campaigns" class="nav-item">
+                            <span class="nav-icon">🎯</span>
+                            <span class="nav-text">Campaigns</span>
                         </a>
                         
-                        <a href="/automations" data-page="automations" title="Automations"
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-orange-500 hover:to-amber-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
-                           style="min-height: 44px;">
-                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">⚡</span>
-                            <span class="sidebar-text font-semibold">Automations</span>
-                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                        <a href="/automations" data-page="automations" data-tooltip="Automations" class="nav-item">
+                            <span class="nav-icon">⚡</span>
+                            <span class="nav-text">Automations</span>
                         </a>
                     </div>
                 </div>
                 
                 <!-- Account Section -->
                 <div class="nav-section">
-                    <h4 class="sidebar-text px-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 relative">
-                        <span class="relative z-10">Account</span>
-                        <div class="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full opacity-60"></div>
+                    <h4 class="nav-section-header px-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                        Account
                     </h4>
                     
-                    <div class="space-y-1">
-                        <a href="/settings" data-page="settings" title="Settings"
-                           class="nav-item group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:text-white hover:bg-gradient-to-r hover:from-slate-500 hover:to-gray-600 hover:shadow-lg hover:scale-105 transition-all duration-200 relative overflow-hidden"
-                           style="min-height: 44px;">
-                            <span class="nav-icon text-lg transition-transform duration-200 group-hover:scale-110 flex-shrink-0">⚙️</span>
-                            <span class="sidebar-text font-semibold">Settings</span>
-                            <div class="nav-shine absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 skew-x-12"></div>
+                    <div class="nav-items">
+                        <a href="/settings" data-page="settings" data-tooltip="Settings" class="nav-item">
+                            <span class="nav-icon">⚙️</span>
+                            <span class="nav-text">Settings</span>
                         </a>
                     </div>
                 </div>
                 
             </nav>
             
-            <!-- User Info Section -->
-            <div class="sidebar-user-section flex-shrink-0 p-4">
+            <!-- User Section -->
+            <div class="sidebar-user-section">
                 <!-- Expanded User Info -->
-                <div class="sidebar-text relative bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-lg overflow-hidden">
-                    <div class="p-4">
-                        <!-- User Details -->
+                <div class="sidebar-user-expanded">
+                    <div class="bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-lg p-4">
                         <div class="mb-3">
                             <div id="sidebar-email" class="text-sm font-bold text-gray-900 mb-1 truncate">Loading...</div>
                             <div id="sidebar-plan" class="inline-flex items-center px-2 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-xs font-bold text-blue-700 uppercase tracking-wider rounded-full border border-blue-200/50">
@@ -178,8 +157,7 @@ getSidebarHTML() {
                             </div>
                         </div>
                         
-                        <!-- Credits Display -->
-                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg text-white shadow-lg">
+                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg text-white shadow-lg mb-3">
                             <div class="flex justify-between items-center">
                                 <div>
                                     <span class="text-xs font-bold uppercase tracking-wide opacity-90">Credits</span>
@@ -189,28 +167,23 @@ getSidebarHTML() {
                             </div>
                         </div>
                         
-                        <!-- Logout Button -->
-                        <button onclick="handleLogout()" 
-                                class="w-full text-xs text-gray-500 hover:text-red-600 transition-colors duration-200 font-medium py-2 mt-3 text-left">
+                        <button onclick="handleLogout()" class="w-full text-xs text-gray-500 hover:text-red-600 transition-colors duration-200 font-medium py-2 text-left">
                             Sign out
                         </button>
                     </div>
                 </div>
                 
-                <!-- Collapsed User Section -->
-                <div class="sidebar-collapsed-user" style="display: none;">
-                    <div class="flex flex-col items-center space-y-3">
-                        <!-- User Avatar -->
-                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-                            <span id="sidebar-user-initial">U</span>
-                        </div>
-                        
-                        <!-- Credits -->
-                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 px-2 py-1 rounded text-white text-center min-w-[50px]">
-                            <div id="sidebar-credits-collapsed" class="text-xs font-bold">--</div>
-                            <div class="text-[10px] opacity-80">credits</div>
-                        </div>
+                <!-- Collapsed User Info -->
+                <div class="sidebar-user-collapsed">
+                    <div class="user-avatar">
+                        <span id="sidebar-user-initial-collapsed">U</span>
                     </div>
+                    <div id="sidebar-credits-collapsed" class="credits-collapsed">--</div>
+                    <button onclick="handleLogout()" class="p-2 text-gray-500 hover:text-red-600 transition-colors duration-200" title="Sign out">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                    </button>
                 </div>
             </div>
             
