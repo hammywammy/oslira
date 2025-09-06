@@ -617,62 +617,6 @@ nav {
 }
 
 /* =============================================================================
-   FOOTER
-   ============================================================================= */
-
-footer {
-    background: var(--text-primary);
-    color: var(--text-inverse);
-    padding: var(--spacing-16) 0 var(--spacing-8);
-    margin-top: var(--spacing-20);
-}
-
-.footer-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 var(--spacing-6);
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: var(--spacing-8);
-}
-
-.footer-section h3 {
-    font-size: var(--text-lg);
-    font-weight: var(--font-semibold);
-    margin-bottom: var(--spacing-4);
-    color: var(--text-inverse);
-}
-
-.footer-section ul {
-    list-style: none;
-    padding: 0;
-}
-
-.footer-section ul li {
-    margin-bottom: var(--spacing-2);
-}
-
-.footer-section ul li a {
-    color: rgba(255, 255, 255, 0.8);
-    text-decoration: none;
-    transition: var(--transition-base);
-}
-
-.footer-section ul li a:hover {
-    color: var(--text-inverse);
-    text-decoration: underline;
-}
-
-.footer-bottom {
-    margin-top: var(--spacing-8);
-    padding-top: var(--spacing-8);
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    text-align: center;
-    color: rgba(255, 255, 255, 0.6);
-    font-size: var(--text-sm);
-}
-
-/* =============================================================================
    LOADING STATES
    ============================================================================= */
 
