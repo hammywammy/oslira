@@ -18,8 +18,8 @@
 }
 
 .main-content {
-    /* Remove margin when outside container */
-    margin-left: 0;
+    /* Remove sidebar margin to make content full width */
+    margin-left: 0 !important;
 }
 /* =============================================================================
    COMPONENT COMPATIBILITY CLASSES
