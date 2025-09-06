@@ -208,7 +208,7 @@ getDependencies() {
                 enableTailwind: true
             },
             
-'home': {
+        'home': {
                 scripts: ['/core/footer/footer-manager.js'],
                 styles: ['/core/footer/footer.css'],
                 requiresAuth: false,
