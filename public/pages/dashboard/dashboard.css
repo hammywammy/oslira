@@ -248,3 +248,25 @@
 .filter-btn {
     @apply will-change-auto;
 }
+
+/* Fix hover animations to be component-specific */
+.platform-group:hover .absolute {
+    opacity: 1;
+}
+
+.analysis-group:hover .absolute {
+    opacity: 1;
+}
+
+.action-button:hover .absolute {
+    opacity: 0.3;
+}
+
+/* Ensure alternating row colors */
+.leads-table tbody tr:nth-child(odd) {
+    background-color: rgba(248, 250, 252, 0.3);
+}
+
+.leads-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.5);
+}
