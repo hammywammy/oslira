@@ -1025,14 +1025,7 @@ select:focus-visible {
     background: white;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
-/* Component-specific hover effects - NOT row hover */
-.platform-hover-group:hover .absolute {
-    opacity: 1 !important;
-}
 
-.analysis-hover-group:hover .absolute {
-    opacity: 1 !important;
-}
 
 /* Row hover effects */
 .table-row:hover {
@@ -1053,7 +1046,3 @@ select:focus-visible {
     pointer-events: auto;
 }
 
-/* Remove any global group hover effects */
-.group:hover * {
-    /* Reset any inherited hover effects */
-}
