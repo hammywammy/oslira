@@ -18,8 +18,8 @@
 }
 
 .main-content {
-    /* Remove sidebar margin to make content full width */
-    margin-left: 0 !important;
+    /* Fallback for non-Tailwind environments */
+    margin-left: var(--sidebar-width, 16rem);
 }
 /* =============================================================================
    COMPONENT COMPATIBILITY CLASSES
