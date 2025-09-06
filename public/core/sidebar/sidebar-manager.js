@@ -452,9 +452,14 @@ setActiveMenuItem(pageId) {
 
 initializeBusinessSelector() {
     try {
-        const businessSelect = document.getElementById('business-select');
+        // Try multiple possible selectors
+        const businessSelect = document.getElementById('business-select') || 
+                              document.getElementById('sidebar-business-select') ||
+                              document.querySelector('.sidebar-business-select');
+                              
         if (!businessSelect) {
-            console.warn('⚠️ [SidebarManager] Business selector element not found');
+            console.warn('⚠️ [SidebarManager] Business selector element not found, creating...');
+            this.createBusinessSelectorIfMissing();
             return;
         }
 
@@ -488,6 +493,43 @@ initializeBusinessSelector() {
     } catch (error) {
         console.error('❌ [SidebarManager] Failed to initialize business selector:', error);
     }
+}
+
+    // =========================================================================
+// DOM REPAIR METHODS
+// =========================================================================
+
+createBusinessSelectorIfMissing() {
+    const userSection = document.querySelector('.sidebar-user-section') || 
+                        document.querySelector('.user-info');
+    
+    if (!userSection) {
+        console.error('❌ [SidebarManager] Cannot create business selector - no user section found');
+        return;
+    }
+    
+    console.log('🔧 [SidebarManager] Creating missing business selector...');
+    
+    const selectorHTML = `
+        <div class="business-selector-section mt-4 p-3 bg-slate-50 rounded-lg">
+            <label for="business-select" class="block text-sm font-medium text-slate-700 mb-2">
+                Business Profile
+            </label>
+            <select id="business-select" 
+                    class="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onchange="window.businessManager?.handleBusinessChange(this.value)">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+    `;
+    
+    userSection.insertAdjacentHTML('afterend', selectorHTML);
+    console.log('✅ [SidebarManager] Business selector created');
+    
+    // Initialize after creation
+    setTimeout(() => {
+        this.initializeBusinessSelector();
+    }, 100);
 }
     
     // =========================================================================
