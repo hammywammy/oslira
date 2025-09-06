@@ -150,18 +150,7 @@ getDependencies() {
         
         // Page-specific dependencies
         pages: {
-'home': {
-    scripts: [
-        '/pages/home/home.js'
-    ],
-    styles: [
-        '/pages/home/home.css'
-    ],
-    requiresAuth: false,
-    enableTailwind: false,
-    additionalLibraries: []
-},
-            
+        
 'dashboard': {
     scripts: [
         '/pages/dashboard/modules/core/event-bus.js',
@@ -216,6 +205,13 @@ getDependencies() {
                 scripts: ['/pages/subscription/subscription.js'],
                 styles: ['/pages/subscription/subscription.css'],
                 requiresAuth: true,
+                enableTailwind: true
+            },
+            
+'home': {
+                scripts: ['/core/footer/footer-manager.js'],
+                styles: ['/core/footer/footer.css'],
+                requiresAuth: false,
                 enableTailwind: true
             },
             
