@@ -68,12 +68,11 @@ getSidebarHTML() {
         <div class="sidebar-logo flex items-center gap-3 flex-1">
             <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
                  class="w-8 h-8 object-contain flex-shrink-0">
-            <div class="sidebar-logo-text flex flex-col min-w-0">
-                <span class="text-lg font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    Oslira
-                </span>
-                <span class="text-xs text-gray-600 font-medium opacity-80">Lead Research</span>
-            </div>
+<div class="sidebar-logo-text flex flex-col min-w-0">
+    <span class="text-lg font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        Oslira
+    </span>
+</div>
         </div>
         <button id="sidebar-toggle" class="sidebar-toggle p-2 rounded-lg hover:bg-white/50 transition-all duration-200 group flex-shrink-0">
             <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +177,7 @@ getSidebarHTML() {
                     <div class="user-avatar">
                         <span id="sidebar-user-initial-collapsed">U</span>
                     </div>
-                    <div id="sidebar-credits-collapsed" class="credits-collapsed">--</div>
+                    <div id="sidebar-credits-collapsed" class="credits-collapsed" title="Available Credits">--</div>
                     <button onclick="handleLogout()" class="p-2 text-gray-500 hover:text-red-600 transition-colors duration-200" title="Sign out">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
