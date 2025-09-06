@@ -32,8 +32,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // Listen for scripts loaded event to initialize footer
 window.addEventListener('oslira:scripts:loaded', async () => {
-  console.log('🚀 [Home] Scripts loaded, initializing footer...');
-  await initializeFooter();
+  console.log('🚀 [Home] Scripts loaded event received, initializing footer...');
+  try {
+    await initializeFooter();
+  } catch (error) {
+    console.error('❌ [Home] Footer initialization failed:', error);
+  }
 });
 
 // =============================================================================
@@ -70,28 +74,42 @@ async function initializeApp() {
 
 async function initializeFooter() {
     try {
-        console.log('🦶 [Home] Initializing footer...');
+        console.log('🦶 [Home] Starting footer initialization...');
+        
+        // Check if container exists
+        const container = document.getElementById('footer-container');
+        if (!container) {
+            throw new Error('footer-container element not found in DOM');
+        }
+        console.log('✅ [Home] Footer container found');
         
         // Wait for FooterManager to be available
+        console.log('🔍 [Home] Waiting for FooterManager...');
         for (let i = 0; i < 50; i++) {
-            if (window.FooterManager) break;
+            if (window.FooterManager) {
+                console.log('✅ [Home] FooterManager found');
+                break;
+            }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         if (!window.FooterManager) {
-            throw new Error('FooterManager not available');
+            throw new Error('FooterManager not available after waiting');
         }
         
         // Initialize footer
+        console.log('🦶 [Home] Creating FooterManager instance...');
         const footerManager = new window.FooterManager();
+        
+        console.log('🦶 [Home] Rendering footer...');
         footerManager.render('footer-container', {
             showSocialLinks: true,
             showNewsletter: true
         });
         
-        console.log('✅ [Home] Footer initialized');
+        console.log('✅ [Home] Footer initialization complete');
     } catch (error) {
-        console.warn('⚠️ [Home] Footer initialization failed:', error);
+        console.error('❌ [Home] Footer initialization failed:', error);
     }
 }
 
