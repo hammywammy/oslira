@@ -1,110 +1,199 @@
-// ===============================================================================
-// ENHANCED LEAD RENDERER - COMPATIBILITY VERSION
-// Fixed to work with existing dashboard system
-// ===============================================================================
+//public/pages/dashboard/modules/leads/lead-renderer.js
 
+/**
+ * OSLIRA LEAD RENDERER MODULE - ENHANCED PROFESSIONAL CRM VERSION
+ * Handles all lead display, card rendering, and UI presentation
+ * Maintains exact compatibility with dependency injection system
+ */
 class LeadRenderer {
-    constructor(stateManager) {
-        this.stateManager = stateManager || this.createFallbackStateManager();
-        this.dateFormatCache = new Map();
-        console.log('🎨 [LeadRenderer] Enhanced renderer initialized with compatibility mode');
-    }
-
-    // ===============================================================================
-    // FALLBACK STATE MANAGER FOR COMPATIBILITY
-    // ===============================================================================
-    
-    createFallbackStateManager() {
-        console.log('🔧 [LeadRenderer] Creating fallback state manager');
-        return {
-            state: {},
-            getState: (key) => this.state[key] || (key === 'selectedLeads' ? new Set() : []),
-            setState: (key, value) => { this.state[key] = value; }
-        };
-    }
-
-    // ===============================================================================
-    // MAIN RENDER FUNCTION - ENHANCED COMPATIBILITY
-    // ===============================================================================
-    
-    renderLeads(leads = []) {
-        console.log('🎨 [LeadRenderer] Starting enhanced lead rendering...', { 
-            leadCount: leads.length,
-            leads: leads 
-        });
+    constructor(container) {
+        this.container = container;
+        this.eventBus = container.get('eventBus');
+        this.stateManager = container.get('stateManager');
+        this.osliraApp = container.get('osliraApp');
         
+        // Cache for rendered elements
+        this.renderCache = new Map();
+        this.dateFormatCache = new Map();
+        
+        console.log('🚀 [LeadRenderer] Enhanced version initialized');
+    }
+    
+    async init() {
+        // Listen to data changes for re-rendering
+        this.stateManager.subscribe('leads', this.handleLeadsChanged.bind(this));
+        this.stateManager.subscribe('filteredLeads', this.handleFilteredLeadsChanged.bind(this));
+        this.stateManager.subscribe('selectedLeads', this.handleSelectionChanged.bind(this));
+        
+        console.log('✅ [LeadRenderer] Event listeners initialized');
+    }
+    
+    // ===============================================================================
+    // EVENT HANDLERS
+    // ===============================================================================
+    
+    handleLeadsChanged(leads) {
+        console.log('🔄 [LeadRenderer] Leads data changed, re-rendering');
+        this.displayLeads(leads);
+    }
+    
+    handleFilteredLeadsChanged(filteredLeads) {
+        console.log('🔄 [LeadRenderer] Filtered leads changed, re-rendering');
+        this.displayLeads(filteredLeads);
+    }
+    
+    handleSelectionChanged(selectedLeads) {
+        console.log('🔄 [LeadRenderer] Selection changed, updating UI');
+        this.updateBulkActionsVisibility(selectedLeads.size > 0);
+        this.updateSelectionUI();
+    }
+    
+    // ===============================================================================
+    // MAIN DISPLAY FUNCTION - ENHANCED
+    // ===============================================================================
+    
+    displayLeads(leads = null) {
+        // Use visibleLeads for pagination support, fallback to filteredLeads, then all leads
+        const leadsToDisplay = leads || 
+                              this.stateManager.getState('visibleLeads') || 
+                              this.stateManager.getState('filteredLeads') || 
+                              this.stateManager.getState('leads');
         const tableBody = document.getElementById('leads-table-body');
-        const emptyState = document.getElementById('empty-state');
-        const leadsContainer = document.querySelector('.leads-table-container');
+        const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
         
         if (!tableBody) {
-            console.error('❌ [LeadRenderer] Table body not found, creating structure...');
+            console.warn('⚠️ [LeadRenderer] Table body element not found');
             this.createTableStructureIfMissing();
-            return this.renderLeads(leads); // Retry after creating structure
+            return;
         }
         
-        console.log('✅ [LeadRenderer] Table body found, proceeding with render');
+        console.log(`🎨 [LeadRenderer] Displaying ${leadsToDisplay.length} leads with enhanced styling`);
         
-        // Show/hide based on leads
-        if (!leads || leads.length === 0) {
-            console.log('📭 [LeadRenderer] No leads to display');
-            tableBody.innerHTML = '';
-            if (leadsContainer) leadsContainer.style.display = 'none';
-            if (emptyState) emptyState.classList.remove('hidden');
+        // Show loading state if needed
+        if (this.stateManager.getState('isLoading')) {
+            this.renderLoadingState(tableBody);
+            return;
+        }
+        
+        // Handle empty state
+        if (leadsToDisplay.length === 0) {
+            this.renderEmptyState(tableBody);
             this.updateLeadCounts(0, 0);
             return;
         }
         
-        console.log('📊 [LeadRenderer] Rendering leads:', leads);
+        // Render leads with enhanced styling
+        const leadCards = leadsToDisplay.map(lead => this.createLeadCard(lead)).join('');
+        tableBody.innerHTML = leadCards;
         
-        // Show table, hide empty state
-        if (leadsContainer) leadsContainer.style.display = 'block';
-        if (emptyState) emptyState.classList.add('hidden');
+        // Update counts
+        this.updateLeadCounts(leadsToDisplay.length, selectedLeads.size);
         
-        try {
-            // Render leads with enhanced styling
-            const leadsDisplay = leads.map(lead => {
-                console.log('🔄 [LeadRenderer] Processing lead:', lead);
-                return this.createEnhancedLeadCard(lead);
-            }).join('');
-            
-            tableBody.innerHTML = leadsDisplay;
-            console.log('✅ [LeadRenderer] Table HTML updated');
-            
-            // Update UI states
-            this.updateSelectionUI();
-            this.updateLeadCounts(leads.length, leads.length);
-            
-            console.log('✨ [LeadRenderer] Enhanced leads display completed', {
-                displayed: leads.length,
-                selected: (this.stateManager.getState('selectedLeads') || new Set()).size
-            });
-        } catch (error) {
-            console.error('❌ [LeadRenderer] Error rendering leads:', error);
-            this.handleRenderError(error, leads);
-        }
+        // Update bulk actions visibility
+        this.updateBulkActionsVisibility(selectedLeads.size > 0);
+        
+        // Emit render complete event
+        this.eventBus.emit('leads:rendered', {
+            count: leadsToDisplay.length,
+            selected: selectedLeads.size
+        });
+        
+        console.log('✅ [LeadRenderer] Enhanced leads display completed');
     }
 
     // ===============================================================================
-    // ENHANCED LEAD CARD CREATION WITH SAFETY CHECKS
+    // ENHANCED LEAD CARD CREATION
     // ===============================================================================
     
-    createEnhancedLeadCard(lead) {
-        // Safety check for lead data
-        if (!lead || !lead.id) {
-            console.warn('⚠️ [LeadRenderer] Invalid lead data:', lead);
-            return '';
-        }
-        
+    createLeadCard(lead) {
         const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
         const isSelected = selectedLeads.has(lead.id);
         const score = lead.score || 0;
         
         // Enhanced score configuration with modern styling
-        const scoreConfig = this.getScoreConfig(score);
+        const getScoreConfig = (score) => {
+            if (score >= 90) return { 
+                class: 'bg-emerald-100 text-emerald-800 border-emerald-200', 
+                label: 'Excellent', 
+                color: 'emerald',
+                icon: '🌟',
+                gradient: 'from-emerald-500 to-emerald-600',
+                barGradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
+                borderColor: 'border-emerald-500'
+            };
+            if (score >= 75) return { 
+                class: 'bg-blue-100 text-blue-800 border-blue-200', 
+                label: 'Strong', 
+                color: 'blue',
+                icon: '💪',
+                gradient: 'from-blue-500 to-blue-600',
+                barGradient: 'from-blue-400 via-blue-500 to-blue-600',
+                borderColor: 'border-blue-500'
+            };
+            if (score >= 60) return { 
+                class: 'bg-amber-100 text-amber-800 border-amber-200', 
+                label: 'Moderate', 
+                color: 'amber',
+                icon: '⚡',
+                gradient: 'from-amber-500 to-orange-500',
+                barGradient: 'from-amber-400 via-amber-500 to-orange-500',
+                borderColor: 'border-amber-500'
+            };
+            return { 
+                class: 'bg-slate-100 text-slate-600 border-slate-200', 
+                label: 'Low', 
+                color: 'slate',
+                icon: '📊',
+                gradient: 'from-slate-400 to-slate-500',
+                barGradient: 'from-slate-300 via-slate-400 to-slate-500',
+                borderColor: 'border-slate-400'
+            };
+        };
+        
+        const scoreConfig = getScoreConfig(score);
         
         // Enhanced platform configuration
-        const platformConfig = this.getPlatformConfig(lead.platform);
+        const getPlatformConfig = (platform) => {
+            const configs = {
+                instagram: { 
+                    icon: '📷', 
+                    class: 'bg-gradient-to-br from-pink-50 to-rose-50 text-pink-700 hover:from-pink-100 hover:to-rose-100', 
+                    name: 'Instagram',
+                    gradient: 'from-pink-400 to-rose-500',
+                    iconBg: 'bg-pink-100'
+                },
+                tiktok: { 
+                    icon: '🎵', 
+                    class: 'bg-gradient-to-br from-purple-50 to-violet-50 text-purple-700 hover:from-purple-100 hover:to-violet-100', 
+                    name: 'TikTok',
+                    gradient: 'from-purple-400 to-violet-500',
+                    iconBg: 'bg-purple-100'
+                },
+                youtube: { 
+                    icon: '📺', 
+                    class: 'bg-gradient-to-br from-red-50 to-orange-50 text-red-700 hover:from-red-100 hover:to-orange-100', 
+                    name: 'YouTube',
+                    gradient: 'from-red-400 to-orange-500',
+                    iconBg: 'bg-red-100'
+                },
+                twitter: { 
+                    icon: '🐦', 
+                    class: 'bg-gradient-to-br from-blue-50 to-sky-50 text-blue-700 hover:from-blue-100 hover:to-sky-100', 
+                    name: 'Twitter',
+                    gradient: 'from-blue-400 to-sky-500',
+                    iconBg: 'bg-blue-100'
+                }
+            };
+            return configs[platform] || { 
+                icon: '🌐', 
+                class: 'bg-gradient-to-br from-slate-50 to-gray-50 text-slate-700 hover:from-slate-100 hover:to-gray-100', 
+                name: platform || 'Unknown',
+                gradient: 'from-slate-400 to-gray-500',
+                iconBg: 'bg-slate-100'
+            };
+        };
+        
+        const platformConfig = getPlatformConfig(lead.platform);
         
         // Enhanced analysis type badge
         const analysisConfig = lead.analysis_type === 'deep' 
@@ -112,9 +201,14 @@ class LeadRenderer {
             : { class: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Light Analysis', icon: '👁️' };
 
         // Enhanced date formatting
-        const formattedDate = this.formatDateProfessional(lead.updated_at || lead.created_at);
+        const dateKey = lead.updated_at || lead.created_at;
+        let formattedDate = this.dateFormatCache.get(dateKey);
+        if (!formattedDate) {
+            formattedDate = this.formatDateProfessional(dateKey);
+            this.dateFormatCache.set(dateKey, formattedDate);
+        }
         
-        // Enhanced profile picture with better fallback
+        // Professional profile picture with enhanced fallback
         const profilePicUrl = lead.profile_pic_url;
         const username = lead.username || 'unknown';
         const fullName = lead.full_name || '';
@@ -140,7 +234,8 @@ class LeadRenderer {
                 <td class="px-6 py-4">
                     <div class="flex items-center">
                         <input type="checkbox" 
-                               class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-offset-0 transition-all duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}"
+                               class="lead-checkbox w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-offset-0 transition-all duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}"
+                               data-lead-id="${lead.id}"
                                ${isSelected ? 'checked' : ''}
                                onchange="dashboard.toggleLeadSelection && dashboard.toggleLeadSelection('${lead.id}', this.checked)">
                     </div>
@@ -276,7 +371,7 @@ class LeadRenderer {
                                         Duplicate Analysis
                                     </button>
                                     <div class="border-t border-slate-200 my-1"></div>
-                                    <button onclick="dashboard.deleteLead && dashboard.deleteLead('${lead.id}')" 
+                                    <button onclick="dashboard.deleteLead('${lead.id}')" 
                                             class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -293,93 +388,58 @@ class LeadRenderer {
     }
 
     // ===============================================================================
-    // CONFIGURATION METHODS WITH SAFETY
+    // ENHANCED LOADING STATE
     // ===============================================================================
-    
-    getScoreConfig(score) {
-        if (score >= 90) return { 
-            class: 'bg-emerald-100 text-emerald-800 border-emerald-200', 
-            label: 'Excellent', 
-            color: 'emerald',
-            icon: '🌟',
-            gradient: 'from-emerald-500 to-emerald-600',
-            barGradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
-            borderColor: 'border-emerald-500'
-        };
-        if (score >= 75) return { 
-            class: 'bg-blue-100 text-blue-800 border-blue-200', 
-            label: 'Strong', 
-            color: 'blue',
-            icon: '💪',
-            gradient: 'from-blue-500 to-blue-600',
-            barGradient: 'from-blue-400 via-blue-500 to-blue-600',
-            borderColor: 'border-blue-500'
-        };
-        if (score >= 60) return { 
-            class: 'bg-amber-100 text-amber-800 border-amber-200', 
-            label: 'Moderate', 
-            color: 'amber',
-            icon: '⚡',
-            gradient: 'from-amber-500 to-orange-500',
-            barGradient: 'from-amber-400 via-amber-500 to-orange-500',
-            borderColor: 'border-amber-500'
-        };
-        return { 
-            class: 'bg-slate-100 text-slate-600 border-slate-200', 
-            label: 'Low', 
-            color: 'slate',
-            icon: '📊',
-            gradient: 'from-slate-400 to-slate-500',
-            barGradient: 'from-slate-300 via-slate-400 to-slate-500',
-            borderColor: 'border-slate-400'
-        };
+
+    renderLoadingState(tableBody) {
+        const loadingRows = Array.from({ length: 5 }, (_, i) => `
+            <tr class="animate-pulse">
+                <td class="px-6 py-4">
+                    <div class="w-4 h-4 bg-slate-200 rounded"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-slate-200 rounded-full"></div>
+                        <div class="flex-1">
+                            <div class="w-24 h-4 bg-slate-200 rounded mb-2"></div>
+                            <div class="w-16 h-3 bg-slate-200 rounded"></div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-20 h-6 bg-slate-200 rounded mx-auto"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-full h-8 bg-slate-200 rounded"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-16 h-6 bg-slate-200 rounded"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-16 h-4 bg-slate-200 rounded"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-20 h-8 bg-slate-200 rounded mx-auto"></div>
+                </td>
+            </tr>
+        `).join('');
+        
+        tableBody.innerHTML = loadingRows;
     }
 
-    getPlatformConfig(platform) {
-        const configs = {
-            instagram: { 
-                icon: '📷', 
-                class: 'bg-gradient-to-br from-pink-50 to-rose-50 text-pink-700 hover:from-pink-100 hover:to-rose-100', 
-                name: 'Instagram',
-                gradient: 'from-pink-400 to-rose-500',
-                iconBg: 'bg-pink-100'
-            },
-            tiktok: { 
-                icon: '🎵', 
-                class: 'bg-gradient-to-br from-purple-50 to-violet-50 text-purple-700 hover:from-purple-100 hover:to-violet-100', 
-                name: 'TikTok',
-                gradient: 'from-purple-400 to-violet-500',
-                iconBg: 'bg-purple-100'
-            },
-            youtube: { 
-                icon: '📺', 
-                class: 'bg-gradient-to-br from-red-50 to-orange-50 text-red-700 hover:from-red-100 hover:to-orange-100', 
-                name: 'YouTube',
-                gradient: 'from-red-400 to-orange-500',
-                iconBg: 'bg-red-100'
-            },
-            twitter: { 
-                icon: '🐦', 
-                class: 'bg-gradient-to-br from-blue-50 to-sky-50 text-blue-700 hover:from-blue-100 hover:to-sky-100', 
-                name: 'Twitter',
-                gradient: 'from-blue-400 to-sky-500',
-                iconBg: 'bg-blue-100'
-            }
-        };
-        return configs[platform] || { 
-            icon: '🌐', 
-            class: 'bg-gradient-to-br from-slate-50 to-gray-50 text-slate-700 hover:from-slate-100 hover:to-gray-100', 
-            name: platform || 'Unknown',
-            gradient: 'from-slate-400 to-gray-500',
-            iconBg: 'bg-slate-100'
-        };
+    renderEmptyState(tableBody) {
+        tableBody.innerHTML = '';
+        const emptyState = document.getElementById('empty-state');
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+        }
     }
 
     // ===============================================================================
     // DOM STRUCTURE REPAIR
     // ===============================================================================
 
-    createTableStructureIfMissing() {
+createTableStructureIfMissing() {
         const leadsContainer = document.querySelector('.leads-table-container');
         if (!leadsContainer) {
             console.error('❌ [LeadRenderer] Leads container not found - cannot create table structure');
@@ -417,7 +477,7 @@ class LeadRenderer {
     }
 
     // ===============================================================================
-    // UI HELPERS WITH SAFETY CHECKS
+    // ENHANCED UI HELPERS
     // ===============================================================================
 
     updateBulkActionsVisibility(show) {
@@ -442,13 +502,12 @@ class LeadRenderer {
         const totalCountEl = document.getElementById('total-count');
         const leadCountDisplay = document.getElementById('lead-count-display');
         
-        // Use provided counts or fallback to state
+        // Get actual total from state
         const allLeads = this.stateManager.getState('leads') || [];
-        const actualTotal = totalCount || allLeads.length;
-        const actualVisible = visibleCount || actualTotal;
+        const actualTotal = allLeads.length;
         
         if (resultsCount) {
-            resultsCount.textContent = `Showing ${actualVisible} leads`;
+            resultsCount.textContent = `Showing ${visibleCount} leads`;
         }
         
         if (totalCountEl) {
@@ -466,9 +525,9 @@ class LeadRenderer {
         }
     }
 
-updateSelectionUI() {
+    updateSelectionUI() {
         const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
-        const checkboxes = document.querySelectorAll('input[type="checkbox"][data-lead-id]');
+        const checkboxes = document.querySelectorAll('.lead-checkbox');
         const selectAllCheckbox = document.getElementById('select-all-checkbox');
         
         // Update individual checkboxes
@@ -496,45 +555,8 @@ updateSelectionUI() {
         }
     }
 
-    renderLoadingState(tableBody) {
-        const loadingRows = Array.from({ length: 5 }, (_, i) => `
-            <tr class="animate-pulse">
-                <td class="px-6 py-4">
-                    <div class="w-4 h-4 bg-slate-200 rounded"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 bg-slate-200 rounded-full"></div>
-                        <div class="flex-1">
-                            <div class="w-24 h-4 bg-slate-200 rounded mb-2"></div>
-                            <div class="w-16 h-3 bg-slate-200 rounded"></div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-20 h-6 bg-slate-200 rounded mx-auto"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-full h-8 bg-slate-200 rounded"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-16 h-6 bg-slate-200 rounded"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-16 h-4 bg-slate-200 rounded"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-20 h-8 bg-slate-200 rounded mx-auto"></div>
-                </td>
-            </tr>
-        `).join('');
-        
-        tableBody.innerHTML = loadingRows;
-        console.log('🔄 [LeadRenderer] Loading state displayed');
-    }
-
     // ===============================================================================
-    // UTILITY FUNCTIONS
+    // ENHANCED UTILITY METHODS
     // ===============================================================================
 
     formatDateProfessional(dateString) {
@@ -596,176 +618,157 @@ updateSelectionUI() {
     }
 
     // ===============================================================================
+    // LEGACY COMPATIBILITY METHODS
+    // ===============================================================================
+
+    // Methods required by dashboard.js legacy compatibility
+    selectLead(checkbox) {
+        const leadId = checkbox.dataset.leadId || checkbox.getAttribute('data-lead-id');
+        const isChecked = checkbox.checked;
+        
+        if (window.dashboard && window.dashboard.toggleLeadSelection) {
+            window.dashboard.toggleLeadSelection(leadId, isChecked);
+        }
+    }
+
+    toggleAllLeads(masterCheckbox) {
+        const checkboxes = document.querySelectorAll('.lead-checkbox');
+        const isChecked = masterCheckbox.checked;
+        
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = isChecked;
+            const leadId = checkbox.dataset.leadId;
+            if (leadId && window.dashboard && window.dashboard.toggleLeadSelection) {
+                window.dashboard.toggleLeadSelection(leadId, isChecked);
+            }
+        });
+    }
+
+    searchLeads(term) {
+        // Legacy method - let the dashboard handle search
+        console.log('🔍 [LeadRenderer] Search term:', term);
+        if (window.dashboard && window.dashboard.filterLeadsBySearch) {
+            window.dashboard.filterLeadsBySearch(term);
+        }
+    }
+
+    filterLeads(filter) {
+        // Legacy method - let the dashboard handle filtering
+        console.log('🔍 [LeadRenderer] Filter:', filter);
+        if (window.dashboard && window.dashboard.applyLeadFilter) {
+            window.dashboard.applyLeadFilter(filter);
+        }
+    }
+
+    editMessage(leadId) {
+        console.log('✏️ [LeadRenderer] Edit message for lead:', leadId);
+        // Legacy method placeholder
+    }
+
+    saveEditedMessage(leadId) {
+        console.log('💾 [LeadRenderer] Save message for lead:', leadId);
+        // Legacy method placeholder
+    }
+
+    // ===============================================================================
     // SEARCH AND FILTER FUNCTIONALITY
     // ===============================================================================
 
-    filterLeads(leads, searchTerm, platformFilter, scoreFilter) {
-        if (!leads || leads.length === 0) return [];
+    filterLeadsBySearch(leads, searchTerm) {
+        if (!searchTerm || !searchTerm.trim()) return leads;
         
-        let filteredLeads = [...leads];
-        
-        // Search filter
-        if (searchTerm && searchTerm.trim()) {
-            const term = searchTerm.toLowerCase().trim();
-            filteredLeads = filteredLeads.filter(lead => {
-                const username = (lead.username || '').toLowerCase();
-                const fullName = (lead.full_name || '').toLowerCase();
-                const platform = (lead.platform || '').toLowerCase();
-                
-                return username.includes(term) || 
-                       fullName.includes(term) || 
-                       platform.includes(term);
-            });
-        }
-        
-        // Platform filter
-        if (platformFilter && platformFilter !== 'all') {
-            filteredLeads = filteredLeads.filter(lead => 
-                lead.platform === platformFilter
-            );
-        }
-        
-        // Score filter
-        if (scoreFilter && scoreFilter !== 'all') {
-            switch (scoreFilter) {
-                case 'high-score':
-                    filteredLeads = filteredLeads.filter(lead => (lead.score || 0) >= 80);
-                    break;
-                case 'medium-score':
-                    filteredLeads = filteredLeads.filter(lead => {
-                        const score = lead.score || 0;
-                        return score >= 60 && score < 80;
-                    });
-                    break;
-                case 'low-score':
-                    filteredLeads = filteredLeads.filter(lead => (lead.score || 0) < 60);
-                    break;
-            }
-        }
-        
-        return filteredLeads;
-    }
-
-    sortLeads(leads, sortBy, sortOrder = 'desc') {
-        if (!leads || leads.length === 0) return [];
-        
-        const sortedLeads = [...leads];
-        
-        sortedLeads.sort((a, b) => {
-            let aValue, bValue;
+        const term = searchTerm.toLowerCase().trim();
+        return leads.filter(lead => {
+            const username = (lead.username || '').toLowerCase();
+            const fullName = (lead.full_name || '').toLowerCase();
+            const platform = (lead.platform || '').toLowerCase();
             
-            switch (sortBy) {
-                case 'username':
-                    aValue = (a.username || '').toLowerCase();
-                    bValue = (b.username || '').toLowerCase();
-                    break;
-                case 'platform':
-                    aValue = a.platform || '';
-                    bValue = b.platform || '';
-                    break;
-                case 'score':
-                    aValue = a.score || 0;
-                    bValue = b.score || 0;
-                    break;
-                case 'date':
-                    aValue = new Date(a.updated_at || a.created_at);
-                    bValue = new Date(b.updated_at || b.created_at);
-                    break;
-                case 'followers':
-                    aValue = a.followers_count || 0;
-                    bValue = b.followers_count || 0;
-                    break;
-                default:
-                    aValue = new Date(a.updated_at || a.created_at);
-                    bValue = new Date(b.updated_at || b.created_at);
-            }
-            
-            if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
-            return 0;
+            return username.includes(term) || 
+                   fullName.includes(term) || 
+                   platform.includes(term);
         });
+    }
+
+    filterLeadsByPlatform(leads, platform) {
+        if (!platform || platform === 'all') return leads;
+        return leads.filter(lead => lead.platform === platform);
+    }
+
+    filterLeadsByScore(leads, scoreFilter) {
+        if (!scoreFilter || scoreFilter === 'all') return leads;
         
-        return sortedLeads;
+        switch (scoreFilter) {
+            case 'high-score':
+                return leads.filter(lead => (lead.score || 0) >= 80);
+            case 'medium-score':
+                return leads.filter(lead => {
+                    const score = lead.score || 0;
+                    return score >= 60 && score < 80;
+                });
+            case 'low-score':
+                return leads.filter(lead => (lead.score || 0) < 60);
+            default:
+                return leads;
+        }
     }
 
     // ===============================================================================
-    // ADVANCED UI METHODS
+    // PAGINATION SUPPORT
     // ===============================================================================
 
-    highlightSearchTerm(text, searchTerm) {
-        if (!searchTerm || !text) return text;
+    paginateLeads(leads, page = 1, pageSize = 25) {
+        const startIndex = (page - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
         
-        const regex = new RegExp(`(${searchTerm})`, 'gi');
-        return text.replace(regex, '<mark class="bg-yellow-200 text-yellow-900 px-1 rounded">$1</mark>');
-    }
-
-    getLeadCardClasses(lead, isSelected) {
-        const baseClasses = 'group hover:bg-slate-50/50 transition-all duration-300';
-        const selectedClasses = 'bg-blue-50/50 border-blue-200';
-        const scoreClasses = this.getRowScoreClasses(lead.score);
-        
-        return `${baseClasses} ${isSelected ? selectedClasses : ''} ${scoreClasses}`;
-    }
-
-    getRowScoreClasses(score) {
-        if (score >= 90) return 'border-l-4 border-emerald-500';
-        if (score >= 75) return 'border-l-4 border-blue-500';
-        if (score >= 60) return 'border-l-4 border-amber-500';
-        return 'border-l-4 border-slate-300';
+        return {
+            leads: leads.slice(startIndex, endIndex),
+            totalCount: leads.length,
+            currentPage: page,
+            totalPages: Math.ceil(leads.length / pageSize),
+            hasNext: endIndex < leads.length,
+            hasPrev: page > 1
+        };
     }
 
     // ===============================================================================
-    // BULK OPERATIONS
+    // ANIMATION AND EFFECTS
     // ===============================================================================
 
-    selectAllVisibleLeads() {
-        const visibleRows = document.querySelectorAll('#leads-table-body tr[data-lead-id]');
-        const selectedLeads = new Set();
+    animateLeadEntry(leadElement) {
+        if (!leadElement) return;
         
-        visibleRows.forEach(row => {
-            const leadId = row.dataset.leadId;
-            if (leadId) {
-                selectedLeads.add(leadId);
-                const checkbox = row.querySelector('input[type="checkbox"]');
-                if (checkbox) checkbox.checked = true;
-            }
+        leadElement.style.opacity = '0';
+        leadElement.style.transform = 'translateY(20px)';
+        
+        requestAnimationFrame(() => {
+            leadElement.style.transition = 'all 0.3s ease-out';
+            leadElement.style.opacity = '1';
+            leadElement.style.transform = 'translateY(0)';
         });
-        
-        this.stateManager.setState('selectedLeads', selectedLeads);
-        this.updateSelectionUI();
-        this.updateBulkActionsVisibility(true);
-        
-        console.log('✅ [LeadRenderer] All visible leads selected:', selectedLeads.size);
     }
 
-    clearAllSelections() {
-        const selectedLeads = new Set();
-        this.stateManager.setState('selectedLeads', selectedLeads);
+    animateLeadRemoval(leadElement, callback) {
+        if (!leadElement) {
+            if (callback) callback();
+            return;
+        }
         
-        // Update all checkboxes
-        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.checked = false;
-        });
+        leadElement.style.transition = 'all 0.3s ease-in';
+        leadElement.style.opacity = '0';
+        leadElement.style.transform = 'translateX(-100%)';
         
-        this.updateBulkActionsVisibility(false);
-        console.log('🧹 [LeadRenderer] All selections cleared');
-    }
-
-    getSelectedLeadsData() {
-        const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
-        const allLeads = this.stateManager.getState('leads') || [];
-        
-        return allLeads.filter(lead => selectedLeads.has(lead.id));
+        setTimeout(() => {
+            if (callback) callback();
+        }, 300);
     }
 
     // ===============================================================================
-    // ERROR HANDLING AND RECOVERY
+    // ERROR HANDLING
     // ===============================================================================
 
     handleRenderError(error, leads) {
         console.error('❌ [LeadRenderer] Render error:', error);
         
-        // Attempt graceful fallback
         const tableBody = document.getElementById('leads-table-body');
         if (tableBody) {
             tableBody.innerHTML = `
@@ -781,9 +784,9 @@ updateSelectionUI() {
                                 <h3 class="text-lg font-semibold text-slate-900">Unable to display leads</h3>
                                 <p class="text-sm text-slate-600 mt-1">There was an error rendering the lead data. Please try refreshing.</p>
                             </div>
-                            <button onclick="dashboard.refreshLeads && dashboard.refreshLeads()" 
+                            <button onclick="window.location.reload()" 
                                     class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                Refresh Leads
+                                Refresh Page
                             </button>
                         </div>
                     </td>
@@ -793,253 +796,26 @@ updateSelectionUI() {
     }
 
     // ===============================================================================
-    // ACCESSIBILITY ENHANCEMENTS
+    // CLEANUP
     // ===============================================================================
 
-    addAccessibilityAttributes() {
-        // Add ARIA labels and roles for screen readers
-        const table = document.querySelector('.leads-table');
-        if (table) {
-            table.setAttribute('role', 'table');
-            table.setAttribute('aria-label', 'Lead intelligence pipeline data');
-        }
-
-        // Add keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.target.closest('.leads-table')) {
-                this.handleKeyboardNavigation(e);
-            }
-        });
-    }
-
-    handleKeyboardNavigation(event) {
-        const { key, target } = event;
-        const currentRow = target.closest('tr');
-        
-        if (!currentRow) return;
-        
-        switch (key) {
-            case 'ArrowDown':
-                event.preventDefault();
-                const nextRow = currentRow.nextElementSibling;
-                if (nextRow) {
-                    const firstInput = nextRow.querySelector('input, button');
-                    if (firstInput) firstInput.focus();
-                }
-                break;
-                
-            case 'ArrowUp':
-                event.preventDefault();
-                const prevRow = currentRow.previousElementSibling;
-                if (prevRow) {
-                    const firstInput = prevRow.querySelector('input, button');
-                    if (firstInput) firstInput.focus();
-                }
-                break;
-                
-            case 'Space':
-                if (target.type === 'checkbox') {
-                    event.preventDefault();
-                    target.checked = !target.checked;
-                    target.dispatchEvent(new Event('change'));
-                }
-                break;
-        }
-    }
-
-    // ===============================================================================
-    // PERFORMANCE OPTIMIZATIONS
-    // ===============================================================================
-
-    createVirtualizedRenderer(leads, containerHeight = 600, rowHeight = 80) {
-        // Basic virtualization for large datasets
-        const visibleRows = Math.ceil(containerHeight / rowHeight);
-        const buffer = 5; // Extra rows for smooth scrolling
-        
-        return {
-            totalRows: leads.length,
-            visibleRows: visibleRows + buffer,
-            rowHeight,
-            
-            getVisibleRange(scrollTop) {
-                const startIndex = Math.floor(scrollTop / rowHeight);
-                const endIndex = Math.min(startIndex + visibleRows + buffer, leads.length);
-                
-                return {
-                    start: Math.max(0, startIndex - buffer),
-                    end: endIndex,
-                    leads: leads.slice(Math.max(0, startIndex - buffer), endIndex)
-                };
-            }
-        };
-    }
-
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    // ===============================================================================
-    // COMPATIBILITY METHODS FOR EXISTING DASHBOARD
-    // ===============================================================================
-
-    // Method to integrate with existing dashboard system
-    integrateWithDashboard(dashboardInstance) {
-        if (dashboardInstance && typeof dashboardInstance === 'object') {
-            // Store reference to dashboard
-            this.dashboard = dashboardInstance;
-            
-            // Override dashboard's renderer if it exists
-            if (dashboardInstance.leadRenderer) {
-                const originalRenderer = dashboardInstance.leadRenderer;
-                dashboardInstance.leadRenderer = this;
-                console.log('✅ [LeadRenderer] Integrated with existing dashboard');
-            }
-            
-            // Bind to dashboard's state if available
-            if (dashboardInstance.stateManager) {
-                this.stateManager = dashboardInstance.stateManager;
-                console.log('✅ [LeadRenderer] Using dashboard state manager');
-            }
-        }
-    }
-
-    // Method to handle legacy function calls
-    createLeadCard(lead) {
-        return this.createEnhancedLeadCard(lead);
-    }
-
-    // Method to handle legacy rendering calls
-    render(leads) {
-        return this.renderLeads(leads);
-    }
-
-    // ===============================================================================
-    // CLEANUP AND INITIALIZATION
-    // ===============================================================================
-
-    destroy() {
+    cleanup() {
         // Clear caches
+        this.renderCache.clear();
         this.dateFormatCache.clear();
         
-        // Remove event listeners
-        document.removeEventListener('keydown', this.handleKeyboardNavigation);
-        
-        console.log('🧹 [LeadRenderer] Renderer destroyed and cleaned up');
-    }
-
-    init() {
-        this.addAccessibilityAttributes();
-        console.log('🚀 [LeadRenderer] Enhanced renderer initialized');
-        
-        // Check if we need to create the table structure
-        const tableBody = document.getElementById('leads-table-body');
-        if (!tableBody) {
-            this.createTableStructureIfMissing();
-        }
+        console.log('🧹 [LeadRenderer] Cleanup completed');
     }
 }
 
 // ===============================================================================
-// EXPORT AND INITIALIZATION
+// GLOBAL EXPORT
 // ===============================================================================
-
-// Auto-initialize if in browser environment
-if (typeof window !== 'undefined') {
-    window.LeadRenderer = LeadRenderer;
-    
-    // Try to integrate with existing dashboard if it exists
-    if (window.dashboard && window.dashboard.leadRenderer) {
-        console.log('🔄 [LeadRenderer] Upgrading existing dashboard renderer...');
-        const enhancedRenderer = new LeadRenderer(window.dashboard.stateManager);
-        enhancedRenderer.integrateWithDashboard(window.dashboard);
-        window.dashboard.leadRenderer = enhancedRenderer;
-        console.log('✅ [LeadRenderer] Dashboard renderer upgraded successfully');
-    }
-    
-    console.log('✅ [LeadRenderer] Enhanced renderer class available globally');
-}
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = LeadRenderer;
-}
-
-// ===============================================================================
-// IMMEDIATE COMPATIBILITY FIX
-// ===============================================================================
-
-// Add compatibility methods to match the original interface
-LeadRenderer.prototype.displayLeads = function(leads) {
-    console.log('🔄 [LeadRenderer] displayLeads called (compatibility mode)');
-    return this.renderLeads(leads);
-};
-
-LeadRenderer.prototype.handleLeadsChanged = function(leads) {
-    console.log('🔄 [LeadRenderer] handleLeadsChanged called');
-    this.renderLeads(leads);
-};
-
-LeadRenderer.prototype.handleFilteredLeadsChanged = function(filteredLeads) {
-    console.log('🔄 [LeadRenderer] handleFilteredLeadsChanged called');
-    this.renderLeads(filteredLeads);
-};
-
-LeadRenderer.prototype.handleSelectionChanged = function(selectedLeads) {
-    console.log('🔄 [LeadRenderer] handleSelectionChanged called');
-    this.updateBulkActionsVisibility(selectedLeads && selectedLeads.size > 0);
-    this.updateSelectionUI();
-};
-
-LeadRenderer.prototype.renderEmptyState = function(tableBody) {
-    console.log('📭 [LeadRenderer] Rendering empty state');
-    const emptyState = document.getElementById('empty-state');
-    const leadsContainer = document.querySelector('.leads-table-container');
-    
-    if (tableBody) tableBody.innerHTML = '';
-    if (leadsContainer) leadsContainer.style.display = 'none';
-    if (emptyState) emptyState.classList.remove('hidden');
-};
-
-// Force compatibility setup
-if (typeof window !== 'undefined' && window.dashboard) {
-    console.log('🔄 [LeadRenderer] Setting up immediate compatibility...');
-    
-    setTimeout(() => {
-        if (window.dashboard && window.dashboard.container) {
-            try {
-                let renderer = window.dashboard.container.get('leadRenderer');
-                if (renderer) {
-                    // Set up state subscriptions
-                    if (renderer.stateManager && typeof renderer.stateManager.subscribe === 'function') {
-                        renderer.stateManager.subscribe('leads', (leads) => {
-                            console.log('📊 [LeadRenderer] Leads state changed, rendering...', leads.length);
-                            renderer.renderLeads(leads);
-                        });
-                        
-                        renderer.stateManager.subscribe('filteredLeads', (filteredLeads) => {
-                            console.log('🔍 [LeadRenderer] Filtered leads changed, rendering...', filteredLeads.length);
-                            renderer.renderLeads(filteredLeads);
-                        });
-                    }
-                    
-                    // Force render current leads
-                    const currentLeads = renderer.stateManager?.getState('leads');
-                    if (currentLeads && currentLeads.length > 0) {
-                        console.log('🎨 [LeadRenderer] Force rendering current leads...', currentLeads.length);
-                        renderer.renderLeads(currentLeads);
-                    }
-                }
-            } catch (error) {
-                console.error('❌ [LeadRenderer] Compatibility setup error:', error);
-            }
-        }
-    }, 500);
+} else if (typeof window !== 'undefined') {
+    window.LeadRenderer = LeadRenderer;
+    console.log('✅ [LeadRenderer] Enhanced renderer class available globally');
 }
