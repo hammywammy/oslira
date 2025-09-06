@@ -239,22 +239,20 @@ const analysisConfig = lead.analysis_type === 'deep'
         `;
 
 return `
-    <tr class="group hover:bg-slate-50/50 transition-all duration-300 ${isSelected ? 'bg-blue-50/50 border-blue-200' : ''} border-l-4 ${this.getRowAccentColor(score)} odd:bg-slate-25/30" 
+    <tr class="group hover:bg-slate-50/30 transition-all duration-200 ${isSelected ? 'bg-blue-50/50' : ''} border-l-4 ${this.getRowAccentColor(score)} odd:bg-slate-25/20" 
         data-lead-id="${lead.id}">
+        
+        <!-- Hidden selection checkbox that appears on hover -->
+        <div class="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+            <input type="checkbox" 
+                   class="lead-checkbox w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 bg-white shadow-md"
+                   data-lead-id="${lead.id}"
+                   ${isSelected ? 'checked' : ''}
+                   onchange="dashboard.toggleLeadSelection && dashboard.toggleLeadSelection('${lead.id}', this.checked)">
+        </div>
                 
-                <!-- Enhanced Selection Checkbox -->
-                <td class="px-6 py-4">
-                    <div class="flex items-center">
-                        <input type="checkbox" 
-                               class="lead-checkbox w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-offset-0 transition-all duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}"
-                               data-lead-id="${lead.id}"
-                               ${isSelected ? 'checked' : ''}
-                               onchange="dashboard.toggleLeadSelection && dashboard.toggleLeadSelection('${lead.id}', this.checked)">
-                    </div>
-                </td>
-                
-                <!-- Enhanced Lead Profile -->
-                <td class="px-6 py-4">
+<!-- Enhanced Lead Profile -->
+<td class="px-6 py-4 border-r border-slate-100/60">
                     <div class="flex items-center space-x-3">
                         <div class="flex-shrink-0 relative">
                             ${profilePicHtml}
@@ -275,11 +273,11 @@ return `
                     </div>
                 </td>
                 
-                <!-- Enhanced Platform -->
-                <td class="px-6 py-4">
-                    <div class="flex items-center justify-center">
-                        <div class="relative group platform-badge-glow">
-                            <div class="absolute -inset-0.5 bg-gradient-to-r ${platformConfig.gradient} rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
+   <!-- Enhanced Platform -->
+<td class="px-6 py-4 border-r border-slate-100/60">
+    <div class="flex items-center justify-center">
+        <div class="relative platform-group">
+            <div class="absolute -inset-0.5 bg-gradient-to-r ${platformConfig.gradient} rounded-lg blur opacity-0 platform-group:hover:opacity-100 transition duration-300"></div>
                             <div class="relative inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold ${platformConfig.class} shadow-sm hover:shadow-md transition-all duration-200 border-0">
                                 <div class="flex items-center space-x-2">
                                     <div class="w-5 h-5 flex items-center justify-center ${platformConfig.iconBg} rounded-full">
@@ -292,8 +290,8 @@ return `
                     </div>
                 </td>
                 
-                <!-- Enhanced Intelligence Score -->
-                <td class="px-6 py-4">
+<!-- Enhanced Intelligence Score -->
+<td class="px-6 py-4 border-r border-slate-100/60">
                     <div class="relative">
                         <!-- Score value with modern styling -->
                         <div class="flex items-center justify-between mb-2">
@@ -326,10 +324,10 @@ return `
                 </td>
                 
 <!-- Enhanced Analysis Type -->
-<td class="px-6 py-4">
+<td class="px-6 py-4 border-r border-slate-100/60">
     <div class="flex items-center justify-center">
-        <div class="relative group">
-            <div class="absolute -inset-0.5 bg-gradient-to-r ${analysisConfig.gradient} rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
+        <div class="relative analysis-group">
+            <div class="absolute -inset-0.5 bg-gradient-to-r ${analysisConfig.gradient} rounded-lg blur opacity-0 analysis-group:hover:opacity-100 transition duration-300"></div>
             <div class="relative inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold ${analysisConfig.class} shadow-sm hover:shadow-md transition-all duration-200 border-0">
                 <div class="flex items-center space-x-2">
                     <div class="w-5 h-5 flex items-center justify-center ${analysisConfig.iconBg} rounded-full">
@@ -342,19 +340,20 @@ return `
     </div>
 </td>
                 
-                <!-- Enhanced Date -->
-                <td class="px-6 py-4">
-                    <div class="text-sm text-slate-900">${formattedDate.date}</div>
-                    <div class="text-xs text-slate-500">${formattedDate.time}</div>
-                </td>
+<!-- Enhanced Date -->
+<td class="px-6 py-4 border-r border-slate-100/60">
+    <div class="text-center">
+        <div class="text-sm text-slate-900">${formattedDate.date}</div>
+        <div class="text-xs text-slate-500">${formattedDate.time}</div>
+    </div>
+</td>
                 
 <!-- Enhanced Actions -->
 <td class="px-6 py-4">
     <div class="flex items-center justify-center">
         <!-- Single Analysis Button -->
         <button onclick="dashboard.openLeadDetails && dashboard.openLeadDetails('${lead.id}')" 
-                class="group relative inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                title="View detailed analysis">
+                class="action-button relative inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
             <svg class="relative w-4 h-4 mr-2 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
@@ -458,24 +457,18 @@ createTableStructureIfMissing() {
         
         console.log('🔧 [LeadRenderer] Creating enhanced table structure...');
         
-        const tableHTML = `
-            <table class="leads-table w-full">
-                <thead class="bg-gradient-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10">
-                    <tr class="border-b border-slate-200/60">
-                        <th class="px-6 py-4 text-left w-12">
-                            <input type="checkbox" 
-                                   id="select-all-checkbox" 
-                                   onchange="dashboard.toggleAllLeads && dashboard.toggleAllLeads(this)"
-                                   class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
-                        </th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Lead Profile</th>
-                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Platform</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Intelligence Score</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Analysis Type</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Date Added</th>
-                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
-                    </tr>
-                </thead>
+const tableHTML = `
+    <table class="leads-table w-full border-separate border-spacing-0">
+        <thead class="bg-gradient-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10">
+            <tr class="border-b border-slate-200/60">
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Lead Profile</th>
+                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Platform</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Intelligence Score</th>
+                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Analysis Type</th>
+                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Date Added</th>
+                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+            </tr>
+        </thead>
                 <tbody id="leads-table-body" class="divide-y divide-slate-200/60 bg-white">
                     <!-- Leads will be populated by JavaScript -->
                 </tbody>
