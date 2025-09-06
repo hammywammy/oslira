@@ -344,11 +344,28 @@ async preResolveAsyncDependencies() {
             handleFileUpload: (event) => this.handleFileUpload(event),
             processBulkUpload: () => this.processBulkUpload(),
             validateBulkForm: () => this.validateBulkForm(),
-            
-            // Lead management
+
+// Lead management
             deleteLead: (leadId) => this.deleteLead(leadId),
             selectLead: (checkbox) => this.selectLead(checkbox),
             toggleAllLeads: (masterCheckbox) => this.toggleAllLeads(masterCheckbox),
+            toggleLeadSelection: (leadId, checked) => {
+                const leadManager = this.container.get('leadManager');
+                return leadManager.toggleLeadSelection(leadId);
+            },
+            refreshLeads: () => {
+                const leadManager = this.container.get('leadManager');
+                return leadManager.loadDashboardData();
+            },
+            toggleActionMenu: (leadId, button) => {
+                const menu = button.nextElementSibling;
+                if (menu) {
+                    menu.classList.toggle('show');
+                    document.querySelectorAll('.action-menu.show').forEach(m => {
+                        if (m !== menu) m.classList.remove('show');
+                    });
+                }
+            },
             editMessage: (leadId) => this.editMessage(leadId),
             saveEditedMessage: (leadId) => this.saveEditedMessage(leadId),
             
