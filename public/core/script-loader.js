@@ -240,19 +240,31 @@ getDependencies() {
                 await this.loadScript({ url: scriptUrl }, `pre-core-${scriptUrl}`);
             }
             
-            // Use centralized environment detection from OsliraEnv
-            this.config = {
-                environment: window.OsliraEnv.ENV,
-                isProduction: window.OsliraEnv.IS_PRODUCTION,
-                isStaging: window.OsliraEnv.IS_STAGING,
-                workerUrl: window.OsliraEnv.WORKER_URL
-            };
+// Use centralized environment detection from OsliraEnv with error handling
+if (!window.OsliraEnv) {
+    throw new Error('OsliraEnv not available - env-manager.js failed to load');
+}
+
+this.config = {
+    environment: window.OsliraEnv.ENV,
+    isProduction: window.OsliraEnv.IS_PRODUCTION,
+    isStaging: window.OsliraEnv.IS_STAGING,
+    workerUrl: window.OsliraEnv.WORKER_URL
+};
+
             
+
 // Set current page from centralized detection with validation
-this.currentPage = window.OsliraEnv?.currentPage || window.OsliraEnv?.CURRENT_PAGE;
+this.currentPage = window.OsliraEnv.currentPage || window.OsliraEnv.CURRENT_PAGE;
+
+// Validate critical properties
+if (!this.config.environment) {
+    console.error('❌ [ScriptLoader] Environment detection failed');
+    this.config.environment = 'development'; // Fallback
+}
 
 if (!this.currentPage) {
-    console.warn('⚠️ [ScriptLoader] Page detection failed, attempting fallback...');
+    console.warn('⚠️ [ScriptLoader] Page detection failed, using fallback');
     this.currentPage = this.detectPageFallback();
 }
 
