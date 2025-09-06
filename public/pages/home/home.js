@@ -19,9 +19,12 @@ if (typeof Sentry !== "undefined") {
 let supabase = null;
 let isInitialized = false;
 
-// Initialize application when DOM loads
 document.addEventListener("DOMContentLoaded", async () => {
   console.log("🚀 Oslira landing page loaded");
+  
+  // Prevent auto-redirect by blocking simple-app initialization
+  window.preventSimpleAppInit = true;
+  
   await initializeApp();
   setupEventListeners();
   setupAnimations();
