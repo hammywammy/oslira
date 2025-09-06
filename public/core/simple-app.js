@@ -248,6 +248,12 @@ window.OsliraSimpleApp = new OsliraSimpleApp();
 
 // Auto-initialize when scripts are loaded
 window.addEventListener('oslira:scripts:loaded', async () => {
+    // Skip auto-initialization on public pages
+    if (window.preventSimpleAppInit || window.location.pathname === '/' || window.location.pathname === '/index.html') {
+        console.log('🏠 [SimpleApp] Skipping auto-initialization for public page');
+        return;
+    }
+    
     try {
         console.log('🚀 [SimpleApp] Scripts loaded, initializing access control...');
         await window.OsliraSimpleApp.initialize();
@@ -261,5 +267,4 @@ window.addEventListener('oslira:scripts:loaded', async () => {
         }
     }
 });
-
 console.log('📱 SimpleApp ready for initialization');
