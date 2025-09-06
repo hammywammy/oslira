@@ -195,10 +195,22 @@ class LeadRenderer {
         
         const platformConfig = getPlatformConfig(lead.platform);
         
-        // Enhanced analysis type badge
-        const analysisConfig = lead.analysis_type === 'deep' 
-            ? { class: 'bg-purple-100 text-purple-700 border-purple-200', label: 'Deep Analysis', icon: '🔍' }
-            : { class: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Light Analysis', icon: '👁️' };
+// Enhanced analysis type badge
+const analysisConfig = lead.analysis_type === 'deep' 
+    ? { 
+        class: 'bg-gradient-to-br from-purple-50 to-violet-50 text-purple-700 hover:from-purple-100 hover:to-violet-100', 
+        label: 'Deep Analysis', 
+        icon: '🔍',
+        gradient: 'from-purple-400 to-violet-500',
+        iconBg: 'bg-purple-100'
+    }
+    : { 
+        class: 'bg-gradient-to-br from-slate-50 to-gray-50 text-slate-600 hover:from-slate-100 hover:to-gray-100', 
+        label: 'Light Analysis', 
+        icon: '👁️',
+        gradient: 'from-slate-400 to-gray-500',
+        iconBg: 'bg-slate-100'
+    };
 
         // Enhanced date formatting
         const dateKey = lead.updated_at || lead.created_at;
@@ -226,9 +238,9 @@ class LeadRenderer {
             </div>
         `;
 
-        return `
-            <tr class="group hover:bg-slate-50/50 transition-all duration-300 ${isSelected ? 'bg-blue-50/50 border-blue-200' : ''}" 
-                data-lead-id="${lead.id}">
+return `
+    <tr class="group hover:bg-slate-50/50 transition-all duration-300 ${isSelected ? 'bg-blue-50/50 border-blue-200' : ''} border-l-4 ${this.getRowAccentColor(score)} odd:bg-slate-25/30" 
+        data-lead-id="${lead.id}">
                 
                 <!-- Enhanced Selection Checkbox -->
                 <td class="px-6 py-4">
@@ -313,13 +325,22 @@ class LeadRenderer {
                     </div>
                 </td>
                 
-                <!-- Enhanced Analysis Type -->
-                <td class="px-6 py-4">
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium border ${analysisConfig.class}">
-                        <span class="mr-1">${analysisConfig.icon}</span>
-                        ${analysisConfig.label}
-                    </span>
-                </td>
+<!-- Enhanced Analysis Type -->
+<td class="px-6 py-4">
+    <div class="flex items-center justify-center">
+        <div class="relative group">
+            <div class="absolute -inset-0.5 bg-gradient-to-r ${analysisConfig.gradient} rounded-lg blur opacity-0 group-hover:opacity-100 transition duration-300"></div>
+            <div class="relative inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold ${analysisConfig.class} shadow-sm hover:shadow-md transition-all duration-200 border-0">
+                <div class="flex items-center space-x-2">
+                    <div class="w-5 h-5 flex items-center justify-center ${analysisConfig.iconBg} rounded-full">
+                        <span class="text-xs">${analysisConfig.icon}</span>
+                    </div>
+                    <span>${analysisConfig.label}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</td>
                 
                 <!-- Enhanced Date -->
                 <td class="px-6 py-4">
@@ -327,30 +348,19 @@ class LeadRenderer {
                     <div class="text-xs text-slate-500">${formattedDate.time}</div>
                 </td>
                 
-                <!-- Enhanced Actions -->
-                <td class="px-6 py-4">
-                    <div class="flex items-center justify-center space-x-3">
-                        <!-- Primary Action: Enhanced Analysis Button -->
-                        <button onclick="dashboard.openLeadDetails && dashboard.openLeadDetails('${lead.id}')" 
-                                class="group relative inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                                title="View detailed analysis">
-                            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
-                            <svg class="relative w-4 h-4 mr-2 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                            </svg>
-                            <span class="relative">Analysis</span>
-                        </button>
-                        
-                        <!-- Modern Action Menu -->
-                        <div class="relative">
-                            <button onclick="dashboard.toggleActionMenu && dashboard.toggleActionMenu('${lead.id}', this)" 
-                                    class="group p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                    title="More actions">
-                                <svg class="w-5 h-5 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                </svg>
-                            </button>
+<!-- Enhanced Actions -->
+<td class="px-6 py-4">
+    <div class="flex items-center justify-center">
+        <!-- Single Analysis Button -->
+        <button onclick="dashboard.openLeadDetails && dashboard.openLeadDetails('${lead.id}')" 
+                class="group relative inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                title="View detailed analysis">
+            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+            <svg class="relative w-4 h-4 mr-2 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            <span class="relative">Analysis</span>
+        </button>
                             
                             <!-- Enhanced Action Menu -->
                             <div class="action-menu absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200/60 z-20 opacity-0 scale-95 transform transition-all duration-300 origin-top-right backdrop-blur-sm"
@@ -616,6 +626,13 @@ createTableStructureIfMissing() {
         }
         return num.toString();
     }
+
+    getRowAccentColor(score) {
+    if (score >= 90) return 'border-emerald-400';
+    if (score >= 75) return 'border-blue-400';
+    if (score >= 60) return 'border-amber-400';
+    return 'border-slate-300';
+}
 
     // ===============================================================================
     // LEGACY COMPATIBILITY METHODS
