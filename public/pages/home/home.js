@@ -40,6 +40,18 @@ window.addEventListener('oslira:scripts:loaded', async () => {
   }
 });
 
+// FALLBACK: Also try to initialize footer after a short delay
+setTimeout(async () => {
+  if (window.FooterManager && !document.querySelector('#footer-container footer')) {
+    console.log('🚀 [Home] Fallback footer initialization...');
+    try {
+      await initializeFooter();
+    } catch (error) {
+      console.error('❌ [Home] Fallback footer initialization failed:', error);
+    }
+  }
+}, 2000);
+
 // =============================================================================
 // INITIALIZATION (matches dashboard/campaigns pattern)
 // =============================================================================
