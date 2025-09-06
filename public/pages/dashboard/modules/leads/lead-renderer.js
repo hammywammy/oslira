@@ -51,8 +51,12 @@ class LeadRenderer {
     // MAIN DISPLAY FUNCTION
     // ===============================================================================
     
-    displayLeads(leads = null) {
-        const leadsToDisplay = leads || this.stateManager.getState('filteredLeads') || this.stateManager.getState('leads');
+displayLeads(leads = null) {
+        // Use visibleLeads for pagination support, fallback to filteredLeads, then all leads
+        const leadsToDisplay = leads || 
+                              this.stateManager.getState('visibleLeads') || 
+                              this.stateManager.getState('filteredLeads') || 
+                              this.stateManager.getState('leads');
         const tableBody = document.getElementById('leads-table-body');
         const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
         
