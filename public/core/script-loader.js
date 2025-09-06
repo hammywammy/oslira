@@ -248,8 +248,13 @@ getDependencies() {
                 workerUrl: window.OsliraEnv.WORKER_URL
             };
             
-// Set current page from centralized detection
-this.currentPage = window.OsliraEnv.currentPage;
+// Set current page from centralized detection with validation
+this.currentPage = window.OsliraEnv?.currentPage || window.OsliraEnv?.CURRENT_PAGE;
+
+if (!this.currentPage) {
+    console.warn('⚠️ [ScriptLoader] Page detection failed, attempting fallback...');
+    this.currentPage = this.detectPageFallback();
+}
 
 console.log(`📚 [ScriptLoader] Environment: ${this.config.environment}`);
 console.log(`📚 [ScriptLoader] Page: ${this.currentPage}`);
@@ -305,6 +310,26 @@ const dependentScripts = [
         
         console.log('✅ [ScriptLoader] Core dependencies loaded');
     }
+
+    // =============================================================================
+// FALLBACK PAGE DETECTION
+// =============================================================================
+
+detectPageFallback() {
+    const pathname = window.location.pathname;
+    console.log('🔍 [ScriptLoader] Fallback page detection for:', pathname);
+    
+    // Simple fallback detection
+    if (pathname.includes('/dashboard')) return 'dashboard';
+    if (pathname.includes('/auth')) return 'auth';
+    if (pathname.includes('/settings')) return 'settings';
+    if (pathname.includes('/analytics')) return 'analytics';
+    if (pathname.includes('/subscription')) return 'subscription';
+    if (pathname === '/' || pathname === '/index.html') return 'home';
+    
+    console.log('🔍 [ScriptLoader] No match in fallback, defaulting to home');
+    return 'home';
+}
     
 // File: public/core/script-loader.js
 // Add this method after loadPageDependencies() around line 150-200
