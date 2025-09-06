@@ -30,6 +30,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAnimations();
 });
 
+// Listen for scripts loaded event to initialize footer
+window.addEventListener('oslira:scripts:loaded', async () => {
+  console.log('🚀 [Home] Scripts loaded, initializing footer...');
+  await initializeFooter();
+});
+
 // =============================================================================
 // INITIALIZATION (matches dashboard/campaigns pattern)
 // =============================================================================
@@ -60,8 +66,6 @@ async function initializeApp() {
     });
     setupDemoMode();
   }
-  
-  await initializeFooter();
 }
 
 async function initializeFooter() {
