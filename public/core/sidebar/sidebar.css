@@ -8,6 +8,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    border-right: 1px solid #000000;
 }
 
 /* =============================================================================
@@ -220,36 +221,65 @@
 .credits-collapsed {
     background: linear-gradient(135deg, #3b82f6, #8b5cf6);
     color: white;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: bold;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 900;
     text-align: center;
-    min-width: 44px;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(8px);
+    min-width: 48px;
+    min-height: 48px;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.3);
+    border: 3px solid rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(12px);
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.credits-collapsed:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5), 0 0 0 3px rgba(255, 255, 255, 0.4);
+}
+
+/* Hide business profiles when sidebar is collapsed */
+.sidebar-collapsed .business-selector,
+.sidebar-collapsed .business-profile,
+.sidebar-collapsed [class*="business-"] {
+    display: none !important;
 }
 
 .credits-collapsed::before {
-    content: '';
+    content: 'CREDITS';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.5rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .credits-collapsed::after {
     content: '⚡';
     position: absolute;
-    top: -2px;
-    right: -2px;
-    font-size: 0.625rem;
-    opacity: 0.8;
+    bottom: -6px;
+    right: -6px;
+    font-size: 0.75rem;
+    opacity: 0.9;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+/* Enhanced tooltip for credits */
+.credits-collapsed:hover::before {
+    content: 'CREDITS REMAINING';
+    top: -12px;
+    font-size: 0.55rem;
+    opacity: 1;
 }
 
 /* =============================================================================
