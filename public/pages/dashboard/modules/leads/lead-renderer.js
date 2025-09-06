@@ -880,6 +880,97 @@ createLeadCard(lead) {
         }
         this.renderCache.set(key, element);
     }
+
+// ===============================================================================
+    // PROFESSIONAL CRM UI HELPERS
+    // ===============================================================================
+
+    updateBulkActionsVisibility(show) {
+        const toolbar = document.getElementById('bulk-actions-toolbar');
+        const selectionCount = document.getElementById('selection-count');
+        const selectedLeads = this.stateManager.getState('selectedLeads');
+        
+        if (toolbar) {
+            if (show && selectedLeads.size > 0) {
+                toolbar.classList.remove('hidden');
+                if (selectionCount) {
+                    selectionCount.textContent = `${selectedLeads.size} selected`;
+                }
+            } else {
+                toolbar.classList.add('hidden');
+            }
+        }
+    }
+
+    updateLeadCounts(visibleCount, totalCount) {
+        const resultsCount = document.getElementById('results-count');
+        const totalCountEl = document.getElementById('total-count');
+        const leadCountDisplay = document.getElementById('lead-count-display');
+        
+        if (resultsCount) {
+            resultsCount.textContent = `Showing ${visibleCount} leads`;
+        }
+        
+        if (totalCountEl) {
+            totalCountEl.textContent = `Total: ${totalCount}`;
+        }
+        
+        if (leadCountDisplay) {
+            if (totalCount === 0) {
+                leadCountDisplay.textContent = 'No leads in pipeline';
+            } else if (totalCount === 1) {
+                leadCountDisplay.textContent = '1 lead in pipeline';
+            } else {
+                leadCountDisplay.textContent = `${totalCount} leads in pipeline`;
+            }
+        }
+    }
+
+    renderLoadingState(tableBody) {
+        const loadingRows = Array.from({ length: 5 }, (_, i) => `
+            <tr class="table-loading">
+                <td class="px-6 py-4">
+                    <div class="skeleton-row w-4 h-4 rounded"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="skeleton-row w-12 h-12 rounded-full"></div>
+                        <div class="flex-1">
+                            <div class="skeleton-row w-24 h-4 mb-2"></div>
+                            <div class="skeleton-row w-16 h-3"></div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="skeleton-row w-20 h-6 rounded-md"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="skeleton-row w-16 h-4 mb-1"></div>
+                    <div class="skeleton-row w-full h-2 rounded-full"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="skeleton-row w-24 h-6 rounded-md"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="skeleton-row w-16 h-4 mb-1"></div>
+                    <div class="skeleton-row w-12 h-3"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="skeleton-row w-8 h-8 rounded"></div>
+                </td>
+            </tr>
+        `).join('');
+        
+        tableBody.innerHTML = loadingRows;
+    }
+
+    renderEmptyState(tableBody) {
+        tableBody.innerHTML = '';
+        const emptyState = document.getElementById('empty-state');
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+        }
+    }
     
     // ===============================================================================
     // CLEANUP
