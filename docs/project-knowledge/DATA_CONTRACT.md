@@ -13,7 +13,7 @@
 - `full_name` (text, nullable) - **NEW**
 - `created_via` (varchar(20), default: 'email') - **NEW**
 - `phone_verified` (boolean, default: false) - **NEW**
-- `credits` (integer, default: 5)
+- `credits` (integer, default: 25)
 - `subscription_plan` (text, default: 'free')
 - `subscription_status` (text, default: 'active')
 - `stripe_customer_id` (text, nullable)
