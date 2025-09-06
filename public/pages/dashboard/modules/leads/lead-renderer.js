@@ -234,44 +234,48 @@ return `
                     <div class="text-xs text-slate-500">${formattedDate.time}</div>
                 </td>
                 
-                <!-- Actions -->
-                <td class="px-6 py-4 text-right">
-                    <div class="flex items-center justify-end space-x-2">
-                        ${lead.quick_summary ? `<button onclick="dashboard.showQuickSummary('${lead.id}')" 
-                                                       class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" 
-                                                       title="View summary">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                    </svg>
-                                                </button>` : ''}
+               <!-- Actions -->
+                <td class="px-6 py-4 text-center">
+                    <div class="flex items-center justify-center space-x-2">
+                        <!-- Primary Action: View Analysis -->
+                        <button onclick="dashboard.openLeadDetails('${lead.id}')" 
+                                class="inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md"
+                                title="View detailed analysis">
+                            <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            Analysis
+                        </button>
                         
+                        <!-- Secondary Actions Menu -->
                         <div class="relative inline-block text-left">
-                            <button onclick="dashboard.toggleActionMenu('${lead.id}')" 
-                                    class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors">
+                            <button onclick="dashboard.toggleActionMenu('${lead.id}', this)" 
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                                    title="More actions">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                                 </svg>
                             </button>
                             
                             <!-- Action Menu (Hidden by default) -->
-                            <div id="action-menu-${lead.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-20">
+                            <div class="action-menu absolute right-0 mt-2 w-44 bg-white rounded-lg shadow-lg border border-slate-200 z-20 opacity-0 scale-95 transform transition-all duration-200 origin-top-right pointer-events-none">
                                 <div class="py-1">
                                     <button onclick="dashboard.copyUsername('${username}')" 
-                                            class="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                            class="flex items-center w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                                         </svg>
                                         Copy Username
                                     </button>
                                     <button onclick="dashboard.openProfile('${lead.profile_url || `https://instagram.com/${username}`}')" 
-                                            class="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                            class="flex items-center w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M14 4h6m0 0v6m0-6L10 14"/>
                                         </svg>
                                         View Profile
                                     </button>
                                     <button onclick="dashboard.exportLead('${lead.id}')" 
-                                            class="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                            class="flex items-center w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                         </svg>
@@ -279,7 +283,7 @@ return `
                                     </button>
                                     <div class="border-t border-slate-200 my-1"></div>
                                     <button onclick="dashboard.deleteLead('${lead.id}')" 
-                                            class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                            class="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
