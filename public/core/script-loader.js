@@ -381,7 +381,7 @@ if (this.currentPage === 'dashboard') {
     
     for (const script of dashboardScripts) {
         try {
-            await this.loadScript({ src: script }, script);
+            await this.loadScript({ url: script }, script);
             console.log(`✅ [ScriptLoader] Dashboard script loaded: ${script}`);
         } catch (error) {
             console.error(`❌ [ScriptLoader] Failed to load dashboard script: ${script}`, error);
@@ -400,7 +400,7 @@ if (this.currentPage === 'home') {
     
     for (const script of homeScripts) {
         try {
-            await this.loadScript({ src: script }, script);
+await this.loadScript({ url: script }, script);
             console.log(`✅ [ScriptLoader] Home script loaded: ${script}`);
         } catch (error) {
             console.error(`❌ [ScriptLoader] Failed to load home script: ${script}`, error);
