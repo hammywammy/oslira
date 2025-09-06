@@ -285,9 +285,10 @@
                                     </svg>
                                 </div>
                                 <input type="text" 
-                                       id="lead-search-input"
-                                       placeholder="Search leads by username, name, or bio keywords..."
-                                       class="block w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm">
+       id="lead-search-input"
+       placeholder="Search leads by username or full name..."
+       oninput="dashboard.searchLeads(this.value)"
+       class="block w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm">
                             </div>
                             
                             <div class="flex items-center space-x-2">
