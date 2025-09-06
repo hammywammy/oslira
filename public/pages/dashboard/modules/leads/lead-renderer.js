@@ -356,26 +356,30 @@ class LeadRenderer {
         }
     }
 
-    updateLeadCounts(visibleCount, totalCount) {
+updateLeadCounts(visibleCount, totalCount) {
         const resultsCount = document.getElementById('results-count');
         const totalCountEl = document.getElementById('total-count');
         const leadCountDisplay = document.getElementById('lead-count-display');
+        
+        // Get actual total from state - FIXED count logic
+        const allLeads = this.stateManager.getState('leads') || [];
+        const actualTotal = allLeads.length;
         
         if (resultsCount) {
             resultsCount.textContent = `Showing ${visibleCount} leads`;
         }
         
         if (totalCountEl) {
-            totalCountEl.textContent = `Total: ${totalCount}`;
+            totalCountEl.textContent = `Total: ${actualTotal}`;
         }
         
         if (leadCountDisplay) {
-            if (totalCount === 0) {
+            if (actualTotal === 0) {
                 leadCountDisplay.textContent = 'No leads in pipeline';
-            } else if (totalCount === 1) {
+            } else if (actualTotal === 1) {
                 leadCountDisplay.textContent = '1 lead in pipeline';
             } else {
-                leadCountDisplay.textContent = `${totalCount} leads in pipeline`;
+                leadCountDisplay.textContent = `${actualTotal} leads in pipeline`;
             }
         }
     }
