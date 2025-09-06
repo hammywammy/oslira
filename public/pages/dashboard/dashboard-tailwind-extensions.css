@@ -9,6 +9,16 @@
    Custom utilities that extend Tailwind's default palette
    ============================================================================= */
 
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-6px) rotate(1deg); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(45, 108, 223, 0.3); }
+    50% { box-shadow: 0 0 35px rgba(45, 108, 223, 0.6); }
+}
+
 @layer utilities {
     /* Brand gradient utilities */
     .bg-gradient-oslira-primary {
@@ -136,9 +146,23 @@
 
 @layer components {
     /* Enhanced card variants */
-    .card-dashboard {
-        @apply bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1;
-    }
+.card-dashboard {
+    @apply bg-white rounded-2xl border border-slate-200/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1;
+    /* Add glass morphism */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+   .card-dashboard:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+        0 25px 50px rgba(0, 0, 0, 0.15),
+        0 0 40px rgba(45, 108, 223, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
     
     .card-stat {
         @apply card-dashboard p-6 text-center;
