@@ -57,6 +57,34 @@ async function initializeApp() {
     });
     setupDemoMode();
   }
+  await this.initializeFooter();
+}
+
+async initializeFooter() {
+    try {
+        console.log('🦶 [Home] Initializing footer...');
+        
+        // Wait for FooterManager to be available
+        for (let i = 0; i < 50; i++) {
+            if (window.FooterManager) break;
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!window.FooterManager) {
+            throw new Error('FooterManager not available');
+        }
+        
+        // Initialize footer
+        const footerManager = new window.FooterManager();
+        footerManager.render('footer-container', {
+            showSocialLinks: true,
+            showNewsletter: true
+        });
+        
+        console.log('✅ [Home] Footer initialized');
+    } catch (error) {
+        console.warn('⚠️ [Home] Footer initialization failed:', error);
+    }
 }
 
 function initializeSupabase() {
