@@ -971,3 +971,75 @@ if (typeof window !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = LeadRenderer;
 }
+
+// ===============================================================================
+// IMMEDIATE COMPATIBILITY FIX
+// ===============================================================================
+
+// Add compatibility methods to match the original interface
+LeadRenderer.prototype.displayLeads = function(leads) {
+    console.log('🔄 [LeadRenderer] displayLeads called (compatibility mode)');
+    return this.renderLeads(leads);
+};
+
+LeadRenderer.prototype.handleLeadsChanged = function(leads) {
+    console.log('🔄 [LeadRenderer] handleLeadsChanged called');
+    this.renderLeads(leads);
+};
+
+LeadRenderer.prototype.handleFilteredLeadsChanged = function(filteredLeads) {
+    console.log('🔄 [LeadRenderer] handleFilteredLeadsChanged called');
+    this.renderLeads(filteredLeads);
+};
+
+LeadRenderer.prototype.handleSelectionChanged = function(selectedLeads) {
+    console.log('🔄 [LeadRenderer] handleSelectionChanged called');
+    this.updateBulkActionsVisibility(selectedLeads && selectedLeads.size > 0);
+    this.updateSelectionUI();
+};
+
+LeadRenderer.prototype.renderEmptyState = function(tableBody) {
+    console.log('📭 [LeadRenderer] Rendering empty state');
+    const emptyState = document.getElementById('empty-state');
+    const leadsContainer = document.querySelector('.leads-table-container');
+    
+    if (tableBody) tableBody.innerHTML = '';
+    if (leadsContainer) leadsContainer.style.display = 'none';
+    if (emptyState) emptyState.classList.remove('hidden');
+};
+
+// Force compatibility setup
+if (typeof window !== 'undefined' && window.dashboard) {
+    console.log('🔄 [LeadRenderer] Setting up immediate compatibility...');
+    
+    setTimeout(() => {
+        if (window.dashboard && window.dashboard.container) {
+            try {
+                let renderer = window.dashboard.container.get('leadRenderer');
+                if (renderer) {
+                    // Set up state subscriptions
+                    if (renderer.stateManager && typeof renderer.stateManager.subscribe === 'function') {
+                        renderer.stateManager.subscribe('leads', (leads) => {
+                            console.log('📊 [LeadRenderer] Leads state changed, rendering...', leads.length);
+                            renderer.renderLeads(leads);
+                        });
+                        
+                        renderer.stateManager.subscribe('filteredLeads', (filteredLeads) => {
+                            console.log('🔍 [LeadRenderer] Filtered leads changed, rendering...', filteredLeads.length);
+                            renderer.renderLeads(filteredLeads);
+                        });
+                    }
+                    
+                    // Force render current leads
+                    const currentLeads = renderer.stateManager?.getState('leads');
+                    if (currentLeads && currentLeads.length > 0) {
+                        console.log('🎨 [LeadRenderer] Force rendering current leads...', currentLeads.length);
+                        renderer.renderLeads(currentLeads);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ [LeadRenderer] Compatibility setup error:', error);
+            }
+        }
+    }, 500);
+}
