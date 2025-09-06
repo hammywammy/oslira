@@ -18,10 +18,9 @@
 }
 
 .main-content {
-    /* Fallback for non-Tailwind environments */
-    margin-left: var(--sidebar-width, 16rem);
+    /* Remove margin when outside container */
+    margin-left: 0;
 }
-
 /* =============================================================================
    COMPONENT COMPATIBILITY CLASSES
    Maintains existing component functionality
