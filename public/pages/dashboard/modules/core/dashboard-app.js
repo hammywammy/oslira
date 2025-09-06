@@ -193,9 +193,19 @@ async preResolveAsyncDependencies() {
     // INITIALIZATION HELPERS
     // ===============================================================================
     
-    async setupInitialData() {
+async setupInitialData() {
         try {
             console.log('📊 [DashboardApp] Setting up initial data...');
+            
+            // Initialize state defaults FIRST
+            const stateManager = this.container.get('stateManager');
+            stateManager.batchUpdate({
+                'pageSize': 25,
+                'currentPage': 1,
+                'filteredLeads': [],
+                'visibleLeads': [],
+                'selectedLeads': new Set()
+            });
             
             // Wait for authentication AND user data
             const isAuthReady = await this.waitForAuth(10000);
