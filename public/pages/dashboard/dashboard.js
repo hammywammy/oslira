@@ -144,7 +144,19 @@ async initializeSidebar() {
         // Make dashboard functions available globally for HTML onclick handlers
         window.dashboard = {
             init: () => this.init(),
-            showAnalysisModal: (username) => this.app.showAnalysisModal(username),
+showAnalysisModal: (username) => {
+    console.log('🔍 [Dashboard] Global showAnalysisModal called with:', username);
+    if (this.app && this.app.showAnalysisModal) {
+        return this.app.showAnalysisModal(username);
+    } else {
+        console.error('❌ [Dashboard] app.showAnalysisModal not available');
+        // Fallback direct modal opening
+        const modal = document.getElementById('analysisModal');
+        if (modal) {
+            modal.style.display = 'flex';
+        }
+    }
+},
             showBulkModal: () => this.app.showBulkModal(),
             closeModal: (id) => this.app.closeModal(id),
             refreshStats: () => this.app.refreshStats(),
