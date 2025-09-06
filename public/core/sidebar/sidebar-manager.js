@@ -63,25 +63,25 @@ getSidebarHTML() {
         <div id="sidebar-container" class="h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10 transition-all duration-300">
             
             <!-- Header -->
-            <div class="sidebar-header">
-                <div class="flex items-center justify-between">
-                    <div class="sidebar-logo flex items-center gap-3">
-                        <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
-                             class="w-8 h-8 object-contain">
-                        <div class="sidebar-logo-text flex flex-col">
-                            <span class="text-lg font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                Oslira
-                            </span>
-                            <span class="text-xs text-gray-600 font-medium opacity-80">Lead Research</span>
-                        </div>
-                    </div>
-                    <button id="sidebar-toggle" class="sidebar-toggle p-2 rounded-lg hover:bg-white/50 transition-all duration-200 group">
-                        <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
-                        </svg>
-                    </button>
-                </div>
+<div class="sidebar-header">
+    <div class="flex items-center justify-between">
+        <div class="sidebar-logo flex items-center gap-3 flex-1">
+            <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
+                 class="w-8 h-8 object-contain flex-shrink-0">
+            <div class="sidebar-logo-text flex flex-col min-w-0">
+                <span class="text-lg font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Oslira
+                </span>
+                <span class="text-xs text-gray-600 font-medium opacity-80">Lead Research</span>
             </div>
+        </div>
+        <button id="sidebar-toggle" class="sidebar-toggle p-2 rounded-lg hover:bg-white/50 transition-all duration-200 group flex-shrink-0">
+            <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+            </svg>
+        </button>
+    </div>
+</div>
             
             <!-- Navigation -->
             <nav class="sidebar-nav">
