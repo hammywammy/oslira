@@ -76,7 +76,7 @@ getSidebarHTML() {
         </div>
 <button id="sidebar-toggle" class="sidebar-toggle p-2 rounded-lg hover:bg-white/50 transition-all duration-200 group flex-shrink-0">
     <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h2m0-12h10a2 2 0 012 2v10a2 2 0 01-2 2H9m0-12V9m0 8v-4">
             </svg>
         </button>
     </div>
