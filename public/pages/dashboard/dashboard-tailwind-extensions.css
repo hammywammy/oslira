@@ -392,3 +392,140 @@
         break-inside: avoid;
     }
 }
+
+/* =============================================================================
+   PROFESSIONAL CRM ENHANCEMENTS
+   ============================================================================= */
+
+@layer components {
+    /* Enhanced filter buttons */
+    .filter-btn {
+        @apply px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 border;
+    }
+    
+    .filter-btn.active {
+        @apply bg-blue-600 text-white border-blue-600 shadow-sm;
+    }
+    
+    .filter-btn:not(.active) {
+        @apply bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300;
+    }
+
+    /* Professional table enhancements */
+    .leads-table th button:hover {
+        @apply text-slate-900;
+    }
+    
+    .leads-table tbody tr.selected {
+        @apply bg-blue-50/50 border-blue-200;
+    }
+    
+    .leads-table tbody tr:hover:not(.selected) {
+        @apply bg-slate-50/50;
+    }
+
+    /* Score progress bars */
+    .score-bar-emerald {
+        @apply bg-gradient-to-r from-emerald-400 to-emerald-600;
+    }
+    
+    .score-bar-blue {
+        @apply bg-gradient-to-r from-blue-400 to-blue-600;
+    }
+    
+    .score-bar-amber {
+        @apply bg-gradient-to-r from-amber-400 to-amber-600;
+    }
+    
+    .score-bar-slate {
+        @apply bg-gradient-to-r from-slate-400 to-slate-600;
+    }
+
+    /* Action menu animations */
+    .action-menu {
+        @apply transform opacity-0 scale-95 transition-all duration-200 origin-top-right;
+    }
+    
+    .action-menu.show {
+        @apply opacity-100 scale-100;
+    }
+
+    /* Professional badge styles */
+    .platform-badge {
+        @apply inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium border;
+    }
+    
+    .analysis-badge {
+        @apply inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium border;
+    }
+    
+    .score-badge {
+        @apply inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border;
+    }
+
+    /* Bulk actions toolbar */
+    .bulk-actions-toolbar {
+        @apply transform translate-y-0 opacity-100 transition-all duration-300;
+    }
+    
+    .bulk-actions-toolbar.hidden {
+        @apply transform -translate-y-full opacity-0 pointer-events-none;
+    }
+
+    /* Loading states */
+    .table-loading {
+        @apply animate-pulse;
+    }
+    
+    .table-loading .skeleton-row {
+        @apply bg-slate-200 rounded h-4 mb-2;
+    }
+}
+
+/* =============================================================================
+   RESPONSIVE TABLE BEHAVIOR
+   ============================================================================= */
+
+@media (max-width: 1024px) {
+    .leads-table {
+        min-width: 800px;
+    }
+    
+    .leads-table th:nth-child(6),
+    .leads-table td:nth-child(6) {
+        display: none; /* Hide date column on smaller screens */
+    }
+}
+
+@media (max-width: 768px) {
+    .leads-table th:nth-child(5),
+    .leads-table td:nth-child(5) {
+        display: none; /* Hide analysis type on mobile */
+    }
+}
+
+/* =============================================================================
+   HOVER STATES AND MICRO-INTERACTIONS
+   ============================================================================= */
+
+.leads-table tbody tr {
+    @apply transition-all duration-200;
+}
+
+.action-menu button:hover {
+    @apply bg-slate-50 transition-colors duration-150;
+}
+
+.action-menu button.delete:hover {
+    @apply bg-red-50 text-red-700;
+}
+
+/* Profile picture hover effects */
+.leads-table .profile-pic:hover {
+    @apply scale-110 transition-transform duration-200;
+}
+
+/* Checkbox enhancement */
+.leads-table input[type="checkbox"]:focus {
+    @apply ring-2 ring-blue-500 ring-offset-1;
+}
