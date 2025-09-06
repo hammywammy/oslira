@@ -145,7 +145,14 @@ getDependencies() {
                 url: '/../core/simple-app.js',
                 global: 'OsliraApp',
                 critical: true
-            }
+            },
+
+            'tailwind-cdn': {
+    url: 'https://cdn.tailwindcss.com',
+    global: 'tailwind',
+    critical: true,
+    defer: true
+}
         },
         
         // Page-specific dependencies
