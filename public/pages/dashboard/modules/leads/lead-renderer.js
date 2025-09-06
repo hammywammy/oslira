@@ -32,15 +32,17 @@ class LeadRenderer {
     // MAIN DISPLAY FUNCTION - EXTRACTED FROM dashboard.js lines 2200-2350
     // ===============================================================================
     
-    displayLeads(leads = null) {
-        const leadsToDisplay = leads || this.stateManager.getState('filteredLeads') || this.stateManager.getState('leads');
-        const tableBody = document.getElementById('activity-table');
-        const selectedLeads = this.stateManager.getState('selectedLeads');
-        
-        if (!tableBody) {
-            console.warn('⚠️ [LeadRenderer] Table body element not found');
-            return;
-        }
+displayLeads(leads = null) {
+    const leadsToDisplay = leads || this.stateManager.getState('filteredLeads') || this.stateManager.getState('leads');
+    const tableBody = document.getElementById('leads-table-body') || document.getElementById('activity-table');
+    const selectedLeads = this.stateManager.getState('selectedLeads');
+    
+    if (!tableBody) {
+        console.warn('⚠️ [LeadRenderer] Table body element not found. Expected: leads-table-body');
+        // Try to create the table structure if it doesn't exist
+        this.createTableStructureIfMissing();
+        return;
+    }
         
         console.log(`🎨 [LeadRenderer] Displaying ${leadsToDisplay.length} leads`);
         
@@ -75,6 +77,47 @@ class LeadRenderer {
         
         console.log('✅ [LeadRenderer] Leads display completed');
     }
+
+    // ===============================================================================
+// DOM STRUCTURE REPAIR
+// ===============================================================================
+
+createTableStructureIfMissing() {
+    const leadsContainer = document.querySelector('.leads-table-container');
+    if (!leadsContainer) {
+        console.error('❌ [LeadRenderer] Leads container not found - cannot create table structure');
+        return;
+    }
+    
+    console.log('🔧 [LeadRenderer] Creating missing table structure...');
+    
+    const tableHTML = `
+        <table class="leads-table w-full">
+            <thead class="bg-slate-50/50">
+                <tr class="border-b border-slate-200/60">
+                    <th class="px-6 py-4 text-left">
+                        <input type="checkbox" 
+                               id="select-all-checkbox" 
+                               onchange="dashboard.toggleAllLeads(this)"
+                               class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                    </th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Lead</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Platform</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Score</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Time</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="leads-table-body" class="divide-y divide-slate-200/60">
+                <!-- Leads will be populated by JavaScript -->
+            </tbody>
+        </table>
+    `;
+    
+    leadsContainer.innerHTML = tableHTML;
+    console.log('✅ [LeadRenderer] Table structure created');
+}
     
     // ===============================================================================
     // LEAD CARD CREATION - EXTRACTED FROM dashboard.js lines 2650-2850
