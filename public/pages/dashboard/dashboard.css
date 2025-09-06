@@ -249,16 +249,16 @@
     @apply will-change-auto;
 }
 
-/* Fix hover animations to be component-specific */
-.platform-group:hover .absolute {
+/* Individual component hover - only when directly hovered */
+.platform-group:hover:not(.table-row:hover *) .absolute {
     opacity: 1;
 }
 
-.analysis-group:hover .absolute {
+.analysis-group:hover:not(.table-row:hover *) .absolute {
     opacity: 1;
 }
 
-.action-button:hover .absolute {
+.action-button:hover:not(.table-row:hover *) .absolute {
     opacity: 0.3;
 }
 
