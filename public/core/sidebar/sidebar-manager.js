@@ -37,7 +37,7 @@ class SidebarManager {
             
 // Inject sidebar HTML
 targetElement.innerHTML = this.getSidebarHTML();
-targetElement.className = 'sidebar fixed left-0 top-0 w-80 h-screen z-50';
+targetElement.className = 'sidebar sidebar-expanded fixed left-0 top-0 h-screen z-50';
             
             // Initialize functionality
             this.initializeSidebar();
@@ -228,72 +228,27 @@ initializeSidebar() {
 setupSidebarToggle() {
     const toggleBtn = document.getElementById('sidebar-toggle');
     const sidebarContainer = document.getElementById('sidebar-container');
+    const sidebar = document.querySelector('.sidebar');
     const mainContent = document.querySelector('.main-content');
-    const toggleIcon = toggleBtn?.querySelector('.toggle-icon');
     
-    if (toggleBtn && sidebarContainer && mainContent) {
+    if (toggleBtn && sidebarContainer && sidebar && mainContent) {
         let isCollapsed = false;
         
         toggleBtn.addEventListener('click', () => {
             if (isCollapsed) {
                 // Expand sidebar
-                sidebarContainer.style.width = 'var(--sidebar-width)';
+                sidebar.classList.remove('sidebar-collapsed');
+                sidebar.classList.add('sidebar-expanded');
+                sidebarContainer.classList.remove('collapsed');
                 mainContent.style.marginLeft = 'var(--sidebar-width)';
                 
-                // Show expanded elements
-                document.querySelectorAll('.sidebar-text').forEach(el => {
-                    el.style.display = '';
-                });
-                document.querySelectorAll('.nav-section h4').forEach(el => {
-                    el.style.display = '';
-                });
-                document.querySelector('.sidebar-user-section .sidebar-text').style.display = '';
-                document.querySelectorAll('.sidebar-collapsed-user, .sidebar-collapsed-logout').forEach(el => {
-                    el.style.display = 'none';
-                });
-                
-                // Reset nav items to normal layout
-                document.querySelectorAll('.nav-item').forEach(item => {
-                    item.style.justifyContent = '';
-                    item.style.padding = '';
-                });
-                
-                // Rotate toggle icon
-                if (toggleIcon) {
-                    toggleIcon.style.transform = 'rotate(0deg)';
-                }
-                
                 isCollapsed = false;
-} else {
-    // Collapse sidebar
-    sidebarContainer.style.width = '70px';
-    sidebarContainer.style.overflow = 'hidden';
-    sidebarContainer.style.minWidth = '70px';
-    sidebarContainer.style.maxWidth = '70px';
-    mainContent.style.marginLeft = '70px';
-                
-                // Hide expanded elements
-                document.querySelectorAll('.sidebar-text').forEach(el => {
-                    el.style.display = 'none';
-                });
-                document.querySelectorAll('.nav-section h4').forEach(el => {
-                    el.style.display = 'none';
-                });
-                document.querySelector('.sidebar-user-section .sidebar-text').style.display = 'none';
-                document.querySelectorAll('.sidebar-collapsed-user, .sidebar-collapsed-logout').forEach(el => {
-                    el.style.display = 'block';
-                });
-                
-                // Adjust nav items for collapsed layout
-                document.querySelectorAll('.nav-item').forEach(item => {
-                    item.style.justifyContent = 'center';
-                    item.style.padding = '0.75rem';
-                });
-                
-                // Rotate toggle icon
-                if (toggleIcon) {
-                    toggleIcon.style.transform = 'rotate(180deg)';
-                }
+            } else {
+                // Collapse sidebar
+                sidebar.classList.remove('sidebar-expanded');
+                sidebar.classList.add('sidebar-collapsed');
+                sidebarContainer.classList.add('collapsed');
+                mainContent.style.marginLeft = '64px';
                 
                 isCollapsed = true;
             }
