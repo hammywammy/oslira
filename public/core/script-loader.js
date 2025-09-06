@@ -388,6 +388,25 @@ if (this.currentPage === 'dashboard') {
         }
     }
 }
+
+// ADD THIS BLOCK RIGHT HERE:
+// CRITICAL: Add home-specific script loading
+if (this.currentPage === 'home') {
+    console.log('🔧 [ScriptLoader] Loading home dependencies...');
+    
+    const homeScripts = [
+        '/pages/home/home.js'
+    ];
+    
+    for (const script of homeScripts) {
+        try {
+            await this.loadScript({ src: script }, script);
+            console.log(`✅ [ScriptLoader] Home script loaded: ${script}`);
+        } catch (error) {
+            console.error(`❌ [ScriptLoader] Failed to load home script: ${script}`, error);
+        }
+    }
+}
     if (!pageConfig || !pageConfig.scripts) {
         console.log(`📄 [ScriptLoader] No page-specific dependencies for: ${this.currentPage}`);
         return;
