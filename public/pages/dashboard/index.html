@@ -459,10 +459,12 @@
                             </div>
                             
                             <div class="flex items-center space-x-3">
-                                <!-- Results per page -->
+                               <!-- Results per page -->
                                 <div class="flex items-center space-x-2">
                                     <label class="text-sm text-slate-600">Show:</label>
-                                    <select id="page-size-selector" class="px-2 py-1 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                    <select id="page-size-selector" 
+                                            onchange="dashboard.changePageSize(this.value)"
+                                            class="px-2 py-1 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
                                         <option value="25">25</option>
                                         <option value="50">50</option>
                                         <option value="100">100</option>
@@ -471,7 +473,9 @@
                                 
                                 <!-- Pagination Controls -->
                                 <div class="flex items-center space-x-1">
-                                    <button id="prev-page" class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <button id="prev-page" 
+                                            onclick="dashboard.previousPage()"
+                                            class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                         Previous
                                     </button>
                                     <div class="flex items-center space-x-1">
@@ -479,7 +483,9 @@
                                         <span class="text-sm text-slate-400">of</span>
                                         <span id="total-pages" class="text-sm text-slate-600">1</span>
                                     </div>
-                                    <button id="next-page" class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <button id="next-page" 
+                                            onclick="dashboard.nextPage()"
+                                            class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                                         Next
                                     </button>
                                 </div>
