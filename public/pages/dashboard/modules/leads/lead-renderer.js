@@ -123,34 +123,241 @@ createTableStructureIfMissing() {
     // LEAD CARD CREATION - EXTRACTED FROM dashboard.js lines 2650-2850
     // ===============================================================================
     
-    createLeadCard(lead) {
+createLeadCard(lead) {
         const selectedLeads = this.stateManager.getState('selectedLeads');
         const isSelected = selectedLeads.has(lead.id);
         const score = lead.score || 0;
-        const scoreClass = score >= 80 ? 'score-high' : score >= 60 ? 'score-medium' : 'score-low';
         
-        // Use cached date if available
-        const dateKey = lead.created_at;
+        // Professional score categorization
+        const getScoreConfig = (score) => {
+            if (score >= 90) return { class: 'bg-emerald-100 text-emerald-800 border-emerald-200', label: 'Excellent', color: 'emerald' };
+            if (score >= 75) return { class: 'bg-blue-100 text-blue-800 border-blue-200', label: 'Strong', color: 'blue' };
+            if (score >= 60) return { class: 'bg-amber-100 text-amber-800 border-amber-200', label: 'Moderate', color: 'amber' };
+            return { class: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Low', color: 'slate' };
+        };
+        
+        const scoreConfig = getScoreConfig(score);
+        
+        // Enhanced date formatting
+        const dateKey = lead.updated_at || lead.created_at;
         let formattedDate = this.dateFormatCache.get(dateKey);
         if (!formattedDate) {
-            formattedDate = this.formatDate(lead.created_at);
+            formattedDate = this.formatDateProfessional(dateKey);
             this.dateFormatCache.set(dateKey, formattedDate);
         }
         
-        // Enhanced profile picture with fallback - EXACT FROM ORIGINAL
+        // Professional profile picture with enhanced fallback
         const profilePicUrl = lead.profile_pic_url;
+        const username = lead.username || 'unknown';
+        const fullName = lead.full_name || '';
+        
         const profilePicHtml = profilePicUrl
             ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=64&h=64&fit=cover&mask=circle" 
-                   alt="@${lead.username}" 
-                   style="width: 48px; height: 48px; border-radius: 50%; border: 2px solid #e5e7eb; object-fit: cover;"
+                   alt="@${username}" 
+                   class="w-12 h-12 rounded-full border-2 border-slate-200 object-cover shadow-sm"
                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
             : '';
             
         const fallbackHtml = `
-            <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: ${profilePicUrl ? 'none' : 'flex'}; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; border: 2px solid #e5e7eb;">
-                ${lead.username.charAt(1).toUpperCase()}
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg border-2 border-slate-200 shadow-sm ${profilePicUrl ? 'hidden' : 'flex'}">
+                ${username.charAt(0).toUpperCase()}
             </div>
         `;
+        
+        // Platform badge configuration
+        const getPlatformConfig = (platform) => {
+            const configs = {
+                instagram: { icon: '📷', class: 'bg-pink-100 text-pink-700 border-pink-200', name: 'Instagram' },
+                tiktok: { icon: '🎵', class: 'bg-purple-100 text-purple-700 border-purple-200', name: 'TikTok' },
+                youtube: { icon: '📺', class: 'bg-red-100 text-red-700 border-red-200', name: 'YouTube' },
+                twitter: { icon: '🐦', class: 'bg-blue-100 text-blue-700 border-blue-200', name: 'Twitter' }
+            };
+            return configs[platform] || { icon: '🌐', class: 'bg-slate-100 text-slate-700 border-slate-200', name: platform };
+        };
+        
+        const platformConfig = getPlatformConfig(lead.platform);
+        
+        // Analysis type badge
+        const analysisConfig = lead.analysis_type === 'deep' 
+            ? { class: 'bg-purple-100 text-purple-700 border-purple-200', label: 'Deep Analysis', icon: '🔍' }
+            : { class: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Light Analysis', icon: '👁️' };
+
+        return `
+            <tr class="group hover:bg-slate-50/50 transition-colors duration-200 ${isSelected ? 'bg-blue-50/50 border-blue-200' : ''}" 
+                data-lead-id="${lead.id}">
+                
+                <!-- Selection Checkbox -->
+                <td class="px-6 py-4">
+                    <input type="checkbox" 
+                           class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-offset-0 transition-colors"
+                           ${isSelected ? 'checked' : ''}
+                           onchange="dashboard.toggleLeadSelection('${lead.id}', this.checked)">
+                </td>
+                
+                <!-- Lead Profile -->
+                <td class="px-6 py-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-shrink-0 relative">
+                            ${profilePicHtml}
+                            ${fallbackHtml}
+                            <!-- Verification badge if needed -->
+                            ${lead.is_verified ? '<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center"><svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></div>' : ''}
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center space-x-2">
+                                <button onclick="dashboard.openProfile('${lead.profile_url || `https://instagram.com/${username}`}')" 
+                                        class="font-semibold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer text-left">
+                                    @${username}
+                                </button>
+                                ${lead.is_business_account ? '<span class="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded border border-orange-200">Business</span>' : ''}
+                            </div>
+                            ${fullName ? `<div class="text-sm text-slate-600 truncate">${fullName}</div>` : ''}
+                            ${lead.followers_count ? `<div class="text-xs text-slate-500">${this.formatFollowerCount(lead.followers_count)} followers</div>` : ''}
+                        </div>
+                    </div>
+                </td>
+                
+                <!-- Platform -->
+                <td class="px-6 py-4">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium border ${platformConfig.class}">
+                        <span class="mr-1">${platformConfig.icon}</span>
+                        ${platformConfig.name}
+                    </span>
+                </td>
+                
+                <!-- Intelligence Score -->
+                <td class="px-6 py-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-sm font-semibold text-slate-900">${score}</span>
+                                <span class="text-xs text-slate-500">/100</span>
+                            </div>
+                            <div class="w-full bg-slate-200 rounded-full h-2">
+                                <div class="bg-gradient-to-r from-${scoreConfig.color}-400 to-${scoreConfig.color}-600 h-2 rounded-full transition-all duration-300" 
+                                     style="width: ${score}%"></div>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${scoreConfig.class}">
+                            ${scoreConfig.label}
+                        </span>
+                    </div>
+                </td>
+                
+                <!-- Analysis Type -->
+                <td class="px-6 py-4">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-medium border ${analysisConfig.class}">
+                        <span class="mr-1">${analysisConfig.icon}</span>
+                        ${analysisConfig.label}
+                    </span>
+                </td>
+                
+                <!-- Date -->
+                <td class="px-6 py-4">
+                    <div class="text-sm text-slate-900">${formattedDate.date}</div>
+                    <div class="text-xs text-slate-500">${formattedDate.time}</div>
+                </td>
+                
+                <!-- Actions -->
+                <td class="px-6 py-4 text-right">
+                    <div class="flex items-center justify-end space-x-2">
+                        ${lead.quick_summary ? `<button onclick="dashboard.showQuickSummary('${lead.id}')" 
+                                                       class="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors" 
+                                                       title="View summary">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                    </svg>
+                                                </button>` : ''}
+                        
+                        <div class="relative inline-block text-left">
+                            <button onclick="dashboard.toggleActionMenu('${lead.id}')" 
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                                </svg>
+                            </button>
+                            
+                            <!-- Action Menu (Hidden by default) -->
+                            <div id="action-menu-${lead.id}" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 z-20">
+                                <div class="py-1">
+                                    <button onclick="dashboard.copyUsername('${username}')" 
+                                            class="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                        </svg>
+                                        Copy Username
+                                    <button onclick="dashboard.openProfile('${lead.profile_url || `https://instagram.com/${username}`}')" 
+                                           class="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                       <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2M14 4h6m0 0v6m0-6L10 14"/>
+                                       </svg>
+                                       View Profile
+                                   </button>
+                                   <button onclick="dashboard.exportLead('${lead.id}')" 
+                                           class="flex items-center w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">
+                                       <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                       </svg>
+                                       Export Data
+                                   </button>
+                                   <div class="border-t border-slate-200 my-1"></div>
+                                   <button onclick="dashboard.deleteLead('${lead.id}')" 
+                                           class="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                                       <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                       </svg>
+                                       Delete Lead
+                                   </button>
+                               </div>
+                           </div>
+                       </div>
+                   </div>
+               </td>
+           </tr>
+       `;
+   }
+
+   // Enhanced date formatting for professional display
+   formatDateProfessional(dateString) {
+       if (!dateString) return { date: '—', time: '—' };
+       
+       const date = new Date(dateString);
+       const now = new Date();
+       const diffTime = Math.abs(now - date);
+       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+       
+       // Relative date for recent items
+       let dateDisplay;
+       if (diffDays === 0) {
+           dateDisplay = 'Today';
+       } else if (diffDays === 1) {
+           dateDisplay = 'Yesterday';
+       } else if (diffDays < 7) {
+           dateDisplay = `${diffDays} days ago`;
+       } else {
+           dateDisplay = date.toLocaleDateString('en-US', { 
+               month: 'short', 
+               day: 'numeric',
+               year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+           });
+       }
+       
+       const timeDisplay = date.toLocaleTimeString('en-US', { 
+           hour: 'numeric', 
+           minute: '2-digit',
+           hour12: true 
+       });
+       
+       return { date: dateDisplay, time: timeDisplay };
+   }
+
+   // Enhanced follower count formatting
+   formatFollowerCount(count) {
+       if (!count) return '0';
+       if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+       if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+       return count.toString();
+   }
         
         // Analysis type badge - EXACT FROM ORIGINAL
         const analysisTypeBadge = lead.analysis_type === 'deep'
