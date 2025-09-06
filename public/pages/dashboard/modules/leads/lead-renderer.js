@@ -159,14 +159,14 @@ class LeadRenderer {
             ? { class: 'bg-purple-100 text-purple-700 border-purple-200', label: 'Deep Analysis', icon: '🔍' }
             : { class: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Light Analysis', icon: '👁️' };
 
-        return `
+return `
             <tr class="group hover:bg-slate-50/50 transition-colors duration-200 ${isSelected ? 'bg-blue-50/50 border-blue-200' : ''}" 
                 data-lead-id="${lead.id}">
                 
-                <!-- Selection Checkbox -->
+                <!-- Selection Checkbox - Only visible on hover or when selected -->
                 <td class="px-6 py-4">
                     <input type="checkbox" 
-                           class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-offset-0 transition-colors"
+                           class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-offset-0 transition-all duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}"
                            ${isSelected ? 'checked' : ''}
                            onchange="dashboard.toggleLeadSelection('${lead.id}', this.checked)">
                 </td>
