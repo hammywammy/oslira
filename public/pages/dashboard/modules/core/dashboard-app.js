@@ -369,8 +369,26 @@ async preResolveAsyncDependencies() {
             editMessage: (leadId) => this.editMessage(leadId),
             saveEditedMessage: (leadId) => this.saveEditedMessage(leadId),
             
-            // Search and filtering
-            searchLeads: (term) => this.searchLeads(term),
+// Search and filtering - ENHANCED with real functionality
+            searchLeads: (term) => {
+                const stateManager = this.container.get('stateManager');
+                const allLeads = stateManager.getState('leads') || [];
+                
+                if (!term.trim()) {
+                    stateManager.setState('filteredLeads', allLeads);
+                    return;
+                }
+                
+                const searchTerm = term.toLowerCase();
+                const filtered = allLeads.filter(lead => {
+                    const username = (lead.username || '').toLowerCase();
+                    const fullName = (lead.full_name || '').toLowerCase();
+                    
+                    return username.includes(searchTerm) || fullName.includes(searchTerm);
+                });
+                
+                stateManager.setState('filteredLeads', filtered);
+            },
             filterLeads: (filter) => this.filterLeads(filter),
             
             // Analysis form
