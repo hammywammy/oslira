@@ -1009,3 +1009,19 @@ select:focus-visible {
 .notification {
     z-index: 100;
 }
+
+/* Ensure hover checkbox is visible and positioned correctly */
+.leads-table tbody tr:hover .absolute {
+    opacity: 1 !important;
+}
+
+.leads-table tbody tr .absolute {
+    transition: opacity 0.2s ease;
+}
+
+/* Make sure the checkbox has proper z-index */
+.leads-table tbody tr .absolute input[type="checkbox"] {
+    z-index: 20;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
