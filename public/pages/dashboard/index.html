@@ -7,324 +7,365 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Oslira</title>
     <link rel="stylesheet" href="/pages/dashboard/dashboard.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <a href="#main-content" class="skip-nav">Skip to main content</a>
+<body class="bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 min-h-screen">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded-md">Skip to main content</a>
     
-    <div class="dashboard">
-      <aside id="sidebar-container"></aside>
+    <div class="dashboard flex min-h-screen">
+        <aside id="sidebar-container"></aside>
         
         <!-- ============================================================================= -->
         <!-- MAIN CONTENT -->
         <!-- ============================================================================= -->
-        <main role="main" id="main-content" class="main-content">
-            <!-- Header -->
-            <header>
-                <div>
-                    <h1>Welcome back! 👋</h1>
-                    <p>Here's what's happening with your lead generation</p>
-                </div>
-                
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="dashboard.showAnalysisModal()">
-                        🔎 Research Lead
-                    </button>
-                    <button class="btn btn-secondary" onclick="dashboard.showBulkModal()">
-                        📁 Bulk Upload
-                    </button>
-                </div>
-            </header>
+        <main role="main" id="main-content" class="main-content flex-1 ml-64 min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40">
             
-            <!-- Quick Actions -->
-            <section class="quick-actions">
-                <div class="action-card" onclick="dashboard.showAnalysisModal()">
-                    <div class="action-icon">🎯</div>
-                    <div>
-                        <h3>Research a Lead</h3>
-                        <p>Analyze any Instagram profile with AI-powered insights and get personalized outreach messages</p>
-                        <span class="action-cost">1-2 CREDITS</span>
-                    </div>
-                </div>
-                
-                <div class="action-card" onclick="dashboard.showBulkModal()">
-                    <div class="action-icon">🚀</div>
-                    <div>
-                        <h3>Create Campaign</h3>
-                        <p>Build automated outreach sequences with AI-powered message variants and lead targeting</p>
-                        <span class="action-badge">NEW</span>
-                    </div>
-                </div>
-                
-                <div class="action-card" onclick="window.location.href='/settings'">
-                    <div class="action-icon">📊</div>
-                    <div>
-                        <h3>Import CSV</h3>
-                        <p>Upload a CSV file with Instagram profiles for bulk analysis and lead generation</p>
-                        <span class="action-badge">BULK</span>
-                    </div>
-                </div>
-                
-                <div class="action-card" onclick="window.location.href='/analytics'">
-                    <div class="action-icon">📈</div>
-                    <div>
-                        <h3>Export Data</h3>
-                        <p>Download your leads and analysis results in CSV format for external use</p>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Stats Grid -->
-            <section class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="total-leads">0</div>
-                    <div class="stat-label">Leads Researched</div>
-                    <div class="stat-detail">Ready to start</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-value" id="credits-used">0</div>
-                    <div class="stat-label">Credits Used</div>
-                    <div class="stat-detail">This month</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-value" id="high-value-leads">0</div>
-                    <div class="stat-label">High-Value Leads</div>
-                    <div class="stat-detail">Score 80+</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-value" id="average-score">0%</div>
-                    <div class="stat-label">Average Score</div>
-                    <div class="stat-detail">Lead quality</div>
-                </div>
-            </section>
-            
-            <!-- Recent Lead Activity -->
-            <section class="leads-section">
-                <div class="section-header">
-                    <h2>Recent Lead Activity</h2>
-                    <div class="section-actions">
-                        <button class="btn btn-small" onclick="dashboard.refreshStats()">
-                            🔄 Refresh
-                        </button>
-                        <select id="filter-select" onchange="dashboard.filterLeads(this.value)">
-                            <option value="all">All Types</option>
-                            <option value="deep">Deep Analysis</option>
-                            <option value="light">Light Analysis</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <!-- Filters -->
-                <div class="leads-filters">
-                    <button class="filter-btn active" onclick="dashboard.filterLeads('all')" data-filter="all">
-                        All Leads
-                    </button>
-                    <button class="filter-btn" onclick="dashboard.filterLeads('high-score')" data-filter="high-score">
-                        High Score (80+)
-                    </button>
-                    <button class="filter-btn" onclick="dashboard.filterLeads('recent')" data-filter="recent">
-                        Last 7 Days
-                    </button>
-                    <button class="filter-btn" onclick="dashboard.filterLeads('deep')" data-filter="deep">
-                        Deep Analysis
-                    </button>
-                </div>
-                
-                <!-- Search -->
-                <div class="search-container">
-                    <input type="text" 
-                           id="search-input" 
-                           placeholder="Search leads by username or name..." 
-                           onkeyup="dashboard.searchLeads(this.value)">
-                </div>
-                
-                <!-- Bulk Actions -->
-                <div id="bulk-actions" class="bulk-actions" style="display: none;">
-                    <div class="bulk-selection-info">
-                        <span id="selected-count">0</span> leads selected
-                    </div>
-                    <div class="bulk-buttons">
-                        <button class="btn btn-secondary" onclick="dashboard.clearSelection()">
-                            Clear Selection
-                        </button>
-                        <button class="btn btn-danger" onclick="dashboard.bulkDeleteLeads()">
-                            Delete Selected
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Leads Table -->
-                <div class="leads-table-container">
-                    <table class="leads-table">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <input type="checkbox" 
-                                           id="select-all-checkbox" 
-                                           onchange="dashboard.toggleAllLeads(this)">
-                                </th>
-                                <th>Lead</th>
-                                <th>Platform</th>
-                                <th>Score</th>
-                                <th>Type</th>
-                                <th>Time</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="activity-table">
-                            <!-- Leads will be dynamically inserted here -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-            
-            <!-- AI Insights -->
-            <section class="insights-section">
-                <div class="section-header">
-                    <h2>🧠 AI Insights & Recommendations</h2>
-                    <button class="btn btn-primary" onclick="dashboard.refreshInsights()">
-                        🔄 Refresh Insights
-                    </button>
-                </div>
-                
-                <div id="insights-content">
-                    <div class="insight-card">
-                        <div class="insight-icon">🚀</div>
-                        <div>
-                            <h4>Welcome to Oslira!</h4>
-                            <p>Start researching leads to unlock AI-powered insights and recommendations tailored to your data.</p>
-                            <button class="btn btn-small" onclick="dashboard.showAnalysisModal()">
-                                Research Your First Lead
+            <!-- Enhanced Header with CRM-style layout -->
+            <header class="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 sticky top-0 z-40">
+                <div class="px-8 py-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <div class="flex-shrink-0">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
+                                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div>
+                                <h1 class="text-2xl font-bold text-slate-900">Welcome back! 👋</h1>
+                                <p class="text-sm text-slate-600 mt-1">Here's what's happening with your lead generation</p>
+                            </div>
+                        </div>
+                        
+                        <div class="header-actions flex items-center space-x-3">
+                            <button onclick="dashboard.showAnalysisModal()" 
+                                    class="btn primary-btn inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-200 transform hover:-translate-y-0.5">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                🔎 Research Lead
+                            </button>
+                            
+                            <button onclick="dashboard.showBulkModal()" 
+                                    class="btn secondary-btn inline-flex items-center px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-200 transform hover:-translate-y-0.5">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                                📁 Bulk Upload
                             </button>
                         </div>
                     </div>
                 </div>
-            </section>
+            </header>
+
+            <!-- Main Content Area -->
+            <div class="px-8 py-6 space-y-8">
+                
+                <!-- Enhanced Quick Actions - CRM Action Center -->
+                <section class="quick-actions bg-white rounded-2xl border border-slate-200/60 shadow-sm">
+                    <div class="px-6 py-5 border-b border-slate-200/60">
+                        <h2 class="text-lg font-semibold text-slate-900">Quick Actions</h2>
+                        <p class="text-sm text-slate-600 mt-1">Get started with lead generation</p>
+                    </div>
+                    
+                    <div class="action-cards grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 p-6">
+                        <div class="action-card group relative overflow-hidden bg-white rounded-xl border border-slate-200/60 hover:border-blue-300/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer" onclick="dashboard.showAnalysisModal()">
+                            <div class="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div class="relative p-6">
+                                <div class="action-icon flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white text-xl mb-4 group-hover:scale-110 transition-transform duration-200">
+                                    🎯
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-900 mb-2">Research a Lead</h3>
+                                    <p class="text-sm text-slate-600 mb-4 leading-relaxed">Analyze any Instagram profile with AI-powered insights and get personalized outreach messages</p>
+                                    <span class="action-cost inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                                        1-2 CREDITS
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-card group relative overflow-hidden bg-white rounded-xl border border-slate-200/60 hover:border-purple-300/60 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer" onclick="dashboard.showBulkModal()">
+                            <div class="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div class="relative p-6">
+                                <div class="action-icon flex items-center justify-center w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl text-white text-xl mb-4 group-hover:scale-110 transition-transform duration-200">
+                                    🚀
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-900 mb-2">Create Campaign</h3>
+                                    <p class="text-sm text-slate-600 mb-4 leading-relaxed">Build automated outreach sequences with AI-powered message variants and lead targeting</p>
+                                    <span class="action-badge inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                                        NEW
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-card group relative overflow-hidden bg-white rounded-xl border border-slate-200/60 hover:border-emerald-300/60 shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer" onclick="window.location.href='/settings'">
+                            <div class="absolute inset-0 bg-gradient-to-br from-emerald-600/5 to-teal-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div class="relative p-6">
+                                <div class="action-icon flex items-center justify-center w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white text-xl mb-4 group-hover:scale-110 transition-transform duration-200">
+                                    📊
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-900 mb-2">Import CSV</h3>
+                                    <p class="text-sm text-slate-600 mb-4 leading-relaxed">Upload a CSV file with Instagram profiles for bulk analysis and lead generation</p>
+                                    <span class="action-badge inline-flex items-center px-2.5 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold rounded-full uppercase tracking-wide">
+                                        BULK
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="action-card group relative overflow-hidden bg-white rounded-xl border border-slate-200/60 hover:border-orange-300/60 shadow-sm hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 transform hover:-translate-y-1 cursor-pointer" onclick="window.location.href='/analytics'">
+                            <div class="absolute inset-0 bg-gradient-to-br from-orange-600/5 to-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            <div class="relative p-6">
+                                <div class="action-icon flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl text-white text-xl mb-4 group-hover:scale-110 transition-transform duration-200">
+                                    📈
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-slate-900 mb-2">Export Data</h3>
+                                    <p class="text-sm text-slate-600 mb-4 leading-relaxed">Download your leads and analysis results in CSV format for external use</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Enhanced Stats Grid - CRM KPI Cards -->
+                <section class="stats-grid grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                    <div class="stat-card group relative overflow-hidden bg-white rounded-2xl border border-slate-200/60 hover:border-blue-300/60 shadow-sm hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-300 transform hover:-translate-y-1">
+                        <div class="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="relative p-6 text-center">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="text-left">
+                                    <p class="stat-label text-sm font-medium text-slate-600 uppercase tracking-wide">Leads Researched</p>
+                                    <p class="stat-value text-3xl font-bold text-slate-900 mt-2" id="total-leads">0</p>
+                                    <p class="stat-detail text-sm text-slate-500 mt-1">Ready to start</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card group relative overflow-hidden bg-white rounded-2xl border border-slate-200/60 hover:border-orange-300/60 shadow-sm hover:shadow-xl hover:shadow-orange-500/10 transition-all duration-300 transform hover:-translate-y-1">
+                        <div class="absolute inset-0 bg-gradient-to-br from-orange-600/5 to-red-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="relative p-6 text-center">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="text-left">
+                                    <p class="stat-label text-sm font-medium text-slate-600 uppercase tracking-wide">Credits Used</p>
+                                    <p class="stat-value text-3xl font-bold text-slate-900 mt-2" id="credits-used">0</p>
+                                    <p class="stat-detail text-sm text-slate-500 mt-1">This month</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card group relative overflow-hidden bg-white rounded-2xl border border-slate-200/60 hover:border-purple-300/60 shadow-sm hover:shadow-xl hover:shadow-purple-500/10 transition-all duration-300 transform hover:-translate-y-1">
+                        <div class="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-pink-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="relative p-6 text-center">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="text-left">
+                                    <p class="stat-label text-sm font-medium text-slate-600 uppercase tracking-wide">High-Value Leads</p>
+                                    <p class="stat-value text-3xl font-bold text-slate-900 mt-2" id="high-value-leads">0</p>
+                                    <p class="stat-detail text-sm text-slate-500 mt-1">Score 80+</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card group relative overflow-hidden bg-white rounded-2xl border border-slate-200/60 hover:border-teal-300/60 shadow-sm hover:shadow-xl hover:shadow-teal-500/10 transition-all duration-300 transform hover:-translate-y-1">
+                        <div class="absolute inset-0 bg-gradient-to-br from-teal-600/5 to-cyan-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div class="relative p-6 text-center">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="text-left">
+                                    <p class="stat-label text-sm font-medium text-slate-600 uppercase tracking-wide">Average Score</p>
+                                    <p class="stat-value text-3xl font-bold text-slate-900 mt-2" id="average-score">0%</p>
+                                    <p class="stat-detail text-sm text-slate-500 mt-1">Lead quality</p>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Enhanced Recent Lead Activity - CRM Data Table -->
+                <section class="leads-section bg-white rounded-2xl border border-slate-200/60 shadow-sm">
+                    <div class="section-header px-6 py-5 border-b border-slate-200/60 flex items-center justify-between flex-wrap gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-900">Recent Lead Activity</h2>
+                            <p class="text-sm text-slate-600 mt-1">Track and manage your lead generation</p>
+                        </div>
+                        <div class="section-actions flex items-center space-x-3">
+                            <button class="btn btn-small inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200" onclick="dashboard.refreshStats()">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                🔄 Refresh
+                            </button>
+                            <select id="filter-select" onchange="dashboard.filterLeads(this.value)" 
+                                    class="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="all">All Types</option>
+                                <option value="deep">Deep Analysis</option>
+                                <option value="light">Light Analysis</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Filters -->
+                    <div class="leads-filters flex flex-wrap gap-3 px-6 py-4 bg-slate-50/50">
+                        <button class="filter-btn active px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200" onclick="dashboard.filterLeads('all')" data-filter="all">
+                            All Leads
+                        </button>
+                        <button class="filter-btn px-4 py-2 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors duration-200" onclick="dashboard.filterLeads('high-score')" data-filter="high-score">
+                            High Score (80+)
+                        </button>
+                        <button class="filter-btn px-4 py-2 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors duration-200" onclick="dashboard.filterLeads('recent')" data-filter="recent">
+                            Last 7 Days
+                        </button>
+                        <button class="filter-btn px-4 py-2 bg-white text-slate-700 text-sm font-medium rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors duration-200" onclick="dashboard.filterLeads('deep')" data-filter="deep">
+                            Deep Analysis
+                        </button>
+                    </div>
+                    
+                    <!-- Enhanced Search -->
+                    <div class="search-container px-6 py-4 border-b border-slate-200/60">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                            <input type="text" 
+                                   id="search-input" 
+                                   placeholder="Search leads by username or name..." 
+                                   onkeyup="dashboard.searchLeads(this.value)"
+                                   class="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Bulk Actions -->
+                    <div id="bulk-actions" class="bulk-actions hidden bg-blue-600 text-white px-6 py-4 flex items-center justify-between">
+                        <div class="bulk-actions-info text-sm font-medium">
+                            <span id="selected-count">0</span> leads selected
+                        </div>
+                        <div class="bulk-actions-buttons flex space-x-2">
+                            <button class="btn px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-sm rounded-md border border-white/30 transition-colors duration-200" onclick="dashboard.clearSelection()">
+                                Clear Selection
+                            </button>
+                            <button class="btn px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors duration-200" onclick="dashboard.bulkDeleteLeads()">
+                                Delete Selected
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Enhanced Leads Table -->
+                    <div class="leads-table-container overflow-x-auto">
+                        <table class="leads-table w-full">
+                            <thead class="bg-slate-50/50">
+                                <tr class="border-b border-slate-200/60">
+                                    <th class="px-6 py-4 text-left">
+                                        <input type="checkbox" 
+                                               id="select-all-checkbox" 
+                                               onchange="dashboard.toggleAllLeads(this)"
+                                               class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
+                                    </th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Lead</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Platform</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Score</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Time</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leads-table-body" class="divide-y divide-slate-200/60">
+                                <!-- Leads will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                        
+                        <!-- Empty State -->
+                        <div id="empty-state" class="hidden text-center py-12 px-6">
+                            <div class="w-16 h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-slate-900 mb-2">No leads yet</h3>
+                            <p class="text-slate-600 mb-6">Start by researching your first lead to see it appear here.</p>
+                            <button onclick="dashboard.showAnalysisModal()" 
+                                    class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                Research Your First Lead
+                            </button>
+                        </div>
+                    </div>
+                </section>
+            </div>
         </main>
+        
+        <!-- Keep existing modals and components structure -->
+        <div id="modal-container"></div>
     </div>
     
-    <!-- ============================================================================= -->
-    <!-- MODALS -->
-    <!-- ============================================================================= -->
-    
-    <!-- Analysis Modal -->
-    <div id="analysisModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>🔎 Analyze Instagram Profile</h3>
-                <button class="modal-close" onclick="dashboard.closeModal('analysisModal')">&times;</button>
-            </div>
-            
-            <div class="modal-body">
-                <form id="analysisForm" onsubmit="dashboard.processAnalysisForm(event)">
-                    <div class="form-group">
-                        <label for="username">Instagram Username</label>
-                        <input type="text" 
-                               id="username" 
-                               name="username" 
-                               placeholder="Enter username (without @)" 
-                               required>
-                        <small>Enter the Instagram username without the @ symbol</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="analysis-type">Analysis Type</label>
-                        <select id="analysis-type" name="analysisType" onchange="dashboard.handleAnalysisTypeChange()" required>
-                            <option value="">Select analysis type...</option>
-                            <option value="light">Light Analysis (1 credit)</option>
-                            <option value="deep">Deep Analysis (2 credits)</option>
-                        </select>
-                        <div id="analysis-cost-display" class="cost-display"></div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="business-id">Business Profile</label>
-                        <select id="business-id" name="businessId" required>
-                            <option value="">Loading businesses...</option>
-                        </select>
-                    </div>
-                    
-                    <button type="submit" id="analysis-submit-btn" class="btn btn-primary" disabled>
-                        Select Analysis Type
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Bulk Upload Modal -->
-    <div id="bulkModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>📁 Bulk Analysis</h3>
-                <button class="modal-close" onclick="dashboard.closeModal('bulkModal')">&times;</button>
-            </div>
-            
-            <div class="modal-body">
-                <form id="bulkForm">
-                    <div class="form-group">
-                        <label for="bulk-analysis-type">Analysis Type</label>
-                        <select id="bulk-analysis-type" name="analysisType" onchange="dashboard.validateBulkForm()" required>
-                            <option value="">Select analysis type...</option>
-                            <option value="light">Light Analysis (1 credit each)</option>
-                            <option value="deep">Deep Analysis (2 credits each)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="bulk-business-id">Business Profile</label>
-                        <select id="bulk-business-id" name="businessId" required>
-                            <option value="">Loading businesses...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="bulk-file">Upload File</label>
-                        <input type="file" 
-                               id="bulk-file" 
-                               name="file" 
-                               accept=".csv,.txt" 
-                               onchange="dashboard.handleFileUpload(event)" 
-                               required>
-                        <small>Upload a CSV or TXT file with Instagram usernames (one per line)</small>
-                    </div>
-                    
-                    <div id="file-display" class="file-display"></div>
-                    
-                    <button type="button" id="bulk-submit-btn" class="btn btn-primary" onclick="dashboard.processBulkUpload()" disabled>
-                        Select Analysis Type
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Lead Details Modal -->
-    <div id="leadDetailsModal" class="modal-overlay">
-        <div class="modal large">
-            <div class="modal-header">
-                <h3>📊 Lead Details</h3>
-                <button class="modal-close" onclick="dashboard.closeModal('leadDetailsModal')">&times;</button>
-            </div>
-            
-            <div class="modal-body">
-                <div id="lead-details-content">
-                    <!-- Lead details will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Analysis Queue (will be positioned by JavaScript) -->
-    <div id="analysis-queue-container" class="analysis-queue" style="display: none;">
-        <!-- Queue items will be dynamically inserted here -->
-    </div>
-    
-    <!-- Success/Error Messages -->
-    <div id="notification-container" class="notification-container">
-        <!-- Notifications will be dynamically inserted here -->
-    </div>
+    <!-- Scripts -->
+    <script src="/pages/dashboard/dashboard.js"></script>
+    <script>
+        // Initialize Tailwind dark mode support
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.5s ease-out',
+                        'slide-in-left': 'slideInLeft 0.3s ease-out',
+                        'slide-in-right': 'slideInRight 0.3s ease-out 150ms both'
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(1.5rem)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        slideInLeft: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(0)' }
+                        },
+                        slideInRight: {
+                            '0%': { opacity: '0', transform: 'translateX(2rem)' },
+                            '100%': { opacity: '1', transform: 'translateX(0)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
