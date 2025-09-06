@@ -145,7 +145,13 @@ class LeadManager {
                 this.osliraApp.cache.lastRefresh = this.lastRefresh;
             }
             
-            console.log(`✅ [LeadManager] Final result: ${enrichedLeads.length} unique leads`);
+console.log(`✅ [LeadManager] Final result: ${enrichedLeads.length} unique leads`);
+            
+            // Initialize pagination with new data
+            this.stateManager.setState('filteredLeads', enrichedLeads);
+            if (window.dashboard?.updatePagination) {
+                window.dashboard.updatePagination();
+            }
             
             // Emit events
             this.eventBus.emit(DASHBOARD_EVENTS.LEADS_LOADED, enrichedLeads);
