@@ -242,8 +242,8 @@ return `
     <tr class="table-row relative hover:bg-purple-50 hover:shadow-md transition-all duration-200 ${isSelected ? 'bg-blue-50/50' : ''} border-l-4 ${this.getRowAccentColor(score)} odd:bg-slate-25/20" 
         data-lead-id="${lead.id}">
     
-    <!-- Hidden selection checkbox that appears on hover at far left -->
-    <div class="absolute left-1 top-1/2 transform -translate-y-1/2 opacity-0 table-row:hover opacity-100 transition-all duration-200 z-20 pointer-events-auto">
+   <!-- Hidden selection checkbox that appears on hover at far left -->
+<div class="absolute left-1 top-1/2 transform -translate-y-1/2 opacity-0 transition-all duration-200 z-20 checkbox-container">
                     <input type="checkbox" 
                            class="lead-checkbox w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 bg-white shadow-md"
                            data-lead-id="${lead.id}"
