@@ -1,22 +1,36 @@
 // ===============================================================================
-// ENHANCED LEAD RENDERER - PROFESSIONAL CRM TABLE
-// Modern, polished UI for lead intelligence pipeline
+// ENHANCED LEAD RENDERER - COMPATIBILITY VERSION
+// Fixed to work with existing dashboard system
 // ===============================================================================
 
 class LeadRenderer {
     constructor(stateManager) {
-        this.stateManager = stateManager;
+        this.stateManager = stateManager || this.createFallbackStateManager();
         this.dateFormatCache = new Map();
-        console.log('🎨 [LeadRenderer] Enhanced renderer initialized');
+        console.log('🎨 [LeadRenderer] Enhanced renderer initialized with compatibility mode');
     }
 
     // ===============================================================================
-    // MAIN RENDER FUNCTION
+    // FALLBACK STATE MANAGER FOR COMPATIBILITY
+    // ===============================================================================
+    
+    createFallbackStateManager() {
+        console.log('🔧 [LeadRenderer] Creating fallback state manager');
+        return {
+            state: {},
+            getState: (key) => this.state[key] || (key === 'selectedLeads' ? new Set() : []),
+            setState: (key, value) => { this.state[key] = value; }
+        };
+    }
+
+    // ===============================================================================
+    // MAIN RENDER FUNCTION - ENHANCED COMPATIBILITY
     // ===============================================================================
     
     renderLeads(leads = []) {
         console.log('🎨 [LeadRenderer] Starting enhanced lead rendering...', { 
-            leadCount: leads.length 
+            leadCount: leads.length,
+            leads: leads 
         });
         
         const tableBody = document.getElementById('leads-table-body');
@@ -24,130 +38,73 @@ class LeadRenderer {
         const leadsContainer = document.querySelector('.leads-table-container');
         
         if (!tableBody) {
-            console.error('❌ [LeadRenderer] Table body not found');
+            console.error('❌ [LeadRenderer] Table body not found, creating structure...');
             this.createTableStructureIfMissing();
-            return;
+            return this.renderLeads(leads); // Retry after creating structure
         }
         
+        console.log('✅ [LeadRenderer] Table body found, proceeding with render');
+        
         // Show/hide based on leads
-        if (leads.length === 0) {
+        if (!leads || leads.length === 0) {
+            console.log('📭 [LeadRenderer] No leads to display');
             tableBody.innerHTML = '';
             if (leadsContainer) leadsContainer.style.display = 'none';
             if (emptyState) emptyState.classList.remove('hidden');
+            this.updateLeadCounts(0, 0);
             return;
         }
+        
+        console.log('📊 [LeadRenderer] Rendering leads:', leads);
         
         // Show table, hide empty state
         if (leadsContainer) leadsContainer.style.display = 'block';
         if (emptyState) emptyState.classList.add('hidden');
         
-        // Render leads with enhanced styling
-        const leadsDisplay = leads.map(lead => this.createEnhancedLeadCard(lead)).join('');
-        tableBody.innerHTML = leadsDisplay;
-        
-        // Update UI states
-        this.updateSelectionUI();
-        this.updateLeadCounts(leads.length, leads.length);
-        
-        console.log('✨ [LeadRenderer] Enhanced leads display completed', {
-            displayed: leads.length,
-            selected: (this.stateManager.getState('selectedLeads') || new Set()).size
-        });
+        try {
+            // Render leads with enhanced styling
+            const leadsDisplay = leads.map(lead => {
+                console.log('🔄 [LeadRenderer] Processing lead:', lead);
+                return this.createEnhancedLeadCard(lead);
+            }).join('');
+            
+            tableBody.innerHTML = leadsDisplay;
+            console.log('✅ [LeadRenderer] Table HTML updated');
+            
+            // Update UI states
+            this.updateSelectionUI();
+            this.updateLeadCounts(leads.length, leads.length);
+            
+            console.log('✨ [LeadRenderer] Enhanced leads display completed', {
+                displayed: leads.length,
+                selected: (this.stateManager.getState('selectedLeads') || new Set()).size
+            });
+        } catch (error) {
+            console.error('❌ [LeadRenderer] Error rendering leads:', error);
+            this.handleRenderError(error, leads);
+        }
     }
 
     // ===============================================================================
-    // ENHANCED LEAD CARD CREATION
+    // ENHANCED LEAD CARD CREATION WITH SAFETY CHECKS
     // ===============================================================================
     
     createEnhancedLeadCard(lead) {
+        // Safety check for lead data
+        if (!lead || !lead.id) {
+            console.warn('⚠️ [LeadRenderer] Invalid lead data:', lead);
+            return '';
+        }
+        
         const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
         const isSelected = selectedLeads.has(lead.id);
         const score = lead.score || 0;
         
         // Enhanced score configuration with modern styling
-        const getScoreConfig = (score) => {
-            if (score >= 90) return { 
-                class: 'bg-emerald-100 text-emerald-800 border-emerald-200', 
-                label: 'Excellent', 
-                color: 'emerald',
-                icon: '🌟',
-                gradient: 'from-emerald-500 to-emerald-600',
-                barGradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
-                borderColor: 'border-emerald-500'
-            };
-            if (score >= 75) return { 
-                class: 'bg-blue-100 text-blue-800 border-blue-200', 
-                label: 'Strong', 
-                color: 'blue',
-                icon: '💪',
-                gradient: 'from-blue-500 to-blue-600',
-                barGradient: 'from-blue-400 via-blue-500 to-blue-600',
-                borderColor: 'border-blue-500'
-            };
-            if (score >= 60) return { 
-                class: 'bg-amber-100 text-amber-800 border-amber-200', 
-                label: 'Moderate', 
-                color: 'amber',
-                icon: '⚡',
-                gradient: 'from-amber-500 to-orange-500',
-                barGradient: 'from-amber-400 via-amber-500 to-orange-500',
-                borderColor: 'border-amber-500'
-            };
-            return { 
-                class: 'bg-slate-100 text-slate-600 border-slate-200', 
-                label: 'Low', 
-                color: 'slate',
-                icon: '📊',
-                gradient: 'from-slate-400 to-slate-500',
-                barGradient: 'from-slate-300 via-slate-400 to-slate-500',
-                borderColor: 'border-slate-400'
-            };
-        };
-        
-        const scoreConfig = getScoreConfig(score);
+        const scoreConfig = this.getScoreConfig(score);
         
         // Enhanced platform configuration
-        const getPlatformConfig = (platform) => {
-            const configs = {
-                instagram: { 
-                    icon: '📷', 
-                    class: 'bg-gradient-to-br from-pink-50 to-rose-50 text-pink-700 hover:from-pink-100 hover:to-rose-100', 
-                    name: 'Instagram',
-                    gradient: 'from-pink-400 to-rose-500',
-                    iconBg: 'bg-pink-100'
-                },
-                tiktok: { 
-                    icon: '🎵', 
-                    class: 'bg-gradient-to-br from-purple-50 to-violet-50 text-purple-700 hover:from-purple-100 hover:to-violet-100', 
-                    name: 'TikTok',
-                    gradient: 'from-purple-400 to-violet-500',
-                    iconBg: 'bg-purple-100'
-                },
-                youtube: { 
-                    icon: '📺', 
-                    class: 'bg-gradient-to-br from-red-50 to-orange-50 text-red-700 hover:from-red-100 hover:to-orange-100', 
-                    name: 'YouTube',
-                    gradient: 'from-red-400 to-orange-500',
-                    iconBg: 'bg-red-100'
-                },
-                twitter: { 
-                    icon: '🐦', 
-                    class: 'bg-gradient-to-br from-blue-50 to-sky-50 text-blue-700 hover:from-blue-100 hover:to-sky-100', 
-                    name: 'Twitter',
-                    gradient: 'from-blue-400 to-sky-500',
-                    iconBg: 'bg-blue-100'
-                }
-            };
-            return configs[platform] || { 
-                icon: '🌐', 
-                class: 'bg-gradient-to-br from-slate-50 to-gray-50 text-slate-700 hover:from-slate-100 hover:to-gray-100', 
-                name: platform,
-                gradient: 'from-slate-400 to-gray-500',
-                iconBg: 'bg-slate-100'
-            };
-        };
-        
-        const platformConfig = getPlatformConfig(lead.platform);
+        const platformConfig = this.getPlatformConfig(lead.platform);
         
         // Enhanced analysis type badge
         const analysisConfig = lead.analysis_type === 'deep' 
@@ -155,12 +112,7 @@ class LeadRenderer {
             : { class: 'bg-slate-100 text-slate-600 border-slate-200', label: 'Light Analysis', icon: '👁️' };
 
         // Enhanced date formatting
-        const dateKey = lead.updated_at || lead.created_at;
-        let formattedDate = this.dateFormatCache.get(dateKey);
-        if (!formattedDate) {
-            formattedDate = this.formatDateProfessional(dateKey);
-            this.dateFormatCache.set(dateKey, formattedDate);
-        }
+        const formattedDate = this.formatDateProfessional(lead.updated_at || lead.created_at);
         
         // Enhanced profile picture with better fallback
         const profilePicUrl = lead.profile_pic_url;
@@ -190,7 +142,7 @@ class LeadRenderer {
                         <input type="checkbox" 
                                class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 focus:ring-offset-0 transition-all duration-200 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}"
                                ${isSelected ? 'checked' : ''}
-                               onchange="dashboard.toggleLeadSelection('${lead.id}', this.checked)">
+                               onchange="dashboard.toggleLeadSelection && dashboard.toggleLeadSelection('${lead.id}', this.checked)">
                     </div>
                 </td>
                 
@@ -284,7 +236,7 @@ class LeadRenderer {
                 <td class="px-6 py-4">
                     <div class="flex items-center justify-center space-x-3">
                         <!-- Primary Action: Enhanced Analysis Button -->
-                        <button onclick="dashboard.openLeadDetails('${lead.id}')" 
+                        <button onclick="dashboard.openLeadDetails && dashboard.openLeadDetails('${lead.id}')" 
                                 class="group relative inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                 title="View detailed analysis">
                             <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
@@ -296,7 +248,7 @@ class LeadRenderer {
                         
                         <!-- Modern Action Menu -->
                         <div class="relative">
-                            <button onclick="dashboard.toggleActionMenu('${lead.id}', this)" 
+                            <button onclick="dashboard.toggleActionMenu && dashboard.toggleActionMenu('${lead.id}', this)" 
                                     class="group p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-slate-300"
                                     title="More actions">
                                 <svg class="w-5 h-5 transition-transform group-hover:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,14 +261,14 @@ class LeadRenderer {
                             <div class="action-menu absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200/60 z-20 opacity-0 scale-95 transform transition-all duration-300 origin-top-right backdrop-blur-sm"
                                  id="action-menu-${lead.id}">
                                 <div class="py-2">
-                                    <button onclick="dashboard.exportLead('${lead.id}')" 
+                                    <button onclick="dashboard.exportLead && dashboard.exportLead('${lead.id}')" 
                                             class="flex items-center w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
                                         <svg class="w-4 h-4 mr-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                         </svg>
                                         Export Lead
                                     </button>
-                                    <button onclick="dashboard.duplicateLead('${lead.id}')" 
+                                    <button onclick="dashboard.duplicateLead && dashboard.duplicateLead('${lead.id}')" 
                                             class="flex items-center w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
                                         <svg class="w-4 h-4 mr-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -324,7 +276,7 @@ class LeadRenderer {
                                         Duplicate Analysis
                                     </button>
                                     <div class="border-t border-slate-200 my-1"></div>
-                                    <button onclick="dashboard.deleteLead('${lead.id}')" 
+                                    <button onclick="dashboard.deleteLead && dashboard.deleteLead('${lead.id}')" 
                                             class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
                                         <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -338,6 +290,89 @@ class LeadRenderer {
                 </td>
             </tr>
         `;
+    }
+
+    // ===============================================================================
+    // CONFIGURATION METHODS WITH SAFETY
+    // ===============================================================================
+    
+    getScoreConfig(score) {
+        if (score >= 90) return { 
+            class: 'bg-emerald-100 text-emerald-800 border-emerald-200', 
+            label: 'Excellent', 
+            color: 'emerald',
+            icon: '🌟',
+            gradient: 'from-emerald-500 to-emerald-600',
+            barGradient: 'from-emerald-400 via-emerald-500 to-emerald-600',
+            borderColor: 'border-emerald-500'
+        };
+        if (score >= 75) return { 
+            class: 'bg-blue-100 text-blue-800 border-blue-200', 
+            label: 'Strong', 
+            color: 'blue',
+            icon: '💪',
+            gradient: 'from-blue-500 to-blue-600',
+            barGradient: 'from-blue-400 via-blue-500 to-blue-600',
+            borderColor: 'border-blue-500'
+        };
+        if (score >= 60) return { 
+            class: 'bg-amber-100 text-amber-800 border-amber-200', 
+            label: 'Moderate', 
+            color: 'amber',
+            icon: '⚡',
+            gradient: 'from-amber-500 to-orange-500',
+            barGradient: 'from-amber-400 via-amber-500 to-orange-500',
+            borderColor: 'border-amber-500'
+        };
+        return { 
+            class: 'bg-slate-100 text-slate-600 border-slate-200', 
+            label: 'Low', 
+            color: 'slate',
+            icon: '📊',
+            gradient: 'from-slate-400 to-slate-500',
+            barGradient: 'from-slate-300 via-slate-400 to-slate-500',
+            borderColor: 'border-slate-400'
+        };
+    }
+
+    getPlatformConfig(platform) {
+        const configs = {
+            instagram: { 
+                icon: '📷', 
+                class: 'bg-gradient-to-br from-pink-50 to-rose-50 text-pink-700 hover:from-pink-100 hover:to-rose-100', 
+                name: 'Instagram',
+                gradient: 'from-pink-400 to-rose-500',
+                iconBg: 'bg-pink-100'
+            },
+            tiktok: { 
+                icon: '🎵', 
+                class: 'bg-gradient-to-br from-purple-50 to-violet-50 text-purple-700 hover:from-purple-100 hover:to-violet-100', 
+                name: 'TikTok',
+                gradient: 'from-purple-400 to-violet-500',
+                iconBg: 'bg-purple-100'
+            },
+            youtube: { 
+                icon: '📺', 
+                class: 'bg-gradient-to-br from-red-50 to-orange-50 text-red-700 hover:from-red-100 hover:to-orange-100', 
+                name: 'YouTube',
+                gradient: 'from-red-400 to-orange-500',
+                iconBg: 'bg-red-100'
+            },
+            twitter: { 
+                icon: '🐦', 
+                class: 'bg-gradient-to-br from-blue-50 to-sky-50 text-blue-700 hover:from-blue-100 hover:to-sky-100', 
+                name: 'Twitter',
+                gradient: 'from-blue-400 to-sky-500',
+                iconBg: 'bg-blue-100'
+            }
+        };
+        return configs[platform] || { 
+            icon: '🌐', 
+            class: 'bg-gradient-to-br from-slate-50 to-gray-50 text-slate-700 hover:from-slate-100 hover:to-gray-100', 
+            name: platform || 'Unknown',
+            gradient: 'from-slate-400 to-gray-500',
+            iconBg: 'bg-slate-100'
+        };
     }
 
     // ===============================================================================
@@ -360,7 +395,7 @@ class LeadRenderer {
                         <th class="px-6 py-4 text-left w-12">
                             <input type="checkbox" 
                                    id="select-all-checkbox" 
-                                   onchange="dashboard.toggleAllLeads(this)"
+                                   onchange="dashboard.toggleAllLeads && dashboard.toggleAllLeads(this)"
                                    class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
                         </th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Lead Profile</th>
@@ -382,7 +417,7 @@ class LeadRenderer {
     }
 
     // ===============================================================================
-    // UI HELPERS
+    // UI HELPERS WITH SAFETY CHECKS
     // ===============================================================================
 
     updateBulkActionsVisibility(show) {
@@ -407,11 +442,13 @@ class LeadRenderer {
         const totalCountEl = document.getElementById('total-count');
         const leadCountDisplay = document.getElementById('lead-count-display');
         
+        // Use provided counts or fallback to state
         const allLeads = this.stateManager.getState('leads') || [];
-        const actualTotal = allLeads.length;
+        const actualTotal = totalCount || allLeads.length;
+        const actualVisible = visibleCount || actualTotal;
         
         if (resultsCount) {
-            resultsCount.textContent = `Showing ${visibleCount} leads`;
+            resultsCount.textContent = `Showing ${actualVisible} leads`;
         }
         
         if (totalCountEl) {
@@ -429,9 +466,9 @@ class LeadRenderer {
         }
     }
 
-    updateSelectionUI() {
+updateSelectionUI() {
         const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
-        const checkboxes = document.querySelectorAll('.lead-checkbox');
+        const checkboxes = document.querySelectorAll('input[type="checkbox"][data-lead-id]');
         const selectAllCheckbox = document.getElementById('select-all-checkbox');
         
         // Update individual checkboxes
@@ -459,7 +496,7 @@ class LeadRenderer {
         }
     }
 
-renderLoadingState(tableBody) {
+    renderLoadingState(tableBody) {
         const loadingRows = Array.from({ length: 5 }, (_, i) => `
             <tr class="animate-pulse">
                 <td class="px-6 py-4">
@@ -475,7 +512,7 @@ renderLoadingState(tableBody) {
                     </div>
                 </td>
                 <td class="px-6 py-4">
-                    <div class="w-20 h-6 bg-slate-200 rounded"></div>
+                    <div class="w-20 h-6 bg-slate-200 rounded mx-auto"></div>
                 </td>
                 <td class="px-6 py-4">
                     <div class="w-full h-8 bg-slate-200 rounded"></div>
@@ -487,7 +524,7 @@ renderLoadingState(tableBody) {
                     <div class="w-16 h-4 bg-slate-200 rounded"></div>
                 </td>
                 <td class="px-6 py-4">
-                    <div class="w-20 h-8 bg-slate-200 rounded"></div>
+                    <div class="w-20 h-8 bg-slate-200 rounded mx-auto"></div>
                 </td>
             </tr>
         `).join('');
@@ -722,45 +759,6 @@ renderLoadingState(tableBody) {
     }
 
     // ===============================================================================
-    // PERFORMANCE OPTIMIZATIONS
-    // ===============================================================================
-
-    createVirtualizedRenderer(leads, containerHeight = 600, rowHeight = 80) {
-        // Basic virtualization for large datasets
-        const visibleRows = Math.ceil(containerHeight / rowHeight);
-        const buffer = 5; // Extra rows for smooth scrolling
-        
-        return {
-            totalRows: leads.length,
-            visibleRows: visibleRows + buffer,
-            rowHeight,
-            
-            getVisibleRange(scrollTop) {
-                const startIndex = Math.floor(scrollTop / rowHeight);
-                const endIndex = Math.min(startIndex + visibleRows + buffer, leads.length);
-                
-                return {
-                    start: Math.max(0, startIndex - buffer),
-                    end: endIndex,
-                    leads: leads.slice(Math.max(0, startIndex - buffer), endIndex)
-                };
-            }
-        };
-    }
-
-    debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
-
-    // ===============================================================================
     // ERROR HANDLING AND RECOVERY
     // ===============================================================================
 
@@ -783,7 +781,7 @@ renderLoadingState(tableBody) {
                                 <h3 class="text-lg font-semibold text-slate-900">Unable to display leads</h3>
                                 <p class="text-sm text-slate-600 mt-1">There was an error rendering the lead data. Please try refreshing.</p>
                             </div>
-                            <button onclick="dashboard.refreshLeads()" 
+                            <button onclick="dashboard.refreshLeads && dashboard.refreshLeads()" 
                                     class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                                 Refresh Leads
                             </button>
@@ -850,6 +848,80 @@ renderLoadingState(tableBody) {
     }
 
     // ===============================================================================
+    // PERFORMANCE OPTIMIZATIONS
+    // ===============================================================================
+
+    createVirtualizedRenderer(leads, containerHeight = 600, rowHeight = 80) {
+        // Basic virtualization for large datasets
+        const visibleRows = Math.ceil(containerHeight / rowHeight);
+        const buffer = 5; // Extra rows for smooth scrolling
+        
+        return {
+            totalRows: leads.length,
+            visibleRows: visibleRows + buffer,
+            rowHeight,
+            
+            getVisibleRange(scrollTop) {
+                const startIndex = Math.floor(scrollTop / rowHeight);
+                const endIndex = Math.min(startIndex + visibleRows + buffer, leads.length);
+                
+                return {
+                    start: Math.max(0, startIndex - buffer),
+                    end: endIndex,
+                    leads: leads.slice(Math.max(0, startIndex - buffer), endIndex)
+                };
+            }
+        };
+    }
+
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // ===============================================================================
+    // COMPATIBILITY METHODS FOR EXISTING DASHBOARD
+    // ===============================================================================
+
+    // Method to integrate with existing dashboard system
+    integrateWithDashboard(dashboardInstance) {
+        if (dashboardInstance && typeof dashboardInstance === 'object') {
+            // Store reference to dashboard
+            this.dashboard = dashboardInstance;
+            
+            // Override dashboard's renderer if it exists
+            if (dashboardInstance.leadRenderer) {
+                const originalRenderer = dashboardInstance.leadRenderer;
+                dashboardInstance.leadRenderer = this;
+                console.log('✅ [LeadRenderer] Integrated with existing dashboard');
+            }
+            
+            // Bind to dashboard's state if available
+            if (dashboardInstance.stateManager) {
+                this.stateManager = dashboardInstance.stateManager;
+                console.log('✅ [LeadRenderer] Using dashboard state manager');
+            }
+        }
+    }
+
+    // Method to handle legacy function calls
+    createLeadCard(lead) {
+        return this.createEnhancedLeadCard(lead);
+    }
+
+    // Method to handle legacy rendering calls
+    render(leads) {
+        return this.renderLeads(leads);
+    }
+
+    // ===============================================================================
     // CLEANUP AND INITIALIZATION
     // ===============================================================================
 
@@ -866,6 +938,12 @@ renderLoadingState(tableBody) {
     init() {
         this.addAccessibilityAttributes();
         console.log('🚀 [LeadRenderer] Enhanced renderer initialized');
+        
+        // Check if we need to create the table structure
+        const tableBody = document.getElementById('leads-table-body');
+        if (!tableBody) {
+            this.createTableStructureIfMissing();
+        }
     }
 }
 
@@ -876,6 +954,16 @@ renderLoadingState(tableBody) {
 // Auto-initialize if in browser environment
 if (typeof window !== 'undefined') {
     window.LeadRenderer = LeadRenderer;
+    
+    // Try to integrate with existing dashboard if it exists
+    if (window.dashboard && window.dashboard.leadRenderer) {
+        console.log('🔄 [LeadRenderer] Upgrading existing dashboard renderer...');
+        const enhancedRenderer = new LeadRenderer(window.dashboard.stateManager);
+        enhancedRenderer.integrateWithDashboard(window.dashboard);
+        window.dashboard.leadRenderer = enhancedRenderer;
+        console.log('✅ [LeadRenderer] Dashboard renderer upgraded successfully');
+    }
+    
     console.log('✅ [LeadRenderer] Enhanced renderer class available globally');
 }
 
