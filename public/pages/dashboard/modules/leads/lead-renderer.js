@@ -3,7 +3,7 @@
 /**
  * OSLIRA LEAD RENDERER MODULE - ENHANCED PROFESSIONAL CRM VERSION
  * Handles all lead display, card rendering, and UI presentation
- * Maintains exact compatibility with dependency injection system
+ * Fixed layout with proper column alignment and no select column
  */
 class LeadRenderer {
     constructor(container) {
@@ -49,7 +49,7 @@ class LeadRenderer {
     }
     
     // ===============================================================================
-    // MAIN DISPLAY FUNCTION - ENHANCED
+    // MAIN DISPLAY FUNCTION
     // ===============================================================================
     
     displayLeads(leads = null) {
@@ -102,7 +102,7 @@ class LeadRenderer {
     }
 
     // ===============================================================================
-    // ENHANCED LEAD CARD CREATION
+    // ENHANCED LEAD CARD CREATION - FIXED LAYOUT
     // ===============================================================================
     
     createLeadCard(lead) {
@@ -110,7 +110,7 @@ class LeadRenderer {
         const isSelected = selectedLeads.has(lead.id);
         const score = lead.score || 0;
         
-        // Enhanced score configuration with modern styling
+        // Enhanced score configuration
         const getScoreConfig = (score) => {
             if (score >= 90) return { 
                 class: 'bg-emerald-100 text-emerald-800 border-emerald-200', 
@@ -195,22 +195,22 @@ class LeadRenderer {
         
         const platformConfig = getPlatformConfig(lead.platform);
         
-// Enhanced analysis type badge
-const analysisConfig = lead.analysis_type === 'deep' 
-    ? { 
-        class: 'bg-gradient-to-br from-purple-50 to-violet-50 text-purple-700 hover:from-purple-100 hover:to-violet-100', 
-        label: 'Deep Analysis', 
-        icon: '🔍',
-        gradient: 'from-purple-400 to-violet-500',
-        iconBg: 'bg-purple-100'
-    }
-    : { 
-        class: 'bg-gradient-to-br from-slate-50 to-gray-50 text-slate-600 hover:from-slate-100 hover:to-gray-100', 
-        label: 'Light Analysis', 
-        icon: '👁️',
-        gradient: 'from-slate-400 to-gray-500',
-        iconBg: 'bg-slate-100'
-    };
+        // Enhanced analysis type badge
+        const analysisConfig = lead.analysis_type === 'deep' 
+            ? { 
+                class: 'bg-gradient-to-br from-purple-50 to-violet-50 text-purple-700 hover:from-purple-100 hover:to-violet-100', 
+                label: 'Deep Analysis', 
+                icon: '🔍',
+                gradient: 'from-purple-400 to-violet-500',
+                iconBg: 'bg-purple-100'
+            }
+            : { 
+                class: 'bg-gradient-to-br from-slate-50 to-gray-50 text-slate-600 hover:from-slate-100 hover:to-gray-100', 
+                label: 'Light Analysis', 
+                icon: '👁️',
+                gradient: 'from-slate-400 to-gray-500',
+                iconBg: 'bg-slate-100'
+            };
 
         // Enhanced date formatting
         const dateKey = lead.updated_at || lead.created_at;
@@ -238,21 +238,21 @@ const analysisConfig = lead.analysis_type === 'deep'
             </div>
         `;
 
-return `
-    <tr class="group hover:bg-slate-50/30 transition-all duration-200 ${isSelected ? 'bg-blue-50/50' : ''} border-l-4 ${this.getRowAccentColor(score)} odd:bg-slate-25/20" 
-        data-lead-id="${lead.id}">
-        
-        <!-- Hidden selection checkbox that appears on hover -->
-        <div class="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-            <input type="checkbox" 
-                   class="lead-checkbox w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 bg-white shadow-md"
-                   data-lead-id="${lead.id}"
-                   ${isSelected ? 'checked' : ''}
-                   onchange="dashboard.toggleLeadSelection && dashboard.toggleLeadSelection('${lead.id}', this.checked)">
-        </div>
+        return `
+            <tr class="group relative hover:bg-slate-50/30 transition-all duration-200 ${isSelected ? 'bg-blue-50/50' : ''} border-l-4 ${this.getRowAccentColor(score)} odd:bg-slate-25/20" 
+                data-lead-id="${lead.id}">
                 
-<!-- Enhanced Lead Profile -->
-<td class="px-6 py-4 border-r border-slate-100/60">
+                <!-- Hidden selection checkbox that appears on hover at far left -->
+                <div class="absolute left-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                    <input type="checkbox" 
+                           class="lead-checkbox w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 bg-white shadow-md"
+                           data-lead-id="${lead.id}"
+                           ${isSelected ? 'checked' : ''}
+                           onchange="dashboard.toggleLeadSelection && dashboard.toggleLeadSelection('${lead.id}', this.checked)">
+                </div>
+                
+                <!-- Lead Profile - Wider column -->
+                <td class="pl-12 pr-6 py-4 border-r border-slate-100/60" style="width: 280px;">
                     <div class="flex items-center space-x-3">
                         <div class="flex-shrink-0 relative">
                             ${profilePicHtml}
@@ -263,21 +263,21 @@ return `
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center space-x-2 mb-1">
-                                <p class="text-sm font-semibold text-slate-900 truncate">@${username}</p>
+                                <p class="text-sm font-semibold text-slate-900 truncate" title="@${username}">@${username}</p>
                                 ${lead.account_type === 'business' ? 
                                     '<span class="inline-flex items-center px-1.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-md border border-orange-200 flex-shrink-0">Business</span>' : ''}
                             </div>
-                            ${fullName ? `<div class="text-sm text-slate-600 truncate mb-0.5">${fullName}</div>` : ''}
+                            ${fullName ? `<div class="text-sm text-slate-600 truncate mb-0.5" title="${fullName}">${fullName}</div>` : ''}
                             ${lead.followers_count ? `<div class="text-xs text-slate-500">${this.formatNumber(lead.followers_count)} followers</div>` : ''}
                         </div>
                     </div>
                 </td>
                 
-   <!-- Enhanced Platform -->
-<td class="px-6 py-4 border-r border-slate-100/60">
-    <div class="flex items-center justify-center">
-        <div class="relative platform-group">
-            <div class="absolute -inset-0.5 bg-gradient-to-r ${platformConfig.gradient} rounded-lg blur opacity-0 platform-group:hover:opacity-100 transition duration-300"></div>
+                <!-- Platform - Centered -->
+                <td class="px-6 py-4 border-r border-slate-100/60" style="width: 160px;">
+                    <div class="flex items-center justify-center">
+                        <div class="relative platform-group">
+                            <div class="absolute -inset-0.5 bg-gradient-to-r ${platformConfig.gradient} rounded-lg blur opacity-0 platform-group:hover:opacity-100 transition duration-300"></div>
                             <div class="relative inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold ${platformConfig.class} shadow-sm hover:shadow-md transition-all duration-200 border-0">
                                 <div class="flex items-center space-x-2">
                                     <div class="w-5 h-5 flex items-center justify-center ${platformConfig.iconBg} rounded-full">
@@ -290,8 +290,8 @@ return `
                     </div>
                 </td>
                 
-<!-- Enhanced Intelligence Score -->
-<td class="px-6 py-4 border-r border-slate-100/60">
+                <!-- Intelligence Score -->
+                <td class="px-6 py-4 border-r border-slate-100/60" style="width: 240px;">
                     <div class="relative">
                         <!-- Score value with modern styling -->
                         <div class="flex items-center justify-between mb-2">
@@ -323,73 +323,43 @@ return `
                     </div>
                 </td>
                 
-<!-- Enhanced Analysis Type -->
-<td class="px-6 py-4 border-r border-slate-100/60">
-    <div class="flex items-center justify-center">
-        <div class="relative analysis-group">
-            <div class="absolute -inset-0.5 bg-gradient-to-r ${analysisConfig.gradient} rounded-lg blur opacity-0 analysis-group:hover:opacity-100 transition duration-300"></div>
-            <div class="relative inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold ${analysisConfig.class} shadow-sm hover:shadow-md transition-all duration-200 border-0">
-                <div class="flex items-center space-x-2">
-                    <div class="w-5 h-5 flex items-center justify-center ${analysisConfig.iconBg} rounded-full">
-                        <span class="text-xs">${analysisConfig.icon}</span>
-                    </div>
-                    <span>${analysisConfig.label}</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</td>
-                
-<!-- Enhanced Date -->
-<td class="px-6 py-4 border-r border-slate-100/60">
-    <div class="text-center">
-        <div class="text-sm text-slate-900">${formattedDate.date}</div>
-        <div class="text-xs text-slate-500">${formattedDate.time}</div>
-    </div>
-</td>
-                
-<!-- Enhanced Actions -->
-<td class="px-6 py-4">
-    <div class="flex items-center justify-center">
-        <!-- Single Analysis Button -->
-        <button onclick="dashboard.openLeadDetails && dashboard.openLeadDetails('${lead.id}')" 
-                class="action-button relative inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
-            <svg class="relative w-4 h-4 mr-2 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-            </svg>
-            <span class="relative">Analysis</span>
-        </button>
-                            
-                            <!-- Enhanced Action Menu -->
-                            <div class="action-menu absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200/60 z-20 opacity-0 scale-95 transform transition-all duration-300 origin-top-right backdrop-blur-sm"
-                                 id="action-menu-${lead.id}">
-                                <div class="py-2">
-                                    <button onclick="dashboard.exportLead && dashboard.exportLead('${lead.id}')" 
-                                            class="flex items-center w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                                        <svg class="w-4 h-4 mr-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                        </svg>
-                                        Export Lead
-                                    </button>
-                                    <button onclick="dashboard.duplicateLead && dashboard.duplicateLead('${lead.id}')" 
-                                            class="flex items-center w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                                        <svg class="w-4 h-4 mr-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                        </svg>
-                                        Duplicate Analysis
-                                    </button>
-                                    <div class="border-t border-slate-200 my-1"></div>
-                                    <button onclick="dashboard.deleteLead('${lead.id}')" 
-                                            class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
-                                        <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                        Delete Lead
-                                    </button>
+                <!-- Analysis Type - Centered -->
+                <td class="px-6 py-4 border-r border-slate-100/60" style="width: 180px;">
+                    <div class="flex items-center justify-center">
+                        <div class="relative analysis-group">
+                            <div class="absolute -inset-0.5 bg-gradient-to-r ${analysisConfig.gradient} rounded-lg blur opacity-0 analysis-group:hover:opacity-100 transition duration-300"></div>
+                            <div class="relative inline-flex items-center px-4 py-2.5 rounded-lg text-sm font-semibold ${analysisConfig.class} shadow-sm hover:shadow-md transition-all duration-200 border-0">
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-5 h-5 flex items-center justify-center ${analysisConfig.iconBg} rounded-full">
+                                        <span class="text-xs">${analysisConfig.icon}</span>
+                                    </div>
+                                    <span>${analysisConfig.label}</span>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </td>
+                
+                <!-- Date - Centered -->
+                <td class="px-6 py-4 border-r border-slate-100/60" style="width: 140px;">
+                    <div class="text-center">
+                        <div class="text-sm text-slate-900">${formattedDate.date}</div>
+                        <div class="text-xs text-slate-500">${formattedDate.time}</div>
+                    </div>
+                </td>
+                
+                <!-- Actions - Centered -->
+                <td class="px-6 py-4" style="width: 140px;">
+                    <div class="flex items-center justify-center">
+                        <button onclick="dashboard.openLeadDetails && dashboard.openLeadDetails('${lead.id}')" 
+                                class="action-button relative inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                title="View detailed analysis">
+                            <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
+                            <svg class="relative w-4 h-4 mr-2 transition-transform group-hover:rotate-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            <span class="relative">Analysis</span>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -397,58 +367,10 @@ return `
     }
 
     // ===============================================================================
-    // ENHANCED LOADING STATE
+    // TABLE STRUCTURE - FIXED LAYOUT
     // ===============================================================================
 
-    renderLoadingState(tableBody) {
-        const loadingRows = Array.from({ length: 5 }, (_, i) => `
-            <tr class="animate-pulse">
-                <td class="px-6 py-4">
-                    <div class="w-4 h-4 bg-slate-200 rounded"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 bg-slate-200 rounded-full"></div>
-                        <div class="flex-1">
-                            <div class="w-24 h-4 bg-slate-200 rounded mb-2"></div>
-                            <div class="w-16 h-3 bg-slate-200 rounded"></div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-20 h-6 bg-slate-200 rounded mx-auto"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-full h-8 bg-slate-200 rounded"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-16 h-6 bg-slate-200 rounded"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-16 h-4 bg-slate-200 rounded"></div>
-                </td>
-                <td class="px-6 py-4">
-                    <div class="w-20 h-8 bg-slate-200 rounded mx-auto"></div>
-                </td>
-            </tr>
-        `).join('');
-        
-        tableBody.innerHTML = loadingRows;
-    }
-
-    renderEmptyState(tableBody) {
-        tableBody.innerHTML = '';
-        const emptyState = document.getElementById('empty-state');
-        if (emptyState) {
-            emptyState.classList.remove('hidden');
-        }
-    }
-
-    // ===============================================================================
-    // DOM STRUCTURE REPAIR
-    // ===============================================================================
-
-createTableStructureIfMissing() {
+    createTableStructureIfMissing() {
         const leadsContainer = document.querySelector('.leads-table-container');
         if (!leadsContainer) {
             console.error('❌ [LeadRenderer] Leads container not found - cannot create table structure');
@@ -457,18 +379,18 @@ createTableStructureIfMissing() {
         
         console.log('🔧 [LeadRenderer] Creating enhanced table structure...');
         
-const tableHTML = `
-    <table class="leads-table w-full border-separate border-spacing-0">
-        <thead class="bg-gradient-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10">
-            <tr class="border-b border-slate-200/60">
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Lead Profile</th>
-                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Platform</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Intelligence Score</th>
-                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Analysis Type</th>
-                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40">Date Added</th>
-                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
-            </tr>
-        </thead>
+        const tableHTML = `
+            <table class="leads-table w-full border-separate border-spacing-0">
+                <thead class="bg-gradient-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10">
+                    <tr class="border-b border-slate-200/60">
+                        <th class="pl-12 pr-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 280px;">Lead Profile</th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 160px;">Platform</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 240px;">Intelligence Score</th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 180px;">Analysis Type</th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 140px;">Date Added</th>
+                        <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider" style="width: 140px;">Actions</th>
+                    </tr>
+                </thead>
                 <tbody id="leads-table-body" class="divide-y divide-slate-200/60 bg-white">
                     <!-- Leads will be populated by JavaScript -->
                 </tbody>
@@ -480,87 +402,15 @@ const tableHTML = `
     }
 
     // ===============================================================================
-    // ENHANCED UI HELPERS
+    // UTILITY METHODS
     // ===============================================================================
 
-    updateBulkActionsVisibility(show) {
-        const toolbar = document.getElementById('bulk-actions-toolbar');
-        const selectionCount = document.getElementById('selection-count');
-        const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
-        
-        if (toolbar) {
-            if (show && selectedLeads.size > 0) {
-                toolbar.classList.remove('hidden');
-                if (selectionCount) {
-                    selectionCount.textContent = `${selectedLeads.size} selected`;
-                }
-            } else {
-                toolbar.classList.add('hidden');
-            }
-        }
+    getRowAccentColor(score) {
+        if (score >= 90) return 'border-emerald-400';
+        if (score >= 75) return 'border-blue-400';
+        if (score >= 60) return 'border-amber-400';
+        return 'border-slate-300';
     }
-
-    updateLeadCounts(visibleCount, totalCount) {
-        const resultsCount = document.getElementById('results-count');
-        const totalCountEl = document.getElementById('total-count');
-        const leadCountDisplay = document.getElementById('lead-count-display');
-        
-        // Get actual total from state
-        const allLeads = this.stateManager.getState('leads') || [];
-        const actualTotal = allLeads.length;
-        
-        if (resultsCount) {
-            resultsCount.textContent = `Showing ${visibleCount} leads`;
-        }
-        
-        if (totalCountEl) {
-            totalCountEl.textContent = `Total: ${actualTotal}`;
-        }
-        
-        if (leadCountDisplay) {
-            if (actualTotal === 0) {
-                leadCountDisplay.textContent = 'No leads in pipeline';
-            } else if (actualTotal === 1) {
-                leadCountDisplay.textContent = '1 lead in pipeline';
-            } else {
-                leadCountDisplay.textContent = `${actualTotal} leads in pipeline`;
-            }
-        }
-    }
-
-    updateSelectionUI() {
-        const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
-        const checkboxes = document.querySelectorAll('.lead-checkbox');
-        const selectAllCheckbox = document.getElementById('select-all-checkbox');
-        
-        // Update individual checkboxes
-        checkboxes.forEach(checkbox => {
-            const leadId = checkbox.dataset.leadId;
-            checkbox.checked = selectedLeads.has(leadId);
-        });
-        
-        // Update select all checkbox
-        if (selectAllCheckbox) {
-            const totalLeads = checkboxes.length;
-            if (totalLeads === 0) {
-                selectAllCheckbox.indeterminate = false;
-                selectAllCheckbox.checked = false;
-            } else if (selectedLeads.size === totalLeads) {
-                selectAllCheckbox.indeterminate = false;
-                selectAllCheckbox.checked = true;
-            } else if (selectedLeads.size > 0) {
-                selectAllCheckbox.indeterminate = true;
-                selectAllCheckbox.checked = false;
-            } else {
-                selectAllCheckbox.indeterminate = false;
-                selectAllCheckbox.checked = false;
-            }
-        }
-    }
-
-    // ===============================================================================
-    // ENHANCED UTILITY METHODS
-    // ===============================================================================
 
     formatDateProfessional(dateString) {
         if (!dateString) return { date: 'Unknown', time: '' };
@@ -620,18 +470,109 @@ const tableHTML = `
         return num.toString();
     }
 
-    getRowAccentColor(score) {
-    if (score >= 90) return 'border-emerald-400';
-    if (score >= 75) return 'border-blue-400';
-    if (score >= 60) return 'border-amber-400';
-    return 'border-slate-300';
-}
+    // ===============================================================================
+    // UI HELPERS
+    // ===============================================================================
+
+    updateBulkActionsVisibility(show) {
+        const toolbar = document.getElementById('bulk-actions-toolbar');
+        const selectionCount = document.getElementById('selection-count');
+        const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
+        
+        if (toolbar) {
+            if (show && selectedLeads.size > 0) {
+                toolbar.classList.remove('hidden');
+                if (selectionCount) {
+                    selectionCount.textContent = `${selectedLeads.size} selected`;
+                }
+            } else {
+                toolbar.classList.add('hidden');
+            }
+        }
+    }
+
+    updateLeadCounts(visibleCount, totalCount) {
+        const resultsCount = document.getElementById('results-count');
+        const totalCountEl = document.getElementById('total-count');
+        const leadCountDisplay = document.getElementById('lead-count-display');
+        
+        const allLeads = this.stateManager.getState('leads') || [];
+        const actualTotal = allLeads.length;
+        
+        if (resultsCount) {
+            resultsCount.textContent = `Showing ${visibleCount} leads`;
+        }
+        
+        if (totalCountEl) {
+            totalCountEl.textContent = `Total: ${actualTotal}`;
+        }
+        
+        if (leadCountDisplay) {
+            if (actualTotal === 0) {
+                leadCountDisplay.textContent = 'No leads in pipeline';
+            } else if (actualTotal === 1) {
+                leadCountDisplay.textContent = '1 lead in pipeline';
+            } else {
+                leadCountDisplay.textContent = `${actualTotal} leads in pipeline`;
+            }
+        }
+    }
+
+    updateSelectionUI() {
+        const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
+        const checkboxes = document.querySelectorAll('.lead-checkbox');
+        
+        checkboxes.forEach(checkbox => {
+            const leadId = checkbox.dataset.leadId;
+            checkbox.checked = selectedLeads.has(leadId);
+        });
+    }
+
+    renderLoadingState(tableBody) {
+        const loadingRows = Array.from({ length: 5 }, (_, i) => `
+            <tr class="animate-pulse">
+                <td class="pl-12 pr-6 py-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-slate-200 rounded-full"></div>
+                        <div class="flex-1">
+                            <div class="w-24 h-4 bg-slate-200 rounded mb-2"></div>
+                            <div class="w-16 h-3 bg-slate-200 rounded"></div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-20 h-6 bg-slate-200 rounded mx-auto"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-full h-8 bg-slate-200 rounded"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-16 h-6 bg-slate-200 rounded mx-auto"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-16 h-4 bg-slate-200 rounded mx-auto"></div>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="w-20 h-8 bg-slate-200 rounded mx-auto"></div>
+                </td>
+            </tr>
+        `).join('');
+        
+        tableBody.innerHTML = loadingRows;
+    }
+
+renderEmptyState(tableBody) {
+        tableBody.innerHTML = '';
+        const emptyState = document.getElementById('empty-state');
+        if (emptyState) {
+            emptyState.classList.remove('hidden');
+        }
+    }
 
     // ===============================================================================
     // LEGACY COMPATIBILITY METHODS
     // ===============================================================================
 
-    // Methods required by dashboard.js legacy compatibility
     selectLead(checkbox) {
         const leadId = checkbox.dataset.leadId || checkbox.getAttribute('data-lead-id');
         const isChecked = checkbox.checked;
@@ -655,7 +596,6 @@ const tableHTML = `
     }
 
     searchLeads(term) {
-        // Legacy method - let the dashboard handle search
         console.log('🔍 [LeadRenderer] Search term:', term);
         if (window.dashboard && window.dashboard.filterLeadsBySearch) {
             window.dashboard.filterLeadsBySearch(term);
@@ -663,7 +603,6 @@ const tableHTML = `
     }
 
     filterLeads(filter) {
-        // Legacy method - let the dashboard handle filtering
         console.log('🔍 [LeadRenderer] Filter:', filter);
         if (window.dashboard && window.dashboard.applyLeadFilter) {
             window.dashboard.applyLeadFilter(filter);
@@ -672,12 +611,10 @@ const tableHTML = `
 
     editMessage(leadId) {
         console.log('✏️ [LeadRenderer] Edit message for lead:', leadId);
-        // Legacy method placeholder
     }
 
     saveEditedMessage(leadId) {
         console.log('💾 [LeadRenderer] Save message for lead:', leadId);
-        // Legacy method placeholder
     }
 
     // ===============================================================================
@@ -783,7 +720,7 @@ const tableHTML = `
         if (tableBody) {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
+                    <td colspan="6" class="px-6 py-12 text-center">
                         <div class="flex flex-col items-center space-y-3">
                             <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                                 <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -806,14 +743,199 @@ const tableHTML = `
     }
 
     // ===============================================================================
+    // ADVANCED FEATURES
+    // ===============================================================================
+
+    highlightSearchTerm(text, searchTerm) {
+        if (!searchTerm || !text) return text;
+        
+        const regex = new RegExp(`(${searchTerm})`, 'gi');
+        return text.replace(regex, '<mark class="bg-yellow-200 text-yellow-900 px-1 rounded">$1</mark>');
+    }
+
+    sortLeads(leads, sortBy, sortOrder = 'desc') {
+        if (!leads || leads.length === 0) return [];
+        
+        const sortedLeads = [...leads];
+        
+        sortedLeads.sort((a, b) => {
+            let aValue, bValue;
+            
+            switch (sortBy) {
+                case 'username':
+                    aValue = (a.username || '').toLowerCase();
+                    bValue = (b.username || '').toLowerCase();
+                    break;
+                case 'platform':
+                    aValue = a.platform || '';
+                    bValue = b.platform || '';
+                    break;
+                case 'score':
+                    aValue = a.score || 0;
+                    bValue = b.score || 0;
+                    break;
+                case 'date':
+                    aValue = new Date(a.updated_at || a.created_at);
+                    bValue = new Date(b.updated_at || b.created_at);
+                    break;
+                case 'followers':
+                    aValue = a.followers_count || 0;
+                    bValue = b.followers_count || 0;
+                    break;
+                default:
+                    aValue = new Date(a.updated_at || a.created_at);
+                    bValue = new Date(b.updated_at || b.created_at);
+            }
+            
+            if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        return sortedLeads;
+    }
+
+    // ===============================================================================
+    // BULK OPERATIONS
+    // ===============================================================================
+
+    selectAllVisibleLeads() {
+        const visibleRows = document.querySelectorAll('#leads-table-body tr[data-lead-id]');
+        const selectedLeads = new Set();
+        
+        visibleRows.forEach(row => {
+            const leadId = row.dataset.leadId;
+            if (leadId) {
+                selectedLeads.add(leadId);
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                if (checkbox) checkbox.checked = true;
+            }
+        });
+        
+        this.stateManager.setState('selectedLeads', selectedLeads);
+        this.updateSelectionUI();
+        this.updateBulkActionsVisibility(true);
+        
+        console.log('✅ [LeadRenderer] All visible leads selected:', selectedLeads.size);
+    }
+
+    clearAllSelections() {
+        const selectedLeads = new Set();
+        this.stateManager.setState('selectedLeads', selectedLeads);
+        
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        this.updateBulkActionsVisibility(false);
+        console.log('🧹 [LeadRenderer] All selections cleared');
+    }
+
+    getSelectedLeadsData() {
+        const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
+        const allLeads = this.stateManager.getState('leads') || [];
+        
+        return allLeads.filter(lead => selectedLeads.has(lead.id));
+    }
+
+    // ===============================================================================
+    // PERFORMANCE OPTIMIZATIONS
+    // ===============================================================================
+
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    createVirtualizedRenderer(leads, containerHeight = 600, rowHeight = 80) {
+        const visibleRows = Math.ceil(containerHeight / rowHeight);
+        const buffer = 5;
+        
+        return {
+            totalRows: leads.length,
+            visibleRows: visibleRows + buffer,
+            rowHeight,
+            
+            getVisibleRange(scrollTop) {
+                const startIndex = Math.floor(scrollTop / rowHeight);
+                const endIndex = Math.min(startIndex + visibleRows + buffer, leads.length);
+                
+                return {
+                    start: Math.max(0, startIndex - buffer),
+                    end: endIndex,
+                    leads: leads.slice(Math.max(0, startIndex - buffer), endIndex)
+                };
+            }
+        };
+    }
+
+    // ===============================================================================
+    // ACCESSIBILITY ENHANCEMENTS
+    // ===============================================================================
+
+    addAccessibilityAttributes() {
+        const table = document.querySelector('.leads-table');
+        if (table) {
+            table.setAttribute('role', 'table');
+            table.setAttribute('aria-label', 'Lead intelligence pipeline data');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.target.closest('.leads-table')) {
+                this.handleKeyboardNavigation(e);
+            }
+        });
+    }
+
+    handleKeyboardNavigation(event) {
+        const { key, target } = event;
+        const currentRow = target.closest('tr');
+        
+        if (!currentRow) return;
+        
+        switch (key) {
+            case 'ArrowDown':
+                event.preventDefault();
+                const nextRow = currentRow.nextElementSibling;
+                if (nextRow) {
+                    const firstInput = nextRow.querySelector('input, button');
+                    if (firstInput) firstInput.focus();
+                }
+                break;
+                
+            case 'ArrowUp':
+                event.preventDefault();
+                const prevRow = currentRow.previousElementSibling;
+                if (prevRow) {
+                    const firstInput = prevRow.querySelector('input, button');
+                    if (firstInput) firstInput.focus();
+                }
+                break;
+                
+            case 'Space':
+                if (target.type === 'checkbox') {
+                    event.preventDefault();
+                    target.checked = !target.checked;
+                    target.dispatchEvent(new Event('change'));
+                }
+                break;
+        }
+    }
+
+    // ===============================================================================
     // CLEANUP
     // ===============================================================================
 
     cleanup() {
-        // Clear caches
         this.renderCache.clear();
         this.dateFormatCache.clear();
-        
         console.log('🧹 [LeadRenderer] Cleanup completed');
     }
 }
@@ -822,7 +944,6 @@ const tableHTML = `
 // GLOBAL EXPORT
 // ===============================================================================
 
-// Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = LeadRenderer;
 } else if (typeof window !== 'undefined') {
