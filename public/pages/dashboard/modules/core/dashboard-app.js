@@ -367,15 +367,24 @@ async setupInitialData() {
                 const leadManager = this.container.get('leadManager');
                 return leadManager.loadDashboardData();
             },
-            toggleActionMenu: (leadId, button) => {
+toggleActionMenu: (leadId, button) => {
                 const menu = button.nextElementSibling;
                 if (menu) {
-                    menu.classList.toggle('show');
-                    document.querySelectorAll('.action-menu.show').forEach(m => {
-                        if (m !== menu) m.classList.remove('show');
+                    const isVisible = menu.classList.contains('opacity-100');
+                    
+                    // Close all other menus first
+                    document.querySelectorAll('.action-menu').forEach(m => {
+                        m.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                        m.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
                     });
+                    
+                    // Toggle current menu
+                    if (!isVisible) {
+                        menu.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                        menu.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+                    }
                 }
-},
+            },
             showBulkActions: () => {
                 // Toggle bulk selection mode
                 const toolbar = document.getElementById('bulk-actions-toolbar');
@@ -419,6 +428,58 @@ async setupInitialData() {
                 if (currentPage < totalPages) {
                     stateManager.setState('currentPage', currentPage + 1);
                     this.updatePagination();
+                }
+},
+            // Missing action functions from the HTML
+            copyUsername: (username) => {
+                navigator.clipboard.writeText(username).then(() => {
+                    console.log(`📋 [Dashboard] Username copied: ${username}`);
+                    if (window.OsliraApp?.showMessage) {
+                        window.OsliraApp.showMessage(`Username @${username} copied to clipboard`, 'success');
+                    }
+                }).catch(err => {
+                    console.error('❌ [Dashboard] Failed to copy username:', err);
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = username;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                });
+            },
+            openProfile: (profileUrl) => {
+                window.open(profileUrl, '_blank');
+                console.log(`🔗 [Dashboard] Opened profile: ${profileUrl}`);
+            },
+            exportLead: (leadId) => {
+                const stateManager = this.container.get('stateManager');
+                const leads = stateManager.getState('leads') || [];
+                const lead = leads.find(l => l.id === leadId);
+                
+                if (lead) {
+                    const exportData = {
+                        username: lead.username,
+                        full_name: lead.full_name,
+                        platform: lead.platform,
+                        followers_count: lead.followers_count,
+                        intelligence_score: lead.intelligence_score,
+                        analysis_type: lead.analysis_type,
+                        created_at: lead.created_at
+                    };
+                    
+                    const dataStr = JSON.stringify(exportData, null, 2);
+                    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                    const url = URL.createObjectURL(dataBlob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `lead-${lead.username}-${new Date().toISOString().split('T')[0]}.json`;
+                    link.click();
+                    URL.revokeObjectURL(url);
+                    
+                    console.log(`📥 [Dashboard] Lead exported: ${lead.username}`);
+                } else {
+                    console.error(`❌ [Dashboard] Lead not found for export: ${leadId}`);
                 }
             },
             editMessage: (leadId) => this.editMessage(leadId),
