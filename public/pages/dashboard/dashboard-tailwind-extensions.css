@@ -441,14 +441,39 @@
         @apply bg-gradient-to-r from-slate-400 to-slate-600;
     }
 
-    /* Action menu animations */
-    .action-menu {
-        @apply transform opacity-0 scale-95 transition-all duration-200 origin-top-right;
-    }
-    
-    .action-menu.show {
-        @apply opacity-100 scale-100;
-    }
+/* Enhanced action menu animations */
+.action-menu {
+    @apply transform opacity-0 scale-95 transition-all duration-300 origin-top-right;
+}
+
+.action-menu.show {
+    @apply opacity-100 scale-100;
+}
+
+/* Shimmer animation for score bars */
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(200%); }
+}
+
+.animate-shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Enhanced platform badge hover effects */
+.platform-badge-glow {
+    @apply relative overflow-hidden;
+}
+
+.platform-badge-glow:before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 transition-transform duration-700;
+    transform: translateX(-100%);
+}
+
+.platform-badge-glow:hover:before {
+    transform: translateX(200%);
+}
 
     /* Professional badge styles */
     .platform-badge {
