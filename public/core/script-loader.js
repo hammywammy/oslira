@@ -65,9 +65,10 @@ class OsliraScriptLoader {
 
 getDependencies() {
     return {
-        'pre-core': [
-            '/core/env-manager.js'
-        ],
+'pre-core': [
+    '/core/env-manager.js',
+    '/env-config.js'  // ADD THIS - all pages need environment config
+]
         
         core: {
             // External Libraries FIRST
@@ -155,43 +156,47 @@ getDependencies() {
 }
         },
         
-        // Page-specific dependencies
-        pages: {
-        
-'dashboard': {
-    scripts: [
-        '/pages/dashboard/modules/core/event-bus.js',
-        '/pages/dashboard/modules/core/state-manager.js', 
-        '/pages/dashboard/modules/core/dependency-container.js',
-        '/pages/dashboard/modules/core/dashboard-app.js',
-        '/core/sidebar/sidebar-manager.js',
-        '/pages/dashboard/modules/analysis/analysis-queue.js',
-        '/pages/dashboard/modules/business/business-manager.js',
-        '/pages/dashboard/modules/leads/lead-manager.js',
-        '/pages/dashboard/modules/leads/lead-renderer.js',
-        '/pages/dashboard/modules/realtime/realtime-manager.js',
-        '/pages/dashboard/modules/stats/stats-calculator.js',
-        '/pages/dashboard/modules/ui/modal-manager.js'
-    ],
-    styles: ['/pages/dashboard/dashboard.css'],
-    requiresAuth: true,
-    enableTailwind: true
-},
-            
-            'auth': {
-                scripts: [],
-                styles: ['/pages/auth/auth.css'],
-                requiresAuth: false,
-                enableTailwind: true  // Enable for auth pages too
-            },
-            
-            'onboarding': {
-                scripts: ['/pages/onboarding/onboarding.js'],
-                styles: ['/pages/onboarding/onboarding.css'],
-                requiresAuth: true,
-                enableTailwind: true
-            },
-            
+
+    pages: {
+    'dashboard': {
+        scripts: [
+            '/pages/dashboard/modules/core/event-bus.js',
+            '/pages/dashboard/modules/core/state-manager.js', 
+            '/pages/dashboard/modules/core/dependency-container.js',
+            '/pages/dashboard/modules/core/dashboard-app.js',
+            '/core/sidebar/sidebar-manager.js',
+            '/pages/dashboard/modules/analysis/analysis-queue.js',
+            '/pages/dashboard/modules/business/business-manager.js',
+            '/pages/dashboard/modules/leads/lead-manager.js',
+            '/pages/dashboard/modules/leads/lead-renderer.js',
+            '/pages/dashboard/modules/realtime/realtime-manager.js',
+            '/pages/dashboard/modules/stats/stats-calculator.js',
+            '/pages/dashboard/modules/ui/modal-manager.js'
+        ],
+        styles: [
+            '/pages/dashboard/dashboard.css',
+            '/pages/dashboard/dashboard-tailwind-extensions.css'
+        ],
+        requiresAuth: true,
+        enableTailwind: true
+    },
+    
+    'home': {
+        scripts: ['/pages/home/home.js', '/core/footer/footer-manager.js'],
+        styles: [
+            '/pages/home/home.css',
+            '/core/footer/footer.css'
+        ],
+        requiresAuth: false,
+        enableTailwind: true
+    },
+    
+    'onboarding': {
+        scripts: ['/pages/onboarding/onboarding.js'],
+        styles: ['/pages/onboarding/onboarding.css'],
+        requiresAuth: true,
+        enableTailwind: true
+    },        
             // Other pages...
             'analytics': {
                 scripts: ['/pages/analytics/analytics.js'],
@@ -212,13 +217,6 @@ getDependencies() {
                 scripts: ['/pages/subscription/subscription.js'],
                 styles: ['/pages/subscription/subscription.css'],
                 requiresAuth: true,
-                enableTailwind: true
-            },
-            
-        'home': {
-                scripts: ['/core/footer/footer-manager.js'],
-                styles: ['/core/footer/footer.css'],
-                requiresAuth: false,
                 enableTailwind: true
             },
             
@@ -292,9 +290,9 @@ console.log(`📚 [ScriptLoader] Page: ${this.currentPage}`);
         console.log('🔧 [ScriptLoader] Loading core dependencies...');
         
         const coreScripts = this.dependencies.core;
-        
+
 // Load independent scripts in parallel
-const independentScripts = ['supabase', 'sentry', 'alert-system', 'tailwind-config'];
+const independentScripts = ['supabase', 'sentry', 'alert-system', 'tailwind-config', 'tailwind-cdn'];
 const dependentScripts = [
     'staging-guard', 'config-manager', 'auth-manager', 'simple-app'
 ];
