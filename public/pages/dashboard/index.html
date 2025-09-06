@@ -307,8 +307,14 @@
                                     <option value="deep">Deep Analysis</option>
                                 </select>
                                 
-                                <!-- Clear Filters -->
-                                <button id="clear-filters" class="px-3 py-2.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors duration-200">
+<!-- Clear Filters - Enhanced with functionality and better styling -->
+                                <button onclick="dashboard.clearFilters()" 
+                                        id="clear-filters" 
+                                        class="px-3 py-2.5 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        title="Clear all filters and search">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
                                     Clear
                                 </button>
                             </div>
