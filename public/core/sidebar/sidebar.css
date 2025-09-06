@@ -220,12 +220,36 @@
 .credits-collapsed {
     background: linear-gradient(135deg, #3b82f6, #8b5cf6);
     color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
     font-weight: bold;
     text-align: center;
-    min-width: 40px;
+    min-width: 44px;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+    position: relative;
+    overflow: hidden;
+}
+
+.credits-collapsed::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+}
+
+.credits-collapsed::after {
+    content: '⚡';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    font-size: 0.625rem;
+    opacity: 0.8;
 }
 
 /* =============================================================================
