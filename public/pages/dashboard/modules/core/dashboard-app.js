@@ -365,6 +365,21 @@ async preResolveAsyncDependencies() {
                         if (m !== menu) m.classList.remove('show');
                     });
                 }
+},
+            showBulkActions: () => {
+                // Toggle bulk selection mode
+                const toolbar = document.getElementById('bulk-actions-toolbar');
+                const isVisible = !toolbar.classList.contains('hidden');
+                
+                if (isVisible) {
+                    // Hide bulk actions and clear selection
+                    toolbar.classList.add('hidden');
+                    const leadManager = this.container.get('leadManager');
+                    leadManager.clearSelection();
+                } else {
+                    // Show bulk actions
+                    toolbar.classList.remove('hidden');
+                }
             },
             editMessage: (leadId) => this.editMessage(leadId),
             saveEditedMessage: (leadId) => this.saveEditedMessage(leadId),
