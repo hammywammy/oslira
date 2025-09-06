@@ -150,34 +150,25 @@ getDependencies() {
         
         // Page-specific dependencies
         pages: {
-            'dashboard': {
-                scripts: [
-                    // Core infrastructure FIRST (dependency order critical)
-                    '/pages/dashboard/modules/core/event-bus.js',
-                    '/pages/dashboard/modules/core/state-manager.js', 
-                    '/pages/dashboard/modules/core/dependency-container.js',
-                    '/pages/dashboard/modules/core/dashboard-app.js',
-                    
-                    // UI Components (load before feature modules)
-                    '/core/sidebar/sidebar-manager.js',
-                    
-                    // Feature modules (parallel loading safe)
-                    '/pages/dashboard/modules/analysis/analysis-queue.js',
-                    '/pages/dashboard/modules/business/business-manager.js',
-                    '/pages/dashboard/modules/leads/lead-manager.js',
-                    '/pages/dashboard/modules/leads/lead-renderer.js',
-                    '/pages/dashboard/modules/realtime/realtime-manager.js',
-                    '/pages/dashboard/modules/stats/stats-calculator.js',
-                    '/pages/dashboard/modules/ui/modal-manager.js',
-                    
-                    // Main controller LAST
-                    '/pages/dashboard/dashboard.js'
-                ],
-                styles: ['/pages/dashboard/dashboard.css'],
-                requiresAuth: true,
-                // ENABLE TAILWIND FOR DASHBOARD
-                enableTailwind: true
-            },
+'dashboard': {
+    scripts: [
+        '/pages/dashboard/modules/core/event-bus.js',
+        '/pages/dashboard/modules/core/state-manager.js', 
+        '/pages/dashboard/modules/core/dependency-container.js',
+        '/pages/dashboard/modules/core/dashboard-app.js',
+        '/core/sidebar/sidebar-manager.js',
+        '/pages/dashboard/modules/analysis/analysis-queue.js',
+        '/pages/dashboard/modules/business/business-manager.js',
+        '/pages/dashboard/modules/leads/lead-manager.js',
+        '/pages/dashboard/modules/leads/lead-renderer.js',
+        '/pages/dashboard/modules/realtime/realtime-manager.js',
+        '/pages/dashboard/modules/stats/stats-calculator.js',
+        '/pages/dashboard/modules/ui/modal-manager.js'
+    ],
+    styles: ['/pages/dashboard/dashboard.css'],
+    requiresAuth: true,
+    enableTailwind: true
+},
             
             'auth': {
                 scripts: [],
@@ -257,11 +248,11 @@ getDependencies() {
                 workerUrl: window.OsliraEnv.WORKER_URL
             };
             
-            // Set current page from centralized detection
-            this.currentPage = window.OsliraEnv.CURRENT_PAGE;
-            
-            console.log(`📚 [ScriptLoader] Environment: ${this.config.environment}`);
-            console.log(`📚 [ScriptLoader] Page: ${this.currentPage}`);
+// Set current page from centralized detection
+this.currentPage = window.OsliraEnv.currentPage;
+
+console.log(`📚 [ScriptLoader] Environment: ${this.config.environment}`);
+console.log(`📚 [ScriptLoader] Page: ${this.currentPage}`);
         }
     }
     
@@ -318,19 +309,21 @@ const dependentScripts = [
 // File: public/core/script-loader.js
 // Add this method after loadPageDependencies() around line 150-200
 
-async loadPageDependencies(pageName) {
-    console.log(`📄 [ScriptLoader] Loading page dependencies: ${pageName}`);
+// =============================================================================
+// PAGE-SPECIFIC LOADING
+// =============================================================================
+
+async loadPageDependencies() {
+    console.log(`📄 [ScriptLoader] Loading page dependencies: ${this.currentPage}`);
     
-    const pageConfig = this.dependencies.pages[pageName];
+    const pageConfig = this.dependencies.pages[this.currentPage];
     if (!pageConfig || !pageConfig.scripts) {
-        console.log(`📄 [ScriptLoader] No page-specific dependencies for: ${pageName}`);
+        console.log(`📄 [ScriptLoader] No page-specific dependencies for: ${this.currentPage}`);
         return;
     }
 
-    const scripts = pageConfig.scripts;
-    
     // Prevent duplicate dashboard.js loading
-    const filteredScripts = scripts.filter(script => {
+    const scripts = pageConfig.scripts.filter(script => {
         const scriptName = script.src || script;
         if (scriptName.includes('dashboard.js') && window.DashboardInitializer) {
             console.log(`⚠️ [ScriptLoader] Skipping duplicate dashboard.js - already loaded`);
@@ -339,9 +332,109 @@ async loadPageDependencies(pageName) {
         return true;
     });
     
-    await this.loadScriptsInOrder(filteredScripts, 'page');
+    // Apply Tailwind customizations if enabled for this page
+    if (pageConfig.enableTailwind) {
+        console.log(`🎨 [ScriptLoader] Initializing Tailwind for page: ${this.currentPage}`);
+        if (window.TailwindManager) {
+            try {
+                await window.TailwindManager.initForPage(this.currentPage);
+                console.log(`✅ [ScriptLoader] Tailwind initialized for page: ${this.currentPage}`);
+            } catch (error) {
+                console.warn(`⚠️ [ScriptLoader] Tailwind initialization failed:`, error);
+            }
+        }
+        
+        // Apply page-specific Tailwind customizations
+        this.applyPageTailwindCustomizations(this.currentPage);
+    }
     
-    console.log(`✅ [ScriptLoader] Page dependencies loaded: ${pageName}`);
+    // Load page stylesheets
+    if (pageConfig.styles) {
+        for (const styleUrl of pageConfig.styles) {
+            try {
+                await this.loadStylesheet(styleUrl);
+            } catch (error) {
+                console.warn(`⚠️ [ScriptLoader] Failed to load stylesheet: ${styleUrl}`, error);
+            }
+        }
+    }
+    
+    // Load additional libraries
+    if (pageConfig.additionalLibraries) {
+        for (const libName of pageConfig.additionalLibraries) {
+            const lib = this.dependencies.libraries[libName];
+            if (lib) {
+                try {
+                    await this.loadScript(lib, libName);
+                    console.log(`✅ [ScriptLoader] Library loaded: ${libName}`);
+                } catch (error) {
+                    console.warn(`⚠️ [ScriptLoader] Failed to load library: ${libName}`, error);
+                }
+            }
+        }
+    }
+    
+    // Load page scripts sequentially
+    for (const script of scripts) {
+        try {
+            const scriptConfig = typeof script === 'string' ? { url: script } : script;
+            const scriptName = `page-${scriptConfig.url}`;
+            await this.loadScript(scriptConfig, scriptName);
+        } catch (error) {
+            console.error(`❌ [ScriptLoader] Failed to load page script:`, script, error);
+            // Don't throw - continue loading other scripts
+        }
+    }
+    
+    console.log(`✅ [ScriptLoader] Page dependencies loaded: ${this.currentPage}`);
+}
+
+applyPageTailwindCustomizations(pageName) {
+    console.log(`🎨 [ScriptLoader] Applying ${pageName} Tailwind customizations`);
+    
+    switch (pageName) {
+        case 'dashboard':
+            // Dashboard-specific Tailwind customizations
+            if (window.TailwindManager?.addCustomStyles) {
+                window.TailwindManager.addCustomStyles(`
+                    .dashboard-grid { 
+                        @apply grid grid-cols-1 lg:grid-cols-4 gap-6; 
+                    }
+                    .dashboard-card { 
+                        @apply bg-white rounded-lg shadow-sm border p-6; 
+                    }
+                    .leads-table { 
+                        @apply w-full border-collapse; 
+                    }
+                    .lead-row { 
+                        @apply hover:bg-slate-50 transition-colors; 
+                    }
+                    .lead-row.selected { 
+                        @apply bg-blue-50 border-blue-200; 
+                    }
+                `);
+            }
+            break;
+            
+        case 'analytics':
+            if (window.TailwindManager?.addCustomStyles) {
+                window.TailwindManager.addCustomStyles(`
+                    .chart-container { 
+                        @apply bg-white p-4 rounded-lg shadow-sm; 
+                    }
+                    .metric-card { 
+                        @apply bg-gradient-to-r from-blue-500 to-blue-600 text-white p-6 rounded-lg; 
+                    }
+                `);
+            }
+            break;
+            
+        default:
+            // No specific customizations
+            break;
+    }
+    
+    console.log(`✅ [ScriptLoader] ${pageName} Tailwind customizations applied`);
 }
 
 // =============================================================================
