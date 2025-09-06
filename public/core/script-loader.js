@@ -70,7 +70,7 @@ getDependencies() {
     '/env-config.js'  // ADD THIS - all pages need environment config
 ]
         
-        core: {
+        'core': {
             // External Libraries FIRST
             'supabase': {
                 url: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js',
