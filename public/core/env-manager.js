@@ -180,9 +180,13 @@ class OsliraEnvManager {
     get BASE_URL() { return this.origin; }
     get AUTH_CALLBACK_URL() { return this.authCallbackUrl; }
     
-    // Page getters - NEW CENTRALIZED API
-    get CURRENT_PAGE() { return this.currentPage; }
-    get PAGE_TYPE() { return this.pageType; }
+// Page getters - NEW CENTRALIZED  
+get CURRENT_PAGE() { return this.currentPage; }
+get PAGE_TYPE() { return this.pageType; }
+
+// Make properties directly accessible (for backward compatibility)
+get currentPage() { return this.currentPage; }
+get pageType() { return this.pageType; }
     get PATHNAME() { return this.pathname; }
     
     // Helper methods
