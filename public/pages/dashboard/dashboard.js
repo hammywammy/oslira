@@ -157,16 +157,82 @@ showAnalysisModal: (username) => {
         }
     }
 },
-            showBulkModal: () => this.app.showBulkModal(),
-            closeModal: (id) => this.app.closeModal(id),
+            showBulkModal: () => this.app.showBulkModal()},
+
+closeModal: (modalId) => {
+    console.log('❌ [Dashboard] Closing modal:', modalId);
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        
+        // Reset form if it's the analysis modal
+        if (modalId === 'analysisModal') {
+            const form = document.getElementById('analysisForm');
+            if (form) form.reset();
+        }
+        
+        console.log('✅ [Dashboard] Modal closed:', modalId);
+    }
+},
             refreshStats: () => this.app.refreshStats(),
             copyText: (elementId) => this.app.copyText(elementId),
             editMessage: (leadId) => this.app.editMessage(leadId),
             saveEditedMessage: (leadId) => this.app.saveEditedMessage(leadId),
             handleAnalysisTypeChange: () => this.app.handleAnalysisTypeChange(),
             handleFileUpload: (event) => this.app.handleFileUpload(event),
-            validateBulkForm: () => this.app.validateBulkForm(),
-            processAnalysisForm: (event) => this.app.processAnalysisForm(event),
+            validateBulkForm: () => this.app.validateBulkForm()},
+
+processAnalysisForm: async (event) => {
+    event.preventDefault();
+    console.log('📊 [Dashboard] Processing analysis form...');
+    
+    const formData = new FormData(event.target);
+    const data = {
+        businessId: formData.get('businessId'),
+        analysisType: formData.get('analysisType'),
+        username: formData.get('username')
+    };
+    
+    // Basic validation
+    if (!data.businessId || !data.analysisType || !data.username) {
+        alert('Please fill in all fields');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = event.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Analyzing...';
+    submitBtn.disabled = true;
+    
+    try {
+        // Make API call (replace with your actual API endpoint)
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${window.OsliraApp?.session?.access_token}`
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            alert('Analysis started! Results will appear in your dashboard.');
+            dashboard.closeModal('analysisModal');
+        } else {
+            const error = await response.text();
+            alert(`Analysis failed: ${error}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ [Dashboard] Analysis failed:', error);
+        alert('Analysis failed. Please try again.');
+    } finally {
+        // Reset button
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+},
             processBulkUpload: () => this.app.processBulkUpload(),
             deleteLead: (leadId) => this.app.deleteLead(leadId),
             selectLead: (checkbox) => this.app.selectLead(checkbox),
