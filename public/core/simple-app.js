@@ -71,9 +71,16 @@ if (isAuthenticated) {
     }
 }
         
-        // Define page requirements
+// Define page requirements
         const authRequiredPages = ['dashboard', 'onboarding', 'analytics', 'settings', 'subscription'];
         const authOnlyPages = ['auth', 'auth-callback'];
+        const publicPages = ['home']; // Pages where authenticated users can stay
+        
+        // Skip access control entirely for public pages
+        if (publicPages.includes(this.currentPage)) {
+            console.log('✅ [SimpleApp] Public page - no access control needed');
+            return;
+        }
         
         // If user needs auth but isn't authenticated
         if (authRequiredPages.includes(this.currentPage) && !isAuthenticated) {
@@ -82,7 +89,7 @@ if (isAuthenticated) {
             return;
         }
         
-        // If user is on auth page but already authenticated
+// If user is on auth page but already authenticated
         if (authOnlyPages.includes(this.currentPage) && isAuthenticated) {
             console.log('✅ [SimpleApp] User authenticated, checking onboarding status...');
             
