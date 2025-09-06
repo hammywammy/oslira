@@ -50,17 +50,18 @@ async function initializeApp() {
     await initializeSupabase();
     isInitialized = true;
     console.log("✅ Landing page initialized");
-  } catch (error) {
+ } catch (error) {
     console.error("❌ Landing page initialization failed:", error);
     Alert.error("Page failed to load properly", {
       actions: [{ label: "Refresh Page", action: "reload" }],
     });
     setupDemoMode();
   }
-  await this.initializeFooter();
+  
+  await initializeFooter();
 }
 
-async initializeFooter() {
+async function initializeFooter() {
     try {
         console.log('🦶 [Home] Initializing footer...');
         
