@@ -365,7 +365,33 @@ detectPageFallback() {
 async loadPageDependencies() {
     console.log(`📄 [ScriptLoader] Loading page dependencies: ${this.currentPage}`);
     
-    const pageConfig = this.dependencies.pages[this.currentPage];
+const pageConfig = this.dependencies.pages[this.currentPage] || {
+    scripts: [],
+    styles: [],
+    additionalLibraries: []
+};
+
+// CRITICAL: Add dashboard-specific script loading
+if (this.currentPage === 'dashboard') {
+    console.log('🔧 [ScriptLoader] Loading dashboard dependencies...');
+    
+    // Ensure DashboardApp is available before dashboard.js
+    const dashboardScripts = [
+        '/pages/dashboard/modules/core/event-bus.js',
+        '/pages/dashboard/modules/core/dashboard-app.js', // MUST load before dashboard.js
+        '/pages/dashboard/modules/ui/modal-manager.js',
+        '/pages/dashboard/dashboard.js' // This depends on DashboardApp
+    ];
+    
+    for (const script of dashboardScripts) {
+        try {
+            await this.loadScript({ src: script }, script);
+            console.log(`✅ [ScriptLoader] Dashboard script loaded: ${script}`);
+        } catch (error) {
+            console.error(`❌ [ScriptLoader] Failed to load dashboard script: ${script}`, error);
+        }
+    }
+}
     if (!pageConfig || !pageConfig.scripts) {
         console.log(`📄 [ScriptLoader] No page-specific dependencies for: ${this.currentPage}`);
         return;
