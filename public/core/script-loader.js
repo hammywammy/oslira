@@ -150,6 +150,18 @@ getDependencies() {
         
         // Page-specific dependencies
         pages: {
+'home': {
+    scripts: [
+        '/pages/home/home.js'
+    ],
+    styles: [
+        '/pages/home/home.css'
+    ],
+    requiresAuth: false,
+    enableTailwind: false,
+    additionalLibraries: []
+},
+            
 'dashboard': {
     scripts: [
         '/pages/dashboard/modules/core/event-bus.js',
