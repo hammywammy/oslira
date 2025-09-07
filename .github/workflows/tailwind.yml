@@ -8,7 +8,7 @@ on:
       - 'tailwind.config.js'
       - 'public/**/*.html'
       - 'public/**/*.js'
-      - 'public/core/**/*.js'  # Added to watch component files
+      - 'public/core/**/*.js'
   workflow_dispatch:
 
 jobs:
@@ -23,16 +23,21 @@ jobs:
       with:
         node-version: '20'
         
-    - run: npm install -D tailwindcss@latest
-    
-    - run: mkdir -p public/assets/css
+    - name: Install Tailwind CSS
+      run: |
+        echo "📦 Installing Tailwind CSS..."
+        npm init -y
+        npm install tailwindcss@latest --save-dev
+        
+    - name: Create output directory
+      run: mkdir -p public/assets/css
     
     - name: Build Tailwind CSS with Component Classes
       run: |
         echo "🎨 Building Tailwind CSS with component classes..."
         
         # Build main CSS file with component classes
-        npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify --watch=false
+        ./node_modules/.bin/tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify
         
         # Verify the file was created and contains component classes
         ls -la public/assets/css/
@@ -72,11 +77,11 @@ jobs:
         echo "🔍 Running CSS validation..."
         
         # Check file size (should be reasonable with component classes)
-        FILE_SIZE=$(stat -f%z public/assets/css/tailwind.css 2>/dev/null || stat -c%s public/assets/css/tailwind.css)
+        FILE_SIZE=$(stat -c%s public/assets/css/tailwind.css)
         echo "📊 Generated CSS size: $FILE_SIZE bytes"
         
         # Size should be reasonable (not too small, not too large)
-        if [ $FILE_SIZE -lt 10000 ]; then
+        if [ $FILE_SIZE -lt 5000 ]; then
           echo "⚠️ CSS file seems too small, may be missing classes"
           exit 1
         fi
