@@ -98,13 +98,6 @@ getDependencies() {
                 critical: false
             },
             
-            // ADD TAILWIND CONFIG MANAGER
-            'tailwind-config': {
-                url: '/../core/tailwind-config.js',
-                global: 'OsliraTailwind',
-                critical: false
-            },
-            
             // Core Systems
             'config-manager': {
                 url: '/../core/config-manager.js',
@@ -146,13 +139,7 @@ getDependencies() {
                 url: '/../core/simple-app.js',
                 global: 'OsliraApp',
                 critical: true
-            },
-
-'tailwind-local': {
-    url: '/public/assets/css/tailwind.css',
-    type: 'stylesheet',
-    critical: false
-}
+            }
         },
         
 
@@ -291,8 +278,8 @@ console.log(`📚 [ScriptLoader] Page: ${this.currentPage}`);
         
         const coreScripts = this.dependencies.core;
 
-// Load independent scripts in parallel
-const independentScripts = ['supabase', 'sentry', 'alert-system', 'tailwind-local'];
+
+const independentScripts = ['supabase', 'sentry', 'alert-system'];
 const dependentScripts = [
     'staging-guard', 'config-manager', 'auth-manager', 'simple-app'
 ];
@@ -447,6 +434,14 @@ if (this.currentPage === 'dashboard') {
     }
     
     console.log(`✅ [ScriptLoader] Page dependencies loaded: ${this.currentPage}`);
+
+     if (pageConfig.enableTailwind) {
+        console.log('🎨 [ScriptLoader] Loading Tailwind CSS...');
+        const tailwindScript = document.createElement('script');
+        tailwindScript.src = '/core/tailwind-loader.js';
+        tailwindScript.defer = true;
+        document.head.appendChild(tailwindScript);
+    }
 }
 
 applyPageTailwindCustomizations(pageName) {
@@ -503,9 +498,37 @@ applyPageTailwindCustomizations(pageName) {
     
 async loadScript(script, name) {
     return new Promise((resolve, reject) => {
+        // Handle CSS files differently from JS files
+        if (script.type === 'stylesheet' || name.includes('tailwind') || script.url?.endsWith('.css')) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = script.url || script;
+            link.id = script.id || name;
+            
+            link.onload = () => {
+                console.log(`✅ [ScriptLoader] ${name} stylesheet loaded successfully`);
+                this.loadedScripts.add(name);
+                resolve();
+            };
+            
+            link.onerror = (error) => {
+                console.error(`❌ [ScriptLoader] Failed to load stylesheet ${name}:`, error);
+                if (script.critical) {
+                    reject(new Error(`Critical stylesheet failed: ${name}`));
+                } else {
+                    console.warn(`⚠️ [ScriptLoader] Non-critical stylesheet failed, continuing: ${name}`);
+                    resolve();
+                }
+            };
+            
+            document.head.appendChild(link);
+            return;
+        }
+        
+        // Original script loading logic for JS files
         const scriptUrl = script.src || script.url || script;
         const scriptId = script.id || name;
-        const normalizedUrl = scriptUrl.startsWith('/') ? scriptUrl : `/${scriptUrl}`;
+        const normalizedUrl = scriptUrl.startsWith('/') ?
         
         // Multiple deduplication checks
         const isDuplicate = 
