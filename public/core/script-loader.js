@@ -181,15 +181,24 @@ getDependencies() {
         enableTailwind: true
     },
     
-    'home': {
-        scripts: ['/pages/home/home.js', '/core/footer/footer-manager.js'],
-        styles: [
-            '/pages/home/home.css',
-            '/core/footer/footer.css'
-        ],
-        requiresAuth: false,
-        enableTailwind: true
-    },
+'home': {
+    scripts: [
+        {
+            src: '/pages/home/home.js',
+            id: 'home-main'
+        },
+        {
+            src: '/core/footer/footer-manager.js',
+            id: 'footer-manager'
+        }
+    ],
+    styles: [
+        '/pages/home/home.css',
+        '/core/footer/footer.css'
+    ],
+    requiresAuth: false,
+    enableTailwind: true
+},
     
     'onboarding': {
         scripts: ['/pages/onboarding/onboarding.js'],
@@ -391,28 +400,6 @@ if (this.currentPage === 'dashboard') {
         } catch (error) {
             console.error(`❌ [ScriptLoader] Failed to load dashboard script: ${script}`, error);
         }
-    }
-}
-
-if (this.currentPage === 'home') {
-    console.log('🔧 [ScriptLoader] Loading home dependencies...');
-    
-    // Don't load home.js if it's already loaded to prevent duplicate supabaseClient
-    if (!this.loadedScripts.has('/pages/home/home.js')) {
-        const homeScripts = [
-            '/pages/home/home.js'
-        ];
-        
-        for (const script of homeScripts) {
-            try {
-                await this.loadScript({ url: script }, script);
-                console.log(`✅ [ScriptLoader] Home script loaded: ${script}`);
-            } catch (error) {
-                console.error(`❌ [ScriptLoader] Failed to load home script: ${script}`, error);
-            }
-        }
-    } else {
-        console.log('✅ [ScriptLoader] Home script already loaded, skipping');
     }
 }
     if (!pageConfig || !pageConfig.scripts) {
@@ -660,33 +647,118 @@ async waitForTailwind(timeout = 5000) {
     // SCRIPT LOADING UTILITIES
     // =============================================================================
     
-    async loadScript(scriptConfig, scriptName) {
-        if (this.loadedScripts.has(scriptName)) {
-            console.log(`⚡ [ScriptLoader] ${scriptName} already loaded`);
+async loadScript(script, name) {
+    return new Promise((resolve, reject) => {
+        const scriptUrl = script.src || script.url || script;
+        const scriptId = script.id || name;
+        const normalizedUrl = scriptUrl.startsWith('/') ? scriptUrl : `/${scriptUrl}`;
+        
+        // Multiple deduplication checks
+        const isDuplicate = 
+            this.loadedScripts.has(name) || 
+            this.loadedScripts.has(scriptUrl) || 
+            this.loadedScripts.has(normalizedUrl) ||
+            document.querySelector(`script[src="${scriptUrl}"]`) ||
+            document.querySelector(`script[src="${normalizedUrl}"]`) ||
+            (scriptId && document.querySelector(`script[data-script-id="${scriptId}"]`));
+            
+        if (isDuplicate) {
+            console.log(`⚠️ [ScriptLoader] Script already loaded: ${name} (${scriptUrl})`);
+            resolve();
             return;
         }
-        
-        if (this.loadingScripts.has(scriptName)) {
-            console.log(`⏳ [ScriptLoader] Waiting for ${scriptName}...`);
-            return await this.loadingScripts.get(scriptName);
+
+        // Handle different script types
+        if (typeof script === 'string') {
+            script = { url: script };
         }
+
+        // Skip if environment doesn't match
+        if (script.environments && !script.environments.includes(this.config.environment)) {
+            console.log(`⏭️ [ScriptLoader] Skipping ${name} (not for ${this.config.environment})`);
+            resolve();
+            return;
+        }
+
+        console.log(`🔄 [ScriptLoader] Loading ${name}...`);
+
+        const scriptElement = document.createElement('script');
+        scriptElement.src = scriptUrl;
         
-        const loadPromise = this.performScriptLoad(scriptConfig, scriptName);
-        this.loadingScripts.set(scriptName, loadPromise);
+        // Set attributes
+        if (script.defer) scriptElement.defer = true;
+        if (script.async) scriptElement.async = true;
+        if (script.type) scriptElement.type = script.type;
+        if (scriptId) scriptElement.setAttribute('data-script-id', scriptId);
         
-        try {
-            await loadPromise;
-            this.loadedScripts.add(scriptName);
-            this.loadingScripts.delete(scriptName);
-        } catch (error) {
-            this.loadingScripts.delete(scriptName);
-            console.error(`❌ [ScriptLoader] Failed to load ${scriptName}:`, error);
-            if (scriptConfig.critical) {
-                throw new Error(`Critical script failed: ${scriptName}`);
+        // Add crossorigin for external scripts
+        if (scriptUrl.startsWith('http')) {
+            scriptElement.crossOrigin = 'anonymous';
+        }
+
+        // Success handler
+        scriptElement.onload = () => {
+            // Track all possible identifiers
+            this.loadedScripts.add(name);
+            this.loadedScripts.add(scriptUrl);
+            this.loadedScripts.add(normalizedUrl);
+            if (scriptId) this.loadedScripts.add(scriptId);
+            
+            console.log(`✅ [ScriptLoader] ${name} script loaded successfully`);
+            
+            // Check for global availability
+            if (script.global && !window[script.global]) {
+                console.warn(`⚠️ [ScriptLoader] Global ${script.global} not found after loading ${name}`);
             }
-            throw error;
-        }
-    }
+            
+            resolve();
+        };
+
+        // Error handler
+        scriptElement.onerror = (error) => {
+            console.error(`❌ [ScriptLoader] Failed to load ${name}:`, error);
+            
+            // Mark as failed but don't fail completely unless critical
+            this.loadedScripts.add(`${name}-FAILED`);
+            
+            if (script.critical) {
+                reject(new Error(`Critical script failed: ${name}`));
+            } else {
+                console.warn(`⚠️ [ScriptLoader] Non-critical script failed, continuing: ${name}`);
+                resolve(); // Continue execution for non-critical scripts
+            }
+        };
+
+        // Timeout handler for hung scripts
+        const timeout = setTimeout(() => {
+            console.error(`⏰ [ScriptLoader] Timeout loading ${name} after 30 seconds`);
+            scriptElement.remove();
+            
+            if (script.critical) {
+                reject(new Error(`Script timeout: ${name}`));
+            } else {
+                resolve();
+            }
+        }, 30000);
+
+        // Clean up timeout on success/error
+        const originalOnload = scriptElement.onload;
+        const originalOnerror = scriptElement.onerror;
+        
+        scriptElement.onload = (e) => {
+            clearTimeout(timeout);
+            originalOnload(e);
+        };
+        
+        scriptElement.onerror = (e) => {
+            clearTimeout(timeout);
+            originalOnerror(e);
+        };
+
+        // Add to DOM
+        document.head.appendChild(scriptElement);
+    });
+}
     
     async performScriptLoad(scriptConfig, scriptName) {
         return new Promise((resolve, reject) => {
