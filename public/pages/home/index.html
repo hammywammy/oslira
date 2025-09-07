@@ -2,175 +2,229 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Oslira - AI-Powered Lead Intelligence Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oslira - AI Lead Generation Platform</title>
     <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
+    
+    <!-- Critical CSS Preload to prevent FOUC -->
+    <link rel="preload" href="/core/design-system.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/pages/home/home.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="/core/footer/footer.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    
+    <!-- Fallback for preload -->
+    <noscript>
+        <link rel="stylesheet" href="/core/design-system.css">
+        <link rel="stylesheet" href="/pages/home/home.css">
+        <link rel="stylesheet" href="/core/footer/footer.css">
+    </noscript>
+    
+    <!-- Immediate CSS load for critical styles -->
+    <style>
+        /* Critical above-fold styles to prevent FOUC */
+        body { 
+            visibility: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+        .show-content { visibility: visible !important; }
+    </style>
+    
+    <!-- Script loader initialization -->
+    <script src="/core/script-loader.js"></script>
 </head>
 <body>
+    <!-- Skip Navigation -->
     <a href="#main-content" class="skip-nav">Skip to main content</a>
-    
-    <nav role="navigation" aria-label="Main navigation">
+
+    <!-- Navigation -->
+    <nav>
         <div class="nav-container">
             <a href="/" class="logo">
-               <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
-                Oslira
+                <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+                <span>Oslira</span>
             </a>
+            
             <div class="nav-menu">
-                <a href="#how-it-works">How it Works</a>
                 <a href="#features">Features</a>
-                <a href="/auth">Login</a>
-                <a href="/auth" class="btn-primary">Start Free</a>
+                <a href="#how-it-works">How it Works</a>
+                <a href="#pricing">Pricing</a>
+                <a href="/auth" class="btn-primary">Get Started</a>
             </div>
         </div>
     </nav>
 
+    <!-- Main Content -->
     <main id="main-content">
+        <!-- Hero Section -->
         <section class="hero">
             <div class="hero-content">
-                <h1>Turn Instagram Profiles Into Perfect Customers</h1>
-                <p class="subtitle">AI-powered lead intelligence that finds your ideal prospects and crafts personalized outreach in seconds</p>
-
-                <div class="hook-demo">
-                    <h3 id="demo-heading">See Your Next Customer in 10 Seconds</h3>
-                    <form class="demo-form" onsubmit="handleDemo(event)" role="form" aria-labelledby="demo-heading">
-                        <label for="demo-input" class="sr-only">Instagram username for analysis</label>
+                <h1>Turn Instagram Profiles Into Quality Business Leads</h1>
+                <p class="subtitle">AI-powered lead generation that analyzes social profiles to find decision-makers and contact information for your business.</p>
+                
+                <!-- Demo Form -->
+                <form class="demo-form" role="search" aria-label="Demo lead analysis">
+                    <div class="demo-input-group">
                         <input 
                             type="text" 
-                            class="demo-input" 
-                            id="demo-input"
-                            placeholder="Paste any Instagram username (e.g., @johndoe)"
+                            id="demo-input" 
+                            placeholder="Enter Instagram username (e.g., @username)"
+                            class="demo-input"
+                            aria-label="Instagram username for demo analysis"
+                            pattern="^@?[a-zA-Z0-9._]+$"
+                            maxlength="30"
                             required
-                            autocomplete="off"
-                            aria-describedby="demo-note"
-                            pattern="[a-zA-Z0-9._@]{1,31}"
-                            title="Enter a valid Instagram username"
                         >
-                        <button type="submit" class="demo-button">
-                            <span class="demo-text">Analyze Profile</span>
-                            <span class="demo-loading">Analyzing...</span>
+                        <button type="submit" class="demo-button" aria-label="Analyze profile">
+                            <span class="demo-text">Analyze Free</span>
+                            <svg class="demo-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                            </svg>
                         </button>
-                    </form>
-                    <p id="demo-note" class="demo-disclaimer">No signup required • See instant results</p>
-                </div>
-
-                <div class="trust-section">
-                    <p class="trust-text">Trusted by growth teams at fast-moving companies</p>
-                    <div class="trust-metrics">
-                        <div class="metric">
-                            <span class="metric-number">1,200+</span>
-                            <span class="metric-label">Active Users</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-number">85%</span>
-                            <span class="metric-label">Response Rate</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-number">2.4x</span>
-                            <span class="metric-label">ROI Increase</span>
-                        </div>
                     </div>
-                </div>
+                    <p class="demo-note">Free analysis • No signup required • See results instantly</p>
+                </form>
 
                 <div class="cta-actions">
-                    <a href="/auth.html" class="btn-primary">Start Free - No Credit Card</a>
-                    <a href="#features" class="btn-secondary">See How It Works</a>
+                    <a href="/auth" class="btn-primary">Start Free Trial</a>
+                    <a href="#how-it-works" class="btn-secondary">Learn More</a>
                 </div>
             </div>
         </section>
 
-        <section id="how-it-works" class="section">
+        <!-- Features Section -->
+        <section id="features" class="section">
             <div class="container">
-                <h2>How Oslira Works</h2>
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-icon">🔍</div>
-                        <h3>1. Analyze</h3>
-                        <p>Enter any Instagram profile and get instant AI analysis of their interests, engagement patterns, and business potential.</p>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">🎯</div>
-                        <h3>2. Target</h3>
-                        <p>Our AI identifies the perfect prospects based on your business profile and ideal customer criteria.</p>
-                    </div>
-                    <div class="step">
-                        <div class="step-icon">💬</div>
-                        <h3>3. Connect</h3>
-                        <p>Generate personalized outreach messages that feel authentic and drive real conversations.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="features" class="section features-section">
-            <div class="container">
-                <h2>Why Leading Teams Choose Oslira</h2>
+                <h2>Why Choose Oslira?</h2>
                 <div class="features-grid">
                     <div class="feature">
-                        <div class="feature-icon">🧠</div>
-                        <h3>AI Lead Intelligence</h3>
-                        <p>Deep analysis of Instagram profiles to understand interests, behavior patterns, and buying signals.</p>
+                        <div class="feature-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <h3>AI-Powered Analysis</h3>
+                        <p>Advanced algorithms analyze social profiles to identify business potential and decision-making authority.</p>
                     </div>
+                    
                     <div class="feature">
-                        <div class="feature-icon">⚡</div>
-                        <h3>Instant Analysis</h3>
-                        <p>Get comprehensive lead insights in under 10 seconds with our lightning-fast AI processing.</p>
+                        <div class="feature-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <h3>Lightning Fast</h3>
+                        <p>Get comprehensive lead analysis in seconds, not hours. Scale your prospecting efforts instantly.</p>
                     </div>
+                    
                     <div class="feature">
-                        <div class="feature-icon">📈</div>
-                        <h3>Higher Response Rates</h3>
-                        <p>Personalized messages based on real insights drive 3x higher response rates than generic outreach.</p>
-                    </div>
-                    <div class="feature">
-                        <div class="feature-icon">🔒</div>
+                        <div class="feature-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                        </div>
                         <h3>Privacy First</h3>
-                        <p>All analysis is done ethically using publicly available information. Your data stays secure.</p>
+                        <p>Only analyzes public profile information. Fully compliant with privacy regulations and platform terms.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="section social-proof">
+        <!-- How It Works Section -->
+        <section id="how-it-works" class="section bg-gradient">
             <div class="container">
-                <h2>Trusted by Growth Teams</h2>
-                <div class="testimonials">
-                    <div class="testimonial">
-                        <div class="testimonial-content">
-                            <p>"Oslira helped us identify and connect with our ideal customers. Our response rate went from 12% to 43%."</p>
-                        </div>
-                        <div class="testimonial-author">
-                            <strong>Sarah Chen</strong>
-                            <span>Growth Lead, TechStartup</span>
-                        </div>
+                <h2>How It Works</h2>
+                <div class="steps-grid">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <h3>Enter Profile</h3>
+                        <p>Simply paste an Instagram username or profile URL into our analysis tool.</p>
                     </div>
-                    <div class="testimonial">
-                        <div class="testimonial-content">
-                            <p>"The AI insights are incredibly accurate. It's like having a research team that works 24/7."</p>
-                        </div>
-                        <div class="testimonial-author">
-                            <strong>Marcus Rodriguez</strong>
-                            <span>Sales Director, SaaS Co</span>
-                        </div>
+                    
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <h3>AI Analysis</h3>
+                        <p>Our AI analyzes the profile for business indicators, audience, and decision-making authority.</p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <h3>Get Results</h3>
+                        <p>Receive detailed insights including lead quality score and recommended outreach approach.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <section class="section cta-section">
+        <!-- Pricing Section -->
+        <section id="pricing" class="section">
             <div class="container">
-                <div class="cta-content">
-                    <h2>Ready to Find Your Next Customer?</h2>
-                    <p>Join thousands of professionals using AI to turn social profiles into sales opportunities.</p>
-                    <div class="cta-actions">
-                        <a href="/auth.html" class="btn-primary">Start Free Trial</a>
-                        <p class="cta-note">✓ No credit card required ✓ 25 free analyses ✓ Setup in 2 minutes</p>
+                <h2>Simple, Transparent Pricing</h2>
+                <div class="pricing-grid">
+                    <div class="pricing-card">
+                        <h3>Free Trial</h3>
+                        <div class="price">
+                            <span class="amount">$0</span>
+                            <span class="period">25 analyses</span>
+                        </div>
+                        <ul class="features-list">
+                            <li>25 free profile analyses</li>
+                            <li>Basic lead scoring</li>
+                            <li>CSV export</li>
+                            <li>Email support</li>
+                        </ul>
+                        <a href="/auth" class="btn-primary">Start Free Trial</a>
+                    </div>
+                    
+                    <div class="pricing-card featured">
+                        <div class="featured-badge">Most Popular</div>
+                        <h3>Professional</h3>
+                        <div class="price">
+                            <span class="amount">$29</span>
+                            <span class="period">per month</span>
+                        </div>
+                        <ul class="features-list">
+                            <li>Unlimited analyses</li>
+                            <li>Advanced AI insights</li>
+                            <li>Bulk upload (CSV)</li>
+                            <li>API access</li>
+                            <li>Priority support</li>
+                        </ul>
+                        <a href="/auth" class="btn-primary">Get Started</a>
+                    </div>
+                    
+                    <div class="pricing-card">
+                        <h3>Enterprise</h3>
+                        <div class="price">
+                            <span class="amount">Custom</span>
+                            <span class="period">volume pricing</span>
+                        </div>
+                        <ul class="features-list">
+                            <li>Everything in Professional</li>
+                            <li>Custom integrations</li>
+                            <li>Dedicated support</li>
+                            <li>SLA guarantees</li>
+                        </ul>
+                        <a href="/auth" class="btn-secondary">Contact Sales</a>
                     </div>
                 </div>
             </div>
         </section>
     </main>
-<!-- Footer will be injected here -->
-    <div id="footer-container"></div>   
-    <script src="/core/script-loader.js"></script>
 
+    <!-- Footer Container (managed by FooterManager) -->
+    <div id="footer-container"></div>
+
+    <!-- Scripts managed by script-loader.js -->
+    <script>
+        // Show content once critical CSS is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add small delay to ensure CSS is processed
+            setTimeout(function() {
+                document.body.classList.add('show-content');
+            }, 50);
+        });
+    </script>
 </body>
 </html>
