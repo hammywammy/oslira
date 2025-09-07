@@ -44,21 +44,25 @@ window.addEventListener('oslira:scripts:loaded', async () => {
 async function waitForTailwind() {
   console.log('🎨 [Home] Waiting for Tailwind CSS to load...');
   
-  // Check if Tailwind CSS is loaded by testing a class
+  // Check for Tailwind CSS link element first
   for (let i = 0; i < 100; i++) {
-    const testEl = document.createElement('div');
-    testEl.className = 'bg-gray-900';
-    testEl.style.visibility = 'hidden';
-    testEl.style.position = 'absolute';
-    document.body.appendChild(testEl);
-    
-    const bgColor = window.getComputedStyle(testEl).backgroundColor;
-    document.body.removeChild(testEl);
-    
-    // Check if bg-gray-900 applied (dark background)
-    if (bgColor === 'rgb(17, 24, 39)' || bgColor.includes('17, 24, 39')) {
-      console.log('✅ [Home] Tailwind CSS loaded');
-      return;
+    const tailwindLink = document.querySelector('link[href="/assets/css/tailwind.css"]');
+    if (tailwindLink) {
+      // Test if styles are actually applied
+      const testEl = document.createElement('div');
+      testEl.className = 'bg-gray-900';
+      testEl.style.visibility = 'hidden';
+      testEl.style.position = 'absolute';
+      document.body.appendChild(testEl);
+      
+      const bgColor = window.getComputedStyle(testEl).backgroundColor;
+      document.body.removeChild(testEl);
+      
+      // Check if bg-gray-900 applied (dark background)
+      if (bgColor === 'rgb(17, 24, 39)' || bgColor.includes('17, 24, 39')) {
+        console.log('✅ [Home] Tailwind CSS loaded and active');
+        return;
+      }
     }
     
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -66,18 +70,6 @@ async function waitForTailwind() {
   
   console.warn('⚠️ [Home] Tailwind CSS may not be fully loaded');
 }
-
-// FALLBACK: Also try to initialize footer after a short delay
-setTimeout(async () => {
-  if (window.FooterManager && !document.querySelector('#footer-container footer')) {
-    console.log('🚀 [Home] Fallback footer initialization...');
-    try {
-      await initializeFooter();
-    } catch (error) {
-      console.error('❌ [Home] Fallback footer initialization failed:', error);
-    }
-  }
-}, 2000);
 
 // =============================================================================
 // INITIALIZATION (matches dashboard/campaigns pattern)
