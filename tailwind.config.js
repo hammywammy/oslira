@@ -2,42 +2,11 @@ module.exports = {
   content: [
     "./public/**/*.{html,js}",
     "./public/pages/**/*.{html,js,css}",
-    "./public/core/**/*.{html,js,css}"
+    "./public/core/**/*.{html,js,css}",
+    "./src/**/*.css"  // Added to scan CSS files for @apply usage
   ],
   safelist: [
-    // Ensure all utility classes used in @apply are included
-    'bg-gradient-to-r',
-    'from-blue-600',
-    'to-blue-700', 
-    'hover:from-blue-700',
-    'hover:to-blue-800',
-    'shadow-lg',
-    'backdrop-blur-xl',
-    'bg-white/80',
-    'border-white/20',
-    'transform',
-    'hover:-translate-y-1',
-    'transition-all',
-    'duration-300',
-    'will-change-transform',
-    'will-change-auto',
-    'bg-slate-50/50',
-    'sr-only',
-    'focus:not-sr-only',
-    'focus:absolute',
-    'focus:top-4',
-    'focus:left-4',
-    'focus:bg-blue-600',
-    'focus:text-white',
-    'focus:px-4',
-    'focus:py-2',
-    'focus:rounded-md',
-    'focus:z-50',
-    // Add pattern matching for dynamic classes
-    { pattern: /bg-(slate|blue|purple|green|yellow|pink)-(50|100|200|300|400|500|600|700|800|900)/ },
-    { pattern: /text-(slate|blue|purple|green|yellow|pink)-(50|100|200|300|400|500|600|700|800|900)/ },
-    { pattern: /border-(slate|blue|purple|green|yellow|pink)-(50|100|200|300|400|500|600|700|800|900)/ },
-    { pattern: /shadow-(blue|purple|green|yellow|pink)-(500|600|700)\/\d+/ }
+    // Remove existing safelist - @apply pattern eliminates need
   ],
   theme: {
     extend: {
