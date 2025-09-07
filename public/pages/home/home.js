@@ -15,8 +15,7 @@ if (typeof Sentry !== "undefined") {
   });
 }
 
-// Application state
-let supabase = null;
+let supabaseClient = null;
 let isInitialized = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -60,16 +59,6 @@ setTimeout(async () => {
 async function initializeApp() {
   try {
     console.log("🚀 Initializing app...");
-
-    // Load environment config FIRST
-    if (typeof loadEnvConfig !== "undefined") {
-      try {
-        await loadEnvConfig();
-        console.log("🔧 Environment configuration loaded");
-      } catch (error) {
-        console.warn("⚠️ Environment config failed:", error);
-      }
-    }
 
     // Initialize Supabase using the modern pattern
     await initializeSupabase();
@@ -125,38 +114,27 @@ async function initializeFooter() {
     }
 }
 
-function initializeSupabase() {
+async function initializeSupabase() {
   try {
-    // Check if config is loaded (from env-config.js)
-    if (!window.CONFIG) {
+    // Wait for config to be loaded by script-loader
+    if (!window.OsliraConfig) {
       console.warn("⚠️ Configuration not loaded. Demo mode only.");
       return;
     }
 
-    // Validate required config
-    const required = ["supabaseUrl", "supabaseAnonKey"];
-    const missing = required.filter((key) => !window.CONFIG[key]);
-
-    if (missing.length > 0) {
-      console.warn("⚠️ Missing configuration:", missing);
-      return;
+    const config = window.OsliraConfig.get();
+    
+    // Use the globally loaded Supabase client
+    if (window.supabase && config) {
+      supabaseClient = window.supabase.createClient(
+        config.SUPABASE_URL,
+        config.SUPABASE_ANON_KEY
+      );
+      console.log("✅ Supabase initialized");
     }
-
-    // Initialize Supabase client
-    supabase = window.supabase.createClient(
-      window.CONFIG.supabaseUrl,
-      window.CONFIG.supabaseAnonKey
-    );
-
-    console.log("✅ Supabase initialized for landing page");
-    return supabase;
   } catch (error) {
     console.error("❌ Supabase initialization failed:", error);
-    Alert.warning({
-      message: "Some features may be limited",
-      suggestions: ["Page will work in demo mode", "Refresh to retry full features"],
-    });
-    throw error;
+    setupDemoMode();
   }
 }
 
@@ -339,11 +317,9 @@ function validateUsername(username) {
 }
 async function performRealDemo(username) {
   try {
-    // ✅ FIXED: Safe access to config
-    const workerUrl =
-      window.CONFIG?.workerUrl ||
-      window.OsliraApp?.config?.workerUrl ||
-      "https://ai-outreach-api.oslira-worker.workers.dev";
+    // Use proper config access
+    const config = window.OsliraConfig?.get();
+    const workerUrl = config?.WORKER_URL || "https://ai-outreach-api.oslira-worker.workers.dev";
 
     const response = await fetch(`${workerUrl}/analyze`, {
       method: "POST",
