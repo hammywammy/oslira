@@ -19,14 +19,12 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         
-    - uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        
-    - name: Install Tailwind CSS
+    - name: Download Tailwind CSS Standalone
       run: |
-        echo "📦 Installing Tailwind CSS..."
-        npm install -g tailwindcss@latest
+        echo "📦 Downloading Tailwind CSS standalone binary..."
+        curl -sLO https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64
+        chmod +x tailwindcss-linux-x64
+        echo "✅ Tailwind CSS binary downloaded and made executable"
         
     - name: Create output directory
       run: mkdir -p public/assets/css
@@ -35,8 +33,8 @@ jobs:
       run: |
         echo "🎨 Building Tailwind CSS with component classes..."
         
-        # Build main CSS file with component classes
-        tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify
+        # Build main CSS file with component classes using standalone binary
+        ./tailwindcss-linux-x64 -i src/styles.css -o public/assets/css/tailwind.css --minify
         
         # Verify the file was created and contains component classes
         ls -la public/assets/css/
@@ -87,7 +85,7 @@ jobs:
         
         if [ $FILE_SIZE -gt 500000 ]; then
           echo "⚠️ CSS file seems too large, may have unused classes"
-          echo "💡 Consider reviewing safelist in tailwind.config.js"
+          echo "💡 Consider reviewing content paths in tailwind.config.js"
         fi
         
         echo "✅ CSS file size is within expected range"
@@ -112,8 +110,8 @@ jobs:
         echo "🎉 Tailwind CSS build completed successfully!"
         echo "📁 Output file: public/assets/css/tailwind.css"
         echo "🎨 Component classes: Included via @apply directives"
-        echo "🔧 Build method: Component classes pattern"
+        echo "🔧 Build method: Standalone binary"
         echo "📊 Final size: $(du -h public/assets/css/tailwind.css)"
         echo ""
-        echo "🚀 Deployment ready - no safelist management required"
-        echo "✨ Infinite scalability - add components without config changes"
+        echo "🚀 Deployment ready - modular CSS architecture activated"
+        echo "✨ Your monolithic CSS has been replaced with sustainable build"
