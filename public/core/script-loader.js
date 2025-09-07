@@ -435,13 +435,11 @@ if (this.currentPage === 'dashboard') {
     
     console.log(`✅ [ScriptLoader] Page dependencies loaded: ${this.currentPage}`);
 
-     if (pageConfig.enableTailwind) {
-        console.log('🎨 [ScriptLoader] Loading Tailwind CSS...');
-        const tailwindScript = document.createElement('script');
-        tailwindScript.src = '/core/tailwind-loader.js';
-        tailwindScript.defer = true;
-        document.head.appendChild(tailwindScript);
-    }
+// Load Tailwind CSS for pages that need it
+if (pageConfig.enableTailwind) {
+    console.log('🎨 [ScriptLoader] Loading Tailwind CSS...');
+    await this.loadStylesheet('/assets/css/tailwind.css');
+}
 }
 
 applyPageTailwindCustomizations(pageName) {
