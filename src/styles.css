@@ -3,7 +3,7 @@
 @layer components {
   /* Global buttons */
   .btn-primary {
-    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 px-4 rounded-lg shadow-lg transition-all duration-200;
+    @apply bg-linear-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-2 px-4 rounded-lg shadow-lg transition-all duration-200;
   }
   
   .btn-secondary {
