@@ -1,0 +1,285 @@
+@layer components {
+  /* =============================================================================
+     BUTTON BASE STYLES
+     ============================================================================= */
+  
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg border transition-all duration-200 cursor-pointer select-none;
+  }
+
+  .btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* =============================================================================
+     PRIMARY BUTTON VARIANTS
+     ============================================================================= */
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white border-transparent shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 focus:ring-4 focus:ring-blue-200;
+  }
+
+  .btn-primary:active {
+    @apply transform translate-y-0;
+  }
+
+  .btn-primary:disabled {
+    @apply bg-gray-400 hover:bg-gray-400 transform-none shadow-none;
+  }
+
+  /* =============================================================================
+     SECONDARY BUTTON VARIANTS
+     ============================================================================= */
+
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-50 text-gray-700 border-gray-300 hover:border-gray-400 shadow-sm hover:shadow-md;
+  }
+
+  .btn-secondary:active {
+    @apply bg-gray-100;
+  }
+
+  /* =============================================================================
+     DESTRUCTIVE BUTTON VARIANTS
+     ============================================================================= */
+
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white border-transparent shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 focus:ring-4 focus:ring-red-200;
+  }
+
+  .btn-danger:active {
+    @apply transform translate-y-0;
+  }
+
+  /* =============================================================================
+     SUCCESS BUTTON VARIANTS
+     ============================================================================= */
+
+  .btn-success {
+    @apply bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white border-transparent shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 focus:ring-4 focus:ring-green-200;
+  }
+
+  .btn-success:active {
+    @apply transform translate-y-0;
+  }
+
+  /* =============================================================================
+     OUTLINE BUTTON VARIANTS
+     ============================================================================= */
+
+  .btn-outline-primary {
+    @apply bg-transparent hover:bg-blue-50 text-blue-600 border-blue-600 hover:border-blue-700;
+  }
+
+  .btn-outline-secondary {
+    @apply bg-transparent hover:bg-gray-50 text-gray-600 border-gray-400 hover:border-gray-500;
+  }
+
+  .btn-outline-danger {
+    @apply bg-transparent hover:bg-red-50 text-red-600 border-red-600 hover:border-red-700;
+  }
+
+  /* =============================================================================
+     GHOST BUTTON VARIANTS
+     ============================================================================= */
+
+  .btn-ghost {
+    @apply bg-transparent hover:bg-gray-100 text-gray-600 border-transparent;
+  }
+
+  .btn-ghost-primary {
+    @apply bg-transparent hover:bg-blue-50 text-blue-600 border-transparent;
+  }
+
+  .btn-ghost-danger {
+    @apply bg-transparent hover:bg-red-50 text-red-600 border-transparent;
+  }
+
+  /* =============================================================================
+     BUTTON SIZES
+     ============================================================================= */
+
+  .btn-xs {
+    @apply text-xs px-2 py-1 rounded;
+  }
+
+  .btn-sm {
+    @apply text-sm px-3 py-1.5 rounded-md;
+  }
+
+  .btn-lg {
+    @apply text-base px-6 py-3 rounded-lg;
+  }
+
+  .btn-xl {
+    @apply text-lg px-8 py-4 rounded-xl;
+  }
+
+  /* =============================================================================
+     BUTTON GROUPS
+     ============================================================================= */
+
+  .btn-group {
+    @apply inline-flex rounded-lg shadow-sm;
+  }
+
+  .btn-group .btn {
+    @apply rounded-none border-r-0 focus:z-10;
+  }
+
+  .btn-group .btn:first-child {
+    @apply rounded-l-lg;
+  }
+
+  .btn-group .btn:last-child {
+    @apply rounded-r-lg border-r;
+  }
+
+  .btn-group .btn:only-child {
+    @apply rounded-lg border-r;
+  }
+
+  /* =============================================================================
+     LOADING STATES
+     ============================================================================= */
+
+  .btn-loading {
+    @apply relative text-transparent pointer-events-none;
+  }
+
+  .btn-loading::after {
+    content: '';
+    @apply absolute inset-0 flex items-center justify-center;
+    background-image: url("data:image/svg+xml,%3csvg class='animate-spin' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3e%3ccircle class='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' stroke-width='4'%3e%3c/circle%3e%3cpath class='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'%3e%3c/path%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 1rem 1rem;
+  }
+
+  /* =============================================================================
+     ICON BUTTONS
+     ============================================================================= */
+
+  .btn-icon {
+    @apply p-2 rounded-lg;
+  }
+
+  .btn-icon-xs {
+    @apply p-1 text-xs rounded;
+  }
+
+  .btn-icon-sm {
+    @apply p-1.5 text-sm rounded-md;
+  }
+
+  .btn-icon-lg {
+    @apply p-3 text-lg rounded-xl;
+  }
+
+  /* =============================================================================
+     FLOATING ACTION BUTTONS
+     ============================================================================= */
+
+  .btn-fab {
+    @apply fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 z-50;
+  }
+
+  .btn-fab-sm {
+    @apply w-10 h-10 bottom-4 right-4;
+  }
+
+  .btn-fab-lg {
+    @apply w-16 h-16 bottom-8 right-8;
+  }
+
+  /* =============================================================================
+     SPECIAL BUTTON EFFECTS
+     ============================================================================= */
+
+  .btn-glow {
+    @apply shadow-lg;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-glow:hover {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+  }
+
+  .btn-pulse {
+    @apply animate-pulse;
+  }
+
+  .btn-bounce {
+    animation: bounce-subtle 1s ease-in-out infinite;
+  }
+
+  @keyframes bounce-subtle {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  /* =============================================================================
+     RESPONSIVE BUTTON ADJUSTMENTS
+     ============================================================================= */
+
+  @media (max-width: 640px) {
+    .btn {
+      @apply text-sm px-3 py-2;
+    }
+
+    .btn-lg {
+      @apply text-base px-5 py-2.5;
+    }
+
+    .btn-xl {
+      @apply text-lg px-6 py-3;
+    }
+
+    .btn-fab {
+      @apply w-12 h-12 bottom-4 right-4;
+    }
+  }
+
+  /* =============================================================================
+     ACCESSIBILITY ENHANCEMENTS
+     ============================================================================= */
+
+  .btn:focus-visible {
+    @apply outline-none ring-4 ring-opacity-50;
+  }
+
+  .btn-primary:focus-visible {
+    @apply ring-blue-200;
+  }
+
+  .btn-secondary:focus-visible {
+    @apply ring-gray-200;
+  }
+
+  .btn-danger:focus-visible {
+    @apply ring-red-200;
+  }
+
+  .btn-success:focus-visible {
+    @apply ring-green-200;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn {
+      @apply transition-none transform-none;
+    }
+
+    .btn-loading::after {
+      animation: none;
+    }
+
+    .btn-pulse,
+    .btn-bounce {
+      animation: none;
+    }
+  }
+}
