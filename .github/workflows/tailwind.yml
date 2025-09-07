@@ -1,0 +1,38 @@
+name: Build Tailwind CSS
+
+on:
+  push:
+    branches: [main, staging]
+    paths: 
+      - 'src/styles.css'
+      - 'tailwind.config.js'
+      - 'public/**/*.html'
+      - 'public/**/*.js'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - run: npm install -D tailwindcss@latest
+    
+    - run: mkdir -p public/assets/css
+    
+    - run: npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify --watch=false
+    
+    - name: Commit changes
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add public/assets/css/tailwind.css
+        git diff --staged --quiet || git commit -m "Auto-build Tailwind CSS [skip ci]"
+        git push
