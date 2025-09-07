@@ -1,0 +1,473 @@
+@layer components {
+  /* =============================================================================
+     HOME PAGE BASE LAYOUT
+     ============================================================================= */
+  
+  .home-page-body {
+    @apply line-height-normal bg-white text-base;
+  }
+
+  .home-main-content {
+    @apply pt-16;
+  }
+
+  /* =============================================================================
+     NAVIGATION COMPONENTS
+     ============================================================================= */
+
+  .home-nav {
+    @apply fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-b border-gray-200 z-50 transition-all duration-200;
+  }
+
+  .home-nav-container {
+    @apply max-w-6xl mx-auto px-6 flex justify-between items-center h-16;
+  }
+
+  .home-logo {
+    @apply flex items-center gap-3 text-gray-900 text-2xl font-bold tracking-tight no-underline;
+  }
+
+  .home-logo-image {
+    @apply w-8 h-8 rounded-lg;
+  }
+
+  .home-nav-menu {
+    @apply flex items-center gap-8;
+  }
+
+  .home-nav-link {
+    @apply text-gray-600 hover:text-blue-600 font-medium transition-colors duration-200 py-2 relative no-underline;
+  }
+
+  .home-nav-link:hover::after {
+    content: '';
+    @apply absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full;
+  }
+
+  /* =============================================================================
+     HERO SECTION
+     ============================================================================= */
+
+  .hero-section {
+    @apply bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-20 lg:py-32 relative overflow-hidden;
+  }
+
+  .hero-section::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-blue-600/10 via-purple-600/5 to-blue-600/10 pointer-events-none;
+  }
+
+  .hero-container {
+    @apply max-w-6xl mx-auto px-6 text-center relative z-10;
+  }
+
+  .hero-title {
+    @apply text-4xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight;
+  }
+
+  .hero-title-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  .hero-subtitle {
+    @apply text-xl lg:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed;
+  }
+
+  .hero-cta-container {
+    @apply flex flex-col sm:flex-row gap-4 justify-center items-center mb-12;
+  }
+
+  .hero-stats {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto;
+  }
+
+  .hero-stat {
+    @apply text-center;
+  }
+
+  .hero-stat-number {
+    @apply text-3xl lg:text-4xl font-bold text-gray-900 mb-2;
+  }
+
+  .hero-stat-label {
+    @apply text-gray-600;
+  }
+
+  /* =============================================================================
+     FEATURES SECTION
+     ============================================================================= */
+
+  .features-section {
+    @apply py-20 bg-white;
+  }
+
+  .features-container {
+    @apply max-w-6xl mx-auto px-6;
+  }
+
+  .features-header {
+    @apply text-center mb-16;
+  }
+
+  .features-title {
+    @apply text-3xl lg:text-4xl font-bold text-gray-900 mb-4;
+  }
+
+  .features-subtitle {
+    @apply text-xl text-gray-600 max-w-2xl mx-auto;
+  }
+
+  .features-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8;
+  }
+
+  .feature-card {
+    @apply bg-white p-8 rounded-2xl border border-gray-200 hover:shadow-xl hover:-translate-y-2 transition-all duration-300;
+  }
+
+  .feature-icon {
+    @apply w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center text-white text-2xl mb-6;
+  }
+
+  .feature-title {
+    @apply text-xl font-semibold text-gray-900 mb-3;
+  }
+
+  .feature-description {
+    @apply text-gray-600 leading-relaxed;
+  }
+
+  /* =============================================================================
+     HOW IT WORKS SECTION
+     ============================================================================= */
+
+  .how-it-works-section {
+    @apply py-20 bg-gray-50;
+  }
+
+  .how-it-works-container {
+    @apply max-w-6xl mx-auto px-6;
+  }
+
+  .how-it-works-header {
+    @apply text-center mb-16;
+  }
+
+  .how-it-works-title {
+    @apply text-3xl lg:text-4xl font-bold text-gray-900 mb-4;
+  }
+
+  .how-it-works-subtitle {
+    @apply text-xl text-gray-600 max-w-2xl mx-auto;
+  }
+
+  .how-it-works-steps {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-8;
+  }
+
+  .step-card {
+    @apply text-center relative;
+  }
+
+  .step-number {
+    @apply w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full flex items-center justify-center font-bold text-lg mx-auto mb-6;
+  }
+
+  .step-title {
+    @apply text-xl font-semibold text-gray-900 mb-3;
+  }
+
+  .step-description {
+    @apply text-gray-600 leading-relaxed;
+  }
+
+  .step-connector {
+    @apply hidden md:block absolute top-6 left-full w-full h-0.5 bg-gradient-to-r from-blue-600 to-purple-600;
+  }
+
+  .step-card:last-child .step-connector {
+    @apply hidden;
+  }
+
+  /* =============================================================================
+     PRICING SECTION
+     ============================================================================= */
+
+  .pricing-section {
+    @apply py-20 bg-white;
+  }
+
+  .pricing-container {
+    @apply max-w-6xl mx-auto px-6;
+  }
+
+  .pricing-header {
+    @apply text-center mb-16;
+  }
+
+  .pricing-title {
+    @apply text-3xl lg:text-4xl font-bold text-gray-900 mb-4;
+  }
+
+  .pricing-subtitle {
+    @apply text-xl text-gray-600 max-w-2xl mx-auto;
+  }
+
+  .pricing-grid {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto;
+  }
+
+  .pricing-card {
+    @apply bg-white border border-gray-200 rounded-2xl p-8 text-center relative hover:shadow-xl hover:-translate-y-2 transition-all duration-300;
+  }
+
+  .pricing-card.featured {
+    @apply border-blue-500 border-2 transform scale-105;
+  }
+
+  .pricing-card.featured::before {
+    content: 'Most Popular';
+    @apply absolute -top-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-semibold;
+  }
+
+  .pricing-plan-name {
+    @apply text-2xl font-bold text-gray-900 mb-2;
+  }
+
+  .pricing-price {
+    @apply text-4xl font-bold text-blue-600 mb-1;
+  }
+
+  .pricing-period {
+    @apply text-gray-500 mb-6;
+  }
+
+  .pricing-features {
+    @apply space-y-3 mb-8;
+  }
+
+  .pricing-feature {
+    @apply flex items-center gap-3 text-gray-600;
+  }
+
+  .pricing-feature-icon {
+    @apply w-5 h-5 text-green-500 flex-shrink-0;
+  }
+
+  /* =============================================================================
+     TESTIMONIALS SECTION
+     ============================================================================= */
+
+  .testimonials-section {
+    @apply py-20 bg-gray-50;
+  }
+
+  .testimonials-container {
+    @apply max-w-6xl mx-auto px-6;
+  }
+
+  .testimonials-header {
+    @apply text-center mb-16;
+  }
+
+  .testimonials-title {
+    @apply text-3xl lg:text-4xl font-bold text-gray-900 mb-4;
+  }
+
+  .testimonials-subtitle {
+    @apply text-xl text-gray-600 max-w-2xl mx-auto;
+  }
+
+  .testimonials-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8;
+  }
+
+  .testimonial-card {
+    @apply bg-white p-8 rounded-2xl border border-gray-200 hover:shadow-xl transition-all duration-300;
+  }
+
+  .testimonial-content {
+    @apply text-gray-600 mb-6 leading-relaxed italic;
+  }
+
+  .testimonial-author {
+    @apply flex items-center gap-4;
+  }
+
+  .testimonial-avatar {
+    @apply w-12 h-12 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center text-white font-bold;
+  }
+
+  .testimonial-name {
+    @apply font-semibold text-gray-900;
+  }
+
+  .testimonial-title {
+    @apply text-sm text-gray-500;
+  }
+
+  /* =============================================================================
+     CTA SECTION
+     ============================================================================= */
+
+  .cta-section {
+    @apply py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white;
+  }
+
+  .cta-container {
+    @apply max-w-4xl mx-auto px-6 text-center;
+  }
+
+  .cta-title {
+    @apply text-3xl lg:text-4xl font-bold mb-4;
+  }
+
+  .cta-subtitle {
+    @apply text-xl opacity-90 mb-8 max-w-2xl mx-auto;
+  }
+
+  .cta-buttons {
+    @apply flex flex-col sm:flex-row gap-4 justify-center;
+  }
+
+  /* =============================================================================
+     MOBILE MENU
+     ============================================================================= */
+
+  .mobile-menu-toggle {
+    @apply md:hidden p-2 text-gray-600 hover:text-gray-900;
+  }
+
+  .mobile-menu {
+    @apply md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg hidden;
+  }
+
+  .mobile-menu.show {
+    @apply block;
+  }
+
+  .mobile-menu-item {
+    @apply block px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 border-b border-gray-100;
+  }
+
+  /* =============================================================================
+     SKIP NAVIGATION
+     ============================================================================= */
+
+  .skip-nav {
+    @apply absolute top-0 left-0 bg-blue-600 text-white px-4 py-2 rounded-br-lg z-50 transform -translate-y-full focus:translate-y-0 transition-transform;
+  }
+
+  /* =============================================================================
+     RESPONSIVE DESIGN
+     ============================================================================= */
+
+  @media (max-width: 768px) {
+    .home-nav-menu {
+      @apply hidden;
+    }
+
+    .hero-title {
+      @apply text-3xl;
+    }
+
+    .hero-subtitle {
+      @apply text-lg;
+    }
+
+    .hero-cta-container {
+      @apply flex-col;
+    }
+
+    .hero-stats {
+      @apply grid-cols-1 gap-6;
+    }
+
+    .features-grid,
+    .how-it-works-steps,
+    .testimonials-grid {
+      @apply grid-cols-1;
+    }
+
+    .pricing-grid {
+      @apply grid-cols-1;
+    }
+
+    .pricing-card.featured {
+      @apply transform-none scale-100;
+    }
+
+    .step-connector {
+      @apply hidden;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .home-nav-container {
+      @apply px-4;
+    }
+
+    .hero-section {
+      @apply py-16;
+    }
+
+    .features-section,
+    .how-it-works-section,
+    .pricing-section,
+    .testimonials-section,
+    .cta-section {
+      @apply py-16;
+    }
+
+    .feature-card,
+    .testimonial-card,
+    .pricing-card {
+      @apply p-6;
+    }
+  }
+
+  /* =============================================================================
+     ACCESSIBILITY ENHANCEMENTS
+     ============================================================================= */
+
+  .home-nav-link:focus-visible,
+  .skip-nav:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .feature-card,
+    .pricing-card,
+    .testimonial-card,
+    .home-nav-link {
+      @apply transition-none transform-none;
+    }
+
+    .feature-card:hover,
+    .pricing-card:hover,
+    .testimonial-card:hover {
+      @apply transform-none;
+    }
+  }
+
+  /* =============================================================================
+     PRINT STYLES
+     ============================================================================= */
+
+  @media print {
+    .home-nav,
+    .cta-section {
+      @apply hidden;
+    }
+
+    .hero-section {
+      @apply bg-white text-black;
+    }
+
+    .hero-title-gradient {
+      @apply text-black;
+      background: none;
+      -webkit-text-fill-color: initial;
+    }
+  }
+}
