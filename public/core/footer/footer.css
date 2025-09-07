@@ -1,5 +1,5 @@
 /* =============================================================================
-   FOOTER.CSS - Remove conflicting overrides, use component classes only
+   FOOTER.CSS - Component-specific logic only (not styling)
    ============================================================================= */
 
 .footer-manager-container {
@@ -7,4 +7,13 @@
     margin-top: auto;
 }
 
-/* Remove all other CSS - component classes handle styling */
+/* Component-specific behavior CSS only - all styling comes from Tailwind build */
+.footer-newsletter-form {
+    /* Any non-Tailwind specific behavior */
+}
+
+.footer-social-link {
+    /* Any JavaScript interaction styles */
+}
+
+/* No @apply or Tailwind utilities here - they come from src/styles.css build */
