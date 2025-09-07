@@ -68,7 +68,7 @@ getDependencies() {
 'pre-core': [
     '/core/env-manager.js',
     '/env-config.js'  // ADD THIS - all pages need environment config
-]
+],
         
         'core': {
             // External Libraries FIRST
