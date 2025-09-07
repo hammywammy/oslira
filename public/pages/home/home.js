@@ -31,13 +31,41 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // Listen for scripts loaded event to initialize footer
 window.addEventListener('oslira:scripts:loaded', async () => {
-  console.log('🚀 [Home] Scripts loaded event received, initializing footer...');
+  console.log('🚀 [Home] Scripts loaded event received, waiting for Tailwind...');
   try {
+    // Wait for Tailwind CSS to load
+    await waitForTailwind();
     await initializeFooter();
   } catch (error) {
     console.error('❌ [Home] Footer initialization failed:', error);
   }
 });
+
+async function waitForTailwind() {
+  console.log('🎨 [Home] Waiting for Tailwind CSS to load...');
+  
+  // Check if Tailwind CSS is loaded by testing a class
+  for (let i = 0; i < 100; i++) {
+    const testEl = document.createElement('div');
+    testEl.className = 'bg-gray-900';
+    testEl.style.visibility = 'hidden';
+    testEl.style.position = 'absolute';
+    document.body.appendChild(testEl);
+    
+    const bgColor = window.getComputedStyle(testEl).backgroundColor;
+    document.body.removeChild(testEl);
+    
+    // Check if bg-gray-900 applied (dark background)
+    if (bgColor === 'rgb(17, 24, 39)' || bgColor.includes('17, 24, 39')) {
+      console.log('✅ [Home] Tailwind CSS loaded');
+      return;
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  console.warn('⚠️ [Home] Tailwind CSS may not be fully loaded');
+}
 
 // FALLBACK: Also try to initialize footer after a short delay
 setTimeout(async () => {
