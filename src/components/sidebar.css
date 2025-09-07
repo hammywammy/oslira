@@ -1,0 +1,411 @@
+@layer components {
+  /* =============================================================================
+     SIDEBAR CORE LAYOUT
+     ============================================================================= */
+  
+  .sidebar {
+    @apply fixed left-0 top-0 h-full w-64 bg-gradient-to-br from-white via-blue-50/30 to-indigo-100/20 backdrop-blur-xl border-r border-gray-200/50 flex flex-col transition-all duration-300 z-40;
+  }
+
+  .sidebar.collapsed {
+    @apply w-16;
+  }
+
+  .sidebar::after {
+    content: '';
+    @apply absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-gray-200 to-transparent;
+  }
+
+  /* =============================================================================
+     SIDEBAR CONTAINER
+     ============================================================================= */
+
+  .sidebar-container {
+    @apply flex flex-col h-full overflow-hidden;
+  }
+
+  .sidebar-container.collapsed {
+    @apply w-16;
+  }
+
+  /* =============================================================================
+     SIDEBAR HEADER
+     ============================================================================= */
+
+  .sidebar-header {
+    @apply p-4 border-b border-gray-200/50 transition-all duration-300;
+  }
+
+  .sidebar-header.collapsed {
+    @apply p-2 flex flex-col items-center gap-2;
+  }
+
+  .sidebar-logo-container {
+    @apply flex items-center gap-3 mb-4;
+  }
+
+  .sidebar-logo-container.collapsed {
+    @apply justify-center mb-2;
+  }
+
+  .sidebar-logo-image {
+    @apply w-8 h-8 rounded-lg;
+  }
+
+  .sidebar-logo-text {
+    @apply text-xl font-bold text-gray-900 tracking-tight transition-opacity duration-300;
+  }
+
+  .sidebar-logo-text.collapsed {
+    @apply opacity-0 w-0 overflow-hidden;
+  }
+
+  .sidebar-toggle {
+    @apply p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200;
+  }
+
+  .sidebar-toggle.collapsed {
+    @apply p-1.5 w-8 h-8 flex items-center justify-center;
+  }
+
+  .sidebar-toggle-icon {
+    @apply w-5 h-5 transition-transform duration-300;
+  }
+
+  .sidebar-toggle-icon.collapsed {
+    @apply w-4 h-4 rotate-180;
+  }
+
+  /* =============================================================================
+     SIDEBAR NAVIGATION
+     ============================================================================= */
+
+  .sidebar-nav {
+    @apply flex-1 overflow-y-auto p-4 space-y-6;
+  }
+
+  .sidebar-nav.collapsed {
+    @apply p-1;
+  }
+
+  .nav-section {
+    @apply space-y-3;
+  }
+
+  .nav-section.collapsed {
+    @apply space-y-2;
+  }
+
+  .nav-section-header {
+    @apply px-2 text-xs font-bold text-gray-500 uppercase tracking-wider transition-opacity duration-300;
+  }
+
+  .nav-section-header.collapsed {
+    @apply opacity-0 h-0 overflow-hidden;
+  }
+
+  .nav-items {
+    @apply space-y-1;
+  }
+
+  /* =============================================================================
+     NAVIGATION ITEMS
+     ============================================================================= */
+
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:text-white rounded-lg transition-all duration-200 cursor-pointer group relative min-h-11;
+  }
+
+  .nav-item.collapsed {
+    @apply justify-center gap-0 px-2 w-12 mx-auto;
+  }
+
+  .nav-item.active {
+    @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg;
+  }
+
+  .nav-item:hover {
+    @apply transform -translate-y-0.5 shadow-md;
+  }
+
+  .nav-icon {
+    @apply w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110;
+  }
+
+  .nav-text {
+    @apply font-medium transition-opacity duration-300;
+  }
+
+  .nav-text.collapsed {
+    @apply opacity-0 w-0 overflow-hidden;
+  }
+
+  /* =============================================================================
+     TOOLTIP FOR COLLAPSED STATE
+     ============================================================================= */
+
+  .nav-item.collapsed {
+    @apply relative;
+  }
+
+  .nav-item.collapsed::after {
+    content: attr(data-tooltip);
+    @apply absolute left-full ml-2 px-2 py-1 bg-gray-900 text-white text-sm rounded opacity-0 pointer-events-none transition-opacity duration-200 whitespace-nowrap z-50;
+  }
+
+  .nav-item.collapsed:hover::after {
+    @apply opacity-100;
+  }
+
+  /* =============================================================================
+     USER SECTION
+     ============================================================================= */
+
+  .sidebar-user-section {
+    @apply p-4 border-t border-gray-200/50;
+  }
+
+  .sidebar-user-section.collapsed {
+    @apply p-2;
+  }
+
+  .sidebar-user-expanded {
+    @apply transition-opacity duration-300;
+  }
+
+  .sidebar-user-expanded.collapsed {
+    @apply opacity-0 h-0 overflow-hidden;
+  }
+
+  .sidebar-user-collapsed {
+    @apply hidden transition-opacity duration-300;
+  }
+
+  .sidebar-user-collapsed.show {
+    @apply block;
+  }
+
+  .sidebar-user-info {
+    @apply bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-xl p-4 shadow-lg;
+  }
+
+  .sidebar-user-header {
+    @apply mb-3;
+  }
+
+  .sidebar-user-email {
+    @apply text-sm font-bold text-gray-900 truncate mb-1;
+  }
+
+  .sidebar-user-plan {
+    @apply inline-flex items-center px-2 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-xs font-bold text-blue-700 uppercase tracking-wider rounded-full border border-blue-200/50;
+  }
+
+  .sidebar-user-credits {
+    @apply bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg text-white shadow-lg mb-3;
+  }
+
+  .sidebar-user-credits-header {
+    @apply flex justify-between items-center;
+  }
+
+  .sidebar-user-credits-label {
+    @apply text-xs font-bold uppercase tracking-wide opacity-90;
+  }
+
+  .sidebar-user-credits-count {
+    @apply text-xl font-black;
+  }
+
+  .sidebar-user-credits-icon {
+    @apply text-xl opacity-80;
+  }
+
+  .sidebar-user-actions {
+    @apply space-y-2;
+  }
+
+  .sidebar-user-button {
+    @apply w-full px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200;
+  }
+
+  .sidebar-user-button.primary {
+    @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700;
+  }
+
+  /* =============================================================================
+     SIDEBAR COLLAPSED USER AVATAR
+     ============================================================================= */
+
+  .sidebar-user-avatar {
+    @apply w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm mx-auto cursor-pointer hover:scale-110 transition-transform duration-200;
+  }
+
+  /* =============================================================================
+     MOBILE RESPONSIVENESS
+     ============================================================================= */
+
+  @media (max-width: 1024px) {
+    .sidebar {
+      @apply transform -translate-x-full;
+    }
+
+    .sidebar.open {
+      @apply translate-x-0;
+    }
+
+    .sidebar-overlay {
+      @apply fixed inset-0 bg-black/50 z-30 opacity-0 pointer-events-none transition-opacity duration-300;
+    }
+
+    .sidebar-overlay.show {
+      @apply opacity-100 pointer-events-auto;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      @apply w-full max-w-sm;
+    }
+
+    .nav-item {
+      @apply px-4 py-3;
+    }
+
+    .sidebar-user-info {
+      @apply p-3;
+    }
+  }
+
+  /* =============================================================================
+     LOADING STATES
+     ============================================================================= */
+
+  .sidebar-loading {
+    @apply animate-pulse;
+  }
+
+  .sidebar-loading .nav-item {
+    @apply bg-gray-200 text-transparent;
+  }
+
+  .sidebar-loading .sidebar-user-info {
+    @apply bg-gray-200;
+  }
+
+  /* =============================================================================
+     SCROLLBAR STYLING
+     ============================================================================= */
+
+  .sidebar-nav::-webkit-scrollbar {
+    @apply w-1;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+
+  /* Firefox */
+  .sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) transparent;
+  }
+
+  /* =============================================================================
+     ACCESSIBILITY ENHANCEMENTS
+     ============================================================================= */
+
+  .nav-item:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-white;
+  }
+
+  .sidebar-toggle:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  .sidebar-user-button:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  /* =============================================================================
+     REDUCED MOTION SUPPORT
+     ============================================================================= */
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .nav-item,
+    .sidebar-toggle,
+    .sidebar-user-expanded,
+    .sidebar-user-collapsed,
+    .nav-text,
+    .sidebar-logo-text {
+      @apply transition-none;
+    }
+
+    .nav-item:hover {
+      @apply transform-none;
+    }
+
+    .sidebar-user-avatar:hover {
+      @apply transform-none;
+    }
+
+    .nav-icon {
+      @apply transition-none;
+    }
+
+    .nav-item:hover .nav-icon {
+      @apply transform-none;
+    }
+  }
+
+  /* =============================================================================
+     HIGH CONTRAST SUPPORT
+     ============================================================================= */
+
+  @media (prefers-contrast: high) {
+    .sidebar {
+      @apply border-2 border-gray-900;
+    }
+
+    .nav-item {
+      @apply border border-transparent;
+    }
+
+    .nav-item:hover,
+    .nav-item.active {
+      @apply border-gray-900;
+    }
+
+    .sidebar-user-info {
+      @apply border-2 border-gray-300;
+    }
+  }
+
+  /* =============================================================================
+     PRINT STYLES
+     ============================================================================= */
+
+  @media print {
+    .sidebar {
+      @apply hidden;
+    }
+  }
+
+  /* =============================================================================
+     DARK MODE PREPARATION (for future implementation)
+     ============================================================================= */
+
+  @media (prefers-color-scheme: dark) {
+    /* Dark mode styles would go here when implemented */
+    /* Currently using light mode only */
+  }
+}
