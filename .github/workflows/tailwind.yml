@@ -26,8 +26,7 @@ jobs:
     - name: Install Tailwind CSS
       run: |
         echo "📦 Installing Tailwind CSS..."
-        npm init -y
-        npm install tailwindcss@latest --save-dev
+        npm install -g tailwindcss@latest
         
     - name: Create output directory
       run: mkdir -p public/assets/css
@@ -37,7 +36,7 @@ jobs:
         echo "🎨 Building Tailwind CSS with component classes..."
         
         # Build main CSS file with component classes
-        ./node_modules/.bin/tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify
+        tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify
         
         # Verify the file was created and contains component classes
         ls -la public/assets/css/
