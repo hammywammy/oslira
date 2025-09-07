@@ -1,5 +1,5 @@
 // =============================================================================
-// INDEX.JS - MODERN SYSTEM (Updated to match dashboard/campaigns pattern)
+// HOME.JS - MODERN SYSTEM (Updated to match dashboard/campaigns pattern)
 // =============================================================================
 
 // Initialize Sentry if available
@@ -15,7 +15,7 @@ if (typeof Sentry !== "undefined") {
   });
 }
 
-let supabaseClient = null;
+// Global state - single declaration
 let isInitialized = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -116,22 +116,21 @@ async function initializeFooter() {
 
 async function initializeSupabase() {
   try {
-    // Wait for config to be loaded by script-loader
-    if (!window.OsliraConfig) {
-      console.warn("⚠️ Configuration not loaded. Demo mode only.");
-      return;
-    }
-
-    const config = window.OsliraConfig.get();
+    // Wait for SimpleAuth to be initialized by script-loader
+    console.log("🔄 Waiting for SimpleAuth initialization...");
     
-    // Use the globally loaded Supabase client
-    if (window.supabase && config) {
-      supabaseClient = window.supabase.createClient(
-        config.SUPABASE_URL,
-        config.SUPABASE_ANON_KEY
-      );
-      console.log("✅ Supabase initialized");
+    let attempts = 0;
+    while (attempts < 50) {
+      if (window.SimpleAuth?.supabase?.from) {
+        console.log("✅ SimpleAuth Supabase client available");
+        return; // Use existing SimpleAuth client
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
     }
+    
+    console.warn("⚠️ SimpleAuth not available. Demo mode only.");
+    setupDemoMode();
   } catch (error) {
     console.error("❌ Supabase initialization failed:", error);
     setupDemoMode();
