@@ -394,22 +394,25 @@ if (this.currentPage === 'dashboard') {
     }
 }
 
-// ADD THIS BLOCK RIGHT HERE:
-// CRITICAL: Add home-specific script loading
 if (this.currentPage === 'home') {
     console.log('🔧 [ScriptLoader] Loading home dependencies...');
     
-    const homeScripts = [
-        '/pages/home/home.js'
-    ];
-    
-    for (const script of homeScripts) {
-        try {
-await this.loadScript({ url: script }, script);
-            console.log(`✅ [ScriptLoader] Home script loaded: ${script}`);
-        } catch (error) {
-            console.error(`❌ [ScriptLoader] Failed to load home script: ${script}`, error);
+    // Don't load home.js if it's already loaded to prevent duplicate supabaseClient
+    if (!this.loadedScripts.has('/pages/home/home.js')) {
+        const homeScripts = [
+            '/pages/home/home.js'
+        ];
+        
+        for (const script of homeScripts) {
+            try {
+                await this.loadScript({ url: script }, script);
+                console.log(`✅ [ScriptLoader] Home script loaded: ${script}`);
+            } catch (error) {
+                console.error(`❌ [ScriptLoader] Failed to load home script: ${script}`, error);
+            }
         }
+    } else {
+        console.log('✅ [ScriptLoader] Home script already loaded, skipping');
     }
 }
     if (!pageConfig || !pageConfig.scripts) {
