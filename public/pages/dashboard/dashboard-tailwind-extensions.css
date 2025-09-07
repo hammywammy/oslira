@@ -1,120 +1,10 @@
 /* =============================================================================
-   ENHANCED DASHBOARD TAILWIND EXTENSIONS
-   Professional CRM styling for lead intelligence pipeline
-   ============================================================================= */
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* =============================================================================
-   MODERN ANIMATIONS AND KEYFRAMES
-   ============================================================================= */
-
-@keyframes shimmer {
-    0% { 
-        transform: translateX(-100%); 
-    }
-    100% { 
-        transform: translateX(200%); 
-    }
-}
-
-@keyframes glow {
-    0%, 100% {
-        box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-    }
-    50% {
-        box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
-    }
-}
-
-@keyframes pulse-glow {
-    0%, 100% {
-        transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
-    }
-    50% {
-        transform: scale(1.05);
-        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
-    }
-}
-
-@keyframes fadeInUp {
-    0% {
-        opacity: 0;
-        transform: translateY(1.5rem);
-    }
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideInLeft {
-    0% {
-        transform: translateX(-100%);
-    }
-    100% {
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideInRight {
-    0% {
-        opacity: 0;
-        transform: translateX(2rem);
-    }
-    100% {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes bounceSubtle {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-4px);
-    }
-}
-
-/* =============================================================================
-   ENHANCED UTILITY CLASSES
+   DASHBOARD TAILWIND EXTENSIONS - V4 COMPATIBLE
+   Professional enhancements and utility classes for dashboard components
    ============================================================================= */
 
 @layer utilities {
-    /* Enhanced animations */
-    .animate-shimmer {
-        animation: shimmer 2s ease-in-out infinite;
-    }
-    
-    .animate-glow {
-        animation: glow 2s ease-in-out infinite;
-    }
-    
-    .animate-pulse-glow {
-        animation: pulse-glow 2s ease-in-out infinite;
-    }
-    
-    .animate-fade-in-up {
-        animation: fadeInUp 0.5s ease-out both;
-    }
-    
-    .animate-slide-in-left {
-        animation: slideInLeft 0.3s ease-out;
-    }
-    
-    .animate-slide-in-right {
-        animation: slideInRight 0.3s ease-out 150ms both;
-    }
-    
-    .animate-bounce-subtle {
-        animation: bounceSubtle 1s ease-in-out infinite;
-    }
-
-    /* Modern hover effects */
+    /* Enhanced hover effects */
     .hover-lift {
         @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
     }
@@ -202,7 +92,7 @@
     }
     
     .filter-btn.active {
-        @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-sm;
+        @apply bg-linear-to-r from-blue-600 to-blue-700 text-white border-blue-600 shadow-sm;
     }
     
     .filter-btn:not(.active) {
@@ -215,7 +105,7 @@
     }
     
     .leads-table th {
-        @apply bg-gradient-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10;
+        @apply bg-linear-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10;
     }
     
     .leads-table th button:hover {
@@ -257,7 +147,7 @@
 
     .platform-badge-glow:before {
         content: '';
-        @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 transition-transform duration-700;
+        @apply absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 transition-transform duration-700;
         transform: translateX(-100%);
     }
 
@@ -288,338 +178,9 @@
     }
 
     /* Enhanced loading states */
-    .table-loading {
-        @apply animate-pulse;
+    .loading-shimmer {
+        @apply bg-linear-to-r from-slate-200 via-slate-100 to-slate-200 transition-colors;
     }
-    
-    .table-loading .skeleton-row {
-        @apply bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded h-4 mb-2;
-        background-size: 200% 100%;
-        animation: shimmer 2s ease-in-out infinite;
-    }
-
-    /* Score progress enhancements */
-    .score-progress-container {
-        @apply relative overflow-hidden;
-    }
-    
-    .score-progress-bar {
-        @apply h-3 rounded-full transition-all duration-500 ease-out shadow-sm relative overflow-hidden;
-    }
-    
-    .score-indicator-dot {
-        @apply absolute top-1/2 transform -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-md border-2 transition-all duration-300;
-    }
-}
-
-/* =============================================================================
-   RESPONSIVE TABLE BEHAVIOR
-   ============================================================================= */
-
-@media (max-width: 1024px) {
-    .leads-table {
-        min-width: 900px;
-    }
-    
-    .leads-table th:nth-child(6),
-    .leads-table td:nth-child(6) {
-        display: none; /* Hide date column on smaller screens */
-    }
-}
-
-@media (max-width: 768px) {
-    .leads-table {
-        min-width: 700px;
-    }
-    
-    .leads-table th:nth-child(5),
-    .leads-table td:nth-child(5) {
-        display: none; /* Hide analysis type on mobile */
-    }
-    
-    .leads-table th:nth-child(6),
-    .leads-table td:nth-child(6) {
-        display: none; /* Hide date column on mobile */
-    }
-}
-
-@media (max-width: 640px) {
-    .leads-table {
-        min-width: 500px;
-    }
-    
-    .leads-table th:nth-child(4),
-    .leads-table td:nth-child(4) {
-        display: none; /* Hide score details on very small screens */
-    }
-}
-
-/* =============================================================================
-   ENHANCED HOVER STATES AND MICRO-INTERACTIONS
-   ============================================================================= */
-
-.leads-table tbody tr {
-    @apply transition-all duration-300;
-}
-
-.leads-table tbody tr:hover {
-    transform: translateY(-1px);
-}
-
-.action-menu button:hover {
-    @apply bg-slate-50 transition-colors duration-150 transform scale-105;
-}
-
-.action-menu button.delete:hover {
-    @apply bg-red-50 text-red-700;
-}
-
-/* Profile picture enhancements */
-.leads-table .profile-pic:hover {
-    @apply scale-110 transition-transform duration-200;
-}
-
-/* Checkbox enhancements */
-.leads-table input[type="checkbox"] {
-    @apply transition-all duration-200;
-}
-
-.leads-table input[type="checkbox"]:focus {
-    @apply ring-2 ring-blue-500 ring-offset-1;
-}
-
-.leads-table input[type="checkbox"]:checked {
-    @apply scale-110;
-}
-
-/* Button hover enhancements */
-button {
-    @apply transition-all duration-200;
-}
-
-button:hover {
-    transform: translateY(-1px);
-}
-
-button:active {
-    transform: translateY(0);
-}
-
-/* =============================================================================
-   DARK MODE SUPPORT (Future Implementation)
-   ============================================================================= */
-
-@media (prefers-color-scheme: dark) {
-    .dark {
-        /* Dark mode variants will be added here */
-        /* Following the existing design system dark mode patterns */
-    }
-}
-
-/* =============================================================================
-   PRINT OPTIMIZATIONS
-   ============================================================================= */
-
-@media print {
-    .no-print {
-        @apply hidden;
-    }
-    
-    .print-full-width {
-        @apply w-full;
-    }
-    
-    .print-break-inside-avoid {
-        break-inside: avoid;
-    }
-    
-    .leads-table {
-        @apply text-xs;
-    }
-    
-    .action-menu,
-    .bulk-actions-toolbar {
-        @apply hidden;
-    }
-}
-
-/* =============================================================================
-   ACCESSIBILITY ENHANCEMENTS
-   ============================================================================= */
-
-/* Focus indicators */
-*:focus {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .leads-table {
-        @apply border-2 border-slate-900;
-    }
-    
-    .leads-table th,
-    .leads-table td {
-        @apply border border-slate-700;
-    }
-    
-    .leads-table tbody tr:hover {
-        @apply bg-yellow-100;
-    }
-    
-    .platform-badge,
-    .analysis-badge,
-    .score-badge {
-        @apply border-2 border-current;
-    }
-    
-    .action-menu {
-        @apply border-2 border-slate-900 bg-white;
-    }
-    
-    .filter-btn.active {
-        @apply bg-black text-white border-black;
-    }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-    
-    .animate-shimmer,
-    .animate-glow,
-    .animate-pulse-glow {
-        animation: none;
-    }
-    
-    .hover-lift,
-    .hover-lift-subtle {
-        transform: none !important;
-    }
-}
-
-/* Screen reader only content */
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-/* Skip links for keyboard navigation */
-.skip-link {
-    @apply absolute top-0 left-0 bg-blue-600 text-white px-4 py-2 rounded-br-lg z-50;
-    transform: translateY(-100%);
-    transition: transform 0.3s;
-}
-
-.skip-link:focus {
-    transform: translateY(0);
-}
-
-/* Enhanced focus states for better accessibility */
-.leads-table tbody tr:focus-within {
-    @apply bg-blue-50 ring-2 ring-blue-500 ring-inset;
-}
-
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
-    @apply ring-2 ring-blue-500 ring-offset-2;
-}
-
-/* Keyboard navigation indicators */
-.leads-table tbody tr[tabindex]:focus {
-    @apply bg-blue-50 outline-none ring-2 ring-blue-500 ring-inset;
-}
-
-/* =============================================================================
-   PERFORMANCE OPTIMIZATIONS
-   ============================================================================= */
-
-/* GPU acceleration for smooth animations */
-.action-card,
-.stat-card,
-.lead-card,
-.card-dashboard {
-    @apply will-change-transform;
-}
-
-/* Optimize repaints for hover effects */
-.btn,
-.filter-btn,
-.action-menu button {
-    @apply will-change-auto;
-}
-
-/* Contain layout shifts */
-.leads-table {
-    contain: layout style;
-}
-
-.leads-table tbody tr {
-    contain: layout;
-}
-
-/* Optimize scroll performance */
-.leads-table-container {
-    @apply will-change-scroll;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
-}
-
-.leads-table-container::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.leads-table-container::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.leads-table-container::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.5);
-    border-radius: 4px;
-}
-
-.leads-table-container::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(148, 163, 184, 0.7);
-}
-
-/* =============================================================================
-   ENHANCED ERROR STATES
-   ============================================================================= */
-
-.error-state {
-    @apply bg-red-50 border border-red-200 rounded-lg p-6 text-center;
-}
-
-.error-state .error-icon {
-    @apply w-12 h-12 mx-auto mb-4 text-red-500;
-}
-
-.error-state .error-title {
-    @apply text-lg font-semibold text-red-900 mb-2;
-}
-
-.error-state .error-message {
-    @apply text-sm text-red-700 mb-4;
-}
-
-.error-state .error-action {
-    @apply px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors;
 }
 
 /* =============================================================================
@@ -631,7 +192,7 @@ select:focus-visible {
 }
 
 .skeleton-row {
-    @apply bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 rounded;
+    @apply bg-linear-to-r from-slate-200 via-slate-100 to-slate-200 rounded;
     background-size: 200% 100%;
     animation: shimmer-loading 2s ease-in-out infinite;
 }
@@ -674,7 +235,7 @@ select:focus-visible {
 }
 
 .empty-state-icon {
-    @apply w-20 h-20 mx-auto bg-gradient-to-br from-slate-100 to-blue-100 rounded-2xl flex items-center justify-center mb-6 shadow-lg;
+    @apply w-20 h-20 mx-auto bg-linear-to-br from-slate-100 to-blue-100 rounded-2xl flex items-center justify-center mb-6 shadow-lg;
 }
 
 .empty-state-title {
@@ -686,7 +247,7 @@ select:focus-visible {
 }
 
 .empty-state-action {
-    @apply px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl;
+    @apply px-6 py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl;
 }
 
 /* =============================================================================
@@ -731,226 +292,26 @@ select:focus-visible {
 }
 
 .notification-message {
-    @apply text-sm text-slate-600 mt-1;
-}
-
-.notification-close {
-    @apply ml-3 flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 transition-colors;
+    @apply text-sm text-slate-600;
 }
 
 /* =============================================================================
-   MODERN SCROLLBAR STYLING
+   ENHANCED ANIMATIONS
    ============================================================================= */
 
-/* Firefox */
-* {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
-}
-
-/* Webkit browsers */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.3);
-    border-radius: 3px;
-    transition: background-color 0.2s ease;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(148, 163, 184, 0.5);
-}
-
-::-webkit-scrollbar-corner {
-    background: transparent;
-}
-
-/* =============================================================================
-   ENHANCED SELECTION STYLES
-   ============================================================================= */
-
-::selection {
-    background-color: rgba(59, 130, 246, 0.2);
-    color: inherit;
-}
-
-::-moz-selection {
-    background-color: rgba(59, 130, 246, 0.2);
-    color: inherit;
-}
-
-/* Custom selection for table cells */
-.leads-table td::selection {
-    background-color: rgba(59, 130, 246, 0.1);
-}
-
-/* =============================================================================
-   UTILITY CLASSES FOR ENHANCED FUNCTIONALITY
-   ============================================================================= */
-
-/* Truncate text with better ellipsis */
-.truncate-enhanced {
-    @apply truncate;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    max-width: 0;
-    flex: 1;
-}
-
-/* Gradient text */
-.text-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Modern backdrop blur */
-.backdrop-blur-modern {
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-}
-
-/* Enhanced border radius */
-.rounded-modern {
-    border-radius: 1rem;
-}
-
-.rounded-modern-lg {
-    border-radius: 1.5rem;
-}
-
-/* Modern shadows */
-.shadow-modern {
-    box-shadow: 
-        0 4px 6px -1px rgba(0, 0, 0, 0.1),
-        0 2px 4px -1px rgba(0, 0, 0, 0.06),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
-}
-
-.shadow-modern-lg {
-    box-shadow: 
-        0 20px 25px -5px rgba(0, 0, 0, 0.1),
-        0 10px 10px -5px rgba(0, 0, 0, 0.04),
-        0 0 0 1px rgba(0, 0, 0, 0.05);
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN ENHANCEMENTS
-   ============================================================================= */
-
-/* Mobile-first responsive utilities */
-@media (max-width: 480px) {
-    .leads-table-container {
-        @apply overflow-x-auto;
-        -webkit-overflow-scrolling: touch;
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
     }
-    
-    .leads-table {
-        min-width: 400px;
-    }
-    
-    .leads-table th,
-    .leads-table td {
-        @apply px-3 py-2 text-xs;
-    }
-    
-    .action-menu {
-        @apply w-40;
-    }
-    
-    .notification {
-        @apply left-4 right-4 max-w-none;
-    }
-}
-
-/* Tablet optimizations */
-@media (min-width: 481px) and (max-width: 1024px) {
-    .leads-table th,
-    .leads-table td {
-        @apply px-4 py-3 text-sm;
-    }
-}
-
-/* Large screen optimizations */
-@media (min-width: 1920px) {
-    .leads-table {
-        @apply text-base;
-    }
-    
-    .leads-table th,
-    .leads-table td {
-        @apply px-8 py-5;
+    to {
+        transform: translateX(0);
+        opacity: 1;
     }
 }
 
 /* =============================================================================
-   LEGACY BROWSER FALLBACKS
-   ============================================================================= */
-
-/* Fallbacks for older browsers */
-@supports not (backdrop-filter: blur(1px)) {
-    .backdrop-blur-modern,
-    .action-menu {
-        background-color: rgba(255, 255, 255, 0.95);
-    }
-}
-
-@supports not (display: grid) {
-    .stats-grid {
-        display: flex;
-        flex-wrap: wrap;
-    }
-}
-
-/* =============================================================================
-   PRINT MEDIA ENHANCEMENTS
-   ============================================================================= */
-
-@media print {
-    /* Optimize for printing */
-    .leads-table {
-        @apply text-xs border-collapse border border-slate-300;
-    }
-    
-    .leads-table th,
-    .leads-table td {
-        @apply border border-slate-300 px-2 py-1;
-    }
-    
-    .leads-table thead {
-        @apply bg-slate-100;
-    }
-    
-    /* Hide interactive elements */
-    .action-menu,
-    .bulk-actions-toolbar,
-    button:not(.print-visible),
-    input[type="checkbox"] {
-        @apply hidden;
-    }
-    
-    /* Ensure text is readable */
-    * {
-        color: black !important;
-        background: white !important;
-    }
-    
-    .leads-table th {
-        background: #f8f9fa !important;
-    }
-}
-
-/* =============================================================================
-   CUSTOM PROPERTIES FOR DYNAMIC THEMING
+   ENHANCED COMPONENT COLORS
    ============================================================================= */
 
 :root {
@@ -1026,7 +387,6 @@ select:focus-visible {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-
 /* Row hover effects - purple glow only */
 .table-row:hover {
     background-color: rgb(245 243 255) !important;
@@ -1053,4 +413,3 @@ select:focus-visible {
     border: 2px solid rgb(139, 92, 246);
     pointer-events: auto;
 }
-
