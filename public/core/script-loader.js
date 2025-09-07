@@ -181,17 +181,9 @@ getDependencies() {
     },
     
 'home': {
-    scripts: [
-        {
-            src: '/pages/home/home.js',
-            id: 'home-main'
-        },
-        {
-            src: '/core/footer/footer-manager.js',
-            id: 'footer-manager'
-        }
-    ],
+    scripts: ['/pages/home/home.js', '/core/footer/footer-manager.js'],
     styles: [
+        '/assets/css/tailwind.css',
         '/pages/home/home.css',
         '/core/footer/footer.css'
     ],
