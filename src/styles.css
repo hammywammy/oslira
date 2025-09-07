@@ -5,6 +5,7 @@
 /* =============================================================================
    GLOBAL COMPONENT CLASSES ONLY
    Page/component-specific classes should be in their own files
+   Updated: Triggering GitHub Actions build for modular CSS
    ============================================================================= */
 
 @layer components {
