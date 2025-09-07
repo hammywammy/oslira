@@ -1,0 +1,488 @@
+@layer components {
+  /* =============================================================================
+     ONBOARDING PAGE LAYOUT
+     ============================================================================= */
+  
+  .onboarding-page-body {
+    @apply bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 min-h-screen text-white;
+  }
+
+  .onboarding-container {
+    @apply max-w-2xl mx-auto px-6 py-8 min-h-screen flex flex-col justify-center;
+  }
+
+  /* =============================================================================
+     ONBOARDING HEADER
+     ============================================================================= */
+
+  .onboarding-header {
+    @apply text-center mb-12;
+  }
+
+  .onboarding-logo {
+    @apply text-4xl font-bold mb-2;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .onboarding-subtitle {
+    @apply text-lg opacity-90 font-normal;
+  }
+
+  /* =============================================================================
+     PROGRESS BAR
+     ============================================================================= */
+
+  .onboarding-progress-container {
+    @apply my-8;
+  }
+
+  .onboarding-progress-bar {
+    @apply h-2 bg-white/20 rounded-full overflow-hidden;
+  }
+
+  .onboarding-progress-fill {
+    @apply h-full bg-gradient-to-r from-white to-blue-200 rounded-full transition-all duration-500 ease-out;
+  }
+
+  .onboarding-progress-text {
+    @apply text-center text-sm mt-3 opacity-75;
+  }
+
+  /* =============================================================================
+     ONBOARDING STEPS
+     ============================================================================= */
+
+  .onboarding-step {
+    @apply hidden;
+  }
+
+  .onboarding-step.active {
+    @apply block animate-fadeInUp;
+  }
+
+  .onboarding-step-header {
+    @apply text-center mb-8;
+  }
+
+  .onboarding-step-title {
+    @apply text-2xl font-bold mb-3;
+  }
+
+  .onboarding-step-description {
+    @apply text-lg opacity-90 leading-relaxed;
+  }
+
+  /* =============================================================================
+     ONBOARDING CARDS
+     ============================================================================= */
+
+  .onboarding-card {
+    @apply bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-8 mb-8;
+  }
+
+  .onboarding-card-content {
+    @apply space-y-6;
+  }
+
+  /* =============================================================================
+     FORM COMPONENTS
+     ============================================================================= */
+
+  .onboarding-form-group {
+    @apply space-y-2;
+  }
+
+  .onboarding-form-label {
+    @apply block text-sm font-medium text-white/90;
+  }
+
+  .onboarding-form-input {
+    @apply w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200;
+  }
+
+  .onboarding-form-textarea {
+    @apply w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200 resize-none;
+  }
+
+  .onboarding-form-select {
+    @apply w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200;
+  }
+
+  .onboarding-form-checkbox {
+    @apply w-5 h-5 bg-white/10 border border-white/30 rounded focus:ring-2 focus:ring-white/50 text-white;
+  }
+
+  .onboarding-form-radio {
+    @apply w-5 h-5 bg-white/10 border border-white/30 focus:ring-2 focus:ring-white/50 text-white;
+  }
+
+  /* =============================================================================
+     CHOICE CARDS
+     ============================================================================= */
+
+  .onboarding-choice-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+  }
+
+  .onboarding-choice-card {
+    @apply bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg p-6 cursor-pointer transition-all duration-200 hover:bg-white/20 hover:border-white/50;
+  }
+
+  .onboarding-choice-card.selected {
+    @apply bg-white/20 border-white/60 ring-2 ring-white/40;
+  }
+
+  .onboarding-choice-icon {
+    @apply w-12 h-12 mx-auto mb-3 text-2xl;
+  }
+
+  .onboarding-choice-title {
+    @apply text-center font-semibold mb-2;
+  }
+
+  .onboarding-choice-description {
+    @apply text-center text-sm opacity-80;
+  }
+
+  /* =============================================================================
+     PLAN SELECTION
+     ============================================================================= */
+
+  .onboarding-plan-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  }
+
+  .onboarding-plan-card {
+    @apply bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 cursor-pointer transition-all duration-200 hover:bg-white/20 hover:border-white/50 relative;
+  }
+
+  .onboarding-plan-card.selected {
+    @apply bg-white/20 border-white/60 ring-2 ring-white/40;
+  }
+
+  .onboarding-plan-card.recommended::before {
+    content: 'Recommended';
+    @apply absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white text-blue-600 px-3 py-1 rounded-full text-xs font-bold;
+  }
+
+  .onboarding-plan-name {
+    @apply text-xl font-bold mb-2;
+  }
+
+  .onboarding-plan-price {
+    @apply text-3xl font-bold mb-1;
+  }
+
+  .onboarding-plan-period {
+    @apply text-sm opacity-75 mb-4;
+  }
+
+  .onboarding-plan-features {
+    @apply space-y-2;
+  }
+
+  .onboarding-plan-feature {
+    @apply flex items-center gap-2 text-sm;
+  }
+
+  .onboarding-plan-feature-icon {
+    @apply w-4 h-4 text-green-300;
+  }
+
+  /* =============================================================================
+     NAVIGATION BUTTONS
+     ============================================================================= */
+
+  .onboarding-navigation {
+    @apply flex justify-between items-center mt-8;
+  }
+
+  .onboarding-btn-back {
+    @apply px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-lg hover:bg-white/20 transition-all duration-200;
+  }
+
+  .onboarding-btn-next {
+    @apply px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-white/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .onboarding-btn-skip {
+    @apply text-white/70 hover:text-white underline text-sm transition-colors duration-200;
+  }
+
+  /* =============================================================================
+     WELCOME STEP
+     ============================================================================= */
+
+  .onboarding-welcome-icon {
+    @apply w-24 h-24 mx-auto mb-6 text-6xl;
+  }
+
+  .onboarding-welcome-title {
+    @apply text-3xl font-bold text-center mb-4;
+  }
+
+  .onboarding-welcome-description {
+    @apply text-xl text-center opacity-90 leading-relaxed mb-8;
+  }
+
+  .onboarding-welcome-features {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-6 mb-8;
+  }
+
+  .onboarding-welcome-feature {
+    @apply text-center;
+  }
+
+  .onboarding-welcome-feature-icon {
+    @apply w-16 h-16 mx-auto mb-3 bg-white/20 rounded-xl flex items-center justify-center text-2xl;
+  }
+
+  .onboarding-welcome-feature-title {
+    @apply font-semibold mb-2;
+  }
+
+  .onboarding-welcome-feature-description {
+    @apply text-sm opacity-80;
+  }
+
+  /* =============================================================================
+     COMPLETION STEP
+     ============================================================================= */
+
+  .onboarding-complete-icon {
+    @apply w-24 h-24 mx-auto mb-6 text-green-300 text-6xl;
+  }
+
+  .onboarding-complete-title {
+    @apply text-3xl font-bold text-center mb-4;
+  }
+
+  .onboarding-complete-description {
+    @apply text-xl text-center opacity-90 leading-relaxed mb-8;
+  }
+
+  .onboarding-complete-summary {
+    @apply bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 mb-8;
+  }
+
+  .onboarding-complete-summary-title {
+    @apply font-semibold mb-4;
+  }
+
+  .onboarding-complete-summary-list {
+    @apply space-y-2;
+  }
+
+  .onboarding-complete-summary-item {
+    @apply flex items-center gap-3;
+  }
+
+  .onboarding-complete-summary-icon {
+    @apply w-5 h-5 text-green-300;
+  }
+
+  /* =============================================================================
+     LOADING STATES
+     ============================================================================= */
+
+  .onboarding-loading {
+    @apply text-center py-8;
+  }
+
+  .onboarding-loading-spinner {
+    @apply w-8 h-8 mx-auto mb-4 animate-spin rounded-full border-2 border-white/30 border-t-white;
+  }
+
+  .onboarding-loading-text {
+    @apply text-lg opacity-90;
+  }
+
+  /* =============================================================================
+     ERROR STATES
+     ============================================================================= */
+
+  .onboarding-error {
+    @apply bg-red-500/20 border border-red-400/50 rounded-lg p-4 mb-6;
+  }
+
+  .onboarding-error-title {
+    @apply font-semibold mb-2;
+  }
+
+  .onboarding-error-message {
+    @apply text-sm opacity-90;
+  }
+
+  /* =============================================================================
+     ANIMATIONS
+     ============================================================================= */
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeInUp {
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  @keyframes slideInRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slideInRight {
+    animation: slideInRight 0.5s ease-out;
+  }
+
+  /* =============================================================================
+     RESPONSIVE DESIGN
+     ============================================================================= */
+
+  @media (max-width: 768px) {
+    .onboarding-container {
+      @apply px-4 py-6;
+    }
+
+    .onboarding-logo {
+      @apply text-3xl;
+    }
+
+    .onboarding-step-title {
+      @apply text-xl;
+    }
+
+    .onboarding-step-description {
+      @apply text-base;
+    }
+
+    .onboarding-card {
+      @apply p-6;
+    }
+
+    .onboarding-choice-grid,
+    .onboarding-plan-grid {
+      @apply grid-cols-1;
+    }
+
+    .onboarding-welcome-features {
+      @apply grid-cols-1 gap-4;
+    }
+
+    .onboarding-navigation {
+      @apply flex-col gap-4;
+    }
+
+    .onboarding-btn-back,
+    .onboarding-btn-next {
+      @apply w-full;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .onboarding-container {
+      @apply px-3;
+    }
+
+    .onboarding-welcome-title,
+    .onboarding-complete-title {
+      @apply text-2xl;
+    }
+
+    .onboarding-welcome-description,
+    .onboarding-complete-description {
+      @apply text-lg;
+    }
+
+    .onboarding-plan-card {
+      @apply p-4;
+    }
+  }
+
+  /* =============================================================================
+     ACCESSIBILITY ENHANCEMENTS
+     ============================================================================= */
+
+  .onboarding-form-input:focus-visible,
+  .onboarding-form-textarea:focus-visible,
+  .onboarding-form-select:focus-visible,
+  .onboarding-choice-card:focus-visible,
+  .onboarding-plan-card:focus-visible,
+  .onboarding-btn-back:focus-visible,
+  .onboarding-btn-next:focus-visible {
+    @apply outline-none ring-2 ring-white/50 ring-offset-2 ring-offset-transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .onboarding-step.active {
+      animation: none;
+    }
+
+    .animate-fadeInUp,
+    .animate-slideInRight {
+      animation: none;
+    }
+
+    .onboarding-progress-fill,
+    .onboarding-choice-card,
+    .onboarding-plan-card,
+    .onboarding-btn-back,
+    .onboarding-btn-next {
+      @apply transition-none;
+    }
+
+    .onboarding-loading-spinner {
+      animation: none;
+    }
+  }
+
+  @media (prefers-contrast: high) {
+    .onboarding-card,
+    .onboarding-choice-card,
+    .onboarding-plan-card,
+    .onboarding-complete-summary {
+      @apply border-2 border-white;
+    }
+
+    .onboarding-form-input,
+    .onboarding-form-textarea,
+    .onboarding-form-select {
+      @apply border-2;
+    }
+  }
+
+  /* =============================================================================
+     PRINT STYLES
+     ============================================================================= */
+
+  @media print {
+    .onboarding-page-body {
+      @apply bg-white text-black;
+    }
+
+    .onboarding-navigation,
+    .onboarding-btn-back,
+    .onboarding-btn-next,
+    .onboarding-btn-skip {
+      @apply hidden;
+    }
+
+    .onboarding-card,
+    .onboarding-choice-card,
+    .onboarding-plan-card {
+      @apply bg-white border border-gray-300;
+    }
+  }
+}
