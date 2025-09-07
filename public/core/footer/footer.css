@@ -1,9 +1,5 @@
 /* =============================================================================
-   FOOTER.CSS - Modular Footer Styles with Tailwind Integration
-   ============================================================================= */
-
-/* =============================================================================
-   FOOTER CONTAINER
+   FOOTER.CSS - Remove conflicting overrides, use component classes only
    ============================================================================= */
 
 .footer-manager-container {
@@ -11,64 +7,4 @@
     margin-top: auto;
 }
 
-/* =============================================================================
-   RESPONSIVE ADJUSTMENTS
-   ============================================================================= */
-
-@media (max-width: 768px) {
-    .footer-manager-container footer .grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 1.5rem;
-    }
-}
-
-@media (max-width: 480px) {
-    .footer-manager-container footer .grid {
-        grid-template-columns: 1fr !important;
-        gap: 2rem;
-    }
-    
-    .footer-manager-container footer .flex {
-        flex-direction: column;
-        gap: 1rem;
-    }
-}
-
-/* =============================================================================
-   ANIMATION ENHANCEMENTS
-   ============================================================================= */
-
-.footer-manager-container footer a {
-    position: relative;
-}
-
-.footer-manager-container footer a::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 2px;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-    transition: width 0.3s ease;
-}
-
-.footer-manager-container footer a:hover::after {
-    width: 100%;
-}
-
-/* =============================================================================
-   NEWSLETTER FORM ENHANCEMENTS
-   ============================================================================= */
-
-.footer-manager-container .newsletter-form {
-    backdrop-filter: blur(10px);
-}
-
-.footer-manager-container .newsletter-form input:focus {
-    background: rgba(255, 255, 255, 0.15);
-}
-
-.footer-manager-container .newsletter-form button:hover {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-}
+/* Remove all other CSS - component classes handle styling */
