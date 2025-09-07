@@ -148,11 +148,10 @@ getDependencies() {
                 critical: true
             },
 
-            'tailwind-cdn': {
-    url: 'https://cdn.tailwindcss.com',
-    global: 'tailwind',
-    critical: true,
-    defer: true
+'tailwind-local': {
+    url: '/assets/css/tailwind.css',
+    type: 'stylesheet',
+    critical: false
 }
         },
         
@@ -301,7 +300,7 @@ console.log(`📚 [ScriptLoader] Page: ${this.currentPage}`);
         const coreScripts = this.dependencies.core;
 
 // Load independent scripts in parallel
-const independentScripts = ['supabase', 'sentry', 'alert-system', 'tailwind-config', 'tailwind-cdn'];
+const independentScripts = ['supabase', 'sentry', 'alert-system', 'tailwind-local'];
 const dependentScripts = [
     'staging-guard', 'config-manager', 'auth-manager', 'simple-app'
 ];
