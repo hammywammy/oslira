@@ -67,7 +67,7 @@ jobs:
         
         # Show first few lines for debugging
         echo "📝 CSS file preview:"
-        head -10 public/assets/css/tailwind.css
+        head -c 1000 public/assets/css/tailwind.css || echo "CSS file too large for preview"
     
     - name: Validate CSS Output
       run: |
