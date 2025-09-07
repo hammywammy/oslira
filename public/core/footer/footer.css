@@ -29,7 +29,7 @@
 }
 
 .footer-company-name {
-    @apply text-xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent;
+    @apply text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent;
 }
 
 .footer-link {
