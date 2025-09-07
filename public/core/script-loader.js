@@ -528,7 +528,8 @@ async loadScript(script, name) {
         // Original script loading logic for JS files
         const scriptUrl = script.src || script.url || script;
         const scriptId = script.id || name;
-        const normalizedUrl = scriptUrl.startsWith('/') ?
+        const normalizedUrl = scriptUrl.startsWith('/') ? 
+            scriptUrl : `/${scriptUrl}`;
         
         // Multiple deduplication checks
         const isDuplicate = 
