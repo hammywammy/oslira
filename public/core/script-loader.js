@@ -149,7 +149,7 @@ getDependencies() {
             },
 
 'tailwind-local': {
-    url: '/assets/css/tailwind.css',
+    url: '/public/assets/css/tailwind.css',
     type: 'stylesheet',
     critical: false
 }
