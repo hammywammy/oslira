@@ -27,7 +27,12 @@ jobs:
     
     - run: mkdir -p public/assets/css
     
-    - run: npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify --watch=false
+    - name: Build Tailwind CSS
+      run: |
+        npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify --watch=false
+        # Verify the file was created
+        ls -la public/assets/css/
+        cat public/assets/css/tailwind.css | head -5
     
     - name: Commit changes
       run: |
