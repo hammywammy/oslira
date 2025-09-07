@@ -8,6 +8,7 @@ on:
       - 'tailwind.config.js'
       - 'public/**/*.html'
       - 'public/**/*.js'
+      - 'public/core/**/*.js'  # Added to watch component files
   workflow_dispatch:
 
 jobs:
@@ -27,17 +28,89 @@ jobs:
     
     - run: mkdir -p public/assets/css
     
-    - name: Build Tailwind CSS
+    - name: Build Tailwind CSS with Component Classes
       run: |
+        echo "🎨 Building Tailwind CSS with component classes..."
+        
+        # Build main CSS file with component classes
         npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify --watch=false
-        # Verify the file was created
+        
+        # Verify the file was created and contains component classes
         ls -la public/assets/css/
-        cat public/assets/css/tailwind.css | head -5
+        echo "📊 File size: $(du -h public/assets/css/tailwind.css)"
+        
+        # Check that component classes are included
+        echo "🔍 Verifying component classes are included..."
+        if grep -q "footer-main" public/assets/css/tailwind.css; then
+          echo "✅ Footer component classes found"
+        else
+          echo "❌ Footer component classes missing"
+          exit 1
+        fi
+        
+        if grep -q "dashboard-card" public/assets/css/tailwind.css; then
+          echo "✅ Dashboard component classes found"
+        else
+          echo "❌ Dashboard component classes missing"
+          exit 1
+        fi
+        
+        if grep -q "btn-primary" public/assets/css/tailwind.css; then
+          echo "✅ Button component classes found"
+        else
+          echo "❌ Button component classes missing"
+          exit 1
+        fi
+        
+        echo "✅ All component classes successfully built into CSS"
+        
+        # Show first few lines for debugging
+        echo "📝 CSS file preview:"
+        head -10 public/assets/css/tailwind.css
+    
+    - name: Validate CSS Output
+      run: |
+        echo "🔍 Running CSS validation..."
+        
+        # Check file size (should be reasonable with component classes)
+        FILE_SIZE=$(stat -f%z public/assets/css/tailwind.css 2>/dev/null || stat -c%s public/assets/css/tailwind.css)
+        echo "📊 Generated CSS size: $FILE_SIZE bytes"
+        
+        # Size should be reasonable (not too small, not too large)
+        if [ $FILE_SIZE -lt 10000 ]; then
+          echo "⚠️ CSS file seems too small, may be missing classes"
+          exit 1
+        fi
+        
+        if [ $FILE_SIZE -gt 500000 ]; then
+          echo "⚠️ CSS file seems too large, may have unused classes"
+          echo "💡 Consider reviewing safelist in tailwind.config.js"
+        fi
+        
+        echo "✅ CSS file size is within expected range"
     
     - name: Commit changes
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add public/assets/css/tailwind.css
-        git diff --staged --quiet || git commit -m "Auto-build Tailwind CSS [skip ci]"
-        git push
+        
+        # Only commit if there are changes
+        if git diff --staged --quiet; then
+          echo "ℹ️ No changes to commit"
+        else
+          git commit -m "Auto-build Tailwind CSS with component classes [skip ci]"
+          git push
+          echo "✅ CSS changes committed and pushed"
+        fi
+    
+    - name: Build Summary
+      run: |
+        echo "🎉 Tailwind CSS build completed successfully!"
+        echo "📁 Output file: public/assets/css/tailwind.css"
+        echo "🎨 Component classes: Included via @apply directives"
+        echo "🔧 Build method: Component classes pattern"
+        echo "📊 Final size: $(du -h public/assets/css/tailwind.css)"
+        echo ""
+        echo "🚀 Deployment ready - no safelist management required"
+        echo "✨ Infinite scalability - add components without config changes"
