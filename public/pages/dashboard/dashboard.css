@@ -1,133 +1,188 @@
 /* =============================================================================
-   DASHBOARD.CSS - TAILWIND INTEGRATION
-   Minimal CSS file for Tailwind-based dashboard
-   Maintains compatibility with existing JavaScript and core functionality
+   DASHBOARD.CSS - COMPONENT CLASSES INTEGRATION
+   Updated to use component classes from src/styles.css
    ============================================================================= */
 
 @import url('/core/design-system.css');
 @import url('/core/sidebar/sidebar.css');
 
 /* =============================================================================
-   CORE LAYOUT COMPATIBILITY
-   Ensures existing JavaScript functions work correctly
+   LEGACY COMPATIBILITY
+   Map existing class names to new component classes
    ============================================================================= */
 
-/* Maintain sidebar layout compatibility */
 .dashboard {
-    @apply flex min-h-screen;
+    @apply dashboard-main;
 }
 
 .main-content {
-    /* Fallback for non-Tailwind environments */
-    margin-left: var(--sidebar-width, 16rem);
+    @apply dashboard-content;
 }
-/* =============================================================================
-   COMPONENT COMPATIBILITY CLASSES
-   Maintains existing component functionality
-   ============================================================================= */
 
-/* Button class compatibility for JavaScript functions */
+/* Button compatibility mapping */
 .btn {
+    /* Use base button from component classes */
     @apply inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md transition-all duration-200;
 }
 
 .primary-btn,
 .btn-primary {
-    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40;
+    @apply btn-primary; /* Maps to component class */
 }
 
 .secondary-btn,
 .btn-secondary {
-    @apply bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-sm hover:shadow-md;
+    @apply btn-secondary; /* Maps to component class */
 }
 
-/* Enhanced action cards */
+/* Enhanced action cards using component classes */
 .action-card {
-    animation: float 6s ease-in-out infinite;
-    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    @apply action-card; /* Uses component class with hover effects */
 }
 
-.action-card:hover {
-    transform: translateY(-12px) scale(1.05) rotate(2deg);
-    animation-play-state: paused;
-    box-shadow: 
-        0 30px 60px rgba(0, 0, 0, 0.2),
-        0 0 50px rgba(139, 92, 246, 0.3);
+.action-icon {
+    @apply action-card-icon;
 }
 
-/* Enhanced stat cards */
-.stat-card:hover .w-12.h-12 {
-    transform: scale(1.1) rotate(5deg);
-    animation: pulse-glow 0.6s ease;
+/* Stats grid compatibility */
+.stats-grid {
+    @apply dashboard-grid;
 }
 
-.btn-small {
-    @apply px-3 py-2 text-sm;
+.stat-card {
+    @apply dashboard-stat-card;
 }
 
-/* =============================================================================
-   FILTER BUTTON STATES
-   JavaScript toggles these classes
-   ============================================================================= */
-
-.filter-btn.active {
-    @apply bg-blue-600 text-white border-blue-600;
+/* Leads table compatibility */
+.leads-table {
+    @apply leads-table; /* Component class handles all styling */
 }
 
-.filter-btn:not(.active) {
-    @apply bg-white text-slate-700 border-slate-200 hover:bg-slate-50;
+.leads-table tbody tr {
+    @apply leads-table-row;
 }
 
-/* =============================================================================
-   TABLE AND COMPONENT STATES
-   ============================================================================= */
-
-.lead-card.selected {
-    @apply border-blue-600 bg-blue-50/50;
+.leads-table tbody tr:hover {
+    @apply hover:bg-gray-50;
 }
 
-.bulk-actions.show {
-    @apply flex;
+.leads-table tbody tr.selected {
+    @apply bg-blue-50 border-blue-200;
 }
 
-.bulk-actions:not(.show) {
-    @apply hidden;
+.leads-table th {
+    @apply leads-table-header-cell;
+}
+
+.leads-table td {
+    @apply leads-table-cell;
 }
 
 /* =============================================================================
-   ANIMATION CLASSES FOR JAVASCRIPT
-   Maintains existing animation functionality
+   PAGE-SPECIFIC ENHANCEMENTS
+   Additional styling beyond component classes
    ============================================================================= */
 
-.fade-in-up {
-    animation: fadeInUp 0.5s ease-out both;
+/* Dashboard header */
+.dashboard-header {
+    @apply flex items-center justify-between mb-8;
 }
 
-.slide-in-left {
-    animation: slideInLeft 0.3s ease-out;
+.dashboard-title {
+    @apply text-3xl font-bold text-gray-900;
 }
 
-.slide-in-right {
-    animation: slideInRight 0.3s ease-out 150ms both;
+.dashboard-subtitle {
+    @apply text-gray-600 mt-1;
+}
+
+/* Quick actions section */
+.quick-actions {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8;
+}
+
+/* Recent activity */
+.recent-activity {
+    @apply bg-white rounded-lg shadow-sm border p-6;
+}
+
+.activity-item {
+    @apply flex items-center gap-3 py-3 border-b border-gray-100 last:border-0;
+}
+
+.activity-icon {
+    @apply w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium;
+}
+
+.activity-content {
+    @apply flex-1;
+}
+
+.activity-title {
+    @apply font-medium text-gray-900;
+}
+
+.activity-description {
+    @apply text-sm text-gray-600;
+}
+
+.activity-time {
+    @apply text-xs text-gray-500;
 }
 
 /* =============================================================================
-   RESPONSIVE UTILITIES
+   MOBILE RESPONSIVENESS
+   Component classes handle most responsive behavior
    ============================================================================= */
 
-/* Mobile sidebar behavior */
 @media (max-width: 768px) {
-    .main-content {
-        margin-left: 0;
+    .dashboard-content {
+        @apply ml-0 p-4;
     }
     
-    .sidebar.mobile-open {
-        @apply translate-x-0;
+    .dashboard-grid {
+        @apply grid-cols-1 gap-4;
     }
     
-    .sidebar:not(.mobile-open) {
-        @apply -translate-x-full;
+    .quick-actions {
+        @apply grid-cols-2 gap-3;
     }
+    
+    .dashboard-header {
+        @apply flex-col items-start gap-4;
+    }
+}
+
+@media (max-width: 640px) {
+    .quick-actions {
+        @apply grid-cols-1;
+    }
+    
+    .action-card {
+        @apply p-4;
+    }
+    
+    .action-card-title {
+        @apply text-base;
+    }
+}
+
+/* =============================================================================
+   PERFORMANCE OPTIMIZATIONS
+   Component classes provide base performance, these add specific optimizations
+   ============================================================================= */
+
+/* GPU acceleration for smooth animations */
+.action-card,
+.stat-card,
+.dashboard-card {
+    @apply will-change-transform;
+}
+
+/* Optimize repaints for hover effects */
+.btn,
+.leads-table-row {
+    @apply will-change-auto;
 }
 
 /* =============================================================================
@@ -138,21 +193,13 @@
     @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-blue-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md focus:z-50;
 }
 
-/* =============================================================================
-   CUSTOM UTILITY CLASSES
-   Enhanced beyond standard Tailwind
-   ============================================================================= */
-
-.glass-effect {
-    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+/* Focus indicators for interactive elements */
+.action-card:focus-within {
+    @apply ring-2 ring-blue-500 ring-offset-2;
 }
 
-.card-hover {
-    @apply transform hover:-translate-y-1 transition-all duration-300;
-}
-
-.gradient-border {
-    background: linear-gradient(90deg, #2D6CDF 0%, #8A6DF1 100%);
+.leads-table-row:focus-within {
+    @apply ring-1 ring-blue-300;
 }
 
 /* =============================================================================
@@ -161,43 +208,33 @@
 
 @media print {
     .sidebar,
-    .header-actions,
-    .bulk-actions,
-    .section-actions {
+    .dashboard-header .action-buttons,
+    .quick-actions {
         @apply hidden;
     }
     
-    .main-content {
+    .dashboard-content {
         @apply ml-0;
     }
     
+    .dashboard-card,
     .stat-card,
-    .action-card,
-    .lead-card {
+    .action-card {
         @apply shadow-none border border-gray-300;
     }
 }
 
 /* =============================================================================
-   DARK MODE SUPPORT (Future)
-   ============================================================================= */
-
-@media (prefers-color-scheme: dark) {
-    /* Dark mode will be implemented when design system supports it */
-    /* Using .dark: prefix classes when Tailwind dark mode is enabled */
-}
-
-/* =============================================================================
    COMPONENT-SPECIFIC OVERRIDES
-   Handle edge cases where Tailwind classes need adjustment
+   Handle edge cases where component classes need fine-tuning
    ============================================================================= */
 
 /* Ensure text visibility in all states */
-.main-content h1,
-.main-content h2,
-.main-content h3,
-.main-content p,
-.main-content span {
+.dashboard-content h1,
+.dashboard-content h2,
+.dashboard-content h3,
+.dashboard-content p,
+.dashboard-content span {
     color: inherit;
 }
 
@@ -206,14 +243,27 @@
     @apply flex-shrink-0;
 }
 
-/* Table row hover effects */
-.leads-table tbody tr:hover {
-    @apply bg-slate-50/50;
+/* Alternating table row colors */
+.leads-table tbody tr:nth-child(odd) {
+    background-color: rgba(248, 250, 252, 0.3);
+}
+
+.leads-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* =============================================================================
+   DARK MODE SUPPORT (Future Enhancement)
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+    /* Dark mode classes will be added when design system supports it */
+    /* All component classes in src/styles.css would need dark: variants */
 }
 
 /* =============================================================================
    LEGACY SUPPORT
-   Ensures compatibility with any remaining non-Tailwind components
+   Ensures compatibility with any remaining non-component-class elements
    ============================================================================= */
 
 /* Design system variable fallbacks */
@@ -224,48 +274,7 @@
 
 /* Component spacing fallbacks */
 .section-header,
-.stats-grid,
-.action-cards,
 .leads-section {
-    /* Fallback spacing if Tailwind fails to load */
+    /* Fallback spacing if component classes fail to load */
     margin-bottom: 2rem;
-}
-
-/* =============================================================================
-   PERFORMANCE OPTIMIZATIONS
-   ============================================================================= */
-
-/* GPU acceleration for smooth animations */
-.action-card,
-.stat-card,
-.lead-card {
-    @apply will-change-transform;
-}
-
-/* Optimize repaints for hover effects */
-.btn,
-.filter-btn {
-    @apply will-change-auto;
-}
-
-/* Individual component hover - only when directly hovered */
-.platform-group:hover:not(.table-row:hover *) .absolute {
-    opacity: 1;
-}
-
-.analysis-group:hover:not(.table-row:hover *) .absolute {
-    opacity: 1;
-}
-
-.action-button:hover:not(.table-row:hover *) .absolute {
-    opacity: 0.3;
-}
-
-/* Ensure alternating row colors */
-.leads-table tbody tr:nth-child(odd) {
-    background-color: rgba(248, 250, 252, 0.3);
-}
-
-.leads-table tbody tr:nth-child(even) {
-    background-color: rgba(255, 255, 255, 0.5);
 }
