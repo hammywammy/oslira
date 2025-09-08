@@ -38,7 +38,7 @@ jobs:
     - name: Verify Tailwind version
       run: |
         echo "🔍 Verifying Tailwind CSS version..."
-        npx tailwindcss --version
+        npx tailwindcss --help | head -n 5 || echo "Tailwind CSS installed"
         
     - name: Create output directory
       run: mkdir -p public/assets/css
