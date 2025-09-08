@@ -152,21 +152,21 @@
 # ===========================
 
 [[redirects]]
-  from = "/footer/legal/privacy"
+  from = "/footer/privacy"
   to = "pages/footer/legal/privacy/index.html"
   status = 200
 
 [[redirects]]
-  from = "/footer/legal/terms"
+  from = "/footer/terms"
   to = "pages/footer/legal/terms/index.html"
   status = 200
 
 [[redirects]]
-  from = "/footer/legal/refund"
+  from = "/footer/refund"
   to = "pages/footer/legal/refund/index.html"
   status = 200
 
 [[redirects]]
-  from = "/footer/legal/disclaimer"
+  from = "/footer/disclaimer"
   to = "pages/footer/legal/disclaimer/index.html"
   status = 200
