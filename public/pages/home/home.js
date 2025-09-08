@@ -97,11 +97,14 @@ async function initializeFooter() {
     try {
         console.log('🦶 [Home] Starting footer initialization...');
         
-        // Check if container exists
-        const container = document.getElementById('footer-container');
-        if (!container) {
-            throw new Error('footer-container element not found in DOM');
-        }
+// Check if container exists, create if missing
+let container = document.getElementById('footer-container');
+if (!container) {
+    console.log('🔧 [Home] Creating footer-container element');
+    container = document.createElement('div');
+    container.id = 'footer-container';
+    document.body.appendChild(container);
+}
         console.log('✅ [Home] Footer container found');
         
         // Wait for FooterManager to be available
