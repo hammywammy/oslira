@@ -1,7 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-        <script src="/core/env-manager.js"></script>
-    <script src="/core/script-loader.js"></script>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -432,6 +430,72 @@
             </div>
         </div>
     </section>
-    <div id="footer-container"></div>
+   <!-- Footer Manager Initialization -->
+    <script>
+        let footerInitialized = false;
+        
+        // Wait for scripts loaded event
+        window.addEventListener('oslira:scripts:loaded', async () => {
+            if (footerInitialized) {
+                console.log('🔄 [About] Footer already initialized, skipping...');
+                return;
+            }
+            
+            console.log('🚀 [About] Scripts loaded event received, initializing footer...');
+            try {
+                footerInitialized = true;
+                await initializeFooter();
+            } catch (error) {
+                console.error('❌ [About] Footer initialization failed:', error);
+                footerInitialized = false;
+            }
+        });
+        
+        async function initializeFooter() {
+            try {
+                // Check if footer already exists
+                if (document.querySelector('.new-footer-main')) {
+                    console.log('🔄 [About] Footer already exists, skipping initialization...');
+                    return;
+                }
+                
+                console.log('🦶 [About] Starting footer initialization...');
+                
+                // Check if container exists
+                let container = document.getElementById('footer-container');
+                if (!container) {
+                    console.log('🔧 [About] Creating footer-container element');
+                    container = document.createElement('div');
+                    container.id = 'footer-container';
+                    document.body.appendChild(container);
+                }
+                
+                // Wait for FooterManager to be available
+                console.log('🔍 [About] Waiting for FooterManager...');
+                for (let i = 0; i < 50; i++) {
+                    if (window.FooterManager) {
+                        console.log('✅ [About] FooterManager found');
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                if (!window.FooterManager) {
+                    throw new Error('FooterManager not available after waiting');
+                }
+                
+                // Initialize footer
+                console.log('🦶 [About] Creating FooterManager instance...');
+                const footerManager = new window.FooterManager();
+                
+                console.log('🦶 [About] Rendering footer...');
+                footerManager.render('footer-container');
+                
+                console.log('✅ [About] Footer initialization complete');
+            } catch (error) {
+                console.error('❌ [About] Footer initialization failed:', error);
+            }
+        }
+    </script>
 </body>
 </html>
