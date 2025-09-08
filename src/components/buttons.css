@@ -181,7 +181,7 @@
      ============================================================================= */
 
   .btn-fab {
-    @apply fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 z-50;
+    @apply fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full shadow-2xl hover:shadow-2xl transform hover:scale-110 transition-all duration-300 z-50;
   }
 
   .btn-fab-sm {
