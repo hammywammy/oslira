@@ -187,9 +187,9 @@ class ConfigManager {
     async getSupabaseConfig() {
         const config = await this.getConfig();
         return {
-            url: config.supabaseUrl,
-            key: config.supabaseKey
-        };
+  url: config.supabaseUrl,
+  key: config.supabaseAnonKey  // Correct key name
+};
     }
     
     async getWorkerUrl() {
