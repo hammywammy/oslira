@@ -1,5 +1,5 @@
 // =============================================================================
-// HOME.JS - MODERN SYSTEM (Updated to match dashboard/campaigns pattern)
+// HOME.JS - CONVERSION OPTIMIZED SYSTEM
 // =============================================================================
 
 // Initialize Sentry if available
@@ -17,9 +17,20 @@ if (typeof Sentry !== "undefined") {
 
 // Global state - single declaration
 let isInitialized = false;
+let footerInitialized = false;
+let conversionTrackingEnabled = true;
+
+// Conversion tracking state
+const conversionState = {
+  demoUsed: false,
+  ctaClicked: false,
+  socialProofShown: false,
+  timeOnPage: 0,
+  scrollDepth: 0
+};
 
 document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Oslira landing page loaded");
+  console.log("🚀 Oslira conversion-optimized landing page loaded");
   
   // Prevent auto-redirect by blocking simple-app initialization
   window.preventSimpleAppInit = true;
@@ -27,6 +38,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await initializeApp();
   setupEventListeners();
   setupAnimations();
+  initializeConversionOptimizations();
   
   // Force footer initialization after scripts load
   setTimeout(async () => {
@@ -39,7 +51,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // Listen for scripts loaded event to initialize footer - ONCE ONLY
-let footerInitialized = false;
 window.addEventListener('oslira:scripts:loaded', async () => {
   if (footerInitialized) {
     console.log('🔄 [Home] Footer already initialized, skipping...');
@@ -56,59 +67,588 @@ window.addEventListener('oslira:scripts:loaded', async () => {
   }
 });
 
-async function waitForTailwind() {
-  console.log('🎨 [Home] Waiting for Tailwind CSS to load...');
+// =============================================================================
+// CONVERSION OPTIMIZATION FEATURES
+// =============================================================================
+
+function initializeConversionOptimizations() {
+  console.log('🎯 [Home] Initializing conversion optimizations...');
   
-  // Check for any Tailwind CSS link element (not just specific path)
-  for (let i = 0; i < 100; i++) {
-    const tailwindLinks = document.querySelectorAll('link[rel="stylesheet"]');
-    let tailwindFound = false;
-    
-    // Check if any stylesheet contains tailwind classes
-    for (let link of tailwindLinks) {
-      if (link.href && (link.href.includes('tailwind') || link.href.includes('style'))) {
-        tailwindFound = true;
-        break;
-      }
-    }
-    
-    if (tailwindFound || document.styleSheets.length > 0) {
-      // Test with multiple Tailwind classes to be sure
-      const testEl = document.createElement('div');
-      testEl.className = 'bg-gray-900 text-white w-full';
-      testEl.style.visibility = 'hidden';
-      testEl.style.position = 'absolute';
-      document.body.appendChild(testEl);
-      
-      const styles = window.getComputedStyle(testEl);
-      const bgColor = styles.backgroundColor;
-      const textColor = styles.color;
-      const width = styles.width;
-      
-      document.body.removeChild(testEl);
-      
-      // More lenient check - if any Tailwind styles are applied
-      if (bgColor !== 'rgba(0, 0, 0, 0)' || 
-          textColor === 'rgb(255, 255, 255)' || 
-          width === '100%' ||
-          document.styleSheets.length > 0) {
-        console.log('✅ [Home] Tailwind CSS loaded and active');
-        return;
-      }
-    }
-    
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
+  // Initialize demo functionality
+  setupInstagramDemo();
   
-  // If Tailwind doesn't load, continue anyway after timeout
-  console.warn('⚠️ [Home] Tailwind CSS timeout - proceeding without full confirmation');
+  // Setup CTA tracking and optimization
+  setupCTAOptimizations();
+  
+  // Initialize social proof popups
+  setupSocialProofNotifications();
+  
+  // Setup scroll tracking for conversion analytics
+  setupScrollTracking();
+  
+  // Initialize urgency elements
+  setupUrgencyElements();
+  
+  // Setup sticky mobile CTA
+  setupMobileStickyCA();
+  
+  // Initialize time-based triggers
+  setupTimeTriggers();
+  
+  console.log('✅ [Home] Conversion optimizations ready');
 }
 
 // =============================================================================
-// INITIALIZATION (matches dashboard/campaigns pattern)
+// INSTAGRAM DEMO FUNCTIONALITY - DOPAMINE TRIGGER
 // =============================================================================
 
-// In home.js, update the initializeApp function:
+function setupInstagramDemo() {
+  const demoInput = document.getElementById('demo-handle-input');
+  const demoBtn = document.getElementById('demo-analyze-btn');
+  const demoResults = document.getElementById('demo-results');
+  
+  if (!demoInput || !demoBtn || !demoResults) {
+    console.warn('⚠️ [Home] Demo elements not found');
+    return;
+  }
+  
+  console.log('🎮 [Home] Setting up Instagram demo...');
+  
+  // Demo button click handler
+  demoBtn.addEventListener('click', async () => {
+    const handle = demoInput.value.trim();
+    
+    if (!handle) {
+      demoInput.focus();
+      demoInput.classList.add('animate-wiggle');
+      setTimeout(() => demoInput.classList.remove('animate-wiggle'), 500);
+      return;
+    }
+    
+    await runInstagramDemo(handle);
+  });
+  
+  // Enter key support
+  demoInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      demoBtn.click();
+    }
+  });
+  
+  // Auto-clean input
+  demoInput.addEventListener('input', (e) => {
+    let value = e.target.value;
+    if (value.length > 0 && !value.startsWith('@')) {
+      value = '@' + value.replace('@', '');
+    }
+    e.target.value = value;
+  });
+}
+
+async function runInstagramDemo(handle) {
+  const demoBtn = document.getElementById('demo-analyze-btn');
+  const demoResults = document.getElementById('demo-results');
+  const btnText = demoBtn.querySelector('.demo-btn-text');
+  const btnLoading = demoBtn.querySelector('.demo-btn-loading');
+  
+  console.log('🔍 [Home] Running demo for:', handle);
+  
+  // Track demo usage
+  conversionState.demoUsed = true;
+  trackConversionEvent('demo_started', { handle });
+  
+  try {
+    // Show loading state
+    btnText.classList.add('hidden');
+    btnLoading.classList.remove('hidden');
+    demoBtn.disabled = true;
+    
+    // Simulate AI analysis (realistic timing)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Generate demo results
+    const demoData = generateDemoResults(handle);
+    displayDemoResults(demoData);
+    
+    // Show results with animation
+    demoResults.classList.remove('hidden');
+    demoResults.classList.add('animate-slide-in-up');
+    
+    // Track successful demo
+    trackConversionEvent('demo_completed', { handle, demoData });
+    
+    // Show upgrade modal after delay
+    setTimeout(() => {
+      showDemoUpgradeModal();
+    }, 3000);
+    
+  } catch (error) {
+    console.error('❌ [Home] Demo error:', error);
+    trackConversionEvent('demo_error', { handle, error: error.message });
+  } finally {
+    // Reset button state
+    btnText.classList.remove('hidden');
+    btnLoading.classList.add('hidden');
+    demoBtn.disabled = false;
+  }
+}
+
+function generateDemoResults(handle) {
+  // Generate realistic demo data
+  const cleanHandle = handle.replace('@', '');
+  const names = ['Sarah', 'Mike', 'Alex', 'Jordan', 'Taylor', 'Casey'];
+  const industries = [
+    { name: 'Health & Wellness', tags: ['Needs copy help', 'High engagement', 'Business owner'] },
+    { name: 'Tech Startup', tags: ['Growing fast', 'Content creator', 'B2B focus'] },
+    { name: 'E-commerce', tags: ['Product launches', 'Email marketing', 'Conversion focused'] },
+    { name: 'Coaching', tags: ['Personal brand', 'Course creator', 'Audience building'] }
+  ];
+  
+  const randomName = names[Math.floor(Math.random() * names.length)];
+  const randomIndustry = industries[Math.floor(Math.random() * industries.length)];
+  const followers = (Math.random() * 50 + 5).toFixed(1) + 'K';
+  const matchScore = (Math.random() * 25 + 75).toFixed(0);
+  
+return {
+    handle: `@${cleanHandle}`,
+    name: randomName,
+    industry: randomIndustry.name,
+    followers: followers,
+    matchScore: matchScore + '%',
+    tags: randomIndustry.tags,
+    outreachPreview: `Hi ${randomName}! I noticed your ${randomIndustry.name.toLowerCase()} content and think you'd be perfect for...`
+  };
+}
+
+function displayDemoResults(demoData) {
+  const demoResults = document.getElementById('demo-results');
+  
+  demoResults.innerHTML = `
+    <div class="demo-result-card">
+      <div class="demo-profile-info">
+        <div class="demo-avatar">${demoData.name.charAt(0)}</div>
+        <div>
+          <h4 class="demo-name">${demoData.handle}</h4>
+          <p class="demo-analysis">Perfect fit • ${demoData.industry} • ${demoData.followers} followers</p>
+        </div>
+        <span class="demo-match-score">${demoData.matchScore} match</span>
+      </div>
+      <div class="demo-insights">
+        ${demoData.tags.map(tag => `<span class="demo-tag">${tag}</span>`).join('')}
+      </div>
+      <div class="demo-outreach-preview">
+        <p class="demo-message">${demoData.outreachPreview}</p>
+      </div>
+      <p class="demo-upgrade-hint">
+        ↑ See 24 more leads like this with your free trial
+      </p>
+    </div>
+  `;
+}
+
+function showDemoUpgradeModal() {
+  const modal = document.getElementById('demo-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+    trackConversionEvent('demo_modal_shown');
+    
+    // Close modal handlers
+    const closeBtn = modal.querySelector('.demo-modal-close');
+    const overlay = modal.querySelector('.demo-modal-overlay');
+    const upgradeBtn = modal.querySelector('.btn-primary-modal');
+    
+    const closeModal = () => {
+      modal.classList.add('hidden');
+      trackConversionEvent('demo_modal_closed');
+    };
+    
+    closeBtn?.addEventListener('click', closeModal);
+    overlay?.addEventListener('click', closeModal);
+    
+    upgradeBtn?.addEventListener('click', () => {
+      trackConversionEvent('demo_modal_cta_clicked');
+      window.location.href = '/auth';
+    });
+  }
+}
+
+// =============================================================================
+// CTA OPTIMIZATION & TRACKING
+// =============================================================================
+
+function setupCTAOptimizations() {
+  console.log('🎯 [Home] Setting up CTA optimizations...');
+  
+  // Track all CTA clicks
+  const ctaButtons = document.querySelectorAll('[class*="btn-primary"], [class*="cta"]');
+  
+  ctaButtons.forEach(button => {
+    button.addEventListener('click', (e) => {
+      const ctaType = identifyCTAType(button);
+      conversionState.ctaClicked = true;
+      
+      trackConversionEvent('cta_clicked', {
+        type: ctaType,
+        text: button.textContent.trim(),
+        position: getCTAPosition(button)
+      });
+      
+      // Add conversion animation
+      button.classList.add('animate-pulse');
+      setTimeout(() => button.classList.remove('animate-pulse'), 600);
+      
+      // If it's a main CTA, redirect to auth
+      if (ctaType.includes('main') || ctaType.includes('primary')) {
+        e.preventDefault();
+        setTimeout(() => {
+          window.location.href = '/auth';
+        }, 300);
+      }
+    });
+  });
+  
+  // Setup hover effects for additional dopamine
+  ctaButtons.forEach(button => {
+    button.addEventListener('mouseenter', () => {
+      trackConversionEvent('cta_hover', { 
+        type: identifyCTAType(button) 
+      });
+    });
+  });
+}
+
+function identifyCTAType(button) {
+  const classList = button.className;
+  if (classList.includes('primary-cta-main')) return 'hero_main';
+  if (classList.includes('final-cta-main')) return 'final_main';
+  if (classList.includes('mobile-cta-btn')) return 'mobile_sticky';
+  if (classList.includes('sticky-cta')) return 'nav_sticky';
+  if (classList.includes('btn-primary-modal')) return 'demo_modal';
+  return 'secondary';
+}
+
+function getCTAPosition(button) {
+  const rect = button.getBoundingClientRect();
+  return {
+    x: Math.round(rect.left),
+    y: Math.round(rect.top),
+    visible: rect.top >= 0 && rect.top <= window.innerHeight
+  };
+}
+
+// =============================================================================
+// SOCIAL PROOF NOTIFICATIONS
+// =============================================================================
+
+function setupSocialProofNotifications() {
+  console.log('📢 [Home] Setting up social proof notifications...');
+  
+  const notifications = [
+    { avatar: 'SC', text: 'Sarah C. just got 5 new leads using Oslira!' },
+    { avatar: 'MR', text: '1,247 copywriters accelerating their outreach' },
+    { avatar: 'AJ', text: 'Alex J. booked 3 clients this week' },
+    { avatar: 'TK', text: 'Someone just improved their response rate by 31%' },
+    { avatar: 'JD', text: 'Jordan D. saved 6 hours of prospecting yesterday' }
+  ];
+  
+  let notificationIndex = 0;
+  let notificationTimer;
+  
+  function showSocialProofNotification() {
+    if (conversionState.socialProofShown) return;
+    
+    const container = document.getElementById('social-proof-notifications');
+    if (!container) return;
+    
+    const notification = notifications[notificationIndex];
+    const notificationEl = createNotificationElement(notification);
+    
+    container.appendChild(notificationEl);
+    
+    // Animate in
+    setTimeout(() => {
+      notificationEl.classList.add('show');
+    }, 100);
+    
+    // Auto dismiss after 4 seconds
+    setTimeout(() => {
+      notificationEl.classList.remove('show');
+      setTimeout(() => {
+        if (notificationEl.parentNode) {
+          notificationEl.parentNode.removeChild(notificationEl);
+        }
+      }, 300);
+    }, 4000);
+    
+    trackConversionEvent('social_proof_shown', { 
+      notification: notification.text,
+      index: notificationIndex 
+    });
+    
+    notificationIndex = (notificationIndex + 1) % notifications.length;
+  }
+  
+  function createNotificationElement(notification) {
+    const div = document.createElement('div');
+    div.className = 'notification-popup';
+    div.innerHTML = `
+      <div class="notification-content">
+        <div class="notification-avatar">${notification.avatar}</div>
+        <div class="notification-text">${notification.text}</div>
+      </div>
+    `;
+    
+    // Click to dismiss
+    div.addEventListener('click', () => {
+      div.classList.remove('show');
+      trackConversionEvent('social_proof_clicked');
+    });
+    
+    return div;
+  }
+  
+  // Start showing notifications after user has been on page for 10 seconds
+  setTimeout(() => {
+    if (!conversionState.ctaClicked) {
+      showSocialProofNotification();
+      conversionState.socialProofShown = true;
+      
+      // Show more notifications every 15 seconds
+      notificationTimer = setInterval(() => {
+        if (!conversionState.ctaClicked && Math.random() > 0.5) {
+          showSocialProofNotification();
+        }
+      }, 15000);
+    }
+  }, 10000);
+}
+
+// =============================================================================
+// SCROLL TRACKING & ANALYTICS
+// =============================================================================
+
+function setupScrollTracking() {
+  let maxScrollDepth = 0;
+  let scrollMilestones = [25, 50, 75, 90, 100];
+  let milestonesHit = new Set();
+  
+  function trackScroll() {
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const scrollPercent = Math.round((scrollTop / docHeight) * 100);
+    
+    if (scrollPercent > maxScrollDepth) {
+      maxScrollDepth = scrollPercent;
+      conversionState.scrollDepth = scrollPercent;
+    }
+    
+    // Track milestone achievements
+    scrollMilestones.forEach(milestone => {
+      if (scrollPercent >= milestone && !milestonesHit.has(milestone)) {
+        milestonesHit.add(milestone);
+        trackConversionEvent('scroll_milestone', { 
+          milestone: milestone,
+          timeOnPage: conversionState.timeOnPage 
+        });
+      }
+    });
+  }
+  
+  let scrollTimeout;
+  window.addEventListener('scroll', () => {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(trackScroll, 100);
+  });
+}
+
+// =============================================================================
+// URGENCY ELEMENTS
+// =============================================================================
+
+function setupUrgencyElements() {
+  console.log('⏰ [Home] Setting up urgency elements...');
+  
+  // Urgency banner close functionality
+  const urgencyClose = document.querySelector('.urgency-close');
+  if (urgencyClose) {
+    urgencyClose.addEventListener('click', () => {
+      const banner = urgencyClose.closest('.urgency-banner');
+      if (banner) {
+        banner.style.display = 'none';
+        trackConversionEvent('urgency_banner_closed');
+      }
+    });
+  }
+  
+  // Update countdown numbers dynamically
+  updateUrgencyCounters();
+  
+  // Update counters every hour
+  setInterval(updateUrgencyCounters, 3600000);
+}
+
+function updateUrgencyCounters() {
+  // Simulate decreasing availability
+  const spots = Math.floor(Math.random() * 50) + 25;
+  
+  const urgencyElements = document.querySelectorAll('.urgency-text');
+  urgencyElements.forEach(el => {
+    const text = el.textContent;
+    if (text.includes('spots left')) {
+      el.innerHTML = text.replace(/\d+ free trials? left/, `${spots} free trials left`);
+    }
+  });
+}
+
+// =============================================================================
+// MOBILE STICKY CTA
+// =============================================================================
+
+function setupMobileStickyCA() {
+  const stickyCA = document.querySelector('.mobile-sticky-cta');
+  if (!stickyCA) return;
+  
+  console.log('📱 [Home] Setting up mobile sticky CTA...');
+  
+  let isVisible = false;
+  
+  function toggleStickyCA() {
+    const scrolled = window.pageYOffset > 500;
+    
+    if (scrolled && !isVisible) {
+      stickyCA.style.transform = 'translateY(0)';
+      isVisible = true;
+      trackConversionEvent('mobile_cta_shown');
+    } else if (!scrolled && isVisible) {
+      stickyCA.style.transform = 'translateY(100%)';
+      isVisible = false;
+    }
+  }
+  
+  // Initial hide
+  stickyCA.style.transform = 'translateY(100%)';
+  stickyCA.style.transition = 'transform 0.3s ease-in-out';
+  
+  let scrollTimeout;
+  window.addEventListener('scroll', () => {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(toggleStickyCA, 50);
+  });
+  
+  // Track clicks
+  const mobileBtn = stickyCA.querySelector('.mobile-cta-btn');
+  if (mobileBtn) {
+    mobileBtn.addEventListener('click', () => {
+      trackConversionEvent('mobile_cta_clicked');
+      window.location.href = '/auth';
+    });
+  }
+}
+
+// =============================================================================
+// TIME-BASED TRIGGERS
+// =============================================================================
+
+function setupTimeTriggers() {
+  console.log('⏲️ [Home] Setting up time-based triggers...');
+  
+  // Track time on page
+  setInterval(() => {
+    conversionState.timeOnPage += 1;
+  }, 1000);
+  
+  // Exit intent detection (desktop only)
+  if (!window.matchMedia('(max-width: 768px)').matches) {
+    document.addEventListener('mouseleave', (e) => {
+      if (e.clientY <= 0 && !conversionState.ctaClicked) {
+        trackConversionEvent('exit_intent', {
+          timeOnPage: conversionState.timeOnPage,
+          scrollDepth: conversionState.scrollDepth
+        });
+        
+        // Could trigger exit intent modal here
+        showExitIntentCTA();
+      }
+    });
+  }
+  
+  // Idle detection
+  let idleTimer;
+  const idleTime = 30; // seconds
+  
+  function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (!conversionState.ctaClicked) {
+        trackConversionEvent('user_idle', {
+          timeOnPage: conversionState.timeOnPage,
+          scrollDepth: conversionState.scrollDepth
+        });
+      }
+    }, idleTime * 1000);
+  }
+  
+  ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, resetIdleTimer, true);
+  });
+  
+  resetIdleTimer();
+}
+
+function showExitIntentCTA() {
+  // Simple exit intent - could enhance with modal
+  const hero = document.querySelector('.hero-section');
+  if (hero) {
+    hero.style.borderTop = '5px solid #ff4444';
+    setTimeout(() => {
+      hero.style.borderTop = 'none';
+    }, 3000);
+  }
+}
+
+// =============================================================================
+// CONVERSION TRACKING & ANALYTICS
+// =============================================================================
+
+function trackConversionEvent(eventName, data = {}) {
+  if (!conversionTrackingEnabled) return;
+  
+  const eventData = {
+    event: eventName,
+    timestamp: new Date().toISOString(),
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    screen: {
+      width: window.screen.width,
+      height: window.screen.height
+    },
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight
+    },
+    state: conversionState,
+    ...data
+  };
+  
+  console.log('📊 [Conversion]', eventName, eventData);
+  
+  // Send to analytics service (if available)
+  if (typeof gtag !== 'undefined') {
+    gtag('event', eventName, {
+      event_category: 'conversion',
+      event_label: JSON.stringify(data),
+      value: 1
+    });
+  }
+  
+  // Could also send to custom analytics endpoint
+  // fetch('/api/analytics', { method: 'POST', body: JSON.stringify(eventData) });
+}
+
+// =============================================================================
+// STANDARD FUNCTIONALITY (from original)
+// =============================================================================
+
 async function initializeApp() {
   try {
     console.log("🚀 Initializing app...");
@@ -117,63 +657,65 @@ async function initializeApp() {
     await initializeSupabase();
     isInitialized = true;
     console.log("✅ Landing page initialized");
- } catch (error) {
+  } catch (error) {
     console.error("❌ Landing page initialization failed:", error);
-    Alert.error("Page failed to load properly", {
-      actions: [{ label: "Refresh Page", action: "reload" }],
-    });
+    if (window.Alert) {
+      Alert.error("Page failed to load properly", {
+        actions: [{ label: "Refresh Page", action: "reload" }],
+      });
+    }
     setupDemoMode();
   }
 }
 
 async function initializeFooter() {
-    try {
-        // Prevent duplicate initialization
-        if (document.querySelector('.footer-main')) {
-            console.log('🔄 [Home] Footer already exists, skipping initialization...');
-            return;
-        }
-        
-        console.log('🦶 [Home] Starting footer initialization...');
-        
-// Check if container exists, create if missing
-let container = document.getElementById('footer-container');
-if (!container) {
-    console.log('🔧 [Home] Creating footer-container element');
-    container = document.createElement('div');
-    container.id = 'footer-container';
-    document.body.appendChild(container);
-}
-        console.log('✅ [Home] Footer container found');
-        
-        // Wait for FooterManager to be available
-        console.log('🔍 [Home] Waiting for FooterManager...');
-        for (let i = 0; i < 50; i++) {
-            if (window.FooterManager) {
-                console.log('✅ [Home] FooterManager found');
-                break;
-            }
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
-        
-        if (!window.FooterManager) {
-            throw new Error('FooterManager not available after waiting');
-        }
-        
-        // Initialize footer
-        console.log('🦶 [Home] Creating FooterManager instance...');
-        const footerManager = new window.FooterManager();
-        
-        console.log('🦶 [Home] Rendering footer...');
-        footerManager.render('footer-container', {
-            showSocialLinks: true,
-            showNewsletter: true
-        });
-        
-        console.log('✅ [Home] Footer initialization complete');
-    } catch (error) {
-        console.error('❌ [Home] Footer initialization failed:', error);
+  try {
+    // Prevent duplicate initialization
+    if (document.querySelector('.footer-main')) {
+      console.log('🔄 [Home] Footer already exists, skipping initialization...');
+      return;
     }
+    
+    console.log('🦶 [Home] Starting footer initialization...');
+    
+    // Check if container exists, create if missing
+    let container = document.getElementById('footer-container');
+    if (!container) {
+      console.log('🔧 [Home] Creating footer-container element');
+      container = document.createElement('div');
+      container.id = 'footer-container';
+      document.body.appendChild(container);
+    }
+    console.log('✅ [Home] Footer container found');
+    
+    // Wait for FooterManager to be available
+    console.log('🔍 [Home] Waiting for FooterManager...');
+    for (let i = 0; i < 50; i++) {
+      if (window.FooterManager) {
+        console.log('✅ [Home] FooterManager found');
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    if (!window.FooterManager) {
+      throw new Error('FooterManager not available after waiting');
+    }
+    
+    // Initialize footer
+    console.log('🦶 [Home] Creating FooterManager instance...');
+    const footerManager = new window.FooterManager();
+    
+    console.log('🦶 [Home] Rendering footer...');
+    footerManager.render('footer-container', {
+      showSocialLinks: true,
+      showNewsletter: true
+    });
+    
+    console.log('✅ [Home] Footer initialization complete');
+  } catch (error) {
+    console.error('❌ [Home] Footer initialization failed:', error);
+  }
 }
 
 async function initializeSupabase() {
@@ -192,464 +734,118 @@ async function initializeSupabase() {
     }
     
     console.warn("⚠️ SimpleAuth not available. Demo mode only.");
-    setupDemoMode();
   } catch (error) {
-    console.error("❌ Supabase initialization failed:", error);
+    console.error("❌ SimpleAuth initialization failed:", error);
     setupDemoMode();
   }
 }
 
 function setupDemoMode() {
-  console.log("🎭 Running in demo mode");
-  // Landing page functionality that doesn't require backend
+  console.log("🎭 Setting up demo mode");
+  // Demo mode functionality if needed
 }
-
-// =============================================================================
-// EVENT LISTENERS
-// =============================================================================
-
-// =============================================================================
-// EVENT LISTENERS (Original functionality)
-// =============================================================================
 
 function setupEventListeners() {
-  // Demo form submission
-  const demoForm = document.querySelector(".demo-form");
-  if (demoForm) {
-    demoForm.addEventListener("submit", handleDemo);
-  }
-
-  // Enhanced demo input with original functionality
-  const demoInput = document.getElementById("demo-input");
-  if (demoInput) {
-    // Remove invalid characters as user types (original feature)
-    demoInput.addEventListener("input", function () {
-      this.value = this.value.replace(/[^a-zA-Z0-9._@]/g, "");
-    });
-  }
-
-  // Smooth scrolling for navigation links (original)
-  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
-    anchor.addEventListener("click", function (e) {
+  // Smooth scrolling for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
       e.preventDefault();
-      const target = document.querySelector(this.getAttribute("href"));
+      const target = document.querySelector(this.getAttribute('href'));
       if (target) {
         target.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
+          behavior: 'smooth',
+          block: 'start'
+        });
+        
+        // Track internal navigation
+        trackConversionEvent('internal_navigation', {
+          target: this.getAttribute('href')
         });
       }
     });
   });
 
-  // Navigation scroll effect (original)
-  window.addEventListener("scroll", handleNavScroll);
+  // Mobile menu functionality
+  const mobileMenuButton = document.getElementById('mobile-menu-button');
+  const mobileMenu = document.getElementById('mobile-menu');
+  
+  if (mobileMenuButton && mobileMenu) {
+    mobileMenuButton.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+      trackConversionEvent('mobile_menu_toggled');
+    });
+  }
 
-  // CTA button clicks
-  document.querySelectorAll('.btn-primary[href="/auth.html"]').forEach((btn) => {
-    btn.addEventListener("click", handleCTAClick);
-  });
-
-  // Keyboard shortcuts (original accessibility feature)
-  document.addEventListener("keydown", function (event) {
-    // Alt + D to focus demo input
-    if (event.altKey && event.key === "d") {
-      event.preventDefault();
-      const demoInput = document.getElementById("demo-input");
-      if (demoInput) {
-        demoInput.focus();
-        announceToScreenReader("Demo input focused. Enter an Instagram username to analyze.");
-      }
-    }
-  });
-
-  // Enhanced keyboard navigation (original feature)
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Enter" && event.target.classList.contains("cta-button")) {
-      event.target.click();
+  // Close mobile menu when clicking outside
+  document.addEventListener('click', (event) => {
+    if (mobileMenu && mobileMenuButton && 
+        !mobileMenu.contains(event.target) && 
+        !mobileMenuButton.contains(event.target)) {
+      mobileMenu.classList.add('hidden');
     }
   });
 }
-
-// =============================================================================
-// DEMO FUNCTIONALITY
-// =============================================================================
-
-async function handleDemo(event) {
-  event.preventDefault();
-
-  const form = event.target;
-  const input = document.getElementById("demo-input");
-  const button = form.querySelector(".demo-button");
-  const username = input.value.trim().replace("@", "");
-
-  // Validate input
-  if (!username) {
-    Alert.warning({ message: "Please enter an Instagram username" });
-    input.focus();
-    return;
-  }
-
-  // Validate username format using original validation
-  if (!validateUsername(username)) {
-    Alert.warning({
-      message: "Invalid username format",
-      suggestions: [
-        "Use only letters, numbers, periods, and underscores",
-        "Remove @ symbol if present",
-        "Maximum 30 characters",
-      ],
-    });
-    input.focus();
-    return;
-  }
-
-  // Show loading state - matching original behavior
-  form.classList.add("demo-loading");
-  const originalText = button.textContent;
-  button.textContent = "Analyzing...";
-  button.disabled = true;
-
-  try {
-    // Simulate analysis delay (matching original)
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    // Store the username for the auth page (original behavior)
-    sessionStorage.setItem("demo_username", username);
-
-    // Redirect to signup with demo context (original behavior)
-    window.location.href = `/auth.html?demo=${encodeURIComponent(username)}`;
-  } catch (error) {
-    console.error("Demo error:", error);
-    Alert.error("Demo analysis failed", {
-      suggestions: ["Try a different username", "Check your internet connection"],
-      actions: [{ label: "Try Again", action: "retry" }],
-    });
-  } finally {
-    // Reset form state
-    form.classList.remove("demo-loading");
-    button.textContent = originalText;
-    button.disabled = false;
-  }
-}
-
-// Original validation function
-function validateUsername(username) {
-  const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
-
-  if (!username || username.length === 0) {
-    Alert.warning({ message: "Username is required" });
-    return false;
-  }
-
-  if (username.length > 30) {
-    Alert.warning({
-      message: "Username too long",
-      suggestions: ["Maximum 30 characters allowed"],
-    });
-    return false;
-  }
-
-  if (!usernameRegex.test(username)) {
-    Alert.warning({
-      message: "Invalid characters in username",
-      suggestions: ["Use only letters, numbers, periods, and underscores"],
-    });
-    return false;
-  }
-
-  if (username.includes("..")) {
-    Alert.warning({
-      message: "Invalid username format",
-      suggestions: ["Cannot have consecutive periods"],
-    });
-    return false;
-  }
-
-  if (username.startsWith(".") || username.endsWith(".")) {
-    Alert.warning({
-      message: "Invalid username format",
-      suggestions: ["Cannot start or end with a period"],
-    });
-    return false;
-  }
-
-  return true;
-}
-async function performRealDemo(username) {
-  try {
-    // Use proper config access
-    const config = window.OsliraConfig?.get();
-    const workerUrl = config?.WORKER_URL || "https://ai-outreach-api.oslira-worker.workers.dev";
-
-    const response = await fetch(`${workerUrl}/analyze`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        profile_url: `https://instagram.com/${username}`,
-        analysis_type: "light",
-        demo: true,
-      }),
-    });
-
-    if (!response.ok) {
-      Alert.warning({
-        message: "Live analysis unavailable",
-        suggestions: ["Demo data will be used instead"],
-      });
-      throw new Error(`API returned ${response.status}`);
-    }
-
-    const result = await response.json();
-    showDemoResult(result, username);
-  } catch (error) {
-    console.error("Real demo failed:", error);
-    Alert.info({
-      message: "Using demo data",
-      suggestions: ["Sign up for real-time analysis"],
-    });
-    await performMockDemo(username);
-  }
-}
-
-async function performMockDemo(username) {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  // Generate mock result
-  const mockResult = {
-    profile: {
-      username: username,
-      followers_count: Math.floor(Math.random() * 50000) + 1000,
-      engagement_rate: (Math.random() * 8 + 2).toFixed(1),
-    },
-    analysis: {
-      interests: ["fitness", "technology", "travel"],
-      niche_fit: Math.floor(Math.random() * 40) + 60,
-      summary: `@${username} shows strong engagement in lifestyle and tech content. High potential for B2B outreach.`,
-    },
-  };
-
-  showDemoResult(mockResult, username, true);
-}
-
-function showDemoResult(result, username, isMock = false) {
-  const demoSection = document.querySelector(".hook-demo");
-
-  // Create result display
-  const resultHTML = `
-        <div class="demo-result">
-            <div class="demo-result-header">
-                <h4>✨ Analysis Complete for @${username}</h4>
-                ${isMock ? '<span class="demo-badge">Demo Mode</span>' : ""}
-            </div>
-            <div class="demo-insights">
-                <div class="insight">
-                    <span class="insight-label">Followers:</span>
-                    <span class="insight-value">${result.profile.followers_count?.toLocaleString() || "N/A"}</span>
-                </div>
-                <div class="insight">
-                    <span class="insight-label">Engagement:</span>
-                    <span class="insight-value">${result.profile.engagement_rate || "N/A"}%</span>
-                </div>
-                <div class="insight">
-                    <span class="insight-label">Lead Score:</span>
-                    <span class="insight-value">${result.analysis.niche_fit || "N/A"}/100</span>
-                </div>
-            </div>
-            <div class="demo-summary">
-                <p>${result.analysis.summary || "Profile analyzed successfully!"}</p>
-            </div>
-            <div class="demo-cta">
-                <a href="/auth.html" class="btn-primary">Get Full Analysis</a>
-                <button class="btn-secondary" onclick="resetDemo()">Try Another</button>
-            </div>
-        </div>
-    `;
-
-  // Replace form with result
-  const demoContent = demoSection.querySelector(".demo-form").parentElement;
-  demoContent.innerHTML = resultHTML;
-
-  // Show success message
-  Alert.success({
-    message: isMock ? "Demo analysis complete!" : "Analysis complete!",
-    suggestions: isMock
-      ? ["Sign up for real-time insights", "Try another username"]
-      : ["Create account for full features"],
-    timeoutMs: 4000,
-  });
-}
-
-function resetDemo() {
-  location.reload();
-}
-
-// =============================================================================
-// UI EFFECTS
-// =============================================================================
 
 function setupAnimations() {
-  // Intersection Observer for feature animations (original)
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.style.opacity = "1";
-            entry.target.style.transform = "translateY(0)";
-          }
-        });
-      },
-      {
-        threshold: 0.1,
-        rootMargin: "0px 0px -50px 0px",
-      }
-    );
+  // Show content once CSS is loaded
+  setTimeout(() => {
+    document.body.classList.add('show-content');
+    trackConversionEvent('page_content_shown');
+  }, 50);
 
-    // Observe elements for animation
-    document.querySelectorAll(".step, .feature, .testimonial").forEach((el) => {
-      el.style.opacity = "0";
-      el.style.transform = "translateY(30px)";
-      el.style.transition = "all 0.6s ease";
-      observer.observe(el);
-    });
-  }
+  // Intersection Observer for scroll animations
+  if ('IntersectionObserver' in window) {
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
 
-  // Performance optimization - lazy load images (original feature)
-  if ("IntersectionObserver" in window) {
-    const imageObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const img = entry.target;
-          if (img.dataset.src) {
-            img.src = img.dataset.src;
-            img.removeAttribute("data-src");
-            imageObserver.unobserve(img);
-          }
+          entry.target.classList.add('animate-slide-in-up');
+          
+          // Track section views
+          const sectionId = entry.target.id || entry.target.className;
+          trackConversionEvent('section_viewed', { section: sectionId });
         }
       });
-    });
+    }, observerOptions);
 
-    document.querySelectorAll("img[data-src]").forEach((img) => {
-      imageObserver.observe(img);
+    // Observe main sections
+    document.querySelectorAll('.benefits-section, .how-it-works-section, .social-proof-section, .final-cta-section').forEach(section => {
+      observer.observe(section);
     });
   }
 }
 
 // =============================================================================
-// UTILITY FUNCTIONS (Original functionality)
+// PAGE VISIBILITY & ENGAGEMENT TRACKING
 // =============================================================================
 
-function showMessage(text, type = "info") {
-  // Legacy support - redirect to Alert system
-  if (type === "error") {
-    Alert.error(text);
-  } else if (type === "success") {
-    Alert.success({ message: text });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    trackConversionEvent('page_hidden', {
+      timeOnPage: conversionState.timeOnPage,
+      scrollDepth: conversionState.scrollDepth
+    });
   } else {
-    Alert.info({ message: text });
+    trackConversionEvent('page_visible');
   }
-}
+});
 
-// Screen reader announcements for dynamic content (original accessibility feature)
-function announceToScreenReader(message) {
-  const announcement = document.createElement("div");
-  announcement.setAttribute("aria-live", "polite");
-  announcement.setAttribute("aria-atomic", "true");
-  announcement.style.position = "absolute";
-  announcement.style.left = "-10000px";
-  announcement.style.width = "1px";
-  announcement.style.height = "1px";
-  announcement.style.overflow = "hidden";
-  announcement.textContent = message;
-
-  document.body.appendChild(announcement);
-
-  setTimeout(() => {
-    document.body.removeChild(announcement);
-  }, 1000);
-}
-
-function handleNavScroll() {
-  // Enhanced navigation scroll effect (original)
-  const nav = document.querySelector("nav");
-  if (window.scrollY > 100) {
-    nav.style.background = "rgba(255, 255, 255, 0.98)";
-    nav.style.boxShadow = "0 4px 20px rgba(45, 108, 223, 0.1)";
-    nav.style.backdropFilter = "blur(10px)";
-  } else {
-    nav.style.background = "rgba(255, 255, 255, 0.95)";
-    nav.style.boxShadow = "none";
-    nav.style.backdropFilter = "none";
-  }
-}
-
-function handleCTAClick(event) {
-  // Track CTA clicks for analytics (original feature)
-  console.log("🎯 CTA clicked:", event.target.textContent);
-}
+// Track page unload
+window.addEventListener('beforeunload', () => {
+  trackConversionEvent('page_unload', {
+    timeOnPage: conversionState.timeOnPage,
+    scrollDepth: conversionState.scrollDepth,
+    demoUsed: conversionState.demoUsed,
+    ctaClicked: conversionState.ctaClicked
+  });
+});
 
 // =============================================================================
-// ERROR HANDLING (Original system)
+// INITIALIZATION
 // =============================================================================
 
-// Error boundary for JavaScript errors (original)
-window.addEventListener("error", function (event) {
-  console.error("JavaScript error:", event.error);
-
-  // Only show critical errors that affect user experience
-  if (
-    event.error &&
-    event.error.message &&
-    (event.error.message.includes("demo") ||
-      event.error.message.includes("form") ||
-      event.error.message.includes("network"))
-  ) {
-    Alert.error("Something went wrong", {
-      suggestions: ["Refresh the page", "Try again in a moment"],
-    });
-  }
-});
-
-window.addEventListener("unhandledrejection", function (event) {
-  console.error("Unhandled promise rejection:", event.reason);
-
-  // Show user-friendly message for critical promise rejections
-  if (
-    event.reason &&
-    event.reason.message &&
-    (event.reason.message.includes("fetch") ||
-      event.reason.message.includes("network") ||
-      event.reason.message.includes("demo"))
-  ) {
-    Alert.warning({
-      message: "Connection issue detected",
-      suggestions: ["Check your internet connection", "Try refreshing the page"],
-    });
-  }
-
-  event.preventDefault();
-});
-
-// Prevent form submission if JavaScript fails (original feature)
-window.addEventListener("beforeunload", function () {
-  try {
-    const forms = document.querySelectorAll("form");
-    forms.forEach((form) => {
-      if (form.classList.contains("demo-loading")) {
-        form.classList.remove("demo-loading");
-        const button = form.querySelector('button[type="submit"]');
-        if (button) {
-          button.disabled = false;
-          button.textContent = "Analyze Profile";
-        }
-      }
-    });
-  } catch (error) {
-    console.error("Form cleanup failed:", error);
-    // Don't show alert on page unload
-  }
-});
+console.log('✅ [Home] Conversion-optimized homepage script loaded');
