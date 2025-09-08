@@ -82,7 +82,7 @@ console.log('🌍 [Env] Environment & Page Setup:', {
             '/messages': 'messages',
             '/integrations': 'integrations',
             '/admin': 'admin',
-            
+             
             // Footer pages (public)
             '/footer/about': 'about',
             '/footer/api': 'api-docs',
