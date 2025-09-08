@@ -1,19 +1,23 @@
 @layer components {
   /* =============================================================================
-     AUTH PAGE LAYOUT
+     MODERN AUTH PAGE LAYOUT
      ============================================================================= */
   
   .auth-page-body {
-    @apply bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen flex items-center justify-center p-6;
+    @apply min-h-screen flex items-center justify-center p-4;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   }
 
   .auth-container {
-    @apply bg-white/95 backdrop-blur-xl p-8 md:p-12 rounded-2xl shadow-2xl border border-white/20 w-full max-w-md text-center relative overflow-hidden;
+    @apply bg-white rounded-3xl p-12 w-full max-w-md relative overflow-hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
 
   .auth-container::before {
     content: '';
-    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600;
+    @apply absolute top-0 left-0 right-0 h-1;
+    background: linear-gradient(90deg, #667eea, #764ba2);
   }
 
   /* =============================================================================
@@ -21,11 +25,11 @@
      ============================================================================= */
 
   .auth-header {
-    @apply mb-8;
+    @apply text-center mb-10;
   }
 
   .auth-logo-container {
-    @apply flex items-center justify-center gap-3 mb-6;
+    @apply inline-flex items-center gap-3 mb-8;
   }
 
   .auth-logo-image {
@@ -33,19 +37,18 @@
   }
 
   .auth-logo-text {
-    @apply text-2xl font-bold text-gray-900 tracking-tight;
+    @apply text-2xl font-bold text-gray-900;
+    letter-spacing: -0.02em;
   }
 
   .auth-title {
-    @apply text-2xl font-bold text-gray-900 mb-2;
+    @apply text-3xl font-bold text-gray-900 mb-2;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
   }
 
   .auth-subtitle {
-    @apply text-base text-gray-600 leading-relaxed mb-4;
-  }
-
-  .auth-description {
-    @apply text-sm text-gray-500 leading-relaxed;
+    @apply text-base text-gray-600 leading-relaxed font-normal;
   }
 
   /* =============================================================================
@@ -61,59 +64,77 @@
   }
 
   .auth-form-label {
-    @apply block text-sm font-medium text-gray-700 text-left;
+    @apply block text-sm font-semibold text-gray-700;
+    letter-spacing: -0.01em;
   }
 
   .auth-form-input {
-    @apply w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm;
+    @apply w-full h-13 px-4 border-2 border-gray-200 rounded-xl text-base bg-white transition-all duration-200 text-gray-900;
   }
 
-  .auth-form-input:hover {
-    @apply border-gray-400;
+  .auth-form-input:focus {
+    @apply outline-none border-blue-500;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
   }
 
   .auth-form-input::placeholder {
-    @apply text-gray-400;
+    @apply text-gray-400 font-normal;
   }
 
   /* =============================================================================
-     AUTH BUTTON VARIANTS
+     BUTTON COMPONENTS
      ============================================================================= */
 
   .auth-button {
-    @apply w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-blue-200;
-  }
-
-  .auth-button:active {
-    @apply transform translate-y-0;
+    @apply w-full h-13 rounded-xl text-base font-semibold border-none cursor-pointer flex items-center justify-center gap-2 transition-all duration-200 relative;
+    letter-spacing: -0.01em;
   }
 
   .auth-button:disabled {
-    @apply bg-gray-400 hover:bg-gray-400 transform-none shadow-none cursor-not-allowed;
+    @apply opacity-60 cursor-not-allowed;
+    transform: none !important;
   }
 
-  .auth-button-secondary {
-    @apply w-full py-3 px-4 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 hover:border-gray-400 font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200;
+  .auth-button.primary {
+    @apply text-white mb-4;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   }
 
-  .auth-button-google {
-    @apply w-full py-3 px-4 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 hover:border-gray-400 font-medium rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-3;
+  .auth-button.primary:hover:not(:disabled) {
+    @apply transform -translate-y-0.5;
+    box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
+  }
+
+  .auth-button.secondary {
+    @apply bg-white text-gray-700 border-2 border-gray-200 mb-4;
+  }
+
+  .auth-button.secondary:hover:not(:disabled) {
+    @apply bg-gray-50 border-gray-300 transform -translate-y-0.5;
+  }
+
+  .auth-button.google {
+    @apply bg-white text-gray-700 border-2 border-gray-200 mb-6;
+  }
+
+  .auth-button.google:hover:not(:disabled) {
+    @apply bg-gray-50 border-gray-300 transform -translate-y-0.5;
   }
 
   /* =============================================================================
-     AUTH METHOD VARIANTS
+     AUTH METHOD COMPONENTS
      ============================================================================= */
 
   .auth-method {
-    @apply w-full py-4 px-6 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 text-gray-700 font-medium cursor-pointer transition-all duration-200 flex items-center justify-center gap-3 hover:border-blue-300 hover:shadow-md transform hover:-translate-y-0.5;
-  }
-
-  .auth-method:active {
-    @apply transform translate-y-0;
+    @apply auth-button;
   }
 
   .auth-method.primary {
-    @apply bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white border-transparent font-semibold;
+    @apply auth-button primary;
+  }
+
+  .auth-method.secondary {
+    @apply auth-button secondary;
   }
 
   .auth-icon {
@@ -121,7 +142,34 @@
   }
 
   .google-icon {
-    @apply w-5 h-5 bg-white rounded-sm p-1;
+    @apply w-5 h-5;
+  }
+
+  /* =============================================================================
+     DIVIDER COMPONENTS
+     ============================================================================= */
+
+  .auth-divider {
+    @apply flex items-center my-8 relative;
+  }
+
+  .auth-divider::before,
+  .auth-divider::after {
+    content: '';
+    @apply flex-1 h-px bg-gray-200;
+  }
+
+  .auth-divider-text {
+    @apply px-5 text-sm text-gray-500 font-medium bg-white;
+  }
+
+  /* Legacy divider support */
+  .divider {
+    @apply auth-divider;
+  }
+
+  .divider span {
+    @apply auth-divider-text;
   }
 
   /* =============================================================================
@@ -129,18 +177,27 @@
      ============================================================================= */
 
   .auth-form-input:invalid:not(:placeholder-shown) {
-    @apply border-red-500 focus:ring-red-200;
+    @apply border-red-500;
   }
 
   .auth-form-input:valid:not(:placeholder-shown) {
-    @apply border-green-500 focus:ring-green-200;
+    @apply border-green-500;
   }
 
   .auth-error-message {
-    @apply bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4 hidden;
+    @apply bg-red-50 border border-red-200 text-red-700 px-4 py-4 rounded-xl text-sm mb-6 hidden leading-relaxed;
   }
 
   .auth-error-message.show {
+    @apply block;
+  }
+
+  /* Legacy error message support */
+  .error-message {
+    @apply auth-error-message;
+  }
+
+  .error-message.show {
     @apply block;
   }
 
@@ -149,7 +206,7 @@
      ============================================================================= */
 
   .auth-success-state {
-    @apply text-center hidden;
+    @apply text-center hidden p-8;
   }
 
   .auth-success-state.show {
@@ -157,23 +214,49 @@
   }
 
   .auth-success-icon {
-    @apply w-16 h-16 mx-auto mb-4 text-green-500;
+    @apply w-16 h-16 mx-auto mb-6 text-green-500;
   }
 
   .auth-success-title {
-    @apply text-xl font-semibold text-gray-900 mb-2;
+    @apply text-2xl font-bold text-gray-900 mb-2;
+    letter-spacing: -0.02em;
   }
 
   .auth-success-message {
-    @apply text-gray-600 mb-4;
+    @apply text-gray-600 mb-8 leading-relaxed;
   }
 
   .auth-success-details {
-    @apply bg-green-50 border border-green-200 rounded-lg p-4 text-left text-sm text-green-700;
+    @apply bg-green-50 border border-green-200 rounded-xl p-4 text-left text-sm text-green-700 leading-relaxed;
   }
 
   .auth-success-note {
     @apply text-xs text-gray-500 mt-2 italic;
+  }
+
+  /* Legacy success support */
+  .success-state {
+    @apply auth-success-state;
+  }
+
+  .success-state.show {
+    @apply block;
+  }
+
+  .success-icon {
+    @apply auth-success-icon;
+  }
+
+  .success-title {
+    @apply auth-success-title;
+  }
+
+  .success-message {
+    @apply auth-success-message;
+  }
+
+  .success-details {
+    @apply auth-success-details;
   }
 
   /* =============================================================================
@@ -189,11 +272,11 @@
   }
 
   .auth-loading-spinner {
-    @apply w-8 h-8 mx-auto mb-4 animate-spin rounded-full border-2 border-gray-200 border-t-blue-600;
+    @apply w-5 h-5 animate-spin rounded-full border-2 border-gray-200 border-t-current;
   }
 
   .auth-loading-text {
-    @apply text-gray-600;
+    @apply text-gray-600 mt-4;
   }
 
   .auth-button-loading {
@@ -206,7 +289,12 @@
     background-image: url("data:image/svg+xml,%3csvg class='animate-spin' xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24'%3e%3ccircle class='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' stroke-width='4'%3e%3c/circle%3e%3cpath class='opacity-75' fill='currentColor' d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'%3e%3c/path%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: center;
-    background-size: 1.5rem 1.5rem;
+    background-size: 1.25rem 1.25rem;
+  }
+
+  /* Legacy loading support */
+  .loading-spinner {
+    @apply auth-loading-spinner;
   }
 
   /* =============================================================================
@@ -214,40 +302,83 @@
      ============================================================================= */
 
   .auth-footer {
-    @apply text-center pt-6 border-t border-gray-200 mt-8;
+    @apply text-center pt-8 mt-10 border-t border-gray-100;
   }
 
   .auth-note {
-    @apply text-sm text-gray-500 leading-relaxed;
+    @apply text-sm text-gray-500 leading-relaxed mb-6;
   }
 
   .auth-links {
-    @apply flex justify-center gap-6 flex-wrap mt-4;
+    @apply flex justify-center gap-6 flex-wrap;
   }
 
   .auth-link {
-    @apply text-sm text-gray-500 hover:text-blue-600 transition-colors duration-200 hover:underline;
+    @apply text-sm text-blue-600 hover:text-purple-600 transition-colors duration-200 hover:underline font-medium;
   }
 
   /* =============================================================================
-     DIVIDER COMPONENTS
+     AUTH STEP MANAGEMENT
      ============================================================================= */
 
-  .auth-divider {
-    @apply relative my-6;
+  .auth-step {
+    @apply hidden;
   }
 
-  .auth-divider::before {
-    content: '';
-    @apply absolute inset-0 flex items-center;
+  .auth-step.active {
+    @apply block;
   }
 
-  .auth-divider::before {
-    @apply w-full h-px bg-gray-300;
+  /* =============================================================================
+     UTILITY CLASSES
+     ============================================================================= */
+
+  .auth-hidden {
+    @apply hidden;
   }
 
-  .auth-divider-text {
-    @apply relative bg-white px-4 text-sm text-gray-500;
+  .auth-show {
+    @apply block;
+  }
+
+  .auth-sr-only {
+    @apply sr-only;
+  }
+
+  .hidden {
+    @apply hidden;
+  }
+
+  /* =============================================================================
+     FORM LEGACY SUPPORT
+     ============================================================================= */
+
+  .form-group {
+    @apply auth-form-group;
+  }
+
+  .form-label {
+    @apply auth-form-label;
+  }
+
+  .form-input {
+    @apply auth-form-input;
+  }
+
+  .btn {
+    @apply auth-button;
+  }
+
+  .btn-primary {
+    @apply auth-button primary;
+  }
+
+  .btn-secondary {
+    @apply auth-button secondary;
+  }
+
+  .btn-google {
+    @apply auth-button google;
   }
 
   /* =============================================================================
@@ -260,37 +391,34 @@
     }
     
     .auth-container {
-      @apply p-6 max-w-none;
+      @apply p-8 rounded-2xl;
     }
     
-    .auth-logo-text,
     .auth-title {
-      @apply text-xl;
-    }
-    
-    .auth-form-input,
-    .auth-button,
-    .auth-method {
-      @apply py-2.5;
-    }
-    
-    .auth-links {
-      @apply flex-col gap-2;
-    }
-  }
-
-  @media (max-width: 320px) {
-    .auth-container {
-      @apply p-4 rounded-xl;
+      @apply text-2xl;
     }
     
     .auth-subtitle {
       @apply text-sm;
     }
     
-    .auth-logo-text,
+    .auth-form-input,
+    .auth-button {
+      @apply h-12 text-sm;
+    }
+    
+    .auth-links {
+      @apply flex-col gap-3;
+    }
+  }
+
+  @media (max-width: 320px) {
+    .auth-container {
+      @apply p-6 rounded-xl;
+    }
+    
     .auth-title {
-      @apply text-lg;
+      @apply text-xl;
     }
   }
 
@@ -340,41 +468,5 @@
     .auth-button {
       @apply border-2 border-blue-800;
     }
-  }
-
-  /* =============================================================================
-     PRINT STYLES
-     ============================================================================= */
-
-  @media print {
-    .auth-container {
-      @apply shadow-none border border-gray-300;
-    }
-    
-    .auth-button,
-    .auth-success-state {
-      @apply hidden;
-    }
-    
-    .auth-form::after {
-      content: "Please visit the website to complete authentication.";
-      @apply block italic text-center mt-4;
-    }
-  }
-
-  /* =============================================================================
-     UTILITY CLASSES
-     ============================================================================= */
-
-  .auth-hidden {
-    @apply hidden;
-  }
-
-  .auth-show {
-    @apply block;
-  }
-
-  .auth-sr-only {
-    @apply sr-only;
   }
 }
