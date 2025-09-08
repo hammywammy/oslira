@@ -1,19 +1,14 @@
 @layer components {
   /* =============================================================================
-     FOOTER MAIN LAYOUT
+     MODERN FOOTER LAYOUT - CLEAN & PROFESSIONAL
      ============================================================================= */
   
   .footer-main {
-    @apply bg-gray-900 text-white relative overflow-hidden;
-  }
-
-  .footer-main::before {
-    content: '';
-    @apply absolute inset-0 bg-gradient-to-r from-blue-900/20 via-purple-900/10 to-blue-900/20 pointer-events-none;
+    @apply bg-slate-900 text-white relative;
   }
 
   .footer-container {
-    @apply max-w-6xl mx-auto px-6 py-16 relative z-10;
+    @apply max-w-6xl mx-auto px-6 py-12;
   }
 
   .footer-grid {
@@ -25,11 +20,15 @@
   }
 
   /* =============================================================================
-     FOOTER BRANDING SECTION
+     COMPANY BRANDING SECTION
      ============================================================================= */
 
+  .footer-brand {
+    @apply lg:col-span-1;
+  }
+
   .footer-logo-container {
-    @apply flex items-center gap-3 mb-6;
+    @apply flex items-center gap-3 mb-4;
   }
 
   .footer-logo-image {
@@ -37,45 +36,31 @@
   }
 
   .footer-company-name {
-    @apply text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent;
+    @apply text-xl font-bold text-white;
   }
 
   .footer-company-description {
-    @apply text-gray-300 text-sm leading-relaxed mb-6;
+    @apply text-gray-400 text-sm leading-relaxed mb-6 max-w-sm;
   }
 
   /* =============================================================================
-     FOOTER SECTION HEADERS
+     SECTION HEADERS
      ============================================================================= */
 
   .footer-section-title {
-    @apply text-white font-semibold text-lg mb-4 relative;
-  }
-
-  .footer-section-title::after {
-    content: '';
-    @apply absolute bottom-0 left-0 w-8 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full;
+    @apply text-white font-semibold text-base mb-4;
   }
 
   /* =============================================================================
-     FOOTER NAVIGATION LINKS
+     NAVIGATION LINKS
      ============================================================================= */
 
   .footer-nav-list {
     @apply space-y-3;
   }
 
-.footer-link {
-  @apply text-gray-300 hover:text-white transition-colors duration-200 text-sm block relative;
-}
-
-  .footer-link::before {
-    content: '';
-    @apply absolute left-0 bottom-0 w-0 h-0.5 bg-gradient-to-r from-blue-400 to-purple-400 transition-all duration-300 group-hover:w-full;
-  }
-
-  .footer-link:hover {
-    @apply transform translate-x-1;
+  .footer-link {
+    @apply text-gray-400 hover:text-white transition-colors duration-200 text-sm block;
   }
 
   /* =============================================================================
@@ -83,43 +68,51 @@
      ============================================================================= */
 
   .footer-social-container {
-    @apply flex gap-4 mt-6;
+    @apply flex gap-3;
   }
 
-.footer-social-link {
-  @apply text-gray-400 hover:text-white transition-all duration-200 w-10 h-10 rounded-lg bg-gray-800 hover:bg-gradient-to-r hover:from-blue-600 hover:to-purple-600 flex items-center justify-center transform hover:scale-110;
-}
+  .footer-social-link {
+    @apply text-gray-400 hover:text-white transition-all duration-200 w-9 h-9 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center;
+  }
 
   .footer-social-icon {
-    @apply w-5 h-5 transition-transform duration-200 group-hover:scale-110;
+    @apply w-4 h-4;
   }
 
   /* =============================================================================
      NEWSLETTER SUBSCRIPTION
      ============================================================================= */
 
+  .footer-newsletter-section {
+    @apply lg:col-span-1;
+  }
+
   .footer-newsletter-container {
-    @apply bg-gradient-to-r from-gray-800/50 to-gray-700/50 p-6 rounded-xl border border-gray-600/50 backdrop-blur-sm;
+    @apply bg-slate-800/50 p-6 rounded-lg border border-slate-700/50;
   }
 
   .footer-newsletter-title {
-    @apply text-white font-semibold mb-2;
+    @apply text-white font-semibold text-base mb-2;
   }
 
   .footer-newsletter-description {
-    @apply text-gray-300 text-sm mb-4;
+    @apply text-gray-400 text-sm mb-4 leading-relaxed;
   }
 
   .footer-newsletter-form {
-    @apply flex gap-2;
+    @apply space-y-3;
   }
 
   .footer-newsletter-input {
-    @apply flex-1 px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent backdrop-blur-sm;
+    @apply w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
   }
 
   .footer-newsletter-button {
-    @apply px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900;
+    @apply w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium rounded-lg transition-all duration-200 text-sm;
+  }
+
+  .footer-newsletter-button:disabled {
+    @apply opacity-75 cursor-not-allowed;
   }
 
   /* =============================================================================
@@ -127,7 +120,7 @@
      ============================================================================= */
 
   .footer-bottom {
-    @apply border-t border-gray-700/50 pt-8 mt-8;
+    @apply border-t border-slate-700/50 pt-6;
   }
 
   .footer-bottom-content {
@@ -147,68 +140,36 @@
   }
 
   /* =============================================================================
-     TRUST INDICATORS
-     ============================================================================= */
-
-  .footer-trust-section {
-    @apply flex flex-col md:flex-row items-center gap-4 mt-6 pt-6 border-t border-gray-700/50;
-  }
-
-  .footer-trust-text {
-    @apply text-gray-400 text-sm;
-  }
-
-  .footer-trust-badges {
-    @apply flex gap-4;
-  }
-
-  .footer-trust-badge {
-    @apply bg-gray-800 px-3 py-1 rounded-lg text-xs text-gray-300 border border-gray-700;
-  }
-
-  /* =============================================================================
-     CONTACT INFORMATION
-     ============================================================================= */
-
-  .footer-contact-item {
-    @apply flex items-center gap-3 text-gray-300 text-sm mb-3;
-  }
-
-  .footer-contact-icon {
-    @apply w-5 h-5 text-gray-400;
-  }
-
-  .footer-contact-link {
-    @apply hover:text-white transition-colors duration-200;
-  }
-
-  /* =============================================================================
      RESPONSIVE DESIGN
      ============================================================================= */
 
   @media (max-width: 768px) {
     .footer-container {
-      @apply px-4 py-12;
+      @apply px-4 py-8;
     }
 
     .footer-grid {
       @apply grid-cols-1 gap-6;
     }
 
-    .footer-newsletter-form {
-      @apply flex-col;
-    }
-
-    .footer-newsletter-input {
-      @apply mb-2;
-    }
-
-    .footer-bottom-content {
+    .footer-brand {
       @apply text-center;
     }
 
+    .footer-company-description {
+      @apply max-w-none;
+    }
+
+    .footer-newsletter-form {
+      @apply space-y-2;
+    }
+
+    .footer-bottom-content {
+      @apply text-center flex-col;
+    }
+
     .footer-legal-links {
-      @apply flex-col gap-2;
+      @apply flex-wrap justify-center gap-4;
     }
 
     .footer-social-container {
@@ -218,23 +179,19 @@
 
   @media (max-width: 480px) {
     .footer-container {
-      @apply px-3 py-8;
+      @apply px-3 py-6;
     }
 
     .footer-section-title {
-      @apply text-base;
+      @apply text-sm;
     }
 
     .footer-company-name {
       @apply text-lg;
     }
 
-    .footer-trust-section {
-      @apply flex-col text-center;
-    }
-
-    .footer-trust-badges {
-      @apply flex-wrap justify-center;
+    .footer-newsletter-container {
+      @apply p-4;
     }
   }
 
@@ -242,19 +199,11 @@
      ACCESSIBILITY ENHANCEMENTS
      ============================================================================= */
 
-  .footer-link:focus,
-  .footer-social-link:focus,
-  .footer-legal-link:focus,
-  .footer-contact-link:focus {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900 rounded;
-  }
-
-  .footer-newsletter-input:focus {
-    @apply ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900;
-  }
-
-  .footer-newsletter-button:focus {
-    @apply ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900;
+  .footer-link:focus-visible,
+  .footer-social-link:focus-visible,
+  .footer-newsletter-input:focus-visible,
+  .footer-newsletter-button:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900;
   }
 
   /* =============================================================================
@@ -263,61 +212,21 @@
 
   @media print {
     .footer-main {
-      @apply bg-white text-black;
-    }
-
-    .footer-main::before {
-      @apply hidden;
-    }
-
-    .footer-social-container,
-    .footer-newsletter-container {
-      @apply hidden;
-    }
-
-    .footer-link,
-    .footer-legal-link,
-    .footer-contact-link {
-      @apply text-black;
+      @apply bg-white text-black border-t border-gray-300;
     }
 
     .footer-company-name {
       @apply text-black;
-      background: none;
-      -webkit-text-fill-color: initial;
     }
-  }
 
-  /* =============================================================================
-     ANIMATION ENHANCEMENTS
-     ============================================================================= */
-
-  @media (prefers-reduced-motion: no-preference) {
-    .footer-main {
-      @apply transition-all duration-300;
+    .footer-newsletter-container,
+    .footer-social-container {
+      @apply hidden;
     }
 
     .footer-link,
-    .footer-social-link,
-    .footer-newsletter-button {
-      @apply transition-all duration-200;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .footer-link,
-    .footer-social-link,
-    .footer-newsletter-button {
-      @apply transition-none transform-none;
-    }
-
-    .footer-link:hover {
-      @apply transform-none;
-    }
-
-    .footer-social-link:hover,
-    .footer-newsletter-button:hover {
-      @apply transform-none;
+    .footer-legal-link {
+      @apply text-gray-700;
     }
   }
 }
