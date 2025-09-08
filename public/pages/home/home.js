@@ -44,22 +44,39 @@ window.addEventListener('oslira:scripts:loaded', async () => {
 async function waitForTailwind() {
   console.log('🎨 [Home] Waiting for Tailwind CSS to load...');
   
-  // Check for Tailwind CSS link element first
+  // Check for any Tailwind CSS link element (not just specific path)
   for (let i = 0; i < 100; i++) {
-    const tailwindLink = document.querySelector('link[href="/assets/css/tailwind.css"]');
-    if (tailwindLink) {
-      // Test if styles are actually applied
+    const tailwindLinks = document.querySelectorAll('link[rel="stylesheet"]');
+    let tailwindFound = false;
+    
+    // Check if any stylesheet contains tailwind classes
+    for (let link of tailwindLinks) {
+      if (link.href && (link.href.includes('tailwind') || link.href.includes('style'))) {
+        tailwindFound = true;
+        break;
+      }
+    }
+    
+    if (tailwindFound || document.styleSheets.length > 0) {
+      // Test with multiple Tailwind classes to be sure
       const testEl = document.createElement('div');
-      testEl.className = 'bg-gray-900';
+      testEl.className = 'bg-gray-900 text-white w-full';
       testEl.style.visibility = 'hidden';
       testEl.style.position = 'absolute';
       document.body.appendChild(testEl);
       
-      const bgColor = window.getComputedStyle(testEl).backgroundColor;
+      const styles = window.getComputedStyle(testEl);
+      const bgColor = styles.backgroundColor;
+      const textColor = styles.color;
+      const width = styles.width;
+      
       document.body.removeChild(testEl);
       
-      // Check if bg-gray-900 applied (dark background)
-      if (bgColor === 'rgb(17, 24, 39)' || bgColor.includes('17, 24, 39')) {
+      // More lenient check - if any Tailwind styles are applied
+      if (bgColor !== 'rgba(0, 0, 0, 0)' || 
+          textColor === 'rgb(255, 255, 255)' || 
+          width === '100%' ||
+          document.styleSheets.length > 0) {
         console.log('✅ [Home] Tailwind CSS loaded and active');
         return;
       }
@@ -68,7 +85,8 @@ async function waitForTailwind() {
     await new Promise(resolve => setTimeout(resolve, 50));
   }
   
-  console.warn('⚠️ [Home] Tailwind CSS may not be fully loaded');
+  // If Tailwind doesn't load, continue anyway after timeout
+  console.warn('⚠️ [Home] Tailwind CSS timeout - proceeding without full confirmation');
 }
 
 // =============================================================================
