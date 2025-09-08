@@ -27,25 +27,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   await initializeApp();
   setupEventListeners();
   setupAnimations();
+});
+
+// Listen for scripts loaded event to initialize footer - ONCE ONLY
+let footerInitialized = false;
+window.addEventListener('oslira:scripts:loaded', async () => {
+  if (footerInitialized) {
+    console.log('🔄 [Home] Footer already initialized, skipping...');
+    return;
+  }
   
-  // Force footer initialization after a short delay
-  setTimeout(async () => {
-    try {
-      console.log('🦶 [Home] Force initializing footer...');
-      if (window.FooterManager) {
-        const footerManager = new window.FooterManager();
-        footerManager.render('footer-container', {
-          showSocialLinks: true,
-          showNewsletter: true
-        });
-        console.log('✅ [Home] Footer force-initialized successfully');
-      } else {
-        console.warn('⚠️ [Home] FooterManager not available for force init');
-      }
-    } catch (error) {
-      console.error('❌ [Home] Footer force initialization failed:', error);
-    }
-  }, 2000);
+  console.log('🚀 [Home] Scripts loaded event received, initializing footer...');
+  try {
+    footerInitialized = true;
+    await initializeFooter();
+  } catch (error) {
+    console.error('❌ [Home] Footer initialization failed:', error);
+    footerInitialized = false; // Reset on error
+  }
 });
 
 async function waitForTailwind() {
@@ -120,6 +119,12 @@ async function initializeApp() {
 
 async function initializeFooter() {
     try {
+        // Prevent duplicate initialization
+        if (document.querySelector('.footer-main')) {
+            console.log('🔄 [Home] Footer already exists, skipping initialization...');
+            return;
+        }
+        
         console.log('🦶 [Home] Starting footer initialization...');
         
 // Check if container exists, create if missing
