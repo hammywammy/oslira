@@ -6,12 +6,12 @@
     <title>Oslira - AI Lead Generation Platform</title>
     <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
     
-<link rel="preload" href="/assets/css/tailwind.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/css/tailwind.css"></noscript>
+    <!-- Preload critical CSS -->
+    <link rel="preload" href="/assets/css/tailwind.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/assets/css/tailwind.css"></noscript>
     
-    <!-- Immediate CSS load for critical styles -->
+    <!-- Critical above-fold styles to prevent FOUC -->
     <style>
-        /* Critical above-fold styles to prevent FOUC */
         body { 
             visibility: hidden; 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -25,37 +25,57 @@
     <!-- Script loader initialization -->
     <script src="/core/script-loader.js"></script>
 </head>
-<body>
+<body class="home-page-body">
     <!-- Skip Navigation -->
     <a href="#main-content" class="skip-nav">Skip to main content</a>
 
     <!-- Navigation -->
-    <nav>
-        <div class="nav-container">
-            <a href="/" class="logo">
-                <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
+    <nav class="home-nav">
+        <div class="home-nav-container">
+            <a href="/" class="home-logo">
+                <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="home-logo-image">
                 <span>Oslira</span>
             </a>
             
-            <div class="nav-menu">
-                <a href="#features">Features</a>
-                <a href="#how-it-works">How it Works</a>
-                <a href="#pricing">Pricing</a>
+            <div class="home-nav-menu">
+                <a href="#features" class="home-nav-link">Features</a>
+                <a href="#how-it-works" class="home-nav-link">How it Works</a>
+                <a href="#pricing" class="home-nav-link">Pricing</a>
                 <a href="/auth" class="btn-primary">Get Started</a>
+            </div>
+            
+            <!-- Mobile Menu Button -->
+            <button id="mobile-menu-button" class="md:hidden p-2 rounded-lg hover:bg-gray-100">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-gray-200">
+            <div class="px-6 py-4 space-y-3">
+                <a href="#features" class="block text-gray-600 hover:text-blue-600 py-2">Features</a>
+                <a href="#how-it-works" class="block text-gray-600 hover:text-blue-600 py-2">How it Works</a>
+                <a href="#pricing" class="block text-gray-600 hover:text-blue-600 py-2">Pricing</a>
+                <a href="/auth" class="block btn-primary text-center mt-4">Get Started</a>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <main id="main-content">
+    <main id="main-content" class="home-main-content">
         <!-- Hero Section -->
-        <section class="hero">
-            <div class="hero-content">
-                <h1>Turn Instagram Profiles Into Quality Business Leads</h1>
-                <p class="subtitle">AI-powered lead generation that analyzes social profiles to find decision-makers and contact information for your business.</p>
+        <section class="hero-section">
+            <div class="hero-container">
+                <h1 class="hero-title">
+                    Turn Instagram Profiles Into 
+                    <span class="hero-title-gradient">Quality Business Leads</span>
+                </h1>
+                <p class="hero-subtitle">AI-powered lead generation that analyzes social profiles to find decision-makers and contact information for your business.</p>
                 
                 <!-- Demo Form -->
-                <form class="demo-form" role="search" aria-label="Demo lead analysis">
+                <form class="demo-form" role="search" aria-label="Demo lead analysis" onsubmit="handleDemoSubmit(event)">
                     <div class="demo-input-group">
                         <input 
                             type="text" 
@@ -64,141 +84,378 @@
                             class="demo-input"
                             aria-label="Instagram username for demo analysis"
                             pattern="^@?[a-zA-Z0-9._]+$"
-                            maxlength="30"
                             required
                         >
-                        <button type="submit" class="demo-button" aria-label="Analyze profile">
-                            <span class="demo-text">Analyze Free</span>
-                            <svg class="demo-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        <button type="submit" class="btn-primary demo-button" aria-label="Analyze profile">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
+                            Analyze
                         </button>
                     </div>
-                    <p class="demo-note">Free analysis • No signup required • See results instantly</p>
+                    <p class="demo-form-note">Try it free - analyze any public Instagram profile</p>
                 </form>
 
-                <div class="cta-actions">
-                    <a href="/auth" class="btn-primary">Start Free Trial</a>
-                    <a href="#how-it-works" class="btn-secondary">Learn More</a>
+                <!-- Hero CTA -->
+                <div class="hero-cta-container">
+                    <a href="/auth" class="btn-primary text-lg px-8 py-4">
+                        Start Free Trial
+                    </a>
+                    <p class="text-gray-600 mt-3">
+                        25 free analyses • No credit card required
+                    </p>
+                </div>
+
+                <!-- Hero Stats -->
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">10,000+</div>
+                        <div class="hero-stat-label">Profiles Analyzed</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">85%</div>
+                        <div class="hero-stat-label">Contact Success Rate</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">3x</div>
+                        <div class="hero-stat-label">Faster Lead Research</div>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Features Section -->
-        <section id="features" class="section">
-            <div class="container">
-                <h2>Why Choose Oslira?</h2>
+        <section id="features" class="features-section">
+            <div class="features-container">
+                <div class="features-header">
+                    <h2 class="features-title">Powerful AI-Driven Features</h2>
+                    <p class="features-subtitle">Everything you need to turn social profiles into actionable business leads</p>
+                </div>
+                
                 <div class="features-grid">
-                    <div class="feature">
-                        <div class="feature-icon">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <h3>AI-Powered Analysis</h3>
-                        <p>Advanced algorithms analyze social profiles to identify business potential and decision-making authority.</p>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <h3 class="feature-title">AI Profile Analysis</h3>
+                        <p class="feature-description">Advanced AI analyzes Instagram profiles to identify business potential, decision-making authority, and contact opportunities.</p>
                     </div>
                     
-                    <div class="feature">
-                        <div class="feature-icon">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <h3>Lightning Fast</h3>
-                        <p>Get comprehensive lead analysis in seconds, not hours. Scale your prospecting efforts instantly.</p>
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3 class="feature-title">Lead Scoring</h3>
+                        <p class="feature-description">Intelligent scoring system ranks leads based on business fit, engagement level, and conversion probability.</p>
                     </div>
                     
-                    <div class="feature">
-                        <div class="feature-icon">
-                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                            </svg>
-                        </div>
-                        <h3>Privacy First</h3>
-                        <p>Only analyzes public profile information. Fully compliant with privacy regulations and platform terms.</p>
+                    <div class="feature-card">
+                        <div class="feature-icon">📧</div>
+                        <h3 class="feature-title">Contact Discovery</h3>
+                        <p class="feature-description">Find email addresses, phone numbers, and professional profiles associated with Instagram accounts.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <h3 class="feature-title">Personalized Outreach</h3>
+                        <p class="feature-description">Generate personalized messages based on profile insights to improve response rates and engagement.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">📈</div>
+                        <h3 class="feature-title">Bulk Processing</h3>
+                        <p class="feature-description">Upload CSV files to analyze hundreds of profiles at once, perfect for large-scale lead generation campaigns.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">🔒</div>
+                        <h3 class="feature-title">Privacy & Security</h3>
+                        <p class="feature-description">Enterprise-grade security with encrypted data storage and compliance with privacy regulations.</p>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- How It Works Section -->
-        <section id="how-it-works" class="section bg-gradient">
-            <div class="container">
-                <h2>How It Works</h2>
-                <div class="steps-grid">
-                    <div class="step">
+        <section id="how-it-works" class="how-it-works-section">
+            <div class="how-it-works-container">
+                <div class="how-it-works-header">
+                    <h2 class="how-it-works-title">How It Works</h2>
+                    <p class="how-it-works-subtitle">Simple 3-step process to find quality leads</p>
+                </div>
+                
+                <div class="how-it-works-steps">
+                    <div class="step-card">
                         <div class="step-number">1</div>
-                        <h3>Enter Profile</h3>
-                        <p>Simply paste an Instagram username or profile URL into our analysis tool.</p>
+                        <h3 class="step-title">Enter Profile</h3>
+                        <p class="step-description">Paste an Instagram username or upload a CSV file with multiple profiles to analyze.</p>
+                        <div class="step-visual">
+                            <div class="mock-input">@businessowner</div>
+                        </div>
                     </div>
                     
-                    <div class="step">
+                    <div class="step-card">
                         <div class="step-number">2</div>
-                        <h3>AI Analysis</h3>
-                        <p>Our AI analyzes the profile for business indicators, audience, and decision-making authority.</p>
+                        <h3 class="step-title">AI Analysis</h3>
+                        <p class="step-description">Our AI analyzes the profile for business indicators, contact information, and lead quality.</p>
+                        <div class="step-visual">
+                            <div class="mock-analysis">
+                                <div class="analysis-item">✅ Business Owner</div>
+                                <div class="analysis-item">📧 Contact Found</div>
+                                <div class="analysis-item">⭐ High Score: 85/100</div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="step">
+                    <div class="step-card">
                         <div class="step-number">3</div>
-                        <h3>Get Results</h3>
-                        <p>Receive detailed insights including lead quality score and recommended outreach approach.</p>
+                        <h3 class="step-title">Get Results</h3>
+                        <p class="step-description">Receive detailed insights, contact information, and personalized outreach suggestions.</p>
+                        <div class="step-visual">
+                            <div class="mock-results">
+                                <div class="result-badge">Ready to Contact</div>
+                                <div class="result-contact">john@example.com</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Social Proof Section -->
+        <section class="social-proof-section">
+            <div class="social-proof-container">
+                <h2 class="social-proof-title">Trusted by Growing Businesses</h2>
+                <div class="testimonials-grid">
+                    <div class="testimonial-card">
+                        <div class="testimonial-content">
+                            <p>"Oslira helped us find 50+ qualified leads in our first week. The AI insights are incredibly accurate."</p>
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">S</div>
+                            <div>
+                                <div class="author-name">Sarah Chen</div>
+                                <div class="author-title">Marketing Director</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="testimonial-card">
+                        <div class="testimonial-content">
+                            <p>"The contact discovery feature is a game-changer. We've doubled our outreach success rate."</p>
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">M</div>
+                            <div>
+                                <div class="author-name">Mike Rodriguez</div>
+                                <div class="author-title">Sales Manager</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="testimonial-card">
+                        <div class="testimonial-content">
+                            <p>"Bulk processing saves us hours of manual research. ROI was positive within the first month."</p>
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">A</div>
+                            <div>
+                                <div class="author-name">Alex Johnson</div>
+                                <div class="author-title">Growth Lead</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- Pricing Section -->
-        <section id="pricing" class="section">
-            <div class="container">
-                <h2>Simple, Transparent Pricing</h2>
+        <section id="pricing" class="pricing-section">
+            <div class="pricing-container">
+                <div class="pricing-header">
+                    <h2 class="pricing-title">Simple, Transparent Pricing</h2>
+                    <p class="pricing-subtitle">Choose the plan that fits your lead generation needs</p>
+                </div>
+                
                 <div class="pricing-grid">
                     <div class="pricing-card">
-                        <h3>Free Trial</h3>
-                        <div class="price">
-                            <span class="amount">$0</span>
-                            <span class="period">25 analyses</span>
+                        <div class="pricing-card-header">
+                            <h3 class="pricing-plan-name">Free Trial</h3>
+                            <div class="pricing-plan-price">
+                                <span class="price-amount">$0</span>
+                                <span class="price-period">25 analyses</span>
+                            </div>
                         </div>
-                        <ul class="features-list">
-                            <li>25 free profile analyses</li>
-                            <li>Basic lead scoring</li>
-                            <li>CSV export</li>
-                            <li>Email support</li>
+                        <ul class="pricing-features-list">
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                25 free profile analyses
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Basic lead scoring
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                CSV export
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Email support
+                            </li>
                         </ul>
-                        <a href="/auth" class="btn-primary">Start Free Trial</a>
+                        <div class="pricing-card-footer">
+                            <a href="/auth" class="btn-primary w-full text-center">Start Free Trial</a>
+                            <p class="pricing-note">No credit card required</p>
+                        </div>
                     </div>
                     
                     <div class="pricing-card featured">
-                        <div class="featured-badge">Most Popular</div>
-                        <h3>Professional</h3>
-                        <div class="price">
-                            <span class="amount">$29</span>
-                            <span class="period">per month</span>
+                        <div class="pricing-featured-badge">Most Popular</div>
+                        <div class="pricing-card-header">
+                            <h3 class="pricing-plan-name">Professional</h3>
+                            <div class="pricing-plan-price">
+                                <span class="price-amount">$29</span>
+                                <span class="price-period">per month</span>
+                            </div>
                         </div>
-                        <ul class="features-list">
-                            <li>Unlimited analyses</li>
-                            <li>Advanced AI insights</li>
-                            <li>Bulk upload (CSV)</li>
-                            <li>API access</li>
-                            <li>Priority support</li>
+                        <ul class="pricing-features-list">
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Unlimited analyses
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Advanced AI insights
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Bulk upload (CSV)
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Contact discovery
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                API access
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Priority support
+                            </li>
                         </ul>
-                        <a href="/auth" class="btn-primary">Get Started</a>
+                        <div class="pricing-card-footer">
+                            <a href="/auth" class="btn-primary w-full text-center">Get Started</a>
+                            <p class="pricing-note">Start with free trial</p>
+                        </div>
                     </div>
                     
                     <div class="pricing-card">
-                        <h3>Enterprise</h3>
-                        <div class="price">
-                            <span class="amount">Custom</span>
-                            <span class="period">volume pricing</span>
+                        <div class="pricing-card-header">
+                            <h3 class="pricing-plan-name">Enterprise</h3>
+                            <div class="pricing-plan-price">
+                                <span class="price-amount">Custom</span>
+                                <span class="price-period">volume pricing</span>
+                            </div>
                         </div>
-                        <ul class="features-list">
-                            <li>Everything in Professional</li>
-                            <li>Custom integrations</li>
-                            <li>Dedicated support</li>
-                            <li>SLA guarantees</li>
+                        <ul class="pricing-features-list">
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Everything in Professional
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Custom integrations
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Dedicated support
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                SLA guarantees
+                            </li>
+                            <li class="pricing-feature">
+                                <svg class="pricing-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                Volume discounts
+                            </li>
                         </ul>
-                        <a href="/auth" class="btn-secondary">Contact Sales</a>
+                        <div class="pricing-card-footer">
+                            <a href="/auth" class="btn-secondary w-full text-center">Contact Sales</a>
+                            <p class="pricing-note">Custom solutions available</p>
+                        </div>
                     </div>
+                </div>
+                
+                <!-- Pricing FAQ -->
+                <div class="pricing-faq">
+                    <h3 class="pricing-faq-title">Frequently Asked Questions</h3>
+                    <div class="pricing-faq-grid">
+                        <div class="faq-item">
+                            <h4 class="faq-question">What counts as an analysis?</h4>
+                            <p class="faq-answer">Each Instagram profile you analyze counts as one analysis, regardless of the results found.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4 class="faq-question">Can I upgrade or downgrade anytime?</h4>
+                            <p class="faq-answer">Yes, you can change your plan at any time. Changes take effect on your next billing cycle.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4 class="faq-question">Do you offer refunds?</h4>
+                            <p class="faq-answer">We offer a 30-day money-back guarantee if you're not satisfied with the service.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h4 class="faq-question">Is my data secure?</h4>
+                            <p class="faq-answer">Yes, we use enterprise-grade encryption and follow strict data protection protocols.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta-section">
+            <div class="cta-container">
+                <div class="cta-content">
+                    <h2 class="cta-title">Ready to Find Your Next Quality Leads?</h2>
+                    <p class="cta-subtitle">Join thousands of businesses using Oslira to grow their customer base</p>
+                    <div class="cta-buttons">
+                        <a href="/auth" class="btn-primary btn-lg">
+                            Start Free Trial
+                        </a>
+                        <a href="#features" class="btn-secondary btn-lg">
+                            Learn More
+                        </a>
+                    </div>
+                    <p class="cta-note">
+                        25 free analyses • No credit card required • Setup in 2 minutes
+                    </p>
                 </div>
             </div>
         </section>
@@ -207,15 +464,116 @@
     <!-- Footer Container (managed by FooterManager) -->
     <div id="footer-container"></div>
 
-    <!-- Scripts managed by script-loader.js -->
+    <!-- Demo Modal -->
+    <div id="demo-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-md w-full p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Demo Analysis</h3>
+                    <button onclick="closeDemoModal()" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div id="demo-content" class="text-center py-8">
+                    <div class="loading-spinner w-8 h-8 mx-auto mb-4"></div>
+                    <p class="text-gray-600">Analyzing profile...</p>
+                </div>
+                <div class="mt-6 text-center">
+                    <p class="text-sm text-gray-500 mb-4">Want full access to detailed analysis?</p>
+                    <a href="/auth" class="btn-primary w-full">Sign Up for Free</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script>
-        // Show content once critical CSS is loaded
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button')?.addEventListener('click', function() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Demo form handler
+        function handleDemoSubmit(event) {
+            event.preventDefault();
+            const username = document.getElementById('demo-input').value.trim();
+            if (username) {
+                showDemoModal(username);
+            }
+        }
+
+        function showDemoModal(username) {
+            const modal = document.getElementById('demo-modal');
+            const content = document.getElementById('demo-content');
+            
+            modal.classList.remove('hidden');
+            
+            // Simulate analysis
+            setTimeout(() => {
+                content.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-6xl mb-4">👤</div>
+                        <h4 class="font-semibold text-lg mb-2">${username}</h4>
+                        <div class="space-y-2 text-left max-w-xs mx-auto">
+                            <div class="flex items-center justify-between py-2 border-b">
+                                <span class="text-sm text-gray-600">Business Type</span>
+                                <span class="text-sm font-medium">Detected</span>
+                            </div>
+                            <div class="flex items-center justify-between py-2 border-b">
+                                <span class="text-sm text-gray-600">Lead Score</span>
+                                <span class="text-sm font-medium text-green-600">72/100</span>
+                            </div>
+                            <div class="flex items-center justify-between py-2 border-b">
+                                <span class="text-sm text-gray-600">Contact Info</span>
+                                <span class="text-sm font-medium">Available</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-4">This is a demo preview. Sign up for detailed analysis.</p>
+                    </div>
+                `;
+            }, 2000);
+        }
+
+        function closeDemoModal() {
+            document.getElementById('demo-modal').classList.add('hidden');
+        }
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Show content once CSS is loaded
         document.addEventListener('DOMContentLoaded', function() {
-            // Add small delay to ensure CSS is processed
             setTimeout(function() {
                 document.body.classList.add('show-content');
             }, 50);
         });
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('mobile-menu');
+            const button = document.getElementById('mobile-menu-button');
+            
+            if (!menu.contains(event.target) && !button.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
     </script>
+
+    <!-- Script Loading managed by script-loader.js -->
+    <script src="/core/script-loader.js"></script>
 </body>
 </html>
