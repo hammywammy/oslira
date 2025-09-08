@@ -92,26 +92,37 @@ class ScriptLoader {
     // MAIN INITIALIZATION
     // =============================================================================
     
-    async initialize() {
-        try {
-            console.log('🚀 [ScriptLoader] Initializing...');
-            
-            // Load core scripts first
-            await this.loadCoreScripts();
-            
-            // Determine current page and load page-specific scripts
-            const currentPage = window.OsliraEnv?.CURRENT_PAGE || 'home';
-            console.log(`📄 [ScriptLoader] Loading scripts for page: ${currentPage}`);
-            
-            await this.loadPageScripts(currentPage);
-            
-            console.log('✅ [ScriptLoader] Initialization complete');
-            
-        } catch (error) {
-            console.error('❌ [ScriptLoader] Initialization failed:', error);
-            this.handleInitializationError(error);
-        }
+async initialize() {
+    try {
+        console.log('🚀 [ScriptLoader] Initializing...');
+        
+        // Load core scripts first
+        await this.loadCoreScripts();
+        
+        // Determine current page and load page-specific scripts
+        const currentPage = window.OsliraEnv?.CURRENT_PAGE || 'home';
+        console.log(`📄 [ScriptLoader] Loading scripts for page: ${currentPage}`);
+        
+        await this.loadPageScripts(currentPage);
+        
+        console.log('✅ [ScriptLoader] Initialization complete');
+        
+        // **CRITICAL FIX:** Dispatch the scripts loaded event
+        const scriptsLoadedEvent = new CustomEvent('oslira:scripts:loaded', {
+            detail: {
+                page: currentPage,
+                loadedScripts: Array.from(this.loadedScripts),
+                timestamp: Date.now()
+            }
+        });
+        window.dispatchEvent(scriptsLoadedEvent);
+        console.log('📡 [ScriptLoader] oslira:scripts:loaded event dispatched');
+        
+    } catch (error) {
+        console.error('❌ [ScriptLoader] Initialization failed:', error);
+        this.handleInitializationError(error);
     }
+}
     
     // =============================================================================
     // CORE SCRIPT LOADING
