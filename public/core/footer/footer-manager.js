@@ -63,7 +63,7 @@ class FooterManager {
                         </div>
                         
                         <!-- Center: Navigation -->
-                        <div class="new-footer-nav">
+<div class="new-footer-nav">
                             <div class="new-footer-nav-group">
                                 <h4 class="new-footer-nav-title">Product</h4>
                                 <a href="/footer/about" class="new-footer-nav-link">About</a>
@@ -77,6 +77,13 @@ class FooterManager {
                                 <a href="/footer/api" class="new-footer-nav-link">API Docs</a>
                                 <a href="/footer/help" class="new-footer-nav-link">Help Center</a>
                                 <a href="/footer/security" class="new-footer-nav-link">Security</a>
+                            </div>
+                            <div class="new-footer-nav-group">
+                                <h4 class="new-footer-nav-title">Legal</h4>
+                                <a href="/footer/privacy" class="new-footer-nav-link">Privacy Policy</a>
+                                <a href="/footer/terms" class="new-footer-nav-link">Terms of Service</a>
+                                <a href="/footer/refund" class="new-footer-nav-link">Refund Policy</a>
+                                <a href="/footer/disclaimer" class="new-footer-nav-link">Disclaimer</a>
                             </div>
                         </div>
                         
