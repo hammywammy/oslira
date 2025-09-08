@@ -27,6 +27,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   await initializeApp();
   setupEventListeners();
   setupAnimations();
+  
+  // Force footer initialization after scripts load
+  setTimeout(async () => {
+    if (window.FooterManager && !document.querySelector('.footer-main')) {
+      console.log('🦶 [Home] Force-initializing footer from DOMContentLoaded...');
+      const footerManager = new window.FooterManager();
+      footerManager.render('footer-container');
+    }
+  }, 3000);
 });
 
 // Listen for scripts loaded event to initialize footer - ONCE ONLY
@@ -481,19 +490,6 @@ function resetDemo() {
 // =============================================================================
 // UI EFFECTS
 // =============================================================================
-
-function handleNavScroll() {
-  const nav = document.querySelector("nav");
-  if (window.scrollY > 100) {
-    nav.style.background = "rgba(255, 255, 255, 0.98)";
-    nav.style.boxShadow = "0 4px 20px rgba(45, 108, 223, 0.1)";
-    nav.style.backdropFilter = "blur(10px)";
-  } else {
-    nav.style.background = "rgba(255, 255, 255, 0.95)";
-    nav.style.boxShadow = "none";
-    nav.style.backdropFilter = "none";
-  }
-}
 
 function setupAnimations() {
   // Intersection Observer for feature animations (original)
