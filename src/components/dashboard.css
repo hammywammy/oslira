@@ -48,7 +48,7 @@
   }
 
   .leads-table-container {
-    @apply overflow-x-auto -webkit-overflow-scrolling-touch;
+@apply overflow-x-auto;
   }
 
   /* =============================================================================
