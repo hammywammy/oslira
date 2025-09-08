@@ -84,7 +84,33 @@ class ScriptLoader {
                 scripts: ['/pages/subscription/subscription.js'],
                 requiresAuth: true,
                 enableTailwind: true
-            }
+            },
+            // In the pageConfigs object, add these:
+'about': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+},
+'pricing': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+},
+'case-studies': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+},
+'help': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+},
+'security-page': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+}
         };
     }
     
