@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Terms of Service - Oslira</title>
+        <link rel="stylesheet" href="/assets/css/tailwind.css">
+    
+    <!-- Script loader initialization -->
+    <script src="/core/script-loader.js"></script>
     <style>
         * {
             margin: 0;
@@ -558,41 +562,73 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h4>Product</h4>
-                <a href="/features.html">Features</a>
-                <a href="/pricing.html">Pricing</a>
-                <a href="/integrations.html">Integrations</a>
-                <a href="/api.html">API</a>
-            </div>
-            <div class="footer-section">
-                <h4>Company</h4>
-                <a href="/about.html">About Us</a>
-                <a href="/careers.html">Careers</a>
-                <a href="/press.html">Press</a>
-                <a href="/contact.html">Contact</a>
-            </div>
-            <div class="footer-section">
-                <h4>Resources</h4>
-                <a href="/help.html">Help Center</a>
-                <a href="/case-studies.html">Case Studies</a>
-                <a href="/blog.html">Blog</a>
-                <a href="/webinars.html">Webinars</a>
-            </div>
-            <div class="footer-section">
-                <h4>Legal</h4>
-                <a href="/privacy.html">Privacy Policy</a>
-                <a href="/terms.html">Terms of Service</a>
-                <a href="/disclaimer.html">Disclaimer</a>
-                <a href="/refund.html">Refund Policy</a>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <p>&copy; 2025 Oslira. All rights reserved.</p>
-        </div>
-    </footer>
+<!-- Footer Manager Initialization -->
+    <script>
+        let footerInitialized = false;
+        
+        window.addEventListener('oslira:scripts:loaded', async () => {
+            if (footerInitialized) {
+                console.log('🔄 [Terms] Footer already initialized, skipping...');
+                return;
+            }
+            
+            console.log('🚀 [Terms] Scripts loaded event received, initializing footer...');
+            try {
+                footerInitialized = true;
+                await initializeFooter();
+            } catch (error) {
+                console.error('❌ [Terms] Footer initialization failed:', error);
+                footerInitialized = false;
+            }
+        });
+        
+        async function initializeFooter() {
+            try {
+                // Check if footer already exists
+                if (document.querySelector('.new-footer-main')) {
+                    console.log('🔄 [Terms] Footer already exists, skipping initialization...');
+                    return;
+                }
+                
+                console.log('🦶 [Terms] Starting footer initialization...');
+                
+                // Check if container exists
+                let container = document.getElementById('footer-container');
+                if (!container) {
+                    console.log('🔧 [Terms] Creating footer-container element');
+                    container = document.createElement('div');
+                    container.id = 'footer-container';
+                    document.body.appendChild(container);
+                }
+                
+                // Wait for FooterManager to be available
+                console.log('🔍 [Terms] Waiting for FooterManager...');
+                for (let i = 0; i < 50; i++) {
+                    if (window.FooterManager) {
+                        console.log('✅ [Terms] FooterManager found');
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                if (!window.FooterManager) {
+                    throw new Error('FooterManager not available after waiting');
+                }
+                
+                // Initialize footer
+                console.log('🦶 [Terms] Creating FooterManager instance...');
+                const footerManager = new window.FooterManager();
+                
+                console.log('🦶 [Terms] Rendering footer...');
+                footerManager.render('footer-container');
+                
+                console.log('✅ [Terms] Footer initialization complete');
+            } catch (error) {
+                console.error('❌ [Terms] Footer initialization failed:', error);
+            }
+        }
+    </script>
+    <!-- Footer Container -->
+    <div id="footer-container"></div>
 </body>
 </html>
