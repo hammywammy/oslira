@@ -110,6 +110,26 @@ class ScriptLoader {
     scripts: ['/core/footer/footer-manager.js'],
     requiresAuth: false,
     enableTailwind: true
+},
+'privacy': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+},
+'terms': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+},
+'refund': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+},
+'disclaimer': {
+    scripts: ['/core/footer/footer-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
 }
         };
     }
