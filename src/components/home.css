@@ -44,13 +44,25 @@
     @apply absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full;
   }
 
+  .home-nav-link.login-btn {
+  @apply px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 no-underline;
+}
+
+.home-nav-link.login-btn:hover::after {
+  display: none;
+}
+
   /* =============================================================================
      URGENCY BANNER
      ============================================================================= */
 
-  .urgency-banner {
-    @apply bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 mt-16;
-  }
+.urgency-banner {
+  @apply bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 mt-16 py-2;
+}
+
+  .urgency-banner p {
+  @apply m-0;
+}
 
   .urgency-close {
     @apply text-blue-700 hover:text-blue-900 font-bold cursor-pointer;
