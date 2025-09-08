@@ -4,170 +4,179 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign up for Oslira - AI Lead Generation</title>
+    <meta name="description" content="Start your free trial with Oslira. Get 25 free lead analyses, then upgrade for unlimited access to AI-powered lead generation.">
     <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
+    
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="/assets/css/tailwind.css">
+    
+    <!-- Script loader initialization -->
+    <script src="/core/script-loader.js"></script>
 </head>
-<body style="visibility: hidden;">
-<div class="auth-container">
-    <!-- Loading State -->
-    <div id="loading-state" class="loading-overlay hidden">
-        <div class="loading-content">
-            <div class="spinner"></div>
-            <p id="loading-message">Loading...</p>
+<body class="auth-page-body" style="visibility: hidden;">
+    <div class="auth-container">
+        <!-- Loading State -->
+        <div id="loading-state" class="auth-loading-state">
+            <div class="auth-loading-spinner"></div>
+            <p id="loading-message" class="auth-loading-text">Loading...</p>
         </div>
-    </div>
 
-    <!-- Error State -->
-    <div id="error-state" class="alert alert-error hidden">
-        <div class="alert-content">
+        <!-- Error State -->
+        <div id="error-state" class="auth-error-message">
             <strong>Error</strong>
             <span id="error-message"></span>
         </div>
-    </div>
 
-    <!-- Success State -->
-    <div id="success-state" class="alert alert-success hidden">
-        <div class="alert-content">
-            <span id="success-message"></span>
+        <!-- Success State -->
+        <div id="success-state" class="auth-success-state">
+            <div class="auth-success-icon">
+                <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+            <h3 class="auth-success-title">Check your email!</h3>
+            <p class="auth-success-message">We've sent you a magic link to sign in.</p>
+            <div class="auth-success-details">
+                <span id="success-message"></span>
+            </div>
         </div>
-    </div>
+
         <!-- Header -->
         <div class="auth-header">
-            <a href="/" class="logo">
-                <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="logo-image">
-                <h1>Oslira</h1>
-            </a>
-            <h2 id="auth-title">Start your free trial</h2>
-<p id="auth-subtitle" class="auth-subtitle">Get 25 free lead analyses, then upgrade for unlimited access</p>
+            <div class="auth-logo-container">
+                <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" class="auth-logo-image">
+                <span class="auth-logo-text">Oslira</span>
+            </div>
+            <h1 id="auth-title" class="auth-title">Start your free trial</h1>
+            <p id="auth-subtitle" class="auth-subtitle">Get 25 free lead analyses, then upgrade for unlimited access</p>
         </div>
 
         <!-- Auth Options -->
-        <div id="auth-options">
-            <button type="button" class="auth-method primary" id="google-signin-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" class="google-icon">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
+        <div id="auth-options" class="auth-form">
+            <button type="button" class="auth-method auth-button primary" id="google-signin-btn">
+                <div class="auth-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" class="google-icon">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                </div>
                 Continue with Google
             </button>
             
-            <div class="divider">
-                <span>or</span>
+            <div class="auth-divider">
+                <span class="auth-divider-text">or</span>
             </div>
             
-            <button type="button" class="auth-method secondary" id="email-continue-btn">
+            <button type="button" class="auth-method auth-button secondary" id="email-continue-btn">
                 Continue with email
             </button>
         </div>
 
         <!-- Email Input Step -->
-        <div id="email-input-step" class="auth-step" style="display: none;">
+        <div id="email-input-step" class="auth-form auth-hidden">
             <form id="email-form">
-                <div class="form-group">
-                    <label for="auth-email" class="form-label">Email address</label>
+                <div class="auth-form-group">
+                    <label for="auth-email" class="auth-form-label">Email address</label>
                     <input 
                         type="email" 
                         id="auth-email" 
                         name="email" 
-                        class="form-input" 
+                        class="auth-form-input" 
                         placeholder="Enter your email"
                         required
                         autocomplete="email"
                     >
-                    <div class="form-error" id="auth-email-error"></div>
+                    <div class="auth-error-message" id="email-error" style="display: none;">
+                        <span id="email-error-message"></span>
+                    </div>
                 </div>
-                
-                <button type="submit" class="auth-method primary">
-                    Continue
-                </button>
+
+                <div class="auth-form-group">
+                    <button type="submit" class="auth-button primary" id="email-submit-btn">
+                        Continue with email
+                    </button>
+                </div>
+
+                <div class="auth-form-group">
+                    <button type="button" class="auth-button secondary" id="back-to-options-btn">
+                        Back to options
+                    </button>
+                </div>
             </form>
-            
-            <div class="back-to-options">
-                <a href="#" class="back-link" id="back-to-options">← Back</a>
-            </div>
         </div>
 
-        <!-- OTP Verification Step -->
-        <div id="otp-verification-step" class="auth-step" style="display: none;">
-            <div class="otp-message">
-                <div class="email-icon">📧</div>
-                <h3>Enter verification code</h3>
-                <p>We sent a 6-digit code to <strong id="otp-email"></strong></p>
-            </div>
-            
-            <form id="otp-form">
-                <div class="form-group">
-                    <input 
-                        type="text" 
-                        id="otp-code" 
-                        name="code" 
-                        class="form-input otp-input" 
-                        placeholder="000000"
-                        maxlength="6"
-                        pattern="[0-9]{6}"
-                        required
-                        autocomplete="one-time-code"
-                    >
-                    <div class="form-error" id="otp-code-error"></div>
-                </div>
-                
-                <button type="submit" class="auth-method primary">
-                    Verify Code
-                </button>
-            </form>
-            
-            <div class="otp-actions">
-                <button type="button" class="resend-link" id="resend-otp">
-                    Didn't receive code? Resend
-                </button>
-            </div>
-            
-            <div class="back-to-options">
-                <a href="#" class="back-link" id="back-to-email-otp">← Use different email</a>
-            </div>
-        </div>
-
-        <!-- Password Input Step -->
-        <div id="password-input-step" class="auth-step" style="display: none;">
-            <div id="user-context" class="user-context"></div>
-            
+        <!-- Password Input Step (for returning users) -->
+        <div id="password-input-step" class="auth-form auth-hidden">
             <form id="password-form">
-                <div class="form-group">
-                    <label for="auth-password" class="form-label">Password</label>
+                <div class="auth-form-group">
+                    <label for="auth-password" class="auth-form-label">Password</label>
                     <input 
                         type="password" 
                         id="auth-password" 
                         name="password" 
-                        class="form-input" 
+                        class="auth-form-input" 
                         placeholder="Enter your password"
                         required
                         autocomplete="current-password"
                     >
-                    <div class="form-error" id="auth-password-error"></div>
+                    <div class="auth-error-message" id="password-error" style="display: none;">
+                        <span id="password-error-message"></span>
+                    </div>
                 </div>
-                
-                <button type="submit" class="auth-method primary" id="submit-auth">
-                    Continue
-                </button>
+
+                <div class="auth-form-group">
+                    <button type="submit" class="auth-button primary" id="password-submit-btn">
+                        Sign in
+                    </button>
+                </div>
+
+                <div class="auth-form-group">
+                    <button type="button" class="auth-link" id="forgot-password-btn">
+                        Forgot your password?
+                    </button>
+                </div>
+
+                <div class="auth-form-group">
+                    <button type="button" class="auth-button secondary" id="back-to-email-btn">
+                        Back to email
+                    </button>
+                </div>
             </form>
-            
-            <div class="back-to-options">
-                <a href="#" class="back-link" id="back-to-email">← Back</a>
-            </div>
         </div>
 
         <!-- Footer -->
-        <div class="footer">
-            By continuing, you agree to our 
-            <a href="/terms">Terms of Service</a> and 
-            <a href="/privacy">Privacy Policy</a>
+        <div class="auth-footer">
+            <p class="auth-note">
+                By continuing, you agree to our Terms of Service and Privacy Policy.
+            </p>
+            <div class="auth-links">
+                <a href="/footer/terms" class="auth-link">Terms of Service</a>
+                <a href="/footer/privacy" class="auth-link">Privacy Policy</a>
+                <a href="/footer/help" class="auth-link">Help Center</a>
+            </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-<script src="/core/script-loader.js"></script>
-<script src="/utils/alert-system.js"></script>
-<script src="/pages/auth/auth.js"></script>
+    <!-- Scripts will be loaded by script-loader -->
+    <script>
+        // Show content after page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.style.visibility = 'visible';
+        });
+
+        // Initialize auth functionality when scripts are loaded
+        window.addEventListener('oslira:scripts:loaded', () => {
+            console.log('🔐 [Auth] Scripts loaded, initializing auth page...');
+            
+            // The auth.js script will handle all the authentication logic
+            if (window.AuthManager) {
+                console.log('✅ [Auth] AuthManager available, initializing...');
+            } else {
+                console.warn('⚠️ [Auth] AuthManager not available');
+            }
+        });
+    </script>
 </body>
 </html>
