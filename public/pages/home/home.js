@@ -27,18 +27,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   await initializeApp();
   setupEventListeners();
   setupAnimations();
-});
-
-// Listen for scripts loaded event to initialize footer
-window.addEventListener('oslira:scripts:loaded', async () => {
-  console.log('🚀 [Home] Scripts loaded event received, waiting for Tailwind...');
-  try {
-    // Wait for Tailwind CSS to load
-    await waitForTailwind();
-    await initializeFooter();
-  } catch (error) {
-    console.error('❌ [Home] Footer initialization failed:', error);
-  }
+  
+  // Force footer initialization after a short delay
+  setTimeout(async () => {
+    try {
+      console.log('🦶 [Home] Force initializing footer...');
+      if (window.FooterManager) {
+        const footerManager = new window.FooterManager();
+        footerManager.render('footer-container', {
+          showSocialLinks: true,
+          showNewsletter: true
+        });
+        console.log('✅ [Home] Footer force-initialized successfully');
+      } else {
+        console.warn('⚠️ [Home] FooterManager not available for force init');
+      }
+    } catch (error) {
+      console.error('❌ [Home] Footer force initialization failed:', error);
+    }
+  }, 2000);
 });
 
 async function waitForTailwind() {
