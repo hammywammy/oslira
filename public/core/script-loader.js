@@ -181,21 +181,23 @@ async loadCoreScripts() {
     for (const scriptName of this.coreScripts) {
         let scriptPath;
         
-        // Handle external CDN scripts
-        if (scriptName === 'supabase') {
-            scriptPath = 'https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.7/supabase.min.js';
-        } else {
-            scriptPath = `/core/${scriptName}.js`;
-        }
+// Handle external CDN scripts
+if (scriptName === 'supabase') {
+    scriptPath = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+} else {
+    scriptPath = `/core/${scriptName}.js`;
+}
         
         try {
             await this.loadScript(scriptName, scriptPath);
             
-            // Verify the script exposed its global object
-            const globalName = this.getGlobalName(scriptName);
-            if (globalName && !window[globalName]) {
-                throw new Error(`Critical script ${scriptName} failed to expose global ${globalName}`);
-            }
+// Verify the script exposed its global object
+const globalName = this.getGlobalName(scriptName);
+if (globalName && !window[globalName]) {
+    throw new Error(`Critical script ${scriptName} failed to expose global ${globalName}`);
+} else if (scriptName === 'supabase' && !window.supabase?.createClient) {
+    throw new Error('Supabase CDN failed to expose createClient function');
+}
             
             // Give each core script time to initialize
             await this.wait(100);
@@ -210,7 +212,7 @@ async loadCoreScripts() {
 getGlobalName(scriptName) {
     const globalMap = {
         'env-manager': 'OsliraEnv',
-        'supabase': 'supabase',
+        'supabase': null, // Supabase CDN doesn't expose a simple global - will check differently
         'config-manager': 'OsliraConfig', 
         'auth-manager': 'OsliraAuth'
     };
