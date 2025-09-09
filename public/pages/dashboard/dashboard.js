@@ -140,118 +140,294 @@ async initializeSidebar() {
         console.log('✅ [Dashboard] Required modules verified');
     }
     
-    setupGlobalCompatibility() {
-        // Make dashboard functions available globally for HTML onclick handlers
-        window.dashboard = {
-            init: () => this.init(),
-showAnalysisModal: (username) => {
-    console.log('🔍 [Dashboard] Global showAnalysisModal called with:', username);
-    if (this.app && this.app.showAnalysisModal) {
-        return this.app.showAnalysisModal(username);
-    } else {
-        console.error('❌ [Dashboard] app.showAnalysisModal not available');
-        // Fallback direct modal opening
-        const modal = document.getElementById('analysisModal');
-        if (modal) {
-            modal.style.display = 'flex';
-        }
-    }
-},
-            showBulkModal: () => this.app.showBulkModal()},
-
-closeModal: (modalId) => {
-    console.log('❌ [Dashboard] Closing modal:', modalId);
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = 'none';
+setupGlobalCompatibility() {
+    // Create comprehensive global dashboard interface
+    window.dashboard = {
+        // Core initialization
+        init: () => this.init(),
         
-        // Reset form if it's the analysis modal
-        if (modalId === 'analysisModal') {
+        // Modal Management
+        showAnalysisModal: (username = '') => {
+            console.log('🔍 [Dashboard] Global showAnalysisModal called with:', username);
+            try {
+                if (this.app?.showAnalysisModal) {
+                    return this.app.showAnalysisModal(username);
+                }
+                
+                // Fallback: direct modal opening
+                const modal = document.getElementById('analysisModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    
+                    // Prefill username if provided
+                    if (username) {
+                        const usernameInput = document.getElementById('username');
+                        const analysisType = document.getElementById('analysis-type');
+                        const inputContainer = document.getElementById('input-field-container');
+                        
+                        if (usernameInput) usernameInput.value = username;
+                        if (analysisType) analysisType.value = 'profile';
+                        if (inputContainer) inputContainer.style.display = 'block';
+                    }
+                    
+                    console.log('✅ [Dashboard] Analysis modal opened via fallback');
+                } else {
+                    console.error('❌ [Dashboard] Analysis modal element not found');
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] showAnalysisModal failed:', error);
+            }
+        },
+        
+        showBulkModal: () => {
+            console.log('📁 [Dashboard] Global showBulkModal called');
+            try {
+                if (this.app?.showBulkModal) {
+                    return this.app.showBulkModal();
+                }
+                
+                // Fallback: direct modal opening
+                const modal = document.getElementById('bulkModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    console.log('✅ [Dashboard] Bulk modal opened via fallback');
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] showBulkModal failed:', error);
+            }
+        },
+        
+        closeModal: (modalId) => {
+            console.log('❌ [Dashboard] Global closeModal called with:', modalId);
+            try {
+                if (this.app?.closeModal) {
+                    return this.app.closeModal(modalId);
+                }
+                
+                // Fallback: direct modal closing
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.style.display = 'none';
+                    console.log(`✅ [Dashboard] Modal ${modalId} closed via fallback`);
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] closeModal failed:', error);
+            }
+        },
+        
+        // Form Handlers
+        submitAnalysis: async () => {
+            console.log('🔍 [Dashboard] Global submitAnalysis called');
+            
             const form = document.getElementById('analysisForm');
-            if (form) form.reset();
-        }
+            const submitBtn = document.getElementById('analysis-submit-btn');
+            const analysisType = document.getElementById('analysis-type')?.value;
+            const username = document.getElementById('username')?.value;
+            
+            // Validation
+            if (!analysisType) {
+                this.showAlert('Please select an analysis type', 'error');
+                return;
+            }
+            
+            if (analysisType === 'profile' && !username?.trim()) {
+                this.showAlert('Please enter a username', 'error');
+                return;
+            }
+            
+            let originalText = 'Start Analysis';
+            
+            try {
+                // Update button state
+                if (submitBtn) {
+                    originalText = submitBtn.textContent;
+                    submitBtn.textContent = 'Processing...';
+                    submitBtn.disabled = true;
+                }
+                
+                // Get configuration
+                const config = await window.OsliraConfig.getConfig();
+                const session = window.SimpleAuth.getCurrentSession();
+                
+                if (!session?.access_token) {
+                    throw new Error('Authentication required');
+                }
+                
+                // Submit analysis
+                const response = await fetch(`${config.workerUrl}/analyze/single`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session.access_token}`
+                    },
+                    body: JSON.stringify({
+                        username: username?.trim(),
+                        analysis_type: analysisType
+                    })
+                });
+                
+                if (response.ok) {
+                    this.showAlert('Analysis started! Results will appear in your dashboard.', 'success');
+                    this.closeModal('analysisModal');
+                    
+                    // Refresh dashboard if possible
+                    if (this.app?.refreshLeads) {
+                        setTimeout(() => this.app.refreshLeads(), 2000);
+                    }
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(errorText || `Server error: ${response.status}`);
+                }
+                
+            } catch (error) {
+                console.error('❌ [Dashboard] Analysis submission failed:', error);
+                this.showAlert(error.message || 'Analysis failed. Please try again.', 'error');
+            } finally {
+                // Reset button state
+                if (submitBtn) {
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            }
+        },
         
-        console.log('✅ [Dashboard] Modal closed:', modalId);
-    }
-},
-            refreshStats: () => this.app.refreshStats(),
-            copyText: (elementId) => this.app.copyText(elementId),
-            editMessage: (leadId) => this.app.editMessage(leadId),
-            saveEditedMessage: (leadId) => this.app.saveEditedMessage(leadId),
-            handleAnalysisTypeChange: () => this.app.handleAnalysisTypeChange(),
-            handleFileUpload: (event) => this.app.handleFileUpload(event),
-            validateBulkForm: () => this.app.validateBulkForm()},
-
-processAnalysisForm: async (event) => {
-    event.preventDefault();
-    console.log('📊 [Dashboard] Processing analysis form...');
-    
-    const formData = new FormData(event.target);
-    const data = {
-        businessId: formData.get('businessId'),
-        analysisType: formData.get('analysisType'),
-        username: formData.get('username')
+        // Lead Management
+        deleteLead: (leadId) => {
+            console.log('🗑️ [Dashboard] Global deleteLead called with:', leadId);
+            try {
+                if (this.app?.deleteLead) {
+                    return this.app.deleteLead(leadId);
+                }
+                console.warn('❌ [Dashboard] deleteLead not available in app');
+            } catch (error) {
+                console.error('❌ [Dashboard] deleteLead failed:', error);
+            }
+        },
+        
+        selectLead: (checkbox) => {
+            try {
+                if (this.app?.selectLead) {
+                    return this.app.selectLead(checkbox);
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] selectLead failed:', error);
+            }
+        },
+        
+        toggleAllLeads: (masterCheckbox) => {
+            try {
+                if (this.app?.toggleAllLeads) {
+                    return this.app.toggleAllLeads(masterCheckbox);
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] toggleAllLeads failed:', error);
+            }
+        },
+        
+        // Filtering and Search
+        filterLeads: (filter) => {
+            try {
+                if (this.app?.filterLeads) {
+                    return this.app.filterLeads(filter);
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] filterLeads failed:', error);
+            }
+        },
+        
+        searchLeads: (term) => {
+            try {
+                if (this.app?.searchLeads) {
+                    return this.app.searchLeads(term);
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] searchLeads failed:', error);
+            }
+        },
+        
+        // Bulk Operations
+        processBulkUpload: () => {
+            console.log('📁 [Dashboard] Global processBulkUpload called');
+            try {
+                if (this.app?.processBulkUpload) {
+                    return this.app.processBulkUpload();
+                }
+                console.warn('❌ [Dashboard] processBulkUpload not available in app');
+            } catch (error) {
+                console.error('❌ [Dashboard] processBulkUpload failed:', error);
+            }
+        },
+        
+        // Utility Methods
+        showAlert: (message, type = 'info') => {
+            if (window.Alert) {
+                switch (type) {
+                    case 'error':
+                        window.Alert.error(message);
+                        break;
+                    case 'success':
+                        window.Alert.success(message);
+                        break;
+                    default:
+                        window.Alert.info(message);
+                }
+            } else {
+                // Fallback to browser alert
+                alert(message);
+            }
+        },
+        
+        refreshData: async () => {
+            console.log('🔄 [Dashboard] Global refreshData called');
+            try {
+                if (this.app?.refreshLeads) {
+                    await this.app.refreshLeads();
+                    console.log('✅ [Dashboard] Data refreshed');
+                } else {
+                    console.warn('❌ [Dashboard] refreshLeads not available');
+                }
+            } catch (error) {
+                console.error('❌ [Dashboard] refreshData failed:', error);
+            }
+        },
+        
+        // Debug and Development
+        debugDashboard: () => {
+            console.log('🐛 [Dashboard] Debug info:', {
+                app: !!this.app,
+                appMethods: this.app ? Object.keys(this.app) : [],
+                container: !!this.app?.container,
+                modules: this.app?.container ? {
+                    modalManager: !!this.app.container.get('modalManager'),
+                    businessManager: !!this.app.container.get('businessManager'),
+                    leadManager: !!this.app.container.get('leadManager')
+                } : 'No container'
+            });
+            
+            if (this.app?.debugDashboard) {
+                return this.app.debugDashboard();
+            }
+        },
+        
+        // Internal reference for advanced usage
+        _app: this.app,
+        _initializer: this
     };
     
-    // Basic validation
-    if (!data.businessId || !data.analysisType || !data.username) {
-        alert('Please fill in all fields');
-        return;
-    }
-    
-    // Show loading state
-    const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = 'Analyzing...';
-    submitBtn.disabled = true;
-    
-    try {
-        // Make API call (replace with your actual API endpoint)
-        const response = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${window.OsliraApp?.session?.access_token}`
-            },
-            body: JSON.stringify(data)
-        });
-        
-        if (response.ok) {
-            alert('Analysis started! Results will appear in your dashboard.');
-            dashboard.closeModal('analysisModal');
-        } else {
-            const error = await response.text();
-            alert(`Analysis failed: ${error}`);
-        }
-        
-    } catch (error) {
-        console.error('❌ [Dashboard] Analysis failed:', error);
-        alert('Analysis failed. Please try again.');
-    } finally {
-        // Reset button
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    }
-},
-            processBulkUpload: () => this.app.processBulkUpload(),
-            deleteLead: (leadId) => this.app.deleteLead(leadId),
-            selectLead: (checkbox) => this.app.selectLead(checkbox),
-            toggleAllLeads: (masterCheckbox) => this.app.toggleAllLeads(masterCheckbox),
-            filterLeads: (filter) => this.app.filterLeads(filter),
-            searchLeads: (term) => this.app.searchLeads(term),
-            debugDashboard: () => this.app.debugDashboard(),
-            _app: this.app
+    // Expose debugging utilities
+    if (this.app?.container) {
+        window.debugUtils = {
+            analysisQueue: this.app.container.get('analysisQueue'),
+            modalManager: this.app.container.get('modalManager'),
+            businessManager: this.app.container.get('businessManager'),
+            leadManager: this.app.container.get('leadManager'),
+            stateManager: this.app.container.get('stateManager')
         };
-        
-        // Expose managers for debugging
-        if (this.app?.container) {
-            window.analysisQueue = this.app.container.get('analysisQueue');
-            window.modalManager = this.app.container.get('modalManager');
-            window.businessManager = this.app.container.get('businessManager');
-        }
-        
-        console.log('✅ [Dashboard] Global compatibility established');
+        console.log('🐛 [Dashboard] Debug utilities exposed as window.debugUtils');
     }
+    
+    console.log('✅ [Dashboard] Global compatibility established');
+}
     
     handleInitializationError(error) {
         console.error('💥 [Dashboard] Critical initialization error:', error);
