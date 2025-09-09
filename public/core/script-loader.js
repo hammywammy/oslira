@@ -32,6 +32,7 @@ this.coreScripts = [
         '/pages/dashboard/modules/core/dashboard-app.js',
         '/pages/dashboard/dashboard.js',
         '/pages/dashboard/modules/analysis/analysis-modal.js',
+        '/pages/dashboard/modules/analysis/analysis-queue.js',
         '/pages/dashboard/modules/bulk/bulk-upload.js',
         '/pages/dashboard/modules/business/business-manager.js',
         '/pages/dashboard/modules/leads/lead-manager.js',
