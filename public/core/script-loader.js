@@ -24,18 +24,20 @@ this.coreScripts = [
         
         // Page-specific script configurations
         this.pageConfigs = {
-            'dashboard': {
-                scripts: [
-                    '/pages/dashboard/dashboard.js',
-                    '/pages/dashboard/modules/analysis/analysis-modal.js',
-                    '/pages/dashboard/modules/bulk/bulk-upload.js',
-                    '/pages/dashboard/modules/business/business-manager.js',
-                    '/pages/dashboard/modules/leads/lead-manager.js',
-                    '/pages/dashboard/modules/leads/lead-renderer.js',
-                    '/pages/dashboard/modules/realtime/realtime-manager.js',
-                    '/pages/dashboard/modules/stats/stats-calculator.js',
-                    '/pages/dashboard/modules/ui/modal-manager.js'
-                ],
+'dashboard': {
+    scripts: [
+        '/pages/dashboard/modules/core/dashboard-app.js',
+        '/pages/dashboard/modules/core/dependency-container.js',
+        '/pages/dashboard/dashboard.js',
+        '/pages/dashboard/modules/analysis/analysis-modal.js',
+        '/pages/dashboard/modules/bulk/bulk-upload.js',
+        '/pages/dashboard/modules/business/business-manager.js',
+        '/pages/dashboard/modules/leads/lead-manager.js',
+        '/pages/dashboard/modules/leads/lead-renderer.js',
+        '/pages/dashboard/modules/realtime/realtime-manager.js',
+        '/pages/dashboard/modules/stats/stats-calculator.js',
+        '/pages/dashboard/modules/ui/modal-manager.js'
+    ],
                 requiresAuth: true,
                 enableTailwind: true
             },
