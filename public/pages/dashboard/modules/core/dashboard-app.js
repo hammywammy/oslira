@@ -88,7 +88,9 @@ await this.container.initialize();
             // Wait for SimpleAuth to initialize its Supabase client
             let attempts = 0;
             while (attempts < 50) {
-                if (window.SimpleAuth?.supabase?.from) {
+    if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
+        const client = window.SimpleAuth.supabase();
+        if (client?.from) {
                     console.log('✅ [DependencyContainer] Got initialized Supabase client from SimpleAuth');
                     return window.SimpleAuth.supabase;
                 }
@@ -164,9 +166,11 @@ async preResolveAsyncDependencies() {
         let attempts = 0;
         let supabase = null;
         
-        while (attempts < 50) {
-            if (window.SimpleAuth?.supabase?.from) {
-                supabase = window.SimpleAuth.supabase;
+       while (attempts < 50) {
+    if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
+        const client = window.SimpleAuth.supabase();
+        if (client?.from) {
+                supabase = window.SimpleAuth.supabase();
                 console.log('✅ [DashboardApp] Got initialized Supabase client from SimpleAuth');
                 break;
             }
@@ -889,5 +893,5 @@ if (typeof module !== 'undefined' && module.exports) {
     module.exports = { DashboardApp, DASHBOARD_EVENTS };
 } else {
     window.DashboardApp = DashboardApp;
-    window.DASHBOARD_EVENTS = DASHBOARD_EVENTS;
+    window.DASHBOARD_EVENTS = DASHBOARD_EVENTS || {};
 }
