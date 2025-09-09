@@ -87,47 +87,47 @@ class ScriptLoader {
             },
             // In the pageConfigs object, add these:
 'about': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 },
 'pricing': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 },
 'case-studies': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 },
 'help': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 },
 'security-page': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 },
 'privacy': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 },
 'terms': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 },
 'refund': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 },
 'disclaimer': {
-    scripts: ['/core/footer/footer-manager.js'],
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
     enableTailwind: true
 }
