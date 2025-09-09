@@ -26,8 +26,10 @@ this.coreScripts = [
         this.pageConfigs = {
 'dashboard': {
     scripts: [
-        '/pages/dashboard/modules/core/dashboard-app.js',
+        '/pages/dashboard/modules/core/event-bus.js',
+        '/pages/dashboard/modules/core/state-manager.js',
         '/pages/dashboard/modules/core/dependency-container.js',
+        '/pages/dashboard/modules/core/dashboard-app.js',
         '/pages/dashboard/dashboard.js',
         '/pages/dashboard/modules/analysis/analysis-modal.js',
         '/pages/dashboard/modules/bulk/bulk-upload.js',
