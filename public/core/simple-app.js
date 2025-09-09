@@ -224,8 +224,8 @@ async createOsliraAppGlobal() {
                 return null;
             }
             
-            const { data: userData, error } = await this.auth.supabase
-                .from('users')
+const { data: userData, error } = await this.auth.supabase()
+    .from('users')
                 .select('*')
                 .eq('id', session.user.id)
                 .single();
