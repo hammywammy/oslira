@@ -21,7 +21,7 @@
             }
         }
     </script>
-    
+    <script src="/core/script-loader.js"></script>
     <!-- Feather Icons -->
     <script src="https://unpkg.com/feather-icons"></script>
     
@@ -198,98 +198,9 @@
     <!-- Main Container with Gradient Background -->
     <div class="min-h-screen gradient-bg relative">
         <div class="wave-pattern"></div>
-        
-        <!-- Sidebar -->
-        <aside class="fixed left-0 top-0 h-full w-64 glass-dark border-r border-white/10 z-50">
-            <!-- Logo Section -->
-            <div class="p-6 border-b border-white/10">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <span class="text-white font-black text-xl">O</span>
-                    </div>
-                    <span class="text-white font-bold text-xl">Oslira</span>
-                </div>
-            </div>
-            
-            <!-- Main Navigation -->
-            <nav class="p-4">
-                <ul class="space-y-2">
-                    <li>
-                        <a href="/dashboard" class="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white rounded-xl border border-indigo-500/30">
-                            <i data-feather="grid" class="w-5 h-5"></i>
-                            <span class="font-medium">Dashboard</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/leads" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
-                            <i data-feather="users" class="w-5 h-5"></i>
-                            <span class="font-medium">Lead Management</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/campaigns" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
-                            <i data-feather="send" class="w-5 h-5"></i>
-                            <span class="font-medium">Outreach Campaigns</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/analytics" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
-                            <i data-feather="bar-chart-2" class="w-5 h-5"></i>
-                            <span class="font-medium">Analytics</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/integrations" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
-                            <i data-feather="link" class="w-5 h-5"></i>
-                            <span class="font-medium">Integrations</span>
-                        </a>
-                    </li>
-                </ul>
-                
-                <!-- Data Management Section -->
-                <div class="mt-6 pt-6 border-t border-white/10">
-                    <p class="px-4 text-xs text-gray-500 uppercase tracking-wider mb-3">Data Management</p>
-                    <ul class="space-y-2">
-                        <li>
-                            <button onclick="openBulkImportModal()" class="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
-                                <i data-feather="upload" class="w-4 h-4"></i>
-                                <span class="text-sm">Bulk Import</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="openExportModal()" class="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
-                                <i data-feather="download" class="w-4 h-4"></i>
-                                <span class="text-sm">Export Data</span>
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="openRecycleBin()" class="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
-                                <i data-feather="trash-2" class="w-4 h-4"></i>
-                                <span class="text-sm">Recycle Bin</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
-            
-            <!-- User Section -->
-            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
-                <div class="flex items-center space-x-3">
-                    <img src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff" 
-                         class="w-10 h-10 rounded-full" alt="User">
-                    <div class="flex-1">
-                        <p class="text-white text-sm font-medium">Welcome back!</p>
-                        <p class="text-gray-400 text-xs">Premium Plan</p>
-                    </div>
-                    <button class="text-gray-400 hover:text-white transition-colors">
-                        <i data-feather="settings" class="w-5 h-5"></i>
-                    </button>
-                </div>
-            </div>
-        </aside>
-        
+<div id="sidebar-container"></div>
         <!-- Main Content Area -->
-        <main class="ml-64 h-screen overflow-y-auto">
+        <main class="main-content" style="margin-left: 256px;">
             <!-- Top Navigation Bar -->
             <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-gray-200">
                 <div class="px-8 py-4">
