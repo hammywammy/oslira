@@ -475,7 +475,10 @@ window.SimpleAuth = {
     getCurrentSession: () => authManager.getCurrentSession(),
     getCurrentUser: () => authManager.getCurrentUser(),
     signOut: () => authManager.signOut(),
-    supabase: () => authManager.supabase
+    supabase: () => authManager.supabase,
+    signInWithGoogle: () => authManager.signInWithGoogle(),
+    signInWithEmail: (email, password) => authManager.signInWithEmail(email, password),
+    signUpWithEmail: (email, password, username) => authManager.signUpWithEmail(email, password, username)
 };
 
 console.log('🔐 [Auth] AuthManager initialized and exposed as window.OsliraAuth');
