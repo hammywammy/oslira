@@ -156,7 +156,7 @@ class ConfigManager {
     }
     
     validateConfiguration() {
-        const required = ['supabaseUrl', 'supabaseKey'];
+const required = ['supabaseUrl', 'supabaseAnonKey'];
         const missing = required.filter(key => !this.config[key] || this.config[key].includes('placeholder'));
         
         if (missing.length > 0) {
