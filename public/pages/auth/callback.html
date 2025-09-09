@@ -142,49 +142,23 @@
                 // Check if we have OAuth parameters (Supabase handles this automatically)
                 updateStatus('Verifying credentials...');
                 
-                // Get current session (Supabase should have processed the callback)
-                const { data: { session }, error } = await window.SimpleAuth.supabase.auth.getSession();
-                
-                if (error) {
-                    console.error('❌ [Callback] Session error:', error);
-                    throw new Error(`Authentication error: ${error.message}`);
-                }
-                
-                if (session && session.user) {
-                    console.log('✅ [Callback] Authentication successful');
-                    console.log('🔐 [Callback] User:', session.user.email);
-                    
-// Update auth state
-window.SimpleAuth.session = session;
+// Use auth manager's callback handler
+const result = await window.OsliraAuth.handleCallback();
 
-// Success - let simple-app.js determine where to redirect
-updateStatus('Sign-in successful! Redirecting...');
-
-// Use proper redirect logic that checks onboarding status
-setTimeout(async () => {
-    try {
-        // Initialize SimpleApp if not already done
-        if (!window.OsliraSimpleApp) {
-            console.log('🔐 [Callback] SimpleApp not available, defaulting to onboarding');
-            window.location.href = '/onboarding';
-            return;
-        }
-
-        await window.OsliraSimpleApp.initialize();
-        const redirectUrl = await window.OsliraSimpleApp.determinePostAuthRedirect();
-        console.log('🔐 [Callback] Redirecting to:', redirectUrl);
-        window.location.href = redirectUrl;
-        
-    } catch (error) {
-        console.error('❌ [Callback] Error determining redirect:', error);
-        // Fallback to onboarding if logic fails
-        window.location.href = '/onboarding';
-    }
-}, 1000); 
-                } else {
-                    console.log('❌ [Callback] No valid session found');
-                    throw new Error('No valid session found after authentication');
-                }
+if (result && result.session) {
+    console.log('✅ [Callback] Authentication successful');
+    console.log('🔐 [Callback] User:', result.session.user.email);
+    
+    updateStatus('Sign-in successful! Redirecting...');
+    
+    // Redirect based on auth manager's recommendation
+    setTimeout(() => {
+        window.location.href = result.redirectTo;
+    }, 1000);
+} else {
+    console.log('❌ [Callback] No valid session found');
+    throw new Error('No valid session found after authentication');
+}
                 
             } catch (error) {
                 console.error('❌ [Callback] Callback processing failed:', error);
