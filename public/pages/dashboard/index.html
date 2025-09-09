@@ -9,10 +9,13 @@
     
     <!-- Load Enhanced Tailwind CSS -->
     <link rel="stylesheet" href="/assets/css/tailwind.css">
+    
+    <!-- Load existing alert system -->
+    <script src="/utils/alert-system.js"></script>
 </head>
 <body class="dashboard-main">
     <!-- Skip Navigation -->
-    <a href="#main-content" class="skip-nav">Skip to main content</a>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     
     <!-- Dashboard Layout -->
     <div class="min-h-screen">
@@ -22,32 +25,32 @@
         <!-- Main Content Area -->
         <main role="main" id="main-content" class="dashboard-content">
             
-            <!-- Modern Header Section -->
+            <!-- Premium Header Section -->
             <header class="dashboard-header fade-in-up">
                 <div class="header-content">
                     <!-- Brand Section -->
                     <div class="brand-section">
-                        <div class="brand-icon">
+                        <div class="brand-icon interactive-element">
                             <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                             </svg>
                         </div>
                         <div class="brand-text">
-                            <h1>Dashboard</h1>
-                            <p>Manage your leads with AI-powered insights</p>
+                            <h1 class="premium-heading">Dashboard</h1>
+                            <p class="premium-text">Manage your leads with AI-powered insights</p>
                         </div>
                     </div>
                     
                     <!-- Header Actions -->
                     <div class="header-actions">
-                        <button onclick="dashboard.showAnalysisModal()" class="btn-primary group">
+                        <button onclick="dashboard.showAnalysisModal()" class="btn-primary interactive-element focus-ring">
                             <svg class="w-5 h-5 mr-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
                             Research Lead
                         </button>
                         
-                        <button onclick="dashboard.showBulkModal()" class="btn-secondary group">
+                        <button onclick="dashboard.showBulkModal()" class="btn-secondary interactive-element focus-ring">
                             <svg class="w-5 h-5 mr-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                             </svg>
@@ -56,125 +59,141 @@
                     </div>
                     
                     <!-- Status Indicators -->
-                    <div class="status-dots">
-                        <div class="status-dot active" title="System Online"></div>
+                    <div class="status-indicators">
+                        <div class="status-dot online" title="System Online"></div>
                         <div class="status-dot processing" title="AI Processing"></div>
                         <div class="status-dot standby" title="Standby Mode"></div>
                     </div>
                 </div>
             </header>
 
-            <!-- QUICK ACTIONS - TOP PRIORITY SECTION -->
-            <section class="quick-actions-hero slide-in-left">
-                <div class="actions-grid">
-                    <!-- Research Lead Action -->
-                    <div class="action-card fade-in-up" onclick="dashboard.showAnalysisModal()">
-                        <div class="action-card-icon">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                        </div>
-                        <h3 class="action-card-title">Research Lead</h3>
-                        <p class="action-card-subtitle">Instant AI analysis of Instagram profiles</p>
+            <!-- HERO QUICK ACTIONS - TOP PRIORITY SECTION -->
+            <section class="hero-actions-section slide-in-left">
+                <div class="hero-glass-container">
+                    <div class="mb-8">
+                        <h2 class="premium-heading text-2xl mb-2">Quick Actions</h2>
+                        <p class="premium-text">Everything you need to accelerate your lead generation</p>
                     </div>
-
-                    <!-- Bulk Upload Action -->
-                    <div class="action-card fade-in-up" onclick="dashboard.showBulkModal()">
-                        <div class="action-card-icon">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                            </svg>
+                    
+                    <div class="actions-grid">
+                        <!-- Research Lead Action -->
+                        <div class="premium-action-card animate-fade-in-scale interactive-element" onclick="dashboard.showAnalysisModal()">
+                            <div class="action-icon-wrapper">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                            <h3 class="action-title">Research Lead</h3>
+                            <p class="action-subtitle">Instant AI analysis of Instagram profiles with detailed insights</p>
                         </div>
-                        <h3 class="action-card-title">Bulk Upload</h3>
-                        <p class="action-card-subtitle">Upload hundreds of leads instantly</p>
-                    </div>
 
-                    <!-- Export Data Action -->
-                    <div class="action-card fade-in-up" onclick="dashboard.exportLeads()">
-                        <div class="action-card-icon">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 10v6m0 0l-4-4m4 4l4-4m-4-4V3a1 1 0 011-1h2a1 1 0 011 1v1"/>
-                            </svg>
+                        <!-- Bulk Upload Action -->
+                        <div class="premium-action-card animate-fade-in-scale interactive-element" onclick="dashboard.showBulkModal()">
+                            <div class="action-icon-wrapper">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                            </div>
+                            <h3 class="action-title">Bulk Upload</h3>
+                            <p class="action-subtitle">Upload hundreds of leads instantly for mass analysis</p>
                         </div>
-                        <h3 class="action-card-title">Export Data</h3>
-                        <p class="action-card-subtitle">Download leads in multiple formats</p>
-                    </div>
 
-                    <!-- Analytics Action -->
-                    <div class="action-card fade-in-up" onclick="window.location.href='/analytics'">
-                        <div class="action-card-icon">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                            </svg>
+                        <!-- Export Data Action -->
+                        <div class="premium-action-card animate-fade-in-scale interactive-element" onclick="dashboard.exportLeads()">
+                            <div class="action-icon-wrapper">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 10v6m0 0l-4-4m4 4l4-4m-4-4V3a1 1 0 011-1h2a1 1 0 011 1v1"/>
+                                </svg>
+                            </div>
+                            <h3 class="action-title">Export Data</h3>
+                            <p class="action-subtitle">Download leads in CSV, Excel, or JSON formats</p>
                         </div>
-                        <h3 class="action-card-title">Analytics</h3>
-                        <p class="action-card-subtitle">Deep insights & performance metrics</p>
+
+                        <!-- Analytics Action -->
+                        <div class="premium-action-card animate-fade-in-scale interactive-element" onclick="window.location.href='/analytics'">
+                            <div class="action-icon-wrapper">
+                                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
+                            </div>
+                            <h3 class="action-title">Analytics</h3>
+                            <p class="action-subtitle">Deep insights and performance metrics dashboard</p>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Enhanced Stats Section -->
-            <section class="dashboard-grid fade-in-up">
-                <div class="dashboard-stat-card">
-                    <div class="stat-icon">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                        </svg>
+            <!-- Premium Stats Section -->
+            <section class="dashboard-grid animate-slide-in-bottom">
+                <div class="premium-stat-card interactive-element">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-trend glow-green">
+                            <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                            </svg>
+                            +32%
+                        </div>
                     </div>
-                    <div class="dashboard-stat-value" id="total-leads">247</div>
-                    <div class="dashboard-stat-label">Total Leads</div>
-                    <div class="stat-trend mt-4">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
-                        </svg>
-                        +32% this week
-                    </div>
+                    <div class="stat-value" id="total-leads">3</div>
+                    <div class="stat-label">Total Leads</div>
+                    <div class="text-white/50 text-sm mt-2">this week</div>
                 </div>
                 
-                <div class="dashboard-stat-card">
-                    <div class="stat-icon">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                    <div class="dashboard-stat-value" id="analyzed-leads">189</div>
-                    <div class="dashboard-stat-label">Analyzed</div>
-                    <div class="stat-trend mt-4">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
-                        </svg>
-                        +18% this week
-                    </div>
+                <div class="premium-stat-card interactive-element">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-trend glow-green">
+                            <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
+                            </svg>
+                            +18%
+                        </div>
+                        </div>
+                    <div class="stat-value" id="analyzed-leads">3</div>
+                    <div class="stat-label">Analyzed</div>
+                    <div class="text-white/50 text-sm mt-2">this week</div>
                 </div>
                 
-                <div class="dashboard-stat-card">
-                    <div class="stat-icon">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
+                <div class="premium-stat-card interactive-element">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-trend" style="background: rgba(255, 200, 50, 0.15); color: #fbbf24;">
+                            <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+                            </svg>
+                            -12%
+                        </div>
                     </div>
-                    <div class="dashboard-stat-value" id="pending-leads">58</div>
-                    <div class="dashboard-stat-label">Pending</div>
-                    <div class="stat-trend mt-4">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
-                        </svg>
-                        -12% this week
-                    </div>
+                    <div class="stat-value" id="pending-leads">0</div>
+                    <div class="stat-label">Pending</div>
+                    <div class="text-white/50 text-sm mt-2">processing now</div>
                 </div>
             </section>
 
-            <!-- CRM Lead Management Section - KEPT EXACTLY THE SAME FUNCTIONALITY -->
-            <section class="lead-management-section fade-in-up">
+            <!-- Premium Lead Management Section - CRM FUNCTIONALITY PRESERVED -->
+            <section class="lead-management-container animate-bounce-in">
                 <div class="section-header">
                     <div>
-                        <h2 class="section-title">Lead Management</h2>
-                        <p class="section-subtitle">Track and analyze your lead pipeline with advanced AI insights</p>
+                        <h2 class="section-title premium-heading">Lead Management</h2>
+                        <p class="section-subtitle premium-text">Track and analyze your lead pipeline with advanced AI insights</p>
                     </div>
                     <div class="filter-controls">
                         <div class="flex items-center space-x-2">
-                            <span class="text-sm font-bold text-gray-600">Filter:</span>
-                            <select id="analysis-filter" class="filter-select">
+                            <span class="text-sm font-bold text-white/80">Filter:</span>
+                            <select id="analysis-filter" class="premium-select focus-ring">
                                 <option value="">All Leads</option>
                                 <option value="completed">Analyzed</option>
                                 <option value="pending">Pending</option>
@@ -182,8 +201,8 @@
                             </select>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <span class="text-sm font-bold text-gray-600">Sort:</span>
-                            <select id="sort-leads" class="filter-select">
+                            <span class="text-sm font-bold text-white/80">Sort:</span>
+                            <select id="sort-leads" class="premium-select focus-ring">
                                 <option value="created_at">Latest First</option>
                                 <option value="username">Username</option>
                                 <option value="score">Score</option>
@@ -193,251 +212,137 @@
                 </div>
 
                 <!-- Bulk Actions Toolbar -->
-                <div id="bulk-actions-toolbar" class="bulk-actions-toolbar hidden">
-                    <div class="flex items-center justify-between px-8 py-4">
-                        <div class="flex items-center space-x-4">
-                            <span class="inline-flex items-center px-4 py-2 rounded-2xl text-sm font-black bg-white/30 text-white">
-                                <span id="selected-count">0</span> leads selected
-                            </span>
+                <div id="bulk-actions-toolbar" class="bulk-actions-toolbar">
+                    <div class="bulk-toolbar-content">
+                        <div class="bulk-counter">
+                            <div class="bulk-counter-badge">
+                                <span id="selected-count">0</span>
+                            </div>
+                            <span class="bulk-counter-text">leads selected</span>
                         </div>
-                        <div class="flex items-center space-x-4">
-                            <button id="bulk-export" class="action-button">
+                        <div class="bulk-actions">
+                            <button id="bulk-export" class="premium-action-btn interactive-element focus-ring">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-4-4m4 4l4-4m-4-4V3a1 1 0 011-1h2a1 1 0 011 1v1"/>
                                 </svg>
                                 Export
                             </button>
-                            <button id="bulk-delete" class="action-button" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                            <button id="bulk-delete" class="premium-action-btn interactive-element focus-ring" style="background: linear-gradient(135deg, rgba(255, 50, 100, 0.8) 0%, rgba(255, 100, 150, 0.9) 100%);">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                 </svg>
                                 Delete
                             </button>
-                            <button id="bulk-clear" class="action-button" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                            <button id="bulk-clear" class="btn-secondary interactive-element focus-ring">
                                 Clear Selection
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <!-- Enhanced Leads Table -->
+                <!-- Premium Leads Table -->
                 <div class="leads-table-container">
                     <table class="leads-table" id="leads-table">
                         <thead>
                             <tr>
-                                <th class="leads-table-header-cell">
+                                <th class="table-header-cell">
                                     <div class="flex items-center">
-                                        <input type="checkbox" id="select-all-leads" class="w-5 h-5 rounded-xl border-2 border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200">
+                                        <input type="checkbox" id="select-all-leads" class="premium-checkbox focus-ring">
                                         <label for="select-all-leads" class="sr-only">Select all leads</label>
                                     </div>
                                 </th>
-                                <th class="leads-table-header-cell">
+                                <th class="table-header-cell">
                                     <div class="flex items-center space-x-2">
-                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                                         </svg>
-                                        <span>Profile</span>
+                                        <span class="accent-text">Profile</span>
                                     </div>
                                 </th>
-                                <th class="leads-table-header-cell">
+                                <th class="table-header-cell">
                                     <div class="flex items-center justify-center space-x-2">
-                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"/>
                                         </svg>
-                                        <span>Platform</span>
+                                        <span class="accent-text">Platform</span>
                                     </div>
                                 </th>
-                                <th class="leads-table-header-cell">
+                                <th class="table-header-cell">
                                     <div class="flex items-center space-x-2">
-                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                                         </svg>
-                                        <span>Analysis</span>
+                                        <span class="accent-text">Analysis</span>
                                     </div>
                                 </th>
-                                <th class="leads-table-header-cell">
+                                <th class="table-header-cell">
                                     <div class="flex items-center justify-center space-x-2">
-                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3a1 1 0 011-1h6a1 1 0 011 1v4h3a1 1 0 010 2h-1v9a2 2 0 01-2 2H7a2 2 0 01-2-2V9H4a1 1 0 010-2h4z"/>
                                         </svg>
-                                        <span>Date</span>
+                                        <span class="accent-text">Date</span>
                                     </div>
                                 </th>
-                                <th class="leads-table-header-cell">
+                                <th class="table-header-cell">
                                     <div class="flex items-center justify-center space-x-2">
-                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
                                         </svg>
-                                        <span>Actions</span>
+                                        <span class="accent-text">Actions</span>
                                     </div>
                                 </th>
                             </tr>
                         </thead>
-                        <tbody id="leads-table-body" class="divide-y divide-gray-100/60">
-                            <!-- Sample Enhanced Row for Demo -->
-                            <tr class="group">
-                                <td class="leads-table-header-cell">
-                                    <input type="checkbox" class="w-5 h-5 rounded-xl border-2 border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200">
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="flex items-center space-x-4">
-                                        <div class="relative">
-                                            <img src="/assets/images/default-avatar.jpg" alt="Profile" class="lead-avatar">
-                                            <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full border-2 border-white shadow-lg"></div>
-                                        </div>
-                                        <div>
-                                            <div class="lead-username">@sarah_entrepreneur</div>
-                                            <div class="lead-fullname">Sarah Johnson</div>
-                                            <div class="flex items-center space-x-2 mt-2">
-                                                <span class="text-xs text-gray-500 font-semibold">2.4K followers</span>
-                                                <div class="w-1 h-1 bg-gray-300 rounded-full"></div>
-                                                <span class="text-xs text-gray-500 font-semibold">Verified</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="flex justify-center">
-                                        <div class="platform-badge">
-                                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                                            </svg>
-                                            Instagram
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="flex items-center justify-center">
-                                        <div class="analysis-badge completed">
-                                            <div class="flex items-center space-x-2">
-                                                <div class="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                                                <span>Completed</span>
-                                                <div class="score-display">92</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="text-center">
-                                        <div class="text-sm font-bold text-gray-900">Dec 18, 2024</div>
-                                        <div class="text-xs text-gray-500 font-semibold">3:45 PM</div>
-                                    </div>
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="flex items-center justify-center">
-                                        <button onclick="dashboard.openLeadDetails && dashboard.openLeadDetails('sample-id')" 
-                                                class="action-button">
-                                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                                            </svg>
-                                            View Analysis
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <!-- Second sample row -->
-                            <tr class="group">
-                                <td class="leads-table-header-cell">
-                                    <input type="checkbox" class="w-5 h-5 rounded-xl border-2 border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all duration-200">
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="flex items-center space-x-4">
-                                        <div class="relative">
-                                            <img src="/assets/images/default-avatar.jpg" alt="Profile" class="lead-avatar">
-                                            <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full border-2 border-white shadow-lg"></div>
-                                        </div>
-                                        <div>
-                                            <div class="lead-username">@mike_startup</div>
-                                            <div class="lead-fullname">Mike Chen</div>
-                                            <div class="flex items-center space-x-2 mt-2">
-                                                <span class="text-xs text-gray-500 font-semibold">1.8K followers</span>
-                                                <div class="w-1 h-1 bg-gray-300 rounded-full"></div>
-                                                <span class="text-xs text-gray-500 font-semibold">Business</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="flex justify-center">
-                                        <div class="platform-badge">
-                                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                                            </svg>
-                                            Instagram
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="flex items-center justify-center">
-                                        <div class="analysis-badge pending">
-                                            <div class="flex items-center space-x-2">
-                                                <div class="w-3 h-3 bg-white rounded-full animate-spin"></div>
-                                                <span>Processing</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="text-center">
-                                        <div class="text-sm font-bold text-gray-900">Dec 18, 2024</div>
-                                        <div class="text-xs text-gray-500 font-semibold">2:15 PM</div>
-                                    </div>
-                                </td>
-                                <td class="leads-table-header-cell">
-                                    <div class="flex items-center justify-center">
-                                        <button disabled class="action-button opacity-50 cursor-not-allowed">
-                                            <svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                            </svg>
-                                            Processing
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                        <tbody id="leads-table-body" class="divide-y divide-white/5">
+                            <!-- Dynamic lead content will be inserted here by existing system -->
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Enhanced Loading State -->
-                <div id="leads-loading" class="hidden text-center py-16">
-                    <div class="mx-auto max-w-md">
-                        <div class="w-16 h-16 mx-auto mb-6">
-                            <div class="loading-spinner w-full h-full"></div>
-                        </div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-4">Loading Your Leads</h3>
-                        <p class="text-gray-600">Fetching the latest data from your pipeline...</p>
+                <!-- Premium Loading State -->
+                <div id="leads-loading" class="hidden">
+                    <div class="loading-content mx-auto max-w-md">
+                        <div class="premium-spinner mb-6"></div>
+                        <h3 class="loading-title">Loading Your Leads</h3>
+                        <p class="loading-subtitle">Fetching the latest data from your pipeline...</p>
                     </div>
                 </div>
 
-                <!-- Enhanced Empty State -->
-                <div id="leads-empty" class="hidden text-center py-20">
-                    <div class="mx-auto max-w-lg">
-                        <div class="w-32 h-32 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl">
-                            <svg class="w-16 h-16 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                <!-- Premium Empty State -->
+                <div id="leads-empty" class="hidden empty-state-container">
+                    <div class="empty-state-icon">
+                        <svg class="w-16 h-16 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="empty-state-title">Ready to Start?</h3>
+                    <p class="empty-state-subtitle">Your lead generation journey begins here. Start by researching your first prospect or upload a batch of leads to analyze.</p>
+                    <div class="empty-state-actions">
+                        <button onclick="dashboard.showAnalysisModal()" class="btn-primary interactive-element focus-ring">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                             </svg>
-                        </div>
-                        <h3 class="text-3xl font-black text-gray-900 mb-6">Ready to Start?</h3>
-                        <p class="text-gray-600 text-lg mb-10 leading-relaxed">Your lead generation journey begins here. Start by researching your first prospect or upload a batch of leads to analyze.</p>
-                        <div class="flex flex-col sm:flex-row gap-6 justify-center">
-                            <button onclick="dashboard.showAnalysisModal()" class="btn-primary">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                                </svg>
-                                Research First Lead
-                            </button>
-                            <button onclick="dashboard.showBulkModal()" class="btn-secondary">
-                                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                </svg>
-                                Upload Lead List
-                            </button>
-                        </div>
+                            Research First Lead
+                        </button>
+                        <button onclick="dashboard.showBulkModal()" class="btn-secondary interactive-element focus-ring">
+                            <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            Upload Lead List
+                        </button>
                     </div>
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Global Loading Overlay -->
+    <div id="global-loading" class="loading-overlay hidden">
+        <div class="loading-content">
+            <div class="premium-spinner mb-6"></div>
+            <h2 class="loading-title">Loading Dashboard</h2>
+            <p class="loading-subtitle">Setting up your personalized experience...</p>
+        </div>
     </div>
 
     <!-- Dashboard Scripts -->
@@ -452,9 +357,9 @@
             autoRefresh: 30000
         };
 
-        // Initialize enhanced dashboard functionality
+        // Initialize world-class dashboard functionality
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🎨 Initializing Vibrant Dashboard...');
+            console.log('🎨 Initializing World-Class Dashboard...');
 
             // Enhanced bulk selection functionality
             const selectAllCheckbox = document.getElementById('select-all-leads');
@@ -469,9 +374,9 @@
                 
                 if (bulkToolbar) {
                     if (count > 0) {
-                        bulkToolbar.classList.remove('hidden');
+                        bulkToolbar.classList.add('show');
                     } else {
-                        bulkToolbar.classList.add('hidden');
+                        bulkToolbar.classList.remove('show');
                     }
                 }
             }
@@ -493,27 +398,27 @@
                 }
             });
 
-            // Enhanced bulk action handlers
+            // Enhanced bulk action handlers using existing alert system
             document.getElementById('bulk-export')?.addEventListener('click', function() {
                 const checkedBoxes = document.querySelectorAll('tbody input[type="checkbox"]:checked');
                 if (checkedBoxes.length === 0) {
-                    showVibrantNotification('Please select leads to export', 'warning');
+                    window.Alert.warning({ message: 'Please select leads to export' });
                     return;
                 }
                 
-                showVibrantNotification(`Exporting ${checkedBoxes.length} leads...`, 'success');
+                window.Alert.success({ message: `Exporting ${checkedBoxes.length} leads...` });
                 // Add export logic here
             });
 
             document.getElementById('bulk-delete')?.addEventListener('click', function() {
                 const checkedBoxes = document.querySelectorAll('tbody input[type="checkbox"]:checked');
                 if (checkedBoxes.length === 0) {
-                    showVibrantNotification('Please select leads to delete', 'warning');
+                    window.Alert.warning({ message: 'Please select leads to delete' });
                     return;
                 }
                 
-                if (confirm(`🗑️ Delete ${checkedBoxes.length} leads? This action cannot be undone.`)) {
-                    showVibrantNotification(`Deleting ${checkedBoxes.length} leads...`, 'error');
+                if (confirm(`Delete ${checkedBoxes.length} leads? This action cannot be undone.`)) {
+                    window.Alert.info({ message: `Deleting ${checkedBoxes.length} leads...` });
                     // Add delete logic here
                 }
             });
@@ -523,57 +428,8 @@
                 checkboxes.forEach(checkbox => checkbox.checked = false);
                 if (selectAllCheckbox) selectAllCheckbox.checked = false;
                 updateBulkToolbar();
-                showVibrantNotification('Selection cleared', 'info');
+                window.Alert.info({ message: 'Selection cleared' });
             });
-
-            // Enhanced vibrant notification system
-            function showVibrantNotification(message, type = 'info') {
-                const notification = document.createElement('div');
-                notification.className = `fixed top-6 right-6 z-50 max-w-sm transform translate-x-full transition-all duration-500`;
-                
-                const colors = {
-                    'info': 'bg-gradient-to-r from-blue-500 to-indigo-600 shadow-blue-500/40',
-                    'success': 'bg-gradient-to-r from-emerald-500 to-green-600 shadow-emerald-500/40',
-                    'warning': 'bg-gradient-to-r from-amber-500 to-orange-600 shadow-amber-500/40',
-                    'error': 'bg-gradient-to-r from-red-500 to-rose-600 shadow-red-500/40'
-                };
-
-                const icons = {
-                    'info': '🔵',
-                    'success': '✅',
-                    'warning': '⚠️',
-                    'error': '❌'
-                };
-                
-                notification.innerHTML = `
-                    <div class="rounded-2xl ${colors[type]} shadow-2xl p-6 text-white backdrop-blur-xl border border-white/20">
-                        <div class="flex items-center space-x-4">
-                            <span class="text-2xl">${icons[type]}</span>
-                            <div class="flex-1">
-                                <p class="font-bold text-lg">${message}</p>
-                            </div>
-                            <button onclick="this.parentElement.parentElement.parentElement.remove()" class="text-white/80 hover:text-white transition-colors p-2 rounded-xl hover:bg-white/20">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                document.body.appendChild(notification);
-                
-                // Animate in
-                setTimeout(() => {
-                    notification.style.transform = 'translateX(0)';
-                }, 100);
-                
-                // Auto remove after 4 seconds
-                setTimeout(() => {
-                    notification.style.transform = 'translateX(full)';
-                    setTimeout(() => notification.remove(), 500);
-                }, 4000);
-            }
 
             // Enhanced filter and sort functionality
             const analysisFilter = document.getElementById('analysis-filter');
@@ -583,13 +439,15 @@
                 analysisFilter.addEventListener('change', function() {
                     const filterValue = this.value;
                     const filterText = filterValue || 'All Leads';
-                    showVibrantNotification(`🔍 Filtering: ${filterText}`, 'info');
+                    window.Alert.info({ message: `Filtering: ${filterText}` });
                     
                     // Add visual feedback to the filter
                     this.style.background = filterValue ? 
-                        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
-                        'rgba(255, 255, 255, 0.9)';
-                    this.style.color = filterValue ? 'white' : '#374151';
+                        'rgba(255, 100, 50, 0.2)' : 
+                        'rgba(255, 255, 255, 0.08)';
+                    this.style.borderColor = filterValue ? 
+                        'rgba(255, 100, 50, 0.5)' : 
+                        'rgba(255, 255, 255, 0.15)';
                 });
             }
             
@@ -601,14 +459,14 @@
                         'username': 'Username A-Z',
                         'score': 'Highest Score'
                     };
-                    showVibrantNotification(`📊 Sorting: ${sortLabels[sortValue]}`, 'info');
+                    window.Alert.info({ message: `Sorting: ${sortLabels[sortValue]}` });
                     
                     // Add visual feedback to the sort
-                    this.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                    this.style.color = 'white';
+                    this.style.background = 'rgba(100, 200, 255, 0.2)';
+                    this.style.borderColor = 'rgba(100, 200, 255, 0.5)';
                     setTimeout(() => {
-                        this.style.background = 'rgba(255, 255, 255, 0.9)';
-                        this.style.color = '#374151';
+                        this.style.background = 'rgba(255, 255, 255, 0.08)';
+                        this.style.borderColor = 'rgba(255, 255, 255, 0.15)';
                     }, 2000);
                 });
             }
@@ -630,12 +488,14 @@
                         if (newValue !== currentValue) {
                             // Animate the change
                             element.style.transform = 'scale(1.1)';
-                            element.style.color = stat.increment > 0 ? '#10b981' : '#ef4444';
+                            element.style.filter = stat.increment > 0 ? 
+                                'drop-shadow(0 0 10px rgba(50, 255, 150, 0.6))' : 
+                                'drop-shadow(0 0 10px rgba(255, 100, 50, 0.6))';
                             
                             setTimeout(() => {
                                 element.textContent = newValue;
                                 element.style.transform = 'scale(1)';
-                                element.style.color = '';
+                                element.style.filter = '';
                             }, 300);
                         }
                     }
@@ -653,7 +513,7 @@
                     if (selectAllCheckbox) {
                         selectAllCheckbox.checked = !selectAllCheckbox.checked;
                         selectAllCheckbox.dispatchEvent(new Event('change'));
-                        showVibrantNotification('🎯 Bulk selection toggled', 'info');
+                        window.Alert.info({ message: 'Bulk selection toggled' });
                     }
                 }
                 
@@ -674,7 +534,7 @@
                     e.preventDefault();
                     if (window.dashboard && window.dashboard.showAnalysisModal) {
                         window.dashboard.showAnalysisModal();
-                        showVibrantNotification('🔍 Opening research modal', 'info');
+                        window.Alert.info({ message: 'Opening research modal' });
                     }
                 }
             });
@@ -692,7 +552,7 @@
                         
                         // Add stagger animations for grid items
                         if (entry.target.classList.contains('dashboard-grid')) {
-                            const cards = entry.target.querySelectorAll('.dashboard-stat-card');
+                            const cards = entry.target.querySelectorAll('.premium-stat-card');
                             cards.forEach((card, index) => {
                                 setTimeout(() => {
                                     card.style.opacity = '1';
@@ -705,39 +565,11 @@
             }, observerOptions);
 
             // Observe sections for scroll animations
-            document.querySelectorAll('section, .dashboard-stat-card').forEach(section => {
+            document.querySelectorAll('section, .premium-stat-card').forEach(section => {
                 observer.observe(section);
             });
 
-            // Enhanced hover effects for action cards
-            document.querySelectorAll('.action-card').forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'scale(1.05) rotate(2deg)';
-                    this.style.zIndex = '10';
-                });
-                
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'scale(1) rotate(0deg)';
-                    this.style.zIndex = '1';
-                });
-            });
-
-            // Enhanced table row interactions
-            document.querySelectorAll('.leads-table tbody tr').forEach(row => {
-                row.addEventListener('mouseenter', function() {
-                    this.style.transform = 'scale(1.02)';
-                    this.style.zIndex = '5';
-                    this.style.boxShadow = '0 20px 40px rgba(102, 126, 234, 0.15)';
-                });
-                
-                row.addEventListener('mouseleave', function() {
-                    this.style.transform = 'scale(1)';
-                    this.style.zIndex = '1';
-                    this.style.boxShadow = '';
-                });
-            });
-
-            // Performance monitoring for vibrant animations
+            // Performance monitoring for smooth animations
             let frameCount = 0;
             let lastTime = performance.now();
             
@@ -749,7 +581,7 @@
                     const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
                     
                     if (fps < 30) {
-                        console.warn('⚡ Low FPS detected, reducing animations');
+                        console.warn('Low FPS detected, reducing animations');
                         document.body.classList.add('reduce-motion');
                     }
                     
@@ -762,26 +594,26 @@
             
             requestAnimationFrame(monitorPerformance);
 
-            // Enhanced error handling with vibrant notifications
+            // Enhanced error handling with existing alert system
             window.addEventListener('error', function(e) {
                 console.error('Dashboard Error:', e.error);
-                showVibrantNotification('⚠️ Something went wrong. Refreshing might help.', 'error');
+                window.Alert.error({ message: 'Something went wrong. Refreshing might help.' });
             });
 
             window.addEventListener('unhandledrejection', function(e) {
                 console.error('Promise Rejection:', e.reason);
-                showVibrantNotification('🌐 Network issue detected. Check your connection.', 'warning');
+                window.Alert.warning({ message: 'Network issue detected. Check your connection.' });
             });
 
-            // Initialize welcome message
+            // Initialize welcome message with existing alert system
             setTimeout(() => {
-                showVibrantNotification('🚀 Welcome to your vibrant dashboard!', 'success');
+                window.Alert.success({ message: 'Welcome to your enhanced dashboard!' });
             }, 1000);
 
-            console.log('✨ Vibrant Dashboard fully loaded with enhanced features!');
+            console.log('✨ World-Class Dashboard fully loaded with premium features!');
         });
-        
-        // Global functions for dashboard interactions
+
+        // Global functions for dashboard interactions (preserved)
         window.dashboard = {
             showAnalysisModal: function() {
                 console.log('🔍 Opening lead analysis modal...');
@@ -805,33 +637,8 @@
         };
     </script>
     
-    <!-- Additional CSS for reduced motion preference -->
+    <!-- Additional CSS for smooth page transitions -->
     <style>
-        @media (prefers-reduced-motion: reduce) {
-            .reduce-motion *,
-            .reduce-motion *::before,
-            .reduce-motion *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-        
-        /* Enhanced loading states */
-        .loading-spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top: 4px solid #667eea;
-            width: 100%;
-            height: 100%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
         /* Smooth initial page load */
         body {
             opacity: 0;
@@ -840,6 +647,20 @@
         
         @keyframes fadeInPage {
             to { opacity: 1; }
+        }
+
+        /* Enhanced focus styles for accessibility */
+        .focus-ring:focus {
+            outline: none;
+            box-shadow: 
+                0 0 0 4px rgba(255, 100, 50, 0.3),
+                0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* GPU acceleration for smooth animations */
+        .interactive-element {
+            will-change: transform;
+            backface-visibility: hidden;
         }
     </style>
 </body>
