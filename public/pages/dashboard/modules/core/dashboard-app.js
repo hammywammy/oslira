@@ -87,17 +87,18 @@ await this.container.initialize();
         container.registerFactory('supabase', async () => {
             // Wait for SimpleAuth to initialize its Supabase client
             let attempts = 0;
-            while (attempts < 50) {
+while (attempts < 50) {
     if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
         const client = window.SimpleAuth.supabase();
         if (client?.from) {
-                    console.log('✅ [DependencyContainer] Got initialized Supabase client from SimpleAuth');
-                    return window.SimpleAuth.supabase;
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            throw new Error('SimpleAuth Supabase client not ready');
+            console.log('✅ [DependencyContainer] Got initialized Supabase client from SimpleAuth');
+            return window.SimpleAuth.supabase();
+        }
+    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+}
+throw new Error('SimpleAuth Supabase client not ready');
         }, []);
 
         // Register OsliraApp as a getter that always checks the global
