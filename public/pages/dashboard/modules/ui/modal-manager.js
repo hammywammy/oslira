@@ -132,7 +132,12 @@ showAnalysisModal(prefillUsername = '') {
         }, 200);
         
         console.log('✅ [ModalManager] Analysis modal opened');
+        
+    } catch (error) {
+        console.error('❌ [ModalManager] Failed to open analysis modal:', error);
+        this.osliraApp?.showMessage('Failed to open analysis modal. Please try again.', 'error');
     }
+}
     
     // Handle analysis type selection - EXACT FROM ORIGINAL
     handleAnalysisTypeChange() {
