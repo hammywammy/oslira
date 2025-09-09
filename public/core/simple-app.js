@@ -177,8 +177,8 @@ async createOsliraAppGlobal() {
             }
             
             // Check if user has completed onboarding
-            const { data: userData, error } = await this.auth.supabase
-                .from('users')
+            const { data: userData, error } = await this.auth.supabase()
+    .from('users')
                 .select('onboarding_completed')
                 .eq('id', session.user.id)
                 .single();
