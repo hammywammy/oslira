@@ -1,842 +1,620 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/core/script-loader.js"></script>
-    <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Oslira</title>
+    <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
     
-    <!-- Load Tailwind CSS -->
-    <link rel="stylesheet" href="/assets/css/tailwind.css?v=4">
-    
-    <!-- Custom White Theme Styles -->
-    <style>
-        body {
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            min-height: 100vh;
-        }
-        
-        .white-card {
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            transition: all 0.3s ease;
-        }
-        
-        .white-card:hover {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            transform: translateY(-2px);
-        }
-        
-        .action-card {
-            background: white;
-            border-radius: 20px;
-            padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .action-card:hover {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            transform: translateY(-4px);
-        }
-        
-        .icon-wrapper {
-            width: 64px;
-            height: 64px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 24px;
-            transition: all 0.3s ease;
-        }
-        
-        .icon-wrapper.orange {
-            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-        }
-        
-        .icon-wrapper.blue {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-        }
-        
-        .icon-wrapper.green {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        }
-        
-        .icon-wrapper.purple {
-            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        }
-        
-        .stat-card {
-            background: white;
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-            transition: all 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            transform: translateY(-2px);
-        }
-        
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .trend-badge {
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-        
-        .trend-up {
-            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-            color: #166534;
-        }
-        
-        .trend-down {
-            background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
-            color: #991b1b;
-        }
-        
-        .table-container {
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(226, 232, 240, 0.8);
-        }
-        
-        .table-header {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-bottom: 1px solid #e2e8f0;
-        }
-        
-        .table-row {
-            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-            transition: all 0.2s ease;
-        }
-        
-        .table-row:hover {
-            background: rgba(248, 250, 252, 0.5);
-        }
-        
-        .avatar {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            object-fit: cover;
-        }
-        
-        .platform-badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .platform-linkedin {
-            background: rgba(59, 130, 246, 0.1);
-            color: #1d4ed8;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-        
-        .platform-instagram {
-            background: rgba(168, 85, 247, 0.1);
-            color: #7c3aed;
-            border: 1px solid rgba(168, 85, 247, 0.2);
-        }
-        
-        .platform-tiktok {
-            background: rgba(236, 72, 153, 0.1);
-            color: #be185d;
-            border: 1px solid rgba(236, 72, 153, 0.2);
-        }
-        
-        .analysis-badge {
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-        
-        .analysis-strong {
-            background: rgba(16, 185, 129, 0.1);
-            color: #059669;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-        
-        .analysis-moderate {
-            background: rgba(59, 130, 246, 0.1);
-            color: #1d4ed8;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-        
-        .analysis-low {
-            background: rgba(245, 158, 11, 0.1);
-            color: #d97706;
-            border: 1px solid rgba(245, 158, 11, 0.2);
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 600;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
-        }
-        
-        .btn-secondary {
-            background: white;
-            color: #64748b;
-            padding: 12px 24px;
-            border-radius: 12px;
-            font-weight: 600;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .btn-secondary:hover {
-            background: #f8fafc;
-            border-color: #cbd5e1;
-            transform: translateY(-2px);
-        }
-        
-        .mobile-menu-btn {
-            position: fixed;
-            top: 16px;
-            left: 16px;
-            z-index: 50;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-        }
-        
-        .sidebar-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 30;
-            backdrop-filter: blur(4px);
-        }
-        
-        @media (min-width: 1024px) {
-            .mobile-menu-btn {
-                display: none;
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'oslira-blue': '#2D6CDF',
+                        'oslira-purple': '#8A6DF1',
+                        'accent-teal': '#06B6D4',
+                    }
+                }
             }
         }
+    </script>
+    
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        /* Animated Gradient Background */
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #667eea 75%, #764ba2 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Wavy Pattern Overlay */
+        .wave-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        
+        .wave-pattern::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255,255,255,0.05) 10px,
+                rgba(255,255,255,0.05) 20px
+            );
+            animation: wave 20s linear infinite;
+            transform: rotate(30deg);
+        }
+        
+        @keyframes wave {
+            0% { transform: translateX(0) rotate(30deg); }
+            100% { transform: translateX(100px) rotate(30deg); }
+        }
+        
+        /* Glass Effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .glass-dark {
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        /* Smooth Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #764ba2, #667eea);
+        }
+        
+        /* Card Hover Effects */
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -15px rgba(109, 91, 241, 0.3);
+        }
+        
+        /* Animated Number Counter */
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .count-animation {
+            animation: countUp 0.6s ease-out forwards;
+        }
+        
+        /* Pulse Animation for Notifications */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Chart Area Gradient */
+        .chart-gradient {
+            background: linear-gradient(180deg, rgba(109, 91, 241, 0.1) 0%, rgba(109, 91, 241, 0) 100%);
+        }
     </style>
-    
-    <!-- Load existing alert system -->
-    <script src="/utils/alert-system.js"></script>
 </head>
-<body>
-    <!-- Skip Navigation -->
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded-lg z-50">Skip to main content</a>
-    
-    <!-- Mobile menu button -->
-    <button id="mobile-menu-btn" class="mobile-menu-btn lg:hidden">
-        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
-    </button>
-
-    <!-- Sidebar overlay for mobile -->
-    <div id="sidebar-overlay" class="sidebar-overlay hidden lg:hidden"></div>
-    
-    <!-- Dashboard Layout -->
-    <div class="min-h-screen">
-        <!-- Sidebar Container -->
-        <aside id="sidebar-container"></aside>
+<body class="bg-gray-50 overflow-hidden">
+    <!-- Main Container with Gradient Background -->
+    <div class="min-h-screen gradient-bg relative">
+        <div class="wave-pattern"></div>
+        
+        <!-- Sidebar -->
+        <aside class="fixed left-0 top-0 h-full w-64 glass-dark border-r border-white/10 z-50">
+            <!-- Logo -->
+            <div class="flex items-center justify-between p-6 border-b border-white/10">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <span class="text-white font-black text-xl">O</span>
+                    </div>
+                    <span class="text-white font-bold text-xl">Oslira</span>
+                </div>
+                <button class="text-gray-400 hover:text-white transition-colors">
+                    <i data-feather="menu" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <!-- User Profile -->
+            <div class="p-6 border-b border-white/10">
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <img src="https://ui-avatars.com/api/?name=Peter+Miller&background=6366f1&color=fff" 
+                             class="w-12 h-12 rounded-full ring-2 ring-purple-500/30" alt="User">
+                        <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800"></div>
+                    </div>
+                    <div>
+                        <p class="text-white font-semibold">Peter Miller</p>
+                        <p class="text-gray-400 text-sm">Premium Plan</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="p-4">
+                <div class="space-y-1">
+                    <!-- Dashboard -->
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-white rounded-xl border border-indigo-500/30 shadow-lg">
+                        <i data-feather="grid" class="w-5 h-5"></i>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+                    
+                    <!-- Activity -->
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                        <i data-feather="activity" class="w-5 h-5"></i>
+                        <span class="font-medium">Activity</span>
+                    </a>
+                    
+                    <!-- Statistics -->
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                        <i data-feather="bar-chart-2" class="w-5 h-5"></i>
+                        <span class="font-medium">Statistics</span>
+                    </a>
+                    
+                    <!-- Performance Cases -->
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                        <i data-feather="briefcase" class="w-5 h-5"></i>
+                        <span class="font-medium">Performance Cases</span>
+                    </a>
+                    
+                    <!-- Tasks -->
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all relative">
+                        <i data-feather="check-circle" class="w-5 h-5"></i>
+                        <span class="font-medium">Tasks</span>
+                        <span class="absolute right-4 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center pulse">5</span>
+                    </a>
+                    
+                    <!-- Libraries -->
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                        <i data-feather="folder" class="w-5 h-5"></i>
+                        <span class="font-medium">Libraries</span>
+                    </a>
+                    
+                    <!-- Saved -->
+                    <a href="#" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                        <i data-feather="bookmark" class="w-5 h-5"></i>
+                        <span class="font-medium">Saved</span>
+                    </a>
+                </div>
+                
+                <!-- Recent Messages -->
+                <div class="mt-8">
+                    <p class="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Recent Messages</p>
+                    <div class="space-y-2">
+                        <a href="#" class="flex items-center space-x-3 px-4 py-2 hover:bg-white/5 rounded-lg transition-all">
+                            <img src="https://ui-avatars.com/api/?name=Erik+Gunsel&background=f59e0b&color=fff" 
+                                 class="w-8 h-8 rounded-full" alt="Erik">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-white text-sm font-medium truncate">Erik Gunsel</p>
+                                <p class="text-gray-500 text-xs truncate">Hey, about that project...</p>
+                            </div>
+                        </a>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-2 hover:bg-white/5 rounded-lg transition-all">
+                            <img src="https://ui-avatars.com/api/?name=Arthur+Adelk&background=10b981&color=fff" 
+                                 class="w-8 h-8 rounded-full" alt="Arthur">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-white text-sm font-medium truncate">Arthur Adelk</p>
+                                <p class="text-gray-500 text-xs truncate">Meeting at 3pm confirmed</p>
+                            </div>
+                        </a>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-2 hover:bg-white/5 rounded-lg transition-all">
+                            <img src="https://ui-avatars.com/api/?name=Emily+Smith&background=ec4899&color=fff" 
+                                 class="w-8 h-8 rounded-full" alt="Emily">
+                            <div class="flex-1 min-w-0">
+                                <p class="text-white text-sm font-medium truncate">Emily Smith</p>
+                                <p class="text-gray-500 text-xs truncate">Documents ready for review</p>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </nav>
+        </aside>
         
         <!-- Main Content Area -->
-        <main role="main" id="main-content" class="ml-0 lg:ml-64 p-6 lg:p-8">
+        <main class="ml-64 p-8 h-screen overflow-y-auto">
+            <!-- Top Header -->
+            <header class="flex items-center justify-between mb-8">
+                <!-- Search Bar -->
+                <div class="flex-1 max-w-xl">
+                    <div class="relative">
+                        <i data-feather="search" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"></i>
+                        <input type="text" placeholder="Search..." 
+                               class="w-full pl-12 pr-4 py-3 bg-white/90 backdrop-blur rounded-2xl border border-white/50 shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all">
+                    </div>
+                </div>
+                
+                <!-- Right Actions -->
+                <div class="flex items-center space-x-4 ml-8">
+                    <button class="relative p-3 bg-white/90 backdrop-blur rounded-xl shadow-lg hover:shadow-xl transition-all">
+                        <i data-feather="bell" class="w-5 h-5 text-gray-700"></i>
+                        <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                    </button>
+                    <div class="flex items-center space-x-3 px-4 py-2 bg-white/90 backdrop-blur rounded-2xl shadow-lg">
+                        <span class="text-sm text-gray-600">DELL LAW</span>
+                        <span class="text-sm font-semibold text-gray-800">Peter Mal</span>
+                    </div>
+                </div>
+            </header>
             
-            <!-- Header Section -->
-            <div class="mb-8">
-                <h1 class="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
-                <p class="text-gray-600 text-lg">Manage your leads with AI-powered insights</p>
+            <!-- Welcome Section -->
+            <div class="glass rounded-3xl p-8 mb-8 shadow-xl border border-white/50">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center space-x-3 mb-2">
+                            <div class="w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                <span class="text-white text-2xl font-black">PF</span>
+                            </div>
+                            <div>
+                                <h1 class="text-3xl font-bold text-gray-800">Hello Peter</h1>
+                                <p class="text-gray-600">New cases are waiting</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all">
+                        View All Cases
+                    </button>
+                </div>
             </div>
             
-            <!-- CTA Buttons -->
-            <div class="flex flex-wrap items-center gap-4 mb-8">
-                <button onclick="dashboard.showAnalysisModal()" class="btn-primary">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    Research Lead
-                </button>
-                <button onclick="dashboard.showBulkUpload()" class="btn-secondary">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                    </svg>
-                    Bulk Upload
-                </button>
-            </div>
-
-            <!-- Quick Actions Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-                <!-- Research Lead Card -->
-                <div class="action-card" onclick="dashboard.showAnalysisModal()">
-                    <div class="icon-wrapper orange">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
+            <!-- Stats Cards Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- New Cases Card -->
+                <div class="glass rounded-3xl p-8 shadow-xl border border-white/50 hover-lift">
+                    <div class="flex items-start justify-between mb-6">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">New Cases</p>
+                            <div class="flex items-baseline space-x-3">
+                                <h2 class="text-5xl font-black text-gray-800 count-animation">104</h2>
+                                <span class="text-green-500 text-sm font-bold flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                    +14.88%
+                                </span>
+                            </div>
+                            <p class="text-gray-500 text-sm mt-2">Trends last month</p>
+                        </div>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-3 text-center">Research Lead</h3>
-                    <p class="text-gray-600 text-center leading-relaxed">Instant AI analysis of Instagram profiles with detailed insights</p>
+                    <!-- Mini Chart -->
+                    <div class="h-20 flex items-end space-x-1">
+                        <div class="flex-1 bg-gradient-to-t from-green-500/30 to-green-500/10 rounded-t" style="height: 40%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-green-500/30 to-green-500/10 rounded-t" style="height: 60%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-green-500/30 to-green-500/10 rounded-t" style="height: 45%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-green-500/30 to-green-500/10 rounded-t" style="height: 70%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-green-500/30 to-green-500/10 rounded-t" style="height: 85%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-green-500/30 to-green-500/10 rounded-t" style="height: 65%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-green-500/30 to-green-500/10 rounded-t" style="height: 90%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-green-500/30 to-green-500/10 rounded-t" style="height: 100%"></div>
+                    </div>
                 </div>
                 
-                <!-- Bulk Upload Card -->
-                <div class="action-card" onclick="dashboard.showBulkUpload()">
-                    <div class="icon-wrapper blue">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-3 text-center">Bulk Upload</h3>
-                    <p class="text-gray-600 text-center leading-relaxed">Upload hundreds of leads instantly for mass analysis</p>
-                </div>
-                
-                <!-- Export Data Card -->
-                <div class="action-card" onclick="dashboard.exportData()">
-                    <div class="icon-wrapper green">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-3 text-center">Export Data</h3>
-                    <p class="text-gray-600 text-center leading-relaxed">Download leads in CSV, Excel, or JSON formats</p>
-                </div>
-                
-                <!-- Analytics Card -->
-                <div class="action-card" onclick="dashboard.openAnalytics()">
-                    <div class="icon-wrapper purple">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-900 mb-3 text-center">Analytics</h3>
-                    <p class="text-gray-600 text-center leading-relaxed">Deep insights and performance metrics dashboard</p>
-                </div>
-            </div>
-
-            <!-- Stats Section -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <!-- Total Leads -->
-                <div class="stat-card">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(234, 88, 12, 0.1) 100%); color: #ea580c;">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                            </svg>
-                        </div>
-                        <div class="trend-badge trend-up">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
-                            </svg>
-                            +32%
+                <!-- New Tasks Card -->
+                <div class="glass rounded-3xl p-8 shadow-xl border border-white/50 hover-lift">
+                    <div class="flex items-start justify-between mb-6">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">New Tasks</p>
+                            <div class="flex items-baseline space-x-3">
+                                <h2 class="text-5xl font-black text-gray-800 count-animation">34</h2>
+                                <span class="text-red-500 text-sm font-bold flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7"></path>
+                                    </svg>
+                                    -5.67%
+                                </span>
+                            </div>
+                            <p class="text-gray-500 text-sm mt-2">Trends last month</p>
                         </div>
                     </div>
-                    <div class="text-3xl font-bold text-gray-900 mb-2">4</div>
-                    <div class="text-gray-600 font-medium mb-1">Total Leads</div>
-                    <div class="text-gray-400 text-sm">this week</div>
-                </div>
-                
-                <!-- Analyzed -->
-                <div class="stat-card">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%); color: #1d4ed8;">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <div class="trend-badge trend-up">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
-                            </svg>
-                            +18%
-                        </div>
+                    <!-- Mini Chart -->
+                    <div class="h-20 flex items-end space-x-1">
+                        <div class="flex-1 bg-gradient-to-t from-red-500/30 to-red-500/10 rounded-t" style="height: 90%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-red-500/30 to-red-500/10 rounded-t" style="height: 75%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-red-500/30 to-red-500/10 rounded-t" style="height: 80%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-red-500/30 to-red-500/10 rounded-t" style="height: 60%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-red-500/30 to-red-500/10 rounded-t" style="height: 55%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-red-500/30 to-red-500/10 rounded-t" style="height: 45%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-red-500/30 to-red-500/10 rounded-t" style="height: 40%"></div>
+                        <div class="flex-1 bg-gradient-to-t from-red-500/30 to-red-500/10 rounded-t" style="height: 35%"></div>
                     </div>
-                    <div class="text-3xl font-bold text-gray-900 mb-2">3</div>
-                    <div class="text-gray-600 font-medium mb-1">Analyzed</div>
-                    <div class="text-gray-400 text-sm">this week</div>
-                </div>
-                
-                <!-- Pending -->
-                <div class="stat-card">
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.1) 100%); color: #059669;">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <div class="trend-badge trend-down">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transform: rotate(180deg);">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/>
-                            </svg>
-                            -12%
-                        </div>
-                    </div>
-                    <div class="text-3xl font-bold text-gray-900 mb-2">0</div>
-                    <div class="text-gray-600 font-medium mb-1">Pending</div>
-                    <div class="text-gray-400 text-sm">processing now</div>
                 </div>
             </div>
-
-            <!-- Lead Management Section -->
-            <div class="white-card p-6 mb-8">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-                    <div class="mb-4 lg:mb-0">
-                        <h2 class="text-2xl font-bold text-gray-900 mb-2">Lead Management</h2>
-                        <p class="text-gray-600">Track and analyze your lead pipeline with advanced AI insights</p>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-3">
-                        <select class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option>All Platforms</option>
-                            <option>Instagram</option>
-                            <option>LinkedIn</option>
-                            <option>TikTok</option>
-                        </select>
-                        
-                        <select class="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option>All Analysis Types</option>
-                            <option>Strong Analysis</option>
-                            <option>Moderate Analysis</option>
-                            <option>Light Analysis</option>
-                        </select>
-                        
-                        <button onclick="dashboard.refreshData()" class="btn-secondary">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
-                            Refresh
+            
+            <!-- Cases Table -->
+            <div class="glass rounded-3xl shadow-xl border border-white/50 mb-8">
+                <!-- Table Header -->
+                <div class="p-6 border-b border-gray-200/50">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xl font-bold text-gray-800">List of Cases to be Accepted</h3>
+                        <button class="text-indigo-600 hover:text-indigo-700 font-medium flex items-center space-x-1">
+                            <span>Full list</span>
+                            <i data-feather="arrow-right" class="w-4 h-4"></i>
                         </button>
                     </div>
                 </div>
                 
-                <!-- Table -->
-                <div class="table-container">
-                    <div class="table-header p-4">
-                        <div class="grid grid-cols-12 gap-4 items-center font-medium text-gray-700 text-sm">
-                            <div class="col-span-1">
-                                <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                <!-- Table Content -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200/50">
+                                <th class="px-6 py-4 text-left">
+                                    <label class="flex items-center space-x-3">
+                                        <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</span>
+                                    </label>
+                                </th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Dates</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Priority</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Attachment</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Assignee</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Row 1 -->
+                            <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <label class="flex items-center space-x-3">
+                                        <input type="checkbox" checked class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="font-medium text-gray-800">Lorem ipsum dolor sit amet</span>
+                                    </label>
+                                </td>
+                                <td class="px-6 py-4 text-gray-600 text-sm">May 18,2024 - May 25,2024</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Low</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2 text-gray-600">
+                                        <i data-feather="paperclip" class="w-4 h-4"></i>
+                                        <span class="text-sm">Requirements.doc</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <img src="https://ui-avatars.com/api/?name=LA&background=8b5cf6&color=fff" 
+                                             class="w-8 h-8 rounded-full" alt="LA">
+                                        <span class="text-sm text-gray-700 font-medium">LA</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Row 2 -->
+                            <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <label class="flex items-center space-x-3">
+                                        <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="font-medium text-gray-800">Lorem ipsum dolor</span>
+                                    </label>
+                                </td>
+                                <td class="px-6 py-4 text-gray-600 text-sm">May 18,2024 - May 25,2024</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 rounded-full">Medium</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2 text-gray-600">
+                                        <i data-feather="paperclip" class="w-4 h-4"></i>
+                                        <span class="text-sm">New case.doc</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex -space-x-2">
+                                        <img src="https://ui-avatars.com/api/?name=JD&background=3b82f6&color=fff" 
+                                             class="w-8 h-8 rounded-full border-2 border-white" alt="JD">
+                                        <img src="https://ui-avatars.com/api/?name=AM&background=ec4899&color=fff" 
+                                             class="w-8 h-8 rounded-full border-2 border-white" alt="AM">
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- Row 3 -->
+                            <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
+                                <td class="px-6 py-4">
+                                    <label class="flex items-center space-x-3">
+                                        <input type="checkbox" class="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        <span class="font-medium text-gray-800">Lorem ipsum dolor sit</span>
+                                    </label>
+                                </td>
+                                <td class="px-6 py-4 text-gray-600 text-sm">May 18,2024 - May 25,2024</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Low</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2 text-gray-600">
+                                        <i data-feather="paperclip" class="w-4 h-4"></i>
+                                        <span class="text-sm">Nike fraud.doc</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                            <i data-feather="user" class="w-4 h-4 text-gray-500"></i>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Table Footer -->
+                <div class="p-4 border-t border-gray-200/50">
+                    <button class="text-indigo-600 hover:text-indigo-700 font-medium flex items-center space-x-1 mx-auto">
+                        <span>See all</span>
+                        <i data-feather="chevron-down" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Bottom Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Communication Section -->
+                <div class="lg:col-span-2 glass rounded-3xl shadow-xl border border-white/50 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">Communication (Last 7 days)</h3>
+                        <button class="text-indigo-600 hover:text-indigo-700 font-medium text-sm">Full report →</button>
+                    </div>
+                    
+                    <!-- Messages -->
+                    <div class="space-y-4 max-h-96 overflow-y-auto">
+                        <div class="flex space-x-4 p-4 hover:bg-gray-50/50 rounded-xl transition-colors">
+                            <img src="https://ui-avatars.com/api/?name=Mark+Wahlberg&background=f59e0b&color=fff" 
+                                 class="w-12 h-12 rounded-full flex-shrink-0" alt="Mark">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h4 class="font-semibold text-gray-800">Mark Wahlberg</h4>
+                                    <span class="text-xs text-gray-500">2 days ago</span>
+                                </div>
+                                <p class="text-gray-600 text-sm leading-relaxed">Lorem ipsum dolor sit amet consectetur. Ut turpis lectus adipiscing leo leo in non tristique. Nulla orci...</p>
                             </div>
-                            <div class="col-span-3">Profile</div>
-                            <div class="col-span-2 text-center">Platform</div>
-                            <div class="col-span-2 text-center">Analysis</div>
-                            <div class="col-span-2 text-center">Date</div>
-                            <div class="col-span-2 text-center">Actions</div>
+                        </div>
+                        
+                        <div class="flex space-x-4 p-4 hover:bg-gray-50/50 rounded-xl transition-colors">
+                            <img src="https://ui-avatars.com/api/?name=Leonardo+DiCaprio&background=10b981&color=fff" 
+                                 class="w-12 h-12 rounded-full flex-shrink-0" alt="Leonardo">
+                            <div class="flex-1">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h4 class="font-semibold text-gray-800">Leonardo DiCaprio</h4>
+                                    <span class="text-xs text-gray-500">5 days ago</span>
+                                </div>
+                                <p class="text-gray-600 text-sm leading-relaxed">Lorem ipsum dolor sit amet consectetur. Ut turpis lectus adipiscing leo leo in non tristique. Nulla orci...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Side Cards -->
+                <div class="space-y-6">
+                    <!-- Calendar Widget -->
+                    <div class="glass rounded-3xl shadow-xl border border-white/50 p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4">My Calendar</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between p-3 hover:bg-gray-50/50 rounded-lg transition-colors">
+                                <div>
+                                    <p class="font-semibold text-gray-800">MON 16</p>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span class="text-sm text-gray-600">Meeting</span>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-500">7:00 - 8:00</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 hover:bg-gray-50/50 rounded-lg transition-colors">
+                                <div>
+                                    <p class="font-semibold text-gray-800">TUE 17</p>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                        <span class="text-sm text-gray-600">Meeting</span>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-500">11:00 - 12:00</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Table Rows -->
-                    <div class="divide-y divide-gray-100">
-                        <!-- Row 1 -->
-                        <div class="table-row p-4">
-                            <div class="grid grid-cols-12 gap-4 items-center">
-                                <div class="col-span-1">
-                                    <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                </div>
-                                <div class="col-span-3">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="/assets/images/default-avatar.png" alt="@poky" class="avatar">
-                                        <div>
-                                            <div class="font-semibold text-gray-900">@poky</div>
-                                            <div class="text-gray-500 text-sm">Social Media Influencer</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <span class="platform-badge platform-linkedin">
-                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                                        </svg>
-                                        LinkedIn
-                                    </span>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <span class="analysis-badge analysis-strong">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        Strong Analysis
-                                    </span>
-                                </div>
-                                <div class="col-span-2 text-center text-gray-600">
-                                    <div class="font-medium">2 days ago</div>
-                                    <div class="text-sm text-gray-400">12:45 AM</div>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <button onclick="dashboard.openLeadDetails('1')" class="btn-primary text-sm px-4 py-2">
-                                        Analysis
-                                    </button>
-                                </div>
-                            </div>
+                    <!-- Tasks Widget -->
+                    <div class="glass rounded-3xl shadow-xl border border-white/50 p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-bold text-gray-800">List of My Tasks</h3>
+                            <button class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">See all →</button>
                         </div>
-                        
-                        <!-- Row 2 -->
-                        <div class="table-row p-4">
-                            <div class="grid grid-cols-12 gap-4 items-center">
-                                <div class="col-span-1">
-                                    <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus :ring-blue-500">
-                                </div>
-                                <div class="col-span-3">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="/assets/images/default-avatar.png" alt="@bobby" class="avatar">
-                                        <div>
-                                            <div class="font-semibold text-gray-900">@bobby</div>
-                                            <div class="text-gray-500 text-sm">Content Creator</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <span class="platform-badge platform-tiktok">
-                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
-                                        </svg>
-                                        TikTok
-                                    </span>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <span class="analysis-badge analysis-low">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                        </svg>
-                                        Low Analysis
-                                    </span>
-                                </div>
-                                <div class="col-span-2 text-center text-gray-600">
-                                    <div class="font-medium">2 days ago</div>
-                                    <div class="text-sm text-gray-400">12:44 AM</div>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <button onclick="dashboard.openLeadDetails('2')" class="btn-primary text-sm px-4 py-2">
-                                        Analysis
-                                    </button>
-                                </div>
+                        <div class="space-y-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span class="text-sm text-gray-700">Lorem ipsum dolor sit amet</span>
                             </div>
-                        </div>
-                        
-                        <!-- Row 3 -->
-                        <div class="table-row p-4">
-                            <div class="grid grid-cols-12 gap-4 items-center">
-                                <div class="col-span-1">
-                                    <input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                </div>
-                                <div class="col-span-3">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="/assets/images/default-avatar.png" alt="@james" class="avatar">
-                                        <div>
-                                            <div class="font-semibold text-gray-900">@james</div>
-                                            <div class="text-gray-500 text-sm">Digital Entrepreneur</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <span class="platform-badge platform-instagram">
-                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                                        </svg>
-                                        Instagram
-                                    </span>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <span class="analysis-badge analysis-moderate">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        Deep Analysis
-                                    </span>
-                                </div>
-                                <div class="col-span-2 text-center text-gray-600">
-                                    <div class="font-medium">3 days ago</div>
-                                    <div class="text-sm text-gray-400">07:52 PM</div>
-                                </div>
-                                <div class="col-span-2 text-center">
-                                    <button onclick="dashboard.openLeadDetails('3')" class="btn-primary text-sm px-4 py-2">
-                                        Analysis
-                                    </button>
-                                </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span class="text-sm text-gray-700">Lorem ipsum dolor sit</span>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span class="text-sm text-gray-700">Lorem ipsum dolor</span>
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Empty State (hidden by default) -->
-                <div id="empty-state" class="hidden text-center py-16">
-                    <div class="inline-flex items-center justify-center w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-2xl">
-                        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-gray-900 mb-4">No leads yet</h3>
-                    <p class="text-gray-600 mb-8 max-w-md mx-auto">
-                        Start researching leads to see them appear here. Use the Research Lead button to analyze Instagram profiles.
-                    </p>
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                        <button onclick="dashboard.showAnalysisModal()" class="btn-primary">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            Research Your First Lead
-                        </button>
-                        <button onclick="dashboard.showBulkUpload()" class="btn-secondary">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                            </svg>
-                            Bulk Upload Leads
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Loading State Overlay -->
-            <div id="loading-overlay" class="hidden fixed inset-0 bg-white bg-opacity-90 z-50 flex items-center justify-center">
-                <div class="text-center">
-                    <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
-                    <h2 class="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard</h2>
-                    <p class="text-gray-600">Please wait while we load your data...</p>
                 </div>
             </div>
         </main>
-        
-        <!-- Bulk Actions Toolbar -->
-        <div id="bulk-actions-toolbar" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-2xl shadow-xl p-4 transition-all duration-300 scale-95 opacity-0" style="transform: translateX(-50%) scale(0.95);">
-            <div class="flex items-center space-x-6">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                        <span id="selected-count">0</span>
-                    </div>
-                    <div class="text-gray-700 font-medium">leads selected</div>
-                </div>
-                
-                <div class="flex items-center space-x-3">
-                    <button onclick="dashboard.bulkExport()" class="btn-secondary text-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        Export Selected
-                    </button>
-                    
-                    <button onclick="dashboard.bulkDelete()" class="btn-secondary text-sm" style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #dc2626;">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                        </svg>
-                        Delete Selected
-                    </button>
-                    
-                    <button onclick="dashboard.clearSelection()" class="btn-secondary text-sm">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                        Clear
-                    </button>
-                </div>
-            </div>
-        </div>
     </div>
-
-    <!-- Analysis Modal Container -->
-    <div id="modal-container"></div>
     
-    <!-- JavaScript -->
+    <!-- Initialize Feather Icons -->
     <script>
-        // =============================================================================
-        // MOBILE MENU HANDLER
-        // =============================================================================
-        document.addEventListener('DOMContentLoaded', () => {
-            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-            const sidebar = document.getElementById('sidebar-container');
-            const overlay = document.getElementById('sidebar-overlay');
-            
-            if (mobileMenuBtn && overlay) {
-                mobileMenuBtn.addEventListener('click', () => {
-                    const sidebarElement = sidebar?.querySelector('.dashboard-sidebar');
-                    if (sidebarElement) {
-                        const isOpen = sidebarElement.classList.contains('mobile-open');
-                        
-                        if (isOpen) {
-                            sidebarElement.classList.remove('mobile-open');
-                            overlay.classList.add('hidden');
-                            document.body.style.overflow = '';
-                        } else {
-                            sidebarElement.classList.add('mobile-open');
-                            overlay.classList.remove('hidden');
-                            document.body.style.overflow = 'hidden';
-                        }
-                    }
-                });
-                
-                overlay.addEventListener('click', () => {
-                    const sidebarElement = sidebar?.querySelector('.dashboard-sidebar');
-                    if (sidebarElement) {
-                        sidebarElement.classList.remove('mobile-open');
-                        overlay.classList.add('hidden');
-                        document.body.style.overflow = '';
-                    }
-                });
-                
-                window.addEventListener('resize', () => {
-                    if (window.innerWidth >= 1024) {
-                        const sidebarElement = sidebar?.querySelector('.dashboard-sidebar');
-                        if (sidebarElement) {
-                            sidebarElement.classList.remove('mobile-open');
-                            overlay.classList.add('hidden');
-                            document.body.style.overflow = '';
-                        }
-                    }
-                });
-            }
-        });
-
-        // =============================================================================
-        // SELECTION MANAGEMENT
-        // =============================================================================
-        window.dashboard = window.dashboard || {};
-        window.dashboard.selectedLeads = new Set();
+        feather.replace();
         
-        window.dashboard.updateBulkToolbar = function() {
-            const toolbar = document.getElementById('bulk-actions-toolbar');
-            const countElement = document.getElementById('selected-count');
-            const count = window.dashboard.selectedLeads.size;
+        // Animated Counter
+        const counters = document.querySelectorAll('.count-animation');
+        counters.forEach(counter => {
+            const target = parseInt(counter.innerText);
+            let count = 0;
+            const increment = target / 50;
             
-            if (count > 0) {
-                toolbar.style.transform = 'translateX(-50%) scale(1)';
-                toolbar.style.opacity = '1';
-                if (countElement) countElement.textContent = count;
-            } else {
-                toolbar.style.transform = 'translateX(-50%) scale(0.95)';
-                toolbar.style.opacity = '0';
-            }
-        };
-        
-        window.dashboard.clearSelection = function() {
-            window.dashboard.selectedLeads.clear();
-            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-            window.dashboard.updateBulkToolbar();
-        };
-
-        // Checkbox event listeners
-        document.addEventListener('change', (e) => {
-            if (e.target.type === 'checkbox') {
-                const row = e.target.closest('.table-row');
-                if (row) {
-                    const leadId = Math.random().toString(36).substr(2, 9); // Generate ID
-                    
-                    if (e.target.checked) {
-                        window.dashboard.selectedLeads.add(leadId);
-                    } else {
-                        window.dashboard.selectedLeads.delete(leadId);
-                    }
-                    
-                    window.dashboard.updateBulkToolbar();
+            const updateCount = () => {
+                if (count < target) {
+                    count += increment;
+                    counter.innerText = Math.ceil(count);
+                    setTimeout(updateCount, 20);
+                } else {
+                    counter.innerText = target;
                 }
-            }
+            };
+            
+            updateCount();
         });
-
-        // =============================================================================
-        // DASHBOARD FUNCTIONS
-        // =============================================================================
-        window.dashboard.showAnalysisModal = window.dashboard.showAnalysisModal || function(username = '') {
-            console.log('🔍 Opening analysis modal for:', username);
-            alert('Analysis modal will open here. Username: ' + (username || 'New research'));
-        };
-        
-        window.dashboard.showBulkUpload = window.dashboard.showBulkUpload || function() {
-            console.log('📁 Opening bulk upload modal');
-            alert('Bulk upload modal will open here');
-        };
-        
-        window.dashboard.exportData = window.dashboard.exportData || function() {
-            console.log('📊 Exporting data');
-            alert('Export functionality will be implemented here');
-        };
-        
-        window.dashboard.openAnalytics = window.dashboard.openAnalytics || function() {
-            console.log('📈 Opening analytics');
-            window.location.href = '/analytics';
-        };
-        
-        window.dashboard.openLeadDetails = window.dashboard.openLeadDetails || function(leadId) {
-            console.log('👤 Opening lead details for:', leadId);
-            alert('Lead details modal will open for lead: ' + leadId);
-        };
-        
-        window.dashboard.refreshData = window.dashboard.refreshData || function() {
-            console.log('🔄 Refreshing data');
-            const loadingOverlay = document.getElementById('loading-overlay');
-            if (loadingOverlay) {
-                loadingOverlay.classList.remove('hidden');
-                setTimeout(() => {
-                    loadingOverlay.classList.add('hidden');
-                }, 1500);
-            }
-        };
-        
-        window.dashboard.bulkExport = window.dashboard.bulkExport || function() {
-            const count = window.dashboard.selectedLeads.size;
-            console.log('📤 Bulk exporting', count, 'leads');
-            alert(`Exporting ${count} selected leads`);
-        };
-        
-        window.dashboard.bulkDelete = window.dashboard.bulkDelete || function() {
-            const count = window.dashboard.selectedLeads.size;
-            if (confirm(`Are you sure you want to delete ${count} selected leads?`)) {
-                console.log('🗑️ Bulk deleting', count, 'leads');
-                window.dashboard.clearSelection();
-                alert(`Deleted ${count} leads`);
-            }
-        };
-
-        // =============================================================================
-        // ERROR PREVENTION
-        // =============================================================================
-        window.addEventListener('error', (event) => {
-            if (event.error?.message?.includes('Cannot read properties')) {
-                event.preventDefault();
-                console.warn('🛡️ Prevented property access error');
-            }
-        });
-
-        console.log('✅ White Theme Dashboard loaded and ready');
     </script>
 </body>
 </html>
