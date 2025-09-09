@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Oslira</title>
+    <title>AI-Powered Lead Research Dashboard - Oslira</title>
     <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
     
     <!-- Tailwind CSS -->
@@ -81,11 +81,13 @@
             100% { transform: translateX(100px) rotate(30deg); }
         }
         
-        /* Glass Effect */
-        .glass {
-            background: rgba(255, 255, 255, 0.95);
+        /* Glass Effect for White Cards */
+        .glass-white {
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
         }
         
         .glass-dark {
@@ -121,7 +123,7 @@
         
         .hover-lift:hover {
             transform: translateY(-4px);
-            box-shadow: 0 20px 40px -15px rgba(109, 91, 241, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
         }
         
         /* Animated Number Counter */
@@ -145,21 +147,51 @@
             animation: pulse 2s infinite;
         }
         
-        /* Score Indicators */
-        .score-high {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.25));
+        /* Priority Card Indicators */
+        .priority-high {
             border-left: 4px solid #10b981;
         }
         
-        .score-medium {
-            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.25));
+        .priority-medium {
             border-left: 4px solid #fbbf24;
         }
         
-        .score-low {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.25));
+        .priority-low {
             border-left: 4px solid #ef4444;
         }
+        
+        /* Notification Badge */
+        .notification-badge::after {
+            content: attr(data-count);
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 5px;
+            border-radius: 10px;
+            min-width: 18px;
+            text-align: center;
+        }
+        
+        /* Score Bar */
+        .score-bar {
+            height: 6px;
+            background: #e5e7eb;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .score-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+        
+        .score-high .score-fill { background: #10b981; }
+        .score-medium .score-fill { background: #fbbf24; }
+        .score-low .score-fill { background: #ef4444; }
     </style>
 </head>
 <body class="bg-gray-50 overflow-hidden">
@@ -167,7 +199,7 @@
     <div class="min-h-screen gradient-bg relative">
         <div class="wave-pattern"></div>
         
-        <!-- Original Sidebar Structure -->
+        <!-- Sidebar -->
         <aside class="fixed left-0 top-0 h-full w-64 glass-dark border-r border-white/10 z-50">
             <!-- Logo Section -->
             <div class="p-6 border-b border-white/10">
@@ -189,16 +221,15 @@
                         </a>
                     </li>
                     <li>
-                        <a href="/leads" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all relative">
+                        <a href="/leads" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
                             <i data-feather="users" class="w-5 h-5"></i>
-                            <span class="font-medium">Leads</span>
-                            <span class="absolute right-4 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center pulse">5</span>
+                            <span class="font-medium">Lead Management</span>
                         </a>
                     </li>
                     <li>
                         <a href="/campaigns" class="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl transition-all">
                             <i data-feather="send" class="w-5 h-5"></i>
-                            <span class="font-medium">Campaigns</span>
+                            <span class="font-medium">Outreach Campaigns</span>
                         </a>
                     </li>
                     <li>
@@ -214,25 +245,32 @@
                         </a>
                     </li>
                 </ul>
-            </nav>
-            
-            <!-- Quick Stats -->
-            <div class="p-4 border-t border-white/10">
-                <div class="space-y-3">
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-400">Leads Analyzed</span>
-                        <span class="text-white font-bold">247</span>
-                    </div>
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-400">Success Rate</span>
-                        <span class="text-green-400 font-bold">73%</span>
-                    </div>
-                    <div class="flex justify-between items-center text-sm">
-                        <span class="text-gray-400">Credits Left</span>
-                        <span class="text-yellow-400 font-bold">42</span>
-                    </div>
+                
+                <!-- Data Management Section -->
+                <div class="mt-6 pt-6 border-t border-white/10">
+                    <p class="px-4 text-xs text-gray-500 uppercase tracking-wider mb-3">Data Management</p>
+                    <ul class="space-y-2">
+                        <li>
+                            <button onclick="openBulkImportModal()" class="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                                <i data-feather="upload" class="w-4 h-4"></i>
+                                <span class="text-sm">Bulk Import</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="openExportModal()" class="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                                <i data-feather="download" class="w-4 h-4"></i>
+                                <span class="text-sm">Export Data</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="openRecycleBin()" class="w-full flex items-center space-x-3 px-4 py-2 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                                <i data-feather="trash-2" class="w-4 h-4"></i>
+                                <span class="text-sm">Recycle Bin</span>
+                            </button>
+                        </li>
+                    </ul>
                 </div>
-            </div>
+            </nav>
             
             <!-- User Section -->
             <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
@@ -251,361 +289,683 @@
         </aside>
         
         <!-- Main Content Area -->
-        <main class="ml-64 p-8 h-screen overflow-y-auto">
-            <!-- Header with Quick Actions -->
-            <header class="mb-8">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-3xl font-bold text-gray-800 mb-2">Lead Research Dashboard</h1>
-                        <p class="text-gray-600">AI-powered lead analysis and outreach automation</p>
-                    </div>
-                    
-                    <!-- Quick Research Button -->
-                    <button onclick="openResearchModal()" 
-                            class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all flex items-center space-x-2">
-                        <i data-feather="search" class="w-5 h-5"></i>
-                        <span>Research New Lead</span>
-                    </button>
-                </div>
-            </header>
-            
-            <!-- Priority Leads Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <!-- High Priority Leads -->
-                <div class="glass rounded-3xl p-6 shadow-xl border border-white/50 hover-lift score-high">
-                    <div class="flex items-start justify-between mb-4">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">High Priority</p>
-                            <h2 class="text-4xl font-black text-gray-800 count-animation">12</h2>
-                            <p class="text-green-600 text-sm font-semibold mt-1">Score 80-100</p>
-                        </div>
-                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                            <i data-feather="trending-up" class="w-6 h-6 text-green-600"></i>
-                        </div>
-                    </div>
-                    <div class="text-gray-600 text-sm">
-                        Ready for immediate outreach
-                    </div>
-                </div>
-                
-                <!-- Medium Priority Leads -->
-                <div class="glass rounded-3xl p-6 shadow-xl border border-white/50 hover-lift score-medium">
-                    <div class="flex items-start justify-between mb-4">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Medium Priority</p>
-                            <h2 class="text-4xl font-black text-gray-800 count-animation">28</h2>
-                            <p class="text-yellow-600 text-sm font-semibold mt-1">Score 60-79</p>
-                        </div>
-                        <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                            <i data-feather="activity" class="w-6 h-6 text-yellow-600"></i>
-                        </div>
-                    </div>
-                    <div class="text-gray-600 text-sm">
-                        Needs nurturing strategy
-                    </div>
-                </div>
-                
-                <!-- Low Priority Leads -->
-                <div class="glass rounded-3xl p-6 shadow-xl border border-white/50 hover-lift score-low">
-                    <div class="flex items-start justify-between mb-4">
-                        <div>
-                            <p class="text-gray-500 text-sm font-medium uppercase tracking-wider mb-1">Low Priority</p>
-                            <h2 class="text-4xl font-black text-gray-800 count-animation">45</h2>
-                            <p class="text-red-600 text-sm font-semibold mt-1">Score &lt;60</p>
-                        </div>
-                        <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                            <i data-feather="trending-down" class="w-6 h-6 text-red-600"></i>
-                        </div>
-                    </div>
-                    <div class="text-gray-600 text-sm">
-                        Review or archive
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Research Stats Row -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <!-- Total Analyzed -->
-                <div class="glass rounded-2xl p-6 shadow-lg border border-white/50">
+        <main class="ml-64 h-screen overflow-y-auto">
+            <!-- Top Navigation Bar -->
+            <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-lg border-b border-gray-200">
+                <div class="px-8 py-4">
                     <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-500 text-xs uppercase tracking-wider">Total Analyzed</p>
-                            <p class="text-2xl font-bold text-gray-800 mt-1">1,247</p>
-                            <p class="text-green-500 text-xs font-semibold mt-1">+14% this week</p>
+                        <!-- Search Bar -->
+                        <div class="flex-1 max-w-xl">
+                            <div class="relative">
+                                <i data-feather="search" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"></i>
+                                <input type="text" 
+                                       placeholder="Search leads by name, company, or platform..." 
+                                       class="w-full pl-12 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            </div>
                         </div>
-                        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <i data-feather="search" class="w-5 h-5 text-purple-600"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Success Rate -->
-                <div class="glass rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-500 text-xs uppercase tracking-wider">Success Rate</p>
-                            <p class="text-2xl font-bold text-gray-800 mt-1">73%</p>
-                            <p class="text-green-500 text-xs font-semibold mt-1">Above average</p>
-                        </div>
-                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                            <i data-feather="check-circle" class="w-5 h-5 text-green-600"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Outreach Sent -->
-                <div class="glass rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-500 text-xs uppercase tracking-wider">Outreach Sent</p>
-                            <p class="text-2xl font-bold text-gray-800 mt-1">892</p>
-                            <p class="text-blue-500 text-xs font-semibold mt-1">32 today</p>
-                        </div>
-                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <i data-feather="send" class="w-5 h-5 text-blue-600"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Response Rate -->
-                <div class="glass rounded-2xl p-6 shadow-lg border border-white/50">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-gray-500 text-xs uppercase tracking-wider">Response Rate</p>
-                            <p class="text-2xl font-bold text-gray-800 mt-1">24%</p>
-                            <p class="text-yellow-500 text-xs font-semibold mt-1">Industry avg: 18%</p>
-                        </div>
-                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                            <i data-feather="message-circle" class="w-5 h-5 text-yellow-600"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Recent Leads Table -->
-            <div class="glass rounded-3xl shadow-xl border border-white/50">
-                <!-- Table Header -->
-                <div class="p-6 border-b border-gray-200/50">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-xl font-bold text-gray-800">Recent Lead Research</h3>
-                        <div class="flex items-center space-x-3">
-                            <select class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option>All Platforms</option>
-                                <option>Instagram</option>
-                                <option>LinkedIn</option>
-                                <option>Twitter</option>
-                            </select>
-                            <button class="text-indigo-600 hover:text-indigo-700 font-medium flex items-center space-x-1">
-                                <span>View All</span>
-                                <i data-feather="arrow-right" class="w-4 h-4"></i>
+                        
+                        <!-- Right Actions -->
+                        <div class="flex items-center space-x-4 ml-8">
+                            <!-- Notifications -->
+                            <div class="relative">
+                                <button onclick="toggleNotifications()" class="relative p-2.5 bg-white border border-gray-200 rounded-xl hover:shadow-md transition-all notification-badge" data-count="3">
+                                    <i data-feather="bell" class="w-5 h-5 text-gray-600"></i>
+                                </button>
+                                
+                                <!-- Notifications Dropdown (hidden by default) -->
+                                <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                                    <div class="p-4 border-b border-gray-100">
+                                        <h3 class="font-semibold text-gray-800">Notifications</h3>
+                                    </div>
+                                    <div class="max-h-96 overflow-y-auto">
+                                        <!-- Duplicate Alert -->
+                                        <div class="p-4 hover:bg-gray-50 border-b border-gray-100">
+                                            <div class="flex items-start space-x-3">
+                                                <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <i data-feather="alert-triangle" class="w-4 h-4 text-yellow-600"></i>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-medium text-gray-800">Duplicate lead detected</p>
+                                                    <p class="text-xs text-gray-500 mt-1">Jane Smith may be a duplicate of Janet Smith</p>
+                                                    <div class="flex space-x-2 mt-2">
+                                                        <button class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Review</button>
+                                                        <button class="text-xs text-gray-500 hover:text-gray-600">Dismiss</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- New Lead Alert -->
+                                        <div class="p-4 hover:bg-gray-50 border-b border-gray-100">
+                                            <div class="flex items-start space-x-3">
+                                                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <i data-feather="user-plus" class="w-4 h-4 text-green-600"></i>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-medium text-gray-800">New lead added</p>
+                                                    <p class="text-xs text-gray-500 mt-1">John Doe from LinkedIn - Score: 85</p>
+                                                    <p class="text-xs text-gray-400 mt-1">2 minutes ago</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- System Alert -->
+                                        <div class="p-4 hover:bg-gray-50">
+                                            <div class="flex items-start space-x-3">
+                                                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <i data-feather="info" class="w-4 h-4 text-blue-600"></i>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <p class="text-sm font-medium text-gray-800">AI Analysis Complete</p>
+                                                    <p class="text-xs text-gray-500 mt-1">5 leads have been re-scored based on new data</p>
+                                                    <p class="text-xs text-gray-400 mt-1">1 hour ago</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Actions -->
+                            <button onclick="openResearchModal()" class="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all flex items-center space-x-2">
+                                <i data-feather="plus" class="w-4 h-4"></i>
+                                <span>Research New Lead</span>
                             </button>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Table Content -->
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead>
-                            <tr class="border-b border-gray-200/50">
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Username</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Platform</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Score</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Followers</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Lead Row 1 -->
-                            <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="https://ui-avatars.com/api/?name=Sarah+Johnson&background=8b5cf6&color=fff" 
-                                             class="w-10 h-10 rounded-full" alt="Lead">
-                                        <div>
-                                            <p class="font-medium text-gray-800">@sarahjohnson</p>
-                                            <p class="text-xs text-gray-500">Sarah Johnson</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="inline-flex items-center space-x-1 text-sm">
-                                        <span class="w-5 h-5 bg-gradient-to-br from-pink-500 to-purple-600 rounded"></span>
-                                        <span>Instagram</span>
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-24 bg-gray-200 rounded-full h-2">
-                                            <div class="bg-green-500 h-2 rounded-full" style="width: 85%"></div>
-                                        </div>
-                                        <span class="text-sm font-semibold text-green-600">85</span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 text-gray-600 text-sm">24.5K</td>
-                                <td class="px-6 py-4">
-                                    <span class="px-3 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Ready</span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-2">
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View Analysis">
-                                            <i data-feather="eye" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Send Outreach">
-                                            <i data-feather="send" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Export">
-                                            <i data-feather="download" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <!-- Lead Row 2 -->
-                            <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="https://ui-avatars.com/api/?name=Mike+Chen&background=3b82f6&color=fff" 
-                                             class="w-10 h-10 rounded-full" alt="Lead">
-                                        <div>
-                                            <p class="font-medium text-gray-800">@mikechen</p>
-                                            <p class="text-xs text-gray-500">Mike Chen</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="inline-flex items-center space-x-1 text-sm">
-                                        <span class="w-5 h-5 bg-blue-500 rounded"></span>
-                                        <span>LinkedIn</span>
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-24 bg-gray-200 rounded-full h-2">
-                                            <div class="bg-yellow-500 h-2 rounded-full" style="width: 72%"></div>
-                                        </div>
-                                        <span class="text-sm font-semibold text-yellow-600">72</span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 text-gray-600 text-sm">18.2K</td>
-                                <td class="px-6 py-4">
-                                    <span class="px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">Analyzing</span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-2">
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View Analysis">
-                                            <i data-feather="eye" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Send Outreach">
-                                            <i data-feather="send" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Export">
-                                            <i data-feather="download" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            
-                            <!-- Lead Row 3 -->
-                            <tr class="border-b border-gray-100 hover:bg-gray-50/50 transition-colors">
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="https://ui-avatars.com/api/?name=Emma+Davis&background=ec4899&color=fff" 
-                                             class="w-10 h-10 rounded-full" alt="Lead">
-                                        <div>
-                                            <p class="font-medium text-gray-800">@emmadavis</p>
-                                            <p class="text-xs text-gray-500">Emma Davis</p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <span class="inline-flex items-center space-x-1 text-sm">
-                                        <span class="w-5 h-5 bg-black rounded"></span>
-                                        <span>Twitter</span>
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-2">
-                                        <div class="w-24 bg-gray-200 rounded-full h-2">
-                                            <div class="bg-red-500 h-2 rounded-full" style="width: 45%"></div>
-                                        </div>
-                                        <span class="text-sm font-semibold text-red-600">45</span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 text-gray-600 text-sm">8.7K</td>
-                                <td class="px-6 py-4">
-                                    <span class="px-3 py-1 text-xs font-semibold text-gray-700 bg-gray-100 rounded-full">Reviewed</span>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="flex items-center space-x-2">
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="View Analysis">
-                                            <i data-feather="eye" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Archive">
-                                            <i data-feather="archive" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                        <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Delete">
-                                            <i data-feather="trash-2" class="w-4 h-4 text-gray-600"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            </header>
             
-            <!-- Quick Research Modal (Hidden by default) -->
-            <div id="researchModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-                <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4">
-                    <h3 class="text-2xl font-bold text-gray-800 mb-6">Research New Lead</h3>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Platform</label>
-                            <select class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option>Instagram</option>
-                                <option>LinkedIn</option>
-                                <option>Twitter</option>
-                            </select>
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
-                            <input type="text" 
-                                   placeholder="@username" 
-                                   class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Analysis Type</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="analysis" checked class="text-purple-600">
-                                    <span class="text-sm">Quick Scan</span>
-                                </label>
-                                <label class="flex items-center space-x-2 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
-                                    <input type="radio" name="analysis" class="text-purple-600">
-                                    <span class="text-sm">Deep Analysis</span>
-                                </label>
+            <!-- Dashboard Content -->
+            <div class="p-8">
+                <!-- Dashboard Title -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-gray-800 mb-2">AI-Powered Lead Research Dashboard</h1>
+                    <p class="text-gray-600">Comprehensive view of all lead management activities with AI-driven insights</p>
+                </div>
+                
+                <!-- Lead Priority Overview -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- High Priority Card -->
+                    <div class="glass-white rounded-2xl p-6 hover-lift priority-high cursor-pointer" onclick="filterByPriority('high')">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">HIGH PRIORITY</p>
+                                <h2 class="text-4xl font-black text-gray-800 count-animation">12</h2>
+                                <p class="text-sm text-gray-600 mt-2">Score 80-100</p>
+                                <p class="text-xs text-green-600 font-medium mt-1">Ready for immediate outreach</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                                <i data-feather="trending-up" class="w-6 h-6 text-green-600"></i>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="flex space-x-3 mt-6">
-                        <button onclick="closeResearchModal()" 
-                                class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors">
-                            Cancel
-                        </button>
-                        <button onclick="submitResearch()" 
-                                class="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all">
-                            Start Research
-                        </button>
+                    <!-- Medium Priority Card -->
+                    <div class="glass-white rounded-2xl p-6 hover-lift priority-medium cursor-pointer" onclick="filterByPriority('medium')">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">MEDIUM PRIORITY</p>
+                                <h2 class="text-4xl font-black text-gray-800 count-animation">28</h2>
+                                <p class="text-sm text-gray-600 mt-2">Score 60-79</p>
+                                <p class="text-xs text-yellow-600 font-medium mt-1">Needs nurturing strategy</p>
+                            </div>
+                            <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                                <i data-feather="activity" class="w-6 h-6 text-yellow-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Low Priority Card -->
+                    <div class="glass-white rounded-2xl p-6 hover-lift priority-low cursor-pointer" onclick="filterByPriority('low')">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">LOW PRIORITY</p>
+                                <h2 class="text-4xl font-black text-gray-800 count-animation">45</h2>
+                                <p class="text-sm text-gray-600 mt-2">Score &lt;60</p>
+                                <p class="text-xs text-red-600 font-medium mt-1">Review or archive</p>
+                            </div>
+                            <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                                <i data-feather="trending-down" class="w-6 h-6 text-red-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Key Performance Metrics Panel -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Total Leads Analyzed -->
+                    <div class="glass-white rounded-2xl p-6 hover-lift">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i data-feather="search" class="w-5 h-5 text-purple-600"></i>
+                            </div>
+                            <span class="text-xs text-green-600 font-semibold">+14% this week</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800">1,247</h3>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mt-1">Total Leads Analyzed</p>
+                    </div>
+                    
+                    <!-- Outreach Success Rate -->
+                    <div class="glass-white rounded-2xl p-6 hover-lift">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i data-feather="check-circle" class="w-5 h-5 text-green-600"></i>
+                            </div>
+                            <span class="text-xs text-green-600 font-semibold">Above average</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800">73%</h3>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mt-1">Success Rate</p>
+                    </div>
+                    
+                    <!-- Outreach Sent -->
+                    <div class="glass-white rounded-2xl p-6 hover-lift">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i data-feather="send" class="w-5 h-5 text-blue-600"></i>
+                            </div>
+                            <span class="text-xs text-blue-600 font-semibold">32 today</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800">892</h3>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mt-1">Outreach Sent</p>
+                    </div>
+                    
+                    <!-- Response Rate -->
+                    <div class="glass-white rounded-2xl p-6 hover-lift">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                <i data-feather="message-circle" class="w-5 h-5 text-yellow-600"></i>
+                            </div>
+                            <span class="text-xs text-yellow-600 font-semibold">Industry avg: 18%</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-800">24%</h3>
+                        <p class="text-xs text-gray-500 uppercase tracking-wider mt-1">Response Rate</p>
+                    </div>
+                </div>
+                
+                <!-- Main Content Grid -->
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    <!-- Recent Lead Research Table (2/3 width) -->
+                    <div class="xl:col-span-2">
+                        <div class="glass-white rounded-2xl overflow-hidden">
+                            <!-- Table Header -->
+                            <div class="p-6 border-b border-gray-100">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h3 class="text-lg font-bold text-gray-800">Recent Lead Research</h3>
+                                        <p class="text-sm text-gray-500 mt-1">Individual leads with AI-generated scores and status</p>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <!-- Filter Dropdown -->
+                                        <select class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                            <option>All Platforms</option>
+                                            <option>LinkedIn</option>
+                                            <option>Instagram</option>
+                                            <option>Twitter</option>
+                                        </select>
+                                        <!-- Sort Dropdown -->
+                                        <select class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                            <option>Sort by: Recent</option>
+                                            <option>Sort by: Score</option>
+                                            <option>Sort by: Name</option>
+                                            <option>Sort by: Followers</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Table Content -->
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead class="bg-gray-50 border-b border-gray-100">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lead</th>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Platform</th>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Score</th>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Followers</th>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-100">
+                                        <!-- Lead Row 1 - High Priority -->
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-3">
+                                                    <img src="https://ui-avatars.com/api/?name=Sarah+Johnson&background=8b5cf6&color=fff" 
+                                                         class="w-10 h-10 rounded-full" alt="Lead">
+                                                    <div>
+                                                        <p class="font-medium text-gray-800">Sarah Johnson</p>
+                                                        <p class="text-xs text-gray-500">@sarahjohnson</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-2">
+                                                    <div class="w-5 h-5 bg-gradient-to-br from-pink-500 to-purple-600 rounded"></div>
+                                                    <span class="text-sm">Instagram</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="space-y-1">
+                                                    <div class="score-bar score-high">
+                                                        <div class="score-fill" style="width: 85%"></div>
+                                                    </div>
+                                                    <span class="text-sm font-semibold text-green-600">85</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="text-sm text-gray-600">24.5K</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="px-2.5 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Ready</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-1">
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="View Details">
+                                                        <i data-feather="eye" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Send Outreach">
+                                                        <i data-feather="send" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Export">
+                                                        <i data-feather="download" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Archive">
+                                                        <i data-feather="archive" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Lead Row 2 - Currently Analyzing -->
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-3">
+                                                    <img src="https://ui-avatars.com/api/?name=Mike+Chen&background=3b82f6&color=fff" 
+                                                         class="w-10 h-10 rounded-full" alt="Lead">
+                                                    <div>
+                                                        <p class="font-medium text-gray-800">Mike Chen</p>
+                                                        <p class="text-xs text-gray-500">@mikechen</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-2">
+                                                    <div class="w-5 h-5 bg-blue-500 rounded"></div>
+                                                    <span class="text-sm">LinkedIn</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="space-y-1">
+                                                    <div class="score-bar score-medium">
+                                                        <div class="score-fill" style="width: 72%"></div>
+                                                    </div>
+                                                    <span class="text-sm font-semibold text-yellow-600">72</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="text-sm text-gray-600">18.2K</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">Analyzing</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-1">
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="View Details">
+                                                        <i data-feather="eye" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Send Outreach">
+                                                        <i data-feather="send" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Export">
+                                                        <i data-feather="download" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Archive">
+                                                        <i data-feather="archive" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Lead Row 3 - Low Priority -->
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-3">
+                                                    <img src="https://ui-avatars.com/api/?name=Emma+Davis&background=ec4899&color=fff" 
+                                                         class="w-10 h-10 rounded-full" alt="Lead">
+                                                    <div>
+                                                        <p class="font-medium text-gray-800">Emma Davis</p>
+                                                        <p class="text-xs text-gray-500">@emmadavis</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-2">
+                                                    <div class="w-5 h-5 bg-black rounded"></div>
+                                                    <span class="text-sm">Twitter</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="space-y-1">
+                                                    <div class="score-bar score-low">
+                                                        <div class="score-fill" style="width: 45%"></div>
+                                                    </div>
+                                                    <span class="text-sm font-semibold text-red-600">45</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="text-sm text-gray-600">8.7K</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="px-2.5 py-1 text-xs font-semibold text-gray-700 bg-gray-100 rounded-full">Reviewed</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-1">
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="View Details">
+                                                        <i data-feather="eye" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Archive">
+                                                        <i data-feather="archive" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                                                        <i data-feather="trash-2" class="w-4 h-4 text-red-500"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- More rows... -->
+                                        <tr class="hover:bg-gray-50/50 transition-colors">
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-3">
+                                                    <img src="https://ui-avatars.com/api/?name=Alex+Thompson&background=10b981&color=fff" 
+                                                         class="w-10 h-10 rounded-full" alt="Lead">
+                                                    <div>
+                                                        <p class="font-medium text-gray-800">Alex Thompson</p>
+                                                        <p class="text-xs text-gray-500">@alexthompson</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-2">
+                                                    <div class="w-5 h-5 bg-blue-500 rounded"></div>
+                                                    <span class="text-sm">LinkedIn</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="space-y-1">
+                                                    <div class="score-bar score-high">
+                                                        <div class="score-fill" style="width: 92%"></div>
+                                                    </div>
+                                                    <span class="text-sm font-semibold text-green-600">92</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="text-sm text-gray-600">52.1K</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <span class="px-2.5 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Ready</span>
+                                            </td>
+                                            <td class="px-6 py-4">
+                                                <div class="flex items-center space-x-1">
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="View Details">
+                                                        <i data-feather="eye" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Send Outreach">
+                                                        <i data-feather="send" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Export">
+                                                        <i data-feather="download" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                    <button class="p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Archive">
+                                                        <i data-feather="archive" class="w-4 h-4 text-gray-500"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- Table Footer with Pagination -->
+                            <div class="p-4 border-t border-gray-100 bg-gray-50/50">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-sm text-gray-600">
+                                        Showing <span class="font-medium">1-10</span> of <span class="font-medium">85</span> leads
+                                    </p>
+                                    <div class="flex items-center space-x-2">
+                                        <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">Previous</button>
+                                        <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg">1</button>
+                                        <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">2</button>
+                                        <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">3</button>
+                                        <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">Next</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- AI-Generated Insights Panel (1/3 width) -->
+                    <div class="xl:col-span-1">
+                        <div class="glass-white rounded-2xl p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-bold text-gray-800">AI-Generated Insights</h3>
+                                <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                    <i data-feather="cpu" class="w-4 h-4 text-white"></i>
+                                </div>
+                            </div>
+                            
+                            <!-- Insights List -->
+                            <div class="space-y-4">
+                                <!-- Insight 1 -->
+                                <div class="p-4 bg-green-50 border border-green-200 rounded-xl">
+                                    <div class="flex items-start space-x-3">
+                                        <i data-feather="trending-up" class="w-5 h-5 text-green-600 mt-0.5"></i>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">High Conversion Pattern</p>
+                                            <p class="text-xs text-gray-600 mt-1">Leads with >10K followers have 20% higher response rate</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Insight 2 -->
+                                <div class="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                                    <div class="flex items-start space-x-3">
+                                        <i data-feather="clock" class="w-5 h-5 text-blue-600 mt-0.5"></i>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">Optimal Timing</p>
+                                            <p class="text-xs text-gray-600 mt-1">Best time to contact: Weekday mornings 9-11 AM</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Insight 3 -->
+                                <div class="p-4 bg-purple-50 border border-purple-200 rounded-xl">
+                                    <div class="flex items-start space-x-3">
+                                        <i data-feather="users" class="w-5 h-5 text-purple-600 mt-0.5"></i>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">Platform Performance</p>
+                                            <p class="text-xs text-gray-600 mt-1">LinkedIn leads convert 35% better than Twitter</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Insight 4 -->
+                                <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
+                                    <div class="flex items-start space-x-3">
+                                        <i data-feather="alert-triangle" class="w-5 h-5 text-yellow-600 mt-0.5"></i>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-800">Nurturing Opportunity</p>
+                                            <p class="text-xs text-gray-600 mt-1">5 low-score leads converted after follow-up</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Weekly Performance -->
+                                <div class="pt-4 border-t border-gray-200">
+                                    <h4 class="text-sm font-semibold text-gray-700 mb-3">This Week's Performance</h4>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs text-gray-600">Response Rate</span>
+                                            <span class="text-xs font-semibold text-green-600">↑ 6%</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs text-gray-600">Avg Lead Score</span>
+                                            <span class="text-xs font-semibold text-green-600">↑ 3.2</span>
+                                        </div>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-xs text-gray-600">Conversion Rate</span>
+                                            <span class="text-xs font-semibold text-yellow-600">→ 0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- AI Recommendation -->
+                                <div class="p-4 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white">
+                                    <p class="text-xs font-semibold mb-2">💡 AI Recommendation</p>
+                                    <p class="text-xs">Focus on high-priority LinkedIn leads this week for maximum ROI</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
+    </div>
+    
+    <!-- Research New Lead Modal -->
+    <div id="researchModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Research New Lead</h3>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Platform</label>
+                    <select class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option>LinkedIn</option>
+                        <option>Instagram</option>
+                        <option>Twitter</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Username or Profile URL</label>
+                    <input type="text" 
+                           placeholder="@username or https://..." 
+                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Company (Optional)</label>
+                    <input type="text" 
+                           placeholder="Company name" 
+                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Analysis Type</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="radio" name="analysis" checked class="text-purple-600">
+                            <div>
+                                <span class="text-sm font-medium">Quick Scan</span>
+                                <p class="text-xs text-gray-500">Basic analysis</p>
+                            </div>
+                        </label>
+                        <label class="flex items-center space-x-3 p-3 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                            <input type="radio" name="analysis" class="text-purple-600">
+                            <div>
+                                <span class="text-sm font-medium">Deep Analysis</span>
+                                <p class="text-xs text-gray-500">Comprehensive</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 mt-8">
+                <button onclick="closeResearchModal()" 
+                        class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="submitResearch()" 
+                        class="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all">
+                    Start Research
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bulk Import Modal -->
+    <div id="bulkImportModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Bulk Import Leads</h3>
+            
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
+                <i data-feather="upload-cloud" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                <p class="text-gray-600 mb-2">Drop your CSV or Excel file here</p>
+                <p class="text-sm text-gray-500 mb-4">or</p>
+                <button class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                    Browse Files
+                </button>
+                <p class="text-xs text-gray-500 mt-4">Supported formats: CSV, XLSX (max 10MB)</p>
+            </div>
+            
+            <div class="flex space-x-3 mt-8">
+                <button onclick="closeBulkImportModal()" 
+                        class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors">
+                    Cancel
+                </button>
+                <button class="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all">
+                    Import Leads
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Duplicate Lead Management Modal -->
+    <div id="duplicateModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Duplicate Lead Detected</h3>
+            <p class="text-gray-600 mb-6">We found a potential duplicate. Please review and decide how to proceed.</p>
+            
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Existing Lead -->
+                <div class="p-4 bg-gray-50 rounded-xl">
+                    <h4 class="font-semibold text-gray-700 mb-3">Existing Lead</h4>
+                    <div class="space-y-2">
+                        <p class="text-sm"><span class="text-gray-500">Name:</span> Janet Smith</p>
+                        <p class="text-sm"><span class="text-gray-500">Email:</span> janet.smith@example.com</p>
+                        <p class="text-sm"><span class="text-gray-500">Platform:</span> LinkedIn</p>
+                        <p class="text-sm"><span class="text-gray-500">Score:</span> 78</p>
+                        <p class="text-sm"><span class="text-gray-500">Added:</span> 3 days ago</p>
+                    </div>
+                </div>
+                
+                <!-- New Lead -->
+                <div class="p-4 bg-blue-50 rounded-xl">
+                    <h4 class="font-semibold text-gray-700 mb-3">New Lead</h4>
+                    <div class="space-y-2">
+                        <p class="text-sm"><span class="text-gray-500">Name:</span> Jane Smith</p>
+                        <p class="text-sm"><span class="text-gray-500">Email:</span> jane.smith@example.com</p>
+                        <p class="text-sm"><span class="text-gray-500">Platform:</span> Instagram</p>
+                        <p class="text-sm"><span class="text-gray-500">Score:</span> Pending</p>
+                        <p class="text-sm"><span class="text-gray-500">Added:</span> Just now</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex space-x-3 mt-8">
+                <button class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors">
+                    Keep Both
+                </button>
+                <button class="flex-1 px-4 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors">
+                    Merge Leads
+                </button>
+                <button class="flex-1 px-4 py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors">
+                    Discard New
+                </button>
+            </div>
+        </div>
     </div>
     
     <!-- Initialize and Scripts -->
@@ -633,7 +993,7 @@
             updateCount();
         });
         
-        // Research Modal Functions
+        // Modal Functions
         function openResearchModal() {
             document.getElementById('researchModal').classList.remove('hidden');
         }
@@ -645,24 +1005,64 @@
         function submitResearch() {
             // Show loading state
             const modal = document.getElementById('researchModal');
-            modal.innerHTML = `
-                <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
+            const modalContent = modal.querySelector('.bg-white');
+            modalContent.innerHTML = `
+                <div class="text-center py-12">
                     <div class="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                         <i data-feather="loader" class="w-8 h-8 text-white animate-spin"></i>
                     </div>
                     <h3 class="text-xl font-bold text-gray-800 mb-2">Researching Lead...</h3>
                     <p class="text-gray-600">AI is analyzing the profile and generating insights</p>
+                    <div class="mt-4 w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full animate-pulse" style="width: 60%"></div>
+                    </div>
                 </div>
             `;
             feather.replace();
             
-            // Simulate processing
             setTimeout(() => {
                 closeResearchModal();
-                // In production, this would trigger actual API call
-                console.log('Lead research submitted');
+                location.reload(); // Refresh to show new lead
             }, 3000);
         }
+        
+        function openBulkImportModal() {
+            document.getElementById('bulkImportModal').classList.remove('hidden');
+        }
+        
+        function closeBulkImportModal() {
+            document.getElementById('bulkImportModal').classList.add('hidden');
+        }
+        
+        function openExportModal() {
+            // Simple export simulation
+            if (confirm('Export all leads to CSV?')) {
+                console.log('Exporting leads...');
+            }
+        }
+        
+        function openRecycleBin() {
+            console.log('Opening recycle bin...');
+        }
+        
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notificationsDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+        
+        function filterByPriority(priority) {
+            console.log('Filtering by priority:', priority);
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            const notifDropdown = document.getElementById('notificationsDropdown');
+            const notifButton = event.target.closest('.notification-badge');
+            
+            if (!notifButton && !notifDropdown.contains(event.target)) {
+                notifDropdown.classList.add('hidden');
+            }
+        });
     </script>
 </body>
 </html>
