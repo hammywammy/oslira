@@ -1,6 +1,6 @@
 @layer components {
   /* =============================================================================
-     WORLD-CLASS GLASSMORPHISM DASHBOARD - INSPIRED BY PREMIUM DESIGNS
+     WORLD-CLASS GLASSMORPHISM DASHBOARD - TAILWIND 3 OPTIMIZED
      ============================================================================= */
   
   .dashboard-main {
@@ -19,7 +19,6 @@
     background-attachment: fixed;
   }
 
-  /* Ultra-premium floating orbs */
   .dashboard-main::before {
     content: '';
     @apply absolute inset-0 pointer-events-none;
@@ -43,7 +42,7 @@
   }
 
   /* =============================================================================
-     ULTRA-PREMIUM GLASS CARDS - INSPIRED BY TOP DESIGNS
+     ULTRA-PREMIUM GLASS CARDS
      ============================================================================= */
 
   .glass-card {
@@ -68,7 +67,7 @@
   }
 
   /* =============================================================================
-     HERO QUICK ACTIONS SECTION - INSPIRED BY MODERN DASHBOARDS
+     HERO QUICK ACTIONS SECTION
      ============================================================================= */
 
   .hero-actions-section {
@@ -86,7 +85,7 @@
   }
 
   .premium-action-card {
-    @apply relative group cursor-pointer p-8 rounded-2xl transition-all duration-500;
+    @apply relative cursor-pointer p-8 rounded-2xl transition-all duration-500;
     background: rgba(255, 255, 255, 0.06);
     backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -108,15 +107,19 @@
 
   .premium-action-card::before {
     content: '';
-    @apply absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500;
+    @apply absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500;
     background: linear-gradient(135deg, 
       rgba(255, 100, 50, 0.1) 0%, 
       rgba(100, 200, 255, 0.1) 100%
     );
   }
 
+  .premium-action-card:hover::before {
+    @apply opacity-100;
+  }
+
   .action-icon-wrapper {
-    @apply w-16 h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center relative z-10 group-hover:scale-110 transition-transform duration-300;
+    @apply w-16 h-16 mx-auto mb-6 rounded-2xl flex items-center justify-center relative z-10 transition-transform duration-300;
     background: linear-gradient(135deg, 
       rgba(255, 100, 50, 0.8) 0%, 
       rgba(255, 150, 100, 0.9) 100%
@@ -124,6 +127,10 @@
     box-shadow: 
       0 8px 25px rgba(255, 100, 50, 0.4),
       inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .premium-action-card:hover .action-icon-wrapper {
+    @apply scale-110;
   }
 
   .premium-action-card:nth-child(2) .action-icon-wrapper {
@@ -167,7 +174,7 @@
   }
 
   /* =============================================================================
-     PREMIUM STATS CARDS - WORLD-CLASS DESIGN
+     PREMIUM STATS CARDS
      ============================================================================= */
 
   .dashboard-grid {
@@ -175,7 +182,7 @@
   }
 
   .premium-stat-card {
-    @apply glass-card p-8 relative group transition-all duration-500 hover:scale-105;
+    @apply glass-card p-8 relative transition-all duration-500 hover:scale-105;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.12);
   }
@@ -347,98 +354,26 @@
   }
 
   .leads-table tbody tr:hover .premium-avatar {
-    @apply ring-white/40 scale-110;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    @apply ring-white/40;
   }
-
-  .lead-username {
-    @apply font-bold text-white text-base transition-colors duration-300;
-  }
-
-  .lead-fullname {
-    @apply text-white/60 font-medium transition-colors duration-300;
-  }
-
-  .leads-table tbody tr:hover .lead-username {
-    @apply text-orange-300;
-  }
-
-  .leads-table tbody tr:hover .lead-fullname {
-    @apply text-white/80;
-  }
-
-  /* =============================================================================
-     PREMIUM PLATFORM BADGES
-     ============================================================================= */
-
-  .platform-badge {
-    @apply inline-flex items-center px-4 py-2 rounded-xl text-sm font-bold shadow-lg transition-transform duration-300;
-    background: linear-gradient(135deg, 
-      rgba(255, 100, 50, 0.8) 0%, 
-      rgba(255, 150, 100, 0.9) 100%
-    );
-    color: white;
-    border: 1px solid rgba(255, 100, 50, 0.3);
-    box-shadow: 
-      0 4px 12px rgba(255, 100, 50, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  .platform-badge:hover {
-    @apply scale-110;
-    box-shadow: 
-      0 8px 20px rgba(255, 100, 50, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-
-  /* =============================================================================
-     PREMIUM ANALYSIS BADGES
-     ============================================================================= */
 
   .analysis-badge {
-    @apply inline-flex items-center px-6 py-3 rounded-xl text-sm font-bold shadow-xl transition-all duration-300;
+    @apply inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300;
   }
 
-  .analysis-badge.completed {
-    background: linear-gradient(135deg, 
-      rgba(50, 255, 150, 0.8) 0%, 
-      rgba(100, 255, 200, 0.9) 100%
-    );
-    color: white;
-    border: 1px solid rgba(50, 255, 150, 0.3);
-    box-shadow: 
-      0 8px 20px rgba(50, 255, 150, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  .analysis-badge.strong {
+    @apply bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-300 border border-green-500/30;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
   }
 
-  .analysis-badge.pending {
-    background: linear-gradient(135deg, 
-      rgba(255, 200, 50, 0.8) 0%, 
-      rgba(255, 220, 100, 0.9) 100%
-    );
-    color: white;
-    border: 1px solid rgba(255, 200, 50, 0.3);
-    box-shadow: 
-      0 8px 20px rgba(255, 200, 50, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  .analysis-badge.moderate {
+    @apply bg-gradient-to-r from-yellow-500/20 to-orange-500/20 text-yellow-300 border border-yellow-500/30;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
   }
 
-  .analysis-badge.failed {
-    background: linear-gradient(135deg, 
-      rgba(255, 50, 100, 0.8) 0%, 
-      rgba(255, 100, 150, 0.9) 100%
-    );
-    color: white;
-    border: 1px solid rgba(255, 50, 100, 0.3);
-    box-shadow: 
-      0 8px 20px rgba(255, 50, 100, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  .score-indicator {
-    @apply ml-3 px-3 py-1 rounded-lg text-xs font-black;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+  .analysis-badge.low {
+    @apply bg-gradient-to-r from-red-500/20 to-pink-500/20 text-red-300 border border-red-500/30;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
   }
 
   /* =============================================================================
@@ -474,49 +409,6 @@
     @apply translate-x-full;
   }
 
-  /* =============================================================================
-     HEADER IMPROVEMENTS
-     ============================================================================= */
-
-  .dashboard-header {
-    @apply glass-card sticky top-0 z-40 mb-8;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-  }
-
-  .header-content {
-    @apply px-8 py-6 flex items-center justify-between;
-  }
-
-  .brand-section {
-    @apply flex items-center space-x-6;
-  }
-
-  .brand-icon {
-    @apply w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl transition-transform duration-300 hover:scale-110;
-    background: linear-gradient(135deg, 
-      rgba(255, 100, 50, 0.8) 0%, 
-      rgba(255, 150, 100, 0.9) 100%
-    );
-    border: 1px solid rgba(255, 100, 50, 0.3);
-    box-shadow: 
-      0 12px 30px rgba(255, 100, 50, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-
-  .brand-text h1 {
-    @apply text-4xl font-black mb-2 tracking-tight text-white;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .brand-text p {
-    @apply text-white/70 font-semibold text-lg;
-  }
-
-  .header-actions {
-    @apply flex items-center space-x-4;
-  }
-
   .btn-primary {
     @apply premium-action-btn;
   }
@@ -533,209 +425,12 @@
 
   .btn-secondary:hover {
     @apply scale-105 -translate-y-1;
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.25);
-    box-shadow: 
-      0 12px 30px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
   }
 
   /* =============================================================================
-     STATUS INDICATORS
-     ============================================================================= */
-
-  .status-indicators {
-    @apply flex items-center space-x-3;
-  }
-
-  .status-dot {
-    @apply w-4 h-4 rounded-full transition-all duration-300 hover:scale-150;
-  }
-
-  .status-dot.online {
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    box-shadow: 
-      0 4px 12px rgba(16, 185, 129, 0.5),
-      0 0 20px rgba(16, 185, 129, 0.3);
-    animation: pulse 2s infinite;
-  }
-
-  .status-dot.processing {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    box-shadow: 
-      0 4px 12px rgba(245, 158, 11, 0.5),
-      0 0 20px rgba(245, 158, 11, 0.3);
-    animation: pulse 2s infinite;
-  }
-
-  .status-dot.standby {
-    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
-  }
-
-  /* =============================================================================
-     ANIMATIONS & EFFECTS
-     ============================================================================= */
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(1.1); }
-  }
-
-  .fade-in-up {
-    animation: fadeInUp 0.8s ease-out forwards;
-  }
-
-  .slide-in-left {
-    animation: slideInLeft 1s ease-out forwards;
-  }
-
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes slideInLeft {
-    from { opacity: 0; transform: translateX(-50px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-
-  /* Stagger animation delays */
-  .premium-action-card:nth-child(1) { animation-delay: 0.1s; }
-  .premium-action-card:nth-child(2) { animation-delay: 0.2s; }
-  .premium-action-card:nth-child(3) { animation-delay: 0.3s; }
-  .premium-action-card:nth-child(4) { animation-delay: 0.4s; }
-
-  .premium-stat-card:nth-child(1) { animation-delay: 0.2s; }
-  .premium-stat-card:nth-child(2) { animation-delay: 0.4s; }
-  .premium-stat-card:nth-child(3) { animation-delay: 0.6s; }
-
-  /* =============================================================================
-     RESPONSIVE DESIGN
-     ============================================================================= */
-
-  @media (max-width: 1024px) {
-    .dashboard-content {
-      @apply ml-0 p-6;
-    }
-
-    .actions-grid {
-      @apply grid-cols-1 md:grid-cols-2 gap-6;
-    }
-
-    .dashboard-grid {
-      @apply grid-cols-1 lg:grid-cols-2 gap-6;
-    }
-
-    .hero-glass-container {
-      @apply p-6;
-    }
-  }
-
-  @media (max-width: 640px) {
-    .dashboard-content {
-      @apply p-4;
-    }
-
-    .actions-grid {
-      @apply grid-cols-1 gap-4;
-    }
-
-    .dashboard-grid {
-      @apply grid-cols-1 gap-4;
-    }
-
-    .premium-action-card,
-    .premium-stat-card {
-      @apply p-6;
-    }
-
-    .hero-glass-container {
-      @apply p-4;
-    }
-
-    .section-header {
-      @apply flex-col items-start space-y-4 p-6;
-    }
-
-    .filter-controls {
-      @apply flex-col space-y-4 space-x-0 w-full;
-    }
-  }
-
-  /* =============================================================================
-     PERFORMANCE OPTIMIZATIONS
-     ============================================================================= */
-
-  .reduce-motion * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-
-  /* =============================================================================
-     EMPTY STATE STYLING
-     ============================================================================= */
-
-  .empty-state-container {
-    @apply text-center py-20;
-  }
-
-  .empty-state-icon {
-    @apply w-32 h-32 mx-auto mb-8 rounded-3xl flex items-center justify-center;
-    background: linear-gradient(135deg, 
-      rgba(255, 100, 50, 0.1) 0%, 
-      rgba(100, 200, 255, 0.1) 100%
-    );
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 
-      0 20px 40px rgba(0, 0, 0, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-.empty-state-title {
-    @apply text-3xl font-black text-white mb-6;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .empty-state-subtitle {
-    @apply text-white/60 text-lg mb-10 leading-relaxed max-w-md mx-auto;
-  }
-
-  .empty-state-actions {
-    @apply flex flex-col sm:flex-row gap-6 justify-center;
-  }
-
-  /* =============================================================================
-     LOADING STATES - PREMIUM DESIGN
-     ============================================================================= */
-
-  .loading-overlay {
-    @apply fixed inset-0 z-50 flex items-center justify-center;
-    background: rgba(15, 15, 35, 0.95);
-    backdrop-filter: blur(20px);
-  }
-
-  .loading-content {
-    @apply glass-card p-12 flex flex-col items-center space-y-6 max-w-md;
-  }
-
-  .premium-spinner {
-    @apply w-16 h-16 border-4 border-white/20 border-t-orange-400 rounded-full animate-spin;
-    box-shadow: 0 0 20px rgba(255, 100, 50, 0.3);
-  }
-
-  .loading-title {
-    @apply text-2xl font-bold text-white text-center;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .loading-subtitle {
-    @apply text-white/60 text-center;
-  }
-
-  /* =============================================================================
-     BULK ACTIONS TOOLBAR - PREMIUM FLOATING DESIGN
+     BULK ACTIONS TOOLBAR
      ============================================================================= */
 
   .bulk-actions-toolbar {
@@ -782,6 +477,235 @@
   }
 
   /* =============================================================================
+     ERROR STATE FIXES
+     ============================================================================= */
+
+  .error-state {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+    background: rgba(15, 15, 35, 0.95);
+    backdrop-filter: blur(20px);
+  }
+
+  .error-content {
+    @apply glass-card p-12 text-center max-w-md;
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .error-content h2 {
+    @apply text-2xl font-bold text-white mb-4;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .error-content p {
+    @apply text-white/70 mb-6 leading-relaxed;
+  }
+
+  .error-actions {
+    @apply flex gap-4 justify-center flex-wrap;
+  }
+
+  .error-actions .btn {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200;
+  }
+
+  .error-actions .btn-primary {
+    @apply bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white;
+    box-shadow: 0 4px 12px rgba(255, 100, 50, 0.3);
+  }
+
+  .error-actions .btn-secondary {
+    @apply bg-white/10 hover:bg-white/20 text-white border border-white/20;
+  }
+
+  /* =============================================================================
+     RESPONSIVE DESIGN - MOBILE FIRST
+     ============================================================================= */
+
+  @media (max-width: 1024px) {
+    .dashboard-content {
+      @apply ml-0 p-6;
+    }
+    
+    .actions-grid {
+      @apply grid-cols-2 gap-6;
+    }
+    
+    .dashboard-grid {
+      @apply grid-cols-2 gap-6;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .dashboard-content {
+      @apply p-4;
+    }
+    
+    .actions-grid {
+      @apply grid-cols-1 gap-4;
+    }
+    
+    .dashboard-grid {
+      @apply grid-cols-1 gap-4;
+    }
+    
+    .hero-glass-container {
+      @apply p-6;
+    }
+    
+    .premium-action-card,
+    .premium-stat-card {
+      @apply p-6;
+    }
+    
+    .leads-table-container {
+      @apply mx-2 overflow-x-auto;
+    }
+    
+    .leads-table {
+      @apply min-w-full text-sm;
+    }
+    
+    .table-header-cell {
+      @apply px-3 py-3 text-xs;
+    }
+    
+    .leads-table tbody td {
+      @apply px-3 py-3 text-xs;
+    }
+
+    .section-header {
+      @apply flex-col items-start space-y-4 p-6;
+    }
+
+    .filter-controls {
+      @apply flex-col space-y-4 space-x-0 w-full;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .dashboard-content {
+      @apply p-3;
+    }
+    
+    .glass-card {
+      @apply rounded-xl;
+    }
+    
+    .premium-action-card,
+    .premium-stat-card {
+      @apply p-4 rounded-xl;
+    }
+    
+    .stat-value {
+      @apply text-3xl;
+    }
+    
+    .action-title {
+      @apply text-lg;
+    }
+    
+    .section-title {
+      @apply text-xl;
+    }
+    
+    .bulk-actions-toolbar {
+      @apply left-2 right-2 px-4 py-3;
+    }
+    
+    .leads-table-container {
+      @apply -mx-3;
+      border-radius: 0;
+    }
+    
+    .table-header-cell,
+    .leads-table tbody td {
+      @apply px-2 py-2 text-xs;
+    }
+
+    .bulk-toolbar-content {
+      @apply flex-col space-x-0 space-y-3;
+    }
+  }
+
+  /* =============================================================================
+     MOBILE SIDEBAR FIXES
+     ============================================================================= */
+
+  .sidebar-overlay {
+    @apply fixed inset-0 bg-black/50 z-30 lg:hidden;
+    backdrop-filter: blur(4px);
+  }
+
+  @media (max-width: 1024px) {
+    .dashboard-sidebar {
+      @apply transform -translate-x-full lg:translate-x-0 fixed lg:relative z-40;
+    }
+    
+    .dashboard-sidebar.mobile-open {
+      @apply translate-x-0;
+    }
+  }
+
+  /* =============================================================================
+     ACCESSIBILITY & REDUCED MOTION
+     ============================================================================= */
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .dashboard-main::before {
+      animation: none;
+    }
+  }
+
+  @media (prefers-contrast: high) {
+    .glass-card {
+      @apply border-2 border-white;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .premium-action-card,
+    .premium-stat-card {
+      @apply border-2 border-white/50;
+    }
+  }
+
+  /* =============================================================================
+     LOADING STATES
+     ============================================================================= */
+
+  .loading-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center;
+    background: rgba(15, 15, 35, 0.95);
+    backdrop-filter: blur(20px);
+  }
+
+  .loading-content {
+    @apply glass-card p-12 flex flex-col items-center space-y-6 max-w-md;
+  }
+
+  .premium-spinner {
+    @apply w-16 h-16 border-4 border-white/20 border-t-orange-400 rounded-full animate-spin;
+    box-shadow: 0 0 20px rgba(255, 100, 50, 0.3);
+  }
+
+  .loading-title {
+    @apply text-2xl font-bold text-white text-center;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  .loading-subtitle {
+    @apply text-white/60 text-center;
+  }
+
+  /* =============================================================================
      CUSTOM FORM ELEMENTS
      ============================================================================= */
 
@@ -807,485 +731,5 @@
     box-shadow: 
       0 0 0 4px rgba(255, 100, 50, 0.3),
       inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  }
-
-  /* =============================================================================
-     MICRO-INTERACTIONS AND HOVER EFFECTS
-     ============================================================================= */
-
-  .interactive-element {
-    @apply transition-all duration-300 ease-out;
-    transform-style: preserve-3d;
-  }
-
-  .interactive-element:hover {
-    @apply scale-105;
-    transform: translateY(-2px) scale(1.05);
-  }
-
-  .interactive-element:active {
-    @apply scale-95;
-    transform: translateY(1px) scale(0.95);
-  }
-
-  /* Glow effect for important elements */
-  .glow-orange {
-    box-shadow: 0 0 20px rgba(255, 100, 50, 0.3);
-  }
-
-  .glow-blue {
-    box-shadow: 0 0 20px rgba(100, 200, 255, 0.3);
-  }
-
-  .glow-green {
-    box-shadow: 0 0 20px rgba(50, 255, 150, 0.3);
-  }
-
-  /* =============================================================================
-     ADVANCED TYPOGRAPHY
-     ============================================================================= */
-
-  .premium-heading {
-    @apply font-black tracking-tight;
-    background: linear-gradient(135deg, 
-      rgba(255, 255, 255, 1) 0%, 
-      rgba(255, 255, 255, 0.8) 100%
-    );
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  }
-
-  .premium-text {
-    @apply text-white/80 leading-relaxed;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  }
-
-  .accent-text {
-    @apply font-bold;
-    background: linear-gradient(135deg, 
-      rgba(255, 100, 50, 1) 0%, 
-      rgba(255, 150, 100, 1) 100%
-    );
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-
-  /* =============================================================================
-     SCROLLBAR STYLING
-     ============================================================================= */
-
-  ::-webkit-scrollbar {
-    @apply w-3 h-3;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, 
-      rgba(255, 100, 50, 0.6) 0%, 
-      rgba(255, 150, 100, 0.8) 100%
-    );
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, 
-      rgba(255, 100, 50, 0.8) 0%, 
-      rgba(255, 150, 100, 1) 100%
-    );
-  }
-
-  /* Firefox scrollbars */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255, 100, 50, 0.6) rgba(255, 255, 255, 0.05);
-  }
-
-  /* =============================================================================
-     ADVANCED GRID LAYOUTS
-     ============================================================================= */
-
-  .masonry-grid {
-    @apply grid gap-6;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    grid-auto-rows: min-content;
-  }
-
-  .grid-item {
-    @apply break-inside-avoid;
-  }
-
-  /* =============================================================================
-     ACCESSIBILITY IMPROVEMENTS
-     ============================================================================= */
-
-  .sr-only {
-    @apply absolute w-px h-px p-0 -m-px overflow-hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
-
-  .focus-ring {
-    @apply focus:outline-none focus:ring-4 focus:ring-orange-400/30;
-  }
-
-  .skip-link {
-    @apply absolute top-0 left-0 bg-orange-600 text-white px-4 py-2 rounded-br-lg z-50 transform -translate-y-full focus:translate-y-0 transition-transform duration-200;
-  }
-
-  /* =============================================================================
-     HIGH CONTRAST MODE SUPPORT
-     ============================================================================= */
-
-  @media (prefers-contrast: high) {
-    .glass-card {
-      @apply border-2 border-white;
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .premium-action-card {
-      @apply border-2 border-white/50;
-    }
-
-    .premium-stat-card {
-      @apply border-2 border-white/50;
-    }
-  }
-
-  /* =============================================================================
-     REDUCED MOTION SUPPORT
-     ============================================================================= */
-
-  @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-
-    .dashboard-main::before {
-      animation: none;
-    }
-
-    .floating-orbs {
-      animation: none;
-    }
-  }
-
-  /* =============================================================================
-     PRINT STYLES
-     ============================================================================= */
-
-  @media print {
-    .dashboard-main {
-      background: white !important;
-    }
-
-    .glass-card {
-      background: white !important;
-      border: 1px solid #ddd !important;
-      box-shadow: none !important;
-    }
-
-    .premium-action-card,
-    .premium-stat-card {
-      background: white !important;
-      border: 1px solid #ddd !important;
-      box-shadow: none !important;
-    }
-
-    .text-white {
-      color: black !important;
-    }
-
-    .premium-heading,
-    .accent-text {
-      -webkit-text-fill-color: black !important;
-      color: black !important;
-    }
-  }
-
-  /* =============================================================================
-     DARK MODE ENHANCEMENTS (Already dark, but for completeness)
-     ============================================================================= */
-
-  @media (prefers-color-scheme: dark) {
-    .dashboard-main {
-      /* Already optimized for dark mode */
-    }
-  }
-
-  /* =============================================================================
-     MOBILE-SPECIFIC OPTIMIZATIONS
-     ============================================================================= */
-
-  @media (max-width: 480px) {
-    .dashboard-content {
-      @apply p-3;
-    }
-
-    .glass-card {
-      @apply rounded-2xl;
-    }
-
-    .premium-action-card {
-      @apply p-4 rounded-xl;
-    }
-
-    .action-icon-wrapper {
-      @apply w-12 h-12 mb-4;
-    }
-
-    .action-title {
-      @apply text-lg;
-    }
-
-    .premium-stat-card {
-      @apply p-4;
-    }
-
-    .stat-value {
-      @apply text-3xl;
-    }
-
-    .section-header {
-      @apply p-4;
-    }
-
-    .section-title {
-      @apply text-2xl;
-    }
-
-    .leads-table-container {
-      @apply mx-4 rounded-xl;
-    }
-
-    .table-header-cell,
-    .leads-table tbody td {
-      @apply px-4 py-4 text-xs;
-    }
-
-    .premium-avatar {
-      @apply w-10 h-10;
-    }
-
-    .bulk-actions-toolbar {
-      @apply left-4 right-4 transform-none translate-x-0 px-4 py-3;
-    }
-
-    .bulk-toolbar-content {
-      @apply flex-col space-x-0 space-y-3;
-    }
-  }
-
-  /* =============================================================================
-     EXPERIMENTAL FEATURES (Optional)
-     ============================================================================= */
-
-  /* CSS Grid Subgrid support (when available) */
-  @supports (grid-template-rows: subgrid) {
-    .subgrid-container {
-      display: grid;
-      grid-template-rows: subgrid;
-    }
-  }
-
-  /* Container queries support (when available) */
-  @supports (container-type: inline-size) {
-    .container-responsive {
-      container-type: inline-size;
-    }
-
-    @container (min-width: 400px) {
-      .container-responsive .premium-action-card {
-        @apply p-8;
-      }
-    }
-  }
-
-  /* CSS backdrop-filter fallback */
-  @supports not (backdrop-filter: blur(20px)) {
-    .glass-card {
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    .premium-action-card {
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    .bulk-actions-toolbar {
-      background: rgba(255, 255, 255, 0.15);
-    }
-  }
-
-  /* =============================================================================
-     PERFORMANCE OPTIMIZATIONS
-     ============================================================================= */
-
-  /* GPU acceleration for smooth animations */
-  .gpu-accelerated {
-    transform: translateZ(0);
-    will-change: transform;
-  }
-
-  /* Prevent layout thrashing */
-  .no-layout-shift {
-    contain: layout style paint;
-  }
-
-  /* Optimize repaints */
-  .optimized-repaint {
-    contain: paint;
-  }
-
-  /* =============================================================================
-     UTILITY CLASSES
-     ============================================================================= */
-
-  .glass-light {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .glass-medium {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-  }
-
-  .glass-heavy {
-    background: rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(25px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-  }
-
-  .gradient-orange {
-    background: linear-gradient(135deg, 
-      rgba(255, 100, 50, 0.8) 0%, 
-      rgba(255, 150, 100, 0.9) 100%
-    );
-  }
-
-  .gradient-blue {
-    background: linear-gradient(135deg, 
-      rgba(100, 200, 255, 0.8) 0%, 
-      rgba(150, 220, 255, 0.9) 100%
-    );
-  }
-
-  .gradient-green {
-    background: linear-gradient(135deg, 
-      rgba(50, 255, 150, 0.8) 0%, 
-      rgba(100, 255, 200, 0.9) 100%
-    );
-  }
-
-  .gradient-purple {
-    background: linear-gradient(135deg, 
-      rgba(150, 100, 255, 0.8) 0%, 
-      rgba(200, 150, 255, 0.9) 100%
-    );
-  }
-
-  .text-shadow-sm {
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  }
-
-  .text-shadow-md {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  .text-shadow-lg {
-    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-  }
-
-  .border-glow {
-    border: 1px solid rgba(255, 100, 50, 0.3);
-    box-shadow: 0 0 20px rgba(255, 100, 50, 0.2);
-  }
-
-  .hover-lift {
-    @apply transition-all duration-300;
-  }
-
-  .hover-lift:hover {
-    @apply -translate-y-2 scale-105;
-  }
-
-  /* =============================================================================
-     ANIMATION KEYFRAMES
-     ============================================================================= */
-
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-
-  @keyframes fadeInScale {
-    0% { 
-      opacity: 0; 
-      transform: scale(0.9) translateY(20px); 
-    }
-    100% { 
-      opacity: 1; 
-      transform: scale(1) translateY(0); 
-    }
-  }
-
-  @keyframes slideInFromBottom {
-    0% { 
-      opacity: 0; 
-      transform: translateY(50px); 
-    }
-    100% { 
-      opacity: 1; 
-      transform: translateY(0); 
-    }
-  }
-
-  @keyframes bounceIn {
-    0% { 
-      opacity: 0; 
-      transform: scale(0.3); 
-    }
-    50% { 
-      opacity: 1; 
-      transform: scale(1.05); 
-    }
-    70% { 
-      transform: scale(0.9); 
-    }
-    100% { 
-      opacity: 1; 
-      transform: scale(1); 
-    }
-  }
-
-  .animate-shimmer {
-    animation: shimmer 2s ease-in-out infinite;
-  }
-
-  .animate-fade-in-scale {
-    animation: fadeInScale 0.6s ease-out forwards;
-  }
-
-  .animate-slide-in-bottom {
-    animation: slideInFromBottom 0.8s ease-out forwards;
-  }
-
-  .animate-bounce-in {
-    animation: bounceIn 0.6s ease-out forwards;
   }
 }
