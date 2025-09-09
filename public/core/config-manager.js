@@ -184,13 +184,13 @@ const required = ['supabaseUrl', 'supabaseAnonKey'];
         return config[key];
     }
     
-    async getSupabaseConfig() {
-        const config = await this.getConfig();
-        return {
-  url: config.supabaseUrl,
-  key: config.supabaseAnonKey  // Correct key name
-};
-    }
+async getSupabaseConfig() {
+    const config = await this.getConfig();
+    return {
+        url: config.supabaseUrl,
+        key: config.supabaseAnonKey || config.supabaseKey  // Support both key names
+    };
+}
     
     async getWorkerUrl() {
         const config = await this.getConfig();
