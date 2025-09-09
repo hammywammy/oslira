@@ -36,9 +36,9 @@ class DashboardApp {
             console.log('🔧 [DashboardApp] Pre-resolving async dependencies...');
             await this.preResolveAsyncDependencies();
             
-// Initialize all modules
-console.log('🔄 [DashboardApp] Initializing modules...');
-await this.container.initialize();
+            // Initialize all modules
+            console.log('🔄 [DashboardApp] Initializing modules...');
+            await this.container.initialize();
             
             // Setup global event handlers
             this.setupGlobalEventHandlers();
@@ -55,7 +55,7 @@ await this.container.initialize();
             console.log(`✅ [DashboardApp] Initialization completed in ${initTime}ms`);
             
             // Emit initialization complete event
-            this.container.get('eventBus').emit(DASHBOARD_EVENTS.INIT_COMPLETE, {
+            this.container.get('eventBus').emit(window.DASHBOARD_EVENTS.INIT_COMPLETE, {
                 initTime,
                 moduleCount: this.container.list().length
             });
@@ -87,18 +87,18 @@ await this.container.initialize();
         container.registerFactory('supabase', async () => {
             // Wait for SimpleAuth to initialize its Supabase client
             let attempts = 0;
-while (attempts < 50) {
-    if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
-        const client = window.SimpleAuth.supabase();
-        if (client?.from) {
-            console.log('✅ [DependencyContainer] Got initialized Supabase client from SimpleAuth');
-            return window.SimpleAuth.supabase();
-        }
-    }
-    await new Promise(resolve => setTimeout(resolve, 100));
-    attempts++;
-}
-throw new Error('SimpleAuth Supabase client not ready');
+            while (attempts < 50) {
+                if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
+                    const client = window.SimpleAuth.supabase();
+                    if (client?.from) {
+                        console.log('✅ [DependencyContainer] Got initialized Supabase client from SimpleAuth');
+                        return window.SimpleAuth.supabase();
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            throw new Error('SimpleAuth Supabase client not ready');
         }, []);
 
         // Register OsliraApp as a getter that always checks the global
@@ -158,47 +158,48 @@ throw new Error('SimpleAuth Supabase client not ready');
     // ASYNC DEPENDENCY RESOLUTION
     // ===============================================================================
     
-async preResolveAsyncDependencies() {
-    try {
-        // Pre-resolve the Supabase client before any modules try to use it
-        console.log('🔄 [DashboardApp] Resolving Supabase dependency...');
-        
-        // Wait for SimpleAuth to initialize its Supabase client
-        let attempts = 0;
-        let supabase = null;
-        
-       while (attempts < 50) {
-    if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
-        const client = window.SimpleAuth.supabase();
-        if (client?.from) {
-                supabase = window.SimpleAuth.supabase();
-                console.log('✅ [DashboardApp] Got initialized Supabase client from SimpleAuth');
-                break;
+    async preResolveAsyncDependencies() {
+        try {
+            // Pre-resolve the Supabase client before any modules try to use it
+            console.log('🔄 [DashboardApp] Resolving Supabase dependency...');
+            
+            // Wait for SimpleAuth to initialize its Supabase client
+            let attempts = 0;
+            let supabase = null;
+            
+            while (attempts < 50) {
+                if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
+                    const client = window.SimpleAuth.supabase();
+                    if (client?.from) {
+                        supabase = window.SimpleAuth.supabase();
+                        console.log('✅ [DashboardApp] Got initialized Supabase client from SimpleAuth');
+                        break;
+                    }
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
+            
+            if (!supabase) {
+                throw new Error('SimpleAuth Supabase client not ready after timeout');
+            }
+            
+            // Replace the async factory with the resolved instance
+            this.container.registerSingleton('supabase', supabase);
+            
+            console.log('✅ [DashboardApp] Supabase dependency resolved and cached');
+            
+        } catch (error) {
+            console.error('❌ [DashboardApp] Failed to resolve async dependencies:', error);
+            throw error;
         }
-        
-        if (!supabase) {
-            throw new Error('SimpleAuth Supabase client not ready after timeout');
-        }
-        
-        // Replace the async factory with the resolved instance
-        this.container.registerSingleton('supabase', supabase);
-        
-        console.log('✅ [DashboardApp] Supabase dependency resolved and cached');
-        
-    } catch (error) {
-        console.error('❌ [DashboardApp] Failed to resolve async dependencies:', error);
-        throw error;
     }
-}
     
     // ===============================================================================
     // INITIALIZATION HELPERS
     // ===============================================================================
     
-async setupInitialData() {
+    async setupInitialData() {
         try {
             console.log('📊 [DashboardApp] Setting up initial data...');
             
@@ -295,24 +296,24 @@ async setupInitialData() {
         const eventBus = this.container.get('eventBus');
         
         // Data refresh events
-        eventBus.on(DASHBOARD_EVENTS.DATA_REFRESH, async (data) => {
+        eventBus.on(window.DASHBOARD_EVENTS.DATA_REFRESH, async (data) => {
             console.log('🔄 [DashboardApp] Data refresh requested:', data.reason);
             try {
                 const leadManager = this.container.get('leadManager');
                 await leadManager.loadDashboardData();
                 
-                eventBus.emit(DASHBOARD_EVENTS.DATA_REFRESH, {
+                eventBus.emit(window.DASHBOARD_EVENTS.DATA_REFRESH, {
                     reason: data.reason,
                     timestamp: Date.now()
                 });
             } catch (error) {
                 console.error('❌ [DashboardApp] Data refresh failed:', error);
-                eventBus.emit(DASHBOARD_EVENTS.DATA_ERROR, error);
+                eventBus.emit(window.DASHBOARD_EVENTS.DATA_ERROR, error);
             }
         });
         
         // Analysis completion events
-        eventBus.on(DASHBOARD_EVENTS.ANALYSIS_COMPLETED, async (data) => {
+        eventBus.on(window.DASHBOARD_EVENTS.ANALYSIS_COMPLETED, async (data) => {
             console.log('🎯 [DashboardApp] Analysis completed:', data.username);
             
             // Refresh dashboard data
@@ -325,7 +326,7 @@ async setupInitialData() {
         });
         
         // Business change events
-        eventBus.on(DASHBOARD_EVENTS.BUSINESS_CHANGED, async (data) => {
+        eventBus.on(window.DASHBOARD_EVENTS.BUSINESS_CHANGED, async (data) => {
             console.log('🏢 [DashboardApp] Business changed:', data.businessId);
             
             // Reload all business-dependent data
@@ -337,7 +338,7 @@ async setupInitialData() {
         });
         
         // Global error handler
-        eventBus.on(DASHBOARD_EVENTS.ERROR, (data) => {
+        eventBus.on(window.DASHBOARD_EVENTS.ERROR, (data) => {
             console.log('🚨 [DashboardApp] Global error:', data);
             this.handleGlobalError(data);
         });
@@ -360,7 +361,7 @@ async setupInitialData() {
             processBulkUpload: () => this.processBulkUpload(),
             validateBulkForm: () => this.validateBulkForm(),
 
-// Lead management
+            // Lead management
             deleteLead: (leadId) => this.deleteLead(leadId),
             selectLead: (checkbox) => this.selectLead(checkbox),
             toggleAllLeads: (masterCheckbox) => this.toggleAllLeads(masterCheckbox),
@@ -372,7 +373,7 @@ async setupInitialData() {
                 const leadManager = this.container.get('leadManager');
                 return leadManager.loadDashboardData();
             },
-toggleActionMenu: (leadId, button) => {
+            toggleActionMenu: (leadId, button) => {
                 const menu = button.nextElementSibling;
                 if (menu) {
                     const isVisible = menu.classList.contains('opacity-100');
@@ -404,13 +405,13 @@ toggleActionMenu: (leadId, button) => {
                     // Show bulk actions
                     toolbar.classList.remove('hidden');
                 }
-},
+            },
             openLeadDetails: (leadId) => {
                 console.log(`🔍 [Dashboard] Opening lead details for: ${leadId}`);
                 // Future: Open lead details modal/page
                 const modalManager = this.container.get('modalManager');
                 return modalManager.showLeadDetailsModal(leadId);
-},
+            },
             // Pagination functionality
             changePageSize: (size) => {
                 const stateManager = this.container.get('stateManager');
@@ -434,7 +435,7 @@ toggleActionMenu: (leadId, button) => {
                     stateManager.setState('currentPage', currentPage + 1);
                     this.updatePagination();
                 }
-},
+            },
             // Missing action functions from the HTML
             copyUsername: (username) => {
                 navigator.clipboard.writeText(username).then(() => {
@@ -490,7 +491,7 @@ toggleActionMenu: (leadId, button) => {
             editMessage: (leadId) => this.editMessage(leadId),
             saveEditedMessage: (leadId) => this.saveEditedMessage(leadId),
             
-// Search and filtering - ENHANCED with real functionality
+            // Search and filtering - ENHANCED with real functionality
             searchLeads: (term) => {
                 const stateManager = this.container.get('stateManager');
                 const allLeads = stateManager.getState('leads') || [];
@@ -508,7 +509,7 @@ toggleActionMenu: (leadId, button) => {
                     return username.includes(searchTerm) || fullName.includes(searchTerm);
                 });
                 
-stateManager.setState('filteredLeads', filtered);
+                stateManager.setState('filteredLeads', filtered);
                 
                 // Update clear button state
                 this.updateClearButtonState();
@@ -645,7 +646,7 @@ stateManager.setState('filteredLeads', filtered);
         if (this.container) {
             try {
                 const eventBus = this.container.get('eventBus');
-                eventBus.emit(DASHBOARD_EVENTS.ERROR, errorData);
+                eventBus.emit(window.DASHBOARD_EVENTS.ERROR, errorData);
             } catch (e) {
                 console.error('Failed to emit error event:', e);
             }
@@ -699,31 +700,31 @@ stateManager.setState('filteredLeads', filtered);
     // PUBLIC METHODS - Legacy compatibility methods
     // ===============================================================================
     
-async showAnalysisModal(username) {
-    console.log('🔍 [DashboardApp] showAnalysisModal called with:', username);
-    try {
-        const modalManager = this.container.get('modalManager');
-        if (!modalManager) {
-            console.error('❌ [DashboardApp] modalManager not found in container');
-            // Fallback: open modal directly
+    async showAnalysisModal(username) {
+        console.log('🔍 [DashboardApp] showAnalysisModal called with:', username);
+        try {
+            const modalManager = this.container.get('modalManager');
+            if (!modalManager) {
+                console.error('❌ [DashboardApp] modalManager not found in container');
+                // Fallback: open modal directly
+                const modal = document.getElementById('analysisModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    console.log('✅ [DashboardApp] Opened modal via fallback');
+                }
+                return;
+            }
+            return modalManager.showAnalysisModal(username);
+        } catch (error) {
+            console.error('❌ [DashboardApp] showAnalysisModal failed:', error);
+            // Emergency fallback
             const modal = document.getElementById('analysisModal');
             if (modal) {
                 modal.style.display = 'flex';
-                console.log('✅ [DashboardApp] Opened modal via fallback');
+                console.log('✅ [DashboardApp] Emergency fallback modal opened');
             }
-            return;
-        }
-        return modalManager.showAnalysisModal(username);
-    } catch (error) {
-        console.error('❌ [DashboardApp] showAnalysisModal failed:', error);
-        // Emergency fallback
-        const modal = document.getElementById('analysisModal');
-        if (modal) {
-            modal.style.display = 'flex';
-            console.log('✅ [DashboardApp] Emergency fallback modal opened');
         }
     }
-}
     
     async showBulkModal() {
         const modalManager = this.container.get('modalManager');
@@ -817,8 +818,8 @@ async showAnalysisModal(username) {
         const statsCalculator = this.container.get('statsCalculator');
         return statsCalculator.refreshStats();
     }
-    
-debugDashboard() {
+
+    debugDashboard() {
         const stateManager = this.container.get('stateManager');
         return stateManager.debugState();
     }
@@ -889,10 +890,10 @@ debugDashboard() {
         console.log('✅ [DashboardApp] Cleanup completed');
     }
 }
+
 // Export for use in other modules - restore original pattern
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { DashboardApp, DASHBOARD_EVENTS };
+    module.exports = { DashboardApp };
 } else {
     window.DashboardApp = DashboardApp;
-    window.DASHBOARD_EVENTS = DASHBOARD_EVENTS || {};
 }
