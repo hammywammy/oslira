@@ -13,12 +13,13 @@ class ScriptLoader {
         this.failedScripts = new Set();
         this.loadingPromises = new Map();
         
-        // Core script loading order (must load in sequence)
-        this.coreScripts = [
-            'env-manager',
-            'config-manager', 
-            'auth-manager'
-        ];
+// Core script loading order (must load in sequence)
+this.coreScripts = [
+    'env-manager',
+    'supabase',
+    'config-manager', 
+    'auth-manager'
+];
         
         // Page-specific script configurations
         this.pageConfigs = {
@@ -174,39 +175,47 @@ async initialize() {
     // CORE SCRIPT LOADING
     // =============================================================================
     
-    async loadCoreScripts() {
-        console.log('🔧 [ScriptLoader] Loading core scripts...');
+async loadCoreScripts() {
+    console.log('🔧 [ScriptLoader] Loading core scripts...');
+    
+    for (const scriptName of this.coreScripts) {
+        let scriptPath;
         
-        for (const scriptName of this.coreScripts) {
-            const scriptPath = `/core/${scriptName}.js`;
+        // Handle external CDN scripts
+        if (scriptName === 'supabase') {
+            scriptPath = 'https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.7/supabase.min.js';
+        } else {
+            scriptPath = `/core/${scriptName}.js`;
+        }
+        
+        try {
+            await this.loadScript(scriptName, scriptPath);
             
-            try {
-                await this.loadScript(scriptName, scriptPath);
-                
-                // Verify the script exposed its global object
-                const globalName = this.getGlobalName(scriptName);
-                if (globalName && !window[globalName]) {
-                    throw new Error(`Critical script ${scriptName} failed to expose global ${globalName}`);
-                }
-                
-                // Give each core script time to initialize
-                await this.wait(100);
-                
-            } catch (error) {
-                console.error(`❌ [ScriptLoader] Core script ${scriptName} failed:`, error);
-                throw error;
+            // Verify the script exposed its global object
+            const globalName = this.getGlobalName(scriptName);
+            if (globalName && !window[globalName]) {
+                throw new Error(`Critical script ${scriptName} failed to expose global ${globalName}`);
             }
+            
+            // Give each core script time to initialize
+            await this.wait(100);
+            
+        } catch (error) {
+            console.error(`❌ [ScriptLoader] Core script ${scriptName} failed:`, error);
+            throw error;
         }
     }
+}
     
-    getGlobalName(scriptName) {
-        const globalMap = {
-            'env-manager': 'OsliraEnv',
-            'config-manager': 'OsliraConfig', 
-            'auth-manager': 'OsliraAuth'
-        };
-        return globalMap[scriptName];
-    }
+getGlobalName(scriptName) {
+    const globalMap = {
+        'env-manager': 'OsliraEnv',
+        'supabase': 'supabase',
+        'config-manager': 'OsliraConfig', 
+        'auth-manager': 'OsliraAuth'
+    };
+    return globalMap[scriptName];
+}
     
     // =============================================================================
     // PAGE SCRIPT LOADING
