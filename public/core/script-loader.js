@@ -18,7 +18,8 @@ this.coreScripts = [
     'env-manager',
     'supabase',
     'config-manager', 
-    'auth-manager'
+    'auth-manager',
+    'simple-app'
 ];
         
         // Page-specific script configurations
