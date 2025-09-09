@@ -313,19 +313,7 @@
     </style>
 </head>
 <body>
-    <header class="header">
-        <nav class="nav-container">
-            <div class="logo">Oslira</div>
-            <div class="nav-links">
-                <a href="/">Home</a>
-                <a href="/about.html">About</a>
-                <a href="/pricing.html">Pricing</a>
-                <a href="/security.html">Security</a>
-                <a href="/help.html">Help</a>
-            </div>
-            <a href="/auth.html" class="cta-button">Get Started</a>
-        </nav>
-    </header>
+<div id="header-container"></div>
 
     <div class="container">
         <h1>Privacy Policy</h1>
@@ -521,7 +509,13 @@
     <script>
         let footerInitialized = false;
         
-        window.addEventListener('oslira:scripts:loaded', async () => {
+window.addEventListener('oslira:scripts:loaded', async () => {
+    // Initialize header first
+    try {
+        await initializeHeader();
+    } catch (error) {
+        console.error('❌ [PageName] Header initialization failed:', error);
+    }
             if (footerInitialized) {
                 console.log('🔄 [Privacy] Footer already initialized, skipping...');
                 return;
@@ -536,6 +530,52 @@
                 footerInitialized = false;
             }
         });
+
+        async function initializeHeader() {
+    try {
+        if (document.querySelector('.home-nav')) {
+            console.log('🔄 [PageName] Header already exists, skipping initialization...');
+            return;
+        }
+        
+        console.log('🧭 [PageName] Starting header initialization...');
+        
+        let container = document.getElementById('header-container');
+        if (!container) {
+            console.log('🔧 [PageName] Creating header-container element');
+            container = document.createElement('div');
+            container.id = 'header-container';
+            document.body.insertBefore(container, document.body.firstChild);
+        }
+        
+        // Wait for HeaderManager to be available
+        console.log('🔍 [PageName] Waiting for HeaderManager...');
+        for (let i = 0; i < 50; i++) {
+            if (window.HeaderManager) {
+                console.log('✅ [PageName] HeaderManager found');
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!window.HeaderManager) {
+            throw new Error('HeaderManager not available after waiting');
+        }
+        
+        // Initialize header for footer pages
+        console.log('🧭 [PageName] Creating HeaderManager instance...');
+        const headerManager = new window.HeaderManager();
+        
+        console.log('🧭 [PageName] Rendering header...');
+        headerManager.render('header-container', {
+            type: 'footer-pages'
+        });
+        
+        console.log('✅ [PageName] Header initialization complete');
+    } catch (error) {
+        console.error('❌ [PageName] Header initialization failed:', error);
+    }
+}
         
         async function initializeFooter() {
             try {
