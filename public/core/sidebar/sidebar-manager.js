@@ -306,6 +306,62 @@ console.log('✅ [SidebarManager] Sidebar rendered successfully');
         console.log('✅ [SidebarManager] Sidebar toggled to:', this.isCollapsed ? 'collapsed' : 'expanded');
     }
 
+    // Add this method to the SidebarManager class
+createExternalToggle() {
+    console.log('🔧 [SidebarManager] Creating external toggle...');
+    
+    // Remove any existing external toggle
+    const existing = document.getElementById('sidebar-external-toggle');
+    if (existing) {
+        existing.remove();
+    }
+    
+    // Create the toggle button
+    const toggle = document.createElement('button');
+    toggle.id = 'sidebar-external-toggle';
+    toggle.innerHTML = `
+        <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+        </svg>
+    `;
+    
+    // Style as thin vertical bar
+    toggle.style.cssText = `
+        position: fixed !important;
+        top: 50% !important;
+        left: 256px !important;
+        transform: translateY(-50%) !important;
+        width: 1rem !important;
+        height: 3rem !important;
+        background: white !important;
+        border: 1px solid #e5e7eb !important;
+        border-left: none !important;
+        border-radius: 0 0.5rem 0.5rem 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        z-index: 9999 !important;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.1) !important;
+        color: #6b7280 !important;
+        transition: all 0.3s ease !important;
+    `;
+    
+    // Add click handler
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.toggleSidebar();
+    });
+    
+    // Add to body
+    document.body.appendChild(toggle);
+    
+    // Store reference
+    this.externalToggle = toggle;
+    
+    console.log('✅ [SidebarManager] External toggle created');
+}
+
 updateSidebarState() {
     if (!this.sidebar) return;
     
@@ -355,13 +411,13 @@ updateSidebarState() {
         this.mainContent.offsetHeight;
     }
 
-    // Update external toggle position and icon
+// Update external toggle position
 if (this.externalToggle) {
     if (this.isCollapsed) {
-        this.externalToggle.style.left = '72px'; // 64px + 8px
+        this.externalToggle.style.left = '64px';
         this.externalToggle.querySelector('svg').style.transform = 'rotate(180deg)';
     } else {
-        this.externalToggle.style.left = '264px'; // 256px + 8px
+        this.externalToggle.style.left = '256px';
         this.externalToggle.querySelector('svg').style.transform = 'rotate(0deg)';
     }
 }
