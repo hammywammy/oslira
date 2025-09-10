@@ -146,6 +146,35 @@
     box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
 }
 
+/* Logo container base styles */
+.sidebar .sidebar-logo-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.75rem !important;
+  margin-bottom: 1rem !important;
+  justify-content: flex-start !important;
+}
+
+/* Collapsed logo centering */
+.sidebar.collapsed .sidebar-logo-container {
+  justify-content: center !important;
+  gap: 0 !important;
+  width: 100% !important;
+}
+
+/* Fix overflow issues */
+.sidebar.collapsed {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+.sidebar.collapsed .sidebar-container,
+.sidebar.collapsed .sidebar-header,
+.sidebar.collapsed .sidebar-logo-container {
+  max-width: 64px !important;
+  overflow: hidden !important;
+}
+
 /* Collapsed state - move toggle to left edge */
 .sidebar.collapsed + .sidebar-external-toggle {
     left: 72px; /* 64px collapsed sidebar + 8px gap */
