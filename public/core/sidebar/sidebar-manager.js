@@ -205,25 +205,35 @@ class SidebarManager {
                     </div>
                 </nav>
                 
-                <!-- User Section -->
-                <div class="sidebar-user-section">
-                    <!-- Expanded User Info -->
-                    <div class="sidebar-user-expanded">
-                        <div class="sidebar-user-info">
-                            <div class="sidebar-user-header">
-                                <div id="sidebar-email" class="sidebar-user-email">Loading...</div>
-                                <div id="sidebar-plan" class="sidebar-user-plan">Free Plan</div>
-                            </div>
-                            
-                            <div class="sidebar-user-credits">
-                                <div class="sidebar-user-credits-header">
-                                    <div>
-                                        <span class="sidebar-user-credits-label">Credits</span>
-                                        <div id="sidebar-credits" class="sidebar-user-credits-count">--</div>
-                                    </div>
-                                    <div class="sidebar-user-credits-icon">⚡</div>
-                                </div>
-                            </div>
+<!-- User Section -->
+<div class="sidebar-user-section">
+    <!-- Business Selector -->
+    <div class="sidebar-business-section">
+        <div class="sidebar-business-header">
+            <span class="sidebar-business-label">Business</span>
+        </div>
+        <select id="business-select" class="sidebar-business-select">
+            <option value="">Loading...</option>
+        </select>
+    </div>
+    
+    <!-- Expanded User Info -->
+    <div class="sidebar-user-expanded">
+        <div class="sidebar-user-info">
+            <div class="sidebar-user-header">
+                <div id="sidebar-email" class="sidebar-user-email">Loading...</div>
+                <div id="sidebar-plan" class="sidebar-user-plan">Free Plan</div>
+            </div>
+            
+            <div class="sidebar-user-credits">
+                <div class="sidebar-user-credits-header">
+                    <div>
+                        <span class="sidebar-user-credits-label">Credits</span>
+                        <div id="sidebar-credits" class="sidebar-user-credits-count">--</div>
+                    </div>
+                    <div class="sidebar-user-credits-icon">⚡</div>
+                </div>
+            </div>
                             
                             <div class="sidebar-user-actions">
                                 <button onclick="window.handleLogout && window.handleLogout()" 
@@ -249,17 +259,20 @@ class SidebarManager {
     // SIDEBAR FUNCTIONALITY
     // =========================================================================
 
-    initializeSidebar() {
-        console.log('⚙️ [SidebarManager] Initializing sidebar functionality...');
-        
-        // Initialize navigation
-        this.initializeNavigation();
-        
-        // Set initial state
-        this.updateSidebarState();
-        
-        console.log('✅ [SidebarManager] Sidebar functionality initialized');
-    }
+initializeSidebar() {
+    console.log('⚙️ [SidebarManager] Initializing sidebar functionality...');
+    
+    // Initialize navigation
+    this.initializeNavigation();
+    
+    // Initialize business integration
+    this.initializeBusinessIntegration();
+    
+    // Set initial state
+    this.updateSidebarState();
+    
+    console.log('✅ [SidebarManager] Sidebar functionality initialized');
+}
 
     toggleSidebar() {
         console.log('🔄 [SidebarManager] Toggling sidebar, current state:', this.isCollapsed);
@@ -403,6 +416,34 @@ class SidebarManager {
         
         console.log('✅ [SidebarManager] Navigation event listeners attached');
     }
+
+    // =========================================================================
+// BUSINESS INTEGRATION
+// =========================================================================
+
+initializeBusinessIntegration() {
+    console.log('🏢 [SidebarManager] Initializing business integration...');
+    
+    // Wait for business manager to be available
+    const waitForBusinessManager = setInterval(() => {
+        if (window.businessManager || this.businessManager) {
+            clearInterval(waitForBusinessManager);
+            const manager = window.businessManager || this.businessManager;
+            
+            // Trigger initial business selector update
+            manager.updateSidebarBusinessSelector();
+            console.log('✅ [SidebarManager] Business integration initialized');
+        }
+    }, 100);
+    
+    // Clear interval after 5 seconds to prevent infinite polling
+    setTimeout(() => clearInterval(waitForBusinessManager), 5000);
+}
+
+setBusinessManager(businessManager) {
+    this.businessManager = businessManager;
+    this.initializeBusinessIntegration();
+}
 
     // =========================================================================
     // UTILITY METHODS
