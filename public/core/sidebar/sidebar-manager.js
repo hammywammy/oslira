@@ -396,6 +396,7 @@ window.SidebarManager = SidebarManager;
 
 // Create global instance
 window.sidebarManager = new SidebarManager();
+window.SidebarManager = window.sidebarManager;
 
 console.log('✅ [SidebarManager] Module loaded and ready');
 
