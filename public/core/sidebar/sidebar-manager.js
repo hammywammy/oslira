@@ -77,16 +77,22 @@ class SidebarManager {
         }
     }
 
-    async updateUserInfo(user) {
-        try {
-            console.log('👤 [SidebarManager] Updating user info...');
-            this.user = user;
+async updateUserInfo(user) {
+    try {
+        console.log('👤 [SidebarManager] Updating user info...', user?.email);
+        this.user = user;
 
-            // Update email
-            const emailElement = document.getElementById('sidebar-email');
-            if (emailElement && user?.email) {
-                emailElement.textContent = user.email;
-            }
+        // Update email
+        const emailElement = document.getElementById('sidebar-email');
+        if (emailElement && user?.email) {
+            emailElement.textContent = user.email;
+            console.log('✅ [SidebarManager] Email updated:', user.email);
+        } else {
+            console.warn('⚠️ [SidebarManager] Email element or user email missing', {
+                hasElement: !!emailElement,
+                hasEmail: !!user?.email
+            });
+        }
 
             // Update user initial
             const userInitialElement = document.getElementById('sidebar-user-initial');
@@ -268,6 +274,9 @@ initializeSidebar() {
     // Initialize business integration
     this.initializeBusinessIntegration();
     
+    // Initialize user data integration
+    this.initializeUserIntegration();
+    
     // Set initial state
     this.updateSidebarState();
     
@@ -444,6 +453,44 @@ setBusinessManager(businessManager) {
     this.businessManager = businessManager;
     this.initializeBusinessIntegration();
 }
+    // =========================================================================
+// USER DATA INTEGRATION
+// =========================================================================
+
+initializeUserIntegration() {
+    console.log('👤 [SidebarManager] Initializing user integration...');
+    
+    // Wait for OsliraApp to be available and update user info
+    const waitForUserData = setInterval(() => {
+        if (window.OsliraApp?.user) {
+            clearInterval(waitForUserData);
+            this.updateUserInfo(window.OsliraApp.user);
+            console.log('✅ [SidebarManager] User integration initialized');
+        }
+    }, 100);
+    
+    // Clear interval after 10 seconds to prevent infinite polling
+    setTimeout(() => clearInterval(waitForUserData), 10000);
+    
+    // Also listen for auth state changes
+    if (window.OsliraAuth) {
+        window.OsliraAuth.onAuthStateChange((event, session) => {
+            if (session?.user && window.OsliraApp?.user) {
+                this.updateUserInfo(window.OsliraApp.user);
+            }
+        });
+    }
+}
+
+// Helper method to refresh user data from OsliraApp
+refreshUserData() {
+    if (window.OsliraApp?.user) {
+        this.updateUserInfo(window.OsliraApp.user);
+        console.log('🔄 [SidebarManager] User data refreshed');
+    } else {
+        console.warn('⚠️ [SidebarManager] No user data available to refresh');
+    }
+}
 
     // =========================================================================
     // UTILITY METHODS
@@ -480,6 +527,16 @@ setBusinessManager(businessManager) {
             isCollapsed: this.isCollapsed,
             user: this.user
         };
+    }
+}
+
+// =========================================================================
+// PUBLIC API
+// =========================================================================
+
+static refreshAllUserData() {
+    if (window.sidebarManager) {
+        window.sidebarManager.refreshUserData();
     }
 }
 
