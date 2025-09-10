@@ -7,9 +7,17 @@
     @apply fixed left-0 top-0 h-full w-64 bg-gradient-to-br from-white via-blue-50/30 to-indigo-100/20 backdrop-blur-xl border-r border-gray-200/50 flex flex-col transition-all duration-300 z-40;
   }
 
-  .sidebar.collapsed {
-    @apply w-16;
-  }
+.sidebar.collapsed {
+  @apply w-16;
+}
+
+.sidebar-expanded {
+  @apply w-64;
+}
+
+.sidebar-collapsed {
+  @apply w-16;
+}
 
   .sidebar::after {
     content: '';
