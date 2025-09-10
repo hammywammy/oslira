@@ -100,44 +100,6 @@
   display: none !important;
 }
 
-/* Toggle button */
-.sidebar-toggle {
-  padding: 0.5rem;
-  color: #6b7280;
-  border-radius: 0.5rem;
-  transition: all 0.2s ease;
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sidebar-toggle:hover {
-  color: #1f2937;
-  background-color: rgba(255,255,255,0.5);
-}
-
-.sidebar-toggle.collapsed {
-  padding: 0.25rem !important;
-  width: 2rem !important;
-  height: 2rem !important;
-  margin: 0 auto !important;
-}
-
-.sidebar-toggle-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  transition: transform 0.3s ease;
-}
-
-.sidebar-toggle-icon.collapsed {
-  width: 1rem;
-  height: 1rem;
-  transform: rotate(180deg);
-}
-
 /* Navigation section */
 .sidebar-nav {
   flex: 1;
@@ -153,6 +115,50 @@
   align-items: center !important;
 }
 
+.sidebar-external-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 264px; /* 256px sidebar + 8px gap */
+    width: 2.5rem;
+    height: 2.5rem;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(229,231,235,0.6);
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 50;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    color: #6b7280;
+}
+
+.sidebar-external-toggle:hover {
+    background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%);
+    color: #374151;
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+}
+
+/* Collapsed state - move toggle to left edge */
+.sidebar.collapsed + .sidebar-external-toggle {
+    left: 72px; /* 64px collapsed sidebar + 8px gap */
+}
+
+/* Toggle icon styling */
+.sidebar-external-toggle .sidebar-toggle-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    transition: transform 0.3s ease;
+}
+
+/* Rotate icon based on sidebar state */
+.sidebar.collapsed + .sidebar-external-toggle .sidebar-toggle-icon {
+    transform: rotate(180deg);
+}
 /* Navigation sections */
 .nav-section {
   display: flex;
@@ -503,11 +509,6 @@
   box-shadow: 0 0 0 2px #3b82f6, 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
-.sidebar-toggle:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px #3b82f6;
-}
-
 .sidebar-user-button:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px #3b82f6;
@@ -517,7 +518,6 @@
 @media (prefers-reduced-motion: reduce) {
   .sidebar,
   .nav-item,
-  .sidebar-toggle,
   .sidebar-user-expanded,
   .sidebar-user-collapsed,
   .nav-text,
