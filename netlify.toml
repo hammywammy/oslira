@@ -18,7 +18,7 @@
   [headers.values]
     Content-Security-Policy = """
       default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app https://oslira.org https://*.oslira.org;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com https://oslira.org https://*.oslira.org;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com https://oslira.org https://*.oslira.org; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://*.sentry.io https://api.oslira.com https://api-staging.oslira.com https://oslira.org https://*.oslira.org https://unpkg.com; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://unpkg.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; font-src 'self' https://unpkg.com https://cdnjs.cloudflare.com"
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://oslira.org https://*.oslira.org;
       font-src 'self' https://fonts.gstatic.com https://oslira.org https://*.oslira.org;
       img-src 'self' data: https: blob: https://images.weserv.nl https://oslira.org https://*.oslira.org;
