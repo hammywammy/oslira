@@ -29,9 +29,16 @@ class SidebarManager {
                 throw new Error(`Container element not found: ${container}`);
             }
             
-            // Set proper sidebar classes and inject HTML
-            targetElement.className = 'sidebar';
-            targetElement.innerHTML = this.getSidebarHTML();
+// Apply sidebar classes and inject HTML
+targetElement.className = 'sidebar';
+targetElement.innerHTML = this.getSidebarHTML();
+
+// Ensure main content has proper margin
+const mainContent = document.querySelector('.main-content, main');
+if (mainContent) {
+    mainContent.style.marginLeft = '256px';
+    mainContent.style.transition = 'margin-left 0.3s ease';
+}
             
             // Store references
             this.sidebar = targetElement;
