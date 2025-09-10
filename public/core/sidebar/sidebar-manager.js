@@ -656,7 +656,12 @@ updateChildElements() {
         userExpanded.forEach(el => el.style.display = 'block');
     }
 }
-
+initializeToggle() {
+    // External toggle is already created and has event listener
+    // This method can be simplified or removed
+    console.log('✅ [SidebarManager] Toggle initialization complete (external toggle used)');
+}
+    
     initializeNavigation() {
         const navItems = document.querySelectorAll('.nav-item[data-page]');
         
