@@ -3,20 +3,29 @@
      SIDEBAR CORE LAYOUT
      ============================================================================= */
   
-  .sidebar {
-    @apply fixed left-0 top-0 h-full w-64 bg-gradient-to-br from-white via-blue-50/30 to-indigo-100/20 backdrop-blur-xl border-r border-gray-200/50 flex flex-col transition-all duration-300 z-40;
-  }
+.sidebar {
+  @apply fixed left-0 top-0 h-full w-64 bg-gradient-to-br from-white via-blue-50/30 to-indigo-100/20 backdrop-blur-xl border-r border-gray-200/50 flex flex-col transition-all duration-300 z-40;
+}
 
 .sidebar.collapsed {
   @apply w-16;
 }
 
-.sidebar-expanded {
-  @apply w-64;
+/* Main content layout compensation */
+.main-content {
+  @apply transition-all duration-300;
+  margin-left: 256px; /* w-64 = 256px */
 }
 
-.sidebar-collapsed {
-  @apply w-16;
+.main-content.sidebar-collapsed {
+  margin-left: 64px; /* w-16 = 64px */
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .main-content {
+    margin-left: 0;
+  }
 }
 
   .sidebar::after {
