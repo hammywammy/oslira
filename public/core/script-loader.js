@@ -41,7 +41,7 @@ this.coreScripts = [
         '/pages/dashboard/modules/stats/stats-calculator.js',
         '/pages/dashboard/modules/ui/modal-manager.js'
     ],
-    stylesheets: ['/src/styles.css'],
+stylesheets: ['/src/components/sidebar.css'],
                 requiresAuth: true,
                 enableTailwind: true
             },
@@ -245,11 +245,14 @@ async loadPageScripts(pageName) {
     }
     
     // Load stylesheets for this page FIRST
-    if (pageConfig.stylesheets) {
-        const stylesheetPromises = pageConfig.stylesheets.map(async (stylePath) => {
-            const styleName = this.extractScriptName(stylePath);
-            return this.loadStylesheet(styleName, stylePath);
+if (pageConfig.stylesheets) {
+    const stylesheetPromises = pageConfig.stylesheets.map(async (stylePath) => {
+        const styleName = this.extractScriptName(stylePath);
+        // Verify CSS file exists before attempting load
+        return this.loadStylesheet(styleName, stylePath).catch(error => {
+            console.warn(`⚠️ [ScriptLoader] Stylesheet ${styleName} failed, continuing without it`);
         });
+    });
         
         try {
             await Promise.all(stylesheetPromises);
