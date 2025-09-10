@@ -117,10 +117,10 @@
 
 .sidebar-external-toggle {
     position: fixed;
-    top: 1rem;
+    top: 50%;
     left: 264px; /* 256px sidebar + 8px gap */
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 1rem;
+    height: 8rem;
     background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
