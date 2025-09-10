@@ -136,11 +136,11 @@
     color: #6b7280;
 }
 
-.sidebar-external-toggle:hover {
-    background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 100%);
-    color: #374151;
-    transform: scale(1.05);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+#sidebar-external-toggle:hover {
+    background: #f9fafb !important;
+    color: #374151 !important;
+    transform: scale(1.05) !important;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2) !important;
 }
 
 /* Collapsed state - move toggle to left edge */
@@ -158,6 +158,15 @@
 /* Rotate icon based on sidebar state */
 .sidebar.collapsed + .sidebar-external-toggle .sidebar-toggle-icon {
     transform: rotate(180deg);
+}
+
+#sidebar-external-toggle:active {
+    transform: scale(0.95) !important;
+}
+
+/* Smooth icon rotation */
+#sidebar-external-toggle svg {
+    transition: transform 0.3s ease !important;
 }
 /* Navigation sections */
 .nav-section {
