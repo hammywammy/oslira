@@ -77,26 +77,22 @@ async initializeSidebar() {
     try {
         console.log('📋 [Dashboard] Initializing modular sidebar...');
         
-        // Wait for SidebarManager to be available
+        // Wait for sidebarManager to be available
         for (let i = 0; i < 50; i++) {
-            if (window.SidebarManager) {
+            if (window.sidebarManager) {
                 console.log('✅ [Dashboard] SidebarManager found');
                 break;
             }
             await new Promise(resolve => setTimeout(resolve, 100));
         }
         
-        if (!window.SidebarManager) {
+        if (!window.sidebarManager) {
             console.warn('⚠️ [Dashboard] SidebarManager not available after waiting, skipping sidebar');
             return;
         }
         
-        // Render sidebar with dashboard configuration
-        window.SidebarManager.render('sidebar-container', {
-            activePage: 'dashboard',
-            showBusinessSelector: true,
-            theme: 'default'
-        });
+        // Render sidebar with correct selector
+        await window.sidebarManager.render('#sidebar-container');
         
         console.log('✅ [Dashboard] Sidebar initialized successfully');
         
