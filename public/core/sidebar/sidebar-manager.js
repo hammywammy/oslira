@@ -21,13 +21,38 @@ class SidebarManager {
         try {
             console.log('🎨 [SidebarManager] Rendering sidebar...');
             
-            const targetElement = typeof container === 'string' 
-                ? document.querySelector(container)
-                : container;
-                
-            if (!targetElement) {
-                throw new Error(`Container element not found: ${container}`);
+// Wait for container to exist if it's not found immediately
+let targetElement = typeof container === 'string' 
+    ? document.querySelector(container)
+    : container;
+
+if (!targetElement && typeof container === 'string') {
+    // Wait up to 2 seconds for container to appear
+    console.log('🔍 [SidebarManager] Waiting for container:', container);
+    await new Promise((resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 20; // 2 seconds at 100ms intervals
+        
+        const checkForElement = () => {
+            targetElement = document.querySelector(container);
+            attempts++;
+            
+            if (targetElement) {
+                resolve();
+            } else if (attempts >= maxAttempts) {
+                reject(new Error(`Container element not found after waiting: ${container}`));
+            } else {
+                setTimeout(checkForElement, 100);
             }
+        };
+        
+        checkForElement();
+    });
+}
+
+if (!targetElement) {
+    throw new Error(`Container element not found: ${container}`);
+}
             
 // Apply sidebar classes and inject HTML
 targetElement.className = 'sidebar';
