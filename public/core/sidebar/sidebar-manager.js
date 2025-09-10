@@ -58,21 +58,45 @@ if (!targetElement) {
 targetElement.className = 'sidebar';
 targetElement.innerHTML = this.getSidebarHTML();
 
+// Force immediate style application
+targetElement.style.cssText = `
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: 100vh !important;
+    width: 256px !important;
+    background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 50%, rgba(241,245,249,0.92) 100%) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border-right: 1px solid rgba(229,231,235,0.5) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    transition: all 0.3s ease !important;
+    z-index: 40 !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+`;
+
 // Ensure main content has proper margin
 const mainContent = document.querySelector('.main-content, main');
 if (mainContent) {
     mainContent.style.marginLeft = '256px';
     mainContent.style.transition = 'margin-left 0.3s ease';
 }
+
+// Force browser reflow
+targetElement.offsetHeight;
             
             // Store references
             this.sidebar = targetElement;
             this.mainContent = document.querySelector('.main-content, [class*="content"], main');
             
-            // Initialize functionality
-            this.initializeSidebar();
-            
-            console.log('✅ [SidebarManager] Sidebar rendered successfully');
+// Initialize functionality  
+this.initializeSidebar();
+
+// Verify CSS is loaded and applied
+this.verifyCSSLoaded();
+
+console.log('✅ [SidebarManager] Sidebar rendered successfully');
             return this;
             
         } catch (error) {
@@ -144,6 +168,8 @@ if (mainContent) {
             console.warn(`⚠️ [SidebarManager] Menu item not found: ${pageId}`);
         }
     }
+
+    
 
     // =========================================================================
     // HTML TEMPLATE
@@ -410,6 +436,213 @@ if (mainContent) {
             user: this.user
         };
     }
+    // Add this new method after line 116 in public/core/sidebar/sidebar-manager.js
+
+verifyCSSLoaded() {
+    console.log('🔍 [SidebarManager] Verifying CSS application...');
+    
+    if (!this.sidebar) return;
+    
+    const computed = getComputedStyle(this.sidebar);
+    const expectedBg = 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.95) 50%, rgba(241, 245, 249, 0.92) 100%)';
+    
+    console.log('Computed background:', computed.background);
+    console.log('Computed width:', computed.width);
+    console.log('Computed position:', computed.position);
+    
+    // If CSS isn't loaded properly, force inline styles
+    if (computed.position !== 'fixed' || computed.width !== '256px') {
+        console.warn('⚠️ [SidebarManager] CSS not loaded properly, applying emergency styles');
+        this.applyEmergencyStyles();
+    }
+}
+
+applyEmergencyStyles() {
+    if (!this.sidebar) return;
+    
+    console.log('🚨 [SidebarManager] Applying emergency inline styles...');
+    
+    // Apply all critical styles inline to override any conflicts
+    this.sidebar.style.cssText = `
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        height: 100vh !important;
+        width: 256px !important;
+        background: linear-gradient(135deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.95) 50%, rgba(241,245,249,0.92) 100%) !important;
+        backdrop-filter: blur(24px) !important;
+        -webkit-backdrop-filter: blur(24px) !important;
+        border-right: 1px solid rgba(229,231,235,0.5) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        transition: all 0.3s ease !important;
+        z-index: 40 !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+        overflow: hidden !important;
+    `;
+    
+    // Apply styles to inner elements
+    const header = this.sidebar.querySelector('.sidebar-header');
+    if (header) {
+        header.style.cssText = `
+            padding: 1rem !important;
+            border-bottom: 1px solid rgba(229,231,235,0.5) !important;
+            transition: all 0.3s ease !important;
+            display: flex !important;
+            flex-direction: column !important;
+        `;
+    }
+    
+    const nav = this.sidebar.querySelector('.sidebar-nav');
+    if (nav) {
+        nav.style.cssText = `
+            flex: 1 !important;
+            overflow-y: auto !important;
+            padding: 1rem !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1.5rem !important;
+        `;
+    }
+    
+    const userSection = this.sidebar.querySelector('.sidebar-user-section');
+    if (userSection) {
+        userSection.style.cssText = `
+            padding: 1rem !important;
+            border-top: 1px solid rgba(229,231,235,0.5) !important;
+        `;
+    }
+    
+    // Style navigation items
+    const navItems = this.sidebar.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.style.cssText = `
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.75rem !important;
+            padding: 0.625rem 0.75rem !important;
+            color: #374151 !important;
+            border-radius: 0.5rem !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer !important;
+            text-decoration: none !important;
+            min-height: 2.75rem !important;
+        `;
+    });
+    
+    // Style user info
+    const userInfo = this.sidebar.querySelector('.sidebar-user-info');
+    if (userInfo) {
+        userInfo.style.cssText = `
+            background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(219,234,254,0.6) 50%, rgba(196,181,253,0.5) 100%) !important;
+            backdrop-filter: blur(24px) !important;
+            -webkit-backdrop-filter: blur(24px) !important;
+            border: 1px solid rgba(255,255,255,0.3) !important;
+            border-radius: 0.75rem !important;
+            padding: 1rem !important;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+        `;
+    }
+    
+    console.log('✅ [SidebarManager] Emergency styles applied');
+    
+    // Force reflow to ensure styles are applied
+    this.sidebar.offsetHeight;
+}
+
+// Update the updateSidebarState method to handle collapsed state emergency styles
+updateSidebarStateWithEmergency() {
+    if (!this.sidebar) return;
+    
+    // Update sidebar classes
+    if (this.isCollapsed) {
+        this.sidebar.classList.add('collapsed');
+        // Apply collapsed emergency styles
+        this.sidebar.style.width = '64px !important';
+        if (this.mainContent) {
+            this.mainContent.classList.add('sidebar-collapsed');
+            this.mainContent.style.marginLeft = '64px';
+        }
+    } else {
+        this.sidebar.classList.remove('collapsed');
+        // Apply expanded emergency styles
+        this.sidebar.style.width = '256px !important';
+        if (this.mainContent) {
+            this.mainContent.classList.remove('sidebar-collapsed');
+            this.mainContent.style.marginLeft = '256px';
+        }
+    }
+    
+    // Update all child elements
+    this.updateChildElements();
+    
+    // Apply emergency styles to collapsed elements
+    if (this.isCollapsed) {
+        const navTexts = this.sidebar.querySelectorAll('.nav-text');
+        navTexts.forEach(text => {
+            text.style.cssText = 'opacity: 0 !important; width: 0 !important; overflow: hidden !important;';
+        });
+        
+        const sectionHeaders = this.sidebar.querySelectorAll('.nav-section-header');
+        sectionHeaders.forEach(header => {
+            header.style.cssText = 'opacity: 0 !important; height: 0 !important; overflow: hidden !important;';
+        });
+        
+        const logoText = this.sidebar.querySelector('.sidebar-logo-text');
+        if (logoText) {
+            logoText.style.cssText = 'opacity: 0 !important; width: 0 !important; overflow: hidden !important;';
+        }
+    } else {
+        const navTexts = this.sidebar.querySelectorAll('.nav-text');
+        navTexts.forEach(text => {
+            text.style.cssText = 'opacity: 1 !important; width: auto !important; overflow: visible !important;';
+        });
+        
+        const sectionHeaders = this.sidebar.querySelectorAll('.nav-section-header');
+        sectionHeaders.forEach(header => {
+            header.style.cssText = 'opacity: 1 !important; height: auto !important; overflow: visible !important;';
+        });
+        
+        const logoText = this.sidebar.querySelector('.sidebar-logo-text');
+        if (logoText) {
+            logoText.style.cssText = 'opacity: 1 !important; width: auto !important; overflow: visible !important;';
+        }
+    }
+}
+
+// Emergency sidebar initialization - call this if normal initialization fails
+emergencyInitialization() {
+    console.log('🚨 [SidebarManager] Running emergency initialization...');
+    
+    const container = document.querySelector('#sidebar-container');
+    if (!container) {
+        console.error('❌ [SidebarManager] No container found for emergency init');
+        return;
+    }
+    
+    // Force create sidebar structure
+    container.innerHTML = this.getSidebarHTML();
+    container.className = 'sidebar';
+    
+    // Apply emergency styles immediately
+    this.sidebar = container;
+    this.applyEmergencyStyles();
+    
+    // Initialize basic functionality
+    this.initializeToggle();
+    this.initializeNavigation();
+    
+    // Set up main content
+    this.mainContent = document.querySelector('.main-content, main, [class*="content"]');
+    if (this.mainContent) {
+        this.mainContent.style.marginLeft = '256px';
+        this.mainContent.style.transition = 'margin-left 0.3s ease';
+    }
+    
+    console.log('✅ [SidebarManager] Emergency initialization complete');
+}
+
+
 }
 
 // =============================================================================
@@ -422,6 +655,32 @@ window.SidebarManager = SidebarManager;
 // Create global instance
 window.sidebarManager = new SidebarManager();
 window.SidebarManager = window.sidebarManager;
+
+// Global emergency fix function
+window.fixSidebarEmergency = function() {
+    console.log('🚨 Running global sidebar emergency fix...');
+    
+    if (window.sidebarManager) {
+        window.sidebarManager.emergencyInitialization();
+    } else {
+        // Create new instance if none exists
+        window.sidebarManager = new SidebarManager();
+        window.sidebarManager.emergencyInitialization();
+    }
+    
+    // Test the fix
+    setTimeout(() => {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            const styles = getComputedStyle(sidebar);
+            console.log('Emergency fix result:');
+            console.log('Width:', styles.width);
+            console.log('Position:', styles.position);
+            console.log('Background:', styles.background || styles.backgroundColor);
+            console.log('Display:', styles.display);
+        }
+    }, 500);
+};
 
 console.log('✅ [SidebarManager] Module loaded and ready');
 
