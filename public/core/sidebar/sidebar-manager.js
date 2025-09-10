@@ -345,28 +345,6 @@ createExternalToggle() {
         color: #6b7280 !important;
         transition: all 0.3s ease !important;
     `;
-        // Add hover effects
-    this.externalToggle.addEventListener('mouseenter', () => {
-        this.externalToggle.style.background = 'rgba(255, 255, 255, 0.95)';
-        this.externalToggle.style.transform = 'scale(1.05)';
-        this.externalToggle.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
-    });
-
-    this.externalToggle.addEventListener('mouseleave', () => {
-        this.externalToggle.style.background = 'rgba(255, 255, 255, 0.9)';
-        this.externalToggle.style.transform = 'scale(1)';
-        this.externalToggle.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
-    });
-
-        // Add focus effects for accessibility
-    this.externalToggle.addEventListener('focus', () => {
-        this.externalToggle.style.outline = '2px solid rgba(59, 130, 246, 0.5)';
-        this.externalToggle.style.outlineOffset = '2px';
-    });
-
-    this.externalToggle.addEventListener('blur', () => {
-        this.externalToggle.style.outline = 'none';
-    });
     
     // Add click handler
     toggle.addEventListener('click', (e) => {
@@ -382,7 +360,6 @@ createExternalToggle() {
     
     console.log('✅ [SidebarManager] External toggle created');
 }
-
     updateSidebarState() {
         if (!this.sidebar) return;
         
