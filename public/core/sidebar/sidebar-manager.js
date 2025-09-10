@@ -305,60 +305,78 @@ toggleSidebar() {
     }
 }
 
-    createExternalToggle() {
-        console.log('🔧 [SidebarManager] Creating external toggle...');
-        
-        // Remove any existing external toggle
-        const existing = document.getElementById('sidebar-external-toggle');
-        if (existing) {
-            existing.remove();
-        }
-        
-        // Create the toggle button
-        const toggle = document.createElement('button');
-        toggle.id = 'sidebar-external-toggle';
-        toggle.innerHTML = `
-            <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
-            </svg>
-        `;
-        
-        // Style as thin vertical bar
-        toggle.style.cssText = `
-            position: fixed !important;
-            top: 6.3% !important;
-            left: 256px !important;
-            transform: translateY(-50%) !important;
-            width: 1rem !important;
-            height: 8rem !important;
-            background: white !important;
-            border: 1px solid #e5e7eb !important;
-            border-left: none !important;
-            border-radius: 0 0.5rem 0.5rem 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            cursor: pointer !important;
-            z-index: 9999 !important;
-            box-shadow: 2px 0 8px rgba(0,0,0,0.1) !important;
-            color: #6b7280 !important;
-            transition: all 0.3s ease !important;
-        `;
-        
-        // Add click handler
-        toggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.toggleSidebar();
-        });
-        
-        // Add to body
-        document.body.appendChild(toggle);
-        
-        // Store reference
-        this.externalToggle = toggle;
-        
-        console.log('✅ [SidebarManager] External toggle created');
-    }
+createExternalToggle() {
+    console.log('🔧 [SidebarManager] Creating external toggle...');
+    
+    // Create the toggle button element
+    this.externalToggle = document.createElement('button');
+    this.externalToggle.className = 'sidebar-external-toggle';
+    
+    // Apply comprehensive styling
+    this.externalToggle.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 256px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        padding: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        color: #374151;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        outline: none;
+        user-select: none;
+    `;
+    
+    // Add the toggle icon
+    this.externalToggle.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition: transform 0.3s ease;">
+            <path d="M3 12h18m-9-9l9 9-9 9"/>
+        </svg>
+    `;
+    
+    // Add hover effects
+    this.externalToggle.addEventListener('mouseenter', () => {
+        this.externalToggle.style.background = 'rgba(255, 255, 255, 0.95)';
+        this.externalToggle.style.transform = 'scale(1.05)';
+        this.externalToggle.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+    });
+
+    this.externalToggle.addEventListener('mouseleave', () => {
+        this.externalToggle.style.background = 'rgba(255, 255, 255, 0.9)';
+        this.externalToggle.style.transform = 'scale(1)';
+        this.externalToggle.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+    });
+
+    // Add focus effects for accessibility
+    this.externalToggle.addEventListener('focus', () => {
+        this.externalToggle.style.outline = '2px solid rgba(59, 130, 246, 0.5)';
+        this.externalToggle.style.outlineOffset = '2px';
+    });
+
+    this.externalToggle.addEventListener('blur', () => {
+        this.externalToggle.style.outline = 'none';
+    });
+    
+    // Add click handler
+    this.externalToggle.addEventListener('click', () => {
+        this.toggleSidebar();
+    });
+    
+    // Append to body
+    document.body.appendChild(this.externalToggle);
+    
+    console.log('✅ [SidebarManager] External toggle created');
+}
 
     updateSidebarState() {
         if (!this.sidebar) return;
