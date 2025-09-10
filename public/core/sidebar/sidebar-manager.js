@@ -213,25 +213,24 @@ async updateUserInfo(user) {
                 
 <!-- User Section -->
 <div class="sidebar-user-section">
-    <!-- Business Selector -->
-    <div class="sidebar-business-section">
-        <div class="sidebar-business-header">
-            <span class="sidebar-business-label">Business</span>
-        </div>
-        <select id="business-select" class="sidebar-business-select">
-            <option value="">Loading...</option>
-        </select>
-    </div>
-    
-    <!-- Expanded User Info -->
+    <!-- Expanded User Info with integrated business -->
     <div class="sidebar-user-expanded">
-        <div class="sidebar-user-info">
-            <div class="sidebar-user-header">
-                <div id="sidebar-email" class="sidebar-user-email">Loading...</div>
-                <div id="sidebar-plan" class="sidebar-user-plan">Free Plan</div>
+        <div class="sidebar-user-info bg-gradient-to-b from-gray-50 to-white rounded-xl border border-gray-200/60 overflow-hidden">
+            <!-- Business Header -->
+            <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200/40">
+                <label class="text-xs text-gray-600 uppercase tracking-wider font-semibold">Active Business</label>
+                <select id="business-select" class="sidebar-business-select w-full mt-1 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+                    <option value="">Loading...</option>
+                </select>
             </div>
             
-            <div class="sidebar-user-credits">
+            <!-- User Details -->
+            <div class="px-4 py-3">
+                <div id="sidebar-email" class="sidebar-user-email text-sm font-medium text-gray-800">Loading...</div>
+                <div id="sidebar-plan" class="sidebar-user-plan text-xs text-gray-500 mt-1">Free Plan</div>
+            </div>
+            
+            <div class="sidebar-user-credits px-4 py-3 border-t border-gray-200/40">
                 <div class="sidebar-user-credits-header">
                     <div>
                         <span class="sidebar-user-credits-label">Credits</span>
@@ -240,23 +239,23 @@ async updateUserInfo(user) {
                     <div class="sidebar-user-credits-icon">⚡</div>
                 </div>
             </div>
-                            
-                            <div class="sidebar-user-actions">
-                                <button onclick="window.handleLogout && window.handleLogout()" 
-                                        class="sidebar-user-button">
-                                    Sign out
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Collapsed User Avatar -->
-                    <div class="sidebar-user-collapsed">
-                        <div class="sidebar-user-avatar">
-                            <span id="sidebar-user-initial">U</span>
-                        </div>
-                    </div>
-                </div>
+            
+            <div class="sidebar-user-actions px-4 py-3 border-t border-gray-200/40 bg-gray-50/50">
+                <button onclick="window.handleLogout && window.handleLogout()" 
+                        class="sidebar-user-button w-full">
+                    Sign out
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Collapsed User Avatar -->
+    <div class="sidebar-user-collapsed">
+        <div class="sidebar-user-avatar">
+            <span id="sidebar-user-initial">U</span>
+        </div>
+    </div>
+</div>
             </div>
         `;
     }
