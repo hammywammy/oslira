@@ -117,7 +117,7 @@
 
 .sidebar-external-toggle {
     position: fixed;
-    top: 70%;
+    top: 100%;
     left: 264px; /* 256px sidebar + 8px gap */
     width: 1rem;
     height: 8rem;
