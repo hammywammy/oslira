@@ -163,259 +163,198 @@
     @apply opacity-100;
   }
 
-  /* =============================================================================
-     USER SECTION
-     ============================================================================= */
+.sidebar-user-section {
+  padding: 1rem !important;
+  border-top: 1px solid rgba(229,231,235,0.5) !important;
+}
 
-  .sidebar-user-section {
-    @apply p-4 border-t border-gray-200/50;
+.sidebar-user-section.collapsed {
+  padding: 0.5rem !important;
+}
+
+.sidebar-user-expanded {
+  transition: opacity 0.3s ease !important;
+}
+
+.sidebar-user-expanded.collapsed {
+  opacity: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+.sidebar-user-collapsed {
+  display: none !important;
+  transition: opacity 0.3s ease !important;
+}
+
+.sidebar-user-collapsed.show {
+  display: block !important;
+}
+
+.sidebar-user-info {
+  background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(219,234,254,0.6) 50%, rgba(196,181,253,0.5) 100%) !important;
+  backdrop-filter: blur(24px) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  border-radius: 0.75rem !important;
+  padding: 1rem !important;
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+}
+
+.sidebar-user-header {
+  margin-bottom: 0.75rem !important;
+}
+
+.sidebar-user-email {
+  font-size: 0.875rem !important;
+  font-weight: 700 !important;
+  color: #1f2937 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.sidebar-user-plan {
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0.25rem 0.5rem !important;
+  background: linear-gradient(to right, rgba(219,234,254,1), rgba(196,181,253,1)) !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  color: #1d4ed8 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-radius: 9999px !important;
+  border: 1px solid rgba(59,130,246,0.5) !important;
+}
+
+.sidebar-user-credits {
+  background: linear-gradient(to right, #3b82f6, #8b5cf6) !important;
+  padding: 0.75rem !important;
+  border-radius: 0.5rem !important;
+  color: white !important;
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1) !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.sidebar-user-credits-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.sidebar-user-credits-label {
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  opacity: 0.9 !important;
+}
+
+.sidebar-user-credits-count {
+  font-size: 1.25rem !important;
+  font-weight: 900 !important;
+}
+
+.sidebar-user-credits-icon {
+  font-size: 1.25rem !important;
+  opacity: 0.8 !important;
+}
+
+.sidebar-user-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+}
+
+.sidebar-user-button {
+  width: 100% !important;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease !important;
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+
+.sidebar-user-button:hover {
+  color: #1f2937 !important;
+  background-color: #f3f4f6 !important;
+}
+
+.sidebar-user-button.primary {
+  background: linear-gradient(to right, #3b82f6, #8b5cf6) !important;
+  color: white !important;
+}
+
+.sidebar-user-button.primary:hover {
+  background: linear-gradient(to right, #2563eb, #7c3aed) !important;
+}
+
+.sidebar-user-avatar {
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  background: linear-gradient(to right, #3b82f6, #8b5cf6) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: white !important;
+  font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  margin: 0 auto !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease !important;
+}
+
+.sidebar-user-avatar:hover {
+  transform: scale(1.1) !important;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 1024px) {
+  .sidebar {
+    transform: translateX(-100%) !important;
   }
 
-  .sidebar-user-section.collapsed {
-    @apply p-2;
+  .sidebar.open {
+    transform: translateX(0) !important;
   }
 
-  .sidebar-user-expanded {
-    @apply transition-opacity duration-300;
+  .main-content {
+    margin-left: 0 !important;
   }
 
-  .sidebar-user-expanded.collapsed {
-    @apply opacity-0 h-0 overflow-hidden;
+  .sidebar-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    background-color: rgba(0,0,0,0.5) !important;
+    z-index: 30 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.3s ease !important;
   }
 
-  .sidebar-user-collapsed {
-    @apply hidden transition-opacity duration-300;
+  .sidebar-overlay.show {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100% !important;
+    max-width: 24rem !important;
   }
 
-  .sidebar-user-collapsed.show {
-    @apply block;
+  .nav-item {
+    padding: 1rem 0.75rem !important;
   }
 
   .sidebar-user-info {
-    @apply bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-xl p-4 shadow-lg;
-  }
-
-  .sidebar-user-header {
-    @apply mb-3;
-  }
-
-  .sidebar-user-email {
-    @apply text-sm font-bold text-gray-900 truncate mb-1;
-  }
-
-  .sidebar-user-plan {
-    @apply inline-flex items-center px-2 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-xs font-bold text-blue-700 uppercase tracking-wider rounded-full border border-blue-200/50;
-  }
-
-  .sidebar-user-credits {
-    @apply bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg text-white shadow-lg mb-3;
-  }
-
-  .sidebar-user-credits-header {
-    @apply flex justify-between items-center;
-  }
-
-  .sidebar-user-credits-label {
-    @apply text-xs font-bold uppercase tracking-wide opacity-90;
-  }
-
-  .sidebar-user-credits-count {
-    @apply text-xl font-black;
-  }
-
-  .sidebar-user-credits-icon {
-    @apply text-xl opacity-80;
-  }
-
-  .sidebar-user-actions {
-    @apply space-y-2;
-  }
-
-  .sidebar-user-button {
-    @apply w-full px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200;
-  }
-
-  .sidebar-user-button.primary {
-    @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700;
-  }
-
-  /* =============================================================================
-     SIDEBAR COLLAPSED USER AVATAR
-     ============================================================================= */
-
-  .sidebar-user-avatar {
-    @apply w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm mx-auto cursor-pointer hover:scale-110 transition-transform duration-200;
-  }
-
-  /* =============================================================================
-     MOBILE RESPONSIVENESS
-     ============================================================================= */
-
-  @media (max-width: 1024px) {
-    .sidebar {
-      @apply transform -translate-x-full;
-    }
-
-    .sidebar.open {
-      @apply translate-x-0;
-    }
-
-    .main-content {
-      margin-left: 0 !important;
-    }
-
-    .sidebar-overlay {
-      @apply fixed inset-0 bg-black/50 z-30 opacity-0 pointer-events-none transition-opacity duration-300;
-    }
-
-    .sidebar-overlay.show {
-      @apply opacity-100 pointer-events-auto;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .sidebar {
-      @apply w-full max-w-sm;
-    }
-
-    .nav-item {
-      @apply px-4 py-3;
-    }
-
-    .sidebar-user-info {
-      @apply p-3;
-    }
-  }
-
-  /* =============================================================================
-     ACCESSIBILITY ENHANCEMENTS
-     ============================================================================= */
-
-  .nav-item:focus-visible {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-white;
-  }
-
-  .sidebar-toggle:focus-visible {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
-  }
-
-  .sidebar-user-button:focus-visible {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
-  }
-
-  /* =============================================================================
-     REDUCED MOTION SUPPORT
-     ============================================================================= */
-
-  @media (prefers-reduced-motion: reduce) {
-    .sidebar,
-    .nav-item,
-    .sidebar-toggle,
-    .sidebar-user-expanded,
-    .sidebar-user-collapsed,
-    .nav-text,
-    .sidebar-logo-text {
-      @apply transition-none;
-    }
-
-    .nav-item:hover {
-      @apply transform-none;
-    }
-
-    .sidebar-user-avatar:hover {
-      @apply transform-none;
-    }
-
-    .nav-icon {
-      @apply transition-none;
-    }
-
-    .nav-item:hover .nav-icon {
-      @apply transform-none;
-    }
-  }
-
-  /* =============================================================================
-     HIGH CONTRAST SUPPORT
-     ============================================================================= */
-
-  @media (prefers-contrast: high) {
-    .sidebar {
-      @apply border-2 border-gray-900;
-    }
-
-    .nav-item {
-      @apply border border-transparent;
-    }
-
-    .nav-item:hover,
-    .nav-item.active {
-      @apply border-gray-900;
-    }
-
-    .sidebar-user-info {
-      @apply border-2 border-gray-300;
-    }
-  }
-
-  /* =============================================================================
-     LOADING STATES
-     ============================================================================= */
-
-  .sidebar-loading {
-    @apply animate-pulse;
-  }
-
-  .sidebar-loading .nav-item {
-    @apply bg-gray-200 text-transparent;
-  }
-
-  .sidebar-loading .sidebar-user-info {
-    @apply bg-gray-200;
-  }
-
-  /* =============================================================================
-     SCROLLBAR STYLING
-     ============================================================================= */
-
-  .sidebar-nav::-webkit-scrollbar {
-    @apply w-1;
-  }
-
-  .sidebar-nav::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-
-  .sidebar-nav::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
-  }
-
-  .sidebar-nav::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
-  }
-
-  /* Firefox */
-  .sidebar-nav {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(209 213 219) transparent;
-  }
-
-  /* =============================================================================
-     PRINT STYLES
-     ============================================================================= */
-
-  @media print {
-    .sidebar {
-      @apply hidden;
-    }
-  }
-
-  /* =============================================================================
-     DARK MODE PREPARATION (for future implementation)
-     ============================================================================= */
-
-  @media (prefers-color-scheme: dark) {
-    /* Dark mode styles would go here when implemented */
-    /* Currently using light mode only */
+    padding: 0.75rem !important;
   }
 }
