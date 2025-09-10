@@ -326,64 +326,174 @@ console.log('✅ [SidebarManager] Sidebar rendered successfully');
         console.log('✅ [SidebarManager] Sidebar toggled to:', this.isCollapsed ? 'collapsed' : 'expanded');
     }
 
-    updateSidebarState() {
-        if (!this.sidebar) return;
+updateSidebarState() {
+    if (!this.sidebar) return;
+    
+    console.log('🔄 [SidebarManager] Updating sidebar state to:', this.isCollapsed ? 'collapsed' : 'expanded');
+    
+    // Force dimensional changes with inline styles
+    if (this.isCollapsed) {
+        // Collapsed state: 64px width
+        this.sidebar.classList.add('collapsed');
+        this.sidebar.style.width = '64px';
+        this.sidebar.style.minWidth = '64px';
+        this.sidebar.style.maxWidth = '64px';
         
-        // Update sidebar classes
-        if (this.isCollapsed) {
-            this.sidebar.classList.add('collapsed');
-            if (this.mainContent) {
-                this.mainContent.classList.add('sidebar-collapsed');
+        if (this.mainContent) {
+            this.mainContent.classList.add('sidebar-collapsed');
+            this.mainContent.style.marginLeft = '64px';
+        }
+    } else {
+        // Expanded state: 256px width
+        this.sidebar.classList.remove('collapsed');
+        this.sidebar.style.width = '256px';
+        this.sidebar.style.minWidth = '256px';
+        this.sidebar.style.maxWidth = '256px';
+        
+        if (this.mainContent) {
+            this.mainContent.classList.remove('sidebar-collapsed');
+            this.mainContent.style.marginLeft = '256px';
+        }
+    }
+    
+    // Update all child elements
+    this.updateChildElements();
+    
+    // Force reflow to ensure changes take effect
+    this.sidebar.offsetHeight;
+    if (this.mainContent) {
+        this.mainContent.offsetHeight;
+    }
+    
+    console.log('✅ [SidebarManager] State updated - Width:', this.sidebar.style.width, 'Main margin:', this.mainContent?.style.marginLeft);
+}
+
+updateChildElements() {
+    const elementsToUpdate = [
+        '.sidebar-header',
+        '.sidebar-logo-container', 
+        '.sidebar-logo-text',
+        '.sidebar-toggle',
+        '.sidebar-toggle-icon',
+        '.sidebar-nav',
+        '.nav-section',
+        '.nav-section-header',
+        '.nav-item',
+        '.nav-text',
+        '.sidebar-user-section',
+        '.sidebar-user-expanded',
+        '.sidebar-user-collapsed'
+    ];
+    
+    elementsToUpdate.forEach(selector => {
+        const elements = this.sidebar.querySelectorAll(selector);
+        elements.forEach(el => {
+            if (this.isCollapsed) {
+                el.classList.add('collapsed');
+            } else {
+                el.classList.remove('collapsed');
             }
-        } else {
-            this.sidebar.classList.remove('collapsed');
-            if (this.mainContent) {
-                this.mainContent.classList.remove('sidebar-collapsed');
-            }
+        });
+    });
+    
+    // Force hide/show text elements with inline styles
+    if (this.isCollapsed) {
+        // Hide text elements
+        const navTexts = this.sidebar.querySelectorAll('.nav-text');
+        navTexts.forEach(text => {
+            text.style.opacity = '0';
+            text.style.width = '0';
+            text.style.overflow = 'hidden';
+        });
+        
+        const sectionHeaders = this.sidebar.querySelectorAll('.nav-section-header');
+        sectionHeaders.forEach(header => {
+            header.style.opacity = '0';
+            header.style.height = '0';
+            header.style.overflow = 'hidden';
+        });
+        
+        const logoText = this.sidebar.querySelector('.sidebar-logo-text');
+        if (logoText) {
+            logoText.style.opacity = '0';
+            logoText.style.width = '0';
+            logoText.style.overflow = 'hidden';
         }
         
-        // Update all child elements
-        this.updateChildElements();
-    }
-
-    updateChildElements() {
-        const elementsToUpdate = [
-            '.sidebar-header',
-            '.sidebar-logo-container', 
-            '.sidebar-logo-text',
-            '.sidebar-toggle',
-            '.sidebar-toggle-icon',
-            '.sidebar-nav',
-            '.nav-section',
-            '.nav-section-header',
-            '.nav-item',
-            '.nav-text',
-            '.sidebar-user-section',
-            '.sidebar-user-expanded',
-            '.sidebar-user-collapsed'
-        ];
-        
-        elementsToUpdate.forEach(selector => {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(el => {
-                if (this.isCollapsed) {
-                    el.classList.add('collapsed');
-                } else {
-                    el.classList.remove('collapsed');
-                }
-            });
+        // Center navigation items
+        const navItems = this.sidebar.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.style.justifyContent = 'center';
+            item.style.gap = '0';
+            item.style.padding = '0.5rem';
+            item.style.width = '3rem';
+            item.style.margin = '0 auto';
         });
         
-        // Special handling for collapsed user avatar
-        const userCollapsed = document.querySelectorAll('.sidebar-user-collapsed');
+        // Show collapsed user avatar
+        const userCollapsed = this.sidebar.querySelectorAll('.sidebar-user-collapsed');
         userCollapsed.forEach(el => {
-            if (this.isCollapsed) {
-                el.classList.add('show');
-            } else {
-                el.classList.remove('show');
-            }
+            el.classList.add('show');
+            el.style.display = 'block';
+        });
+        
+        // Hide expanded user info
+        const userExpanded = this.sidebar.querySelectorAll('.sidebar-user-expanded');
+        userExpanded.forEach(el => {
+            el.style.opacity = '0';
+            el.style.height = '0';
+            el.style.overflow = 'hidden';
+        });
+        
+    } else {
+        // Show text elements
+        const navTexts = this.sidebar.querySelectorAll('.nav-text');
+        navTexts.forEach(text => {
+            text.style.opacity = '1';
+            text.style.width = 'auto';
+            text.style.overflow = 'visible';
+        });
+        
+        const sectionHeaders = this.sidebar.querySelectorAll('.nav-section-header');
+        sectionHeaders.forEach(header => {
+            header.style.opacity = '1';
+            header.style.height = 'auto';
+            header.style.overflow = 'visible';
+        });
+        
+        const logoText = this.sidebar.querySelector('.sidebar-logo-text');
+        if (logoText) {
+            logoText.style.opacity = '1';
+            logoText.style.width = 'auto';
+            logoText.style.overflow = 'visible';
+        }
+        
+        // Reset navigation items
+        const navItems = this.sidebar.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            item.style.justifyContent = 'flex-start';
+            item.style.gap = '0.75rem';
+            item.style.padding = '0.625rem 0.75rem';
+            item.style.width = 'auto';
+            item.style.margin = '0';
+        });
+        
+        // Hide collapsed user avatar
+        const userCollapsed = this.sidebar.querySelectorAll('.sidebar-user-collapsed');
+        userCollapsed.forEach(el => {
+            el.classList.remove('show');
+            el.style.display = 'none';
+        });
+        
+        // Show expanded user info
+        const userExpanded = this.sidebar.querySelectorAll('.sidebar-user-expanded');
+        userExpanded.forEach(el => {
+            el.style.opacity = '1';
+            el.style.height = 'auto';
+            el.style.overflow = 'visible';
         });
     }
+}
 
     initializeNavigation() {
         const navItems = document.querySelectorAll('.nav-item[data-page]');
