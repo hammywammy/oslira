@@ -283,14 +283,27 @@ initializeSidebar() {
     console.log('✅ [SidebarManager] Sidebar functionality initialized');
 }
 
-    toggleSidebar() {
-        console.log('🔄 [SidebarManager] Toggling sidebar, current state:', this.isCollapsed);
-        
-        this.isCollapsed = !this.isCollapsed;
-        this.updateSidebarState();
-        
-        console.log('✅ [SidebarManager] Sidebar toggled to:', this.isCollapsed ? 'collapsed' : 'expanded');
+toggleSidebar() {
+    console.log('🔄 [SidebarManager] Toggling sidebar, current state:', this.isCollapsed);
+    
+    this.isCollapsed = !this.isCollapsed;
+    this.updateSidebarState();
+    
+    // Update classes and margins
+    if (this.isCollapsed) {
+        this.sidebar.classList.add('collapsed');
+        if (this.mainContent) {
+            this.mainContent.classList.add('sidebar-collapsed');
+            this.mainContent.style.marginLeft = '64px'; // Collapsed sidebar width
+        }
+    } else {
+        this.sidebar.classList.remove('collapsed');
+        if (this.mainContent) {
+            this.mainContent.classList.remove('sidebar-collapsed');
+            this.mainContent.style.marginLeft = '256px'; // Full sidebar width
+        }
     }
+}
 
     createExternalToggle() {
         console.log('🔧 [SidebarManager] Creating external toggle...');
