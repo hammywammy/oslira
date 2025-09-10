@@ -332,7 +332,7 @@ createExternalToggle() {
         left: 256px !important;
         transform: translateY(-50%) !important;
         width: 1rem !important;
-        height: 3rem !important;
+        height: 8rem !important;
         background: white !important;
         border: 1px solid #e5e7eb !important;
         border-left: none !important;
