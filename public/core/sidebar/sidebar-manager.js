@@ -1,43 +1,41 @@
 // =============================================================================
-// SIDEBAR-MANAGER.JS - Modular Sidebar Implementation
+// SIDEBAR MANAGER - PRODUCTION READY COMPONENT
+// Core sidebar navigation system with proper width control and state management
 // =============================================================================
 
 class SidebarManager {
     constructor() {
-        this.initialized = false;
-        this.currentConfig = null;
-        this.businessManager = null;
-        this.eventListeners = [];
+        this.isCollapsed = false;
+        this.user = null;
+        this.sidebar = null;
+        this.mainContent = null;
+        
+        console.log('🚀 [SidebarManager] Initializing...');
     }
-    
+
     // =========================================================================
-    // MAIN RENDER METHOD
+    // PUBLIC API - CORE METHODS
     // =========================================================================
-    
-    render(container, config = {}) {
+
+    async render(container = '#sidebar-container') {
         try {
             console.log('🎨 [SidebarManager] Rendering sidebar...');
             
-            this.currentConfig = {
-                activePage: 'dashboard',
-                showBusinessSelector: true,
-                customMenuItems: [],
-                theme: 'default',
-                ...config
-            };
-            
-            // Get container element
             const targetElement = typeof container === 'string' 
-                ? document.getElementById(container) 
+                ? document.querySelector(container)
                 : container;
                 
             if (!targetElement) {
                 throw new Error(`Container element not found: ${container}`);
             }
             
-// Inject sidebar HTML
-targetElement.innerHTML = this.getSidebarHTML();
-targetElement.className = 'sidebar fixed left-0 top-0 h-screen z-50';
+            // Set proper sidebar classes and inject HTML
+            targetElement.className = 'sidebar';
+            targetElement.innerHTML = this.getSidebarHTML();
+            
+            // Store references
+            this.sidebar = targetElement;
+            this.mainContent = document.querySelector('.main-content, [class*="content"], main');
             
             // Initialize functionality
             this.initializeSidebar();
@@ -50,560 +48,354 @@ targetElement.className = 'sidebar fixed left-0 top-0 h-screen z-50';
             throw error;
         }
     }
-    
+
+    async updateUserInfo(user) {
+        try {
+            console.log('👤 [SidebarManager] Updating user info...');
+            this.user = user;
+
+            // Update email
+            const emailElement = document.getElementById('sidebar-email');
+            if (emailElement && user?.email) {
+                emailElement.textContent = user.email;
+            }
+
+            // Update user initial
+            const userInitialElement = document.getElementById('sidebar-user-initial');
+            if (userInitialElement && user?.email) {
+                userInitialElement.textContent = user.email.charAt(0).toUpperCase();
+            }
+
+            // Update subscription plan
+            const planElement = document.getElementById('sidebar-plan');
+            if (planElement) {
+                const planName = this.formatPlanName(user.subscription_plan || 'free');
+                planElement.textContent = planName;
+            }
+
+            // Update credits display
+            const creditsElement = document.getElementById('sidebar-credits');
+            if (creditsElement) {
+                const credits = user.credits || 0;
+                creditsElement.textContent = credits;
+                
+                // Add low credits warning
+                if (credits < 5) {
+                    creditsElement.classList.add('text-red-500');
+                } else {
+                    creditsElement.classList.remove('text-red-500');
+                }
+            }
+
+            console.log('✅ [SidebarManager] User info updated');
+            
+        } catch (error) {
+            console.error('❌ [SidebarManager] Failed to update user info:', error);
+        }
+    }
+
+    setActiveMenuItem(pageId) {
+        console.log(`🎯 [SidebarManager] Setting active menu item: ${pageId}`);
+        
+        // Remove active class from all menu items
+        const menuItems = document.querySelectorAll('.nav-item');
+        menuItems.forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        // Add active class to current page
+        const activeItem = document.querySelector(`[data-page="${pageId}"]`);
+        if (activeItem) {
+            activeItem.classList.add('active');
+            console.log(`✅ [SidebarManager] Active menu item set: ${pageId}`);
+        } else {
+            console.warn(`⚠️ [SidebarManager] Menu item not found: ${pageId}`);
+        }
+    }
+
     // =========================================================================
     // HTML TEMPLATE
     // =========================================================================
-    
-// File: public/core/sidebar/sidebar-manager.js
-// Replace the getSidebarHTML() method (around line 50-150) with this Tailwind version
 
-getSidebarHTML() {
-    return `
-        <div id="sidebar-container" class="sidebar-container h-full overflow-hidden">
-            
-            <!-- Header -->
-<div class="sidebar-header">
-    <div class="flex items-center justify-between">
-        <div class="sidebar-logo flex items-center gap-3 flex-1">
-            <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
-                 class="w-8 h-8 object-contain flex-shrink-0">
-<div class="sidebar-logo-text flex flex-col min-w-0">
-    <span class="text-lg font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-        Oslira
-    </span>
-</div>
-        </div>
-<button id="sidebar-toggle" class="sidebar-toggle p-2 rounded-lg hover:bg-white/50 transition-all duration-200 group flex-shrink-0">
-    <svg class="w-5 h-5 text-gray-600 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h2m0-12h10a2 2 0 012 2v10a2 2 0 01-2 2H9m0-12V9m0 8v-4">
-            </svg>
-        </button>
-    </div>
-</div>
-            
-            <!-- Navigation -->
-            <nav class="sidebar-nav">
-                
-                <!-- Main Section -->
-                <div class="nav-section">
-                    <h4 class="nav-section-header px-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        Main
-                    </h4>
-                    
-                    <div class="nav-items">
-                        <a href="/dashboard" data-page="dashboard" data-tooltip="Dashboard" class="nav-item">
-                            <span class="nav-icon">📊</span>
-                            <span class="nav-text">Dashboard</span>
-                        </a>
-                        
-                        <a href="/leads" data-page="leads" data-tooltip="Lead Research" class="nav-item">
-                            <span class="nav-icon">🔍</span>
-                            <span class="nav-text">Lead Research</span>
-                        </a>
-                        
-                        <a href="/analytics" data-page="analytics" data-tooltip="Analytics" class="nav-item">
-                            <span class="nav-icon">📈</span>
-                            <span class="nav-text">Analytics</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Tools Section -->
-                <div class="nav-section">
-                    <h4 class="nav-section-header px-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        Tools
-                    </h4>
-                    
-                    <div class="nav-items">
-                        <a href="/campaigns" data-page="campaigns" data-tooltip="Campaigns" class="nav-item">
-                            <span class="nav-icon">🎯</span>
-                            <span class="nav-text">Campaigns</span>
-                        </a>
-                        
-                        <a href="/automations" data-page="automations" data-tooltip="Automations" class="nav-item">
-                            <span class="nav-icon">⚡</span>
-                            <span class="nav-text">Automations</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Account Section -->
-                <div class="nav-section">
-                    <h4 class="nav-section-header px-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
-                        Account
-                    </h4>
-                    
-                    <div class="nav-items">
-                        <a href="/settings" data-page="settings" data-tooltip="Settings" class="nav-item">
-                            <span class="nav-icon">⚙️</span>
-                            <span class="nav-text">Settings</span>
-                        </a>
-                    </div>
-                </div>
-                
-            </nav>
-            
-            <!-- User Section -->
-            <div class="sidebar-user-section">
-                <!-- Expanded User Info -->
-                <div class="sidebar-user-expanded">
-                    <div class="bg-gradient-to-br from-white/70 via-blue-50/60 to-purple-50/50 backdrop-blur-xl border border-white/30 rounded-xl shadow-lg p-4">
-                        <div class="mb-3">
-                            <div id="sidebar-email" class="text-sm font-bold text-gray-900 mb-1 truncate">Loading...</div>
-                            <div id="sidebar-plan" class="inline-flex items-center px-2 py-1 bg-gradient-to-r from-blue-100 to-purple-100 text-xs font-bold text-blue-700 uppercase tracking-wider rounded-full border border-blue-200/50">
-                                Free Plan
-                            </div>
+    getSidebarHTML() {
+        return `
+            <div class="sidebar-container">
+                <!-- Header -->
+                <div class="sidebar-header">
+                    <div class="flex items-center justify-between">
+                        <div class="sidebar-logo-container">
+                            <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
+                                 class="sidebar-logo-image">
+                            <div class="sidebar-logo-text">Oslira</div>
                         </div>
-                        
-                        <div class="bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-lg text-white shadow-lg mb-3">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <span class="text-xs font-bold uppercase tracking-wide opacity-90">Credits</span>
-                                    <div id="sidebar-credits" class="text-xl font-black">--</div>
-                                </div>
-                                <div class="text-xl opacity-80">⚡</div>
-                            </div>
-                        </div>
-                        
-                        <button onclick="handleLogout()" class="w-full text-xs text-gray-500 hover:text-red-600 transition-colors duration-200 font-medium py-2 text-left">
-                            Sign out
+                        <button id="sidebar-toggle" class="sidebar-toggle">
+                            <svg class="sidebar-toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h2m0-12h10a2 2 0 012 2v10a2 2 0 01-2 2H9m0-12V9m0 8v-4"/>
+                            </svg>
                         </button>
                     </div>
                 </div>
                 
-                <!-- Collapsed User Info -->
-                <div class="sidebar-user-collapsed">
-                    <div class="user-avatar">
-                        <span id="sidebar-user-initial-collapsed">U</span>
+                <!-- Navigation -->
+                <nav class="sidebar-nav">
+                    <!-- Main Section -->
+                    <div class="nav-section">
+                        <h4 class="nav-section-header">Main</h4>
+                        <div class="nav-items">
+                            <a href="/dashboard" data-page="dashboard" data-tooltip="Dashboard" class="nav-item">
+                                <span class="nav-icon">📊</span>
+                                <span class="nav-text">Dashboard</span>
+                            </a>
+                            <a href="/leads" data-page="leads" data-tooltip="Lead Research" class="nav-item">
+                                <span class="nav-icon">🔍</span>
+                                <span class="nav-text">Lead Research</span>
+                            </a>
+                            <a href="/analytics" data-page="analytics" data-tooltip="Analytics" class="nav-item">
+                                <span class="nav-icon">📈</span>
+                                <span class="nav-text">Analytics</span>
+                            </a>
+                        </div>
                     </div>
-                    <div id="sidebar-credits-collapsed" class="credits-collapsed" title="Available Credits">--</div>
-                    <button onclick="handleLogout()" class="p-2 text-gray-500 hover:text-red-600 transition-colors duration-200" title="Sign out">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                    </button>
+                    
+                    <!-- Tools Section -->
+                    <div class="nav-section">
+                        <h4 class="nav-section-header">Tools</h4>
+                        <div class="nav-items">
+                            <a href="/campaigns" data-page="campaigns" data-tooltip="Campaigns" class="nav-item">
+                                <span class="nav-icon">🎯</span>
+                                <span class="nav-text">Campaigns</span>
+                            </a>
+                            <a href="/automations" data-page="automations" data-tooltip="Automations" class="nav-item">
+                                <span class="nav-icon">⚡</span>
+                                <span class="nav-text">Automations</span>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Account Section -->
+                    <div class="nav-section">
+                        <h4 class="nav-section-header">Account</h4>
+                        <div class="nav-items">
+                            <a href="/settings" data-page="settings" data-tooltip="Settings" class="nav-item">
+                                <span class="nav-icon">⚙️</span>
+                                <span class="nav-text">Settings</span>
+                            </a>
+                        </div>
+                    </div>
+                </nav>
+                
+                <!-- User Section -->
+                <div class="sidebar-user-section">
+                    <!-- Expanded User Info -->
+                    <div class="sidebar-user-expanded">
+                        <div class="sidebar-user-info">
+                            <div class="sidebar-user-header">
+                                <div id="sidebar-email" class="sidebar-user-email">Loading...</div>
+                                <div id="sidebar-plan" class="sidebar-user-plan">Free Plan</div>
+                            </div>
+                            
+                            <div class="sidebar-user-credits">
+                                <div class="sidebar-user-credits-header">
+                                    <div>
+                                        <span class="sidebar-user-credits-label">Credits</span>
+                                        <div id="sidebar-credits" class="sidebar-user-credits-count">--</div>
+                                    </div>
+                                    <div class="sidebar-user-credits-icon">⚡</div>
+                                </div>
+                            </div>
+                            
+                            <div class="sidebar-user-actions">
+                                <button onclick="window.handleLogout && window.handleLogout()" 
+                                        class="sidebar-user-button">
+                                    Sign out
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Collapsed User Avatar -->
+                    <div class="sidebar-user-collapsed">
+                        <div class="sidebar-user-avatar">
+                            <span id="sidebar-user-initial">U</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-        </div>
-    `;
-}
-    
-    // =========================================================================
-    // INITIALIZATION
-    // =========================================================================
-    
-initializeSidebar() {
-    try {
-        // Set up sidebar toggle functionality
-        this.setupSidebarToggle();
-        
-        // Set up logout functionality
-        const logoutBtns = document.querySelectorAll('button[onclick="handleLogout()"]');
-        logoutBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.logout();
-            });
-        });
-        
-        // Wait for dependencies and update user info
-        this.waitForDependencies().then(() => {
-            this.connectToBusinessManager();
-            this.updateUserInfo();
-            this.setActiveMenuItem(this.currentConfig.activePage);
-            this.setupEventListeners();
-            this.initializeBusinessSelector();
-        });
-        
-        console.log('✅ [SidebarManager] Sidebar initialized successfully');
-        
-    } catch (error) {
-        console.error('❌ [SidebarManager] Initialization failed:', error);
+        `;
     }
-}
 
-setupSidebarToggle() {
-    const toggleBtn = document.getElementById('sidebar-toggle');
-    const sidebarContainer = document.getElementById('sidebar-container');
-    const sidebar = document.querySelector('.sidebar');
-    const mainContent = document.querySelector('.main-content, [class*="content"], main');
-    
-    if (toggleBtn && sidebarContainer) {
-        let isCollapsed = false;
+    // =========================================================================
+    // SIDEBAR FUNCTIONALITY
+    // =========================================================================
+
+    initializeSidebar() {
+        console.log('⚙️ [SidebarManager] Initializing sidebar functionality...');
+        
+        // Initialize toggle functionality
+        this.initializeToggle();
+        
+        // Initialize navigation
+        this.initializeNavigation();
+        
+        // Set initial state
+        this.updateSidebarState();
+        
+        console.log('✅ [SidebarManager] Sidebar functionality initialized');
+    }
+
+    initializeToggle() {
+        const toggleBtn = document.getElementById('sidebar-toggle');
+        
+        if (!toggleBtn) {
+            console.error('❌ [SidebarManager] Toggle button not found');
+            return;
+        }
         
         toggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            console.log('🔄 [SidebarManager] Toggle clicked, current state:', isCollapsed);
-            
-            if (isCollapsed) {
-                // Expand sidebar - match CSS class names
-                sidebar?.classList.remove('collapsed');
-                sidebarContainer.classList.remove('collapsed');
-                
-                // Update all elements with collapsed state
-                document.querySelectorAll('.sidebar-header').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.sidebar-logo-container').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.sidebar-logo-text').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.sidebar-toggle').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.sidebar-toggle-icon').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.sidebar-nav').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.nav-section').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.nav-section-header').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.nav-text').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.sidebar-user-section').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.sidebar-user-expanded').forEach(el => el.classList.remove('collapsed'));
-                document.querySelectorAll('.sidebar-user-collapsed').forEach(el => el.classList.remove('show'));
-                
-// Adjust main content margin
-if (mainContent) {
-    mainContent.classList.remove('sidebar-collapsed');
-    mainContent.style.marginLeft = ''; // Let CSS handle it
-                }
-                
-                isCollapsed = false;
-                console.log('✅ [SidebarManager] Sidebar expanded');
-            } else {
-                // Collapse sidebar - match CSS class names  
-                sidebar?.classList.add('collapsed');
-                sidebarContainer.classList.add('collapsed');
-                
-                // Update all elements with collapsed state
-                document.querySelectorAll('.sidebar-header').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.sidebar-logo-container').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.sidebar-logo-text').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.sidebar-toggle').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.sidebar-toggle-icon').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.sidebar-nav').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.nav-section').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.nav-section-header').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.nav-item').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.nav-text').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.sidebar-user-section').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.sidebar-user-expanded').forEach(el => el.classList.add('collapsed'));
-                document.querySelectorAll('.sidebar-user-collapsed').forEach(el => el.classList.add('show'));
-                
-                // Adjust main content margin
-                if (mainContent) {
-                    mainContent.style.marginLeft = '64px'; // w-16 = 64px
-                }
-                
-                isCollapsed = true;
-                console.log('✅ [SidebarManager] Sidebar collapsed');
-            }
+            this.toggleSidebar();
         });
         
         console.log('✅ [SidebarManager] Toggle event listener attached');
-    } else {
-        console.error('❌ [SidebarManager] Missing toggle elements:', {
-            toggleBtn: !!toggleBtn,
-            sidebarContainer: !!sidebarContainer
-        });
     }
-}
-    
-    async waitForDependencies() {
-        // Wait for OsliraApp
-        for (let i = 0; i < 50; i++) {
-            if (window.OsliraApp?.user) {
-                break;
-            }
-            await new Promise(resolve => setTimeout(resolve, 100));
-        }
+
+    toggleSidebar() {
+        console.log('🔄 [SidebarManager] Toggling sidebar, current state:', this.isCollapsed);
         
-        if (!window.OsliraApp?.user) {
-            throw new Error('OsliraApp not available');
-        }
-    }
-    
-connectToBusinessManager() {
-    // Try to get BusinessManager from dashboard container
-    if (window.dashboard?._app?.container) {
-        this.businessManager = window.dashboard._app.container.get('businessManager');
-        console.log('✅ [SidebarManager] Connected to BusinessManager');
+        this.isCollapsed = !this.isCollapsed;
+        this.updateSidebarState();
         
-        // Notify BusinessManager that sidebar is ready
-        if (this.businessManager && this.businessManager.updateSidebarBusinessSelector) {
-            setTimeout(() => {
-                console.log('🔄 [SidebarManager] Triggering business selector update...');
-                this.businessManager.updateSidebarBusinessSelector();
-            }, 100); // Small delay to ensure DOM is ready
-        }
-    } else {
-        console.warn('⚠️ [SidebarManager] BusinessManager not available');
+        console.log('✅ [SidebarManager] Sidebar toggled to:', this.isCollapsed ? 'collapsed' : 'expanded');
     }
-}
-    
-    // =========================================================================
-    // USER INFO UPDATE
-    // =========================================================================
-    
-updateUserInfo() {
-    try {
-        const user = window.OsliraApp?.user;
-        if (!user) {
-            console.warn('⚠️ [SidebarManager] No user data available');
-            return;
-        }
 
-        console.log('🔄 [SidebarManager] Updating user info...');
-
-        // Update email
-        const emailElement = document.getElementById('sidebar-email');
-        if (emailElement) {
-            emailElement.textContent = user.email || 'No email';
-        }
-
-        // Update user initial (first letter of email)
-        const userInitialElement = document.getElementById('sidebar-user-initial');
-        if (userInitialElement && user.email) {
-            userInitialElement.textContent = user.email.charAt(0).toUpperCase();
-        }
-
-        // Update subscription plan
-        const planElement = document.getElementById('sidebar-plan');
-        if (planElement) {
-            const planName = this.formatPlanName(user.subscription_plan || 'free');
-            planElement.textContent = planName;
-        }
-
-        // Update credits display (both expanded and collapsed)
-        const creditsElement = document.getElementById('sidebar-credits');
-        const creditsCollapsedElement = document.getElementById('sidebar-credits-collapsed');
-        if (creditsElement || creditsCollapsedElement) {
-            const credits = user.credits || 0;
-            
-            if (creditsElement) {
-                creditsElement.textContent = credits;
+    updateSidebarState() {
+        if (!this.sidebar) return;
+        
+        // Update sidebar classes
+        if (this.isCollapsed) {
+            this.sidebar.classList.add('collapsed');
+            if (this.mainContent) {
+                this.mainContent.classList.add('sidebar-collapsed');
             }
-            if (creditsCollapsedElement) {
-                creditsCollapsedElement.textContent = credits;
-            }
-            
-            // Add warning class for low credits
-            const creditClass = credits < 5 ? 'low-credits' : '';
-            if (creditsElement) {
-                creditsElement.className = `text-xl font-black ${creditClass}`;
-            }
-            if (creditsCollapsedElement) {
-                creditsCollapsedElement.className = `text-xs font-bold mt-1 ${creditClass}`;
+        } else {
+            this.sidebar.classList.remove('collapsed');
+            if (this.mainContent) {
+                this.mainContent.classList.remove('sidebar-collapsed');
             }
         }
-
-        console.log('✅ [SidebarManager] User info updated');
         
-    } catch (error) {
-        console.error('❌ [SidebarManager] Failed to update user info:', error);
+        // Update all child elements
+        this.updateChildElements();
     }
-}
-    
-formatPlanName(plan) {
-    const planMap = {
-        'free': 'Free Plan',
-        'starter': 'Starter Plan',
-        'professional': 'Pro Plan',
-        'enterprise': 'Enterprise Plan'
-    };
-    return planMap[plan] || 'Subscription';
-}
-    
-    // =========================================================================
-    // NAVIGATION CONTROL
-    // =========================================================================
-    
-// File: public/core/sidebar/sidebar-manager.js
-// Replace the setActiveMenuItem method (around line 200-220) with this version
 
-setActiveMenuItem(pageId) {
-    console.log(`🎯 [SidebarManager] Setting active menu item: ${pageId}`);
-    
-    // Remove active class from all menu items
-    const menuItems = document.querySelectorAll('.sidebar nav a[data-page]');
-    menuItems.forEach(item => {
-        item.classList.remove('active');
-        // Reset to default styles
-        item.classList.remove('bg-blue-500', 'text-white', 'shadow-lg');
-        item.classList.add('text-gray-800', 'bg-gray-50/50');
-    });
-    
-    // Add active class to current page
-    const activeItem = document.querySelector(`.sidebar nav a[data-page="${pageId}"]`);
-    if (activeItem) {
-        activeItem.classList.add('active');
-        // Apply active styles - dark text on light background for readability
-        activeItem.classList.remove('text-gray-800', 'bg-gray-50/50');
-        activeItem.classList.add('bg-blue-500', 'text-white', 'shadow-lg');
+    updateChildElements() {
+        const elementsToUpdate = [
+            '.sidebar-header',
+            '.sidebar-logo-container', 
+            '.sidebar-logo-text',
+            '.sidebar-toggle',
+            '.sidebar-toggle-icon',
+            '.sidebar-nav',
+            '.nav-section',
+            '.nav-section-header',
+            '.nav-item',
+            '.nav-text',
+            '.sidebar-user-section',
+            '.sidebar-user-expanded',
+            '.sidebar-user-collapsed'
+        ];
         
-        console.log(`✅ [SidebarManager] Active menu item set: ${pageId}`);
-    } else {
-        console.warn(`⚠️ [SidebarManager] Menu item not found: ${pageId}`);
-    }
-}
-    
-    // =========================================================================
-    // EVENT LISTENERS
-    // =========================================================================
-    
-    setupEventListeners() {
-        // Listen for business changes
-        if (this.businessManager?.eventBus) {
-            const handleBusinessChange = (event) => {
-                console.log('🔄 [SidebarManager] Business changed, updating sidebar...');
-                // Business selector is automatically updated by BusinessManager
-            };
-            
-            this.businessManager.eventBus.on('business:changed', handleBusinessChange);
-            this.eventListeners.push({
-                target: this.businessManager.eventBus,
-                event: 'business:changed',
-                handler: handleBusinessChange
-            });
-        }
-        
-        // Listen for user data changes
-        const handleUserUpdate = () => {
-            this.updateUserInfo();
-        };
-        
-        window.addEventListener('user:updated', handleUserUpdate);
-        this.eventListeners.push({
-            target: window,
-            event: 'user:updated',
-            handler: handleUserUpdate
-        });
-    }
-    
-    // =========================================================================
-    // UPDATE METHODS
-    // =========================================================================
-    
-    updateUserCredits(newCredits) {
-        const creditsElement = document.getElementById('sidebar-credits');
-        if (creditsElement) {
-            creditsElement.textContent = newCredits;
-            const creditClass = newCredits < 5 ? 'low-credits' : '';
-            creditsElement.className = `credits-amount ${creditClass}`;
-        }
-    }
-    
-    updateSubscriptionPlan(planName) {
-        const planElement = document.getElementById('sidebar-plan');
-        if (planElement) {
-            planElement.textContent = this.formatPlanName(planName);
-        }
-    }
-
-    // =========================================================================
-// BUSINESS SELECTOR INITIALIZATION
-// =========================================================================
-
-initializeBusinessSelector() {
-    try {
-        // Try multiple possible selectors
-        const businessSelect = document.getElementById('business-select') || 
-                              document.getElementById('sidebar-business-select') ||
-                              document.querySelector('.sidebar-business-select');
-                              
-        if (!businessSelect) {
-            console.warn('⚠️ [SidebarManager] Business selector element not found, creating...');
-            this.createBusinessSelectorIfMissing();
-            return;
-        }
-
-        // Check if we have business data available
-        if (window.OsliraApp?.businesses && window.OsliraApp.businesses.length > 0) {
-            console.log('🏢 [SidebarManager] Populating business selector with existing data');
-            
-            const businesses = window.OsliraApp.businesses;
-            const currentBusiness = window.OsliraApp.business;
-            
-            const optionsHTML = businesses.map(business => 
-                `<option value="${business.id}" ${business.id === currentBusiness?.id ? 'selected' : ''}>
-                    ${business.business_name || business.name || 'Unnamed Business'}
-                </option>`
-            ).join('');
-            
-            businessSelect.innerHTML = `
-                <option value="">Select business profile...</option>
-                ${optionsHTML}
-            `;
-            
-            // Add change handler
-            businessSelect.addEventListener('change', (e) => {
-                if (e.target.value && this.businessManager?.switchBusiness) {
-                    this.businessManager.switchBusiness(e.target.value);
+        elementsToUpdate.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                if (this.isCollapsed) {
+                    el.classList.add('collapsed');
+                } else {
+                    el.classList.remove('collapsed');
                 }
             });
-            
-            console.log('✅ [SidebarManager] Business selector initialized');
-        }
-    } catch (error) {
-        console.error('❌ [SidebarManager] Failed to initialize business selector:', error);
-    }
-}
-
-    // =========================================================================
-// DOM REPAIR METHODS
-// =========================================================================
-
-createBusinessSelectorIfMissing() {
-    const userSection = document.querySelector('.sidebar-user-section') || 
-                        document.querySelector('.user-info');
-    
-    if (!userSection) {
-        console.error('❌ [SidebarManager] Cannot create business selector - no user section found');
-        return;
-    }
-    
-    console.log('🔧 [SidebarManager] Creating missing business selector...');
-    
-    const selectorHTML = `
-        <div class="business-selector-section mt-4 p-3 bg-slate-50 rounded-lg">
-            <label for="business-select" class="block text-sm font-medium text-slate-700 mb-2">
-                Business Profile
-            </label>
-            <select id="business-select" 
-                    class="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onchange="window.businessManager?.handleBusinessChange(this.value)">
-                <option value="">Loading...</option>
-            </select>
-        </div>
-    `;
-    
-    userSection.insertAdjacentHTML('afterend', selectorHTML);
-    console.log('✅ [SidebarManager] Business selector created');
-    
-    // Initialize after creation
-    setTimeout(() => {
-        this.initializeBusinessSelector();
-    }, 100);
-}
-    
-    // =========================================================================
-    // CLEANUP
-    // =========================================================================
-    
-    destroy() {
-        // Remove event listeners
-        this.eventListeners.forEach(({ target, event, handler }) => {
-            if (target.off) {
-                target.off(event, handler);
-            } else {
-                target.removeEventListener(event, handler);
-            }
         });
         
-        this.eventListeners = [];
-        this.businessManager = null;
-        this.initialized = false;
+        // Special handling for collapsed user avatar
+        const userCollapsed = document.querySelectorAll('.sidebar-user-collapsed');
+        userCollapsed.forEach(el => {
+            if (this.isCollapsed) {
+                el.classList.add('show');
+            } else {
+                el.classList.remove('show');
+            }
+        });
+    }
+
+    initializeNavigation() {
+        const navItems = document.querySelectorAll('.nav-item[data-page]');
         
-        console.log('🧹 [SidebarManager] Cleaned up');
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                const pageId = item.getAttribute('data-page');
+                if (pageId) {
+                    this.setActiveMenuItem(pageId);
+                }
+            });
+        });
+        
+        console.log('✅ [SidebarManager] Navigation event listeners attached');
+    }
+
+    // =========================================================================
+    // UTILITY METHODS
+    // =========================================================================
+
+    formatPlanName(plan) {
+        const planMap = {
+            'free': 'Free Plan',
+            'starter': 'Starter Plan',
+            'professional': 'Pro Plan',
+            'enterprise': 'Enterprise Plan'
+        };
+        return planMap[plan] || 'Subscription';
+    }
+
+    // =========================================================================
+    // PUBLIC UTILITIES
+    // =========================================================================
+
+    collapse() {
+        if (!this.isCollapsed) {
+            this.toggleSidebar();
+        }
+    }
+
+    expand() {
+        if (this.isCollapsed) {
+            this.toggleSidebar();
+        }
+    }
+
+    getState() {
+        return {
+            isCollapsed: this.isCollapsed,
+            user: this.user
+        };
     }
 }
 
-// Create global instance
-window.SidebarManager = new SidebarManager();
+// =============================================================================
+// GLOBAL INITIALIZATION
+// =============================================================================
 
-console.log('📋 SidebarManager ready for use');
+// Export for global use
+window.SidebarManager = SidebarManager;
+
+// Create global instance
+window.sidebarManager = new SidebarManager();
+
+console.log('✅ [SidebarManager] Module loaded and ready');
+
+// Auto-initialize if container exists
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.querySelector('#sidebar-container');
+    if (container) {
+        window.sidebarManager.render('#sidebar-container').catch(console.error);
+    }
+});
