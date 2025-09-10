@@ -187,10 +187,10 @@ console.log('✅ [SidebarManager] Sidebar rendered successfully');
                             <div class="sidebar-logo-text">Oslira</div>
                         </div>
                         <button id="sidebar-toggle" class="sidebar-toggle">
-                            <svg class="sidebar-toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h2m0-12h10a2 2 0 012 2v10a2 2 0 01-2 2H9m0-12V9m0 8v-4"/>
-                            </svg>
-                        </button>
+    <svg class="sidebar-toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+</button>
                     </div>
                 </div>
                 
@@ -369,6 +369,8 @@ updateSidebarState() {
 }
 
 updateChildElements() {
+    if (!this.sidebar) return;
+    
     const elementsToUpdate = [
         '.sidebar-header',
         '.sidebar-logo-container', 
@@ -396,87 +398,250 @@ updateChildElements() {
         });
     });
     
-    // Force hide/show text elements with inline styles
     if (this.isCollapsed) {
-        // Hide text elements
-        const navTexts = this.sidebar.querySelectorAll('.nav-text');
-        navTexts.forEach(text => {
-            text.style.opacity = '0';
-            text.style.width = '0';
-            text.style.overflow = 'hidden';
-        });
+        // COLLAPSED STATE - Force perfect centering
         
-        const sectionHeaders = this.sidebar.querySelectorAll('.nav-section-header');
-        sectionHeaders.forEach(header => {
-            header.style.opacity = '0';
-            header.style.height = '0';
-            header.style.overflow = 'hidden';
-        });
+        // 1. Fix sidebar overflow
+        this.sidebar.style.overflowX = 'hidden';
+        this.sidebar.style.overflowY = 'auto';
         
-        const logoText = this.sidebar.querySelector('.sidebar-logo-text');
-        if (logoText) {
-            logoText.style.opacity = '0';
-            logoText.style.width = '0';
-            logoText.style.overflow = 'hidden';
+        // 2. Center header elements
+        const header = this.sidebar.querySelector('.sidebar-header');
+        if (header) {
+            header.style.cssText = `
+                padding: 0.5rem 0.25rem !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                gap: 0.5rem !important;
+                overflow: hidden !important;
+            `;
         }
         
-        // Center navigation items
+        // 3. Center logo
+        const logoContainer = this.sidebar.querySelector('.sidebar-logo-container');
+        if (logoContainer) {
+            logoContainer.style.cssText = `
+                justify-content: center !important;
+                margin-bottom: 0.5rem !important;
+                width: 100% !important;
+            `;
+        }
+        
+        // 4. Hide logo text completely
+        const logoText = this.sidebar.querySelector('.sidebar-logo-text');
+        if (logoText) {
+            logoText.style.display = 'none';
+        }
+        
+        // 5. Style toggle button as chevron
+        const toggle = this.sidebar.querySelector('.sidebar-toggle');
+        if (toggle) {
+            toggle.style.cssText = `
+                padding: 0.25rem !important;
+                width: 2rem !important;
+                height: 2rem !important;
+                margin: 0 auto !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            `;
+        }
+        
+        // 6. Rotate chevron for collapsed state
+        const toggleIcon = this.sidebar.querySelector('.sidebar-toggle-icon');
+        if (toggleIcon) {
+            toggleIcon.style.transform = 'rotate(0deg)';
+        }
+        
+        // 7. Center navigation
+        const nav = this.sidebar.querySelector('.sidebar-nav');
+        if (nav) {
+            nav.style.cssText = `
+                padding: 0.25rem !important;
+                align-items: center !important;
+                overflow: hidden !important;
+            `;
+        }
+        
+        // 8. Perfect center all nav items and icons
         const navItems = this.sidebar.querySelectorAll('.nav-item');
         navItems.forEach(item => {
-            item.style.justifyContent = 'center';
-            item.style.gap = '0';
-            item.style.padding = '0.5rem';
-            item.style.width = '3rem';
-            item.style.margin = '0 auto';
+            item.style.cssText = `
+                justify-content: center !important;
+                align-items: center !important;
+                gap: 0 !important;
+                padding: 0.5rem !important;
+                width: 3rem !important;
+                height: 3rem !important;
+                margin: 0.125rem auto !important;
+                border-radius: 0.5rem !important;
+                display: flex !important;
+            `;
+            
+            // Center the icon within each item
+            const icon = item.querySelector('.nav-icon');
+            if (icon) {
+                icon.style.cssText = `
+                    margin: 0 auto !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    width: 1.5rem !important;
+                    height: 1.5rem !important;
+                    font-size: 1.25rem !important;
+                `;
+            }
         });
         
-        // Show collapsed user avatar
+        // 9. Hide all text elements
+        const navTexts = this.sidebar.querySelectorAll('.nav-text');
+        navTexts.forEach(text => text.style.display = 'none');
+        
+        const sectionHeaders = this.sidebar.querySelectorAll('.nav-section-header');
+        sectionHeaders.forEach(header => header.style.display = 'none');
+        
+        // 10. Center user section
+        const userSection = this.sidebar.querySelector('.sidebar-user-section');
+        if (userSection) {
+            userSection.style.cssText = `
+                padding: 0.5rem 0.25rem !important;
+                display: flex !important;
+                justify-content: center !important;
+            `;
+        }
+        
+        // 11. Show collapsed user avatar centered
         const userCollapsed = this.sidebar.querySelectorAll('.sidebar-user-collapsed');
         userCollapsed.forEach(el => {
             el.classList.add('show');
-            el.style.display = 'block';
+            el.style.cssText = `
+                display: flex !important;
+                justify-content: center !important;
+                width: 100% !important;
+            `;
         });
         
-        // Hide expanded user info
+        // 12. Hide expanded user info
         const userExpanded = this.sidebar.querySelectorAll('.sidebar-user-expanded');
-        userExpanded.forEach(el => {
-            el.style.opacity = '0';
-            el.style.height = '0';
-            el.style.overflow = 'hidden';
-        });
+        userExpanded.forEach(el => el.style.display = 'none');
         
     } else {
-        // Show text elements
-        const navTexts = this.sidebar.querySelectorAll('.nav-text');
-        navTexts.forEach(text => {
-            text.style.opacity = '1';
-            text.style.width = 'auto';
-            text.style.overflow = 'visible';
-        });
+        // EXPANDED STATE - Reset all styles
         
-        const sectionHeaders = this.sidebar.querySelectorAll('.nav-section-header');
-        sectionHeaders.forEach(header => {
-            header.style.opacity = '1';
-            header.style.height = 'auto';
-            header.style.overflow = 'visible';
-        });
+        // Reset overflow
+        this.sidebar.style.overflowX = 'visible';
+        this.sidebar.style.overflowY = 'auto';
+        
+        // Reset header
+        const header = this.sidebar.querySelector('.sidebar-header');
+        if (header) {
+            header.style.cssText = `
+                padding: 1rem !important;
+                border-bottom: 1px solid rgba(229,231,235,0.5) !important;
+                transition: all 0.3s ease !important;
+            `;
+        }
+        
+        // Reset logo
+        const logoContainer = this.sidebar.querySelector('.sidebar-logo-container');
+        if (logoContainer) {
+            logoContainer.style.cssText = `
+                display: flex !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                margin-bottom: 1rem !important;
+            `;
+        }
         
         const logoText = this.sidebar.querySelector('.sidebar-logo-text');
         if (logoText) {
-            logoText.style.opacity = '1';
-            logoText.style.width = 'auto';
-            logoText.style.overflow = 'visible';
+            logoText.style.display = 'block';
         }
         
-        // Reset navigation items
+        // Reset toggle
+        const toggle = this.sidebar.querySelector('.sidebar-toggle');
+        if (toggle) {
+            toggle.style.cssText = `
+                padding: 0.5rem !important;
+                color: #6b7280 !important;
+                border-radius: 0.5rem !important;
+                transition: all 0.2s ease !important;
+                background: none !important;
+                border: none !important;
+                cursor: pointer !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            `;
+        }
+        
+        // Rotate chevron for expanded state
+        const toggleIcon = this.sidebar.querySelector('.sidebar-toggle-icon');
+        if (toggleIcon) {
+            toggleIcon.style.transform = 'rotate(180deg)';
+        }
+        
+        // Reset navigation
+        const nav = this.sidebar.querySelector('.sidebar-nav');
+        if (nav) {
+            nav.style.cssText = `
+                flex: 1 !important;
+                overflow-y: auto !important;
+                padding: 1rem !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 1.5rem !important;
+            `;
+        }
+        
+        // Reset nav items
         const navItems = this.sidebar.querySelectorAll('.nav-item');
         navItems.forEach(item => {
-            item.style.justifyContent = 'flex-start';
-            item.style.gap = '0.75rem';
-            item.style.padding = '0.625rem 0.75rem';
-            item.style.width = 'auto';
-            item.style.margin = '0';
+            item.style.cssText = `
+                display: flex !important;
+                align-items: center !important;
+                gap: 0.75rem !important;
+                padding: 0.625rem 0.75rem !important;
+                color: #374151 !important;
+                border-radius: 0.5rem !important;
+                transition: all 0.2s ease !important;
+                cursor: pointer !important;
+                min-height: 2.75rem !important;
+                text-decoration: none !important;
+                width: auto !important;
+                margin: 0 !important;
+            `;
+            
+            const icon = item.querySelector('.nav-icon');
+            if (icon) {
+                icon.style.cssText = `
+                    width: 1.25rem !important;
+                    height: 1.25rem !important;
+                    flex-shrink: 0 !important;
+                    font-size: 1.25rem !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                `;
+            }
         });
+        
+        // Show text elements
+        const navTexts = this.sidebar.querySelectorAll('.nav-text');
+        navTexts.forEach(text => text.style.display = 'block');
+        
+        const sectionHeaders = this.sidebar.querySelectorAll('.nav-section-header');
+        sectionHeaders.forEach(header => header.style.display = 'block');
+        
+        // Reset user section
+        const userSection = this.sidebar.querySelector('.sidebar-user-section');
+        if (userSection) {
+            userSection.style.cssText = `
+                padding: 1rem !important;
+                border-top: 1px solid rgba(229,231,235,0.5) !important;
+            `;
+        }
         
         // Hide collapsed user avatar
         const userCollapsed = this.sidebar.querySelectorAll('.sidebar-user-collapsed');
@@ -487,11 +652,7 @@ updateChildElements() {
         
         // Show expanded user info
         const userExpanded = this.sidebar.querySelectorAll('.sidebar-user-expanded');
-        userExpanded.forEach(el => {
-            el.style.opacity = '1';
-            el.style.height = 'auto';
-            el.style.overflow = 'visible';
-        });
+        userExpanded.forEach(el => el.style.display = 'block');
     }
 }
 
