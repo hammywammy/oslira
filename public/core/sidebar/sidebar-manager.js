@@ -37,7 +37,7 @@ class SidebarManager {
             
 // Inject sidebar HTML
 targetElement.innerHTML = this.getSidebarHTML();
-targetElement.className = 'sidebar sidebar-expanded fixed left-0 top-0 h-screen z-50';
+targetElement.className = 'sidebar fixed left-0 top-0 h-screen z-50';
             
             // Initialize functionality
             this.initializeSidebar();
@@ -228,29 +228,77 @@ setupSidebarToggle() {
     const toggleBtn = document.getElementById('sidebar-toggle');
     const sidebarContainer = document.getElementById('sidebar-container');
     const sidebar = document.querySelector('.sidebar');
-    const mainContent = document.querySelector('.main-content');
+    const mainContent = document.querySelector('.main-content, [class*="content"], main');
     
-    if (toggleBtn && sidebarContainer && sidebar && mainContent) {
+    if (toggleBtn && sidebarContainer) {
         let isCollapsed = false;
         
-        toggleBtn.addEventListener('click', () => {
+        toggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('🔄 [SidebarManager] Toggle clicked, current state:', isCollapsed);
+            
             if (isCollapsed) {
-                // Expand sidebar
-                sidebar.classList.remove('sidebar-collapsed');
-                sidebar.classList.add('sidebar-expanded');
+                // Expand sidebar - match CSS class names
+                sidebar?.classList.remove('collapsed');
                 sidebarContainer.classList.remove('collapsed');
-                mainContent.style.marginLeft = 'var(--sidebar-width)';
+                
+                // Update all elements with collapsed state
+                document.querySelectorAll('.sidebar-header').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.sidebar-logo-container').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.sidebar-logo-text').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.sidebar-toggle').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.sidebar-toggle-icon').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.sidebar-nav').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.nav-section').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.nav-section-header').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.nav-text').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.sidebar-user-section').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.sidebar-user-expanded').forEach(el => el.classList.remove('collapsed'));
+                document.querySelectorAll('.sidebar-user-collapsed').forEach(el => el.classList.remove('show'));
+                
+                // Adjust main content margin
+                if (mainContent) {
+                    mainContent.style.marginLeft = '256px'; // w-64 = 256px
+                }
                 
                 isCollapsed = false;
+                console.log('✅ [SidebarManager] Sidebar expanded');
             } else {
-                // Collapse sidebar
-                sidebar.classList.remove('sidebar-expanded');
-                sidebar.classList.add('sidebar-collapsed');
+                // Collapse sidebar - match CSS class names  
+                sidebar?.classList.add('collapsed');
                 sidebarContainer.classList.add('collapsed');
-                mainContent.style.marginLeft = '64px';
+                
+                // Update all elements with collapsed state
+                document.querySelectorAll('.sidebar-header').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.sidebar-logo-container').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.sidebar-logo-text').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.sidebar-toggle').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.sidebar-toggle-icon').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.sidebar-nav').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.nav-section').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.nav-section-header').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.nav-text').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.sidebar-user-section').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.sidebar-user-expanded').forEach(el => el.classList.add('collapsed'));
+                document.querySelectorAll('.sidebar-user-collapsed').forEach(el => el.classList.add('show'));
+                
+                // Adjust main content margin
+                if (mainContent) {
+                    mainContent.style.marginLeft = '64px'; // w-16 = 64px
+                }
                 
                 isCollapsed = true;
+                console.log('✅ [SidebarManager] Sidebar collapsed');
             }
+        });
+        
+        console.log('✅ [SidebarManager] Toggle event listener attached');
+    } else {
+        console.error('❌ [SidebarManager] Missing toggle elements:', {
+            toggleBtn: !!toggleBtn,
+            sidebarContainer: !!sidebarContainer
         });
     }
 }
