@@ -60,7 +60,7 @@ targetElement.className = 'sidebar fixed left-0 top-0 h-screen z-50';
 
 getSidebarHTML() {
     return `
-        <div id="sidebar-container" class="h-full bg-gradient-to-br from-white/95 via-blue-50/90 to-purple-50/85 backdrop-blur-xl border-r border-white/20 shadow-2xl shadow-blue-500/10 transition-all duration-300">
+        <div id="sidebar-container" class="sidebar-container h-full overflow-hidden">
             
             <!-- Header -->
 <div class="sidebar-header">
@@ -257,9 +257,10 @@ setupSidebarToggle() {
                 document.querySelectorAll('.sidebar-user-expanded').forEach(el => el.classList.remove('collapsed'));
                 document.querySelectorAll('.sidebar-user-collapsed').forEach(el => el.classList.remove('show'));
                 
-                // Adjust main content margin
-                if (mainContent) {
-                    mainContent.style.marginLeft = '256px'; // w-64 = 256px
+// Adjust main content margin
+if (mainContent) {
+    mainContent.classList.remove('sidebar-collapsed');
+    mainContent.style.marginLeft = ''; // Let CSS handle it
                 }
                 
                 isCollapsed = false;
