@@ -41,7 +41,7 @@ this.coreScripts = [
         '/pages/dashboard/modules/stats/stats-calculator.js',
         '/pages/dashboard/modules/ui/modal-manager.js'
     ],
-stylesheets: ['/src/components/sidebar.css'],
+stylesheets: ['/assets/css/tailwind.css'],
                 requiresAuth: true,
                 enableTailwind: true
             },
