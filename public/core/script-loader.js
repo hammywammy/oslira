@@ -41,6 +41,7 @@ this.coreScripts = [
         '/pages/dashboard/modules/stats/stats-calculator.js',
         '/pages/dashboard/modules/ui/modal-manager.js'
     ],
+    stylesheets: ['/src/styles.css'],
                 requiresAuth: true,
                 enableTailwind: true
             },
@@ -228,36 +229,64 @@ getGlobalName(scriptName) {
     // =============================================================================
     // PAGE SCRIPT LOADING
     // =============================================================================
+async loadPageScripts(pageName) {
+    const pageConfig = this.pageConfigs[pageName];
     
-    async loadPageScripts(pageName) {
-        const pageConfig = this.pageConfigs[pageName];
-        
-        if (!pageConfig) {
-            console.log(`ℹ️  [ScriptLoader] No scripts configured for page: ${pageName}`);
-            return;
-        }
-        
-        console.log(`📦 [ScriptLoader] Loading ${pageConfig.scripts.length} scripts for ${pageName}`);
-        
-        // Load sidebar for authenticated pages
-        if (pageConfig.requiresAuth && pageName !== 'auth' && pageName !== 'onboarding') {
-            await this.loadScript('sidebar-manager', '/core/sidebar/sidebar-manager.js');
-        }
-        
-        // Load page scripts in parallel
-        const loadPromises = pageConfig.scripts.map(async (scriptPath) => {
-            const scriptName = this.extractScriptName(scriptPath);
-            return this.loadScript(scriptName, scriptPath);
+    if (!pageConfig) {
+        console.log(`ℹ️  [ScriptLoader] No scripts configured for page: ${pageName}`);
+        return;
+    }
+    
+    console.log(`📦 [ScriptLoader] Loading ${pageConfig.scripts.length} scripts for ${pageName}`);
+    
+    // Load sidebar for authenticated pages
+    if (pageConfig.requiresAuth && pageName !== 'auth' && pageName !== 'onboarding') {
+        await this.loadScript('sidebar-manager', '/core/sidebar/sidebar-manager.js');
+    }
+    
+    // Load stylesheets for this page FIRST
+    if (pageConfig.stylesheets) {
+        const stylesheetPromises = pageConfig.stylesheets.map(async (stylePath) => {
+            const styleName = this.extractScriptName(stylePath);
+            return this.loadStylesheet(styleName, stylePath);
         });
         
         try {
-            await Promise.all(loadPromises);
-            console.log(`✅ [ScriptLoader] All scripts loaded for ${pageName}`);
+            await Promise.all(stylesheetPromises);
+            console.log(`✅ [ScriptLoader] All stylesheets loaded for ${pageName}`);
         } catch (error) {
-            console.error(`❌ [ScriptLoader] Failed to load scripts for ${pageName}:`, error);
-            // Continue execution even if some page scripts fail
+            console.error(`❌ [ScriptLoader] Failed to load stylesheets for ${pageName}:`, error);
         }
     }
+    
+    // Load page scripts in parallel
+    const loadPromises = pageConfig.scripts.map(async (scriptPath) => {
+        const scriptName = this.extractScriptName(scriptPath);
+        return this.loadScript(scriptName, scriptPath);
+    });
+    
+    try {
+        await Promise.all(loadPromises);
+        console.log(`✅ [ScriptLoader] All scripts loaded for ${pageName}`);
+    } catch (error) {
+        console.error(`❌ [ScriptLoader] Failed to load scripts for ${pageName}:`, error);
+        // Continue execution even if some page scripts fail
+    }
+    // Load stylesheets for this page
+if (pageConfig.stylesheets) {
+    const stylesheetPromises = pageConfig.stylesheets.map(async (stylePath) => {
+        const styleName = this.extractScriptName(stylePath);
+        return this.loadStylesheet(styleName, stylePath);
+    });
+    
+    try {
+        await Promise.all(stylesheetPromises);
+        console.log(`✅ [ScriptLoader] All stylesheets loaded for ${pageName}`);
+    } catch (error) {
+        console.error(`❌ [ScriptLoader] Failed to load stylesheets for ${pageName}:`, error);
+    }
+}
+}
     
     extractScriptName(scriptPath) {
         return scriptPath.split('/').pop().replace('.js', '');
@@ -311,6 +340,35 @@ getGlobalName(scriptName) {
         this.loadingPromises.set(name, promise);
         return promise;
     }
+    async loadStylesheet(name, href) {
+    // Check if already loaded
+    if (this.loadedScripts.has(name)) {
+        return;
+    }
+    
+    console.log(`🎨 [ScriptLoader] Loading stylesheet: ${name} from ${href}`);
+    
+    const promise = new Promise((resolve, reject) => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        
+        link.onload = () => {
+            console.log(`✅ [ScriptLoader] ${name} stylesheet loaded`);
+            this.loadedScripts.add(name);
+            resolve();
+        };
+        
+        link.onerror = () => {
+            console.error(`❌ [ScriptLoader] Failed to load stylesheet ${name}`);
+            reject(new Error(`Failed to load stylesheet: ${name}`));
+        };
+        
+        document.head.appendChild(link);
+    });
+    
+    return promise;
+}
     
     // =============================================================================
     // ERROR HANDLING
