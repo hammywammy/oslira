@@ -472,14 +472,20 @@ initializeUserIntegration() {
     // Clear interval after 10 seconds to prevent infinite polling
     setTimeout(() => clearInterval(waitForUserData), 10000);
     
-    // Also listen for auth state changes
-    if (window.OsliraAuth) {
+// Also listen for auth state changes if available
+try {
+    if (window.OsliraAuth && typeof window.OsliraAuth.onAuthStateChange === 'function') {
         window.OsliraAuth.onAuthStateChange((event, session) => {
             if (session?.user && window.OsliraApp?.user) {
                 this.updateUserInfo(window.OsliraApp.user);
             }
         });
+    } else {
+        console.log('👤 [SidebarManager] Auth state change listener not available, using polling only');
     }
+} catch (error) {
+    console.warn('⚠️ [SidebarManager] Could not setup auth state listener:', error.message);
+}
 }
 
 // Helper method to refresh user data from OsliraApp
