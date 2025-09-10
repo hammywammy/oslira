@@ -179,20 +179,13 @@ console.log('✅ [SidebarManager] Sidebar rendered successfully');
         return `
             <div class="sidebar-container">
                 <!-- Header -->
-                <div class="sidebar-header">
-                    <div class="flex items-center justify-between">
-                        <div class="sidebar-logo-container">
-                            <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
-                                 class="sidebar-logo-image">
-                            <div class="sidebar-logo-text">Oslira</div>
-                        </div>
-                        <button id="sidebar-toggle" class="sidebar-toggle">
-    <svg class="sidebar-toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-    </svg>
-</button>
-                    </div>
-                </div>
+<div class="sidebar-header">
+    <div class="sidebar-logo-container">
+        <img src="/assets/images/oslira-logo.png" alt="Oslira Logo" 
+             class="sidebar-logo-image">
+        <div class="sidebar-logo-text">Oslira</div>
+    </div>
+</div>
                 
                 <!-- Navigation -->
                 <nav class="sidebar-nav">
@@ -279,6 +272,12 @@ console.log('✅ [SidebarManager] Sidebar rendered successfully');
                     </div>
                 </div>
             </div>
+            <!-- External Toggle Button -->
+<button id="sidebar-toggle" class="sidebar-external-toggle">
+    <svg class="sidebar-toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+    </svg>
+</button>
         `;
     }
 
@@ -353,6 +352,16 @@ updateSidebarState() {
         if (this.mainContent) {
             this.mainContent.classList.remove('sidebar-collapsed');
             this.mainContent.style.marginLeft = '256px';
+        }
+    }
+    
+    // Update external toggle button position
+    const externalToggle = document.getElementById('sidebar-toggle');
+    if (externalToggle) {
+        if (this.isCollapsed) {
+            externalToggle.style.left = '72px'; // 64px + 8px gap
+        } else {
+            externalToggle.style.left = '264px'; // 256px + 8px gap
         }
     }
     
@@ -891,9 +900,23 @@ emergencyInitialization() {
         return;
     }
     
-    // Force create sidebar structure
-    container.innerHTML = this.getSidebarHTML();
-    container.className = 'sidebar';
+// Apply sidebar classes and inject HTML
+targetElement.className = 'sidebar';
+targetElement.innerHTML = this.getSidebarHTML();
+
+// Create external toggle button if it doesn't exist
+let externalToggle = document.getElementById('sidebar-toggle');
+if (!externalToggle) {
+    externalToggle = document.createElement('button');
+    externalToggle.id = 'sidebar-toggle';
+    externalToggle.className = 'sidebar-external-toggle';
+    externalToggle.innerHTML = `
+        <svg class="sidebar-toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+    `;
+    document.body.appendChild(externalToggle);
+}
     
     // Apply emergency styles immediately
     this.sidebar = container;
