@@ -328,7 +328,7 @@ createExternalToggle() {
     // Style as thin vertical bar
     toggle.style.cssText = `
         position: fixed !important;
-        top: 50% !important;
+        top: 2rem !important;
         left: 256px !important;
         transform: translateY(-50%) !important;
         width: 1rem !important;
@@ -1109,6 +1109,16 @@ window.createAttachedThinToggle = function() {
             if (mainContent) mainContent.style.marginLeft = '256px';
             toggle.style.left = '256px';
             toggle.querySelector('svg').style.transform = 'rotate(0deg)';
+
+                if (logoContainer) {
+        logoContainer.style.cssText = `
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.75rem !important;
+            margin-bottom: 1rem !important;
+            justify-content: flex-start !important;
+        `;
+    }
         } else {
             // Collapse
             sidebar.classList.add('collapsed');
