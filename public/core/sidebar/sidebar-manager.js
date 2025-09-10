@@ -745,93 +745,6 @@ verifyCSSLoaded() {
     }
 }
     
-// Create thin vertical toggle attached to sidebar edge
-window.createAttachedThinToggle = function() {
-    console.log('🔧 Creating thin attached toggle...');
-    
-    // Remove any existing toggle
-    const existing = document.getElementById('sidebar-external-toggle');
-    if (existing) existing.remove();
-    
-    // Create thin vertical toggle
-    const toggle = document.createElement('button');
-    toggle.id = 'sidebar-external-toggle';
-    toggle.innerHTML = `
-        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-        </svg>
-    `;
-    
-    // Style as thin vertical bar attached to sidebar
-    toggle.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 256px;
-        transform: translateY(-50%);
-        width: 1rem;
-        height: 3rem;
-        background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(229,231,235,0.6);
-        border-left: none;
-        border-radius: 0 0.5rem 0.5rem 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        z-index: 1000;
-        box-shadow: 2px 0 8px rgba(0,0,0,0.1);
-        color: #6b7280;
-        transition: all 0.3s ease;
-    `;
-    
-    // Add hover effect
-    toggle.onmouseenter = function() {
-        this.style.background = 'rgba(255,255,255,0.98)';
-        this.style.color = '#374151';
-        this.style.boxShadow = '2px 0 12px rgba(0,0,0,0.15)';
-    };
-    
-    toggle.onmouseleave = function() {
-        this.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%)';
-        this.style.color = '#6b7280';
-        this.style.boxShadow = '2px 0 8px rgba(0,0,0,0.1)';
-    };
-    
-    // Click functionality
-    toggle.onclick = function() {
-        const sidebar = document.querySelector('.sidebar');
-        const mainContent = document.querySelector('.main-content');
-        const isCollapsed = sidebar?.classList.contains('collapsed');
-        
-        if (isCollapsed) {
-            // Expand
-            sidebar.classList.remove('collapsed');
-            sidebar.style.width = '256px';
-            if (mainContent) mainContent.style.marginLeft = '256px';
-            toggle.style.left = '256px';
-            toggle.querySelector('svg').style.transform = 'rotate(0deg)';
-        } else {
-            // Collapse
-            sidebar.classList.add('collapsed');
-            sidebar.style.width = '64px';
-            if (mainContent) mainContent.style.marginLeft = '64px';
-            toggle.style.left = '64px';
-            toggle.querySelector('svg').style.transform = 'rotate(180deg)';
-        }
-        
-        // Update child elements including logo centering
-        if (window.sidebarManager) {
-            window.sidebarManager.isCollapsed = !isCollapsed;
-            window.sidebarManager.updateChildElements();
-        }
-    };
-    
-    // Add to body
-    document.body.appendChild(toggle);
-    
-    console.log('✅ Thin attached toggle created');
-};
 applyEmergencyStyles() {
     if (!this.sidebar) return;
     
@@ -1073,6 +986,94 @@ window.fixSidebarEmergency = function() {
 };
 
 console.log('✅ [SidebarManager] Module loaded and ready');
+
+// Create thin vertical toggle attached to sidebar edge
+window.createAttachedThinToggle = function() {
+    console.log('🔧 Creating thin attached toggle...');
+    
+    // Remove any existing toggle
+    const existing = document.getElementById('sidebar-external-toggle');
+    if (existing) existing.remove();
+    
+    // Create thin vertical toggle
+    const toggle = document.createElement('button');
+    toggle.id = 'sidebar-external-toggle';
+    toggle.innerHTML = `
+        <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+    `;
+    
+    // Style as thin vertical bar attached to sidebar
+    toggle.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 256px;
+        transform: translateY(-50%);
+        width: 1rem;
+        height: 3rem;
+        background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(229,231,235,0.6);
+        border-left: none;
+        border-radius: 0 0.5rem 0.5rem 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+        color: #6b7280;
+        transition: all 0.3s ease;
+    `;
+    
+    // Add hover effect
+    toggle.onmouseenter = function() {
+        this.style.background = 'rgba(255,255,255,0.98)';
+        this.style.color = '#374151';
+        this.style.boxShadow = '2px 0 12px rgba(0,0,0,0.15)';
+    };
+    
+    toggle.onmouseleave = function() {
+        this.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%)';
+        this.style.color = '#6b7280';
+        this.style.boxShadow = '2px 0 8px rgba(0,0,0,0.1)';
+    };
+    
+    // Click functionality
+    toggle.onclick = function() {
+        const sidebar = document.querySelector('.sidebar');
+        const mainContent = document.querySelector('.main-content');
+        const isCollapsed = sidebar?.classList.contains('collapsed');
+        
+        if (isCollapsed) {
+            // Expand
+            sidebar.classList.remove('collapsed');
+            sidebar.style.width = '256px';
+            if (mainContent) mainContent.style.marginLeft = '256px';
+            toggle.style.left = '256px';
+            toggle.querySelector('svg').style.transform = 'rotate(0deg)';
+        } else {
+            // Collapse
+            sidebar.classList.add('collapsed');
+            sidebar.style.width = '64px';
+            if (mainContent) mainContent.style.marginLeft = '64px';
+            toggle.style.left = '64px';
+            toggle.querySelector('svg').style.transform = 'rotate(180deg)';
+        }
+        
+        // Update child elements including logo centering
+        if (window.sidebarManager) {
+            window.sidebarManager.isCollapsed = !isCollapsed;
+            window.sidebarManager.updateChildElements();
+        }
+    };
+    
+    // Add to body
+    document.body.appendChild(toggle);
+    
+    console.log('✅ Thin attached toggle created');
+};
 
 // Auto-initialize if container exists
 document.addEventListener('DOMContentLoaded', () => {
