@@ -90,7 +90,10 @@ targetElement.offsetHeight;
             this.sidebar = targetElement;
             this.mainContent = document.querySelector('.main-content, [class*="content"], main');
             
-// Initialize functionality  
+// Create external toggle
+this.createExternalToggle();
+
+// Initialize functionality
 this.initializeSidebar();
 
 // Verify CSS is loaded and applied
@@ -272,12 +275,6 @@ console.log('✅ [SidebarManager] Sidebar rendered successfully');
                     </div>
                 </div>
             </div>
-            <!-- External Toggle Button -->
-<button id="sidebar-toggle" class="sidebar-external-toggle">
-    <svg class="sidebar-toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-    </svg>
-</button>
         `;
     }
 
@@ -298,22 +295,6 @@ console.log('✅ [SidebarManager] Sidebar rendered successfully');
         this.updateSidebarState();
         
         console.log('✅ [SidebarManager] Sidebar functionality initialized');
-    }
-
-    initializeToggle() {
-        const toggleBtn = document.getElementById('sidebar-toggle');
-        
-        if (!toggleBtn) {
-            console.error('❌ [SidebarManager] Toggle button not found');
-            return;
-        }
-        
-        toggleBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.toggleSidebar();
-        });
-        
-        console.log('✅ [SidebarManager] Toggle event listener attached');
     }
 
     toggleSidebar() {
@@ -373,6 +354,17 @@ updateSidebarState() {
     if (this.mainContent) {
         this.mainContent.offsetHeight;
     }
+
+    // Update external toggle position and icon
+if (this.externalToggle) {
+    if (this.isCollapsed) {
+        this.externalToggle.style.left = '72px'; // 64px + 8px
+        this.externalToggle.querySelector('svg').style.transform = 'rotate(180deg)';
+    } else {
+        this.externalToggle.style.left = '264px'; // 256px + 8px
+        this.externalToggle.querySelector('svg').style.transform = 'rotate(0deg)';
+    }
+}
     
     console.log('✅ [SidebarManager] State updated - Width:', this.sidebar.style.width, 'Main margin:', this.mainContent?.style.marginLeft);
 }
@@ -736,6 +728,57 @@ verifyCSSLoaded() {
         this.applyEmergencyStyles();
     }
 }
+    
+createExternalToggle() {
+    console.log('🔧 [SidebarManager] Creating external toggle...');
+    
+    // Remove any existing external toggle
+    const existing = document.getElementById('sidebar-external-toggle');
+    if (existing) existing.remove();
+    
+    // Create the toggle button
+    const toggle = document.createElement('button');
+    toggle.id = 'sidebar-external-toggle';
+    toggle.innerHTML = `
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+    `;
+    
+    // Apply styles
+    toggle.style.cssText = `
+        position: fixed;
+        top: 1rem;
+        left: 264px;
+        width: 2.5rem;
+        height: 2.5rem;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        color: #6b7280;
+        transition: all 0.3s ease;
+    `;
+    
+    // Add click handler
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.toggleSidebar();
+    });
+    
+    // Add to body
+    document.body.appendChild(toggle);
+    
+    // Store reference
+    this.externalToggle = toggle;
+    
+    console.log('✅ [SidebarManager] External toggle created');
+}
 
 applyEmergencyStyles() {
     if (!this.sidebar) return;
@@ -903,6 +946,7 @@ emergencyInitialization() {
 // Apply sidebar classes and inject HTML
 targetElement.className = 'sidebar';
 targetElement.innerHTML = this.getSidebarHTML();
+
 
 // Create external toggle button if it doesn't exist
 let externalToggle = document.getElementById('sidebar-toggle');
