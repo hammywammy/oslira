@@ -612,6 +612,7 @@ if (logoImage) {
             `;
         }
         
+// Reset logo
 const logoContainer = this.sidebar.querySelector('.sidebar-logo-container');
 if (logoContainer) {
     logoContainer.style.cssText = `
@@ -620,6 +621,7 @@ if (logoContainer) {
         gap: 0.75rem !important;
         margin-bottom: 1rem !important;
         justify-content: flex-start !important;
+        width: auto !important;
     `;
 }
         
