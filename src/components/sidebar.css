@@ -1,36 +1,29 @@
 @layer components {
   /* =============================================================================
-     SIDEBAR CORE LAYOUT
+     SIDEBAR CORE LAYOUT - FIXED WIDTH SYSTEM
      ============================================================================= */
   
-.sidebar {
-  @apply fixed left-0 top-0 h-full w-64 bg-gradient-to-br from-white via-blue-50/30 to-indigo-100/20 backdrop-blur-xl border-r border-gray-200/50 flex flex-col transition-all duration-300 z-40;
-}
-
-.sidebar.collapsed {
-  @apply w-16;
-}
-
-/* Main content layout compensation */
-.main-content {
-  @apply transition-all duration-300;
-  margin-left: 256px; /* w-64 = 256px */
-}
-
-.main-content.sidebar-collapsed {
-  margin-left: 64px; /* w-16 = 64px */
-}
-
-/* Responsive adjustments */
-@media (max-width: 1024px) {
-  .main-content {
-    margin-left: 0;
+  .sidebar {
+    @apply fixed left-0 top-0 h-full w-64 bg-gradient-to-br from-white via-blue-50/30 to-indigo-100/20 backdrop-blur-xl border-r border-gray-200/50 flex flex-col transition-all duration-300 z-40;
   }
-}
+
+  .sidebar.collapsed {
+    @apply w-16;
+  }
 
   .sidebar::after {
     content: '';
     @apply absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-gray-200 to-transparent;
+  }
+
+  /* Main content layout compensation */
+  .main-content {
+    @apply transition-all duration-300;
+    margin-left: 256px; /* Fixed 16rem = 256px */
+  }
+
+  .main-content.sidebar-collapsed {
+    margin-left: 64px; /* Fixed 4rem = 64px */
   }
 
   /* =============================================================================
@@ -38,11 +31,7 @@
      ============================================================================= */
 
   .sidebar-container {
-    @apply flex flex-col h-full overflow-hidden;
-  }
-
-  .sidebar-container.collapsed {
-    @apply w-16;
+    @apply flex flex-col h-full overflow-hidden w-full;
   }
 
   /* =============================================================================
@@ -129,9 +118,9 @@
      NAVIGATION ITEMS
      ============================================================================= */
 
-.nav-item {
-  @apply flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:text-white rounded-lg transition-all duration-200 cursor-pointer relative min-h-11;
-}
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 text-gray-700 hover:text-gray-900 hover:bg-gradient-to-r hover:from-blue-500 hover:to-purple-600 hover:text-white rounded-lg transition-all duration-200 cursor-pointer relative min-h-11;
+  }
 
   .nav-item.collapsed {
     @apply justify-center gap-0 px-2 w-12 mx-auto;
@@ -271,6 +260,10 @@
       @apply translate-x-0;
     }
 
+    .main-content {
+      margin-left: 0 !important;
+    }
+
     .sidebar-overlay {
       @apply fixed inset-0 bg-black/50 z-30 opacity-0 pointer-events-none transition-opacity duration-300;
     }
@@ -292,48 +285,6 @@
     .sidebar-user-info {
       @apply p-3;
     }
-  }
-
-  /* =============================================================================
-     LOADING STATES
-     ============================================================================= */
-
-  .sidebar-loading {
-    @apply animate-pulse;
-  }
-
-  .sidebar-loading .nav-item {
-    @apply bg-gray-200 text-transparent;
-  }
-
-  .sidebar-loading .sidebar-user-info {
-    @apply bg-gray-200;
-  }
-
-  /* =============================================================================
-     SCROLLBAR STYLING
-     ============================================================================= */
-
-  .sidebar-nav::-webkit-scrollbar {
-    @apply w-1;
-  }
-
-  .sidebar-nav::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-
-  .sidebar-nav::-webkit-scrollbar-thumb {
-    @apply bg-gray-300 rounded-full;
-  }
-
-  .sidebar-nav::-webkit-scrollbar-thumb:hover {
-    @apply bg-gray-400;
-  }
-
-  /* Firefox */
-  .sidebar-nav {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(209 213 219) transparent;
   }
 
   /* =============================================================================
@@ -405,6 +356,48 @@
     .sidebar-user-info {
       @apply border-2 border-gray-300;
     }
+  }
+
+  /* =============================================================================
+     LOADING STATES
+     ============================================================================= */
+
+  .sidebar-loading {
+    @apply animate-pulse;
+  }
+
+  .sidebar-loading .nav-item {
+    @apply bg-gray-200 text-transparent;
+  }
+
+  .sidebar-loading .sidebar-user-info {
+    @apply bg-gray-200;
+  }
+
+  /* =============================================================================
+     SCROLLBAR STYLING
+     ============================================================================= */
+
+  .sidebar-nav::-webkit-scrollbar {
+    @apply w-1;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full;
+  }
+
+  .sidebar-nav::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+
+  /* Firefox */
+  .sidebar-nav {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(209 213 219) transparent;
   }
 
   /* =============================================================================
