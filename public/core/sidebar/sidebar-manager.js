@@ -484,6 +484,7 @@ if (logoContainer) {
         width: 100% !important;
         display: flex !important;
         align-items: center !important;
+        gap: 0 !important;
     `;
 }
 
@@ -611,16 +612,16 @@ if (logoImage) {
             `;
         }
         
-        // Reset logo
-        const logoContainer = this.sidebar.querySelector('.sidebar-logo-container');
-        if (logoContainer) {
-            logoContainer.style.cssText = `
-                display: flex !important;
-                align-items: center !important;
-                gap: 0.75rem !important;
-                margin-bottom: 1rem !important;
-            `;
-        }
+const logoContainer = this.sidebar.querySelector('.sidebar-logo-container');
+if (logoContainer) {
+    logoContainer.style.cssText = `
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+        margin-bottom: 1rem !important;
+        justify-content: flex-start !important;
+    `;
+}
         
         const logoText = this.sidebar.querySelector('.sidebar-logo-text');
         if (logoText) {
