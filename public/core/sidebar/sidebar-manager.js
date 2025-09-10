@@ -328,7 +328,7 @@ createExternalToggle() {
     // Style as thin vertical bar
     toggle.style.cssText = `
         position: fixed !important;
-        top: 75% !important;
+        top: 6.3% !important;
         left: 256px !important;
         transform: translateY(-50%) !important;
         width: 1rem !important;
