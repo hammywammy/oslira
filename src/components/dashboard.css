@@ -84,16 +84,16 @@
      PREMIUM NAVIGATION SIDEBAR
      ============================================================================= */
 
-  .sidebar-nav {
-    @apply fixed left-0 top-0 h-full w-64 z-50;
-    background: linear-gradient(180deg, 
-      rgba(30, 41, 59, 0.98) 0%, 
-      rgba(30, 41, 59, 0.95) 100%
-    );
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-  }
+.dashboard-sidebar-nav {
+  @apply fixed left-0 top-0 h-full w-64 z-50;
+  background: linear-gradient(180deg, 
+    rgba(30, 41, 59, 0.98) 0%, 
+    rgba(30, 41, 59, 0.95) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
 
   .nav-item {
     @apply relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300;
