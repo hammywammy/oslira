@@ -528,17 +528,14 @@ refreshUserData() {
             user: this.user
         };
     }
-}
 
-// =========================================================================
-// PUBLIC API
-// =========================================================================
-
-static refreshAllUserData() {
+    static refreshAllUserData() {
     if (window.sidebarManager) {
         window.sidebarManager.refreshUserData();
     }
 }
+}
+
 
 // =============================================================================
 // GLOBAL INITIALIZATION
