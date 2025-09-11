@@ -582,36 +582,322 @@
 </div>
     </div>
 
-        <div id="leadAnalysisModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-4">
-                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+<!-- Enhanced Lead Analysis Modal -->
+<div id="leadAnalysisModal" class="lead-modal-overlay hidden">
+    <div class="lead-modal-container">
+        
+        <!-- Dynamic Header -->
+        <div class="lead-modal-header">
+            <!-- Floating background elements -->
+            <div class="lead-header-bg-orb lead-header-bg-orb-1"></div>
+            <div class="lead-header-bg-orb lead-header-bg-orb-2"></div>
+            <div class="lead-header-bg-orb lead-header-bg-orb-3"></div>
+            
+            <div class="lead-header-content">
+                <div class="lead-header-profile">
+                    <!-- Profile Image with Glow -->
+                    <div class="lead-profile-wrapper">
+                        <div class="lead-profile-glow"></div>
+                        <img id="leadProfileImage" 
+                             src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" 
+                             alt="Profile" 
+                             class="lead-profile-image">
+                        <div class="lead-profile-badge">
+                            <svg class="lead-profile-badge-icon" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                         </div>
-                        <div>
-                            <h2 class="text-2xl font-bold text-white">Lead Analysis</h2>
-                            <p class="text-white/80 text-sm">Comprehensive profile insights</p>
+                    </div>
+                    
+                    <div class="lead-profile-info">
+                        <div class="lead-profile-title">
+                            <h1 id="leadUsername" class="lead-username">@noahskipslegday</h1>
+                            <span id="leadBadge" class="lead-role-badge">AI Entrepreneur</span>
+                        </div>
+                        <div class="lead-profile-stats">
+                            <div class="lead-stat-item">
+                                <svg class="lead-stat-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span id="leadFollowers" class="lead-stat-text">2,628 followers</span>
+                            </div>
+                            <div class="lead-stat-item">
+                                <svg class="lead-stat-icon" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
+                                </svg>
+                                <span id="leadPosts">0 posts</span>
+                            </div>
                         </div>
                     </div>
-                    <button onclick="closeLeadAnalysisModal()" class="text-white/60 hover:text-white transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
+                </div>
+                
+                <!-- Close Button -->
+                <button onclick="closeLeadAnalysisModal()" class="lead-close-btn">
+                    <svg class="lead-close-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Enhanced Content Area -->
+        <div class="lead-modal-content">
+            
+            <!-- Quick Stats Grid -->
+            <div class="lead-stats-grid">
+                <!-- Overall Score -->
+                <div class="lead-metric-card">
+                    <div class="lead-metric-header">
+                        <h3 class="lead-metric-title">Overall Score</h3>
+                        <div class="lead-metric-indicator lead-indicator-green"></div>
+                    </div>
+                    <div class="lead-metric-content">
+                        <!-- Animated Score Ring -->
+                        <div class="lead-score-ring-wrapper">
+                            <svg class="lead-score-ring" viewBox="0 0 36 36">
+                                <path class="lead-score-bg" stroke="currentColor" stroke-width="3" fill="transparent" 
+                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                                <path id="overallScoreCircle" class="lead-score-progress" stroke="currentColor" stroke-width="3" fill="transparent" 
+                                      stroke-dasharray="0, 100" 
+                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                            </svg>
+                            <div class="lead-score-center">
+                                <span id="overallScoreText" class="lead-score-number">70</span>
+                            </div>
+                        </div>
+                        <div class="lead-score-details">
+                            <p class="lead-score-fraction"><span id="overallScoreDisplay">70</span>/100</p>
+                            <p class="lead-score-label">↗ Above Average</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Engagement Score -->
+                <div class="lead-metric-card">
+                    <div class="lead-metric-header">
+                        <h3 class="lead-metric-title">Engagement</h3>
+                        <div class="lead-metric-indicator lead-indicator-red"></div>
+                    </div>
+                    <div class="lead-metric-simple">
+                        <div class="lead-score-display">
+                            <span id="engagementScore" class="lead-score-number-red">58</span>
+                            <span class="lead-score-suffix">/100</span>
+                        </div>
+                        <div class="lead-progress-wrapper">
+                            <div id="engagementBar" class="lead-progress-bar lead-progress-red"></div>
+                        </div>
+                        <p class="lead-metric-description">Based on likes, comments, followers</p>
+                    </div>
+                </div>
+                
+                <!-- Niche Fit -->
+                <div class="lead-metric-card">
+                    <div class="lead-metric-header">
+                        <h3 class="lead-metric-title">Niche Fit</h3>
+                        <div class="lead-metric-indicator lead-indicator-red"></div>
+                    </div>
+                    <div class="lead-metric-simple">
+                        <div class="lead-score-display">
+                            <span id="nicheFitScore" class="lead-score-number-red">0</span>
+                            <span class="lead-score-suffix">/100</span>
+                        </div>
+                        <div class="lead-progress-wrapper">
+                            <div id="nicheFitBar" class="lead-progress-bar lead-progress-red-solid"></div>
+                        </div>
+                        <p class="lead-metric-description">Alignment with your business</p>
+                    </div>
+                </div>
+                
+                <!-- Total Score -->
+                <div class="lead-metric-card">
+                    <div class="lead-metric-header">
+                        <h3 class="lead-metric-title">Total Score</h3>
+                        <div class="lead-metric-indicator lead-indicator-red"></div>
+                    </div>
+                    <div class="lead-metric-simple">
+                        <div class="lead-score-display">
+                            <span id="totalScore" class="lead-score-number-red">0</span>
+                            <span class="lead-score-suffix">/100</span>
+                        </div>
+                        <div class="lead-progress-wrapper">
+                            <div id="totalScoreBar" class="lead-progress-bar lead-progress-red-solid"></div>
+                        </div>
+                        <p class="lead-metric-description">Overall recommendation score</p>
+                    </div>
                 </div>
             </div>
             
-            <!-- Content -->
-            <div id="lead-analysis-content" class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                <!-- Content will be dynamically loaded here -->
+            <!-- Analysis Summary -->
+            <div class="lead-analysis-summary">
+                <div class="lead-summary-header">
+                    <div class="lead-summary-icon">
+                        <svg class="lead-summary-icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <div class="lead-summary-content">
+                        <h3 class="lead-summary-title">AI Analysis Summary</h3>
+                        <div id="analysisSummary" class="lead-summary-text">
+                            <p class="lead-summary-item">
+                                <strong>Profile Status:</strong> Verified personal brand with clear AI entrepreneurship positioning. 
+                                Strong foundation with 2,628 engaged followers and established identity in Sin City + UNLV ecosystem.
+                            </p>
+                            <p class="lead-summary-item">
+                                <strong>Content Strategy:</strong> Focus on AI use cases, faith-informed entrepreneurship, and local UNLV/Sin City scenes. 
+                                No recent posts detected, suggesting potential for content collaboration.
+                            </p>
+                            <p class="lead-summary-item">
+                                <strong>Business Opportunity:</strong> Mid-tier performance with strong potential for SMB targeting. 
+                                Recommend showcasing case studies, productized AI services, and client testimonials.
+                            </p>
+                            <p class="lead-summary-item">
+                                <strong>Next Steps:</strong> Enable analytics access, optimize bio with contact link/Linktree, 
+                                publish 3 Reels and 5 Stories weekly for 8 weeks, run one paid local promo.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Audience Quality Section -->
+            <div class="lead-audience-section">
+                <div class="lead-audience-header">
+                    <div class="lead-audience-icon">
+                        <svg class="lead-audience-icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="lead-audience-title">Audience Quality</h3>
+                    <span id="audienceQualityBadge" class="lead-quality-badge">Medium</span>
+                </div>
+                
+                <div class="lead-audience-grid">
+                    <!-- Insights -->
+                    <div class="lead-insights-section">
+                        <div class="lead-insights-card">
+                            <h4 class="lead-insights-title">Key Insights</h4>
+                            <ul class="lead-insights-list">
+                                <li class="lead-insight-item lead-insight-green">
+                                    <div class="lead-insight-dot"></div>
+                                    <span>Micro-influencer tier (~2.6K followers) with verified personal identity</span>
+                                </li>
+                                <li class="lead-insight-item lead-insight-blue">
+                                    <div class="lead-insight-dot"></div>
+                                    <span>Clear "AI entrepreneur" positioning suggests content authority</span>
+                                </li>
+                                <li class="lead-insight-item lead-insight-purple">
+                                    <div class="lead-insight-dot"></div>
+                                    <span>Expected engagement: moderate (2-5% range) with authentic interactions</span>
+                                </li>
+                                <li class="lead-insight-item lead-insight-orange">
+                                    <div class="lead-insight-dot"></div>
+                                    <span>Strong relevance to AI tools for SMBs and potential for local/regional activation</span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="lead-collaboration-card">
+                            <h4 class="lead-collab-title">Collaboration Potential</h4>
+                            <div class="lead-collab-list">
+                                <div class="lead-collab-item">
+                                    <span class="lead-collab-label">Local partnerships</span>
+                                    <span class="lead-collab-value lead-collab-strong">Strong</span>
+                                </div>
+                                <div class="lead-collab-item">
+                                    <span class="lead-collab-label">Faith-based organizations</span>
+                                    <span class="lead-collab-value lead-collab-strong">Strong</span>
+                                </div>
+                                <div class="lead-collab-item">
+                                    <span class="lead-collab-label">AI tool vendors</span>
+                                    <span class="lead-collab-value lead-collab-medium">Medium</span>
+                                </div>
+                                <div class="lead-collab-item">
+                                    <span class="lead-collab-label">Student groups</span>
+                                    <span class="lead-collab-value lead-collab-medium">Medium</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recommendations -->
+                    <div class="lead-recommendations-section">
+                        <div class="lead-next-steps-card">
+                            <h4 class="lead-steps-title">Immediate Next Steps</h4>
+                            <div class="lead-steps-list">
+                                <div class="lead-step-item">
+                                    <div class="lead-step-number lead-step-green">1</div>
+                                    <div class="lead-step-content">
+                                        <p class="lead-step-action">Enable analytics access</p>
+                                        <p class="lead-step-detail">Optimize bio with contact link/Linktree</p>
+                                    </div>
+                                </div>
+                                <div class="lead-step-item">
+                                    <div class="lead-step-number lead-step-blue">2</div>
+                                    <div class="lead-step-content">
+                                        <p class="lead-step-action">Publish 3 Reels and 5 Stories weekly</p>
+                                        <p class="lead-step-detail">8-week content sprint to build momentum</p>
+                                    </div>
+                                </div>
+                                <div class="lead-step-item">
+                                    <div class="lead-step-number lead-step-purple">3</div>
+                                    <div class="lead-step-content">
+                                        <p class="lead-step-action">Run one paid local promo</p>
+                                        <p class="lead-step-detail">Measure KPIs: engagement rate, inquiries, conversion to leads</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="lead-metrics-card">
+                            <h4 class="lead-metrics-title">Success Metrics</h4>
+                            <div class="lead-metrics-grid">
+                                <div class="lead-metric-box">
+                                    <p class="lead-metric-value">2-5%</p>
+                                    <p class="lead-metric-label">Target Engagement Rate</p>
+                                </div>
+                                <div class="lead-metric-box">
+                                    <p class="lead-metric-value">10+</p>
+                                    <p class="lead-metric-label">Monthly Inquiries</p>
+                                </div>
+                                <div class="lead-metric-box">
+                                    <p class="lead-metric-value">3-5</p>
+                                    <p class="lead-metric-label">Quality Leads</p>
+                                </div>
+                                <div class="lead-metric-box">
+                                    <p class="lead-metric-value">15%</p>
+                                    <p class="lead-metric-label">Conversion Rate</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="lead-action-buttons">
+                <button id="exportBtn" class="lead-btn lead-btn-primary">
+                    <div class="lead-btn-content">
+                        <svg class="lead-btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span>Export Analysis</span>
+                    </div>
+                </button>
+                <button id="generateBtn" class="lead-btn lead-btn-secondary">
+                    <div class="lead-btn-content">
+                        <svg class="lead-btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        <span>Generate Outreach</span>
+                    </div>
+                </button>
+                <button onclick="closeLeadAnalysisModal()" class="lead-btn lead-btn-tertiary">
+                    Close
+                </button>
             </div>
         </div>
     </div>
+</div>
     <!-- Bulk Import Modal -->
     <div id="bulkImportModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full">
