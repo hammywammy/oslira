@@ -1313,11 +1313,12 @@ async function openLeadAnalysisModal(leadId) {
         // Create the modal HTML structure first
         createLeadAnalysisModalStructure();
         
-        // Then populate it with data
-        buildAnalysisModalHTML(lead, analysisData, leadId);
+// Remove loading modal first
+        const loadingModal = document.getElementById('loadingModal');
+        if (loadingModal) loadingModal.remove();
         
-        // Animate entry
-        setTimeout(animateModalEntry, 10);
+        // Build and show the analysis modal
+        buildAnalysisModalHTML(lead, analysisData, leadId);
         
         // Prevent body scroll
         document.body.style.overflow = 'hidden';
@@ -1485,25 +1486,39 @@ function showLoadingModal() {
 
 function buildAnalysisModalHTML(lead, analysisData, leadId) {
     const modal = document.getElementById('leadAnalysisModal');
-    if (!modal) return;
+    if (!modal) {
+        console.error('❌ Modal element not found, cannot build analysis HTML');
+        return;
+    }
+    
+    // Make modal visible
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
     
     const isDeepAnalysis = lead.analysis_type === 'deep' && analysisData;
     
-    // Update profile section with CORS-safe image loading
+// Update profile section with CORS-safe image loading
     const profileImg = document.getElementById('leadProfileImage');
-    if (lead.profile_pic_url) {
-        const proxiedUrl = `https://images.weserv.nl/?url=${encodeURIComponent(lead.profile_pic_url)}&w=160&h=160&fit=cover&mask=circle`;
-        profileImg.src = proxiedUrl;
-        profileImg.onerror = function() {
-            this.src = '/assets/default-avatar.png';
-        };
-    } else {
-        profileImg.src = '/assets/default-avatar.png';
+    if (profileImg) {
+        if (lead.profile_pic_url) {
+            const proxiedUrl = `https://images.weserv.nl/?url=${encodeURIComponent(lead.profile_pic_url)}&w=160&h=160&fit=cover&mask=circle`;
+            profileImg.src = proxiedUrl;
+            profileImg.onerror = function() {
+                this.src = '/assets/default-avatar.png';
+            };
+        } else {
+            profileImg.src = '/assets/default-avatar.png';
+        }
     }
     
-    document.getElementById('leadUsername').textContent = `@${lead.username}`;
-    document.getElementById('leadFullName').textContent = lead.full_name || lead.username;
-    document.getElementById('leadBio').textContent = lead.bio || '';
+    const usernameEl = document.getElementById('leadUsername');
+    if (usernameEl) usernameEl.textContent = `@${lead.username}`;
+    
+    const fullNameEl = document.getElementById('leadFullName');
+    if (fullNameEl) fullNameEl.textContent = lead.full_name || lead.username;
+    
+    const bioEl = document.getElementById('leadBio');
+    if (bioEl) bioEl.textContent = lead.bio || '';
     
     // Badges
     document.getElementById('verifiedBadge').classList.toggle('hidden', !lead.is_verified);
