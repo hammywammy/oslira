@@ -580,324 +580,170 @@
         </button>
     </div>
 </div>
-    </div>
 
-<!-- Enhanced Lead Analysis Modal -->
-<div id="leadAnalysisModal" class="lead-modal-overlay hidden">
-    <div class="lead-modal-container">
+        <!-- Lead Analysis Modal - Tailwind v3 Design -->
+<div id="leadAnalysisModal" class="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-hidden">
         
-        <!-- Dynamic Header -->
-        <div class="lead-modal-header">
-            <!-- Floating background elements -->
-            <div class="lead-header-bg-orb lead-header-bg-orb-1"></div>
-            <div class="lead-header-bg-orb lead-header-bg-orb-2"></div>
-            <div class="lead-header-bg-orb lead-header-bg-orb-3"></div>
+        <!-- Modal Header with Profile -->
+        <div class="relative bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
+            <!-- Close Button -->
+            <button onclick="closeLeadAnalysisModal()" 
+                    class="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
             
-            <div class="lead-header-content">
-                <div class="lead-header-profile">
-                    <!-- Profile Image with Glow -->
-                    <div class="lead-profile-wrapper">
-                        <div class="lead-profile-glow"></div>
-                        <img id="leadProfileImage" 
-                             src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face" 
-                             alt="Profile" 
-                             class="lead-profile-image">
-                        <div class="lead-profile-badge">
-                            <svg class="lead-profile-badge-icon" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            <!-- Profile Section -->
+            <div class="flex items-center space-x-4">
+                <img id="leadProfileImage" 
+                     src="" 
+                     alt="Profile" 
+                     class="w-20 h-20 rounded-full border-4 border-white shadow-lg object-cover">
+                
+                <div class="text-white">
+                    <div class="flex items-center space-x-2">
+                        <h2 id="leadUsername" class="text-2xl font-bold">@username</h2>
+                        <span id="verifiedBadge" class="hidden">
+                            <svg class="w-5 h-5 text-blue-200" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.21 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.21 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.21 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.21 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
-                        </div>
+                        </span>
                     </div>
-                    
-                    <div class="lead-profile-info">
-                        <div class="lead-profile-title">
-                            <h1 id="leadUsername" class="lead-username">@noahskipslegday</h1>
-                            <span id="leadBadge" class="lead-role-badge">AI Entrepreneur</span>
-                        </div>
-                        <div class="lead-profile-stats">
-                            <div class="lead-stat-item">
-                                <svg class="lead-stat-icon" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <span id="leadFollowers" class="lead-stat-text">2,628 followers</span>
-                            </div>
-                            <div class="lead-stat-item">
-                                <svg class="lead-stat-icon" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
-                                </svg>
-                                <span id="leadPosts">0 posts</span>
-                            </div>
-                        </div>
+                    <p id="leadFullName" class="text-white/90 text-sm">Full Name</p>
+                    <div class="flex items-center space-x-4 mt-2 text-white/80 text-sm">
+                        <span id="leadPlatform" class="flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zM5.838 12a6.162 6.162 0 1112.324 0 6.162 6.162 0 01-12.324 0zM12 16a4 4 0 110-8 4 4 0 010 8zm4.965-10.405a1.44 1.44 0 112.881.001 1.44 1.44 0 01-2.881-.001z"/>
+                            </svg>
+                            <span>Instagram</span>
+                        </span>
+                        <span id="businessBadge" class="hidden px-2 py-0.5 bg-white/20 rounded text-xs">Business</span>
+                        <span id="privateBadge" class="hidden px-2 py-0.5 bg-white/20 rounded text-xs">🔒 Private</span>
                     </div>
                 </div>
-                
-                <!-- Close Button -->
-                <button onclick="closeLeadAnalysisModal()" class="lead-close-btn">
-                    <svg class="lead-close-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
             </div>
+            
+            <!-- Bio Section -->
+            <div id="leadBio" class="mt-4 text-white/90 text-sm line-clamp-2"></div>
         </div>
         
-        <!-- Enhanced Content Area -->
-        <div class="lead-modal-content">
+        <!-- Modal Body - Scrollable -->
+        <div class="overflow-y-auto max-h-[calc(90vh-200px)] p-6">
             
-            <!-- Quick Stats Grid -->
-            <div class="lead-stats-grid">
-                <!-- Overall Score -->
-                <div class="lead-metric-card">
-                    <div class="lead-metric-header">
-                        <h3 class="lead-metric-title">Overall Score</h3>
-                        <div class="lead-metric-indicator lead-indicator-green"></div>
-                    </div>
-                    <div class="lead-metric-content">
-                        <!-- Animated Score Ring -->
-                        <div class="lead-score-ring-wrapper">
-                            <svg class="lead-score-ring" viewBox="0 0 36 36">
-                                <path class="lead-score-bg" stroke="currentColor" stroke-width="3" fill="transparent" 
-                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                                <path id="overallScoreCircle" class="lead-score-progress" stroke="currentColor" stroke-width="3" fill="transparent" 
-                                      stroke-dasharray="0, 100" 
-                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-                            </svg>
-                            <div class="lead-score-center">
-                                <span id="overallScoreText" class="lead-score-number">70</span>
-                            </div>
-                        </div>
-                        <div class="lead-score-details">
-                            <p class="lead-score-fraction"><span id="overallScoreDisplay">70</span>/100</p>
-                            <p class="lead-score-label">↗ Above Average</p>
-                        </div>
-                    </div>
+            <!-- Profile Summary -->
+            <div id="profileSummary" class="mb-6 p-4 bg-gray-50 rounded-lg">
+                <p class="text-gray-700 leading-relaxed"></p>
+            </div>
+            
+            <!-- Key Stats Grid -->
+            <div class="grid grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-800" id="followersCount">0</p>
+                    <p class="text-sm text-gray-600">Followers</p>
                 </div>
-                
-                <!-- Engagement Score -->
-                <div class="lead-metric-card">
-                    <div class="lead-metric-header">
-                        <h3 class="lead-metric-title">Engagement</h3>
-                        <div class="lead-metric-indicator lead-indicator-red"></div>
-                    </div>
-                    <div class="lead-metric-simple">
-                        <div class="lead-score-display">
-                            <span id="engagementScore" class="lead-score-number-red">58</span>
-                            <span class="lead-score-suffix">/100</span>
-                        </div>
-                        <div class="lead-progress-wrapper">
-                            <div id="engagementBar" class="lead-progress-bar lead-progress-red"></div>
-                        </div>
-                        <p class="lead-metric-description">Based on likes, comments, followers</p>
-                    </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-800" id="followingCount">0</p>
+                    <p class="text-sm text-gray-600">Following</p>
                 </div>
-                
-                <!-- Niche Fit -->
-                <div class="lead-metric-card">
-                    <div class="lead-metric-header">
-                        <h3 class="lead-metric-title">Niche Fit</h3>
-                        <div class="lead-metric-indicator lead-indicator-red"></div>
-                    </div>
-                    <div class="lead-metric-simple">
-                        <div class="lead-score-display">
-                            <span id="nicheFitScore" class="lead-score-number-red">0</span>
-                            <span class="lead-score-suffix">/100</span>
-                        </div>
-                        <div class="lead-progress-wrapper">
-                            <div id="nicheFitBar" class="lead-progress-bar lead-progress-red-solid"></div>
-                        </div>
-                        <p class="lead-metric-description">Alignment with your business</p>
-                    </div>
+                <div class="text-center">
+                    <p class="text-2xl font-bold text-gray-800" id="postsCount">0</p>
+                    <p class="text-sm text-gray-600">Posts</p>
                 </div>
-                
-                <!-- Total Score -->
-                <div class="lead-metric-card">
-                    <div class="lead-metric-header">
-                        <h3 class="lead-metric-title">Total Score</h3>
-                        <div class="lead-metric-indicator lead-indicator-red"></div>
-                    </div>
-                    <div class="lead-metric-simple">
-                        <div class="lead-score-display">
-                            <span id="totalScore" class="lead-score-number-red">0</span>
-                            <span class="lead-score-suffix">/100</span>
-                        </div>
-                        <div class="lead-progress-wrapper">
-                            <div id="totalScoreBar" class="lead-progress-bar lead-progress-red-solid"></div>
-                        </div>
-                        <p class="lead-metric-description">Overall recommendation score</p>
-                    </div>
+                <div class="text-center" id="engagementRateContainer">
+                    <p class="text-2xl font-bold text-gray-800" id="engagementRate">N/A</p>
+                    <p class="text-sm text-gray-600">Engagement</p>
                 </div>
             </div>
             
-            <!-- Analysis Summary -->
-            <div class="lead-analysis-summary">
-                <div class="lead-summary-header">
-                    <div class="lead-summary-icon">
-                        <svg class="lead-summary-icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
-                    </div>
-                    <div class="lead-summary-content">
-                        <h3 class="lead-summary-title">AI Analysis Summary</h3>
-                        <div id="analysisSummary" class="lead-summary-text">
-                            <p class="lead-summary-item">
-                                <strong>Profile Status:</strong> Verified personal brand with clear AI entrepreneurship positioning. 
-                                Strong foundation with 2,628 engaged followers and established identity in Sin City + UNLV ecosystem.
-                            </p>
-                            <p class="lead-summary-item">
-                                <strong>Content Strategy:</strong> Focus on AI use cases, faith-informed entrepreneurship, and local UNLV/Sin City scenes. 
-                                No recent posts detected, suggesting potential for content collaboration.
-                            </p>
-                            <p class="lead-summary-item">
-                                <strong>Business Opportunity:</strong> Mid-tier performance with strong potential for SMB targeting. 
-                                Recommend showcasing case studies, productized AI services, and client testimonials.
-                            </p>
-                            <p class="lead-summary-item">
-                                <strong>Next Steps:</strong> Enable analytics access, optimize bio with contact link/Linktree, 
-                                publish 3 Reels and 5 Stories weekly for 8 weeks, run one paid local promo.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Audience Quality Section -->
-            <div class="lead-audience-section">
-                <div class="lead-audience-header">
-                    <div class="lead-audience-icon">
-                        <svg class="lead-audience-icon-svg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                        </svg>
-                    </div>
-                    <h3 class="lead-audience-title">Audience Quality</h3>
-                    <span id="audienceQualityBadge" class="lead-quality-badge">Medium</span>
-                </div>
+            <!-- Deep Analysis Sections -->
+            <div id="deepAnalysisContent" class="space-y-6 hidden">
                 
-                <div class="lead-audience-grid">
-                    <!-- Insights -->
-                    <div class="lead-insights-section">
-                        <div class="lead-insights-card">
-                            <h4 class="lead-insights-title">Key Insights</h4>
-                            <ul class="lead-insights-list">
-                                <li class="lead-insight-item lead-insight-green">
-                                    <div class="lead-insight-dot"></div>
-                                    <span>Micro-influencer tier (~2.6K followers) with verified personal identity</span>
-                                </li>
-                                <li class="lead-insight-item lead-insight-blue">
-                                    <div class="lead-insight-dot"></div>
-                                    <span>Clear "AI entrepreneur" positioning suggests content authority</span>
-                                </li>
-                                <li class="lead-insight-item lead-insight-purple">
-                                    <div class="lead-insight-dot"></div>
-                                    <span>Expected engagement: moderate (2-5% range) with authentic interactions</span>
-                                </li>
-                                <li class="lead-insight-item lead-insight-orange">
-                                    <div class="lead-insight-dot"></div>
-                                    <span>Strong relevance to AI tools for SMBs and potential for local/regional activation</span>
-                                </li>
-                            </ul>
+                <!-- Engagement Metrics -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">Engagement Metrics</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-600">Average Likes</p>
+                            <p class="text-lg font-semibold text-gray-800" id="avgLikes">0</p>
                         </div>
-                        
-                        <div class="lead-collaboration-card">
-                            <h4 class="lead-collab-title">Collaboration Potential</h4>
-                            <div class="lead-collab-list">
-                                <div class="lead-collab-item">
-                                    <span class="lead-collab-label">Local partnerships</span>
-                                    <span class="lead-collab-value lead-collab-strong">Strong</span>
-                                </div>
-                                <div class="lead-collab-item">
-                                    <span class="lead-collab-label">Faith-based organizations</span>
-                                    <span class="lead-collab-value lead-collab-strong">Strong</span>
-                                </div>
-                                <div class="lead-collab-item">
-                                    <span class="lead-collab-label">AI tool vendors</span>
-                                    <span class="lead-collab-value lead-collab-medium">Medium</span>
-                                </div>
-                                <div class="lead-collab-item">
-                                    <span class="lead-collab-label">Student groups</span>
-                                    <span class="lead-collab-value lead-collab-medium">Medium</span>
-                                </div>
-                            </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Average Comments</p>
+                            <p class="text-lg font-semibold text-gray-800" id="avgComments">0</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Engagement Rate</p>
+                            <p class="text-lg font-semibold text-gray-800" id="engagementRateDetail">0%</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">Audience Quality</p>
+                            <p class="text-lg font-semibold" id="audienceQuality">
+                                <span class="px-2 py-1 rounded text-sm">Medium</span>
+                            </p>
                         </div>
                     </div>
                     
-                    <!-- Recommendations -->
-                    <div class="lead-recommendations-section">
-                        <div class="lead-next-steps-card">
-                            <h4 class="lead-steps-title">Immediate Next Steps</h4>
-                            <div class="lead-steps-list">
-                                <div class="lead-step-item">
-                                    <div class="lead-step-number lead-step-green">1</div>
-                                    <div class="lead-step-content">
-                                        <p class="lead-step-action">Enable analytics access</p>
-                                        <p class="lead-step-detail">Optimize bio with contact link/Linktree</p>
-                                    </div>
-                                </div>
-                                <div class="lead-step-item">
-                                    <div class="lead-step-number lead-step-blue">2</div>
-                                    <div class="lead-step-content">
-                                        <p class="lead-step-action">Publish 3 Reels and 5 Stories weekly</p>
-                                        <p class="lead-step-detail">8-week content sprint to build momentum</p>
-                                    </div>
-                                </div>
-                                <div class="lead-step-item">
-                                    <div class="lead-step-number lead-step-purple">3</div>
-                                    <div class="lead-step-content">
-                                        <p class="lead-step-action">Run one paid local promo</p>
-                                        <p class="lead-step-detail">Measure KPIs: engagement rate, inquiries, conversion to leads</p>
-                                    </div>
-                                </div>
-                            </div>
+                    <!-- Engagement Insights -->
+                    <div id="engagementInsights" class="mt-4 p-3 bg-blue-50 rounded text-sm text-blue-700 italic hidden"></div>
+                </div>
+                
+                <!-- Scoring Overview -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">Scoring Overview</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Profile Score</span>
+                            <span class="font-semibold text-gray-800" id="profileScore">0/100</span>
                         </div>
-                        
-                        <div class="lead-metrics-card">
-                            <h4 class="lead-metrics-title">Success Metrics</h4>
-                            <div class="lead-metrics-grid">
-                                <div class="lead-metric-box">
-                                    <p class="lead-metric-value">2-5%</p>
-                                    <p class="lead-metric-label">Target Engagement Rate</p>
-                                </div>
-                                <div class="lead-metric-box">
-                                    <p class="lead-metric-value">10+</p>
-                                    <p class="lead-metric-label">Monthly Inquiries</p>
-                                </div>
-                                <div class="lead-metric-box">
-                                    <p class="lead-metric-value">3-5</p>
-                                    <p class="lead-metric-label">Quality Leads</p>
-                                </div>
-                                <div class="lead-metric-box">
-                                    <p class="lead-metric-value">15%</p>
-                                    <p class="lead-metric-label">Conversion Rate</p>
-                                </div>
-                            </div>
+                        <div class="flex justify-between items-center" id="engagementScoreRow">
+                            <span class="text-sm text-gray-600">Engagement Score</span>
+                            <span class="font-semibold text-gray-800" id="engagementScore">0/100</span>
+                        </div>
+                        <div class="flex justify-between items-center" id="nicheFitRow">
+                            <span class="text-sm text-gray-600">Niche Fit Score</span>
+                            <span class="font-semibold text-gray-800" id="nicheFitScore">0/100</span>
+                        </div>
+                        <div class="flex justify-between items-center border-t pt-2" id="totalScoreRow">
+                            <span class="font-semibold text-gray-700">Total Score</span>
+                            <span class="font-bold text-lg text-indigo-600" id="totalScore">0/100</span>
                         </div>
                     </div>
                 </div>
+                
+                <!-- Selling Points -->
+                <div id="sellingPointsSection" class="bg-white border border-gray-200 rounded-lg p-4 hidden">
+                    <h3 class="font-semibold text-gray-800 mb-3">Key Selling Points</h3>
+                    <ul id="sellingPointsList" class="list-disc list-inside space-y-2 text-sm text-gray-700"></ul>
+                </div>
+                
+                <!-- Outreach Message -->
+                <div id="outreachSection" class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4 hidden">
+                    <h3 class="font-semibold text-gray-800 mb-3">Suggested Outreach Message</h3>
+                    <div id="outreachMessage" class="bg-white p-3 rounded text-sm text-gray-700 border border-gray-200"></div>
+                    <button onclick="copyOutreachMessage()" 
+                            class="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
+                        Copy Message
+                    </button>
+                </div>
+                
+                <!-- Latest Posts Preview -->
+                <div id="latestPostsSection" class="bg-white border border-gray-200 rounded-lg p-4 hidden">
+                    <h3 class="font-semibold text-gray-800 mb-3">Recent Posts</h3>
+                    <div id="latestPostsGrid" class="grid grid-cols-3 gap-2 overflow-x-auto"></div>
+                </div>
             </div>
             
-            <!-- Action Buttons -->
-            <div class="lead-action-buttons">
-                <button id="exportBtn" class="lead-btn lead-btn-primary">
-                    <div class="lead-btn-content">
-                        <svg class="lead-btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <span>Export Analysis</span>
-                    </div>
-                </button>
-                <button id="generateBtn" class="lead-btn lead-btn-secondary">
-                    <div class="lead-btn-content">
-                        <svg class="lead-btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                        </svg>
-                        <span>Generate Outreach</span>
-                    </div>
-                </button>
-                <button onclick="closeLeadAnalysisModal()" class="lead-btn lead-btn-tertiary">
-                    Close
-                </button>
+            <!-- Light Analysis Note -->
+            <div id="lightAnalysisNote" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg hidden">
+                <p class="text-sm text-yellow-800">
+                    This is a light analysis. Upgrade to deep analysis for engagement metrics, audience insights, and personalized outreach messages.
+                </p>
             </div>
         </div>
     </div>
 </div>
+        
     <!-- Bulk Import Modal -->
     <div id="bulkImportModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full">
@@ -1459,22 +1305,15 @@ async function openLeadAnalysisModal(leadId) {
         if (!lead) {
             throw new Error('Lead not found');
         }
-// Build the comprehensive modal with real data
-const modalHTML = buildAnalysisModalHTML(lead, analysisData, leadId);
+
+        // Just call the updated function
+buildAnalysisModalHTML(lead, analysisData, leadId);
         
         // Remove existing modal and loading
         removeExistingModals();
         
-        // Add new modal to body
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-        
         // Prevent body scroll
         document.body.style.overflow = 'hidden';
-        
-        // Trigger animations after modal is rendered
-        setTimeout(() => {
-            animateModalEntry();
-        }, 50);
         
     } catch (error) {
         console.error('❌ Failed to load lead analysis:', error);
@@ -1499,308 +1338,103 @@ function showLoadingModal() {
 }
 
 function buildAnalysisModalHTML(lead, analysisData, leadId) {
+    const modal = document.getElementById('leadAnalysisModal');
+    if (!modal) return;
+    
     const isDeepAnalysis = lead.analysis_type === 'deep' && analysisData;
     
-    // Calculate display values
-    const overallScore = isDeepAnalysis ? (analysisData.score_total || lead.score || 0) : (lead.score || 0);
-    const engagementScore = isDeepAnalysis ? (analysisData.engagement_score || 0) : 'N/A';
-    const nicheFitScore = isDeepAnalysis ? (analysisData.score_niche_fit || 0) : 'N/A';
-    const followerCount = lead.followers_count ? lead.followers_count.toLocaleString() : '0';
-const engagementRate = isDeepAnalysis && analysisData.engagement_rate ? 
-    `${(analysisData.engagement_rate > 1 ? analysisData.engagement_rate : analysisData.engagement_rate * 100).toFixed(1)}%` : 'N/A';
+    // Update profile section
+    document.getElementById('leadProfileImage').src = lead.profile_pic_url || '/assets/default-avatar.png';
+    document.getElementById('leadUsername').textContent = `@${lead.username}`;
+    document.getElementById('leadFullName').textContent = lead.full_name || lead.username;
+    document.getElementById('leadBio').textContent = lead.bio || '';
     
-    // Get platform icon
-    const platformIcon = getPlatformIcon(lead.platform);
+    // Badges
+    document.getElementById('verifiedBadge').classList.toggle('hidden', !lead.is_verified);
+    document.getElementById('businessBadge').classList.toggle('hidden', !lead.is_business_account);
+    document.getElementById('privateBadge').classList.toggle('hidden', !lead.is_private);
     
-    // Score color coding
-    const getScoreColor = (score) => {
-        if (score >= 80) return 'green';
-        if (score >= 60) return 'yellow';
-        if (score >= 40) return 'orange';
-        return 'red';
-    };
+    // Summary
+    const summaryText = isDeepAnalysis ? analysisData.deep_summary : lead.quick_summary;
+    const summaryEl = document.querySelector('#profileSummary p');
+    if (summaryEl) summaryEl.textContent = summaryText || 'No summary available';
     
-    const overallColor = getScoreColor(overallScore);
-    const engagementColor = isDeepAnalysis ? getScoreColor(engagementScore) : 'gray';
-    const nicheFitColor = isDeepAnalysis ? getScoreColor(nicheFitScore) : 'gray';
+    // Stats
+    document.getElementById('followersCount').textContent = (lead.followers_count || 0).toLocaleString();
+    document.getElementById('followingCount').textContent = (lead.following_count || 0).toLocaleString();
+    document.getElementById('postsCount').textContent = (lead.posts_count || 0).toLocaleString();
     
-    return `
-        <div id="leadAnalysisModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-            <div class="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden transform scale-95 transition-transform duration-300">
-                
-                <!-- Dynamic Header with Gradient -->
-                <div class="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 text-white overflow-hidden">
-                    <!-- Animated Background Elements -->
-                    <div class="absolute inset-0">
-                        <div class="absolute w-32 h-32 bg-white/10 rounded-full -top-4 -right-4 animate-pulse"></div>
-                        <div class="absolute w-24 h-24 bg-white/5 rounded-full top-12 right-16 animate-bounce" style="animation-delay: 1s;"></div>
-                        <div class="absolute w-16 h-16 bg-white/10 rounded-full bottom-4 left-1/3 animate-pulse" style="animation-delay: 2s;"></div>
-                    </div>
-                    
-                    <div class="relative flex items-center justify-between">
-                        <div class="flex items-center space-x-6">
-                            <!-- Profile Image with Glow Effect -->
-                            <div class="relative">
-                                <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full blur-lg opacity-75 animate-pulse"></div>
-                                <img src="${lead.profile_pic_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face'}" 
-                                     alt="Profile" 
-                                     class="relative w-20 h-20 rounded-full border-4 border-white shadow-2xl object-cover">
-                                <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-4 border-white">
-                                    ${platformIcon}
-                                </div>
-                            </div>
-                            
-                            <!-- Profile Info -->
-                            <div>
-                                <div class="flex items-center space-x-3 mb-2">
-                                    <h3 class="text-3xl font-bold">@${lead.username}</h3>
-                                    <span class="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium">
-                                        ${lead.analysis_type === 'deep' ? 'Deep Analysis' : 'Light Scan'}
-                                    </span>
-                                </div>
-                                <div class="flex items-center space-x-6 text-white/90">
-                                    <span class="flex items-center space-x-2">
-                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                        <span class="font-medium">${followerCount} followers</span>
-                                    </span>
-                                    ${isDeepAnalysis ? `
-                                        <span class="flex items-center space-x-2">
-                                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"/>
-                                            </svg>
-                                            <span class="font-medium">${engagementRate} engagement</span>
-                                        </span>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Close Button -->
-                        <button onclick="closeLeadAnalysisModal()" 
-                                class="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl hover:bg-white/30 transition-all duration-300 hover:scale-110 hover:rotate-90">
-                            <svg class="w-6 h-6 text-white mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
+    // Deep analysis content
+    if (isDeepAnalysis) {
+        document.getElementById('deepAnalysisContent').classList.remove('hidden');
+        document.getElementById('lightAnalysisNote').classList.add('hidden');
+        
+        // Engagement metrics
+        document.getElementById('avgLikes').textContent = (analysisData.avg_likes || 0).toLocaleString();
+        document.getElementById('avgComments').textContent = (analysisData.avg_comments || 0).toLocaleString();
+        document.getElementById('engagementRateDetail').textContent = 
+            `${(analysisData.engagement_rate || 0).toFixed(2)}%`;
+        
+        // Audience quality with color
+        const qualityEl = document.getElementById('audienceQuality').querySelector('span');
+        qualityEl.textContent = analysisData.audience_quality || 'Unknown';
+        qualityEl.className = `px-2 py-1 rounded text-sm ${
+            analysisData.audience_quality === 'High' ? 'bg-green-100 text-green-800' :
+            analysisData.audience_quality === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+            'bg-red-100 text-red-800'
+        }`;
+        
+        // Insights
+        const insightsEl = document.getElementById('engagementInsights');
+        if (analysisData.engagement_insights) {
+            insightsEl.textContent = analysisData.engagement_insights;
+            insightsEl.classList.remove('hidden');
+        }
+        
+        // Scores
+        document.getElementById('profileScore').textContent = `${lead.score || 0}/100`;
+        document.getElementById('engagementScore').textContent = `${analysisData.engagement_score || 0}/100`;
+        document.getElementById('nicheFitScore').textContent = `${analysisData.score_niche_fit || 0}/100`;
+        document.getElementById('totalScore').textContent = `${analysisData.score_total || lead.score || 0}/100`;
+        
+        // Selling points
+        if (analysisData.selling_points?.length > 0) {
+            document.getElementById('sellingPointsSection').classList.remove('hidden');
+            document.getElementById('sellingPointsList').innerHTML = 
+                analysisData.selling_points.map(point => `<li>${point}</li>`).join('');
+        }
+        
+        // Outreach message
+        if (analysisData.outreach_message) {
+            document.getElementById('outreachSection').classList.remove('hidden');
+            document.getElementById('outreachMessage').textContent = analysisData.outreach_message;
+        }
+        
+        // Latest posts
+        if (analysisData.latest_posts?.length > 0) {
+            document.getElementById('latestPostsSection').classList.remove('hidden');
+            const postsGrid = document.getElementById('latestPostsGrid');
+            postsGrid.innerHTML = analysisData.latest_posts.slice(0, 6).map(post => `
+                <div class="relative group">
+                    <img src="${post.thumbnail}" alt="Post" class="w-full h-20 object-cover rounded">
+                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center text-white text-xs">
+                        <span>❤️ ${post.likes}</span>
+                        <span class="ml-2">💬 ${post.comments}</span>
                     </div>
                 </div>
-                
-                <!-- Content Area -->
-                <div class="p-8 overflow-y-auto max-h-[calc(95vh-280px)]">
-                    
-                    <!-- Score Dashboard -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <!-- Overall Score -->
-                        <div class="bg-gradient-to-br from-${overallColor}-50 to-${overallColor}-100 border border-${overallColor}-200 rounded-2xl p-6 relative overflow-hidden">
-                            <div class="absolute inset-0 bg-gradient-to-br from-${overallColor}-400/10 to-transparent"></div>
-                            <div class="relative">
-                                <div class="flex items-center justify-between mb-4">
-                                    <h4 class="text-sm font-semibold text-${overallColor}-700 uppercase tracking-wider">Overall Score</h4>
-                                    <div class="w-3 h-3 bg-${overallColor}-500 rounded-full animate-pulse"></div>
-                                </div>
-                                <div class="flex items-center space-x-4">
-                                    <div class="relative w-16 h-16">
-                                        <svg class="w-16 h-16 transform -rotate-90" viewBox="0 0 36 36">
-                                            <path d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831" 
-                                                  fill="none" stroke="#e5e7eb" stroke-width="2"/>
-                                            <path d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831" 
-                                                  fill="none" stroke="currentColor" stroke-width="2" 
-                                                  stroke-dasharray="${overallScore}, 100" 
-                                                  class="text-${overallColor}-500 transition-all duration-1000 ease-out"/>
-                                        </svg>
-                                        <div class="absolute inset-0 flex items-center justify-center">
-                                            <span class="text-2xl font-bold text-${overallColor}-700">${overallScore}</span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div class="text-3xl font-bold text-${overallColor}-700">${overallScore}/100</div>
-                                        <div class="text-sm text-${overallColor}-600">${getScoreLabel(overallScore)}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Engagement Score -->
-                        <div class="bg-gradient-to-br from-${engagementColor}-50 to-${engagementColor}-100 border border-${engagementColor}-200 rounded-2xl p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-sm font-semibold text-${engagementColor}-700 uppercase tracking-wider">Engagement</h4>
-                                <div class="w-3 h-3 bg-${engagementColor}-500 rounded-full animate-pulse"></div>
-                            </div>
-                            <div class="text-3xl font-bold text-${engagementColor}-700 mb-1">${isDeepAnalysis ? engagementScore + '/100' : 'N/A'}</div>
-                            <div class="text-sm text-${engagementColor}-600">${isDeepAnalysis ? getScoreLabel(engagementScore) : 'Light analysis only'}</div>
-                            ${isDeepAnalysis && analysisData.avg_likes ? `
-                                <div class="mt-3 text-xs text-${engagementColor}-600">
-                                    Avg: ${analysisData.avg_likes} likes, ${analysisData.avg_comments || 0} comments
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <!-- Niche Fit Score -->
-                        <div class="bg-gradient-to-br from-${nicheFitColor}-50 to-${nicheFitColor}-100 border border-${nicheFitColor}-200 rounded-2xl p-6">
-                            <div class="flex items-center justify-between mb-4">
-                                <h4 class="text-sm font-semibold text-${nicheFitColor}-700 uppercase tracking-wider">Niche Fit</h4>
-                                <div class="w-3 h-3 bg-${nicheFitColor}-500 rounded-full animate-pulse"></div>
-                            </div>
-                            <div class="text-3xl font-bold text-${nicheFitColor}-700 mb-1">${isDeepAnalysis ? nicheFitScore + '/100' : 'N/A'}</div>
-                            <div class="text-sm text-${nicheFitColor}-600">${isDeepAnalysis ? getScoreLabel(nicheFitScore) : 'Light analysis only'}</div>
-                            ${isDeepAnalysis && analysisData.audience_quality ? `
-                                <div class="mt-3 text-xs text-${nicheFitColor}-600">
-                                    Audience: ${analysisData.audience_quality}
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    
-                    <!-- Analysis Summary -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                        <!-- Summary Section -->
-                        <div class="bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
-                            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
-                                <svg class="w-5 h-5 mr-2 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                Analysis Summary
-                            </h4>
-                            <div class="prose prose-sm text-gray-700">
-                                ${isDeepAnalysis && analysisData.deep_summary ? 
-                                    `<p>${analysisData.deep_summary}</p>` : 
-                                    lead.quick_summary ? 
-                                        `<p>${lead.quick_summary}</p>` : 
-                                        '<p>This lead has been analyzed and shows potential for outreach. Consider their engagement patterns and audience alignment with your target market.</p>'
-                                }
-                            </div>
-                            
-                            ${isDeepAnalysis && analysisData.engagement_insights ? `
-                                <div class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                                    <h5 class="font-semibold text-blue-800 mb-2">Engagement Insights</h5>
-                                    <p class="text-sm text-blue-700">${analysisData.engagement_insights}</p>
-                                </div>
-                            ` : ''}
-                        </div>
-                        
-                        <!-- Selling Points or Profile Details -->
-                        <div class="bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-6 border border-amber-200">
-                            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
-                                <svg class="w-5 h-5 mr-2 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                </svg>
-                                ${isDeepAnalysis && analysisData.selling_points && analysisData.selling_points.length > 0 ? 'Key Selling Points' : 'Profile Highlights'}
-                            </h4>
-                            
-                            ${isDeepAnalysis && analysisData.selling_points && analysisData.selling_points.length > 0 ? `
-                                <ul class="space-y-2">
-                                    ${analysisData.selling_points.map(point => 
-                                        `<li class="flex items-start space-x-2">
-                                            <div class="w-2 h-2 bg-amber-500 rounded-full mt-2 flex-shrink-0"></div>
-                                            <span class="text-sm text-gray-700">${point}</span>
-                                        </li>`
-                                    ).join('')}
-                                </ul>
-                            ` : `
-                                <div class="space-y-3 text-sm text-gray-700">
-                                    <div class="flex justify-between">
-                                        <span class="font-medium">Platform:</span>
-                                        <span class="capitalize">${lead.platform}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="font-medium">Analysis Type:</span>
-                                        <span class="capitalize">${lead.analysis_type}</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="font-medium">Profile Score:</span>
-                                        <span class="font-bold text-amber-600">${lead.score}/100</span>
-                                    </div>
-                                    ${lead.profile_url ? `
-                                        <div class="flex justify-between">
-                                            <span class="font-medium">Profile URL:</span>
-                                            <a href="${lead.profile_url}" target="_blank" class="text-blue-600 hover:underline truncate max-w-32">View Profile</a>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            `}
-                        </div>
-                    </div>
-                    
-                    <!-- Outreach Message (Deep Analysis Only) -->
-                    ${isDeepAnalysis && analysisData.outreach_message ? `
-                        <div class="bg-gradient-to-br from-emerald-50 to-green-100 rounded-2xl p-6 border border-emerald-200 mb-6">
-                            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
-                                <svg class="w-5 h-5 mr-2 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-                                </svg>
-                                Personalized Outreach Message
-                            </h4>
-                            <div class="bg-white rounded-xl p-4 border border-emerald-200 mb-4">
-                                <p id="outreachMessage" class="text-gray-700 italic leading-relaxed">"${analysisData.outreach_message}"</p>
-                            </div>
-                            <button onclick="copyOutreachMessage()" 
-                                    class="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center space-x-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                </svg>
-                                <span>Copy Message</span>
-                            </button>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Latest Posts (Deep Analysis Only) -->
-                    ${isDeepAnalysis && analysisData.latest_posts && Array.isArray(analysisData.latest_posts) && analysisData.latest_posts.length > 0 ? `
-                        <div class="bg-gradient-to-br from-purple-50 to-indigo-100 rounded-2xl p-6 border border-purple-200 mb-6">
-                            <h4 class="font-bold text-gray-800 mb-4 flex items-center">
-                                <svg class="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"/>
-                                </svg>
-                                Recent Posts Analysis
-                            </h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                ${analysisData.latest_posts.slice(0, 6).map(post => `
-                                    <div class="bg-white rounded-lg p-4 border border-purple-200">
-                                        ${post.media_url ? `
-                                            <img src="${post.media_url}" alt="Post" class="w-full h-32 object-cover rounded-lg mb-2">
-                                        ` : ''}
-                                        <p class="text-sm text-gray-600 line-clamp-3">${post.caption || 'No caption'}</p>
-                                        <div class="flex justify-between mt-2 text-xs text-gray-500">
-                                            <span>${post.like_count || 0} likes</span>
-                                            <span>${post.comments_count || 0} comments</span>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-                    
-                    <!-- Action Buttons -->
-                    <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-                        <button onclick="closeLeadAnalysisModal()" 
-                                class="flex-1 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors">
-                            Close Analysis
-                        </button>
-                        ${lead.profile_url ? `
-                            <button onclick="window.open('${lead.profile_url}', '_blank')" 
-                                    class="flex-1 px-6 py-3 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-colors flex items-center justify-center space-x-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                </svg>
-                                <span>View Profile</span>
-                            </button>
-                        ` : ''}
-                        <button onclick="contactLead('${leadId}')" 
-                                class="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all flex items-center justify-center space-x-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.405L3 21l2.595-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
-                            </svg>
-                            <span>Start Outreach</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+            `).join('');
+        }
+    } else {
+        // Light analysis
+        document.getElementById('deepAnalysisContent').classList.add('hidden');
+        document.getElementById('lightAnalysisNote').classList.remove('hidden');
+        document.getElementById('profileScore').textContent = `${lead.score || 0}/100`;
+    }
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 }
-
 function getPlatformIcon(platform) {
     switch(platform?.toLowerCase()) {
         case 'instagram':
