@@ -62,6 +62,9 @@ class SidebarManager {
             this.sidebar = targetElement;
             this.mainContent = document.querySelector('.main-content, [class*="content"], main');
             
+            // Create external toggle
+            this.createExternalToggle();
+
             // Initialize functionality
             this.initializeSidebar();
 
@@ -245,16 +248,7 @@ async updateUserInfo(user) {
             </div>
         </div>
     </div>
-
-            <!-- Integrated Toggle Handle -->
-        <div class="sidebar-toggle-handle">
-            <button class="sidebar-toggle-button" onclick="window.sidebarManager.toggleSidebar()">
-                <svg class="sidebar-toggle-icon" width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
-                </svg>
-            </button>
-        </div>
-        
+    
     <!-- Collapsed User Avatar -->
     <div class="sidebar-user-collapsed">
         <div class="sidebar-user-avatar">
@@ -310,6 +304,90 @@ toggleSidebar() {
     }
 }
 
+createExternalToggle() {
+    console.log('🔧 [SidebarManager] Creating external toggle...');
+    
+    // Remove any existing external toggle
+    const existing = document.getElementById('sidebar-external-toggle');
+    if (existing) {
+        existing.remove();
+    }
+    
+    // Create the toggle button
+    const toggle = document.createElement('button');
+    toggle.id = 'sidebar-external-toggle';
+    toggle.innerHTML = `
+        <svg width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/>
+        </svg>
+    `;
+    
+    // Style as thin vertical bar with transparency
+    toggle.style.cssText = `
+        position: fixed !important;
+        top: 6.3% !important;
+        left: 256px !important;
+        transform: translateY(-50%) !important;
+        width: 1rem !important;
+        height: 8rem !important;
+background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.9) 100%) !important;
+backdrop-filter: blur(16px) !important;
+-webkit-backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(229, 231, 235, 0.6) !important;
+        border-left: none !important;
+        border-radius: 0 0.5rem 0.5rem 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        z-index: 30 !important;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.1) !important;
+        color: #6b7280 !important;
+        transition: all 0.3s ease !important;
+    `;
+    
+    // Add click handler
+    toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.toggleSidebar();
+    });
+    
+    // Add to body
+    document.body.appendChild(toggle);
+    
+    // Store reference
+    this.externalToggle = toggle;
+    
+    console.log('✅ [SidebarManager] External toggle created');
+}
+
+    // Hide toggle when modals are present
+const hideWhenModalsPresent = () => {
+    const modals = document.querySelectorAll('.fixed[style*="z-index: 50"], .fixed[style*="z-index: 9999"], #loadingModal, #leadAnalysisModal, #analysisModal, #bulkModal, #errorModal');
+    const hasVisibleModal = Array.from(modals).some(modal => 
+        modal.style.display !== 'none' && 
+        !modal.classList.contains('hidden') && 
+        modal.offsetParent !== null
+    );
+    
+    if (hasVisibleModal) {
+        toggle.style.display = 'none';
+    } else {
+        toggle.style.display = 'flex';
+    }
+};
+
+// Check immediately
+hideWhenModalsPresent();
+
+// Monitor for modal changes
+const observer = new MutationObserver(hideWhenModalsPresent);
+observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'class']
+});
     updateSidebarState() {
         if (!this.sidebar) return;
         
@@ -330,6 +408,17 @@ toggleSidebar() {
         
         // Update all child elements
         this.updateChildElements();
+        
+        // Update external toggle position
+        if (this.externalToggle) {
+            if (this.isCollapsed) {
+                this.externalToggle.style.left = '64px';
+                this.externalToggle.querySelector('svg').style.transform = 'rotate(180deg)';
+            } else {
+                this.externalToggle.style.left = '256px';
+                this.externalToggle.querySelector('svg').style.transform = 'rotate(0deg)';
+            }
+        }
         
         console.log('✅ [SidebarManager] State updated');
     }
