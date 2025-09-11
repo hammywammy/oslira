@@ -1382,45 +1382,40 @@ function buildAnalysisModalHTML(lead, analysisData, leadId) {
         `https://images.weserv.nl/?url=${encodeURIComponent(lead.profile_pic_url)}&w=160&h=160&fit=cover&mask=circle` : 
         '/assets/default-avatar.png';
     
-    // Calculate engagement rate if available
-    const engagementRate = analysisData?.engagement_rate ? 
-        `${analysisData.engagement_rate.toFixed(2)}%` : 'N/A';
-    
-    // Score color coding
-    const getScoreColor = (score) => {
-        if (score >= 80) return 'text-green-600 bg-green-50';
-        if (score >= 60) return 'text-yellow-600 bg-yellow-50';
-        if (score >= 40) return 'text-orange-600 bg-orange-50';
-        return 'text-red-600 bg-red-50';
-    };
-    
-    const getScoreLabel = (score) => {
-        if (score >= 90) return 'Excellent';
-        if (score >= 80) return 'Very Good';
-        if (score >= 70) return 'Good';
-        if (score >= 60) return 'Above Average';
-        if (score >= 50) return 'Average';
-        if (score >= 40) return 'Below Average';
-        if (score >= 30) return 'Poor';
-        return 'Very Poor';
+    // Score color and emoji mapping
+    const getScoreDisplay = (score) => {
+        if (score >= 85) return { color: 'text-emerald-600', bg: 'bg-emerald-50', emoji: '🔥', label: 'Hot Lead' };
+        if (score >= 70) return { color: 'text-green-600', bg: 'bg-green-50', emoji: '✨', label: 'Strong' };
+        if (score >= 55) return { color: 'text-yellow-600', bg: 'bg-yellow-50', emoji: '👍', label: 'Good' };
+        if (score >= 40) return { color: 'text-orange-600', bg: 'bg-orange-50', emoji: '📈', label: 'Potential' };
+        return { color: 'text-red-600', bg: 'bg-red-50', emoji: '🤔', label: 'Needs Work' };
     };
     
     const mainScore = isDeepAnalysis ? (analysisData.score_total || lead.score) : lead.score;
+    const scoreDisplay = getScoreDisplay(mainScore);
+    
+    // Engagement rate display
+    const engagementRate = analysisData?.engagement_rate ? 
+        `${analysisData.engagement_rate.toFixed(1)}%` : 'N/A';
     
     modalContent.innerHTML = `
-        <!-- Header with gradient background -->
-        <div class="bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-6 text-white relative overflow-hidden">
-            <div class="absolute inset-0 bg-black/10"></div>
-            <div class="relative z-10">
-                <div class="flex items-start space-x-6">
-                    <!-- Profile Image -->
+        <!-- Hero Header -->
+        <div class="relative bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 p-8 text-white overflow-hidden">
+            <!-- Background Pattern -->
+            <div class="absolute inset-0 opacity-10">
+                <div class="absolute inset-0" style="background-image: radial-gradient(circle at 25% 25%, white 1px, transparent 1px); background-size: 20px 20px;"></div>
+            </div>
+            
+            <div class="relative z-10 flex items-start justify-between">
+                <!-- Profile Section -->
+                <div class="flex items-center space-x-6">
                     <div class="relative">
                         <img src="${profileImageUrl}" 
                              alt="Profile" 
-                             class="w-24 h-24 rounded-full border-4 border-white/20 shadow-lg"
+                             class="w-20 h-20 rounded-full border-4 border-white/30 shadow-xl"
                              onerror="this.src='/assets/default-avatar.png'">
                         ${lead.is_verified ? `
-                            <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white">
+                            <div class="absolute -bottom-1 -right-1 w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-lg">
                                 <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
                                 </svg>
@@ -1428,125 +1423,113 @@ function buildAnalysisModalHTML(lead, analysisData, leadId) {
                         ` : ''}
                     </div>
                     
-                    <!-- Profile Info -->
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center space-x-3 mb-2">
-                            <h2 class="text-2xl font-bold text-white truncate">
-                                ${lead.full_name || lead.username}
-                            </h2>
-                            <div class="flex space-x-2">
-                                ${lead.is_business_account ? `
-                                    <span class="px-2 py-1 bg-white/20 text-white text-xs rounded-full">Business</span>
-                                ` : ''}
-                                ${lead.is_private ? `
-                                    <span class="px-2 py-1 bg-white/20 text-white text-xs rounded-full">Private</span>
-                                ` : ''}
-                            </div>
-                        </div>
-                        <p class="text-lg text-white/90 mb-1">@${lead.username}</p>
-                        <p class="text-sm text-white/80 mb-4 line-clamp-2">
-                            ${lead.bio || 'No bio available'}
-                        </p>
-                        
-                        <!-- Quick Stats -->
-                        <div class="grid grid-cols-3 gap-4 text-center">
-                            <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                                <div class="text-xl font-bold text-white">${(lead.followers_count || 0).toLocaleString()}</div>
-                                <div class="text-xs text-white/80">Followers</div>
-                            </div>
-                            <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                                <div class="text-xl font-bold text-white">${(lead.following_count || 0).toLocaleString()}</div>
-                                <div class="text-xs text-white/80">Following</div>
-                            </div>
-                            <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
-                                <div class="text-xl font-bold text-white">${(lead.posts_count || 0).toLocaleString()}</div>
-                                <div class="text-xs text-white/80">Posts</div>
-                            </div>
+                    <div>
+                        <h1 class="text-2xl font-bold mb-1">${lead.full_name || lead.username}</h1>
+                        <p class="text-lg text-white/90 mb-2">@${lead.username}</p>
+                        <div class="flex items-center space-x-2">
+                            ${lead.is_business_account ? '<span class="px-2 py-1 bg-white/20 text-xs rounded-full">Business</span>' : ''}
+                            ${lead.is_private ? '<span class="px-2 py-1 bg-white/20 text-xs rounded-full">Private</span>' : ''}
                         </div>
                     </div>
-                    
-                    <!-- Overall Score -->
-                    <div class="text-center">
-                        <div class="bg-white/20 rounded-xl p-4 backdrop-blur-sm">
-                            <div class="text-3xl font-bold text-white mb-1">${mainScore}</div>
-                            <div class="text-sm text-white/80">Overall Score</div>
-                            <div class="text-xs text-white/70 mt-1">${getScoreLabel(mainScore)}</div>
-                        </div>
+                </div>
+                
+                <!-- Score Display -->
+                <div class="text-center">
+                    <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-6 min-w-[120px]">
+                        <div class="text-4xl font-bold mb-1">${mainScore}</div>
+                        <div class="text-sm opacity-90 mb-2">Overall Score</div>
+                        <div class="text-2xl">${scoreDisplay.emoji}</div>
+                        <div class="text-xs font-medium">${scoreDisplay.label}</div>
                     </div>
+                </div>
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-3 gap-4 mt-6 relative z-10">
+                <div class="text-center bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <div class="text-2xl font-bold">${(lead.followers_count || 0).toLocaleString()}</div>
+                    <div class="text-sm opacity-80">Followers</div>
+                </div>
+                <div class="text-center bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <div class="text-2xl font-bold">${(lead.following_count || 0).toLocaleString()}</div>
+                    <div class="text-sm opacity-80">Following</div>
+                </div>
+                <div class="text-center bg-white/10 backdrop-blur-sm rounded-xl p-4">
+                    <div class="text-2xl font-bold">${(lead.posts_count || 0).toLocaleString()}</div>
+                    <div class="text-sm opacity-80">Posts</div>
                 </div>
             </div>
         </div>
         
-        <!-- Content Sections -->
         <div class="p-6 space-y-6">
-            <!-- Analysis Summary -->
-            <div class="bg-gray-50 rounded-xl p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                    <svg class="w-5 h-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    ${isDeepAnalysis ? 'Deep Analysis Summary' : 'Quick Analysis Summary'}
-                </h3>
-                <p class="text-gray-700 leading-relaxed">
-                    ${summaryText || 'No summary available for this lead.'}
-                </p>
-            </div>
-            
             ${isDeepAnalysis ? `
-                <!-- Deep Analysis Sections -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Engagement Metrics -->
-                    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <svg class="w-5 h-5 text-pink-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                <!-- AI Summary Card -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                             </svg>
-                            Engagement Metrics
-                        </h3>
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Engagement Score</span>
-                                <span class="font-semibold ${getScoreColor(analysisData.engagement_score || 0).split(' ')[0]}">${analysisData.engagement_score || 0}/100</span>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">🤖 AI Analysis</h3>
+                            <p class="text-gray-700 leading-relaxed text-sm">${summaryText || 'No analysis summary available.'}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Metrics Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Engagement Card -->
+                    <div class="bg-white border-2 border-pink-100 rounded-2xl p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">💖 Engagement</h3>
+                            <span class="text-2xl font-bold ${getScoreDisplay(analysisData.engagement_score || 0).color}">${analysisData.engagement_score || 0}</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 text-sm">Avg. Likes</span>
+                                <span class="font-semibold">${(analysisData.avg_likes || 0).toLocaleString()}</span>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Avg. Likes</span>
-                                <span class="font-semibold text-gray-900">${(analysisData.avg_likes || 0).toLocaleString()}</span>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 text-sm">Avg. Comments</span>
+                                <span class="font-semibold">${(analysisData.avg_comments || 0).toLocaleString()}</span>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Avg. Comments</span>
-                                <span class="font-semibold text-gray-900">${(analysisData.avg_comments || 0).toLocaleString()}</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Engagement Rate</span>
-                                <span class="font-semibold text-gray-900">${engagementRate}</span>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 text-sm">Engagement Rate</span>
+                                <span class="font-semibold">${engagementRate}</span>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Scoring Breakdown -->
-                    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                            </svg>
-                            Score Breakdown
-                        </h3>
-                        <div class="space-y-4">
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Niche Fit</span>
-                                <span class="font-semibold ${getScoreColor(analysisData.score_niche_fit || 0).split(' ')[0]}">${analysisData.score_niche_fit || 0}/100</span>
+                    <!-- Scores Card -->
+                    <div class="bg-white border-2 border-green-100 rounded-2xl p-6 hover:shadow-lg transition-shadow">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900">📊 Fit Scores</h3>
+                            <span class="text-2xl font-bold ${getScoreDisplay(analysisData.score_total || 0).color}">${analysisData.score_total || 0}</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 text-sm">Niche Fit</span>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-16 h-2 bg-gray-200 rounded-full">
+                                        <div class="h-2 bg-green-500 rounded-full" style="width: ${analysisData.score_niche_fit || 0}%"></div>
+                                    </div>
+                                    <span class="font-semibold text-sm">${analysisData.score_niche_fit || 0}</span>
+                                </div>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Engagement</span>
-                                <span class="font-semibold ${getScoreColor(analysisData.engagement_score || 0).split(' ')[0]}">${analysisData.engagement_score || 0}/100</span>
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 text-sm">Engagement</span>
+                                <div class="flex items-center space-x-2">
+                                    <div class="w-16 h-2 bg-gray-200 rounded-full">
+                                        <div class="h-2 bg-pink-500 rounded-full" style="width: ${analysisData.engagement_score || 0}%"></div>
+                                    </div>
+                                    <span class="font-semibold text-sm">${analysisData.engagement_score || 0}</span>
+                                </div>
                             </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Total Score</span>
-                                <span class="font-semibold ${getScoreColor(analysisData.score_total || 0).split(' ')[0]}">${analysisData.score_total || 0}/100</span>
-                            </div>
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <span class="text-gray-600">Audience Quality</span>
-                                <span class="px-2 py-1 rounded text-sm font-medium ${
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600 text-sm">Audience Quality</span>
+                                <span class="px-2 py-1 rounded-full text-xs font-medium ${
                                     analysisData.audience_quality === 'High' ? 'bg-green-100 text-green-800' :
                                     analysisData.audience_quality === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
                                     'bg-red-100 text-red-800'
@@ -1558,20 +1541,16 @@ function buildAnalysisModalHTML(lead, analysisData, leadId) {
                 
                 ${analysisData.selling_points && analysisData.selling_points.length > 0 ? `
                     <!-- Selling Points -->
-                    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                    <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-6">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <svg class="w-5 h-5 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
+                            <span class="text-2xl mr-2">⚡</span>
                             Key Selling Points
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            ${analysisData.selling_points.map(point => `
-                                <div class="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                                    <svg class="w-4 h-4 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-                                    </svg>
-                                    <span class="text-gray-700 text-sm">${point}</span>
+                            ${analysisData.selling_points.slice(0, 6).map((point, index) => `
+                                <div class="flex items-start space-x-3 p-3 bg-white/60 rounded-lg border border-yellow-200/50">
+                                    <span class="w-6 h-6 bg-yellow-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">${index + 1}</span>
+                                    <span class="text-gray-700 text-sm leading-relaxed">${point}</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -1579,85 +1558,84 @@ function buildAnalysisModalHTML(lead, analysisData, leadId) {
                 ` : ''}
                 
                 ${analysisData.outreach_message ? `
-                    <!-- Personalized Outreach Message -->
-                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <svg class="w-5 h-5 text-purple-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.405L3 21l2.595-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
-                            </svg>
-                            Personalized Outreach Message
-                        </h3>
-                        <div class="bg-white rounded-lg p-4 mb-4 border">
-                            <p class="text-gray-700 leading-relaxed" id="outreachMessage">${analysisData.outreach_message}</p>
+                    <!-- Outreach Message -->
+                    <div class="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                <span class="text-2xl mr-2">💌</span>
+                                Ready-to-Send Message
+                            </h3>
+                            <button onclick="copyOutreachMessage()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center space-x-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                <span>Copy</span>
+                            </button>
                         </div>
-                        <button onclick="copyOutreachMessage()" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                            </svg>
-                            Copy Message
-                        </button>
+                        <div class="bg-white rounded-xl p-4 border border-purple-200 shadow-sm">
+                            <p class="text-gray-700 leading-relaxed text-sm" id="outreachMessage">${analysisData.outreach_message}</p>
+                        </div>
                     </div>
                 ` : ''}
                 
                 ${analysisData.engagement_insights ? `
-                    <!-- Engagement Insights -->
-                    <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                    <!-- Insights -->
+                    <div class="bg-gradient-to-r from-teal-50 to-cyan-50 border border-teal-200 rounded-2xl p-6">
                         <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                            <svg class="w-5 h-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                            </svg>
-                            Engagement Insights
+                            <span class="text-2xl mr-2">🎯</span>
+                            Pro Insights
                         </h3>
-                        <p class="text-gray-700 leading-relaxed">${analysisData.engagement_insights}</p>
+                        <p class="text-gray-700 leading-relaxed text-sm">${analysisData.engagement_insights}</p>
                     </div>
                 ` : ''}
             ` : `
-                <!-- Light Analysis Note -->
-                <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center">
-                    <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mb-4">
-                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
+                <!-- Light Analysis -->
+                <div class="bg-gradient-to-r from-gray-50 to-blue-50 border-2 border-blue-200 rounded-2xl p-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-2xl">🔍</span>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3">Quick Summary</h3>
+                            <p class="text-gray-700 leading-relaxed text-sm mb-4">${summaryText || 'Basic profile analysis complete.'}</p>
+                        </div>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Light Analysis Complete</h3>
-                    <p class="text-gray-600 mb-4">
-                        This is a basic analysis. For detailed engagement metrics, audience insights, 
-                        and personalized outreach messages, run a deep analysis on this lead.
-                    </p>
-                    <button onclick="startDeepAnalysis('${lead.username}')" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
-                        Run Deep Analysis
+                </div>
+                
+                <!-- Upgrade Prompt -->
+                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-2xl p-8 text-center">
+                    <div class="text-4xl mb-4">🚀</div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Want the Full Picture?</h3>
+                    <p class="text-gray-600 mb-6 text-sm">Get detailed engagement metrics, personalized outreach messages, and strategic insights with a deep analysis.</p>
+                    <button onclick="startDeepAnalysis('${lead.username}')" class="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+                        🔥 Run Deep Analysis
                     </button>
                 </div>
             `}
         </div>
         
-        <!-- Footer Actions -->
-        <div class="border-t bg-gray-50 px-6 py-4 flex justify-between items-center">
-            <div class="flex space-x-3">
-                <button onclick="contactLead('${lead.username}', '${lead.profile_url || ''}')" 
-                        class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.405L3 21l2.595-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
-                    </svg>
-                    Contact Lead
+        <!-- Action Footer -->
+        <div class="border-t bg-gradient-to-r from-gray-50 to-white px-6 py-6">
+            <div class="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                <div class="flex gap-3">
+                    <button onclick="contactLead('${lead.username}', '${lead.profile_url || ''}')" 
+                            class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center space-x-2">
+                        <span class="text-lg">💬</span>
+                        <span>Contact Lead</span>
+                    </button>
+                    ${lead.profile_url ? `
+                        <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
+                           class="px-4 py-3 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors flex items-center space-x-2">
+                            <span class="text-lg">👀</span>
+                            <span>View Profile</span>
+                        </a>
+                    ` : ''}
+                </div>
+                <button onclick="closeLeadAnalysisModal()" 
+                        class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium">
+                    Close
                 </button>
-                ${lead.profile_url ? `
-                    <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
-                       class="inline-flex items-center px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                        </svg>
-                        View Profile
-                    </a>
-                ` : ''}
             </div>
-            <button onclick="closeLeadAnalysisModal()" 
-                    class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
-                Close
-            </button>
         </div>
     `;
 }
