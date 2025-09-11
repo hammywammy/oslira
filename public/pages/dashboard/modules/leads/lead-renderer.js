@@ -351,7 +351,7 @@ return `
                 <!-- Actions - Centered -->
                 <td class="px-6 py-4" style="width: 140px;">
                     <div class="flex items-center justify-center">
-                        <button onclick="dashboard.openLeadDetails && dashboard.openLeadDetails('${lead.id}')" 
+                        <button onclick="openLeadAnalysisModal('${lead.id}')"
                                 class="action-button relative inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/25 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                 title="View detailed analysis">
                             <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg blur opacity-0 group-hover:opacity-30 transition-opacity duration-300"></div>
