@@ -351,15 +351,6 @@ backdrop-filter: blur(16px) !important;
         e.preventDefault();
         this.toggleSidebar();
     });
-    
-    // Add to body
-    document.body.appendChild(toggle);
-    
-    // Store reference
-    this.externalToggle = toggle;
-    
-    console.log('✅ [SidebarManager] External toggle created');
-}
 
     // Hide toggle when modals are present
 const hideWhenModalsPresent = () => {
@@ -388,6 +379,16 @@ observer.observe(document.body, {
     attributes: true,
     attributeFilter: ['style', 'class']
 });
+    
+    // Add to body
+    document.body.appendChild(toggle);
+    
+    // Store reference
+    this.externalToggle = toggle;
+    
+    console.log('✅ [SidebarManager] External toggle created');
+}
+
     updateSidebarState() {
         if (!this.sidebar) return;
         
