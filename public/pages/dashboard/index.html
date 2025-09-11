@@ -1258,37 +1258,79 @@ async function submitResearch() {
             }
         });
         
-        // Lead Analysis Modal Functions
-        function openLeadAnalysisModal(leadId) {
-            console.log('🔍 Opening lead analysis modal for:', leadId);
-            
-            const modal = document.getElementById('leadAnalysisModal');
-            const contentContainer = document.getElementById('lead-analysis-content');
-            
-            if (!modal || !contentContainer) {
-                console.error('❌ Analysis modal elements not found');
-                return;
-            }
+function openLeadAnalysisModal(leadId) {
+    console.log('🔍 Opening lead analysis modal for:', leadId);
+    
+    const modal = document.getElementById('leadAnalysisModal');
+    const contentContainer = modal?.querySelector('.lead-modal-content');
+    
+    if (!modal || !contentContainer) {
+        console.error('❌ Analysis modal elements not found');
+        return;
+    }
             
             // Show modal
             modal.classList.remove('hidden');
             
-            // Show loading state
-            contentContainer.innerHTML = `
-                <div class="flex items-center justify-center py-12">
-                    <div class="text-center">
-                        <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                        </div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">Loading Analysis</h3>
-                        <p class="text-gray-500">Fetching lead details...</p>
-                    </div>
-                </div>
-            `;
+// Show loading state
+contentContainer.innerHTML = `
+    <div class="flex items-center justify-center py-12">
+        <div class="text-center">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Loading Analysis</h3>
+            <p class="text-gray-500">Fetching lead details...</p>
+        </div>
+    </div>
+`;
+
+// Load sample data since the modal content area is now populated by HTML
+setTimeout(() => {
+    // Update profile information
+    const profileImage = document.getElementById('leadProfileImage');
+    const username = document.getElementById('leadUsername');
+    const badge = document.getElementById('leadBadge');
+    const followers = document.getElementById('leadFollowers');
+    const posts = document.getElementById('leadPosts');
+    
+    if (profileImage) profileImage.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face';
+    if (username) username.textContent = '@noahskipslegday';
+    if (badge) badge.textContent = 'AI Entrepreneur';
+    if (followers) followers.textContent = '2,628 followers';
+    if (posts) posts.textContent = '0 posts';
+    
+    // Trigger score animations
+    triggerScoreAnimations();
+    
+    // Hide loading and show content
+    contentContainer.style.display = 'block';
+}, 1000);
             
             // Load lead data
             loadLeadAnalysisData(leadId, contentContainer);
         }
+
+        function triggerScoreAnimations() {
+    // Animate score circle
+    setTimeout(() => {
+        const scoreCircle = document.getElementById('overallScoreCircle');
+        if (scoreCircle) {
+            scoreCircle.style.strokeDasharray = '70, 100';
+        }
+    }, 200);
+    
+    // Animate progress bars
+    setTimeout(() => {
+        const engagementBar = document.getElementById('engagementBar');
+        const nicheFitBar = document.getElementById('nicheFitBar');
+        const totalScoreBar = document.getElementById('totalScoreBar');
+        
+        if (engagementBar) engagementBar.style.width = '58%';
+        if (nicheFitBar) nicheFitBar.style.width = '0%';
+        if (totalScoreBar) totalScoreBar.style.width = '0%';
+    }, 400);
+}
         
         function closeLeadAnalysisModal() {
             const modal = document.getElementById('leadAnalysisModal');
