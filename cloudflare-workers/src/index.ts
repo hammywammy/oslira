@@ -7,7 +7,7 @@ import { createStandardResponse } from './utils/response.js';
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
-  origin: ['https://oslira.netlify.app', 'https://osliratest.netlify.app', 'http://localhost:8000', 'https://oslira.com'],
+  origin: ['https://oslira.netlify.app', 'https://osliratest.netlify.app', 'http://localhost:8000', 'https://oslira.com', 'https://oslira.org'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true
