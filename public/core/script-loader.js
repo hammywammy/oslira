@@ -39,7 +39,8 @@ this.coreScripts = [
         '/pages/dashboard/modules/leads/lead-renderer.js',
         '/pages/dashboard/modules/realtime/realtime-manager.js',
         '/pages/dashboard/modules/stats/stats-calculator.js',
-        '/pages/dashboard/modules/ui/modal-manager.js'
+        '/pages/dashboard/modules/ui/modal-manager.js',
+        '/pages/dashboard/modules/analysis/analysis-functions.js'
     ],
                 requiresAuth: true,
                 enableTailwind: true
