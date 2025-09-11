@@ -565,16 +565,20 @@ class AnalysisFunctions {
         }
     }
 
-    setupGlobalMethods() {
-        // Export methods to global scope for onclick handlers
-        window.showAnalysisModal = (username = '') => this.showAnalysisModal(username);
-        window.showBulkModal = () => this.showBulkModal();
-        window.handleAnalysisTypeChange = () => this.handleAnalysisTypeChange();
-        window.validateBulkForm = () => this.validateBulkForm();
-        window.processAnalysisForm = (event) => this.processAnalysisForm(event);
-        window.processBulkUpload = () => this.processBulkUpload();
-        window.handleFileUpload = (event) => this.handleFileUpload(event);
-    }
+setupGlobalMethods() {
+    // Export methods to global scope for onclick handlers
+    window.openLeadAnalysisModal = openLeadAnalysisModal;
+    window.closeLeadAnalysisModal = closeLeadAnalysisModal;
+    window.showLoadingModal = showLoadingModal;
+    window.removeExistingModals = removeExistingModals;
+    window.createLeadAnalysisModalStructure = createLeadAnalysisModalStructure;
+    window.buildAnalysisModalHTML = buildAnalysisModalHTML;
+    window.copyOutreachMessage = copyOutreachMessage;
+    window.startDeepAnalysis = startDeepAnalysis;
+    window.contactLead = contactLead;
+    window.showContactSuccess = showContactSuccess;
+    window.showCopySuccess = showCopySuccess;
+}
 
     // ===============================================================================
     // ANALYSIS MODAL MANAGEMENT
