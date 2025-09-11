@@ -1506,8 +1506,8 @@ function buildAnalysisModalHTML(lead, analysisData, leadId) {
     const engagementScore = isDeepAnalysis ? (analysisData.engagement_score || 0) : 'N/A';
     const nicheFitScore = isDeepAnalysis ? (analysisData.score_niche_fit || 0) : 'N/A';
     const followerCount = lead.followers_count ? lead.followers_count.toLocaleString() : '0';
-    const engagementRate = isDeepAnalysis && analysisData.engagement_rate ? 
-        `${(analysisData.engagement_rate * 100).toFixed(1)}%` : 'N/A';
+const engagementRate = isDeepAnalysis && analysisData.engagement_rate ? 
+    `${(analysisData.engagement_rate > 1 ? analysisData.engagement_rate : analysisData.engagement_rate * 100).toFixed(1)}%` : 'N/A';
     
     // Get platform icon
     const platformIcon = getPlatformIcon(lead.platform);
