@@ -65,15 +65,25 @@ class AnalysisFunctions {
     }
 }
     
-    buildAnalysisModalHTML(lead, analysisData, leadId) {
+buildAnalysisModalHTML(lead, analysisData, leadId) {
     const modalContent = document.getElementById('modalContent');
     if (!modalContent) {
         console.error('❌ Modal content container not found');
         return;
     }
     
-    const isDeepAnalysis = lead.analysis_type === 'deep' && analysisData;
-    const summaryText = isDeepAnalysis ? analysisData.deep_summary : lead.quick_summary;
+    // More robust deep analysis detection
+    const isDeepAnalysis = lead.analysis_type === 'deep';
+    const hasDeepData = isDeepAnalysis && analysisData && analysisData.deep_summary;
+    const summaryText = hasDeepData ? analysisData.deep_summary : lead.quick_summary;
+    
+    console.log('🎨 [AnalysisFunctions] Building modal HTML:', {
+        username: lead.username,
+        analysisType: lead.analysis_type,
+        isDeepAnalysis,
+        hasDeepData,
+        hasAnalysisData: !!analysisData
+    });
     
     // Safe profile image URL with fallback
     const profileImageUrl = lead.profile_pic_url ? 
@@ -996,29 +1006,26 @@ setupGlobalMethods() {
     // BUILD ANALYSIS FUNCTIONS
     // ===============================================================================
 
-    async buildAnalysisModal(leadId) {
-        console.log('🔍 [AnalysisFunctions] Building analysis modal for lead:', leadId);
+async buildAnalysisModal(leadId) {
+    console.log('🔍 [AnalysisFunctions] Building analysis modal for lead:', leadId);
+    
+    try {
+        this.showLoadingModal();
         
-        try {
-            this.showLoadingModal();
-            
-            const leadManager = this.container.get('leadManager');
-            const lead = await leadManager.getLeadById(leadId);
-            
-            if (!lead) {
-                throw new Error('Lead not found');
-            }
-            
-            let analysisData = null;
-            if (lead.analysis_type === 'deep' && lead.analysis_result) {
-                try {
-                    analysisData = typeof lead.analysis_result === 'string' 
-                        ? JSON.parse(lead.analysis_result) 
-                        : lead.analysis_result;
-                } catch (e) {
-                    console.warn('Failed to parse analysis result:', e);
-                }
-            }
+        const leadManager = this.container.get('leadManager');
+        
+        // Use viewLead method to get both lead and analysis data
+        const { lead, analysisData } = await leadManager.viewLead(leadId);
+        
+        if (!lead) {
+            throw new Error('Lead not found');
+        }
+        
+        console.log('📊 [AnalysisFunctions] Lead data:', {
+            username: lead.username,
+            analysisType: lead.analysis_type,
+            hasAnalysisData: !!analysisData
+        });
             
             this.removeExistingModals();
             this.createLeadAnalysisModalStructure();
