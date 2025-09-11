@@ -1011,15 +1011,31 @@ async function submitResearch() {
             }
         }
         
-        async function loadLeadAnalysisData(leadId, container) {
+async function loadLeadAnalysisData(leadId, container) {
             try {
-                // Get the lead manager instance
-                const leadManager = dashboard?.container?.get('leadManager');
-                if (!leadManager) {
-                    throw new Error('Lead manager not available');
+                // Use the existing modal manager pattern - same as showLeadDetailsModal
+                let dashboardInstance = null;
+                
+                // Wait for dashboard to be available
+                let attempts = 0;
+                while (!dashboardInstance && attempts < 10) {
+                    dashboardInstance = window.dashboard || window.osliraApp;
+                    if (!dashboardInstance) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        attempts++;
+                    }
                 }
                 
-                // Fetch lead details
+                if (!dashboardInstance || !dashboardInstance.container) {
+                    throw new Error('Dashboard not available');
+                }
+                
+                const leadManager = dashboardInstance.container.get('leadManager');
+                if (!leadManager) {
+                    throw new Error('Lead manager not found');
+                }
+                
+                // Fetch lead details using the same method as existing modals
                 const leadData = await leadManager.getLeadDetails(leadId);
                 if (!leadData) {
                     throw new Error('Lead not found');
