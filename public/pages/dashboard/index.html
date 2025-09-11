@@ -746,7 +746,16 @@ if (errorDiv) {
         
         // 3. GET SUPABASE SESSION
         console.log('🔐 [Dashboard] Getting Supabase session...');
-        const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
+        // Get Supabase client from SimpleAuth
+let supabaseClient;
+if (window.SimpleAuth?.supabase) {
+    supabaseClient = window.SimpleAuth.supabase();
+} else {
+    console.error('❌ [Dashboard] SimpleAuth not available');
+    return;
+}
+
+const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
         
         if (sessionError) {
             console.error('❌ [Dashboard] Session error:', sessionError);
