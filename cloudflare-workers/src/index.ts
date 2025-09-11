@@ -7,10 +7,10 @@ import { createStandardResponse } from './utils/response.js';
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
-  origin: ['https://oslira.netlify.app', 'https://osliratest.netlify.app', 'http://localhost:8000', 'https://oslira.com', 'https://oslira.org'],
+  origin: '*',  // Allow all origins temporarily for debugging
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: false  // Set to false when using wildcard origin
 }));
 
 // ===============================================================================
