@@ -567,17 +567,26 @@ class AnalysisFunctions {
 
 setupGlobalMethods() {
     // Export methods to global scope for onclick handlers
-    window.openLeadAnalysisModal = openLeadAnalysisModal;
-    window.closeLeadAnalysisModal = closeLeadAnalysisModal;
-    window.showLoadingModal = showLoadingModal;
-    window.removeExistingModals = removeExistingModals;
-    window.createLeadAnalysisModalStructure = createLeadAnalysisModalStructure;
-    window.buildAnalysisModalHTML = buildAnalysisModalHTML;
-    window.copyOutreachMessage = copyOutreachMessage;
-    window.startDeepAnalysis = startDeepAnalysis;
-    window.contactLead = contactLead;
-    window.showContactSuccess = showContactSuccess;
-    window.showCopySuccess = showCopySuccess;
+    window.openLeadAnalysisModal = (leadId) => this.buildAnalysisModal(leadId);
+    window.closeLeadAnalysisModal = () => this.removeExistingModals();
+    window.showLoadingModal = () => this.showLoadingModal();
+    window.removeExistingModals = () => this.removeExistingModals();
+    window.createLeadAnalysisModalStructure = () => this.createLeadAnalysisModalStructure();
+    window.buildAnalysisModalHTML = (lead, analysisData, leadId) => this.buildAnalysisModalHTML(lead, analysisData, leadId);
+    window.copyOutreachMessage = (message) => this.copyOutreachMessage(message);
+    window.startDeepAnalysis = (leadId) => this.startDeepAnalysis(leadId);
+    window.contactLead = (leadId) => this.contactLead(leadId);
+    window.showContactSuccess = () => this.showContactSuccess();
+    window.showCopySuccess = () => this.showCopySuccess();
+    
+    // Additional analysis modal methods
+    window.showAnalysisModal = (username = '') => this.showAnalysisModal(username);
+    window.showBulkModal = () => this.showBulkModal();
+    window.handleAnalysisTypeChange = (type) => this.handleAnalysisTypeChange(type);
+    window.validateBulkForm = () => this.validateBulkForm();
+    window.processAnalysisForm = (event) => this.processAnalysisForm(event);
+    window.processBulkUpload = () => this.processBulkUpload();
+    window.handleFileUpload = (event) => this.handleFileUpload(event);
 }
 
     // ===============================================================================
