@@ -17,6 +17,54 @@ class AnalysisFunctions {
         
         console.log('🔍 [AnalysisFunctions] Initialized');
     }
+
+    openLeadAnalysisModal(leadId) {
+    console.log('🔍 Opening lead analysis modal for:', leadId);
+    
+    try {
+        const modalManager = window.modalManager;
+        if (!modalManager || !modalManager.container) {
+            throw new Error('Modal manager not available');
+        }
+        
+        const leadManager = modalManager.container.get('leadManager');
+        if (!leadManager) {
+            throw new Error('Lead manager not found');
+        }
+        
+        showLoadingModal();
+        
+        const { lead, analysisData } = await leadManager.viewLead(leadId);
+        
+        if (!lead) {
+            throw new Error('Lead not found');
+        }
+
+        removeExistingModals();
+        createLeadAnalysisModalStructure();
+        buildAnalysisModalHTML(lead, analysisData, leadId);
+        
+        // Animate modal entry
+        setTimeout(() => {
+            const modal = document.getElementById('leadAnalysisModal');
+            if (modal) {
+                modal.style.opacity = '1';
+                const container = modal.querySelector('div');
+                if (container) {
+                    container.style.transform = 'scale(1)';
+                }
+            }
+        }, 10);
+        
+        document.body.style.overflow = 'hidden';
+        
+    } catch (error) {
+        console.error('❌ Failed to load lead analysis:', error);
+        removeExistingModals();
+        showErrorModal(error.message);
+    }
+}
+    
    buildAnalysisModalHTML(lead, analysisData, leadId) {
     const modalContent = document.getElementById('modalContent');
     if (!modalContent) {
