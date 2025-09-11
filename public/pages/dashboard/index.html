@@ -1463,8 +1463,15 @@ if (!contentContainer) {
     return;
 }
             
-            // Show modal
+            // Show modal with proper CSS display override
             modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            modal.style.position = 'fixed';
+            modal.style.inset = '0';
+            modal.style.zIndex = '9999';
+            
+            // Prevent body scroll
+            document.body.style.overflow = 'hidden';
             
 // Show loading state
 contentContainer.innerHTML = `
@@ -1526,12 +1533,16 @@ setTimeout(() => {
     }, 400);
 }
         
-        function closeLeadAnalysisModal() {
-            const modal = document.getElementById('leadAnalysisModal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        }
+function closeLeadAnalysisModal() {
+    const modal = document.getElementById('leadAnalysisModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+    }
+}
         
 async function loadLeadAnalysisData(leadId, container) {
     try {
