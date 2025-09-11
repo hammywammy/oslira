@@ -77,6 +77,13 @@ class DashboardApp {
         // Register core infrastructure
         console.log('📋 [DashboardApp] Registering core dependencies...');
         container.registerSingleton('eventBus', new DashboardEventBus());
+
+        // Analysis Functions - must call init() to setup global methods
+container.registerFactory('analysisFunctions', () => {
+    const instance = new window.AnalysisFunctions(container);
+    instance.init(); // This sets up the global methods including openLeadAnalysisModal
+    return instance;
+});
         
         // State manager depends on event bus
         container.registerFactory('stateManager', (eventBus) => {
@@ -100,12 +107,6 @@ class DashboardApp {
             }
             throw new Error('SimpleAuth Supabase client not ready');
         }, []);
-
-        container.registerSingleton('analysisFunctions', () => {
-    const analysisFunctions = new window.AnalysisFunctions(container);
-    analysisFunctions.init();
-    return analysisFunctions;
-});
 
         // Register OsliraApp as a getter that always checks the global
         container.registerSingleton('osliraApp', new Proxy({}, {
