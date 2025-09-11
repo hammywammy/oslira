@@ -171,7 +171,11 @@ export async function saveLeadAndAnalysis(
         // Real engagement data (CRITICAL FIX)
         avg_likes: parseInt(analysisData.avg_likes) || 0,
         avg_comments: parseInt(analysisData.avg_comments) || 0,
-        engagement_rate: parseFloat(analysisData.engagement_rate) || 0,
+engagement_rate: (() => {
+  const rate = parseFloat(analysisData.engagement_rate) || 0;
+  // Convert percentage to decimal if needed (58.5% -> 0.585)
+  return rate > 1 ? Math.min(rate / 100, 9.9999) : Math.min(rate, 9.9999);
+})(),
         
         // Analysis results
         audience_quality: analysisData.audience_quality || 'Unknown',
