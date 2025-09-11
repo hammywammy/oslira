@@ -209,17 +209,15 @@
                 <p class="text-gray-600">Comprehensive view of all lead management activities with AI-driven insights</p>
             </div>
             
-            <!-- Right Actions -->
+<!-- Right Actions -->
             <div class="flex items-center space-x-4">
                 <!-- Notifications -->
-                <div class="relative">
+                <div class="relative" style="z-index: 10001;">
                     <button onclick="toggleNotifications()" class="relative p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl hover:shadow-md transition-all notification-badge" data-count="3">
                         <i data-feather="bell" class="w-5 h-5 text-gray-600"></i>
                     </button>
-                    
                     <!-- Notifications Dropdown (hidden by default) -->
-                    <!-- Notifications Dropdown (hidden by default) -->
-<div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden" style="z-index: 10000; top: 100%;">
+<div id="notificationsDropdown" class="hidden absolute right-0 w-80 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden" style="z-index: 10001; top: calc(100% + 8px);">
                         <div class="p-4 border-b border-gray-100">
                             <h3 class="font-semibold text-gray-800">Notifications</h3>
                         </div>
