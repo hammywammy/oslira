@@ -767,14 +767,38 @@ const { data: { session }, error: sessionError } = await supabaseClient.auth.get
             return;
         }
         
-        console.log('✅ [Dashboard] Supabase session found:', {
-            userId: session.user.id,
-            email: session.user.email,
-            tokenLength: session.access_token?.length || 0
-        });
-        
-        // Close modal for now
-        closeResearchModal();
+console.log('✅ [Dashboard] Supabase session found:', {
+    userId: session.user.id,
+    email: session.user.email,
+    tokenLength: session.access_token?.length || 0
+});
+
+// 4. GET BUSINESS PROFILE
+console.log('🏢 [Dashboard] Getting business profile...');
+const { data: business, error: businessError } = await supabaseClient
+    .from('business_profiles')
+    .select('id, business_name, target_audience')
+    .eq('user_id', session.user.id)
+    .single();
+
+if (businessError) {
+    console.error('❌ [Dashboard] Business profile error:', businessError);
+    return;
+}
+
+if (!business) {
+    console.error('❌ [Dashboard] No business profile found');
+    return;
+}
+
+console.log('✅ [Dashboard] Business profile found:', {
+    businessId: business.id,
+    businessName: business.business_name,
+    targetAudience: business.target_audience
+});
+
+// Close modal for now
+closeResearchModal();
         
     } catch (error) {
         console.error('💥 [Dashboard] Unexpected error:', error);
