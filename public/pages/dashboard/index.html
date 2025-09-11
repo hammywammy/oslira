@@ -1025,8 +1025,8 @@ async function loadLeadAnalysisData(leadId, container) {
                     throw new Error('Lead manager not found');
                 }
                 
-                // Fetch lead details using the same method as existing modals
-                const leadData = await leadManager.getLeadDetails(leadId);
+// Fetch lead details using the same method as existing modals
+                const leadData = await leadManager.viewLead(leadId);
                 if (!leadData) {
                     throw new Error('Lead not found');
                 }
