@@ -1004,6 +1004,179 @@
         function closeResearchModal() {
             document.getElementById('researchModal').classList.add('hidden');
         }
+
+        function renderLeadAnalysisContent(leadData, container) {
+    const { lead, analysisData } = leadData;
+    
+    console.log('🎨 [LeadAnalysis] Rendering content for:', lead.username);
+    
+    // Update header profile information
+    updateProfileHeader(lead);
+    
+    // Update scores with actual data or defaults
+    const scores = analysisData?.scores || {
+        overall: 70,
+        engagement: 58,
+        nicheFit: 0,
+        total: 0
+    };
+    
+    // Update score displays
+    updateScoreDisplays(scores);
+    
+    // Update analysis summary
+    updateAnalysisSummary(lead, analysisData);
+    
+    // Trigger animations
+    setTimeout(() => {
+        triggerScoreAnimations(scores);
+    }, 300);
+    
+    // Show the populated content
+    container.style.opacity = '0';
+    container.style.display = 'block';
+    
+    // Fade in effect
+    setTimeout(() => {
+        container.style.transition = 'opacity 0.3s ease-out';
+        container.style.opacity = '1';
+    }, 100);
+}
+
+function updateProfileHeader(lead) {
+    const profileImage = document.getElementById('leadProfileImage');
+    const username = document.getElementById('leadUsername');
+    const badge = document.getElementById('leadBadge');
+    const followers = document.getElementById('leadFollowers');
+    const posts = document.getElementById('leadPosts');
+    
+    if (profileImage && lead.profile_pic_url) {
+        profileImage.src = lead.profile_pic_url;
+        profileImage.alt = `@${lead.username}`;
+    }
+    
+    if (username) username.textContent = `@${lead.username}`;
+    
+    if (badge) {
+        // Determine badge text based on lead data
+        let badgeText = 'Influencer';
+        if (lead.is_business_account) badgeText = 'Business';
+        if (lead.followers_count > 10000) badgeText = 'Macro Influencer';
+        if (lead.followers_count < 10000) badgeText = 'Micro Influencer';
+        badge.textContent = badgeText;
+    }
+    
+    if (followers) {
+        const followerCount = lead.followers_count || 0;
+        followers.textContent = `${followerCount.toLocaleString()} followers`;
+    }
+    
+    if (posts) {
+        const postCount = lead.posts_count || 0;
+        posts.textContent = `${postCount} posts`;
+    }
+}
+
+function updateScoreDisplays(scores) {
+    // Update score text elements
+    const elements = [
+        { id: 'overallScoreText', value: scores.overall },
+        { id: 'overallScoreDisplay', value: scores.overall },
+        { id: 'engagementScore', value: scores.engagement },
+        { id: 'nicheFitScore', value: scores.nicheFit },
+        { id: 'totalScore', value: scores.total }
+    ];
+    
+    elements.forEach(({ id, value }) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value || 0;
+        }
+    });
+}
+
+function updateAnalysisSummary(lead, analysisData) {
+    const summaryElement = document.getElementById('analysisSummary');
+    if (!summaryElement) return;
+    
+    const analysis = analysisData?.analysis || {};
+    
+    const summary = `
+        <p class="lead-summary-item">
+            <strong>Profile Status:</strong> ${analysis.profileStatus || `Verified account with ${lead.followers_count?.toLocaleString() || 0} followers. ${lead.is_business_account ? 'Business account' : 'Personal account'} with established online presence.`}
+        </p>
+        <p class="lead-summary-item">
+            <strong>Content Strategy:</strong> ${analysis.contentStrategy || `Profile shows ${lead.posts_count || 0} posts. Recommend analyzing posting frequency and engagement patterns for optimization opportunities.`}
+        </p>
+        <p class="lead-summary-item">
+            <strong>Business Opportunity:</strong> ${analysis.businessOpportunity || 'Mid-tier performance with potential for growth. Recommend targeted outreach and collaboration opportunities.'}
+        </p>
+        <p class="lead-summary-item">
+            <strong>Next Steps:</strong> ${analysis.nextSteps || 'Enable analytics access, optimize bio and content strategy, implement regular posting schedule.'}
+        </p>
+    `;
+    
+    summaryElement.innerHTML = summary;
+}
+
+function triggerScoreAnimations(scores) {
+    // Animate score circle
+    setTimeout(() => {
+        const scoreCircle = document.getElementById('overallScoreCircle');
+        if (scoreCircle && scores.overall) {
+            scoreCircle.style.strokeDasharray = `${scores.overall}, 100`;
+        }
+    }, 200);
+    
+    // Animate progress bars
+    setTimeout(() => {
+        const bars = [
+            { id: 'engagementBar', value: scores.engagement },
+            { id: 'nicheFitBar', value: scores.nicheFit },
+            { id: 'totalScoreBar', value: scores.total }
+        ];
+        
+        bars.forEach(({ id, value }) => {
+            const bar = document.getElementById(id);
+            if (bar) {
+                bar.style.width = `${value || 0}%`;
+            }
+        });
+    }, 400);
+    
+    // Count up animation for numbers
+    setTimeout(() => {
+        animateCountUp('overallScoreText', scores.overall);
+        animateCountUp('overallScoreDisplay', scores.overall);
+        animateCountUp('engagementScore', scores.engagement);
+        animateCountUp('nicheFitScore', scores.nicheFit);
+        animateCountUp('totalScore', scores.total);
+    }, 100);
+}
+
+function animateCountUp(elementId, targetValue) {
+    const element = document.getElementById(elementId);
+    if (!element || !targetValue) return;
+    
+    const startValue = 0;
+    const duration = 1500;
+    const startTime = performance.now();
+    
+    const updateCount = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const currentValue = Math.floor(startValue + (targetValue - startValue) * easeOutQuart);
+        
+        element.textContent = currentValue;
+        
+        if (progress < 1) {
+            requestAnimationFrame(updateCount);
+        }
+    };
+    
+    requestAnimationFrame(updateCount);
+}
         
 async function submitResearch() {
     console.log('🔍 [Dashboard] submitResearch() called');
@@ -1340,47 +1513,62 @@ setTimeout(() => {
         }
         
 async function loadLeadAnalysisData(leadId, container) {
-            try {
-                // Use the same pattern as the existing openLeadDetails function
-                // Access the lead manager through the global modalManager
-                const modalManager = window.modalManager;
-                if (!modalManager || !modalManager.container) {
-                    throw new Error('Modal manager not available');
-                }
-                
-                const leadManager = modalManager.container.get('leadManager');
-                if (!leadManager) {
-                    throw new Error('Lead manager not found');
-                }
-                
-// Fetch lead details using the same method as existing modals
-                const leadData = await leadManager.viewLead(leadId);
-                if (!leadData) {
-                    throw new Error('Lead not found');
-                }
-                
-                // Render the analysis content
-                renderLeadAnalysisContent(leadData, container);
-                
-            } catch (error) {
-                console.error('❌ Failed to load lead analysis:', error);
-                container.innerHTML = `
-                    <div class="text-center py-12">
-                        <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">Error Loading Analysis</h3>
-                        <p class="text-gray-500 mb-4">${error.message}</p>
-                        <button onclick="loadLeadAnalysisData('${leadId}', this.closest('#lead-analysis-content'))" 
+    try {
+        console.log('📊 [LeadAnalysis] Loading data for:', leadId);
+        
+        // Use the same pattern as existing modals
+        const modalManager = window.modalManager;
+        if (!modalManager || !modalManager.container) {
+            throw new Error('Modal manager not available');
+        }
+        
+        const leadManager = modalManager.container.get('leadManager');
+        if (!leadManager) {
+            throw new Error('Lead manager not found');
+        }
+        
+        // Fetch lead details using the same method as existing modals
+        const leadData = await leadManager.viewLead(leadId);
+        if (!leadData) {
+            throw new Error('Lead not found');
+        }
+        
+        // Render the analysis content
+        renderLeadAnalysisContent(leadData, container);
+        
+    } catch (error) {
+        console.error('❌ Failed to load lead analysis:', error);
+        
+        // Show error in the modal content area instead of replacing it
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+        errorDiv.innerHTML = `
+            <div class="bg-white rounded-xl p-6 max-w-md mx-4">
+                <div class="text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Error Loading Analysis</h3>
+                    <p class="text-gray-500 mb-4">${error.message}</p>
+                    <div class="flex space-x-3">
+                        <button onclick="this.closest('.fixed').remove(); loadLeadAnalysisData('${leadId}', document.querySelector('.lead-modal-content'))" 
                                 class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
                             Try Again
                         </button>
+                        <button onclick="this.closest('.fixed').remove(); closeLeadAnalysisModal()" 
+                                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                            Close
+                        </button>
                     </div>
-                `;
-            }
-        }
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(errorDiv);
+    }
+}
         
         function renderLeadAnalysisContent(leadData, container) {
             const { lead, analysisData } = leadData;
