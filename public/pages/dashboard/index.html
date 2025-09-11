@@ -1459,9 +1459,8 @@ async function openLeadAnalysisModal(leadId) {
         if (!lead) {
             throw new Error('Lead not found');
         }
-        
-        // Build the comprehensive modal with real data
-        const modalHTML = buildAnalysisModalHTML(lead, analysisData);
+// Build the comprehensive modal with real data
+const modalHTML = buildAnalysisModalHTML(lead, analysisData, leadId);
         
         // Remove existing modal and loading
         removeExistingModals();
@@ -1499,7 +1498,7 @@ function showLoadingModal() {
     document.body.insertAdjacentHTML('beforeend', loadingHTML);
 }
 
-function buildAnalysisModalHTML(lead, analysisData) {
+function buildAnalysisModalHTML(lead, analysisData, leadId) {
     const isDeepAnalysis = lead.analysis_type === 'deep' && analysisData;
     
     // Calculate display values
