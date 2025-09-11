@@ -683,38 +683,58 @@
             document.getElementById('researchModal').classList.add('hidden');
         }
         
-function submitResearch() {
+async function submitResearch() {
     console.log('🔍 [Dashboard] submitResearch() called');
     
-    // 1. CAPTURE FORM DATA
-    const usernameInput = document.querySelector('#researchModal input[type="text"]');
-    const analysisRadio = document.querySelector('#researchModal input[name="analysis"]:checked');
-    
-    const username = usernameInput?.value?.trim();
-    const analysisType = analysisRadio?.value || 'quick';
-    
-    // 2. LOG THE DATA
-    console.log('📊 [Dashboard] Form data captured:', {
-        username: username,
-        analysisType: analysisType,
-        usernameInputFound: !!usernameInput,
-        analysisRadioFound: !!analysisRadio
-    });
-    
-    // 3. BASIC VALIDATION
-    if (!username) {
-        console.error('❌ No username entered');
-        return;
+    try {
+        // 1. CAPTURE FORM DATA
+        const usernameInput = document.querySelector('#researchModal input[type="text"]');
+        const analysisRadio = document.querySelector('#researchModal input[name="analysis"]:checked');
+        
+        const username = usernameInput?.value?.trim();
+        const analysisType = analysisRadio?.value || 'light';
+        
+        console.log('📊 [Dashboard] Form data captured:', {
+            username: username,
+            analysisType: analysisType
+        });
+        
+        // 2. BASIC VALIDATION
+        if (!username) {
+            console.error('❌ No username entered');
+            return;
+        }
+        
+        // Clean username
+        const cleanUsername = username.replace(/^@/, '').replace(/.*instagram\.com\//, '').replace(/\/$/, '');
+        console.log('✅ [Dashboard] Clean username:', cleanUsername);
+        
+        // 3. GET SUPABASE SESSION
+        console.log('🔐 [Dashboard] Getting Supabase session...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+            console.error('❌ [Dashboard] Session error:', sessionError);
+            return;
+        }
+        
+        if (!session) {
+            console.error('❌ [Dashboard] No active session - user not logged in');
+            return;
+        }
+        
+        console.log('✅ [Dashboard] Supabase session found:', {
+            userId: session.user.id,
+            email: session.user.email,
+            tokenLength: session.access_token?.length || 0
+        });
+        
+        // Close modal for now
+        closeResearchModal();
+        
+    } catch (error) {
+        console.error('💥 [Dashboard] Unexpected error:', error);
     }
-    
-    // Clean username
-    const cleanUsername = username.replace(/^@/, '').replace(/.*instagram\.com\//, '').replace(/\/$/, '');
-    
-    console.log('✅ [Dashboard] Clean username:', cleanUsername);
-    console.log('✅ [Dashboard] Analysis type:', analysisType);
-    
-    // Close modal for now
-    closeResearchModal();
 }
         
         function openBulkImportModal() {
