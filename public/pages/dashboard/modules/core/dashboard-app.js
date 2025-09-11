@@ -101,6 +101,12 @@ class DashboardApp {
             throw new Error('SimpleAuth Supabase client not ready');
         }, []);
 
+        container.registerSingleton('analysisFunctions', () => {
+    const analysisFunctions = new window.AnalysisFunctions(container);
+    analysisFunctions.init();
+    return analysisFunctions;
+});
+
         // Register OsliraApp as a getter that always checks the global
         container.registerSingleton('osliraApp', new Proxy({}, {
             get(target, prop) {
