@@ -699,11 +699,40 @@ async function submitResearch() {
             analysisType: analysisType
         });
         
-        // 2. BASIC VALIDATION
-        if (!username) {
-            console.error('❌ No username entered');
-            return;
-        }
+// 2. BASIC VALIDATION
+if (!username) {
+    console.error('❌ No username entered');
+    
+    // Show error message
+    const usernameContainer = usernameInput.parentElement;
+    let errorDiv = usernameContainer.querySelector('.username-error');
+    
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.className = 'username-error text-red-500 text-sm mt-1';
+        usernameContainer.appendChild(errorDiv);
+    }
+    
+    errorDiv.textContent = 'Please enter a username';
+    
+    // Shake animation
+    usernameInput.style.animation = 'shake 0.5s ease-in-out';
+    usernameInput.style.borderColor = '#ef4444';
+    
+    setTimeout(() => {
+        usernameInput.style.animation = '';
+        usernameInput.style.borderColor = '';
+    }, 500);
+    
+    return;
+}
+
+// Clear any previous error
+const usernameContainer = usernameInput.parentElement;
+const errorDiv = usernameContainer.querySelector('.username-error');
+if (errorDiv) {
+    errorDiv.remove();
+}
         
         // Clean username
         const cleanUsername = username.replace(/^@/, '').replace(/.*instagram\.com\//, '').replace(/\/$/, '');
@@ -711,7 +740,7 @@ async function submitResearch() {
         
         // 3. GET SUPABASE SESSION
         console.log('🔐 [Dashboard] Getting Supabase session...');
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
         
         if (sessionError) {
             console.error('❌ [Dashboard] Session error:', sessionError);
