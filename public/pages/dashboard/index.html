@@ -1439,12 +1439,29 @@ function openLeadAnalysisModal(leadId) {
     console.log('🔍 Opening lead analysis modal for:', leadId);
     
     const modal = document.getElementById('leadAnalysisModal');
-    const contentContainer = modal?.querySelector('.lead-modal-content');
+// Check if modal exists first
+if (!modal) {
+    console.error('❌ Modal #leadAnalysisModal not found');
+    return;
+}
+
+// Find the actual content container within the modal structure
+let contentContainer = modal.querySelector('.lead-modal-content');
+
+// If lead-modal-content doesn't exist, find the main content area
+if (!contentContainer) {
+    // Look for other possible content containers in the modal
+    contentContainer = modal.querySelector('.lead-modal-container') || 
+                     modal.querySelector('.modal-content') ||
+                     modal.querySelector('.modal-body');
     
-    if (!modal || !contentContainer) {
-        console.error('❌ Analysis modal elements not found');
-        return;
-    }
+    console.log('🔍 Using fallback content container:', contentContainer?.className);
+}
+
+if (!contentContainer) {
+    console.error('❌ No suitable content container found in modal. Modal structure:', modal.innerHTML.substring(0, 200));
+    return;
+}
             
             // Show modal
             modal.classList.remove('hidden');
