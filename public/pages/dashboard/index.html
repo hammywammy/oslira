@@ -1050,10 +1050,21 @@ function updateProfileHeader(lead) {
     const followers = document.getElementById('leadFollowers');
     const posts = document.getElementById('leadPosts');
     
-    if (profileImage && lead.profile_pic_url) {
-        profileImage.src = lead.profile_pic_url;
-        profileImage.alt = `@${lead.username}`;
-    }
+if (profileImage && lead.profile_pic_url) {
+    // Use a proxy or handle CORS gracefully
+    profileImage.src = lead.profile_pic_url;
+    profileImage.alt = `@${lead.username}`;
+    
+    // Handle CORS errors gracefully
+    profileImage.onerror = function() {
+        console.log('🔄 [ProfileImage] CORS blocked, using fallback');
+        this.src = '/assets/default-avatar.png';
+        this.onerror = null; // Prevent infinite loop
+    };
+    
+    // Add crossorigin attribute for better CORS handling
+    profileImage.crossOrigin = 'anonymous';
+}
     
     if (username) username.textContent = `@${lead.username}`;
     
@@ -1599,9 +1610,11 @@ async function loadLeadAnalysisData(leadId, container) {
                 <div class="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-6 mb-6">
                     <div class="flex items-center space-x-6">
                         <div class="relative">
-                            <img src="${lead.profile_pic_url || '/assets/default-avatar.png'}" 
-                                 alt="@${lead.username}" 
-                                 class="w-20 h-20 rounded-full border-4 border-white shadow-lg object-cover">
+<img src="${lead.profile_pic_url || '/assets/default-avatar.png'}" 
+     alt="@${lead.username}" 
+     class="w-20 h-20 rounded-full border-4 border-white shadow-lg object-cover"
+     onerror="this.src='/assets/default-avatar.png'; this.onerror=null;"
+     crossorigin="anonymous">
                             ${lead.is_verified ? `
                                 <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
                                     <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
