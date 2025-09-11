@@ -1285,7 +1285,6 @@ async function openLeadAnalysisModal(leadId) {
     console.log('🔍 Opening lead analysis modal for:', leadId);
     
     try {
-        // Get lead data from the dashboard's lead manager
         const modalManager = window.modalManager;
         if (!modalManager || !modalManager.container) {
             throw new Error('Modal manager not available');
@@ -1296,31 +1295,21 @@ async function openLeadAnalysisModal(leadId) {
             throw new Error('Lead manager not found');
         }
         
-        // Show loading modal first
         showLoadingModal();
         
-        // Fetch lead details with analysis data
         const { lead, analysisData } = await leadManager.viewLead(leadId);
         
         if (!lead) {
             throw new Error('Lead not found');
         }
 
-        // Remove loading modal
-        const loadingModal = document.getElementById('loadingModal');
-        if (loadingModal) loadingModal.remove();
+        // Remove loading modal - no variable declaration here
+        removeExistingModals();
         
-        // Create the modal HTML structure first
         createLeadAnalysisModalStructure();
         
-// Remove loading modal first
-        const loadingModal = document.getElementById('loadingModal');
-        if (loadingModal) loadingModal.remove();
-        
-        // Build and show the analysis modal
         buildAnalysisModalHTML(lead, analysisData, leadId);
         
-        // Prevent body scroll
         document.body.style.overflow = 'hidden';
         
     } catch (error) {
@@ -1329,7 +1318,6 @@ async function openLeadAnalysisModal(leadId) {
         showErrorModal(error.message);
     }
 }
-
 function createLeadAnalysisModalStructure() {
     // Remove any existing modal first
     removeExistingModals();
@@ -1646,7 +1634,6 @@ function getScoreLabel(score) {
 }
 
 function removeExistingModals() {
-    // Remove any existing modals
     const existingModal = document.getElementById('leadAnalysisModal');
     const loadingModal = document.getElementById('loadingModal');
     const errorModal = document.getElementById('errorModal');
@@ -2217,10 +2204,17 @@ async function loadLeadAnalysisData(leadId, container) {
             }, 3000);
 }
         
-        // Make functions globally available
-        window.openLeadAnalysisModal = openLeadAnalysisModal;
-        window.closeLeadAnalysisModal = closeLeadAnalysisModal;
-        window.copyToClipboard = copyToClipboard;
+// Ensure global function availability 
+if (typeof window !== 'undefined') {
+    window.openLeadAnalysisModal = openLeadAnalysisModal;
+    window.closeLeadAnalysisModal = closeLeadAnalysisModal;
+    window.showLoadingModal = showLoadingModal;
+    window.removeExistingModals = removeExistingModals;
+    window.createLeadAnalysisModalStructure = createLeadAnalysisModalStructure;
+    window.buildAnalysisModalHTML = buildAnalysisModalHTML;
+    
+    console.log('✅ [Dashboard] Lead analysis functions exposed globally');
+}
     </script>
 </body>
 </html>
