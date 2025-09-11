@@ -1343,8 +1343,18 @@ function buildAnalysisModalHTML(lead, analysisData, leadId) {
     
     const isDeepAnalysis = lead.analysis_type === 'deep' && analysisData;
     
-    // Update profile section
-    document.getElementById('leadProfileImage').src = lead.profile_pic_url || '/assets/default-avatar.png';
+    // Update profile section with CORS-safe image loading
+    const profileImg = document.getElementById('leadProfileImage');
+    if (lead.profile_pic_url) {
+        const proxiedUrl = `https://images.weserv.nl/?url=${encodeURIComponent(lead.profile_pic_url)}&w=160&h=160&fit=cover&mask=circle`;
+        profileImg.src = proxiedUrl;
+        profileImg.onerror = function() {
+            this.src = '/assets/default-avatar.png';
+        };
+    } else {
+        profileImg.src = '/assets/default-avatar.png';
+    }
+    
     document.getElementById('leadUsername').textContent = `@${lead.username}`;
     document.getElementById('leadFullName').textContent = lead.full_name || lead.username;
     document.getElementById('leadBio').textContent = lead.bio || '';
@@ -1410,16 +1420,31 @@ function buildAnalysisModalHTML(lead, analysisData, leadId) {
             document.getElementById('outreachMessage').textContent = analysisData.outreach_message;
         }
         
-        // Latest posts
-        if (analysisData.latest_posts?.length > 0) {
+        // Latest posts - Parse JSON string if needed
+        let latestPosts = [];
+        try {
+            if (typeof analysisData.latest_posts === 'string') {
+                latestPosts = JSON.parse(analysisData.latest_posts);
+            } else if (Array.isArray(analysisData.latest_posts)) {
+                latestPosts = analysisData.latest_posts;
+            }
+        } catch (e) {
+            console.log('Could not parse latest posts');
+        }
+
+        if (latestPosts.length > 0) {
             document.getElementById('latestPostsSection').classList.remove('hidden');
             const postsGrid = document.getElementById('latestPostsGrid');
-            postsGrid.innerHTML = analysisData.latest_posts.slice(0, 6).map(post => `
+            postsGrid.innerHTML = latestPosts.slice(0, 6).map(post => `
                 <div class="relative group">
-                    <img src="${post.thumbnail}" alt="Post" class="w-full h-20 object-cover rounded">
+                    <div class="w-full h-20 bg-gray-200 rounded flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
                     <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded flex items-center justify-center text-white text-xs">
-                        <span>❤️ ${post.likes}</span>
-                        <span class="ml-2">💬 ${post.comments}</span>
+                        <span>❤️ ${post.likes || 0}</span>
+                        <span class="ml-2">💬 ${post.comments || 0}</span>
                     </div>
                 </div>
             `).join('');
@@ -1428,13 +1453,13 @@ function buildAnalysisModalHTML(lead, analysisData, leadId) {
         // Light analysis
         document.getElementById('deepAnalysisContent').classList.add('hidden');
         document.getElementById('lightAnalysisNote').classList.remove('hidden');
-        document.getElementById('profileScore').textContent = `${lead.score || 0}/100`;
     }
     
     // Show modal
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 }
+        
 function getPlatformIcon(platform) {
     switch(platform?.toLowerCase()) {
         case 'instagram':
