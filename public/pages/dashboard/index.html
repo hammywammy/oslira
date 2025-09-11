@@ -1438,84 +1438,98 @@ async function submitResearch() {
 function openLeadAnalysisModal(leadId) {
     console.log('🔍 Opening lead analysis modal for:', leadId);
     
-    const modal = document.getElementById('leadAnalysisModal');
-// Check if modal exists first
-if (!modal) {
-    console.error('❌ Modal #leadAnalysisModal not found');
-    return;
-}
-
-// Find the actual content container within the modal structure
-let contentContainer = modal.querySelector('.lead-modal-content');
-
-// If lead-modal-content doesn't exist, find the main content area
-if (!contentContainer) {
-    // Look for other possible content containers in the modal
-    contentContainer = modal.querySelector('.lead-modal-container') || 
-                     modal.querySelector('.modal-content') ||
-                     modal.querySelector('.modal-body');
-    
-    console.log('🔍 Using fallback content container:', contentContainer?.className);
-}
-
-if (!contentContainer) {
-    console.error('❌ No suitable content container found in modal. Modal structure:', modal.innerHTML.substring(0, 200));
-    return;
-}
-            
-// Show modal with proper display override
-modal.classList.remove('hidden');
-modal.style.display = 'flex';
-modal.style.visibility = 'visible';
-modal.style.opacity = '1';
-
-// Ensure proper z-index and positioning
-modal.style.position = 'fixed';
-modal.style.inset = '0';
-modal.style.zIndex = '9999';
-
-// Prevent body scroll
-document.body.style.overflow = 'hidden';
-            
-// Show loading state
-contentContainer.innerHTML = `
-    <div class="flex items-center justify-center py-12">
-        <div class="text-center">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    // Use the same pattern as the working research modal
+    const modalHTML = `
+        <div id="leadAnalysisModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-2xl font-bold text-gray-800">Lead Analysis</h3>
+                    <button onclick="closeLeadAnalysisModal()" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                </div>
+                
+                <!-- Profile Section -->
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 mb-6 text-white">
+                    <div class="flex items-center space-x-4">
+                        <img id="modalProfileImage" 
+                             src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face" 
+                             alt="Profile" 
+                             class="w-16 h-16 rounded-full border-4 border-white object-cover">
+                        <div>
+                            <h4 id="modalUsername" class="text-xl font-bold">@noahskipslegday</h4>
+                            <p id="modalBadge" class="text-indigo-100">AI Entrepreneur</p>
+                            <div class="flex items-center space-x-4 mt-2 text-sm">
+                                <span id="modalFollowers">2,628 followers</span>
+                                <span id="modalPosts">0 posts</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+                        <div class="text-sm font-medium text-green-600 mb-1">Overall Score</div>
+                        <div class="text-2xl font-bold text-green-700">70/100</div>
+                        <div class="text-xs text-green-600">Good potential</div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <div class="text-sm font-medium text-blue-600 mb-1">Engagement</div>
+                        <div class="text-2xl font-bold text-blue-700">58%</div>
+                        <div class="text-xs text-blue-600">Above average</div>
+                    </div>
+                    <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                        <div class="text-sm font-medium text-purple-600 mb-1">Niche Fit</div>
+                        <div class="text-2xl font-bold text-purple-700">85%</div>
+                        <div class="text-xs text-purple-600">Excellent match</div>
+                    </div>
+                </div>
+                
+                <!-- Analysis Details -->
+                <div class="space-y-4">
+                    <div class="bg-gray-50 rounded-xl p-6">
+                        <h5 class="font-semibold text-gray-800 mb-3">Analysis Summary</h5>
+                        <p class="text-gray-600">This lead shows strong potential with good engagement rates and excellent niche alignment. Their content focuses on AI entrepreneurship which aligns well with your target audience.</p>
+                    </div>
+                    
+                    <div class="bg-amber-50 rounded-xl p-6">
+                        <h5 class="font-semibold text-gray-800 mb-3">Recommended Outreach</h5>
+                        <div class="bg-white rounded-lg p-4 border border-amber-200">
+                            <p class="text-gray-700 italic">"Hi Noah! I noticed your content about AI entrepreneurship - really insightful stuff. I think you'd be interested in our platform that helps entrepreneurs like yourself scale their lead generation with AI. Would love to show you how it works!"</p>
+                        </div>
+                        <button onclick="copyOutreachMessage()" class="mt-3 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
+                            Copy Message
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex space-x-3 mt-8">
+                    <button onclick="closeLeadAnalysisModal()" 
+                            class="flex-1 px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors">
+                        Close
+                    </button>
+                    <button onclick="contactLead('${leadId}')" 
+                            class="flex-1 px-4 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all">
+                        Contact Lead
+                    </button>
+                </div>
             </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">Loading Analysis</h3>
-            <p class="text-gray-500">Fetching lead details...</p>
         </div>
-    </div>
-`;
-
-// Load sample data since the modal content area is now populated by HTML
-setTimeout(() => {
-    // Update profile information
-    const profileImage = document.getElementById('leadProfileImage');
-    const username = document.getElementById('leadUsername');
-    const badge = document.getElementById('leadBadge');
-    const followers = document.getElementById('leadFollowers');
-    const posts = document.getElementById('leadPosts');
+    `;
     
-    if (profileImage) profileImage.src = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face';
-    if (username) username.textContent = '@noahskipslegday';
-    if (badge) badge.textContent = 'AI Entrepreneur';
-    if (followers) followers.textContent = '2,628 followers';
-    if (posts) posts.textContent = '0 posts';
+    // Remove existing modal if any
+    const existingModal = document.getElementById('leadAnalysisModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
     
-    // Trigger score animations
-    triggerScoreAnimations();
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    // Hide loading and show content
-    contentContainer.style.display = 'block';
-}, 1000);
-            
-            // Load lead data
-            loadLeadAnalysisData(leadId, contentContainer);
-        }
-
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+}
         function triggerScoreAnimations() {
     // Animate score circle
     setTimeout(() => {
@@ -1540,14 +1554,44 @@ setTimeout(() => {
 function closeLeadAnalysisModal() {
     const modal = document.getElementById('leadAnalysisModal');
     if (modal) {
-        modal.classList.add('hidden');
-        modal.style.display = 'none';
-        modal.style.visibility = 'hidden';
-        modal.style.opacity = '0';
-        
-        // Restore body scroll
+        modal.remove();
         document.body.style.overflow = '';
     }
+}
+
+function copyOutreachMessage() {
+    const message = "Hi Noah! I noticed your content about AI entrepreneurship - really insightful stuff. I think you'd be interested in our platform that helps entrepreneurs like yourself scale their lead generation with AI. Would love to show you how it works!";
+    
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(message).then(() => {
+            showCopySuccess();
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = message;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            showCopySuccess();
+        } catch (err) {
+            console.error('Failed to copy message');
+        }
+        
+        document.body.removeChild(textArea);
+    }
+}
+
+function contactLead(leadId) {
+    console.log('Contacting lead:', leadId);
+    // Add your contact logic here
+    closeLeadAnalysisModal();
 }
         
 async function loadLeadAnalysisData(leadId, container) {
