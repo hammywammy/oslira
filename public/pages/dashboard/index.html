@@ -692,29 +692,39 @@
             document.getElementById('researchModal').classList.add('hidden');
         }
         
-        function submitResearch() {
-            // Show loading state
-            const modal = document.getElementById('researchModal');
-            const modalContent = modal.querySelector('.bg-white');
-            modalContent.innerHTML = `
-                <div class="text-center py-12">
-                    <div class="w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                        <i data-feather="loader" class="w-8 h-8 text-white animate-spin"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">Researching Lead...</h3>
-                    <p class="text-gray-600">AI is analyzing the profile and generating insights</p>
-                    <div class="mt-4 w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full animate-pulse" style="width: 60%"></div>
-                    </div>
-                </div>
-            `;
-            feather.replace();
-            
-            setTimeout(() => {
-                closeResearchModal();
-                location.reload(); // Refresh to show new lead
-            }, 3000);
-        }
+function submitResearch() {
+    console.log('🔍 [Dashboard] submitResearch() called');
+    
+    // 1. CAPTURE FORM DATA
+    const usernameInput = document.querySelector('#researchModal input[type="text"]');
+    const analysisRadio = document.querySelector('#researchModal input[name="analysis"]:checked');
+    
+    const username = usernameInput?.value?.trim();
+    const analysisType = analysisRadio?.value || 'quick';
+    
+    // 2. LOG THE DATA
+    console.log('📊 [Dashboard] Form data captured:', {
+        username: username,
+        analysisType: analysisType,
+        usernameInputFound: !!usernameInput,
+        analysisRadioFound: !!analysisRadio
+    });
+    
+    // 3. BASIC VALIDATION
+    if (!username) {
+        console.error('❌ No username entered');
+        return;
+    }
+    
+    // Clean username
+    const cleanUsername = username.replace(/^@/, '').replace(/.*instagram\.com\//, '').replace(/\/$/, '');
+    
+    console.log('✅ [Dashboard] Clean username:', cleanUsername);
+    console.log('✅ [Dashboard] Analysis type:', analysisType);
+    
+    // Close modal for now
+    closeResearchModal();
+}
         
         function openBulkImportModal() {
             document.getElementById('bulkImportModal').classList.remove('hidden');
