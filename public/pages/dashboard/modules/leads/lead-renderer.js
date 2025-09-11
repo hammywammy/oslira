@@ -225,12 +225,12 @@ class LeadRenderer {
         const username = lead.username || 'unknown';
         const fullName = lead.full_name || '';
         
-        const profilePicHtml = profilePicUrl
-            ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=64&h=64&fit=cover&mask=circle" 
-                   alt="@${username}" 
-                   class="w-12 h-12 rounded-full border-2 border-slate-200 object-cover shadow-sm hover:scale-105 transition-transform duration-200"
-                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
-            : '';
+const profilePicHtml = profilePicUrl
+    ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=64&h=64&fit=cover&mask=circle&errorredirect=https://via.placeholder.com/64x64/3B82F6/FFFFFF?text=${username.charAt(0).toUpperCase()}" 
+           alt="@${username}" 
+           class="w-12 h-12 rounded-full border-2 border-slate-200 object-cover shadow-sm hover:scale-105 transition-transform duration-200"
+           onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">`
+    : '';
             
         const fallbackHtml = `
             <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg border-2 border-slate-200 shadow-sm hover:scale-105 transition-transform duration-200 ${profilePicUrl ? 'hidden' : 'flex'}">
