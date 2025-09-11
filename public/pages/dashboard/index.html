@@ -797,7 +797,69 @@ console.log('✅ [Dashboard] Business profile found:', {
     targetAudience: business.target_audience
 });
 
-// Close modal for now
+// 5. GET WORKER URL
+console.log('🔧 [Dashboard] Getting worker URL...');
+let workerUrl;
+try {
+    if (window.OsliraConfig?.getWorkerUrl) {
+        workerUrl = await window.OsliraConfig.getWorkerUrl();
+    } else if (window.OsliraEnv?.WORKER_URL) {
+        workerUrl = window.OsliraEnv.WORKER_URL;
+    } else {
+        throw new Error('Worker URL not configured');
+    }
+    
+    console.log('✅ [Dashboard] Worker URL found:', workerUrl);
+} catch (configError) {
+    console.error('❌ [Dashboard] Worker URL error:', configError);
+    return;
+}
+
+// 6. PREPARE API PAYLOAD
+const apiPayload = {
+    profile_url: `https://instagram.com/${cleanUsername}`,
+    analysis_type: analysisType,
+    business_id: business.id,
+    user_id: session.user.id
+};
+
+console.log('🚀 [Dashboard] API payload prepared:', apiPayload);
+
+// 7. MAKE API CALL
+console.log('🌐 [Dashboard] Calling Cloudflare Worker...');
+const apiUrl = `${workerUrl}/v1/analyze`;
+console.log('📡 [Dashboard] API endpoint:', apiUrl);
+
+try {
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(apiPayload)
+    });
+    
+    console.log('📨 [Dashboard] API response status:', response.status);
+    
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ [Dashboard] API error:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorText
+        });
+        return;
+    }
+    
+    const result = await response.json();
+    console.log('✅ [Dashboard] API success:', result);
+    
+} catch (apiError) {
+    console.error('💥 [Dashboard] API call failed:', apiError);
+}
+
+// Close modal
 closeResearchModal();
         
     } catch (error) {
