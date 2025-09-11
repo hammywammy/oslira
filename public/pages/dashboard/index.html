@@ -581,7 +581,37 @@
     </div>
 </div>
     </div>
-    
+
+        <div id="leadAnalysisModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 p-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">Lead Analysis</h2>
+                            <p class="text-white/80 text-sm">Comprehensive profile insights</p>
+                        </div>
+                    </div>
+                    <button onclick="closeLeadAnalysisModal()" class="text-white/60 hover:text-white transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Content -->
+            <div id="lead-analysis-content" class="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <!-- Content will be dynamically loaded here -->
+            </div>
+        </div>
+    </div>
     <!-- Bulk Import Modal -->
     <div id="bulkImportModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full">
@@ -941,6 +971,435 @@ async function submitResearch() {
                 notifDropdown.classList.add('hidden');
             }
         });
+
+        }
+        
+        // Lead Analysis Modal Functions
+        function openLeadAnalysisModal(leadId) {
+            console.log('🔍 Opening lead analysis modal for:', leadId);
+            
+            const modal = document.getElementById('leadAnalysisModal');
+            const contentContainer = document.getElementById('lead-analysis-content');
+            
+            if (!modal || !contentContainer) {
+                console.error('❌ Analysis modal elements not found');
+                return;
+            }
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            
+            // Show loading state
+            contentContainer.innerHTML = `
+                <div class="flex items-center justify-center py-12">
+                    <div class="text-center">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Loading Analysis</h3>
+                        <p class="text-gray-500">Fetching lead details...</p>
+                    </div>
+                </div>
+            `;
+            
+            // Load lead data
+            loadLeadAnalysisData(leadId, contentContainer);
+        }
+        
+        function closeLeadAnalysisModal() {
+            const modal = document.getElementById('leadAnalysisModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+        
+        async function loadLeadAnalysisData(leadId, container) {
+            try {
+                // Get the lead manager instance
+                const leadManager = dashboard?.container?.get('leadManager');
+                if (!leadManager) {
+                    throw new Error('Lead manager not available');
+                }
+                
+                // Fetch lead details
+                const leadData = await leadManager.getLeadDetails(leadId);
+                if (!leadData) {
+                    throw new Error('Lead not found');
+                }
+                
+                // Render the analysis content
+                renderLeadAnalysisContent(leadData, container);
+                
+            } catch (error) {
+                console.error('❌ Failed to load lead analysis:', error);
+                container.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                            <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Error Loading Analysis</h3>
+                        <p class="text-gray-500 mb-4">${error.message}</p>
+                        <button onclick="loadLeadAnalysisData('${leadId}', this.closest('#lead-analysis-content'))" 
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+                            Try Again
+                        </button>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderLeadAnalysisContent(leadData, container) {
+            const { lead, analysisData } = leadData;
+            const isDeepAnalysis = lead.analysis_type === 'deep' && analysisData;
+            
+            // Helper function to format numbers
+            const formatNumber = (num) => {
+                if (!num) return '0';
+                return new Intl.NumberFormat().format(num);
+            };
+            
+            // Helper function to get score color
+            const getScoreColor = (score) => {
+                if (score >= 80) return 'text-green-600 bg-green-100';
+                if (score >= 60) return 'text-yellow-600 bg-yellow-100';
+                return 'text-red-600 bg-red-100';
+            };
+            
+            // Helper function to get engagement rate color
+            const getEngagementColor = (rate) => {
+                if (rate >= 3) return 'text-green-600';
+                if (rate >= 1.5) return 'text-yellow-600';
+                return 'text-red-600';
+            };
+            
+            container.innerHTML = `
+                <!-- Profile Header -->
+                <div class="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-6 mb-6">
+                    <div class="flex items-center space-x-6">
+                        <div class="relative">
+                            <img src="${lead.profile_pic_url || '/assets/default-avatar.png'}" 
+                                 alt="@${lead.username}" 
+                                 class="w-20 h-20 rounded-full border-4 border-white shadow-lg object-cover">
+                            ${lead.is_verified ? `
+                                <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3 mb-2">
+                                <h1 class="text-2xl font-bold text-gray-900">@${lead.username}</h1>
+                                ${lead.is_business_account ? `
+                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">Business</span>
+                                ` : ''}
+                                ${lead.is_private ? `
+                                    <span class="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded-full">Private</span>
+                                ` : ''}
+                            </div>
+                            ${lead.full_name ? `<p class="text-gray-600 font-medium mb-2">${lead.full_name}</p>` : ''}
+                            <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                    ${formatNumber(lead.followers_count)} followers
+                                </span>
+                                <span class="flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                    </svg>
+                                    ${formatNumber(lead.posts_count || 0)} posts
+                                </span>
+                                ${lead.following_count ? `
+                                    <span class="flex items-center">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+                                        </svg>
+                                        ${formatNumber(lead.following_count)} following
+                                    </span>
+                                ` : ''}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center justify-end mb-2">
+                                <span class="text-sm font-medium text-gray-600 mr-2">Overall Score</span>
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${getScoreColor(lead.score)}">
+                                    ${lead.score || 0}/100
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wide">
+                                ${lead.analysis_type === 'deep' ? 'Deep Analysis' : 'Light Scan'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bio Section -->
+                ${lead.bio ? `
+                    <div class="bg-white border border-gray-200 rounded-xl p-4 mb-6">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wide">Biography</h3>
+                        <p class="text-gray-700 leading-relaxed">${lead.bio}</p>
+                    </div>
+                ` : ''}
+
+                <!-- Summary Section -->
+                <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Analysis Summary
+                    </h3>
+                    <div class="prose prose-sm max-w-none">
+                        <p class="text-gray-700 leading-relaxed">
+                            ${isDeepAnalysis && analysisData.deep_summary ? analysisData.deep_summary : (lead.quick_summary || 'No summary available for this lead.')}
+                        </p>
+                    </div>
+                </div>
+
+                ${isDeepAnalysis ? `
+                    <!-- Deep Analysis Scores -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-white border border-gray-200 rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Engagement Score</h4>
+                                <span class="text-2xl font-bold ${getScoreColor(analysisData.engagement_score || 0).replace('bg-', 'text-').replace('-100', '-600')}">
+                                    ${analysisData.engagement_score || 0}
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                <div class="h-2 rounded-full transition-all duration-500 ${getScoreColor(analysisData.engagement_score || 0).includes('green') ? 'bg-green-500' : getScoreColor(analysisData.engagement_score || 0).includes('yellow') ? 'bg-yellow-500' : 'bg-red-500'}" 
+                                     style="width: ${analysisData.engagement_score || 0}%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500">Based on likes, comments, and followers</p>
+                        </div>
+
+                        <div class="bg-white border border-gray-200 rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Niche Fit</h4>
+                                <span class="text-2xl font-bold ${getScoreColor(analysisData.score_niche_fit || 0).replace('bg-', 'text-').replace('-100', '-600')}">
+                                    ${analysisData.score_niche_fit || 0}
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                <div class="h-2 rounded-full transition-all duration-500 ${getScoreColor(analysisData.score_niche_fit || 0).includes('green') ? 'bg-green-500' : getScoreColor(analysisData.score_niche_fit || 0).includes('yellow') ? 'bg-yellow-500' : 'bg-red-500'}" 
+                                     style="width: ${analysisData.score_niche_fit || 0}%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500">Alignment with your business</p>
+                        </div>
+
+                        <div class="bg-white border border-gray-200 rounded-xl p-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-gray-900 uppercase tracking-wide">Total Score</h4>
+                                <span class="text-2xl font-bold ${getScoreColor(analysisData.score_total || 0).replace('bg-', 'text-').replace('-100', '-600')}">
+                                    ${analysisData.score_total || 0}
+                                </span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                <div class="h-2 rounded-full transition-all duration-500 ${getScoreColor(analysisData.score_total || 0).includes('green') ? 'bg-green-500' : getScoreColor(analysisData.score_total || 0).includes('yellow') ? 'bg-yellow-500' : 'bg-red-500'}" 
+                                     style="width: ${analysisData.score_total || 0}%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500">Overall recommendation score</p>
+                        </div>
+                    </div>
+
+                    <!-- Engagement Metrics -->
+                    ${analysisData.avg_likes || analysisData.avg_comments || analysisData.engagement_rate ? `
+                        <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                                Engagement Metrics
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                ${analysisData.avg_likes ? `
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-gray-900 mb-1">${formatNumber(analysisData.avg_likes)}</div>
+                                        <div class="text-sm text-gray-600">Average Likes</div>
+                                    </div>
+                                ` : ''}
+                                ${analysisData.avg_comments ? `
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-gray-900 mb-1">${formatNumber(analysisData.avg_comments)}</div>
+                                        <div class="text-sm text-gray-600">Average Comments</div>
+                                    </div>
+                                ` : ''}
+                                ${analysisData.engagement_rate ? `
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold ${getEngagementColor(analysisData.engagement_rate)} mb-1">${analysisData.engagement_rate.toFixed(2)}%</div>
+                                        <div class="text-sm text-gray-600">Engagement Rate</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Audience Quality -->
+                    ${analysisData.audience_quality ? `
+                        <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                                Audience Quality
+                            </h3>
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${analysisData.audience_quality === 'High' ? 'bg-green-100 text-green-800' : analysisData.audience_quality === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">
+                                    ${analysisData.audience_quality}
+                                </span>
+                                ${analysisData.engagement_insights ? `
+                                    <span class="ml-3 text-sm text-gray-600">${analysisData.engagement_insights}</span>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Selling Points -->
+                    ${analysisData.selling_points && analysisData.selling_points.length > 0 ? `
+                        <div class="bg-white border border-gray-200 rounded-xl p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Key Selling Points
+                            </h3>
+                            <div class="space-y-2">
+                                ${analysisData.selling_points.map(point => `
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                                        <p class="text-gray-700">${point}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Outreach Message -->
+                    ${analysisData.outreach_message ? `
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 mb-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                    <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                    </svg>
+                                    Personalized Outreach Message
+                                </h3>
+                                <button onclick="copyToClipboard('outreach-message-${lead.id}')" 
+                                        class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                    Copy
+                                </button>
+                            </div>
+                            <div id="outreach-message-${lead.id}" class="bg-white rounded-lg p-4 border border-blue-200">
+                                <p class="text-gray-800 whitespace-pre-wrap">${analysisData.outreach_message}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+                ` : ''}
+
+                <!-- Profile URL -->
+                ${lead.profile_url ? `
+                    <div class="bg-white border border-gray-200 rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                            </svg>
+                            Profile Link
+                        </h3>
+                        <a href="${lead.profile_url}" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-medium rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 hover:scale-105">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                            </svg>
+                            View Profile
+                        </a>
+                    </div>
+                ` : ''}
+            `;
+        }
+        
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const text = element.textContent || element.innerText;
+            
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopySuccess();
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+        
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopySuccess();
+                }
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        function showCopySuccess() {
+            // Create temporary success message
+            const successEl = document.createElement('div');
+            successEl.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 transform transition-all duration-300';
+            successEl.innerHTML = `
+                <div class="flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    Copied to clipboard!
+                </div>
+            `;
+            
+            document.body.appendChild(successEl);
+            
+            // Animate in
+            setTimeout(() => {
+                successEl.style.transform = 'translateY(0)';
+            }, 10);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                successEl.style.transform = 'translateY(-100%)';
+                setTimeout(() => {
+                    document.body.removeChild(successEl);
+                }, 300);
+            }, 3000);
+}
+        
+        // Make functions globally available
+        window.openLeadAnalysisModal = openLeadAnalysisModal;
+        window.closeLeadAnalysisModal = closeLeadAnalysisModal;
+        window.copyToClipboard = copyToClipboard;
     </script>
 </body>
 </html>
