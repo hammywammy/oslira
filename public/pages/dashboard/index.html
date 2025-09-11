@@ -852,20 +852,32 @@ try {
         return;
     }
     
-    const result = await response.json();
-    console.log('✅ [Dashboard] API success:', result);
-    
-} catch (apiError) {
-    console.error('💥 [Dashboard] API call failed:', apiError);
+const result = await response.json();
+console.log('✅ [Dashboard] API success:', result);
+
+// Close modal first
+closeResearchModal();
+
+// Refresh the leads table
+console.log('🔄 [Dashboard] Refreshing leads table...');
+try {
+    // Try multiple refresh methods in order of preference
+    if (window.dashboard?._app?.refreshLeads) {
+        await window.dashboard._app.refreshLeads();
+        console.log('✅ [Dashboard] Leads refreshed via dashboard app');
+    } else if (window.location.pathname.includes('dashboard')) {
+        // Simple page reload as fallback
+        console.log('🔄 [Dashboard] Page reload fallback');
+        window.location.reload();
+    }
+} catch (refreshError) {
+    console.error('❌ [Dashboard] Refresh failed, using page reload:', refreshError);
+    window.location.reload();
 }
 
-// Close modal
-closeResearchModal();
-        
-    } catch (error) {
-        console.error('💥 [Dashboard] Unexpected error:', error);
-    }
-}
+} catch (apiError) {
+    console.error('💥 [Dashboard] API call failed:', apiError);
+}}
         
         function openBulkImportModal() {
             document.getElementById('bulkImportModal').classList.remove('hidden');
