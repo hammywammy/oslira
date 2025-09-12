@@ -904,7 +904,7 @@ function calculateEstimatedROI(
 async function performUltimateAnalysis(
   profile: ProfileData,
   business: BusinessProfile,
-  analysisType: 'light' | 'deep',
+  analysisType: 'light' | 'deep' | 'xray',
   env: Env,
   requestId: string
 ): Promise<{
@@ -1073,7 +1073,7 @@ const ultimateMonitor = new UltimateAnalysisMonitor();
 export async function performAIAnalysis(
   profile: ProfileData,
   business: BusinessProfile,
-  analysisType: 'light' | 'deep',
+  analysisType: 'light' | 'deep' | 'xray',
   env: Env,
   requestId: string
 ): Promise<AnalysisResult> {
@@ -1089,13 +1089,20 @@ export async function performAIAnalysis(
   let quickSummary: string | undefined;
   let deepSummary: string | undefined;
 
-  if (analysisType === 'light') {
-    quickSummary = await generateQuickSummary(profile, env);
-    logger('info', 'Quick summary generated for light analysis', {
-      username: profile.username,
-      summaryLength: quickSummary.length
-    }, requestId);
-  }
+if (analysisType === 'light') {
+  quickSummary = await generateQuickSummary(profile, env);
+  logger('info', 'Quick summary generated for light analysis', {
+    username: profile.username,
+    summaryLength: quickSummary.length
+  }, requestId);
+} else if (analysisType === 'xray') {
+  // X-Ray gets both quick summary AND deep summary
+  quickSummary = await generateQuickSummary(profile, env);
+  logger('info', 'Quick summary generated for X-Ray analysis', {
+    username: profile.username,
+    summaryLength: quickSummary.length
+  }, requestId);
+}
 
   logger('info', 'Starting final AI evaluation with real engagement data', {
     username: profile.username,
@@ -1109,9 +1116,20 @@ export async function performAIAnalysis(
   }, requestId);
 
   // Build evaluator prompt using your original functions (verbatim)
-  const evaluatorPrompt = analysisType === 'light'
-    ? buildLightEvaluatorPrompt(profile, business)
-    : buildDeepEvaluatorPrompt(profile, business);
+let evaluatorPrompt: string;
+switch (analysisType) {
+  case 'light':
+    evaluatorPrompt = buildLightEvaluatorPrompt(profile, business);
+    break;
+  case 'deep':
+    evaluatorPrompt = buildDeepEvaluatorPrompt(profile, business);
+    break;
+  case 'xray':
+    evaluatorPrompt = buildXRayEvaluatorPrompt(profile, business);
+    break;
+  default:
+    throw new Error(`Unsupported analysis type: ${analysisType}`);
+}
 
   // Run the upgraded orchestrator (adaptive model selection still stays within your GPT-5 family)
   const { result, metadata } = await performUltimateAnalysis(
@@ -1126,15 +1144,23 @@ export async function performAIAnalysis(
     }, requestId);
   }
 
-  // If deep analysis, generate deep summary after the validated result (keep old behavior)
-  if (analysisType === 'deep') {
-    const preliminaryResult = validateAnalysisResult(result);
-    deepSummary = await generateDeepSummary(profile, business, preliminaryResult, env);
-    logger('info', 'Deep summary generated', {
-      username: profile.username,
-      summaryLength: deepSummary.length
-    }, requestId);
-  }
+if (analysisType === 'deep') {
+  const preliminaryResult = validateAnalysisResult(result);
+  deepSummary = await generateDeepSummary(profile, business, preliminaryResult, env);
+  logger('info', 'Deep summary generated', {
+    username: profile.username,
+    summaryLength: deepSummary.length
+  }, requestId);
+}
+
+if (analysisType === 'xray') {
+  const preliminaryResult = validateAnalysisResult(result);
+  deepSummary = await generateDeepSummary(profile, business, preliminaryResult, env);
+  logger('info', 'X-Ray summary generated', {
+    username: profile.username,
+    summaryLength: deepSummary.length
+  }, requestId);
+}
 
   // Final decoration (preserve your original confidence calc signature)
   const finalResult = validateAnalysisResult(result);
@@ -1312,6 +1338,82 @@ Would you be interested in exploring a potential partnership? I'd love to share 
 
 Best regards`;
   }
+}
+
+function buildXRayEvaluatorPrompt(profile: ProfileData, business: BusinessProfile): string {
+  const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 
+    ? `Real engagement: ${profile.engagement?.engagementRate}% (${profile.engagement?.avgLikes} avg likes, ${profile.engagement?.avgComments} avg comments across ${profile.engagement?.postsAnalyzed} posts)`
+    : `Estimated engagement based on ${profile.followersCount.toLocaleString()} followers`;
+
+  const contentInfo = (profile.latestPosts?.length || 0) > 0 
+    ? `Recent content themes: ${profile.latestPosts.slice(0, 3).map(p => p.caption?.slice(0, 50) || 'Visual content').join('; ')}`
+    : 'Content analysis limited - profile access restricted';
+
+  return `# COPYWRITER'S X-RAY INTELLIGENCE REPORT
+
+**TARGET ANALYSIS**: @${profile.username} (${profile.displayName || 'N/A'})
+**CLIENT**: ${business.name} (${business.industry})
+**MISSION**: Complete psychological and commercial intelligence for high-value copywriting campaign
+
+**PROFILE INTELLIGENCE**:
+- Audience Scale: ${profile.followersCount.toLocaleString()} followers${profile.isVerified ? ' | VERIFIED' : ''}
+- Authority Signals: ${profile.isBusinessAccount ? 'Business Account' : 'Personal Brand'}
+- Bio Analysis: "${profile.bio || 'No bio available'}"
+- External Link: ${profile.externalUrl || 'None'}
+
+**ENGAGEMENT INTELLIGENCE**:
+${engagementInfo}
+
+**CONTENT INTELLIGENCE**:
+${contentInfo}
+
+**BUSINESS CONTEXT**:
+- Value Proposition: ${business.value_proposition}
+- Target Audience: ${business.target_audience}  
+- Key Pain Points: ${business.pain_points?.join(', ') || 'Not specified'}
+- Unique Advantages: ${business.unique_advantages?.join(', ') || 'Not specified'}
+
+**X-RAY ANALYSIS REQUIREMENTS**:
+Provide comprehensive copywriter intelligence including:
+
+1. **PSYCHOGRAPHIC PROFILE**: Personality type, communication style, values, emotional triggers
+2. **COMMERCIAL ASSESSMENT**: Budget tier, decision-making role, buying stage, likely objections
+3. **PERSUASION MAPPING**: Primary angle, social proof needs, urgency factors, trust signals
+4. **MESSAGE STRATEGY**: Hook style, proof elements, CTA approach, personalization variables
+5. **OBJECTION HANDLING**: Anticipated pushbacks and preemption strategies
+6. **FOLLOW-UP SEQUENCE**: Multi-touch approach recommendations
+
+**JSON OUTPUT REQUIRED**:
+{
+  "score": <0-100 partnership potential>,
+  "engagement_score": <0-100 audience quality>,
+  "niche_fit": <0-100 business alignment>,
+  "audience_quality": <"High"/"Medium"/"Low">,
+  "engagement_insights": <detailed copywriter insights - max 1500 chars>,
+  "selling_points": [<5-7 strategic advantages for copywriter>],
+  "reasons": [<6-10 data-driven rationales>],
+  "psychographic_profile": {
+    "personality_type": <personality assessment>,
+    "communication_style": <how they communicate>,
+    "values": [<core values>],
+    "emotional_triggers": [<what drives them>]
+  },
+  "commercial_intelligence": {
+    "budget_tier": <estimated budget range>,
+    "decision_role": <their role in buying>,
+    "buying_stage": <awareness level>,
+    "objections": [<likely objections>]
+  },
+  "copywriting_strategy": {
+    "primary_angle": <main persuasion angle>,
+    "hook_style": <opening approach>,
+    "proof_elements": [<types of proof needed>],
+    "cta_approach": <call-to-action style>,
+    "personalization": {<personalization variables>}
+  }
+}
+
+Provide complete X-Ray intelligence for copywriter success.`;
 }
 
 // ===============================================================================
