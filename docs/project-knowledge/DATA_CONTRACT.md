@@ -78,105 +78,6 @@ opt_in_sms (boolean, default: false) - NEW
 created_at, updated_at - NEW
 
 
-LEADS (RLS ✅) - UPDATED SCHEMA
-
-id (uuid, PK)
-
-user_id (uuid, FK → users.id)
-
-business_id (uuid, FK → business_profiles.id)
-
-username (text, not null)
-
-full_name (text, nullable)
-
-bio (text, nullable)
-
-followers_count (integer, default: 0)
-
-profile_pic_url (text, nullable)
-
-platform (text, default: 'instagram')
-
-analysis_type (text, default: 'light')
-
-score (integer, not null)
-
-profile_url (text, nullable)
-
-quick_summary (text, nullable)
-
-external_url (text, nullable) - NEW
-
-posts_count (integer, nullable)
-
-following_count (integer, nullable)
-
-is_private (boolean, default: false)
-
-is_verified (boolean, default: false)
-
-is_business_account (boolean, default: false)
-
-created_at (timestamp with time zone, default: now()) - NEW
-
-env (text, nullable) - NEW
-
-
-LEAD_ANALYSES (RLS ✅) - UPDATED SCHEMA
-
-id (uuid, PK)
-
-user_id (uuid, FK → users.id)
-
-business_id (uuid, FK → business_profiles.id)
-
-lead_id (uuid, FK → leads.id)
-
-username (text, not null)
-
-score (integer, default: 0)
-
-deep_summary (text, nullable)
-
-niche_fit (integer, nullable) - NEW
-
-engagement_score (integer, default: 0)
-
-reasons (text[], default: {}) - NEW
-
-selling_points (text[], default: {})
-
-latest_posts (jsonb, default: '[]')
-
-engagement_data (jsonb, default: '{}')
-
-analysis_type (text, default: 'deep') - NEW
-
-analyzed_at (timestamp with time zone, default: now()) - NEW
-
-created_at (timestamp with time zone, default: now()) - NEW
-
-score_niche_fit (integer, default: 0)
-
-score_total (integer, default: 0)
-
-outreach_message (text, nullable)
-
-avg_comments (integer, nullable) - NEW
-
-avg_likes (integer, nullable) - NEW
-
-engagement_rate (numeric, nullable)
-
-audience_quality (text, default: 'Medium')
-
-engagement_insights (text, nullable)
-
-analysis_data (jsonb, default: '{}') - NEW
-
-env (text, nullable) - NEW
-
 
 CREDIT_TRANSACTIONS (RLS ✅) - UPDATED SCHEMA
 
@@ -239,6 +140,180 @@ cancelled_at (timestamp with time zone, nullable)
 created_at (timestamp with time zone, default: now())
 
 updated_at (timestamp with time zone, default: now())
+
+LEADS Table (Profile Identity)
+sql-- Create leads table with clear naming
+CREATE TABLE IF NOT EXISTS leads (
+    lead_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    business_id UUID NOT NULL,
+    
+    -- Instagram profile identity
+    username TEXT NOT NULL,
+    display_name TEXT,
+    profile_picture_url TEXT,
+    bio_text TEXT,
+    external_website_url TEXT,
+    
+    -- Profile metrics
+    follower_count INTEGER DEFAULT 0,
+    following_count INTEGER DEFAULT 0,
+    post_count INTEGER DEFAULT 0,
+    
+    -- Profile attributes
+    is_verified_account BOOLEAN DEFAULT FALSE,
+    is_private_account BOOLEAN DEFAULT FALSE,
+    is_business_account BOOLEAN DEFAULT FALSE,
+    
+    -- Platform info
+    platform_type TEXT DEFAULT 'instagram',
+    profile_url TEXT,
+    
+    -- Timestamps
+    first_discovered_at TIMESTAMPTZ DEFAULT NOW(),
+    last_updated_at TIMESTAMPTZ DEFAULT NOW(),
+    
+    -- Constraints
+    UNIQUE(user_id, username, business_id)
+);
+RUNS Table (Analysis Metadata)
+sql-- Create runs table for analysis tracking
+CREATE TABLE IF NOT EXISTS runs (
+    run_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id UUID NOT NULL REFERENCES leads(lead_id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    business_id UUID NOT NULL,
+    
+    -- Analysis identification
+    analysis_type TEXT NOT NULL CHECK (analysis_type IN ('light', 'deep', 'xray')),
+    analysis_version TEXT DEFAULT '1.0',
+    
+    -- Universal scores (present for ALL analysis types)
+    overall_score INTEGER CHECK (overall_score >= 0 AND overall_score <= 100),
+    niche_fit_score INTEGER CHECK (niche_fit_score >= 0 AND niche_fit_score <= 100),
+    engagement_score INTEGER CHECK (engagement_score >= 0 AND engagement_score <= 100),
+    
+    -- Quick reference data
+    summary_text TEXT, -- Short 1-2 sentence summary for lists
+    confidence_level DECIMAL(3,2), -- 0.00 to 1.00
+    
+    -- Processing metadata
+    run_status TEXT DEFAULT 'completed' CHECK (run_status IN ('pending', 'processing', 'completed', 'failed')),
+    processing_duration_ms INTEGER,
+    ai_model_used TEXT,
+    
+    -- Timestamps
+    analysis_started_at TIMESTAMPTZ DEFAULT NOW(),
+    analysis_completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+PAYLOADS Table (Analysis Details)
+sql-- Create payloads table for detailed analysis data
+CREATE TABLE IF NOT EXISTS payloads (
+    payload_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES runs(run_id) ON DELETE CASCADE,
+    lead_id UUID NOT NULL, -- Denormalized for direct queries
+    user_id UUID NOT NULL, -- Denormalized for RLS
+    business_id UUID NOT NULL, -- Denormalized for filtering
+    
+    -- Analysis type for easy querying
+    analysis_type TEXT NOT NULL,
+    
+    -- The main payload data
+    analysis_data JSONB NOT NULL,
+    
+    -- Metadata
+    data_size_bytes INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+INDEXES FOR PERFORMANCE
+LEADS Table Indexes
+sql-- Performance indexes for leads
+CREATE INDEX IF NOT EXISTS idx_leads_user_business ON leads(user_id, business_id);
+CREATE INDEX IF NOT EXISTS idx_leads_username ON leads(username);
+CREATE INDEX IF NOT EXISTS idx_leads_discovered_at ON leads(first_discovered_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_leads_unique_profile ON leads(user_id, username, business_id);
+RUNS Table Indexes
+sql-- Performance indexes for runs
+CREATE INDEX IF NOT EXISTS idx_runs_lead_id ON runs(lead_id);
+CREATE INDEX IF NOT EXISTS idx_runs_user_business ON runs(user_id, business_id);
+CREATE INDEX IF NOT EXISTS idx_runs_analysis_type ON runs(analysis_type);
+CREATE INDEX IF NOT EXISTS idx_runs_created_at ON runs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_runs_overall_score ON runs(overall_score DESC);
+CREATE INDEX IF NOT EXISTS idx_runs_niche_fit_score ON runs(niche_fit_score DESC);
+CREATE INDEX IF NOT EXISTS idx_runs_engagement_score ON runs(engagement_score DESC);
+
+-- Composite index for dashboard queries
+CREATE INDEX IF NOT EXISTS idx_runs_dashboard ON runs(user_id, business_id, created_at DESC);
+
+-- Index for finding latest runs per lead/type
+CREATE INDEX IF NOT EXISTS idx_runs_latest_lookup ON runs(lead_id, analysis_type, created_at DESC);
+PAYLOADS Table Indexes
+sql-- Performance indexes for payloads
+CREATE INDEX IF NOT EXISTS idx_payloads_run_id ON payloads(run_id);
+CREATE INDEX IF NOT EXISTS idx_payloads_lead_id ON payloads(lead_id);
+CREATE INDEX IF NOT EXISTS idx_payloads_user_business ON payloads(user_id, business_id);
+CREATE INDEX IF NOT EXISTS idx_payloads_analysis_type ON payloads(analysis_type);
+
+-- JSONB GIN index for querying analysis_data
+CREATE INDEX IF NOT EXISTS idx_payloads_analysis_data ON payloads USING GIN(analysis_data);
+ROW LEVEL SECURITY (RLS)
+Enable RLS on All Tables
+sql-- Enable RLS
+ALTER TABLE leads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payloads ENABLE ROW LEVEL SECURITY;
+RLS Policies
+sql-- LEADS RLS Policies
+CREATE POLICY IF NOT EXISTS "Users can view their own leads"
+    ON leads FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can insert their own leads"
+    ON leads FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can update their own leads"
+    ON leads FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can delete their own leads"
+    ON leads FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- RUNS RLS Policies
+CREATE POLICY IF NOT EXISTS "Users can view their own runs"
+    ON runs FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can insert their own runs"
+    ON runs FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can update their own runs"
+    ON runs FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can delete their own runs"
+    ON runs FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- PAYLOADS RLS Policies
+CREATE POLICY IF NOT EXISTS "Users can view their own payloads"
+    ON payloads FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can insert their own payloads"
+    ON payloads FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can update their own payloads"
+    ON payloads FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY IF NOT EXISTS "Users can delete their own payloads"
+    ON payloads FOR DELETE
+    USING (auth.uid() = user_id);
 
 ---
 
