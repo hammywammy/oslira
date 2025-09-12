@@ -325,7 +325,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                         
                         <!-- Animated Score Ring - with count-up animation -->
                         <div class="relative">
-                            <div class="w-32 h-32 relative hover-3d">
+                            <div class="w-32 h-32 relative">
                                 <!-- Background circle -->
                                 <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
                                     <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"/>
