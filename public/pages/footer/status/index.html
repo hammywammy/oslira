@@ -243,6 +243,22 @@
             color: #6b7280;
             margin-top: 0.25rem;
         }
+
+        .no-incidents {
+    @apply text-center py-12;
+}
+
+.no-incidents-icon {
+    @apply text-6xl mb-4;
+}
+
+.no-incidents-title {
+    @apply text-xl font-semibold text-gray-800 mb-2;
+}
+
+.no-incidents-description {
+    @apply text-gray-600;
+}
         
         /* =============================================================================
            INCIDENT TIMELINE
@@ -972,13 +988,16 @@ async function fetchUptimeRobotData() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: new URLSearchParams({
-                'api_key': UPTIME_ROBOT_CONFIG.apiKey,
-                'format': 'json',
-                'logs': '1',
-                'response_times': '1',
-                'response_times_limit': '30'
-            })
+body: new URLSearchParams({
+    'api_key': UPTIME_ROBOT_CONFIG.apiKey,
+    'format': 'json',
+    'logs': '1',
+    'logs_limit': '50',
+    'response_times': '1',
+    'response_times_limit': '30',
+    'all_time_uptime_ratio': '1',
+    'custom_uptime_ratio': '1-7-30'
+})
         });
         
         if (!response.ok) {
@@ -992,7 +1011,8 @@ async function fetchUptimeRobotData() {
         }
         
         console.log('✅ [Status] UptimeRobot data fetched successfully');
-        updateStatusFromUptimeRobot(data.monitors);
+updateStatusFromUptimeRobot(data.monitors);
+updateIncidentTimeline(data.monitors);
         
     } catch (error) {
         console.error('❌ [Status] Failed to fetch UptimeRobot data:', error);
@@ -1006,6 +1026,13 @@ function updateStatusFromUptimeRobot(monitors) {
     let hasWarnings = false;
     
     monitors.forEach(monitor => {
+        console.log('📊 [Status] Processing monitor:', {
+            id: monitor.id,
+            name: monitor.friendly_name,
+            status: monitor.status,
+            uptime: monitor.all_time_uptime_ratio
+        });
+        
         // Find which service this monitor corresponds to
         const serviceId = Object.keys(UPTIME_ROBOT_CONFIG.monitorMap).find(
             key => UPTIME_ROBOT_CONFIG.monitorMap[key] == monitor.id
@@ -1013,20 +1040,16 @@ function updateStatusFromUptimeRobot(monitors) {
         
         if (!serviceId) return;
         
-        // Determine status based on UptimeRobot status codes
+        // UptimeRobot status codes: 0=paused, 1=not checked, 2=up, 8=seems down, 9=down
         let status = 'operational';
-        if (monitor.status === 0) { // Paused
+        if (monitor.status === 0 || monitor.status === 1) { // Paused or not checked
             status = 'degraded';
             hasWarnings = true;
             allOperational = false;
-        } else if (monitor.status === 1) { // Not checked yet
-            status = 'degraded';
-            hasWarnings = true;
-            allOperational = false;
-        } else if (monitor.status === 8) { // Down
+        } else if (monitor.status === 8 || monitor.status === 9) { // Down
             status = 'outage';
             allOperational = false;
-        } else if (monitor.status === 9) { // Up
+        } else if (monitor.status === 2) { // Up
             status = 'operational';
         }
         
@@ -1034,7 +1057,7 @@ function updateStatusFromUptimeRobot(monitors) {
         const uptimeRatio = monitor.all_time_uptime_ratio || 100;
         const uptimePercent = `${uptimeRatio.toFixed(1)}%`;
         
-        // Get average response time
+        // Get average response time from recent logs
         let avgResponse = 'N/A';
         if (monitor.response_times && monitor.response_times.length > 0) {
             const totalTime = monitor.response_times.reduce((sum, rt) => sum + rt.value, 0);
@@ -1113,6 +1136,53 @@ function updateOverallStatus(allOperational, hasWarnings) {
     }
 }
 
+function updateIncidentTimeline(monitors) {
+    const timeline = document.getElementById('incident-timeline');
+    if (!timeline) return;
+    
+    // Clear existing incidents
+    timeline.innerHTML = '';
+    
+    let hasIncidents = false;
+    
+    monitors.forEach(monitor => {
+        // Check for recent incidents in logs
+        if (monitor.logs && monitor.logs.length > 0) {
+            monitor.logs.forEach(log => {
+                if (log.type === 1) { // Down event
+                    hasIncidents = true;
+                    const incidentDate = new Date(log.datetime * 1000);
+                    const duration = log.duration ? `${Math.round(log.duration / 60)} minutes` : 'Unknown duration';
+                    
+                    const incidentHTML = `
+                        <div class="incident-item error">
+                            <div class="incident-date">${incidentDate.toLocaleString()}</div>
+                            <div class="incident-title">Service Interruption - ${monitor.friendly_name}</div>
+                            <div class="incident-description">
+                                Service was temporarily unavailable. Duration: ${duration}
+                            </div>
+                            <div class="incident-status resolved">Resolved</div>
+                        </div>
+                    `;
+                    
+                    timeline.insertAdjacentHTML('afterbegin', incidentHTML);
+                }
+            });
+        }
+    });
+    
+    // Show no incidents message if none found
+    if (!hasIncidents) {
+        timeline.innerHTML = `
+            <div class="no-incidents">
+                <div class="no-incidents-icon">👍</div>
+                <div class="no-incidents-title">All Systems Running Smoothly</div>
+                <div class="no-incidents-description">No incidents reported in the last 30 days.</div>
+            </div>
+        `;
+    }
+}
+
 function showFallbackData() {
     console.log('📊 [Status] Showing fallback data due to API failure');
     // Keep existing static data as fallback
@@ -1166,12 +1236,9 @@ function showFallbackData() {
             if (!timeline) return;
             
             const incidentHTML = `
-                <div class="incident-item ${incident.severity || ''}">
-                    <div class="incident-date">${incident.date}</div>
-                    <div class="incident-title">${incident.title}</div>
-                    <div class="incident-description">${incident.description}</div>
-                    <div class="incident-status ${incident.status}">${incident.statusText}</div>
-                </div>
+<div class="incident-timeline" id="incident-timeline">
+    <!-- Real incidents will be populated by JavaScript -->
+</div>
             `;
             
             timeline.insertAdjacentHTML('afterbegin', incidentHTML);
