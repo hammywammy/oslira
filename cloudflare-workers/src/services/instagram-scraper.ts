@@ -44,7 +44,7 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
       
       return profileData;
 
-    } else {
+    } else if (analysisType === 'deep') {
       logger('info', 'Deep analysis: Starting with deep scraper configurations');
       
       const deepConfigs = [
@@ -186,6 +186,11 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
       });
 
       return fallbackProfile;
+
+    } else if (analysisType === 'xray') {
+      logger('info', 'X-Ray analysis: Using comprehensive data extraction');
+      // place logic here
+
     }
 
   } catch (error: any) {
