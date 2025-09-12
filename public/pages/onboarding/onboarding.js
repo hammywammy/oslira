@@ -456,23 +456,6 @@
         console.log(`👀 [Onboarding] Showing step ${stepNumber}`);
     }
     
-    function nextStep() {
-        if (!validateStep(currentStep)) {
-            console.log(`❌ [Onboarding] Step ${currentStep} validation failed`);
-            return;
-        }
-        
-        // Handle smart defaults
-        if (currentStep === 3) { // After business niche selection
-            setSmartDefaults();
-        }
-        
-        if (currentStep < totalSteps) {
-            showStep(currentStep + 1);
-        } else {
-            submitOnboarding();
-        }
-    }
     
     function prevStep() {
         if (currentStep > 1) {
@@ -480,72 +463,244 @@
         }
     }
     
-    // =============================================================================
-    // VALIDATION WITH CHARACTER LIMITS
-    // =============================================================================
+function validateStep(stepNumber) {
+    console.log(`🔍 [Onboarding] Validating step ${stepNumber}`);
     
-    function validateStep(stepNumber) {
-        const fields = stepFields[stepNumber] || [];
-        let isValid = true;
-        
-        console.log(`🔍 [Onboarding] Validating step ${stepNumber} with fields:`, fields);
-        
-        fields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            const rules = validationRules[fieldId] || {};
-            const limits = CHARACTER_LIMITS[fieldId];
-            const errorElement = document.getElementById(`${fieldId}-error`);
+    switch (stepNumber) {
+        case 1: // Business Info
+            const businessName = getFieldValue('business_name');
+            return validateBusinessName(businessName);
             
-            if (!field) return;
+        case 2: // Business Niche
+            return getFieldValue('business_niche') !== '';
             
-            // Clear previous errors
-            field.classList.remove('error');
-            if (errorElement) {
-                errorElement.style.display = 'none';
-                errorElement.textContent = '';
-            }
+        case 3: // Target Audience
+            return getFieldValue('target_audience').trim().length > 0;
             
-            const value = getFieldValue(fieldId);
+        case 4: // Success Outcome - NOW MANDATORY
+            const successOutcome = getFieldValue('success_outcome');
+            return validateSuccessOutcome(successOutcome);
             
-            // Required field validation
-            if (rules.required && !value) {
-                showFieldError(fieldId, 'This field is required');
-                isValid = false;
-                return;
-            }
+        case 5: // Communication Style - NOW PROPERLY ENFORCED
+            return validateCommunicationStyle();
             
-            // Character limit validation
-            if (limits && value.length > limits.max) {
-                showFieldError(fieldId, `Maximum ${limits.max} characters allowed`);
-                isValid = false;
-                return;
-            }
-            
-            if (limits && limits.min > 0 && value.length > 0 && value.length < limits.min) {
-                showFieldError(fieldId, `Minimum ${limits.min} characters required`);
-                isValid = false;
-                return;
-            }
-            
-            // Existing validation rules
-            if (rules.minLength && value.length > 0 && value.length < rules.minLength) {
-                showFieldError(fieldId, `Minimum ${rules.minLength} characters required`);
-                isValid = false;
-                return;
-            }
-            
-            // Phone number specific validation
-            if (fieldId === 'phone-number' && value) {
-                if (!validatePhoneNumber(value)) {
-                    showFieldError(fieldId, 'Please enter a valid phone number');
-                    isValid = false;
-                    return;
-                }
-            }
-        });
-        
-        return isValid;
+        default:
+            return true;
     }
+}
+
+// =============================================================================
+// ENHANCED VALIDATION FUNCTIONS
+// =============================================================================
+
+function validateBusinessName(businessName) {
+    const trimmed = businessName.trim();
+    
+    // Check if empty
+    if (trimmed.length === 0) {
+        showValidationError('business_name', 'Business name is required');
+        return false;
+    }
+    
+    // Check minimum length
+    if (trimmed.length < 2) {
+        showValidationError('business_name', 'Business name must be at least 2 characters');
+        return false;
+    }
+    
+    // Check maximum length
+    if (trimmed.length > 50) {
+        showValidationError('business_name', 'Business name must be 50 characters or less');
+        return false;
+    }
+    
+    // Check for valid characters only (letters, numbers, spaces, hyphens, apostrophes)
+    const validPattern = /^[a-zA-Z0-9\s\-'&\.]+$/;
+    if (!validPattern.test(trimmed)) {
+        showValidationError('business_name', 'Business name contains invalid characters. Only letters, numbers, spaces, hyphens, apostrophes, and periods are allowed.');
+        return false;
+    }
+    
+    // Check that it's not just special characters
+    const hasLetterOrNumber = /[a-zA-Z0-9]/.test(trimmed);
+    if (!hasLetterOrNumber) {
+        showValidationError('business_name', 'Business name must contain at least one letter or number');
+        return false;
+    }
+    
+    // Clear any previous errors
+    clearValidationError('business_name');
+    console.log(`✅ [Onboarding] Business name validation passed: "${trimmed}"`);
+    return true;
+}
+
+function validateSuccessOutcome(successOutcome) {
+    const trimmed = successOutcome.trim();
+    
+    // Check if empty
+    if (trimmed.length === 0) {
+        showValidationError('success_outcome', 'Please describe what results you deliver to your clients');
+        return false;
+    }
+    
+    // Check minimum word count (at least 3 words)
+    const wordCount = trimmed.split(/\s+/).filter(word => word.length > 0).length;
+    if (wordCount < 3) {
+        showValidationError('success_outcome', 'Please provide a more detailed description (at least 3 words)');
+        return false;
+    }
+    
+    // Check minimum character count
+    if (trimmed.length < 10) {
+        showValidationError('success_outcome', 'Please provide a more detailed description (at least 10 characters)');
+        return false;
+    }
+    
+    // Clear any previous errors
+    clearValidationError('success_outcome');
+    console.log(`✅ [Onboarding] Success outcome validation passed: ${wordCount} words`);
+    return true;
+}
+
+function validateCommunicationStyle() {
+    const selectedStyle = getSelectedChoice('communication_style');
+    
+    // Check if any option is selected
+    if (!selectedStyle || selectedStyle === null || selectedStyle === '') {
+        showValidationError('communication_style', 'Please select how you prefer to communicate');
+        highlightCommunicationChoices();
+        return false;
+    }
+    
+    // Verify the selected option is valid
+    const validStyles = ['professional', 'casual', 'friendly', 'direct', 'consultative'];
+    if (!validStyles.includes(selectedStyle)) {
+        showValidationError('communication_style', 'Please select a valid communication style');
+        return false;
+    }
+    
+    // Clear any previous errors
+    clearValidationError('communication_style');
+    console.log(`✅ [Onboarding] Communication style validation passed: "${selectedStyle}"`);
+    return true;
+}
+
+// =============================================================================
+// ERROR DISPLAY FUNCTIONS
+// =============================================================================
+
+function showValidationError(fieldName, message) {
+    // Remove any existing error for this field
+    clearValidationError(fieldName);
+    
+    // Find the field
+    const field = document.getElementById(fieldName) || document.querySelector(`[name="${fieldName}"]`);
+    if (!field) return;
+    
+    // Add error styling to field
+    field.classList.add('field-error');
+    
+    // Create error message element
+    const errorElement = document.createElement('div');
+    errorElement.className = 'validation-error';
+    errorElement.id = `${fieldName}_error`;
+    errorElement.textContent = message;
+    
+    // Insert error message after the field
+    field.parentNode.insertBefore(errorElement, field.nextSibling);
+    
+    // Add error styling to field container if it exists
+    const fieldContainer = field.closest('.onboarding-form-group');
+    if (fieldContainer) {
+        fieldContainer.classList.add('has-error');
+    }
+    
+    console.log(`❌ [Onboarding] Validation error for ${fieldName}: ${message}`);
+}
+
+function clearValidationError(fieldName) {
+    // Find and remove error message
+    const errorElement = document.getElementById(`${fieldName}_error`);
+    if (errorElement) {
+        errorElement.remove();
+    }
+    
+    // Remove error styling from field
+    const field = document.getElementById(fieldName) || document.querySelector(`[name="${fieldName}"]`);
+    if (field) {
+        field.classList.remove('field-error');
+        
+        // Remove error styling from container
+        const fieldContainer = field.closest('.onboarding-form-group');
+        if (fieldContainer) {
+            fieldContainer.classList.remove('has-error');
+        }
+    }
+}
+
+function highlightCommunicationChoices() {
+    // Add visual emphasis to communication style choices
+    const choiceCards = document.querySelectorAll('[data-choice-group="communication_style"]');
+    choiceCards.forEach(card => {
+        card.classList.add('choice-required-highlight');
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+            card.classList.remove('choice-required-highlight');
+        }, 3000);
+    });
+}
+
+// =============================================================================
+// ENHANCED NEXT STEP FUNCTION
+// =============================================================================
+
+// Also enhance the nextStep function to provide better user feedback
+function nextStep() {
+    const isValid = validateStep(currentStep);
+    
+    if (!isValid) {
+        console.log(`❌ [Onboarding] Step ${currentStep} validation failed`);
+        
+        // Show user feedback
+        showStepValidationFailed();
+        return;
+    }
+    
+    // Handle smart defaults
+    if (currentStep === 3) { // After business niche selection
+        setSmartDefaults();
+    }
+    
+    if (currentStep < totalSteps) {
+        showStep(currentStep + 1);
+        console.log(`✅ [Onboarding] Moved to step ${currentStep}`);
+    } else {
+        completeOnboarding();
+    }
+}
+
+function showStepValidationFailed() {
+    // Create a temporary notification
+    const notification = document.createElement('div');
+    notification.className = 'validation-notification';
+    notification.innerHTML = `
+        <i class="fas fa-exclamation-circle"></i>
+        <span>Please complete all required fields before continuing</span>
+    `;
+    
+    // Add to current step
+    const currentStepElement = document.querySelector('.onboarding-step.active');
+    if (currentStepElement) {
+        currentStepElement.insertBefore(notification, currentStepElement.firstChild);
+        
+        // Remove notification after 4 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 4000);
+    }
+}
     
     function showFieldError(fieldId, message) {
         const field = document.getElementById(fieldId);
