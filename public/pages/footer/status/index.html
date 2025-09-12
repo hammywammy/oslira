@@ -22,6 +22,9 @@
     
     <!-- Tailwind CSS -->
     <link rel="stylesheet" href="/assets/css/tailwind.css">
+
+    <!-- Script loader initialization -->
+<script src="/core/script-loader.js"></script>
     
     <!-- Stylesheets -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -783,43 +786,33 @@
     <div id="footer-container"></div>
     
 <script>
-    // Ensure header container exists before any initialization
-    if (!document.getElementById('header-container')) {
-        const headerContainer = document.createElement('div');
-        headerContainer.id = 'header-container';
-        document.body.insertBefore(headerContainer, document.body.firstChild);
+let footerInitialized = false;
+
+// Wait for scripts loaded event  
+window.addEventListener('oslira:scripts:loaded', async () => {
+    // Initialize header first
+    try {
+        await initializeHeader();
+    } catch (error) {
+        console.error('❌ [Status] Header initialization failed:', error);
     }
     
-    // =============================================================================
-    // STATUS PAGE INITIALIZATION
-    // =============================================================================
-        
-        let headerInitialized = false;
-        let footerInitialized = false;
-        
-        // Page initialization
-        document.addEventListener('DOMContentLoaded', async function() {
-            console.log('🚀 [Status] Page loading started...');
-            
-            try {
-                // Load dependencies in parallel
-                await Promise.all([
-                    initializeHeader(),
-                    initializeFooter(),
-                    initializeStatusData()
-                ]);
-                
-                console.log('✅ [Status] Page fully initialized');
-                
-            } catch (error) {
-                console.error('❌ [Status] Page initialization failed:', error);
-            }
-        });
-        
-        // =============================================================================
-        // HEADER INITIALIZATION
-        // =============================================================================
-        
+    if (footerInitialized) {
+        console.log('🔄 [Status] Footer already initialized, skipping...');
+        return;
+    }
+    
+    console.log('🚀 [Status] Scripts loaded event received, initializing footer...');
+    try {
+        footerInitialized = true;
+        await initializeFooter();
+        await initializeStatusData();
+    } catch (error) {
+        console.error('❌ [Status] Footer initialization failed:', error);
+        footerInitialized = false;
+    }
+});
+
 async function initializeHeader() {
     try {
         if (document.querySelector('.home-nav')) {
@@ -865,11 +858,7 @@ async function initializeHeader() {
         console.error('❌ [Status] Header initialization failed:', error);
     }
 }
-        
-        // =============================================================================
-        // FOOTER INITIALIZATION
-        // =============================================================================
-        
+
 async function initializeFooter() {
     try {
         // Check if footer already exists
@@ -916,11 +905,7 @@ async function initializeFooter() {
         console.error('❌ [Status] Footer initialization failed:', error);
     }
 }
-        
-        // =============================================================================
-        // STATUS DATA INITIALIZATION
-        // =============================================================================
-        
+
 async function initializeStatusData() {
     try {
         console.log('📊 [Status] Initializing status data...');
@@ -939,11 +924,7 @@ async function initializeStatusData() {
         showFallbackData();
     }
 }
-        
-        // =============================================================================
-        // STATUS DATA REFRESH
-        // =============================================================================
-        
+
 async function refreshStatusData() {
     try {
         console.log('🔄 [Status] Refreshing status data...');
@@ -985,16 +966,16 @@ async function fetchUptimeRobotData() {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-body: new URLSearchParams({
-    'api_key': UPTIME_ROBOT_CONFIG.apiKey,
-    'format': 'json',
-    'logs': '1',
-    'logs_limit': '50',
-    'response_times': '1',
-    'response_times_limit': '30',
-    'all_time_uptime_ratio': '1',
-    'custom_uptime_ratio': '1-7-30'
-})
+            body: new URLSearchParams({
+                'api_key': UPTIME_ROBOT_CONFIG.apiKey,
+                'format': 'json',
+                'logs': '1',
+                'logs_limit': '50',
+                'response_times': '1',
+                'response_times_limit': '30',
+                'all_time_uptime_ratio': '1',
+                'custom_uptime_ratio': '1-7-30'
+            })
         });
         
         if (!response.ok) {
@@ -1008,8 +989,8 @@ body: new URLSearchParams({
         }
         
         console.log('✅ [Status] UptimeRobot data fetched successfully');
-updateStatusFromUptimeRobot(data.monitors);
-updateIncidentTimeline(data.monitors);
+        updateStatusFromUptimeRobot(data.monitors);
+        updateIncidentTimeline(data.monitors);
         
     } catch (error) {
         console.error('❌ [Status] Failed to fetch UptimeRobot data:', error);
@@ -1184,77 +1165,17 @@ function showFallbackData() {
     console.log('📊 [Status] Showing fallback data due to API failure');
     // Keep existing static data as fallback
 }
-        
-        // =============================================================================
-        // UTILITY FUNCTIONS
-        // =============================================================================
-        
-        function updateServiceStatus(serviceId, status, metrics = {}) {
-            const serviceCard = document.querySelector(`[data-service="${serviceId}"]`);
-            if (!serviceCard) return;
-            
-            const statusElement = serviceCard.querySelector('.service-status');
-            const statusClasses = ['operational', 'degraded', 'outage'];
-            
-            // Remove existing status classes
-            statusClasses.forEach(cls => statusElement.classList.remove(cls));
-            
-            // Add new status class
-            statusElement.classList.add(status);
-            
-            // Update status text and icon
-            const statusText = {
-                'operational': { text: 'Operational', icon: 'fas fa-check-circle' },
-                'degraded': { text: 'Degraded', icon: 'fas fa-exclamation-triangle' },
-                'outage': { text: 'Outage', icon: 'fas fa-times-circle' }
-            };
-            
-            if (statusText[status]) {
-                statusElement.innerHTML = `
-                    <i class="${statusText[status].icon}"></i>
-                    ${statusText[status].text}
-                `;
-            }
-            
-            // Update metrics if provided
-            if (metrics.uptime) {
-                const uptimeElement = serviceCard.querySelector('.metric-value');
-                if (uptimeElement) uptimeElement.textContent = metrics.uptime;
-            }
-            
-            if (metrics.response) {
-                const responseElements = serviceCard.querySelectorAll('.metric-value');
-                if (responseElements[1]) responseElements[1].textContent = metrics.response;
-            }
-        }
-        
-        function addIncident(incident) {
-            const timeline = document.querySelector('.incident-timeline');
-            if (!timeline) return;
-            
-            const incidentHTML = `
-<div class="incident-timeline" id="incident-timeline">
-    <!-- Real incidents will be populated by JavaScript -->
-</div>
-            `;
-            
-            timeline.insertAdjacentHTML('afterbegin', incidentHTML);
-        }
-        
-        // Make functions available globally for debugging
-        window.debugStatus = {
-            updateServiceStatus,
-            addIncident,
-            refreshStatusData,
-            getInitializationStatus: () => ({
-                header: headerInitialized,
-                footer: footerInitialized
-            })
-        };
-        
-        console.log('📊 [Status] Status page script loaded');
-        
-    </script>
+
+// Make functions available globally for debugging
+window.debugStatus = {
+    refreshStatusData,
+    getInitializationStatus: () => ({
+        footer: footerInitialized
+    })
+};
+
+console.log('📊 [Status] Status page script loaded');
+</script>
     
 </body>
 </html>
