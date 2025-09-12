@@ -28,7 +28,7 @@ export async function handleAnalyze(c: Context): Promise<Response> {
       fetchBusinessProfile(business_id, user_id, c.env)
     ]);
     
-    const creditCost = analysis_type === 'deep' ? 2 : 1;
+    const creditCost = analysis_type === 'xray' ? 3 : (analysis_type === 'deep' ? 2 : 1);
     if (userResult.credits < creditCost) {
       return c.json(createStandardResponse(
         false, 
