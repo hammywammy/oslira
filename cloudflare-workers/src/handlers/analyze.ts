@@ -1,77 +1,73 @@
-import type { Context } from 'hono';
-import type { Env, AnalysisRequest, ProfileData, BusinessProfile, AnalysisResult, User } from '../types/interfaces.js';
+import { Context } from 'hono';
+import type { Env, AnalysisRequest, ProfileData, AnalysisResult } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
+import { validateUser } from '../services/user-manager.js';
 import { normalizeRequest } from '../utils/validation.js';
-import { fetchUserAndCredits, fetchBusinessProfile, saveLeadAndAnalysis, updateCreditsAndTransaction } from '../services/database.js';
-import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
-import { performAIAnalysis, generateOutreachMessage } from '../services/ai-analysis.js';
-import { calculateConfidenceLevel } from '../utils/validation.js';
-import { getEnvironment } from '../utils/env.js';
+import { saveCompleteAnalysis, updateCreditsAndTransaction } from '../services/database.js';
 
-export async function handleAnalyze(c: Context): Promise<Response> {
+export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
-    const body = await c.req.json();
-    const data = normalizeRequest(body);
-    const { username, analysis_type, business_id, user_id, profile_url } = data;
-    
-    logger('info', 'Enterprise analysis request started', { 
+    logger('info', 'Analysis request received', { requestId });
+
+    // Parse and validate request
+    const body = await c.req.json() as AnalysisRequest;
+    const { profile_url, username, analysis_type, business_id, user_id } = normalizeRequest(body);
+
+    logger('info', 'Request validated', { 
+      requestId, 
       username, 
-      analysisType: analysis_type, 
-      requestId
+      analysis_type, 
+      business_id 
     });
-    
-    const [userResult, business] = await Promise.all([
-      fetchUserAndCredits(user_id, c.env),
-      fetchBusinessProfile(business_id, user_id, c.env)
-    ]);
-    
-    const creditCost = analysis_type === 'xray' ? 3 : (analysis_type === 'deep' ? 2 : 1);
+
+    // Validate user and check credits
+    const userResult = await validateUser(user_id, c.env);
+    if (!userResult.isValid) {
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        userResult.error, 
+        requestId
+      ), 400);
+    }
+
+    // Check credit requirements
+    const creditCost = analysis_type === 'deep' ? 2 : analysis_type === 'xray' ? 3 : 1;
     if (userResult.credits < creditCost) {
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        'Insufficient credits', 
+        `Insufficient credits. Need ${creditCost}, have ${userResult.credits}`, 
         requestId
       ), 402);
     }
-    
-    // SCRAPE PROFILE
+
+    logger('info', 'User validation passed', { 
+      userId: user_id, 
+      credits: userResult.credits, 
+      creditCost 
+    });
+
+    // SCRAPE PROFILE DATA
     let profileData: ProfileData;
     try {
       logger('info', 'Starting profile scraping', { username });
-      profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-      logger('info', 'Profile scraped successfully', { 
-        username: profileData.username, 
-        followers: profileData.followersCount,
-        postsFound: profileData.latestPosts?.length || 0,
-        hasRealEngagement: (profileData.engagement?.postsAnalyzed || 0) > 0,
-        dataQuality: profileData.dataQuality,
-        scraperUsed: profileData.scraperUsed
+      const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
+      profileData = await scrapeInstagramProfile(profile_url, c.env);
+      logger('info', 'Profile scraping completed', { 
+        username: profileData.username,
+        followersCount: profileData.followersCount,
+        dataQuality: profileData.dataQuality
       });
     } catch (scrapeError: any) {
-      logger('error', 'Profile scraping failed', { 
-        username, 
-        error: scrapeError.message 
-      });
-      
-      let errorMessage = 'Failed to retrieve profile data';
-      if (scrapeError.message.includes('not found')) {
-        errorMessage = 'Instagram profile not found';
-      } else if (scrapeError.message.includes('private')) {
-        errorMessage = 'This Instagram profile is private';
-      } else if (scrapeError.message.includes('rate limit') || scrapeError.message.includes('429')) {
-        errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
-      } else if (scrapeError.message.includes('timeout')) {
-        errorMessage = 'Profile scraping timed out. Please try again.';
-      }
-      
+      logger('error', 'Profile scraping failed', { error: scrapeError.message });
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        errorMessage, 
+        `Profile scraping failed: ${scrapeError.message}`, 
         requestId
       ), 500);
     }
@@ -79,120 +75,75 @@ export async function handleAnalyze(c: Context): Promise<Response> {
     // AI ANALYSIS
     let analysisResult: AnalysisResult;
     try {
-      logger('info', 'Starting AI analysis');
-      analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
+      logger('info', 'Starting AI analysis', { analysis_type, username: profileData.username });
+      const { performAIAnalysis } = await import('../services/ai-analysis.js');
+      analysisResult = await performAIAnalysis(profileData, analysis_type, user_id, c.env);
       logger('info', 'AI analysis completed', { 
         score: analysisResult.score,
-        engagementScore: analysisResult.engagement_score,
-        nicheFit: analysisResult.niche_fit,
-        confidence: analysisResult.confidence_level,
-        hasQuickSummary: !!analysisResult.quick_summary,
-        hasDeepSummary: !!analysisResult.deep_summary
+        confidence: analysisResult.confidence_level
       });
-    } catch (aiError: any) {
-      logger('error', 'AI analysis failed', { error: aiError.message });
+    } catch (analysisError: any) {
+      logger('error', 'AI analysis failed', { error: analysisError.message });
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        'AI analysis failed', 
+        `AI analysis failed: ${analysisError.message}`, 
         requestId
       ), 500);
     }
 
-    // GENERATE OUTREACH MESSAGE FOR DEEP ANALYSIS
-    let outreachMessage = '';
-    if (analysis_type === 'deep') {
-      try {
-        logger('info', 'Generating outreach message');
-        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-        logger('info', 'Outreach message generated', { length: outreachMessage.length });
-      } catch (messageError: any) {
-        logger('warn', 'Message generation failed (non-fatal)', { error: messageError.message });
-      }
-    }
-
-    // PREPARE LEAD DATA
+    // PREPARE DATA FOR NEW SCHEMA
     const leadData = {
-      user_id: user_id,
-      business_id: business_id,
+      user_id,
+      business_id,
       username: profileData.username,
-      platform: 'instagram',
-      profile_url: profile_url,
-      profile_pic_url: profileData.profilePicUrl || null,
-      score: analysisResult.score || 0,
-      analysis_type: analysis_type,
-      followers_count: profileData.followersCount || 0,
-      created_at: new Date().toISOString(),
-      quick_summary: analysisResult.quick_summary || null,
-      env: getEnvironment(c.env)
+      full_name: profileData.displayName,
+      profile_pic_url: profileData.profilePicUrl,
+      bio: profileData.bio,
+      external_url: profileData.externalUrl,
+      followers_count: profileData.followersCount,
+      following_count: profileData.followingCount,
+      posts_count: profileData.postsCount,
+      is_verified: profileData.isVerified,
+      is_private: profileData.isPrivate,
+      is_business_account: profileData.isBusinessAccount || false,
+      profile_url
     };
 
-    // PREPARE ANALYSIS DATA FOR DEEP ANALYSIS
+    // Prepare analysis data based on type
     let analysisData = null;
-    if (analysis_type === 'deep') {
+    if (analysis_type === 'deep' || analysis_type === 'xray') {
       analysisData = {
-        user_id: user_id,
-        username: profileData.username,
-        analysis_type: 'deep',
-        score: analysisResult.score || 0,
-        engagement_score: analysisResult.engagement_score || 0,
-        score_niche_fit: analysisResult.niche_fit || 0,
-        score_total: analysisResult.score || 0,
-        niche_fit: analysisResult.niche_fit || 0,
+        ...analysisResult,
+        // Engagement data from scraping
         avg_likes: profileData.engagement?.avgLikes || 0,
         avg_comments: profileData.engagement?.avgComments || 0,
         engagement_rate: profileData.engagement?.engagementRate || 0,
-        audience_quality: analysisResult.audience_quality || 'Unknown',
-        engagement_insights: analysisResult.engagement_insights || 'No insights available',
-        selling_points: Array.isArray(analysisResult.selling_points) ? 
-          analysisResult.selling_points : 
-          (analysisResult.selling_points ? [analysisResult.selling_points] : null),
-        reasons: Array.isArray(analysisResult.reasons) ? analysisResult.reasons : 
-          (Array.isArray(analysisResult.selling_points) ? analysisResult.selling_points : null),
-        latest_posts: (profileData.latestPosts?.length || 0) > 0 ? 
-          JSON.stringify(profileData.latestPosts.slice(0, 12)) : null,
+        
+        // Structured data
+        latest_posts: profileData.latestPosts ? JSON.stringify(profileData.latestPosts) : null,
         engagement_data: profileData.engagement ? JSON.stringify({
-          avgLikes: profileData.engagement.avgLikes,
-          avgComments: profileData.engagement.avgComments,
-          engagementRate: profileData.engagement.engagementRate,
-          totalEngagement: profileData.engagement.totalEngagement,
-          postsAnalyzed: profileData.engagement.postsAnalyzed,
-          dataQuality: profileData.dataQuality,
-          scraperUsed: profileData.scraperUsed,
-          dataSource: 'real_scraped_data',
-          calculationMethod: 'manual_averaging_from_posts'
-        }) : JSON.stringify({
-          dataSource: 'no_real_data_available',
-          reason: 'scraping_failed_or_private_account',
-          scraperUsed: profileData.scraperUsed,
-          estimatedData: false
-        }),
-        analysis_data: JSON.stringify({
-          confidence_level: analysisResult.confidence_level || calculateConfidenceLevel(profileData, analysis_type),
-          scraper_used: profileData.scraperUsed,
-          data_quality: profileData.dataQuality,
-          posts_found: profileData.latestPosts?.length || 0,
-          posts_with_engagement: profileData.latestPosts?.filter(p => p.likesCount > 0 || p.commentsCount > 0).length || 0,
-          real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0,
-          follower_count: profileData.followersCount,
-          verification_status: profileData.isVerified,
-          account_type: profileData.isPrivate ? 'private' : 'public',
-          analysis_timestamp: new Date().toISOString(),
-          ai_model_used: 'gpt-5'
-        }),
-        outreach_message: outreachMessage || null,
-        deep_summary: analysisResult.deep_summary || null,
-        env: getEnvironment(c.env),
-        created_at: new Date().toISOString()
+          avg_likes: profileData.engagement.avgLikes,
+          avg_comments: profileData.engagement.avgComments,
+          engagement_rate: profileData.engagement.engagementRate,
+          posts_analyzed: profileData.engagement.postsAnalyzed,
+          data_source: 'real_scraped_calculation'
+        }) : null,
+        
+        // Analysis metadata
+        analysis_timestamp: new Date().toISOString(),
+        ai_model_used: 'gpt-4o',
+        scraperUsed: profileData.scraperUsed,
+        dataQuality: profileData.dataQuality
       };
     }
 
-    // SAVE TO DATABASE
-    let lead_id: string;
+    // SAVE TO DATABASE (NEW 3-TABLE STRUCTURE)
+    let run_id: string;
     try {
-      logger('info', 'Saving data to database');
-      lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
-      logger('info', 'Database save successful', { lead_id });
+      logger('info', 'Saving complete analysis to new schema');
+      run_id = await saveCompleteAnalysis(leadData, analysisData, analysis_type, c.env);
+      logger('info', 'Database save successful', { run_id });
     } catch (saveError: any) {
       logger('error', 'Database save failed', { error: saveError.message });
       return c.json(createStandardResponse(
@@ -212,7 +163,7 @@ export async function handleAnalyze(c: Context): Promise<Response> {
         `${analysis_type} analysis for @${profileData.username}`,
         'use',
         c.env,
-        lead_id
+        run_id // Use run_id instead of lead_id
       );
       logger('info', 'Credits updated successfully', { 
         creditCost, 
@@ -228,9 +179,9 @@ export async function handleAnalyze(c: Context): Promise<Response> {
       ), 500);
     }
 
-    // PREPARE RESPONSE
+    // PREPARE RESPONSE (Updated for new schema)
     const responseData = {
-      lead_id,
+      run_id, // Return run_id instead of lead_id
       profile: {
         username: profileData.username,
         displayName: profileData.displayName,
@@ -241,19 +192,21 @@ export async function handleAnalyze(c: Context): Promise<Response> {
         scraperUsed: profileData.scraperUsed
       },
       analysis: {
-        score: analysisResult.score,
+        overall_score: analysisResult.score, // Updated field name
+        niche_fit_score: analysisResult.niche_fit, // Updated field name
+        engagement_score: analysisResult.engagement_score,
         type: analysis_type,
         confidence_level: analysisResult.confidence_level,
-        quick_summary: analysisResult.quick_summary,
+        summary_text: analysisResult.quick_summary, // Updated field name
+        
+        // Include detailed data for deep/xray analyses
         ...(analysis_type === 'deep' && {
-          engagement_score: analysisResult.engagement_score,
-          niche_fit: analysisResult.niche_fit,
           audience_quality: analysisResult.audience_quality,
           selling_points: analysisResult.selling_points,
           reasons: analysisResult.reasons,
-          outreach_message: outreachMessage,
           deep_summary: analysisResult.deep_summary,
-          engagement_data: profileData.engagement ? {
+          outreach_message: analysisData?.outreach_message || null,
+          engagement_breakdown: profileData.engagement ? {
             avg_likes: profileData.engagement.avgLikes,
             avg_comments: profileData.engagement.avgComments,
             engagement_rate: profileData.engagement.engagementRate,
@@ -265,18 +218,29 @@ export async function handleAnalyze(c: Context): Promise<Response> {
             avg_comments: 0,
             engagement_rate: 0
           }
+        }),
+        
+        ...(analysis_type === 'xray' && {
+          copywriter_profile: analysisData?.copywriter_profile || {},
+          commercial_intelligence: analysisData?.commercial_intelligence || {},
+          persuasion_strategy: analysisData?.persuasion_strategy || {}
         })
       },
       credits: {
         used: creditCost,
         remaining: userResult.credits - creditCost
+      },
+      metadata: {
+        request_id: requestId,
+        analysis_completed_at: new Date().toISOString(),
+        schema_version: '3.0' // Indicate new schema version
       }
     };
 
     logger('info', 'Analysis completed successfully', { 
-      lead_id, 
+      run_id, 
       username: profileData.username, 
-      score: analysisResult.score,
+      overall_score: analysisResult.score,
       confidence: analysisResult.confidence_level,
       dataQuality: profileData.dataQuality
     });
