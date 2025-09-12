@@ -134,6 +134,11 @@ this.coreScripts = [
     requiresAuth: false,
     enableTailwind: true
 },
+'status': {
+    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+    requiresAuth: false,
+    enableTailwind: true
+},
 'disclaimer': {
     scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
     requiresAuth: false,
