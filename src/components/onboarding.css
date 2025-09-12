@@ -485,4 +485,50 @@
       @apply bg-white border border-gray-300;
     }
   }
+  /* =============================================================================
+   VALIDATION ERROR STYLES
+   ============================================================================= */
+
+.field-error {
+    @apply border-red-400 bg-red-50/10;
+}
+
+.validation-error {
+    @apply text-red-300 text-sm mt-2 flex items-center gap-2;
+}
+
+.validation-error::before {
+    content: '⚠️';
+}
+
+.has-error .onboarding-form-label {
+    @apply text-red-300;
+}
+
+.choice-required-highlight {
+    @apply ring-2 ring-red-400 ring-opacity-75 animate-pulse;
+}
+
+.validation-notification {
+    @apply bg-red-500/20 border border-red-400/50 rounded-lg p-4 mb-6 flex items-center gap-3 animate-slideInDown;
+}
+
+.validation-notification i {
+    @apply text-red-300 text-lg;
+}
+
+.validation-notification span {
+    @apply text-red-200 font-medium;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 }
