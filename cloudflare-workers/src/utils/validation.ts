@@ -55,9 +55,9 @@ export function normalizeRequest(body: AnalysisRequest) {
   const user_id = body.user_id;
 
   if (!profile_url) errors.push('profile_url or username is required');
-  if (!analysis_type || !['light', 'deep'].includes(analysis_type)) {
-    errors.push('analysis_type must be "light" or "deep"');
-  }
+if (!analysis_type || !['light', 'deep', 'xray'].includes(analysis_type)) {
+  errors.push('analysis_type must be "light", "deep", or "xray"');
+}
   if (!business_id) errors.push('business_id is required');
   if (!user_id) errors.push('user_id is required');
 
