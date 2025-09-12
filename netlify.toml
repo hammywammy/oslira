@@ -22,8 +22,7 @@
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://oslira.org https://*.oslira.org;
       font-src 'self' https://fonts.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com https://oslira.org https://*.oslira.org;
       img-src 'self' data: https: blob: https://images.weserv.nl https://ui-avatars.com https://oslira.org https://*.oslira.org;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://*.sentry.io https://api.oslira.com https://api-staging.oslira.com https://unpkg.com https://oslira.org https://*.oslira.org;
-      frame-src https://js.stripe.com https://oslira.org https://*.oslira.org;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://*.sentry.io https://api.oslira.com https://api-staging.oslira.com https://unpkg.com https://oslira.org https://*.oslira.org https://api.uptimerobot.com
       object-src 'none';
       base-uri 'self';
       form-action 'self' https://*.stripe.com https://oslira.org https://*.oslira.org;
