@@ -75,7 +75,7 @@ if (isAuthenticated) {
 // Define page requirements
         const authRequiredPages = ['dashboard', 'onboarding', 'analytics', 'settings', 'subscription'];
         const authOnlyPages = ['auth', 'auth-callback'];
-        const publicPages = ['home']; // Pages where authenticated users can stay
+const publicPages = ['home', 'status', 'about', 'api-docs', 'case-studies', 'guides', 'help', 'pricing', 'security-page', 'privacy', 'terms', 'refund', 'disclaimer']; // Pages where authenticated users can stay
         
         // Skip access control entirely for public pages
         if (publicPages.includes(this.currentPage)) {
@@ -242,7 +242,7 @@ const { data: userData, error } = await this.auth.supabase()
             return null;
         }
     }
-}}
+}
 
 // Only create if not already exists
 if (typeof window.OsliraSimpleApp === 'undefined') {
