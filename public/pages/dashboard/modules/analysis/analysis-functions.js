@@ -64,9 +64,10 @@ class AnalysisFunctions {
         showErrorModal(error.message);
     }
 }
+    
 
 // File Path: public/pages/dashboard/modules/analysis/analysis-functions.js
-// Replace the buildAnalysisModalHTML method completely
+// Replace ONLY the buildAnalysisModalHTML method
 
 buildAnalysisModalHTML(lead, analysisData, leadId) {
     const modalContent = document.getElementById('modalContent');
@@ -109,6 +110,8 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
     
     modalContent.innerHTML = `
         <style>
+            /* ONLY ADDING your requested changes to existing styles */
+            
             /* Score count-up animation from 0 to final score */
             .score-count-up {
                 animation: scoreCountUp 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
@@ -320,16 +323,16 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                             </div>
                         </div>
                         
-                        <!-- Animated Score Ring - with synced count-up animation -->
+                        <!-- Animated Score Ring - with count-up animation -->
                         <div class="relative">
                             <div class="w-32 h-32 relative hover-3d">
                                 <!-- Background circle -->
                                 <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
                                     <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"/>
-                                    <circle id="scoreRing" cx="50" cy="50" r="40" stroke="white" stroke-width="8" fill="none"
-                                            stroke-dasharray="251.2"
-                                            stroke-dashoffset="251.2"
-                                            stroke-linecap="round"/>
+<circle id="scoreRing" cx="50" cy="50" r="40" stroke="white" stroke-width="8" fill="none"
+        stroke-dasharray="251.2"
+        stroke-dashoffset="251.2"
+        stroke-linecap="round"/>
                                 </svg>
                                 <div class="absolute inset-0 flex items-center justify-center">
                                     <div class="text-center">
@@ -365,10 +368,13 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
             <!-- Content with Advanced Animations - ALL your exact styling preserved -->
             <div class="p-8 space-y-8 bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
                 ${isDeepAnalysis ? `
-                    <!-- Deep Analysis sections - keeping all your original styling -->
+                    <!-- Animated Metrics Grid - with stagger -->
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-3 stagger-reveal" style="animation-delay: 0.3s;">
+                        <!-- Engagement Card -->
                         <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-pink-50 to-rose-100 p-6 shadow-2xl border border-pink-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
+                            <!-- Floating gradient orb -->
                             <div class="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite;"></div>
+                            
                             <div class="relative z-10">
                                 <div class="flex items-center justify-between mb-4">
                                     <div class="p-3 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl shadow-lg group-hover:rotate-12 transition-transform duration-500">
@@ -377,36 +383,196 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                         </svg>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent count-up">${analysisData?.engagement_score || 0}</div>
+                                        <div class="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent count-up">${analysisData.engagement_score || 0}</div>
                                         <div class="text-sm text-pink-600/80">Engagement</div>
                                     </div>
                                 </div>
+                                
                                 <h3 class="text-lg font-bold text-gray-900 mb-3">Engagement Metrics</h3>
                                 <div class="space-y-2">
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-600">Avg. Likes</span>
-                                        <span class="font-bold text-pink-700 count-up">${(analysisData?.avg_likes || 0).toLocaleString()}</span>
+                                        <span class="font-bold text-pink-700 count-up">${(analysisData.avg_likes || 0).toLocaleString()}</span>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-600">Avg. Comments</span>
-                                        <span class="font-bold text-pink-700 count-up">${(analysisData?.avg_comments || 0).toLocaleString()}</span>
+                                        <span class="font-bold text-pink-700 count-up">${(analysisData.avg_comments || 0).toLocaleString()}</span>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-600">Rate</span>
-                                        <span class="font-bold text-pink-700 count-up">${analysisData?.engagement_rate ? analysisData.engagement_rate.toFixed(2) + '%' : 'N/A'}</span>
+                                        <span class="font-bold text-pink-700 count-up">${analysisData?.engagement_rate ? `${analysisData.engagement_rate.toFixed(2)}%` : 'N/A'}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Continue with all your other deep analysis sections... -->
-                        <div class="text-center p-8 text-gray-500">
-                            [Keeping all your other deep analysis sections exactly as they were]
+                        <!-- Niche Fit Card -->
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-100 p-6 shadow-2xl border border-blue-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
+                            <div class="absolute -top-4 -left-4 w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 1s;"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                                        <svg class="w-6 h-6 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent count-up">${analysisData.score_niche_fit || 0}</div>
+                                        <div class="text-sm text-blue-600/80">Niche Fit</div>
+                                    </div>
+                                </div>
+                                
+                                <h3 class="text-lg font-bold text-gray-900 mb-3">Target Alignment</h3>
+                                <div class="space-y-3">
+                                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-2000 ease-out" 
+                                             style="width: ${analysisData.score_niche_fit || 0}%; animation-delay: 1s;"></div>
+                                    </div>
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-600">Audience Quality</span>
+                                        <span class="px-2 py-1 rounded-full text-xs font-bold ${
+                                            analysisData.audience_quality === 'High' ? 'bg-green-500 text-white' :
+                                            analysisData.audience_quality === 'Medium' ? 'bg-yellow-500 text-white' :
+                                            'bg-red-500 text-white'
+                                        }">${analysisData.audience_quality || 'Unknown'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Followers Card -->
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-50 to-emerald-100 p-6 shadow-2xl border border-green-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
+                            <div class="absolute -bottom-4 -right-4 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 2s;"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                                        <svg class="w-6 h-6 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent count-up">${(lead.followers_count || 0) > 1000 ? ((lead.followers_count || 0) / 1000).toFixed(1) + 'K' : (lead.followers_count || 0)}</div>
+                                        <div class="text-sm text-green-600/80">Followers</div>
+                                    </div>
+                                </div>
+                                
+                                <h3 class="text-lg font-bold text-gray-900 mb-3">Reach Potential</h3>
+                                <div class="space-y-2">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Category</span>
+                                        <span class="px-2 py-1 rounded-full text-xs font-bold ${
+                                            (lead.followers_count || 0) >= 10000 ? 'bg-purple-500 text-white' :
+                                            (lead.followers_count || 0) >= 1000 ? 'bg-blue-500 text-white' :
+                                            'bg-gray-500 text-white'
+                                        }">${(lead.followers_count || 0) >= 10000 ? 'Macro' : (lead.followers_count || 0) >= 1000 ? 'Micro' : 'Nano'}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-600">Engagement Rate</span>
+                                        <span class="font-bold text-green-700">${analysisData?.engagement_rate ? `${analysisData.engagement_rate.toFixed(2)}%` : 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    
+                    <!-- AI Summary with Morphing Border - with stagger -->
+                    <div class="group relative overflow-hidden rounded-3xl bg-white p-8 shadow-2xl border-2 border-transparent bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-border hover-3d stagger-reveal" style="animation-delay: 0.4s;">
+                        <div class="absolute inset-[2px] bg-white rounded-3xl"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center space-x-4 mb-6">
+                                <div class="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                    <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                    </svg>
+                                </div>
+                                <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">AI Analysis Summary</h3>
+                            </div>
+                            <p class="text-gray-700 leading-relaxed text-lg font-light">${summaryText || 'No analysis summary available for this lead.'}</p>
+                        </div>
+                    </div>
+                    
+                    ${analysisData.selling_points && analysisData.selling_points.length > 0 ? `
+<!-- Selling Points with Staggered Animation -->
+                        <div class="group rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-100 p-8 shadow-2xl border border-yellow-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.5s;">
+                            <div class="flex items-center space-x-4 mb-6">
+                                <div class="p-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                    <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                                <h3 class="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">Key Selling Points</h3>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${analysisData.selling_points.map((point, index) => `
+                                    <div class="group/item flex items-start space-x-4 p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-yellow-200/50 hover-3d shimmer-effect transition-all duration-500 hover:bg-white hover:shadow-xl count-up" style="animation-delay: ${0.6 + (index * 0.1)}s;">
+                                        <div class="w-10 h-10 bg-gradient-to-br from-yellow-500 to-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-lg">
+                                            ${index + 1}
+                                        </div>
+                                        <span class="text-gray-700 font-medium leading-relaxed">${point}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${analysisData.outreach_message ? `
+                        <!-- Outreach Message with Glowing Border -->
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 to-pink-100 p-8 shadow-2xl border-2 border-purple-200/50 hover-3d stagger-reveal" style="animation-delay: 0.6s;">
+                            <!-- Animated border gradient -->
+                            <div class="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-1000"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex items-center justify-between mb-6">
+                                    <div class="flex items-center space-x-4">
+                                        <div class="p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                            <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.405L3 21l2.595-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
+                                            </svg>
+                                        </div>
+                                        <h3 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Ready-to-Send Message</h3>
+                                    </div>
+                                    <button onclick="copyOutreachMessage()" class="group/btn relative overflow-hidden px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 shimmer-effect">
+                                        <span class="relative z-10 flex items-center space-x-2">
+                                            <svg class="w-5 h-5 group-hover/btn:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                            </svg>
+                                            <span>Copy Message</span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border-2 border-purple-200/50 shadow-inner">
+                                    <p class="text-gray-700 leading-relaxed text-lg font-light" id="outreachMessage">${analysisData.outreach_message}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${analysisData.engagement_insights ? `
+                        <!-- Insights with Floating Elements -->
+                        <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-50 to-cyan-100 p-8 shadow-2xl border border-teal-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.7s;">
+                            <!-- Floating geometric shapes -->
+                            <div class="absolute top-4 right-4 w-8 h-8 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full opacity-30 group-hover:scale-150 transition-transform duration-1000" style="animation: float 4s ease-in-out infinite;"></div>
+                            <div class="absolute bottom-8 left-8 w-6 h-6 bg-gradient-to-br from-cyan-400 to-teal-500 rotate-45 opacity-20 group-hover:rotate-180 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 1s;"></div>
+                            
+                            <div class="relative z-10">
+                                <div class="flex items-center space-x-4 mb-6">
+                                    <div class="p-4 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                        <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-2xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">Pro Insights</h3>
+                                </div>
+                                <p class="text-gray-700 leading-relaxed text-lg font-light">${analysisData.engagement_insights}</p>
+                            </div>
+                        </div>
+                    ` : ''}
                 ` : `
                     <!-- Light Analysis with Animated Elements -->
                     <div class="group relative overflow-hidden rounded-3xl bg-white p-12 shadow-2xl border-2 border-blue-200/50 text-center hover-3d stagger-reveal" style="animation-delay: 0.3s;">
+                        <!-- Pulsing background orbs -->
                         <div class="absolute top-8 left-8 w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full opacity-10 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite;"></div>
                         <div class="absolute bottom-8 right-8 w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full opacity-10 group-hover:scale-150 transition-transform duration-1000" style="animation: float 4s ease-in-out infinite; animation-delay: 1s;"></div>
                         
@@ -419,6 +585,9 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                             <h3 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent count-up">Light Analysis Complete</h3>
                             <p class="text-gray-600 text-lg font-light max-w-2xl mx-auto count-up" style="animation-delay: 0.3s;">
                                 ${summaryText || 'Basic profile analysis shows potential for outreach.'}
+                            </p>
+                            <p class="text-gray-500 max-w-xl mx-auto count-up" style="animation-delay: 0.6s;">
+                                For detailed engagement metrics, audience insights, and personalized outreach messages, run a deep analysis.
                             </p>
                             <button onclick="startDeepAnalysis('${lead.username}')" class="group/btn relative overflow-hidden px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-500 shimmer-effect count-up" style="animation-delay: 0.9s;">
                                 <span class="relative z-10 flex items-center space-x-3">
@@ -433,8 +602,14 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                 `}
             </div>
             
-            <!-- Footer -->
+            <!-- Enhanced Footer with Glassmorphism -->
             <div class="relative bg-gradient-to-r from-slate-100 via-gray-100 to-slate-100 px-8 py-6 border-t border-gray-200/50 backdrop-blur-sm stagger-reveal" style="animation-delay: 0.8s;">
+                <!-- Subtle floating particles -->
+                <div class="absolute inset-0 overflow-hidden opacity-30">
+                    <div class="absolute top-2 left-1/4 w-1 h-1 bg-blue-400 rounded-full" style="animation: float 3s ease-in-out infinite;"></div>
+                    <div class="absolute bottom-2 right-1/3 w-1 h-1 bg-purple-400 rounded-full" style="animation: float 4s ease-in-out infinite; animation-delay: 1s;"></div>
+                </div>
+                
                 <div class="relative z-10 flex flex-col sm:flex-row gap-4 justify-between items-center">
                     <div class="flex gap-4">
                         <button onclick="contactLead('${lead.username}', '${lead.profile_url || ''}')" 
@@ -467,21 +642,30 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
         </div>
     `;
     
-    // Initialize score count-up and circle animation together
+    // Initialize score count-up animation and staggered reveals
     setTimeout(() => {
-        const scoreDisplay = document.getElementById('scoreDisplay');
-        const scoreRing = document.getElementById('scoreRing');
-        
-        if (scoreDisplay && scoreRing) {
-            console.log('Starting synced score animation:', mainScore);
-            this.animateScoreAndCircle(scoreDisplay, scoreRing, mainScore);
-        }
-        
+            const scoreDisplay = document.getElementById('scoreDisplay');
+    const scoreRing = document.getElementById('scoreRing');
+    
+    if (scoreDisplay && scoreRing) {
+        this.animateScoreAndCircle(scoreDisplay, scoreRing, mainScore);
+    }
+
         // Initialize staggered reveals
         const staggerElements = modalContent.querySelectorAll('.stagger-reveal');
         staggerElements.forEach((el, index) => {
+            // Parse existing animation delay or use index-based delay
             const currentDelay = el.style.animationDelay || `${index * 0.1}s`;
             el.style.animationDelay = currentDelay;
+        });
+        
+        // Trigger count-up animations
+        const countElements = modalContent.querySelectorAll('.count-up');
+        countElements.forEach((el, index) => {
+            setTimeout(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, index * 100);
         });
         
         // Initialize particle systems
@@ -495,39 +679,33 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
     }, 100);
 }
 
-// New method that syncs score and circle animation
 animateScoreAndCircle(scoreElement, circleElement, targetScore) {
     let currentScore = 0;
-    const duration = 2000; // 2 seconds total
-    const frameDuration = 16; // ~60fps
+    const duration = 2000;
+    const frameDuration = 16;
     const totalFrames = duration / frameDuration;
     const increment = targetScore / totalFrames;
     
-    const circumference = 251.2; // 2 * PI * 40
+    const circumference = 251.2;
     
     const animate = () => {
         currentScore += increment;
         
-        // Clamp to target
         if (currentScore >= targetScore) {
             currentScore = targetScore;
         }
         
-        // Update score text (rounded)
         scoreElement.textContent = Math.round(currentScore);
         
-        // Update circle progress
         const progress = currentScore / 100;
         const offset = circumference * (1 - progress);
         circleElement.style.strokeDashoffset = offset;
         
-        // Continue animation if not done
         if (currentScore < targetScore) {
             requestAnimationFrame(animate);
         }
     };
     
-    // Start animation
     requestAnimationFrame(animate);
 }
 
@@ -1221,5 +1399,4 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
     window.AnalysisFunctions = AnalysisFunctions;
 }
-
 console.log('📄 [AnalysisFunctions] Module loaded');
