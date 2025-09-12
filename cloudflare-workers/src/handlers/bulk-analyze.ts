@@ -74,16 +74,27 @@ export async function handleBulkAnalyze(c: Context): Promise<Response> {
         const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
         
         let outreachMessage = '';
-        if (analysis_type === 'deep') {
-          try {
-            outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-          } catch (messageError: any) {
-            logger('warn', 'Message generation failed for bulk profile', { 
-              username: profile.username, 
-              error: messageError.message 
-            });
-          }
-        }
+if (analysis_type === 'deep') {
+  try {
+    outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+  } catch (messageError: any) {
+    logger('warn', 'Message generation failed for bulk profile', { 
+      username: profile.username, 
+      error: messageError.message 
+    });
+  }
+}
+
+if (analysis_type === 'xray') {
+  try {
+    outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
+  } catch (messageError: any) {
+    logger('warn', 'Message generation failed for bulk profile', { 
+      username: profile.username, 
+      error: messageError.message 
+    });
+  }
+}
 
         const leadData = {
           user_id: user_id,
