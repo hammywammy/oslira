@@ -40,6 +40,7 @@ created_at, updated_at, last_sign_in_at
 NEW INDEXES: idx_users_username_lower (LOWER(username)), idx_users_email (email), idx_users_phone (phone), idx_users_created_via (created_via)
 NEW FUNCTIONS: validate_username() - Enforces 3–20 chars, alphanumeric + underscore/hyphen; get_user_by_username(text) - Username lookup for login
 
+
 BUSINESS_PROFILES (RLS ✅) - UPDATED SCHEMA
 
 id (uuid, PK)
@@ -75,6 +76,7 @@ phone_number (text, nullable) - NEW
 opt_in_sms (boolean, default: false) - NEW
 
 created_at, updated_at - NEW
+
 
 LEADS (RLS ✅) - UPDATED SCHEMA
 
@@ -119,6 +121,7 @@ is_business_account (boolean, default: false)
 created_at (timestamp with time zone, default: now()) - NEW
 
 env (text, nullable) - NEW
+
 
 LEAD_ANALYSES (RLS ✅) - UPDATED SCHEMA
 
@@ -174,6 +177,7 @@ analysis_data (jsonb, default: '{}') - NEW
 
 env (text, nullable) - NEW
 
+
 CREDIT_TRANSACTIONS (RLS ✅) - UPDATED SCHEMA
 
 id (uuid, PK)
@@ -191,6 +195,7 @@ description (text, not null)
 created_at (timestamp with time zone, default: now()) - NEW
 
 env (text, nullable) - NEW
+
 
 PAYMENTS (RLS ✅) - NEW TABLE
 
@@ -213,6 +218,7 @@ failed_at (timestamp with time zone, nullable)
 failure_reason (text, nullable)
 
 created_at (timestamp with time zone, default: now())
+
 
 SUBSCRIPTIONS (RLS ✅) - NEW TABLE
 
