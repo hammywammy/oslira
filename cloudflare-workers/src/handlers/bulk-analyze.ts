@@ -49,7 +49,7 @@ export async function handleBulkAnalyze(c: Context): Promise<Response> {
     const userResult = await fetchUserAndCredits(user_id, c.env);
     const business = await fetchBusinessProfile(business_id, user_id, c.env);
 
-    const costPerProfile = analysis_type === 'deep' ? 2 : 1;
+    const costPerProfile = analysis_type === 'xray' ? 3 : (analysis_type === 'deep' ? 2 : 1);
     const totalCost = validatedProfiles.length * costPerProfile;
     
     if (userResult.credits < totalCost) {
