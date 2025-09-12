@@ -6,134 +6,247 @@
 ## **# SUPABASE DATABASE SCHEMA - UPDATED WITH NEW AUTH SYSTEM**
 
 USERS (RLS ✅) - UPDATED SCHEMA
+
 id (uuid, PK, auth.uid())
-email (text, unique, not null
+
+email (text, unique, not null)
+
 username (varchar(20), unique, nullable) - NEW
+
 phone (varchar(20), nullable) - NEW
+
 full_name (text, nullable) - NEW
+
 created_via (varchar(20), default: 'email') - NEW
+
 phone_verified (boolean, default: false) - NEW
+
 credits (integer, default: 25)
+
 subscription_plan (text, default: 'free')
+
 subscription_status (text, default: 'active')
+
 stripe_customer_id (text, nullable)
+
 onboarding_completed (boolean, default: false)
+
 is_admin (boolean, default: false)
+
 opt_in_sms (boolean, default: false) - NEW
+
 timezone (text, nullable) - NEW
+
 created_at, updated_at, last_sign_in_at
 
 NEW INDEXES:
+
 idx_users_username_lower (LOWER(username))
+
 idx_users_email (email)
+
 idx_users_phone (phone)
+
 idx_users_created_via (created_via)
 
 NEW FUNCTIONS:
+
 validate_username() - Enforces 3–20 chars, alphanumeric + underscore/hyphen
+
 get_user_by_username(text) - Username lookup for login
 
 BUSINESS_PROFILES (RLS ✅) - UPDATED SCHEMA
+
 id (uuid, PK)
+
 user_id (uuid, FK → users.id)
+
 business_name (text, not null)
+
 business_niche (text, not null)
+
 target_audience (text, not null)
+
 target_problems (text, not null)
+
 value_proposition (text, not null)
+
 communication_style (text, not null)
+
 message_example (text, not null)
+
 success_outcome (text, not null)
+
 call_to_action (text, not null)
+
 is_active (boolean, default: true)
+
 primary_objective (text)
+
 summary (text, nullable) - NEW
+
 phone_number (text, nullable) - NEW
+
 opt_in_sms (boolean, default: false) - NEW
+
 created_at, updated_at - NEW
 
 LEADS (RLS ✅) - UPDATED SCHEMA
+
 id (uuid, PK)
+
 user_id (uuid, FK → users.id)
+
 business_id (uuid, FK → business_profiles.id)
+
 username (text, not null)
+
 full_name (text, nullable)
+
 bio (text, nullable)
+
 followers_count (integer, default: 0)
+
 profile_pic_url (text, nullable)
+
 platform (text, default: 'instagram')
+
 analysis_type (text, default: 'light')
+
 score (integer, not null)
+
 profile_url (text, nullable)
+
 quick_summary (text, nullable)
+
 external_url (text, nullable) - NEW
+
 posts_count (integer, nullable)
+
 following_count (integer, nullable)
+
 is_private (boolean, default: false)
+
 is_verified (boolean, default: false)
+
 is_business_account (boolean, default: false)
+
 created_at (timestamp with time zone, default: now()) - NEW
+
 env (text, nullable) - NEW
 
 LEAD_ANALYSES (RLS ✅) - UPDATED SCHEMA
+
 id (uuid, PK)
+
 user_id (uuid, FK → users.id)
+
 business_id (uuid, FK → business_profiles.id)
+
 lead_id (uuid, FK → leads.id)
+
 username (text, not null)
+
 score (integer, default: 0)
+
 deep_summary (text, nullable)
+
 niche_fit (integer, nullable) - NEW
+
 engagement_score (integer, default: 0)
+
 reasons (text[], default: {}) - NEW
+
 selling_points (text[], default: {})
+
 latest_posts (jsonb, default: '[]')
+
 engagement_data (jsonb, default: '{}')
+
 analysis_type (text, default: 'deep') - NEW
+
 analyzed_at (timestamp with time zone, default: now()) - NEW
+
 created_at (timestamp with time zone, default: now()) - NEW
+
 score_niche_fit (integer, default: 0)
+
 score_total (integer, default: 0)
+
 outreach_message (text, nullable)
+
 avg_comments (integer, nullable) - NEW
+
 avg_likes (integer, nullable) - NEW
+
 engagement_rate (numeric, nullable)
+
 audience_quality (text, default: 'Medium')
+
 engagement_insights (text, nullable)
+
 analysis_data (jsonb, default: '{}') - NEW
+
 env (text, nullable) - NEW
 
 CREDIT_TRANSACTIONS (RLS ✅) - UPDATED SCHEMA
+
 id (uuid, PK)
+
 user_id (uuid, FK → users.id)
+
 lead_id (uuid, FK → leads.id, nullable)
+
 amount (integer, not null)
+
 type (text, not null)
+
 description (text, not null)
+
 created_at (timestamp with time zone, default: now()) - NEW
+
 env (text, nullable) - NEW
 
 PAYMENTS (RLS ✅) - NEW TABLE
+
 id (text, PK)
+
 customer_id (text, not null)
+
 subscription_id (text, not null)
+
 amount (integer, not null)
+
 currency (text, not null)
+
 status (text, not null)
+
 paid_at (timestamp with time zone, nullable)
+
 failed_at (timestamp with time zone, nullable)
+
 failure_reason (text, nullable)
+
 created_at (timestamp with time zone, default: now())
 
 SUBSCRIPTIONS (RLS ✅) - NEW TABLE
+
 id (text, PK)
+
 customer_id (text, not null)
+
 status (text, not null)
+
 current_period_start (timestamp with time zone, not null)
+
 current_period_end (timestamp with time zone, not null)
+
 plan_id (text, not null)
+
 cancelled_at (timestamp with time zone, nullable)
+
 created_at (timestamp with time zone, default: now())
+
 updated_at (timestamp with time zone, default: now())
 
 ---
