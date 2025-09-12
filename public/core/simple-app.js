@@ -2,8 +2,7 @@
 // SIMPLE-APP.JS - Centralized Access Control with Onboarding Check
 // =============================================================================
 
-if (typeof window.OsliraSimpleApp === 'undefined') {
-    class OsliraSimpleApp {
+class OsliraSimpleApp {
     constructor() {
         this.initialized = false;
         this.currentPage = null;
@@ -75,7 +74,7 @@ if (isAuthenticated) {
 // Define page requirements
         const authRequiredPages = ['dashboard', 'onboarding', 'analytics', 'settings', 'subscription'];
         const authOnlyPages = ['auth', 'auth-callback'];
-const publicPages = ['home', 'status', 'about', 'api-docs', 'case-studies', 'guides', 'help', 'pricing', 'security-page', 'privacy', 'terms', 'refund', 'disclaimer']; // Pages where authenticated users can stay
+        const publicPages = ['home']; // Pages where authenticated users can stay
         
         // Skip access control entirely for public pages
         if (publicPages.includes(this.currentPage)) {
@@ -244,10 +243,8 @@ const { data: userData, error } = await this.auth.supabase()
     }
 }
 
-// Only create if not already exists
-if (typeof window.OsliraSimpleApp === 'undefined') {
-    window.OsliraSimpleApp = OsliraSimpleApp;
-}
+// Create global instance
+window.OsliraSimpleApp = new OsliraSimpleApp();
 
 // Auto-initialize when scripts are loaded
 window.addEventListener('oslira:scripts:loaded', async () => {
