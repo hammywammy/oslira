@@ -298,10 +298,10 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                 <div class="pulse-ring w-20 h-20"></div>
                                 <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
                                 
-                                <img src="${profileImageUrl}" 
-                                     alt="Profile" 
-                                     class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl transition-all duration-500 hover:scale-110 hover:shadow-3xl shimmer-effect"
-                                     onerror="this.src='/assets/default-avatar.png'">
+<img src="${profileImageUrl}" 
+     alt="Profile" 
+     class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect"
+     onerror="this.src='/assets/default-avatar.png'">
                                 ${lead.is_verified ? `
                                     <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
                                         <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -687,7 +687,7 @@ animateScoreAndCircle(scoreElement, circleElement, targetScore) {
         console.log('✅ [AnalysisFunctions] Event listeners and global methods setup');
     }
 
-    copyOutreachMessage(message) {
+copyOutreachMessage(message, buttonElement = null) {
     try {
         // Get the message text from the DOM if no message provided
         const messageText = message || document.getElementById('outreachMessage')?.textContent;
@@ -700,21 +700,21 @@ animateScoreAndCircle(scoreElement, circleElement, targetScore) {
         // Use the Clipboard API
         if (navigator.clipboard && window.isSecureContext) {
             navigator.clipboard.writeText(messageText).then(() => {
-                this.showCopySuccess();
+                this.showCopySuccess(buttonElement);
             }).catch(err => {
                 console.error('Failed to copy message:', err);
-                this.fallbackCopyTextToClipboard(messageText);
+                this.fallbackCopyTextToClipboard(messageText, buttonElement);
             });
         } else {
             // Fallback for older browsers or non-HTTPS
-            this.fallbackCopyTextToClipboard(messageText);
+            this.fallbackCopyTextToClipboard(messageText, buttonElement);
         }
     } catch (error) {
         console.error('Error copying message:', error);
     }
 }
 
-fallbackCopyTextToClipboard(text) {
+fallbackCopyTextToClipboard(text, buttonElement = null) {
     const textArea = document.createElement("textarea");
     textArea.value = text;
     textArea.style.top = "0";
@@ -728,7 +728,7 @@ fallbackCopyTextToClipboard(text) {
     try {
         const successful = document.execCommand('copy');
         if (successful) {
-            this.showCopySuccess();
+            this.showCopySuccess(buttonElement);
         }
     } catch (err) {
         console.error('Fallback copy failed:', err);
@@ -737,9 +737,20 @@ fallbackCopyTextToClipboard(text) {
     document.body.removeChild(textArea);
 }
 
-showCopySuccess() {
-    // Simple success feedback
-    const button = event.target.closest('button');
+showCopySuccess(buttonElement = null) {
+    // Simple success feedback with proper event handling
+    let button = buttonElement;
+    
+    // Try to find button from event if not provided
+    if (!button && typeof event !== 'undefined' && event?.target) {
+        button = event.target.closest('button');
+    }
+    
+    // Fallback to any copy button if still not found
+    if (!button) {
+        button = document.querySelector('button[onclick*="copyOutreachMessage"]');
+    }
+    
     if (button) {
         const originalText = button.innerHTML;
         button.innerHTML = `
