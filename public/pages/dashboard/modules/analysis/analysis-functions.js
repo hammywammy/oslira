@@ -688,13 +688,26 @@ animateScoreCountUp(element, targetScore) {
     const increment = Math.ceil(targetScore / 60); // ~60 frames
     const interval = duration / (targetScore / increment);
     
+    // Get the score ring element
+    const scoreRing = document.getElementById('scoreRing');
+    const circumference = 2 * Math.PI * 40; // radius = 40
+    
     const timer = setInterval(() => {
         currentScore += increment;
         if (currentScore >= targetScore) {
             currentScore = targetScore;
             clearInterval(timer);
         }
+        
+        // Update the score text
         element.textContent = currentScore;
+        
+        // Update the ring progress
+        if (scoreRing) {
+            const progress = currentScore / 100;
+            const offset = circumference * (1 - progress);
+            scoreRing.style.strokeDashoffset = offset;
+        }
     }, interval);
 }
 
