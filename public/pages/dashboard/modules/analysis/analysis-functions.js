@@ -311,16 +311,27 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                 ` : ''}
                             </div>
                             
-                            <div class="space-y-2">
-                                <h1 class="text-3xl font-bold text-white count-up">
-                                    ${lead.full_name || lead.username}
-                                </h1>
-                                <p class="text-xl text-white/90 count-up" style="animation-delay: 0.2s;">@${lead.username}</p>
-                                <div class="flex items-center space-x-3">
-                                    ${lead.is_business_account ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Business</span>' : ''}
-                                    ${lead.is_private ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Private</span>' : ''}
-                                </div>
-                            </div>
+<div class="space-y-2">
+    <h1 class="text-3xl font-bold text-white count-up">
+        ${lead.full_name || lead.username}
+    </h1>
+    <p class="text-xl text-white/90 count-up" style="animation-delay: 0.2s;">@${lead.username}</p>
+    
+    ${lead.profile_url ? `
+        <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
+           class="inline-flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm font-semibold">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+            <span>View Profile</span>
+        </a>
+    ` : ''}
+    
+    <div class="flex items-center space-x-3">
+        ${lead.is_business_account ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Business</span>' : ''}
+        ${lead.is_private ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Private</span>' : ''}
+    </div>
+</div>
                         </div>
                         
                         <!-- Animated Score Ring - with count-up animation -->
@@ -601,45 +612,6 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                     </div>
                 `}
             </div>
-            
-            <!-- Enhanced Footer with Glassmorphism -->
-            <div class="relative bg-gradient-to-r from-slate-100 via-gray-100 to-slate-100 px-8 py-6 border-t border-gray-200/50 backdrop-blur-sm stagger-reveal" style="animation-delay: 0.8s;">
-                <!-- Subtle floating particles -->
-                <div class="absolute inset-0 overflow-hidden opacity-30">
-                    <div class="absolute top-2 left-1/4 w-1 h-1 bg-blue-400 rounded-full" style="animation: float 3s ease-in-out infinite;"></div>
-                    <div class="absolute bottom-2 right-1/3 w-1 h-1 bg-purple-400 rounded-full" style="animation: float 4s ease-in-out infinite; animation-delay: 1s;"></div>
-                </div>
-                
-                <div class="relative z-10 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                    <div class="flex gap-4">
-                        <button onclick="contactLead('${lead.username}', '${lead.profile_url || ''}')" 
-                                class="group relative overflow-hidden px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-500 shimmer-effect">
-                            <span class="relative z-10 flex items-center space-x-3">
-                                <svg class="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.405L3 21l2.595-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
-                                </svg>
-                                <span>Contact Lead</span>
-                            </span>
-                        </button>
-                        ${lead.profile_url ? `
-                            <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
-                               class="group relative overflow-hidden px-6 py-4 bg-white border-2 border-gray-300 text-gray-700 rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-500 hover:border-gray-400 shimmer-effect">
-                                <span class="relative z-10 flex items-center space-x-2">
-                                    <svg class="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                    </svg>
-                                    <span>View Profile</span>
-                                </span>
-                            </a>
-                        ` : ''}
-                    </div>
-                    <button onclick="closeLeadAnalysisModal()" 
-                            class="px-6 py-3 bg-white/80 backdrop-blur-sm border border-gray-300 text-gray-700 rounded-xl hover:bg-white hover:shadow-lg transition-all duration-300 font-medium">
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
     `;
     
     // Initialize score count-up animation and staggered reveals
@@ -714,6 +686,76 @@ animateScoreAndCircle(scoreElement, circleElement, targetScore) {
         this.setupGlobalMethods();
         console.log('✅ [AnalysisFunctions] Event listeners and global methods setup');
     }
+
+    copyOutreachMessage(message) {
+    try {
+        // Get the message text from the DOM if no message provided
+        const messageText = message || document.getElementById('outreachMessage')?.textContent;
+        
+        if (!messageText) {
+            console.error('No message to copy');
+            return;
+        }
+
+        // Use the Clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(messageText).then(() => {
+                this.showCopySuccess();
+            }).catch(err => {
+                console.error('Failed to copy message:', err);
+                this.fallbackCopyTextToClipboard(messageText);
+            });
+        } else {
+            // Fallback for older browsers or non-HTTPS
+            this.fallbackCopyTextToClipboard(messageText);
+        }
+    } catch (error) {
+        console.error('Error copying message:', error);
+    }
+}
+
+fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            this.showCopySuccess();
+        }
+    } catch (err) {
+        console.error('Fallback copy failed:', err);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+showCopySuccess() {
+    // Simple success feedback
+    const button = event.target.closest('button');
+    if (button) {
+        const originalText = button.innerHTML;
+        button.innerHTML = `
+            <span class="relative z-10 flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <span>Copied!</span>
+            </span>
+        `;
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+        }, 2000);
+    }
+}
 
     setupEventListeners() {
         // Analysis type change handler
