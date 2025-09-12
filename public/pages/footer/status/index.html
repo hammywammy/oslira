@@ -782,13 +782,17 @@
     <!-- Footer Container -->
     <div id="footer-container"></div>
     
-    <!-- Core Scripts -->
-    <script src="/core/script-loader.js"></script>
+<script>
+    // Ensure header container exists before any initialization
+    if (!document.getElementById('header-container')) {
+        const headerContainer = document.createElement('div');
+        headerContainer.id = 'header-container';
+        document.body.insertBefore(headerContainer, document.body.firstChild);
+    }
     
-    <script>
-        // =============================================================================
-        // STATUS PAGE INITIALIZATION
-        // =============================================================================
+    // =============================================================================
+    // STATUS PAGE INITIALIZATION
+    // =============================================================================
         
         let headerInitialized = false;
         let footerInitialized = false;
