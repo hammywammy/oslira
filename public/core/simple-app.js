@@ -2,7 +2,8 @@
 // SIMPLE-APP.JS - Centralized Access Control with Onboarding Check
 // =============================================================================
 
-class OsliraSimpleApp {
+if (typeof window.OsliraSimpleApp === 'undefined') {
+    class OsliraSimpleApp {
     constructor() {
         this.initialized = false;
         this.currentPage = null;
@@ -241,10 +242,12 @@ const { data: userData, error } = await this.auth.supabase()
             return null;
         }
     }
-}
+}}
 
-// Create global instance
-window.OsliraSimpleApp = new OsliraSimpleApp();
+// Only create if not already exists
+if (typeof window.OsliraSimpleApp === 'undefined') {
+    window.OsliraSimpleApp = OsliraSimpleApp;
+}
 
 // Auto-initialize when scripts are loaded
 window.addEventListener('oslira:scripts:loaded', async () => {
