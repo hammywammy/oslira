@@ -112,8 +112,8 @@ export interface AnalysisResult {
 export interface AnalysisRequest {
   profile_url?: string;
   username?: string;
-  analysis_type: 'light' | 'deep';
-  type?: 'light' | 'deep';
+analysis_type: 'light' | 'deep' | 'xray';
+type?: 'light' | 'deep' | 'xray';
   business_id: string;
   user_id: string;
 }
@@ -130,4 +130,4 @@ export interface User {
   stripe_customer_id: string;
 }
 
-export type AnalysisType = 'light' | 'deep';
+export type AnalysisType = 'light' | 'deep' | 'xray';
