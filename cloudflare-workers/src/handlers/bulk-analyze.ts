@@ -1,29 +1,51 @@
-import type { Context } from 'hono';
-import type { AnalysisRequest, ProfileData, BusinessProfile } from '../types/interfaces.js';
+import { Context } from 'hono';
+import type { Env, BulkAnalysisRequest, BulkAnalysisResult, AnalysisResponse, ProfileData, AnalysisResult } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
+import { validateUser } from '../services/user-manager.js';
 import { extractUsername } from '../utils/validation.js';
-import { fetchUserAndCredits, fetchBusinessProfile, saveLeadAndAnalysis, updateCreditsAndTransaction } from '../services/database.js';
-import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
-import { performAIAnalysis, generateOutreachMessage } from '../services/ai-analysis.js';
+import { saveCompleteAnalysis, updateCreditsAndTransaction } from '../services/database.js';
 
-export async function handleBulkAnalyze(c: Context): Promise<Response> {
+export async function handleBulkAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
-    const body = await c.req.json();
+    logger('info', 'Bulk analysis request received', { requestId });
+
+    // Parse and validate request
+    const body = await c.req.json() as BulkAnalysisRequest;
     const { profiles, analysis_type, business_id, user_id } = body;
-    
-    if (!Array.isArray(profiles) || profiles.length === 0) {
+
+    // Validate required fields
+    if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        'Profiles array is required', 
+        'profiles array is required and cannot be empty', 
         requestId
       ), 400);
     }
 
-    if (profiles.length > 50) {
+    if (!analysis_type || !['light', 'deep', 'xray'].includes(analysis_type)) {
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        'analysis_type must be "light", "deep", or "xray"', 
+        requestId
+      ), 400);
+    }
+
+    if (!business_id || !user_id) {
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        'business_id and user_id are required', 
+        requestId
+      ), 400);
+    }
+
+    const profileCount = profiles.length;
+    if (profileCount > 50) {
       return c.json(createStandardResponse(
         false, 
         undefined, 
@@ -32,214 +54,293 @@ export async function handleBulkAnalyze(c: Context): Promise<Response> {
       ), 400);
     }
 
-    logger('info', 'Bulk analysis started', { 
-      profileCount: profiles.length, 
-      analysisType: analysis_type, 
-      requestId
+    logger('info', 'Bulk request validated', { 
+      requestId, 
+      profileCount, 
+      analysis_type, 
+      business_id 
     });
 
-    const validatedProfiles = profiles.map(profileUrl => {
-      const username = extractUsername(profileUrl);
-      if (!username) {
-        throw new Error(`Invalid profile URL: ${profileUrl}`);
-      }
-      return { username, profileUrl };
-    });
-
-    const userResult = await fetchUserAndCredits(user_id, c.env);
-    const business = await fetchBusinessProfile(business_id, user_id, c.env);
-
-    const costPerProfile = analysis_type === 'xray' ? 3 : (analysis_type === 'deep' ? 2 : 1);
-    const totalCost = validatedProfiles.length * costPerProfile;
-    
-    if (userResult.credits < totalCost) {
+    // Validate user and check credits
+    const userResult = await validateUser(user_id, c.env);
+    if (!userResult.isValid) {
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        'Insufficient credits', 
+        userResult.error, 
+        requestId
+      ), 400);
+    }
+
+    // Calculate total credit cost
+    const creditCostPerAnalysis = analysis_type === 'deep' ? 2 : analysis_type === 'xray' ? 3 : 1;
+    const totalCreditCost = profileCount * creditCostPerAnalysis;
+    
+    if (userResult.credits < totalCreditCost) {
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        `Insufficient credits. Need ${totalCreditCost}, have ${userResult.credits}`, 
         requestId
       ), 402);
     }
 
-    const results = [];
-    let successful = 0;
-    let failed = 0;
+    logger('info', 'User validation passed for bulk analysis', { 
+      userId: user_id, 
+      credits: userResult.credits, 
+      totalCreditCost,
+      profileCount
+    });
+
+    // Process profiles in parallel with concurrency limit
+    const results: AnalysisResponse[] = [];
+    const errors: Array<{ profile: string; error: string }> = [];
     let creditsUsed = 0;
 
-    for (const profile of validatedProfiles) {
-      try {
-        logger('info', 'Processing bulk profile', { username: profile.username });
+    // Import required services
+    const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
+    const { performAIAnalysis } = await import('../services/ai-analysis.js');
 
-        const profileData = await scrapeInstagramProfile(profile.username, analysis_type, c.env);
-        const analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
+    // Process profiles with controlled concurrency (5 at a time)
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < profiles.length; i += BATCH_SIZE) {
+      const batch = profiles.slice(i, i + BATCH_SIZE);
+      
+      const batchPromises = batch.map(async (profile) => {
+        const profileId = `${i + batch.indexOf(profile) + 1}`;
         
-        let outreachMessage = '';
-if (analysis_type === 'deep') {
-  try {
-    outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-  } catch (messageError: any) {
-    logger('warn', 'Message generation failed for bulk profile', { 
-      username: profile.username, 
-      error: messageError.message 
-    });
-  }
-}
+        try {
+          logger('info', `Processing profile ${profileId}/${profileCount}`, { profile });
 
-if (analysis_type === 'xray') {
-  try {
-    outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-  } catch (messageError: any) {
-    logger('warn', 'Message generation failed for bulk profile', { 
-      username: profile.username, 
-      error: messageError.message 
-    });
-  }
-}
+          // Extract username and build URL
+          const username = extractUsername(profile);
+          if (!username) {
+            throw new Error('Invalid username or URL format');
+          }
 
-        const leadData = {
-          user_id: user_id,
-          business_id: business_id,
-          username: profileData.username,
-          platform: 'instagram',
-          profile_url: profile.profileUrl,
-          profile_pic_url: profileData.profilePicUrl || null,
-          score: analysisResult.score || 0,
-          analysis_type: analysis_type,
-          followers_count: profileData.followersCount || 0,
-          created_at: new Date().toISOString(),
-          quick_summary: analysisResult.quick_summary || null
-        };
+          const profile_url = profile.includes('instagram.com') ? profile : `https://instagram.com/${username}`;
 
-        let analysisData = null;
-        if (analysis_type === 'deep') {
-          analysisData = {
-            user_id: user_id,
+          // SCRAPE PROFILE DATA
+          let profileData: ProfileData;
+          try {
+            profileData = await scrapeInstagramProfile(profile_url, c.env);
+            logger('info', `Profile scraped successfully`, { 
+              username: profileData.username,
+              followersCount: profileData.followersCount
+            });
+          } catch (scrapeError: any) {
+            throw new Error(`Scraping failed: ${scrapeError.message}`);
+          }
+
+          // AI ANALYSIS
+          let analysisResult: AnalysisResult;
+          try {
+            analysisResult = await performAIAnalysis(profileData, analysis_type, user_id, c.env);
+            logger('info', `AI analysis completed`, { 
+              username: profileData.username,
+              score: analysisResult.score
+            });
+          } catch (analysisError: any) {
+            throw new Error(`AI analysis failed: ${analysisError.message}`);
+          }
+
+          // PREPARE DATA FOR NEW SCHEMA
+          const leadData = {
+            user_id,
+            business_id,
             username: profileData.username,
-            analysis_type: 'deep',
-            score: analysisResult.score || 0,
-            engagement_score: analysisResult.engagement_score || 0,
-            score_niche_fit: analysisResult.niche_fit || 0,
-            score_total: analysisResult.score || 0,
-            niche_fit: analysisResult.niche_fit || 0,
-            audience_quality: analysisResult.audience_quality || 'Unknown',
-            engagement_insights: analysisResult.engagement_insights || 'No insights available',
-            outreach_message: outreachMessage || null,
-            selling_points: Array.isArray(analysisResult.selling_points) ? 
-              analysisResult.selling_points : 
-              (analysisResult.selling_points ? [analysisResult.selling_points] : null),
-            reasons: Array.isArray(analysisResult.reasons) ? analysisResult.reasons : 
-              (Array.isArray(analysisResult.selling_points) ? analysisResult.selling_points : null),
-            avg_comments: profileData.engagement?.avgComments || 0,
-            avg_likes: profileData.engagement?.avgLikes || 0,
-            engagement_rate: profileData.engagement?.engagementRate || 0,
-            latest_posts: profileData.latestPosts ? JSON.stringify(profileData.latestPosts) : null,
-            engagement_data: profileData.engagement ? JSON.stringify({
-              avgLikes: profileData.engagement.avgLikes,
-              avgComments: profileData.engagement.avgComments,
-              engagementRate: profileData.engagement.engagementRate,
-              postsAnalyzed: profileData.engagement.postsAnalyzed,
-              dataSource: 'real_scraped_data'
-            }) : JSON.stringify({ dataSource: 'no_real_data_available' }),
-            analysis_data: JSON.stringify({
-              confidence_level: analysisResult.confidence_level,
-              real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0
-            }),
-            deep_summary: analysisResult.deep_summary || null,
-            created_at: new Date().toISOString()
+            full_name: profileData.displayName,
+            profile_pic_url: profileData.profilePicUrl,
+            bio: profileData.bio,
+            external_url: profileData.externalUrl,
+            followers_count: profileData.followersCount,
+            following_count: profileData.followingCount,
+            posts_count: profileData.postsCount,
+            is_verified: profileData.isVerified,
+            is_private: profileData.isPrivate,
+            is_business_account: profileData.isBusinessAccount || false,
+            profile_url
           };
+
+          // Prepare analysis data based on type
+          let analysisData = null;
+          if (analysis_type === 'deep' || analysis_type === 'xray') {
+            analysisData = {
+              ...analysisResult,
+              // Engagement data from scraping
+              avg_likes: profileData.engagement?.avgLikes || 0,
+              avg_comments: profileData.engagement?.avgComments || 0,
+              engagement_rate: profileData.engagement?.engagementRate || 0,
+              
+              // Structured data
+              latest_posts: profileData.latestPosts ? JSON.stringify(profileData.latestPosts) : null,
+              engagement_data: profileData.engagement ? JSON.stringify({
+                avg_likes: profileData.engagement.avgLikes,
+                avg_comments: profileData.engagement.avgComments,
+                engagement_rate: profileData.engagement.engagementRate,
+                posts_analyzed: profileData.engagement.postsAnalyzed,
+                data_source: 'real_scraped_calculation'
+              }) : null,
+              
+              // Analysis metadata
+              analysis_timestamp: new Date().toISOString(),
+              ai_model_used: 'gpt-4o',
+              scraperUsed: profileData.scraperUsed,
+              dataQuality: profileData.dataQuality
+            };
+          }
+
+          // SAVE TO DATABASE (NEW 3-TABLE STRUCTURE)
+          let run_id: string;
+          try {
+            run_id = await saveCompleteAnalysis(leadData, analysisData, analysis_type, c.env);
+            logger('info', `Database save successful for ${profileData.username}`, { run_id });
+          } catch (saveError: any) {
+            throw new Error(`Database save failed: ${saveError.message}`);
+          }
+
+          // Increment credits used
+          creditsUsed += creditCostPerAnalysis;
+
+          // PREPARE RESPONSE DATA
+          const responseData: AnalysisResponse = {
+            run_id,
+            profile: {
+              username: profileData.username,
+              displayName: profileData.displayName,
+              followersCount: profileData.followersCount,
+              isVerified: profileData.isVerified,
+              profilePicUrl: profileData.profilePicUrl,
+              dataQuality: profileData.dataQuality || 'medium',
+              scraperUsed: profileData.scraperUsed || 'unknown'
+            },
+            analysis: {
+              overall_score: analysisResult.score,
+              niche_fit_score: analysisResult.niche_fit,
+              engagement_score: analysisResult.engagement_score,
+              type: analysis_type,
+              confidence_level: analysisResult.confidence_level,
+              summary_text: analysisResult.quick_summary,
+              
+              // Include detailed data for deep/xray analyses
+              ...(analysis_type === 'deep' && {
+                audience_quality: analysisResult.audience_quality,
+                selling_points: analysisResult.selling_points,
+                reasons: analysisResult.reasons,
+                deep_summary: analysisResult.deep_summary,
+                outreach_message: analysisData?.outreach_message || null,
+                engagement_breakdown: profileData.engagement ? {
+                  avg_likes: profileData.engagement.avgLikes,
+                  avg_comments: profileData.engagement.avgComments,
+                  engagement_rate: profileData.engagement.engagementRate,
+                  posts_analyzed: profileData.engagement.postsAnalyzed,
+                  data_source: 'real_scraped_calculation'
+                } : {
+                  data_source: 'no_real_data_available',
+                  avg_likes: 0,
+                  avg_comments: 0,
+                  engagement_rate: 0
+                }
+              }),
+              
+              ...(analysis_type === 'xray' && {
+                copywriter_profile: analysisData?.copywriter_profile || {},
+                commercial_intelligence: analysisData?.commercial_intelligence || {},
+                persuasion_strategy: analysisData?.persuasion_strategy || {}
+              })
+            },
+            credits: {
+              used: creditCostPerAnalysis,
+              remaining: userResult.credits - creditsUsed
+            },
+            metadata: {
+              request_id: requestId,
+              analysis_completed_at: new Date().toISOString(),
+              schema_version: '3.0'
+            }
+          };
+
+          return responseData;
+
+        } catch (error: any) {
+          logger('error', `Profile ${profileId} analysis failed`, { 
+            profile, 
+            error: error.message 
+          });
+          
+          errors.push({
+            profile,
+            error: error.message
+          });
+          
+          return null;
         }
+      });
 
-        const lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
+      // Wait for batch to complete
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Add successful results
+      batchResults.forEach(result => {
+        if (result) {
+          results.push(result);
+        }
+      });
 
-        results.push({
-          username: profile.username,
-          success: true,
-          lead_id,
-          score: analysisResult.score,
-          confidence_level: analysisResult.confidence_level,
-          data_quality: profileData.dataQuality,
-          real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0,
-          ...(analysis_type === 'deep' && {
-            engagement_score: analysisResult.engagement_score,
-            niche_fit: analysisResult.niche_fit,
-            outreach_message: outreachMessage,
-            posts_analyzed: profileData.engagement?.postsAnalyzed || 0
-          })
-        });
-
-        successful++;
-        creditsUsed += costPerProfile;
-
-        logger('info', 'Bulk profile processed successfully', { 
-          username: profile.username, 
-          score: analysisResult.score,
-          dataQuality: profileData.dataQuality
-        });
-
-      } catch (error: any) {
-        logger('error', 'Bulk profile processing failed', { 
-          username: profile.username, 
-          error: error.message 
-        });
-
-        results.push({
-          username: profile.username,
-          success: false,
-          error: error.message
-        });
-
-        failed++;
-      }
+      // Log batch progress
+      logger('info', `Batch ${Math.floor(i / BATCH_SIZE) + 1} completed`, {
+        processed: Math.min(i + BATCH_SIZE, profiles.length),
+        total: profiles.length,
+        successful: results.length,
+        errors: errors.length
+      });
     }
 
+    // UPDATE CREDITS FOR ALL SUCCESSFUL ANALYSES
     if (creditsUsed > 0) {
       try {
+        const newBalance = userResult.credits - creditsUsed;
         await updateCreditsAndTransaction(
           user_id,
           creditsUsed,
-          userResult.credits - creditsUsed,
-          `Bulk ${analysis_type} analysis (${successful} profiles)`,
+          newBalance,
+          `Bulk ${analysis_type} analysis - ${results.length} profiles`,
           'use',
           c.env
         );
+        logger('info', 'Bulk credits updated successfully', { 
+          creditsUsed, 
+          remainingCredits: newBalance 
+        });
       } catch (creditError: any) {
         logger('error', 'Bulk credit update failed', { error: creditError.message });
-        return c.json(createStandardResponse(
-          false, 
-          undefined, 
-          `Analysis completed but credit update failed: ${creditError.message}`, 
-          requestId
-        ), 500);
+        // Don't fail the entire request for credit logging issues
       }
     }
 
-    const responseData = {
-      summary: {
-        total: validatedProfiles.length,
-        successful,
-        failed,
-        creditsUsed,
-        average_confidence: successful > 0 ? 
-          Math.round(results.filter(r => r.success).reduce((sum, r) => sum + (r.confidence_level || 0), 0) / successful) : 0,
-        real_engagement_profiles: results.filter(r => r.success && r.real_engagement_available).length
-      },
+    // PREPARE FINAL RESPONSE
+    const bulkResult: BulkAnalysisResult = {
+      total_requested: profileCount,
+      successful: results.length,
+      failed: errors.length,
       results,
-      credits: {
-        remaining: userResult.credits - creditsUsed
-      }
+      errors,
+      credits_used: creditsUsed,
+      credits_remaining: userResult.credits - creditsUsed
     };
 
     logger('info', 'Bulk analysis completed', { 
-      total: validatedProfiles.length, 
-      successful, 
-      failed, 
+      requestId,
+      totalRequested: profileCount,
+      successful: results.length,
+      failed: errors.length,
       creditsUsed
     });
 
-    return c.json(createStandardResponse(true, responseData, undefined, requestId));
+    return c.json(createStandardResponse(true, bulkResult, undefined, requestId));
 
   } catch (error: any) {
-    logger('error', 'Bulk analysis failed', { error: error.message, requestId });
+    logger('error', 'Bulk analysis request failed', { error: error.message, requestId });
     return c.json(createStandardResponse(
       false, 
       undefined, 
