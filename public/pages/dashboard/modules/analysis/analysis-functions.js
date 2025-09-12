@@ -92,7 +92,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
     // Safe profile image URL with fallback
     const profileImageUrl = lead.profile_pic_url ? 
         `https://images.weserv.nl/?url=${encodeURIComponent(lead.profile_pic_url)}&w=160&h=160&fit=cover&mask=circle` : 
-        '/assets/default-avatar.png';
+        '/assets/images/default-avatar.png';
     
     const mainScore = isDeepAnalysis ? (analysisData?.score_total || lead.score) : lead.score;
     
@@ -301,7 +301,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
 <img src="${profileImageUrl}" 
      alt="Profile" 
      class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect"
-     onerror="this.src='/assets/default-avatar.png'">
+     onerror="this.src='/assets/images/default-avatar.png'">
                                 ${lead.is_verified ? `
                                     <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
                                         <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
