@@ -18,4 +18,4 @@ routes = [
 
 [env.staging.vars]
 APP_ENV = "staging" 
-FRONTEND_URL = "https://osliratest.netlify.app"
+FRONTEND_URL = "https://osliratest.netlify.app" 
