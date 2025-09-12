@@ -815,107 +815,102 @@
         // HEADER INITIALIZATION
         // =============================================================================
         
-        async function initializeHeader() {
-            try {
-                if (document.querySelector('.home-nav')) {
-                    console.log('🔄 [Status] Header already exists, skipping initialization...');
-                    return;
-                }
-                
-                console.log('🧭 [Status] Starting header initialization...');
-                
-                let container = document.getElementById('header-container');
-                if (!container) {
-                    console.log('🔧 [Status] Creating header-container element');
-                    container = document.createElement('div');
-                    container.id = 'header-container';
-                    document.body.insertBefore(container, document.body.firstChild);
-                }
-                
-                // Wait for HeaderManager to be available
-                console.log('🔍 [Status] Waiting for HeaderManager...');
-                for (let i = 0; i < 50; i++) {
-                    if (window.HeaderManager) {
-                        console.log('✅ [Status] HeaderManager found');
-                        break;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-                
-                if (!window.HeaderManager) {
-                    throw new Error('HeaderManager not available after waiting');
-                }
-                
-                // Initialize header for footer pages
-                console.log('🧭 [Status] Creating HeaderManager instance...');
-                const headerManager = new window.HeaderManager();
-                
-                console.log('🧭 [Status] Rendering header...');
-                headerManager.render('header-container', {
-                    type: 'footer-pages'
-                });
-                
-                headerInitialized = true;
-                console.log('✅ [Status] Header initialization complete');
-                
-            } catch (error) {
-                console.error('❌ [Status] Header initialization failed:', error);
-                headerInitialized = false;
-            }
+async function initializeHeader() {
+    try {
+        if (document.querySelector('.home-nav')) {
+            console.log('🔄 [Status] Header already exists, skipping initialization...');
+            return;
         }
+        
+        console.log('🧭 [Status] Starting header initialization...');
+        
+        let container = document.getElementById('header-container');
+        if (!container) {
+            console.log('🔧 [Status] Creating header-container element');
+            container = document.createElement('div');
+            container.id = 'header-container';
+            document.body.insertBefore(container, document.body.firstChild);
+        }
+        
+        // Wait for HeaderManager to be available
+        console.log('🔍 [Status] Waiting for HeaderManager...');
+        for (let i = 0; i < 50; i++) {
+            if (window.HeaderManager) {
+                console.log('✅ [Status] HeaderManager found');
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!window.HeaderManager) {
+            throw new Error('HeaderManager not available after waiting');
+        }
+        
+        // Initialize header for footer pages
+        console.log('🧭 [Status] Creating HeaderManager instance...');
+        const headerManager = new window.HeaderManager();
+        
+        console.log('🧭 [Status] Rendering header...');
+        headerManager.render('header-container', {
+            type: 'footer-pages'
+        });
+        
+        console.log('✅ [Status] Header initialization complete');
+    } catch (error) {
+        console.error('❌ [Status] Header initialization failed:', error);
+    }
+}
         
         // =============================================================================
         // FOOTER INITIALIZATION
         // =============================================================================
         
-        async function initializeFooter() {
-            try {
-                // Check if footer already exists
-                if (document.querySelector('.new-footer-main')) {
-                    console.log('🔄 [Status] Footer already exists, skipping initialization...');
-                    return;
-                }
-                
-                console.log('🦶 [Status] Starting footer initialization...');
-                
-                // Check if container exists
-                let container = document.getElementById('footer-container');
-                if (!container) {
-                    console.log('🔧 [Status] Creating footer-container element');
-                    container = document.createElement('div');
-                    container.id = 'footer-container';
-                    document.body.appendChild(container);
-                }
-                
-                // Wait for FooterManager to be available
-                console.log('🔍 [Status] Waiting for FooterManager...');
-                for (let i = 0; i < 50; i++) {
-                    if (window.FooterManager) {
-                        console.log('✅ [Status] FooterManager found');
-                        break;
-                    }
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                }
-                
-                if (!window.FooterManager) {
-                    throw new Error('FooterManager not available after waiting');
-                }
-                
-                // Initialize footer
-                console.log('🦶 [Status] Creating FooterManager instance...');
-                const footerManager = new window.FooterManager();
-                
-                console.log('🦶 [Status] Rendering footer...');
-                footerManager.render('footer-container');
-                
-                footerInitialized = true;
-                console.log('✅ [Status] Footer initialization complete');
-                
-            } catch (error) {
-                console.error('❌ [Status] Footer initialization failed:', error);
-                footerInitialized = false;
-            }
+async function initializeFooter() {
+    try {
+        // Check if footer already exists
+        if (document.querySelector('.new-footer-main')) {
+            console.log('🔄 [Status] Footer already exists, skipping initialization...');
+            return;
         }
+        
+        console.log('🦶 [Status] Starting footer initialization...');
+        
+        // Check if container exists
+        let container = document.getElementById('footer-container');
+        if (!container) {
+            console.log('🔧 [Status] Creating footer-container element');
+            container = document.createElement('div');
+            container.id = 'footer-container';
+            document.body.appendChild(container);
+        }
+        
+        // Wait for FooterManager to be available
+        console.log('🔍 [Status] Waiting for FooterManager...');
+        for (let i = 0; i < 50; i++) {
+            if (window.FooterManager) {
+                console.log('✅ [Status] FooterManager found');
+                break;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        if (!window.FooterManager) {
+            throw new Error('FooterManager not available after waiting');
+        }
+        
+        // Create FooterManager instance
+        console.log('🦶 [Status] Creating FooterManager instance...');
+        const footerManager = new window.FooterManager();
+        
+        console.log('🦶 [Status] Rendering footer...');
+        footerManager.render('footer-container');
+        
+        console.log('✅ [Status] Footer initialization complete');
+        
+    } catch (error) {
+        console.error('❌ [Status] Footer initialization failed:', error);
+    }
+}
         
         // =============================================================================
         // STATUS DATA INITIALIZATION
