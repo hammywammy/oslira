@@ -291,7 +291,7 @@
   overflow: hidden;
 }
 
-/* Tooltip for collapsed state */
+/* Tooltip for collapsed state - DISABLED */
 .nav-item.collapsed {
   position: relative;
 }
@@ -314,7 +314,7 @@
 }
 
 .nav-item.collapsed:hover::after {
-  opacity: 1;
+  opacity: 0; /* Changed from 1 to 0 to disable tooltip */
 }
 
 /* User section */
