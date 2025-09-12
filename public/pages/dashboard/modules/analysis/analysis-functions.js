@@ -963,26 +963,28 @@ setupGlobalMethods() {
     }
 
     updateCreditCostDisplay(analysisType) {
-        const costDisplay = document.getElementById('analysis-cost-display');
-        if (costDisplay) {
-            const cost = analysisType === 'deep' ? 2 : 1;
+    const costDisplay = document.getElementById('analysis-cost');
+    if (costDisplay) {
+        if (analysisType) {
+            const cost = analysisType === 'xray' ? 3 : (analysisType === 'deep' ? 2 : 1);
             costDisplay.textContent = `${cost} credit${cost > 1 ? 's' : ''}`;
         }
     }
+}
     
-    updateAnalysisSubmitButton(analysisType) {
-        const submitBtn = document.getElementById('analysis-submit-btn');
-        if (submitBtn) {
-            if (analysisType) {
-                const cost = analysisType === 'deep' ? 2 : 1;
-                submitBtn.textContent = `Start Analysis (${cost} credit${cost > 1 ? 's' : ''})`;
-                submitBtn.disabled = false;
-            } else {
-                submitBtn.textContent = 'Select Analysis Type';
-                submitBtn.disabled = true;
-            }
+updateAnalysisSubmitButton(analysisType) {
+    const submitBtn = document.getElementById('analysis-submit-btn');
+    if (submitBtn) {
+        if (analysisType) {
+            const cost = analysisType === 'xray' ? 3 : (analysisType === 'deep' ? 2 : 1);
+            submitBtn.textContent = `Start Analysis (${cost} credit${cost > 1 ? 's' : ''})`;
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.textContent = 'Select Analysis Type';
+            submitBtn.disabled = true;
         }
     }
+}
 
     async processAnalysisForm(event) {
         event.preventDefault();
