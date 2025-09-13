@@ -24,7 +24,7 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
         resultsLimit: 1
       };
 
-      const profileResponse = await callWithRetry(
+const profileResponse = await callWithRetry(
         `https://api.apify.com/v2/acts/dSCLg0C3YEZ83HzYX/run-sync-get-dataset-items?token=${apifyToken}`,
         {
           method: 'POST',
@@ -33,6 +33,13 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
         },
         3, 2000, 30000
       );
+
+      logger('info', 'Light scraper raw response', { 
+        isArray: Array.isArray(profileResponse),
+        length: profileResponse?.length,
+        firstItem: profileResponse?.[0] ? Object.keys(profileResponse[0]).slice(0, 10) : 'undefined',
+        responseType: typeof profileResponse
+      });
 
       if (!profileResponse || !Array.isArray(profileResponse) || profileResponse.length === 0) {
         throw new Error('Profile not found or private');
