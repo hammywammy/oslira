@@ -183,13 +183,14 @@ const [userResult, business] = await Promise.all([
     }
 
 // UPDATE USER CREDITS WITH ENHANCED TRACKING
-try {
-  const { calculateCreditCost } = await import('../config/models.js');
-  const totalTokens = orchestrationResult.totalCost.tokens_in + orchestrationResult.totalCost.tokens_out;
-  const dynamicCreditCost = calculateCreditCost(analysis_type, orchestrationResult.totalCost.actual_cost, totalTokens);
-  
-  // Use dynamic cost if different from fixed cost
-  const finalCreditCost = Math.max(creditCost, dynamicCreditCost);
+    let finalCreditCost = creditCost; // Initialize with default cost
+    try {
+      const { calculateCreditCost } = await import('../config/models.js');
+      const totalTokens = orchestrationResult.totalCost.tokens_in + orchestrationResult.totalCost.tokens_out;
+      const dynamicCreditCost = calculateCreditCost(analysis_type, orchestrationResult.totalCost.actual_cost, totalTokens);
+      
+      // Use dynamic cost if different from fixed cost
+      finalCreditCost = Math.max(creditCost, dynamicCreditCost);
   
   const costDetails = {
     actual_cost: orchestrationResult.totalCost.actual_cost,
@@ -212,6 +213,7 @@ try {
     run_id,
     costDetails
   );
+  
 logger('info', 'Credits updated with cost tracking', { 
     userId: user_id, 
     creditsCharged: finalCreditCost,
