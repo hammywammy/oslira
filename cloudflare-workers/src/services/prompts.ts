@@ -433,24 +433,21 @@ Start with engagement reality check. State actual ER% vs expected for their foll
 
 **selling_points** (3-8 bullets):
 ONLY claims you can defend with numbers:
-- "ER of ${profile.engagement?.engagementRate}% beats ${followerTier} average by X%"
-- "Consistent posting (${postsAnalyzed} posts in X days)"
-- "High comment ratio (${avgComments/avgLikes}%) suggests engaged community"
+- "ER of ${profile.engagement?.engagementRate}% beats follower tier average"
+- "Consistent posting (${profile.latestPosts?.length || 0} recent posts)"
+- "High comment ratio suggests engaged community"
 - "Verified status + business account = platform trust"
 NO generic claims like "great content" or "strong influence"
 
 **outreach_message** (150-250 words):
-Open with specific metric ("Your ${profile.engagement?.engagementRate}% engagement with ${profile.followersCount.toLocaleString()} followers...")
+Open with specific metric about their engagement rate and follower count
 Reference actual content theme from their posts
 Propose specific collaboration format (Reel, Carousel, Story series)
 Include concrete success metric (target reach, engagement, conversions)
 End with clear CTA and contact preference
 
 **engagement_breakdown**:
-Use REAL data when available:
-- avg_likes: ${profile.engagement?.avgLikes || 0}
-- avg_comments: ${profile.engagement?.avgComments || 0}  
-- engagement_rate: ${profile.engagement?.engagementRate || 0}
+Use REAL data when available from profile.engagement object
 
 **audience_insights**:
 From actual post performance:
