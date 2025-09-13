@@ -45,8 +45,28 @@ export const CREDIT_PRICING = {
     xray: 2.0
   },
   minimum_charge: 0.1, // Prevent negative margins
-  token_cap: 2200 // Skip remaining if hit
+  token_cap: 2200, // Skip remaining if hit
+  margin_target: 0.3 // 30% target margin over actual costs
 };
+
+export function calculateCreditCost(
+  analysisType: string,
+  actualCost: number,
+  tokensUsed: number
+): number {
+  const baseFee = CREDIT_PRICING.base_fees[analysisType as keyof typeof CREDIT_PRICING.base_fees] || 1.0;
+  
+  // Apply token cap penalty
+  if (tokensUsed > CREDIT_PRICING.token_cap) {
+    return baseFee * 1.5; // 50% penalty for exceeding cap
+  }
+  
+  // Calculate with margin
+  const costWithMargin = actualCost * (1 + CREDIT_PRICING.margin_target);
+  const finalCost = Math.max(baseFee + costWithMargin, CREDIT_PRICING.minimum_charge);
+  
+  return Math.round(finalCost * 100) / 100; // Round to 2 decimal places
+}
 
 export function calculateCost(
   tokensIn: number, 
