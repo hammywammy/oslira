@@ -23,8 +23,3 @@ FRONTEND_URL = "https://osliratest.netlify.app"
 [[r2_buckets]]
 binding = "R2_CACHE_BUCKET"
 bucket_name = "oslira-preprocessor-cache"
-
-[[kv_namespaces]]
-binding = "CONFIG_KV_NAMESPACE" 
-id = "your_kv_namespace_id"
-preview_id = "your_preview_kv_id"
