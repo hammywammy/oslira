@@ -76,10 +76,14 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
         return;
     }
     
-    // More robust deep analysis detection
-    const isDeepAnalysis = lead.analysis_type === 'deep';
-    const hasDeepData = isDeepAnalysis && analysisData && analysisData.deep_summary;
-    const summaryText = hasDeepData ? analysisData.deep_summary : lead.quick_summary;
+    // Updated deep analysis detection to include xray
+    const isDeepAnalysis = lead.analysis_type === 'deep' || lead.analysis_type === 'xray';
+    const hasDeepData = isDeepAnalysis && analysisData && (analysisData.deep_summary || analysisData.summary_text);
+    
+    // Updated summary text mapping for new schema
+    const summaryText = hasDeepData ? 
+        (analysisData.deep_summary || analysisData.summary_text) : 
+        (lead.quick_summary || analysisData?.summary_text || 'No summary available for this lead.');
     
     console.log('🎨 [AnalysisFunctions] Building modal HTML:', {
         username: lead.username,
@@ -89,12 +93,13 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
         hasAnalysisData: !!analysisData
     });
     
-    // Safe profile image URL with fallback
-    const profileImageUrl = lead.profile_pic_url ? 
-        `https://images.weserv.nl/?url=${encodeURIComponent(lead.profile_pic_url)}&w=160&h=160&fit=cover&mask=circle` : 
+    // Updated profile image URL mapping for new schema
+    const profileImageUrl = (lead.profile_picture_url || lead.profile_pic_url) ? 
+        `https://images.weserv.nl/?url=${encodeURIComponent(lead.profile_picture_url || lead.profile_pic_url)}&w=160&h=160&fit=cover&mask=circle` : 
         '/assets/images/default-avatar.png';
     
-    const mainScore = isDeepAnalysis ? (analysisData?.score_total || lead.score) : lead.score;
+    // Updated score mapping for new schema (runs table fields)
+    const mainScore = isDeepAnalysis ? (analysisData?.score_total || analysisData?.overall_score || lead.score) : lead.score;
     
     // Success state detection for premium leads
     const isPremiumLead = mainScore >= 90;
@@ -298,11 +303,11 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                 <div class="pulse-ring w-20 h-20"></div>
                                 <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
                                 
-<img src="${profileImageUrl}" 
-     alt="Profile" 
-     class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect"
-     onerror="this.src='/assets/images/default-avatar.png'">
-                                ${lead.is_verified ? `
+                                <img src="${profileImageUrl}" 
+                                     alt="Profile" 
+                                     class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect"
+                                     onerror="this.src='/assets/images/default-avatar.png'">
+                                ${(lead.is_verified_account || lead.is_verified) ? `
                                     <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
                                         <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
@@ -311,27 +316,27 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                 ` : ''}
                             </div>
                             
-<div class="space-y-2">
-    <h1 class="text-3xl font-bold text-white count-up">
-        ${lead.full_name || lead.username}
-    </h1>
-    <p class="text-xl text-white/90 count-up" style="animation-delay: 0.2s;">@${lead.username}</p>
-    
-    ${lead.profile_url ? `
-        <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
-           class="inline-flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm font-semibold">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-            </svg>
-            <span>View Profile</span>
-        </a>
-    ` : ''}
-    
-    <div class="flex items-center space-x-3">
-        ${lead.is_business_account ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Business</span>' : ''}
-        ${lead.is_private ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Private</span>' : ''}
-    </div>
-</div>
+                            <div class="space-y-2">
+                                <h1 class="text-3xl font-bold text-white count-up">
+                                    ${lead.display_name || lead.full_name || lead.username}
+                                </h1>
+                                <p class="text-xl text-white/90 count-up" style="animation-delay: 0.2s;">@${lead.username}</p>
+                                
+                                ${lead.profile_url ? `
+                                    <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
+                                       class="inline-flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm font-semibold">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                        </svg>
+                                        <span>View Profile</span>
+                                    </a>
+                                ` : ''}
+                                
+                                <div class="flex items-center space-x-3">
+                                    ${(lead.is_business_account) ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Business</span>' : ''}
+                                    ${(lead.is_private_account || lead.is_private) ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Private</span>' : ''}
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Animated Score Ring - with count-up animation -->
@@ -340,10 +345,10 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                 <!-- Background circle -->
                                 <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
                                     <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"/>
-<circle id="scoreRing" cx="50" cy="50" r="40" stroke="white" stroke-width="8" fill="none"
-        stroke-dasharray="251.2"
-        stroke-dashoffset="251.2"
-        stroke-linecap="round"/>
+                                    <circle id="scoreRing" cx="50" cy="50" r="40" stroke="white" stroke-width="8" fill="none"
+                                            stroke-dasharray="251.2"
+                                            stroke-dashoffset="251.2"
+                                            stroke-linecap="round"/>
                                 </svg>
                                 <div class="absolute inset-0 flex items-center justify-center">
                                     <div class="text-center">
@@ -355,10 +360,10 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                         </div>
                     </div>
                     
-                    <!-- Animated Stats Grid - with stagger -->
+                    <!-- Animated Stats Grid - with stagger, updated field mapping -->
                     <div class="grid grid-cols-3 gap-4 stagger-reveal" style="animation-delay: 0.2s;">
                         <div class="group bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 hover-3d shimmer-effect transition-all duration-500 hover:bg-white/25">
-                            <div class="text-2xl font-bold text-white count-up group-hover:scale-110 transition-transform duration-300" style="animation-delay: 0.6s;">${(lead.followers_count || 0).toLocaleString()}</div>
+                            <div class="text-2xl font-bold text-white count-up group-hover:scale-110 transition-transform duration-300" style="animation-delay: 0.6s;">${(lead.follower_count || lead.followers_count || 0).toLocaleString()}</div>
                             <div class="text-sm text-white/80">Followers</div>
                             <div class="absolute top-2 right-2 w-2 h-2 bg-green-400 rounded-full subtle-icon-pulse"></div>
                         </div>
@@ -368,7 +373,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                             <div class="absolute top-2 right-2 w-2 h-2 bg-blue-400 rounded-full subtle-icon-pulse" style="animation-delay: 0.5s;"></div>
                         </div>
                         <div class="group bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 hover-3d shimmer-effect transition-all duration-500 hover:bg-white/25">
-                            <div class="text-2xl font-bold text-white count-up group-hover:scale-110 transition-transform duration-300" style="animation-delay: 1s;">${(lead.posts_count || 0).toLocaleString()}</div>
+                            <div class="text-2xl font-bold text-white count-up group-hover:scale-110 transition-transform duration-300" style="animation-delay: 1s;">${(lead.post_count || lead.posts_count || 0).toLocaleString()}</div>
                             <div class="text-sm text-white/80">Posts</div>
                             <div class="absolute top-2 right-2 w-2 h-2 bg-purple-400 rounded-full subtle-icon-pulse" style="animation-delay: 1s;"></div>
                         </div>
@@ -379,9 +384,9 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
             <!-- Content with Advanced Animations - ALL your exact styling preserved -->
             <div class="p-8 space-y-8 bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
                 ${isDeepAnalysis ? `
-                    <!-- Animated Metrics Grid - with stagger -->
+                    <!-- Animated Metrics Grid - with stagger, updated field mapping -->
                     <div class="grid grid-cols-1 gap-6 md:grid-cols-3 stagger-reveal" style="animation-delay: 0.3s;">
-                        <!-- Engagement Card -->
+                        <!-- Engagement Card - Updated field mapping -->
                         <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-pink-50 to-rose-100 p-6 shadow-2xl border border-pink-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
                             <!-- Floating gradient orb -->
                             <div class="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite;"></div>
@@ -394,7 +399,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                         </svg>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent count-up">${analysisData.engagement_score || 0}</div>
+                                        <div class="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent count-up">${analysisData?.engagement_score || 0}</div>
                                         <div class="text-sm text-pink-600/80">Engagement</div>
                                     </div>
                                 </div>
@@ -403,11 +408,11 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                 <div class="space-y-2">
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-600">Avg. Likes</span>
-                                        <span class="font-bold text-pink-700 count-up">${(analysisData.avg_likes || 0).toLocaleString()}</span>
+                                        <span class="font-bold text-pink-700 count-up">${(analysisData?.avg_likes || 0).toLocaleString()}</span>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-600">Avg. Comments</span>
-                                        <span class="font-bold text-pink-700 count-up">${(analysisData.avg_comments || 0).toLocaleString()}</span>
+                                        <span class="font-bold text-pink-700 count-up">${(analysisData?.avg_comments || 0).toLocaleString()}</span>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-600">Rate</span>
@@ -417,7 +422,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                             </div>
                         </div>
                         
-                        <!-- Niche Fit Card -->
+                        <!-- Niche Fit Card - Updated field mapping -->
                         <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-100 p-6 shadow-2xl border border-blue-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
                             <div class="absolute -top-4 -left-4 w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 1s;"></div>
                             
@@ -429,7 +434,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                         </svg>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent count-up">${analysisData.score_niche_fit || 0}</div>
+                                        <div class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent count-up">${analysisData?.score_niche_fit || analysisData?.niche_fit_score || 0}</div>
                                         <div class="text-sm text-blue-600/80">Niche Fit</div>
                                     </div>
                                 </div>
@@ -438,21 +443,21 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                 <div class="space-y-3">
                                     <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                                         <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-2000 ease-out" 
-                                             style="width: ${analysisData.score_niche_fit || 0}%; animation-delay: 1s;"></div>
+                                             style="width: ${analysisData?.score_niche_fit || analysisData?.niche_fit_score || 0}%; animation-delay: 1s;"></div>
                                     </div>
                                     <div class="flex justify-between text-sm">
                                         <span class="text-gray-600">Audience Quality</span>
                                         <span class="px-2 py-1 rounded-full text-xs font-bold ${
-                                            analysisData.audience_quality === 'High' ? 'bg-green-500 text-white' :
-                                            analysisData.audience_quality === 'Medium' ? 'bg-yellow-500 text-white' :
+                                            analysisData?.audience_quality === 'High' ? 'bg-green-500 text-white' :
+                                            analysisData?.audience_quality === 'Medium' ? 'bg-yellow-500 text-white' :
                                             'bg-red-500 text-white'
-                                        }">${analysisData.audience_quality || 'Unknown'}</span>
+                                        }">${analysisData?.audience_quality || 'Unknown'}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Followers Card -->
+                        <!-- Followers Card - Updated field mapping -->
                         <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-50 to-emerald-100 p-6 shadow-2xl border border-green-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
                             <div class="absolute -bottom-4 -right-4 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 2s;"></div>
                             
@@ -464,7 +469,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                         </svg>
                                     </div>
                                     <div class="text-right">
-                                        <div class="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent count-up">${(lead.followers_count || 0) > 1000 ? ((lead.followers_count || 0) / 1000).toFixed(1) + 'K' : (lead.followers_count || 0)}</div>
+                                        <div class="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent count-up">${(lead.follower_count || lead.followers_count || 0) > 1000 ? ((lead.follower_count || lead.followers_count || 0) / 1000).toFixed(1) + 'K' : (lead.follower_count || lead.followers_count || 0)}</div>
                                         <div class="text-sm text-green-600/80">Followers</div>
                                     </div>
                                 </div>
@@ -474,10 +479,10 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-600">Category</span>
                                         <span class="px-2 py-1 rounded-full text-xs font-bold ${
-                                            (lead.followers_count || 0) >= 10000 ? 'bg-purple-500 text-white' :
-                                            (lead.followers_count || 0) >= 1000 ? 'bg-blue-500 text-white' :
+                                            (lead.follower_count || lead.followers_count || 0) >= 10000 ? 'bg-purple-500 text-white' :
+                                            (lead.follower_count || lead.followers_count || 0) >= 1000 ? 'bg-blue-500 text-white' :
                                             'bg-gray-500 text-white'
-                                        }">${(lead.followers_count || 0) >= 10000 ? 'Macro' : (lead.followers_count || 0) >= 1000 ? 'Micro' : 'Nano'}</span>
+                                        }">${(lead.follower_count || lead.followers_count || 0) >= 10000 ? 'Macro' : (lead.follower_count || lead.followers_count || 0) >= 1000 ? 'Micro' : 'Nano'}</span>
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-sm text-gray-600">Engagement Rate</span>
@@ -495,7 +500,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                             <div class="flex items-center space-x-4 mb-6">
                                 <div class="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
                                     <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                                     </svg>
                                 </div>
                                 <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">AI Analysis Summary</h3>
@@ -504,8 +509,8 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                         </div>
                     </div>
                     
-                    ${analysisData.selling_points && analysisData.selling_points.length > 0 ? `
-<!-- Selling Points with Staggered Animation -->
+                    ${analysisData?.selling_points && analysisData.selling_points.length > 0 ? `
+                        <!-- Selling Points with Staggered Animation -->
                         <div class="group rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-100 p-8 shadow-2xl border border-yellow-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.5s;">
                             <div class="flex items-center space-x-4 mb-6">
                                 <div class="p-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
@@ -528,7 +533,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                         </div>
                     ` : ''}
                     
-                    ${analysisData.outreach_message ? `
+                    ${analysisData?.outreach_message ? `
                         <!-- Outreach Message with Glowing Border -->
                         <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 to-pink-100 p-8 shadow-2xl border-2 border-purple-200/50 hover-3d stagger-reveal" style="animation-delay: 0.6s;">
                             <!-- Animated border gradient -->
@@ -560,7 +565,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                         </div>
                     ` : ''}
                     
-                    ${analysisData.engagement_insights ? `
+                    ${analysisData?.engagement_insights ? `
                         <!-- Insights with Floating Elements -->
                         <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-50 to-cyan-100 p-8 shadow-2xl border border-teal-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.7s;">
                             <!-- Floating geometric shapes -->
@@ -612,16 +617,17 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
                     </div>
                 `}
             </div>
+        </div>
     `;
     
     // Initialize score count-up animation and staggered reveals
-    setTimeout(() => {
-            const scoreDisplay = document.getElementById('scoreDisplay');
-    const scoreRing = document.getElementById('scoreRing');
-    
-    if (scoreDisplay && scoreRing) {
-        this.animateScoreAndCircle(scoreDisplay, scoreRing, mainScore);
-    }
+       setTimeout(() => {
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const scoreRing = document.getElementById('scoreRing');
+        
+        if (scoreDisplay && scoreRing) {
+            this.animateScoreAndCircle(scoreDisplay, scoreRing, mainScore);
+        }
 
         // Initialize staggered reveals
         const staggerElements = modalContent.querySelectorAll('.stagger-reveal');
@@ -650,6 +656,32 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
         
     }, 100);
 }
+
+// Helper function for copying outreach message
+function copyOutreachMessage() {
+    const messageElement = document.getElementById('outreachMessage');
+    if (messageElement) {
+        navigator.clipboard.writeText(messageElement.textContent).then(() => {
+            // Show success notification
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.innerHTML = `
+                <span class="relative z-10 flex items-center space-x-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span>Copied!</span>
+                </span>
+            `;
+            setTimeout(() => {
+                button.innerHTML = originalText;
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy message:', err);
+        });
+    }
+}
+                                    
 
 animateScoreAndCircle(scoreElement, circleElement, targetScore) {
     let currentScore = 0;
@@ -686,33 +718,6 @@ animateScoreAndCircle(scoreElement, circleElement, targetScore) {
         this.setupGlobalMethods();
         console.log('✅ [AnalysisFunctions] Event listeners and global methods setup');
     }
-
-copyOutreachMessage(message, buttonElement = null) {
-    try {
-        // Get the message text from the DOM if no message provided
-        const messageText = message || document.getElementById('outreachMessage')?.textContent;
-        
-        if (!messageText) {
-            console.error('No message to copy');
-            return;
-        }
-
-        // Use the Clipboard API
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(messageText).then(() => {
-                this.showCopySuccess(buttonElement);
-            }).catch(err => {
-                console.error('Failed to copy message:', err);
-                this.fallbackCopyTextToClipboard(messageText, buttonElement);
-            });
-        } else {
-            // Fallback for older browsers or non-HTTPS
-            this.fallbackCopyTextToClipboard(messageText, buttonElement);
-        }
-    } catch (error) {
-        console.error('Error copying message:', error);
-    }
-}
 
 fallbackCopyTextToClipboard(text, buttonElement = null) {
     const textArea = document.createElement("textarea");
