@@ -566,15 +566,15 @@ From content themes and caption style:
 
 **pain_points** (2-6 from content):
 Look for complaint patterns, questions asked, problems mentioned:
-- "Posts about ${topic} suggest frustration with..."
-- "Asking followers about ${issue} indicates struggle with..."
-- "Collaboration requests suggest need for..."
+- "Posts about specific topics suggest frustration with relevant issues"
+- "Asking followers about problems indicates struggle with those areas"
+- "Collaboration requests suggest need for partnerships"
 
 **dreams_desires** (2-6 from content):
 From aspirational posts, goals mentioned, celebration posts:
-- "Celebrates ${achievement} suggesting values..."
-- "Posts about ${future} indicating desires..."
-- "Hashtags like #${tag} show aspiration toward..."
+- "Celebrates achievements suggesting their values and priorities"
+- "Posts about future goals indicating their desires and aspirations"
+- "Hashtags show aspiration toward specific outcomes or lifestyles"
 
 ### COMMERCIAL INTELLIGENCE - Based on observable signals
 
