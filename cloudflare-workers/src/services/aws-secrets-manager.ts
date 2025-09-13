@@ -13,15 +13,24 @@ export class AWSSecretsManager {
   private secretAccessKey: string;
   private region: string;
 
-  constructor(env: Env) {
-    this.accessKeyId = env.AWS_ACCESS_KEY_ID;
-    this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
-    this.region = env.AWS_REGION || 'us-east-1';
+constructor(env: Env) {
+  this.accessKeyId = env.AWS_ACCESS_KEY_ID;
+  this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
+  this.region = env.AWS_REGION || 'us-east-1';
 
-    if (!this.accessKeyId || !this.secretAccessKey) {
-      throw new Error('AWS credentials not configured');
-    }
+  // Debug logging
+  console.log('AWS Constructor Debug:', {
+    hasAccessKey: !!env.AWS_ACCESS_KEY_ID,
+    hasSecretKey: !!env.AWS_SECRET_ACCESS_KEY,
+    accessKeyLength: env.AWS_ACCESS_KEY_ID?.length || 0,
+    secretKeyLength: env.AWS_SECRET_ACCESS_KEY?.length || 0,
+    region: this.region
+  });
+
+  if (!this.accessKeyId || !this.secretAccessKey) {
+    throw new Error(`AWS credentials not configured - Access Key: ${!!this.accessKeyId}, Secret Key: ${!!this.secretAccessKey}`);
   }
+}
 
   async getSecret(secretName: string): Promise<string> {
     try {
