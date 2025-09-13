@@ -1,7 +1,13 @@
 import type { Env } from '../types/interfaces.js';
 import { fetchJson } from '../utils/helpers.js';
-import { logger } from '../utils/logger.js';
 import { getAWSSecretsManager } from './aws-secrets-manager.js';
+
+// Local logging function to avoid import issues in Worker environment
+function logger(level: 'info' | 'warn' | 'error', message: string, data?: any, requestId?: string) {
+  const timestamp = new Date().toISOString();
+  const logData = { timestamp, level, message, requestId, ...data };
+  console.log(JSON.stringify(logData));
+}
 
 interface ConfigItem {
   key_name: string;
