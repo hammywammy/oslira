@@ -31,6 +31,7 @@ export async function runTriage(
   if (!openaiKey) throw new Error('OpenAI API key not available');
 
   const modelConfig = MODEL_CONFIG.triage;
+if (!modelConfig) throw new Error('Triage model config not found');
   
   const prompt = buildTriagePrompt(snapshot, businessOneLiner);
   
