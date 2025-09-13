@@ -141,17 +141,17 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       };
     }
 
-    // SAVE TO DATABASE (NEW 3-TABLE STRUCTURE)
+// SAVE TO DATABASE (NEW 3-TABLE STRUCTURE)
     let run_id: string;
     try {
-      run_id = await saveCompleteAnalysis(leadData, analysisData, analysis_type, c.env);
+      run_id = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
       logger('info', 'Database save successful', { run_id, username: profileData.username });
     } catch (saveError: any) {
       logger('error', 'Database save failed', { error: saveError.message });
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        `Database save failed: ${saveError.message}`, 
+        `Database save failed: ${saveError.message}`,
         requestId
       ), 500);
     }
