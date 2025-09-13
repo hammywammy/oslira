@@ -28,6 +28,17 @@ class EnhancedConfigManager {
   ];
 
 constructor(private env: Env) {
+  // Log what we actually receive
+  console.log('EnhancedConfigManager env keys:', Object.keys(env));
+  console.log('AWS vars check:', {
+    AWS_ACCESS_KEY_ID: typeof env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: typeof env.AWS_SECRET_ACCESS_KEY,
+    values: {
+      accessKey: env.AWS_ACCESS_KEY_ID?.substring(0, 4) + '...',
+      secretKey: env.AWS_SECRET_ACCESS_KEY?.substring(0, 4) + '...'
+    }
+  });
+
   try {
     this.awsSecrets = getAWSSecretsManager(env);
     logger('info', 'AWS Secrets Manager initialized successfully');
