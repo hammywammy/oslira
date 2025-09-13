@@ -453,3 +453,68 @@ export async function updateCreditsAndTransaction(
     throw new Error(`Failed to update credits: ${error.message}`);
   }
 }
+
+export async function fetchUserAndCredits(user_id: string, env: Env): Promise<any> {
+  try {
+    const headers = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/users?select=*&id=eq.${user_id}`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error(`User fetch failed: ${response.status}`);
+    }
+
+    const users = await response.json();
+    if (!users.length) {
+      return { isValid: false, error: 'User not found' };
+    }
+
+    const user = users[0];
+    return {
+      isValid: true,
+      credits: user.credits || 0,
+      userId: user.id
+    };
+
+  } catch (error: any) {
+    logger('error', 'fetchUserAndCredits failed', { error: error.message });
+    return { isValid: false, error: error.message };
+  }
+}
+
+export async function fetchBusinessProfile(business_id: string, user_id: string, env: Env): Promise<any> {
+  try {
+    const headers = {
+      apikey: env.SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+      'Content-Type': 'application/json'
+    };
+
+    const response = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/business_profiles?select=*&id=eq.${business_id}&user_id=eq.${user_id}`,
+      { headers }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Business profile fetch failed: ${response.status}`);
+    }
+
+    const profiles = await response.json();
+    if (!profiles.length) {
+      throw new Error('Business profile not found or access denied');
+    }
+
+    return profiles[0];
+
+  } catch (error: any) {
+    logger('error', 'fetchBusinessProfile failed', { error: error.message });
+    throw new Error(`Business profile fetch failed: ${error.message}`);
+  }
+}
