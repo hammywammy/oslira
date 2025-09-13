@@ -24,11 +24,11 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       business_id 
     });
 
-// Validate user and fetch business profile with context
-    const [userResult, businessRaw] = await Promise.all([
-      fetchUserAndCredits(user_id, c.env),
-      fetchBusinessProfile(business_id, user_id, c.env)
-    ]);
+// Validate user and fetch business profile
+const [userResult, business] = await Promise.all([
+  fetchUserAndCredits(user_id, c.env),
+  fetchBusinessProfile(business_id, user_id, c.env)
+]);
     
     if (!userResult.isValid) {
       return c.json(createStandardResponse(
@@ -39,9 +39,7 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       ), 400);
     }
 
-    // Ensure business context exists
-    const businessContext = await ensureBusinessContext(businessRaw, c.env, requestId);
-    const business = { ...businessRaw, ...businessContext };
+// Business context will be ensured in orchestrator
 
     // Check credit requirements
     const creditCost = analysis_type === 'deep' ? 2 : analysis_type === 'xray' ? 3 : 1;
