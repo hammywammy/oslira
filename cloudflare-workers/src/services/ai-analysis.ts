@@ -1,5 +1,4 @@
 import type { ProfileData, BusinessProfile, AnalysisResult, Env } from '../types/interfaces.js';
-import { logger } from '../utils/logger.js';
 import { callWithRetry } from '../utils/helpers.js';
 import { calculateConfidenceLevel } from '../utils/validation.js';
 import { getApiKey } from './enhanced-config-manager.js';
@@ -157,6 +156,9 @@ async function executeAnalysisWithRetry(
   requestId: string,
   maxRetries: number = 3
 ): Promise<any> {
+  
+  // Import logger locally to ensure it's available in this scope
+  const { logger } = await import('../utils/logger.js');
   
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
   if (!openaiKey) throw new Error('OpenAI API key not available');
