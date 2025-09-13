@@ -409,7 +409,14 @@ export async function updateCreditsAndTransaction(
   description: string,
   transactionType: string,
   env: Env,
-  run_id?: string
+  run_id?: string,
+  costDetails?: {
+    actual_cost: number;
+    tokens_in: number;
+    tokens_out: number;
+    model_used: string;
+    block_type: string;
+  }
 ): Promise<void> {
   const headers = {
     apikey: env.SUPABASE_SERVICE_ROLE,
@@ -429,13 +436,18 @@ export async function updateCreditsAndTransaction(
       10000
     );
 
-    // Create transaction record
+// Create transaction record
     const transactionData = {
       user_id,
       amount: -cost,
       type: transactionType,
       description: description,
-      run_id: run_id || null // Use run_id instead of lead_id
+      run_id: run_id || null,
+      actual_cost: costDetails?.actual_cost || null,
+      tokens_in: costDetails?.tokens_in || null,
+      tokens_out: costDetails?.tokens_out || null,
+      model_used: costDetails?.model_used || null,
+      block_type: costDetails?.block_type || null
     };
 
     await fetchJson(
@@ -498,7 +510,7 @@ export async function fetchBusinessProfile(business_id: string, user_id: string,
     };
 
     const response = await fetch(
-      `${env.SUPABASE_URL}/rest/v1/business_profiles?select=*&id=eq.${business_id}&user_id=eq.${user_id}`,
+      `${env.SUPABASE_URL}/rest/v1/business_profiles?select=*,business_one_liner,business_context_pack,context_version,context_updated_at&id=eq.${business_id}&user_id=eq.${user_id}`,
       { headers }
     );
 
