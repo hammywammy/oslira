@@ -19,3 +19,7 @@ routes = [
 [env.staging.vars]
 APP_ENV = "staging" 
 FRONTEND_URL = "https://osliratest.netlify.app" 
+
+[[r2_buckets]]
+binding = "R2_CACHE_BUCKET"
+bucket_name = "oslira-preprocessor-cache"
