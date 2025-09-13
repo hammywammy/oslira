@@ -27,14 +27,20 @@ class EnhancedConfigManager {
     'SUPABASE_ANON_KEY'
   ];
 
-  constructor(private env: Env) {
-    try {
-      this.awsSecrets = getAWSSecretsManager(env);
-    } catch (error) {
-      logger('warn', 'AWS Secrets Manager not available, falling back to Supabase only');
-      this.awsSecrets = null;
-    }
+constructor(private env: Env) {
+  try {
+    this.awsSecrets = getAWSSecretsManager(env);
+    logger('info', 'AWS Secrets Manager initialized successfully');
+  } catch (error: any) {
+    logger('error', 'AWS Secrets Manager initialization failed', { 
+      error: error.message,
+      hasAccessKey: !!env.AWS_ACCESS_KEY_ID,
+      hasSecretKey: !!env.AWS_SECRET_ACCESS_KEY,
+      region: env.AWS_REGION
+    });
+    this.awsSecrets = null;
   }
+}
 
   async getConfig(keyName: string): Promise<string> {
     // Check cache first
