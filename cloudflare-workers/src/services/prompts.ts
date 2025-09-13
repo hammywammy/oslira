@@ -266,12 +266,27 @@ export function getXRayAnalysisJsonSchema() {
 // LIGHT ANALYSIS PROMPTS
 // ===============================================================================
 
-export function buildLightAnalysisPrompt(profile: ProfileData, business: BusinessProfile): string {
+export function buildLightAnalysisPrompt(
+  profile: ProfileData, 
+  business: BusinessProfile,
+  context?: {
+    triage?: any;
+    preprocessor?: any;
+  }
+): string {
   const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 
     ? `Real engagement data: ${profile.engagement?.engagementRate}% rate (${profile.engagement?.avgLikes} avg likes, ${profile.engagement?.avgComments} avg comments across ${profile.engagement?.postsAnalyzed} posts)`
     : `Estimated engagement based on ${profile.followersCount.toLocaleString()} followers`;
 
+  const triageContext = context?.triage ? `
+## TRIAGE INSIGHTS
+- **Lead Score**: ${context.triage.lead_score}/100
+- **Data Quality**: ${context.triage.data_richness}/100  
+- **Key Observations**: ${context.triage.focus_points?.join(', ') || 'None'}
+` : '';
+
   return `# LIGHT ANALYSIS: Quick Business Fit Assessment
+${triageContext}
 
 # LIGHT ANALYSIS: 10-Second Lead Check
 
@@ -338,10 +353,32 @@ Return JSON only. Make the decision binary: pursue or skip.
 // DEEP ANALYSIS PROMPTS  
 // ===============================================================================
 
-export function buildDeepAnalysisPrompt(profile: ProfileData, business: BusinessProfile): string {
+export function buildDeepAnalysisPrompt(
+  profile: ProfileData, 
+  business: BusinessProfile,
+  context?: {
+    triage?: any;
+    preprocessor?: any;
+  }
+): string {
   const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 
     ? `REAL ENGAGEMENT DATA: ${profile.engagement?.engagementRate}% rate (${profile.engagement?.avgLikes} avg likes, ${profile.engagement?.avgComments} avg comments across ${profile.engagement?.postsAnalyzed} posts)`
     : `Estimated engagement based on ${profile.followersCount.toLocaleString()} followers`;
+
+  const triageContext = context?.triage ? `
+## TRIAGE INSIGHTS  
+- **Lead Score**: ${context.triage.lead_score}/100 (${context.triage.confidence * 100}% confidence)
+- **Focus Areas**: ${context.triage.focus_points?.join(', ') || 'General analysis'}
+` : '';
+
+  const preprocessorContext = context?.preprocessor ? `
+## EXTRACTED PROFILE FACTS
+- **Content Themes**: ${context.preprocessor.content_themes?.join(', ') || 'Unknown'}
+- **Posting Pattern**: ${context.preprocessor.posting_cadence || 'Unknown'}
+- **Collaboration History**: ${context.preprocessor.collaboration_history || 'No evidence'}
+- **Contact Readiness**: ${context.preprocessor.contact_readiness || 'Unknown'}
+- **Brand Mentions**: ${context.preprocessor.brand_mentions?.join(', ') || 'None found'}
+` : '';
 
   const contentInfo = (profile.latestPosts?.length || 0) > 0 
     ? `Recent content themes: ${profile.latestPosts.slice(0, 3).map(p => `"${p.caption?.slice(0, 100) || 'Visual content'}"...`).join(' | ')}`
@@ -441,10 +478,32 @@ Return JSON only. Every claim must trace to profile data.
 // X-RAY ANALYSIS PROMPTS
 // ===============================================================================
 
-export function buildXRayAnalysisPrompt(profile: ProfileData, business: BusinessProfile): string {
+export function buildXRayAnalysisPrompt(
+  profile: ProfileData, 
+  business: BusinessProfile,
+  context?: {
+    triage?: any;
+    preprocessor?: any;
+  }
+): string {
   const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 
     ? `REAL ENGAGEMENT DATA: ${profile.engagement?.engagementRate}% rate (${profile.engagement?.avgLikes} avg likes, ${profile.engagement?.avgComments} avg comments across ${profile.engagement?.postsAnalyzed} posts)`
     : `Estimated engagement based on ${profile.followersCount.toLocaleString()} followers`;
+
+  const triageContext = context?.triage ? `
+## STRATEGIC CONTEXT
+- **Lead Quality**: ${context.triage.lead_score}/100 (${Math.round(context.triage.confidence * 100)}% confidence)
+- **Analysis Focus**: ${context.triage.focus_points?.join(' | ') || 'Comprehensive profile'}
+` : '';
+
+  const preprocessorContext = context?.preprocessor ? `
+## BEHAVIORAL INTELLIGENCE
+- **Content Strategy**: ${context.preprocessor.content_themes?.join(' + ') || 'Unknown themes'}
+- **Engagement Drivers**: ${context.preprocessor.engagement_patterns || 'Unknown patterns'}
+- **Brand Relationships**: ${context.preprocessor.brand_mentions?.length > 0 ? context.preprocessor.brand_mentions.join(', ') : 'No brand connections visible'}
+- **Business Readiness**: ${context.preprocessor.contact_readiness || 'Unknown'}
+- **Collaboration Track Record**: ${context.preprocessor.collaboration_history || 'No evidence'}
+` : '';
 
   const contentInfo = (profile.latestPosts?.length || 0) > 0 
     ? `Recent content analysis: ${profile.latestPosts.slice(0, 5).map(p => `"${p.caption?.slice(0, 150) || 'Visual content'}"...`).join(' | ')}`
