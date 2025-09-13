@@ -361,8 +361,8 @@ export function buildDeepAnalysisPrompt(
     preprocessor?: any;
   }
 ): string {
-  const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 
-    ? `REAL ENGAGEMENT DATA: ${profile.engagement?.engagementRate}% rate (${profile.engagement?.avgLikes} avg likes, ${profile.engagement?.avgComments} avg comments across ${profile.engagement?.postsAnalyzed} posts)`
+const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 
+    ? `REAL ENGAGEMENT DATA: ${profile.engagement.engagementRate}% rate (${profile.engagement.avgLikes} avg likes, ${profile.engagement.avgComments} avg comments across ${profile.engagement.postsAnalyzed} posts)`
     : `Estimated engagement based on ${profile.followersCount.toLocaleString()} followers`;
 
   const triageContext = context?.triage ? `
@@ -395,7 +395,7 @@ export function buildDeepAnalysisPrompt(
 - **Status**: ${profile.isVerified ? 'Verified ✓' : 'Unverified'} | ${profile.isBusinessAccount ? 'Business' : 'Personal'}
 
 ## ACTUAL ENGAGEMENT DATA
-${(profile.engagement?.postsAnalyzed || 0) > 0 
+${profile.engagement && profile.engagement.postsAnalyzed > 0
   ? `REAL METRICS from ${profile.engagement.postsAnalyzed} posts:
     - Avg Likes: ${profile.engagement.avgLikes.toLocaleString()}
     - Avg Comments: ${profile.engagement.avgComments.toLocaleString()}
