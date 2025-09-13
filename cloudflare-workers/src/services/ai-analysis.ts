@@ -142,7 +142,7 @@ export async function performAIAnalysis(
 
     return transformedResult;
 
-} catch (error: any) {
+  } catch (error: any) {
     // Import logger for error handling
     const { logger } = await import('../utils/logger.js');
     logger('error', 'AI analysis failed', { error: error.message, requestId });
@@ -162,7 +162,7 @@ async function executeAnalysisWithRetry(
   maxRetries: number = 3
 ): Promise<any> {
   
-  // Import logger locally to ensure it's available throughout this function
+  // Import logger locally to ensure it's available in this function scope
   const { logger } = await import('../utils/logger.js');
   
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
@@ -305,163 +305,112 @@ function transformAnalysisResult(
         const persuasionAngle = rawResult.xray_payload.persuasion_strategy?.primary_angle || '';
         
         baseResult.selling_points = [
-          `Psychographic Profile: ${psychographics}`,
-          `Primary Persuasion Angle: ${persuasionAngle}`,
+          ...(rawResult.xray_payload.copywriter_profile?.pain_points || []),
           ...(rawResult.xray_payload.copywriter_profile?.dreams_desires || [])
         ];
+        baseResult.reasons = rawResult.xray_payload.persuasion_strategy?.key_messages || [];
         
-        baseResult.reasons = [
-          `Decision Role: ${rawResult.xray_payload.commercial_intelligence?.decision_role || 'Unknown'}`,
-          `Communication Style: ${rawResult.xray_payload.persuasion_strategy?.communication_style || 'Unknown'}`,
-          ...(rawResult.xray_payload.copywriter_profile?.pain_points || [])
-        ];
-
-        // Store X-ray specific data for database payload
+        // Store X-ray specific data
         baseResult.copywriter_profile = rawResult.xray_payload.copywriter_profile;
         baseResult.commercial_intelligence = rawResult.xray_payload.commercial_intelligence;
         baseResult.persuasion_strategy = rawResult.xray_payload.persuasion_strategy;
       }
       break;
-  }
 
-  // Store the raw payload for database insertion
-  baseResult.payload_data = rawResult[`${analysisType}_payload`];
-  baseResult.analysis_type = analysisType;
+    default:
+      break;
+  }
 
   return baseResult;
 }
 
 // ===============================================================================
-// OUTREACH MESSAGE GENERATION (UPDATED)
+// LEGACY OUTREACH MESSAGE GENERATION
 // ===============================================================================
 
 export async function generateOutreachMessage(
   profile: ProfileData,
-  business: BusinessProfile,
   analysis: AnalysisResult,
-  env: Env,
-  requestId?: string
+  business: BusinessProfile,
+  env: Env
 ): Promise<string> {
+  const { logger } = await import('../utils/logger.js');
   
   try {
-    logger('info', 'Starting outreach message generation', { 
-      username: profile.username, 
-      requestId 
+    const prompt = buildOutreachMessagePrompt(profile, analysis, business);
+    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+    
+    if (!openaiKey) throw new Error('OpenAI API key not available');
+
+    const body = buildOpenAIChatBody({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: 'You are a professional copywriter specializing in influencer outreach. Write personalized, compelling messages that feel human and authentic.' },
+        { role: 'user', content: prompt }
+      ],
+      maxTokens: 500
     });
 
-    const prompt = buildOutreachMessagePrompt(profile, business, analysis);
-    
-    // Try Claude first for better creative writing
-    const claudeKey = await getApiKey('CLAUDE_API_KEY', env);
-    if (claudeKey) {
-      try {
-        const claudeResponse = await callWithRetry(
-          'https://api.anthropic.com/v1/messages',
-          {
-            method: 'POST',
-            headers: {
-              'x-api-key': claudeKey,
-              'Content-Type': 'application/json',
-              'anthropic-version': '2023-06-01'
-            },
-            body: JSON.stringify({
-              model: 'claude-3-5-sonnet-20241022',
-              max_tokens: 1000,
-              messages: [
-                { role: 'user', content: prompt }
-              ]
-            })
-          },
-          2, 1500, 20000
-        );
-
-        if (claudeResponse?.content?.[0]?.text) {
-          const message = claudeResponse.content[0].text.trim();
-          logger('info', 'Outreach message generated via Claude', { requestId });
-          return message;
-        }
-      } catch (claudeError: any) {
-        logger('warn', 'Claude outreach generation failed, trying OpenAI', { 
-          error: claudeError.message, 
-          requestId 
-        });
-      }
-    }
-
-    // Fallback to OpenAI
-    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-    if (openaiKey) {
-      const body = buildOpenAIChatBody({
-        model: 'gpt-4o',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'Write a personalized outreach message. Be professional but friendly. No markdown formatting.' 
-          },
-          { role: 'user', content: prompt }
-        ],
-        maxTokens: 1000
-      });
-
-      const openaiResponse = await callWithRetry(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${openaiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
+    const response = await callWithRetry(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${openaiKey}`,
+          'Content-Type': 'application/json'
         },
-        2, 1500, 20000
-      );
+        body: JSON.stringify(body)
+      },
+      2, // 2 retries
+      2000, // 2 second delay
+      15000 // 15 second timeout
+    );
 
-      const content = parseChoiceSafe(openaiResponse?.choices?.[0]);
-      if (content) {
-        logger('info', 'Outreach message generated via OpenAI', { requestId });
-        return content.trim();
-      }
-    }
+    const content = parseChoiceSafe(response?.choices?.[0]);
+    if (!content) throw new Error('Empty outreach message response');
 
-    throw new Error('No AI service available for message generation');
+    logger('info', 'Outreach message generated successfully', { 
+      username: profile.username,
+      messageLength: content.length
+    });
+
+    return content;
 
   } catch (error: any) {
-    logger('error', 'Outreach message generation failed, using fallback', { 
-      error: error.message, 
-      requestId 
+    logger('error', 'Outreach message generation failed', { 
+      error: error.message,
+      username: profile.username
     });
-
-    // Intelligent fallback based on profile data
-    return `Hi ${profile.displayName || profile.username},
-
-I came across your profile and was impressed by your content and engagement with your ${profile.followersCount.toLocaleString()} followers.
-
-I'm reaching out from ${business.name}, and I think there could be a great opportunity for collaboration given your audience and our ${business.value_proposition || 'offering'}.
-
-Would you be interested in exploring a potential partnership? I'd love to share more details about what we have in mind.
-
-Best regards`;
+    
+    // Return fallback message
+    return `Hi @${profile.username}! I came across your ${profile.isVerified ? 'verified' : 'amazing'} profile and was impressed by your content. I think there could be a great partnership opportunity between you and ${business.name}. Would love to chat about how we can work together! 🤝`;
   }
 }
 
 // ===============================================================================
-// SUMMARY GENERATION FUNCTIONS (UPDATED)
+// SUMMARY GENERATION FUNCTIONS
 // ===============================================================================
 
 export async function generateQuickSummary(
   profile: ProfileData,
-  env: Env,
-  requestId?: string
+  analysis: AnalysisResult,
+  env: Env
 ): Promise<string> {
+  const { logger } = await import('../utils/logger.js');
   
   try {
-    const prompt = buildQuickSummaryPrompt(profile);
+    const prompt = buildQuickSummaryPrompt(profile, analysis);
     const openaiKey = await getApiKey('OPENAI_API_KEY', env);
+    
+    if (!openaiKey) {
+      // Return fallback summary if no API key
+      return `${profile.isVerified ? 'Verified' : 'Unverified'} profile with ${profile.followersCount.toLocaleString()} followers and ${analysis.score}/100 business compatibility score. Engagement rate of ${profile.engagement?.engagementRate || 'unknown'}% indicates ${analysis.audience_quality ? String(analysis.audience_quality).toLowerCase() : 'unknown'} audience quality.`;
+    }
 
     const body = buildOpenAIChatBody({
-      model: 'gpt-4o-mini',
+      model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'Generate a concise profile summary. Maximum 150 characters.' },
+        { role: 'system', content: 'You are a business analyst. Provide concise, professional summaries of influencer profiles.' },
         { role: 'user', content: prompt }
       ],
       maxTokens: 200
@@ -476,56 +425,22 @@ export async function generateQuickSummary(
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(body)
-      }
+      },
+      2, // 2 retries
+      2000, // 2 second delay
+      10000 // 10 second timeout
     );
 
     const content = parseChoiceSafe(response?.choices?.[0]);
-    return content?.trim() || `@${profile.username} - ${profile.followersCount.toLocaleString()} followers, ${profile.isVerified ? 'verified' : 'unverified'} ${profile.isBusinessAccount ? 'business' : 'personal'} account`;
+    return content || `${profile.username} analysis summary generated successfully.`;
 
-  } catch (error) {
-    logger('warn', 'Quick summary generation failed, using fallback', { error }, requestId);
-    return `@${profile.username} - ${profile.followersCount.toLocaleString()} followers, ${profile.isVerified ? 'verified' : 'unverified'} account`;
-  }
-}
-
-export async function generateDeepSummary(
-  profile: ProfileData,
-  business: BusinessProfile,
-  analysis: AnalysisResult,
-  env: Env,
-  requestId?: string
-): Promise<string> {
-  
-  try {
-    const prompt = buildDeepSummaryPrompt(profile, business, analysis);
-    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-
-    const body = buildOpenAIChatBody({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'Write a 5-7 sentence executive analysis summary. No preface.' },
-        { role: 'user', content: prompt }
-      ],
-      maxTokens: 600
+  } catch (error: any) {
+    logger('warn', 'Quick summary generation failed, using fallback', { 
+      error: error.message,
+      username: profile.username
     });
-
-    const response = await callWithRetry(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${openaiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      }
-    );
-
-    const content = parseChoiceSafe(response?.choices?.[0]);
-    return content?.trim() || `Comprehensive analysis of @${profile.username}: ${profile.isVerified ? 'Verified' : 'Unverified'} profile with ${profile.followersCount.toLocaleString()} followers and ${analysis.score}/100 business compatibility score.`;
-
-  } catch (error) {
-    logger('warn', 'Deep summary generation failed, using fallback', { error }, requestId);
-    return `Comprehensive analysis of @${profile.username}: ${profile.isVerified ? 'Verified' : 'Unverified'} profile with ${profile.followersCount.toLocaleString()} followers and ${analysis.score}/100 business compatibility score. Engagement rate of ${profile.engagement?.engagementRate || 'unknown'}% indicates ${analysis.audience_quality ? String(analysis.audience_quality).toLowerCase() : 'unknown'} audience quality.`;
+    
+    // Return fallback summary
+    return `${profile.isVerified ? 'Verified' : 'Unverified'} profile with ${profile.followersCount.toLocaleString()} followers and ${analysis.score}/100 business compatibility score. Engagement rate of ${profile.engagement?.engagementRate || 'unknown'}% indicates ${analysis.audience_quality ? String(analysis.audience_quality).toLowerCase() : 'unknown'} audience quality.`;
   }
 }
