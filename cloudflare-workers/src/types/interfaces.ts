@@ -1,27 +1,29 @@
 // ===============================================================================
 // ENVIRONMENT INTERFACE (UPDATED)
 // ===============================================================================
-
 export interface Env {
+  // AWS Credentials (stored in Cloudflare)
   AWS_ACCESS_KEY_ID: string;
   AWS_SECRET_ACCESS_KEY: string;
   AWS_REGION: string;
   AWS_ACCOUNT_ID: string;
   SECRETS_PREFIX: string;
   
-  // Admin
+  // Admin (stored in Cloudflare)
   ADMIN_TOKEN: string;
   
-  // Supabase
+  // Supabase (stored in Cloudflare)
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE: string;
   SUPABASE_ANON_KEY: string;
-  OPENAI_API_KEY: string;  // Updated from OPENAI_KEY
-  CLAUDE_API_KEY: string;  // Added for Claude support
-  APIFY_API_TOKEN: string;
-  STRIPE_SECRET_KEY: string;
-  STRIPE_WEBHOOK_SECRET: string;
+  
+  // App Config (stored in Cloudflare)
   FRONTEND_URL: string;
+  APP_ENV?: string;
+  
+  // Note: These are retrieved from AWS, not environment variables:
+  // OPENAI_API_KEY, CLAUDE_API_KEY, APIFY_API_TOKEN, 
+  // STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
 }
 
 // ===============================================================================
