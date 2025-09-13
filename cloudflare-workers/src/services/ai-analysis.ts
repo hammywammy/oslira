@@ -16,6 +16,7 @@ import {
   buildDeepSummaryPrompt
 } from './prompts.js';
 
+import { MODEL_CONFIG, calculateCost } from '../config/models.js';
 // ===============================================================================
 // HELPER FUNCTIONS
 // ===============================================================================
@@ -23,6 +24,7 @@ import {
 const isGPT5 = (m: string) => /^gpt-5/i.test(m);
 
 type ChatMsg = { role: 'system'|'user'|'assistant'; content: string };
+
 
 function buildOpenAIChatBody(opts: {
   model: string;
@@ -95,8 +97,21 @@ export async function performAIAnalysis(
   business: BusinessProfile,
   analysisType: 'light' | 'deep' | 'xray',
   env: Env,
-  requestId: string
-): Promise<AnalysisResult> {
+  requestId: string,
+  context?: {
+    triage?: any;
+    preprocessor?: any;
+  }
+): Promise<{
+  result: AnalysisResult;
+  costDetails: {
+    actual_cost: number;
+    tokens_in: number;
+    tokens_out: number;
+    model_used: string;
+    block_type: string;
+  };
+}> {
   
   log('info', 'About to call getApiKey for OPENAI_API_KEY', { requestId });
   
@@ -130,11 +145,22 @@ export async function performAIAnalysis(
         throw new Error(`Unsupported analysis type: ${analysisType}`);
     }
 
-    // Execute the analysis
-    const rawResult = await executeAnalysisWithRetry(prompt, jsonSchema, env, requestId);
+// Execute the analysis
+    const { result: rawResult, costDetails } = await executeAnalysisWithRetry(
+      prompt, 
+      jsonSchema, 
+      env, 
+      requestId, 
+      analysisType
+    );
     
     // Transform the result to match our AnalysisResult interface
     const transformedResult = transformAnalysisResult(rawResult, analysisType, profile);
+
+    return {
+      result: transformedResult,
+      costDetails
+    };
     
     log('info', `AI analysis completed with new payload structure`, {
       username: profile.username,
@@ -163,16 +189,28 @@ async function executeAnalysisWithRetry(
   jsonSchema: any,
   env: Env,
   requestId: string,
+  blockType: string,
   maxRetries: number = 3
-): Promise<any> {
+): Promise<{
+  result: any;
+  costDetails: {
+    actual_cost: number;
+    tokens_in: number;
+    tokens_out: number;
+    model_used: string;
+    block_type: string;
+  };
+}> {
   
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
   if (!openaiKey) throw new Error('OpenAI API key not available');
 
-  const model = 'gpt-4o'; // Using GPT-4o for consistent results
+  const modelConfig = MODEL_CONFIG[blockType];
+  const model = modelConfig.model;
+  
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-log('info', `Analysis attempt ${attempt}/${maxRetries}`, undefined, requestId);
+    try {
+      log('info', `Analysis attempt ${attempt}/${maxRetries}`, { blockType, model }, requestId);
 
       const body = buildOpenAIChatBody({
         model,
@@ -181,66 +219,80 @@ log('info', `Analysis attempt ${attempt}/${maxRetries}`, undefined, requestId);
             role: 'system', 
             content: 'You are an expert business analyst specializing in influencer partnerships. Return ONLY valid JSON matching the exact schema provided. No additional text, explanations, or markdown formatting.' 
           },
-              { role: 'user', content: prompt }
-            ],
-            maxTokens: 4000,
-            jsonSchema: jsonSchema
-          });
+          { role: 'user', content: prompt }
+        ],
+        maxTokens: modelConfig.max_out,
+        jsonSchema: jsonSchema
+      });
 
-          const response = await callWithRetry(
-            'https://api.openai.com/v1/chat/completions',
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${openaiKey}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(body)
-            },
-            2, // 2 retries for API call
-            2000, // 2 second delay
-            30000 // 30 second timeout
-          );
+      const response = await callWithRetry(
+        'https://api.openai.com/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(body)
+        },
+        2, // 2 retries for API call
+        2000, // 2 second delay
+        30000 // 30 second timeout
+      );
 
-          const content = parseChoiceSafe(response?.choices?.[0]);
-          if (!content) {
-            throw new Error(`Empty response from model (attempt ${attempt})`);
-          }
-
-          // Parse and validate JSON
-          let parsedResult;
-          try {
-            parsedResult = JSON.parse(content);
-          } catch (parseError) {
-            throw new Error(`Invalid JSON response (attempt ${attempt}): ${parseError}`);
-          }
-
-          // Validate required fields exist
-          if (!parsedResult.score || !parsedResult.engagement_score || !parsedResult.niche_fit) {
-            throw new Error(`Missing required score fields (attempt ${attempt})`);
-          }
-
-log('info', 'Analysis completed successfully', { 
-            attempt, 
-            score: parsedResult.score
-          }, requestId);
-
-          return parsedResult;
-
-} catch (error: any) {
-          log('warn', `Analysis attempt ${attempt} failed`, { 
-            error: error.message
-          }, requestId);
-
-          if (attempt === maxRetries) {
-            throw new Error(`All ${maxRetries} analysis attempts failed. Last error: ${error.message}`);
-          }
-
-          // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, attempt * 1000));
-        }
+      const content = parseChoiceSafe(response?.choices?.[0]);
+      if (!content) {
+        throw new Error(`Empty response from model (attempt ${attempt})`);
       }
+
+      // Calculate actual cost
+      const usage = response?.usage;
+      const tokensIn = usage?.prompt_tokens || 0;
+      const tokensOut = usage?.completion_tokens || 0;
+      const actualCost = calculateCost(tokensIn, tokensOut, blockType);
+
+      // Parse and validate JSON
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(content);
+      } catch (parseError) {
+        throw new Error(`Invalid JSON response (attempt ${attempt}): ${parseError}`);
+      }
+
+      log('info', 'Analysis completed successfully', { 
+        attempt, 
+        tokensIn,
+        tokensOut,
+        actualCost,
+        blockType
+      }, requestId);
+
+      return {
+        result: parsedResult,
+        costDetails: {
+          actual_cost: actualCost,
+          tokens_in: tokensIn,
+          tokens_out: tokensOut,
+          model_used: model,
+          block_type: blockType
+        }
+      };
+
+    } catch (error: any) {
+      log('warn', `Analysis attempt ${attempt} failed`, { 
+        error: error.message,
+        blockType
+      }, requestId);
+
+      if (attempt === maxRetries) {
+        throw new Error(`All ${maxRetries} analysis attempts failed. Last error: ${error.message}`);
+      }
+
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => setTimeout(resolve, attempt * 1000));
     }
+  }
+}
 
 // ===============================================================================
 // RESULT TRANSFORMATION (MAPS NEW PAYLOAD TO OLD INTERFACE)
