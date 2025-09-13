@@ -182,33 +182,46 @@ const [userResult, business] = await Promise.all([
       ), 500);
     }
 
-// UPDATE USER CREDITS
-    try {
-      const costDetails = {
-        actual_cost: orchestrationResult.totalCost.actual_cost,
-        tokens_in: orchestrationResult.totalCost.tokens_in,
-        tokens_out: orchestrationResult.totalCost.tokens_out,
-        model_used: orchestrationResult.totalCost.blocks_used.join('+'),
-        block_type: orchestrationResult.totalCost.blocks_used.join('+')
-      };
-      
-      const newBalance = userResult.credits - creditCost;
-      await updateCreditsAndTransaction(
-        user_id, 
-        creditCost, 
-        newBalance,
-        `${analysis_type} analysis (${orchestrationResult.totalCost.blocks_used.join('+')})`,
-        'use',
-        c.env,
-        run_id,
-        costDetails
-      );
-      logger('info', 'Credits updated successfully', { 
-        userId: user_id, 
-        creditsUsed: creditCost,
-        actualCost: costDetails.actual_cost,
-        remaining: newBalance
-      });
+// UPDATE USER CREDITS WITH ENHANCED TRACKING
+try {
+  const { calculateCreditCost } = await import('../config/models.js');
+  const totalTokens = orchestrationResult.totalCost.tokens_in + orchestrationResult.totalCost.tokens_out;
+  const dynamicCreditCost = calculateCreditCost(analysis_type, orchestrationResult.totalCost.actual_cost, totalTokens);
+  
+  // Use dynamic cost if different from fixed cost
+  const finalCreditCost = Math.max(creditCost, dynamicCreditCost);
+  
+  const costDetails = {
+    actual_cost: orchestrationResult.totalCost.actual_cost,
+    tokens_in: orchestrationResult.totalCost.tokens_in,
+    tokens_out: orchestrationResult.totalCost.tokens_out,
+    model_used: orchestrationResult.totalCost.blocks_used.join('+'),
+    block_type: orchestrationResult.totalCost.blocks_used.join('+'),
+    processing_duration_ms: orchestrationResult.performance.total_ms,
+    blocks_used: orchestrationResult.totalCost.blocks_used
+  };
+  
+  const newBalance = userResult.credits - finalCreditCost;
+  await updateCreditsAndTransaction(
+    user_id, 
+    finalCreditCost, 
+    newBalance,
+    `${analysis_type} analysis (${orchestrationResult.totalCost.blocks_used.join('+')})`,
+    'use',
+    c.env,
+    run_id,
+    costDetails
+  );
+logger('info', 'Credits updated with cost tracking', { 
+    userId: user_id, 
+    creditsCharged: finalCreditCost,
+    actualCost: costDetails.actual_cost,
+    margin: finalCreditCost - costDetails.actual_cost,
+    tokensCapped: totalTokens > 2200,
+    remaining: newBalance,
+    blocks: orchestrationResult.totalCost.blocks_used.join('+'),
+    processingMs: orchestrationResult.performance.total_ms
+  });
     } catch (creditError: any) {
       logger('error', 'Credit update failed', { error: creditError.message });
       // Analysis completed but credit update failed - still return success
@@ -261,9 +274,11 @@ const [userResult, business] = await Promise.all([
           persuasion_strategy: analysisData?.persuasion_strategy || {}
         })
       },
-      credits: {
-        used: creditCost,
-        remaining: userResult.credits - creditCost
+credits: {
+        used: finalCreditCost,
+        remaining: userResult.credits - finalCreditCost,
+        actual_cost: orchestrationResult.totalCost.actual_cost,
+        margin: finalCreditCost - orchestrationResult.totalCost.actual_cost
       },
 metadata: {
         request_id: requestId,
