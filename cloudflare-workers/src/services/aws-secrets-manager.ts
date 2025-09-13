@@ -315,7 +315,8 @@ constructor(env: Env) {
 let awsSecretsInstance: AWSSecretsManager | null = null;
 
 export function getAWSSecretsManager(env: Env): AWSSecretsManager {
-  // Don't use singleton for now - create fresh instance each time
-  console.log('Creating new AWSSecretsManager instance');
-  return new AWSSecretsManager(env);
+  if (!awsSecretsInstance) {
+    awsSecretsInstance = new AWSSecretsManager(env);
+  }
+  return awsSecretsInstance;
 }
