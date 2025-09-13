@@ -122,6 +122,29 @@ app.get('/debug-env', async (c) => {
   return handleDebugEnv(c);
 });
 
+app.get('/test-orchestration', async (c) => {
+  const { runIntegrationTests } = await import('./test/orchestration-integration.js');
+  try {
+    const results = await runIntegrationTests(c.env);
+    const totalCost = results.reduce((sum, r) => sum + r.cost, 0);
+    const totalDuration = results.reduce((sum, r) => sum + r.duration_ms, 0);
+    const successCount = results.filter(r => r.success).length;
+    
+    return c.json({
+      success: true,
+      summary: {
+        total_tests: results.length,
+        passed: successCount,
+        failed: results.length - successCount,
+        total_cost: totalCost,
+        total_duration_ms: totalDuration
+      },
+      results
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
 // Test endpoints
 app.get('/test-supabase', async (c) => {
   const { handleTestSupabase } = await import('./handlers/test.js');
