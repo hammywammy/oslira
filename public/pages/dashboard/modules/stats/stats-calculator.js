@@ -85,6 +85,23 @@ async refreshStats() {
         }
     }, 250);
 }
+
+    calculateGrowthRate(runs, days) {
+    const now = new Date();
+    const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const recentRuns = runs.filter(run => new Date(run.created_at) > cutoffDate);
+    
+    // Simple growth calculation based on analysis volume
+    const previousPeriodStart = new Date(cutoffDate.getTime() - days * 24 * 60 * 60 * 1000);
+    const previousPeriodRuns = runs.filter(run => {
+        const runDate = new Date(run.created_at);
+        return runDate > previousPeriodStart && runDate <= cutoffDate;
+    });
+    
+    if (previousPeriodRuns.length === 0) return recentRuns.length > 0 ? 100 : 0;
+    
+    return Math.round(((recentRuns.length - previousPeriodRuns.length) / previousPeriodRuns.length) * 100);
+}
     
     // EXTRACTED FROM dashboard.js lines 1100-1200
     calculateStats(leads) {
@@ -271,69 +288,91 @@ async refreshStats() {
     // INSIGHTS GENERATION
     // ===============================================================================
     
-    generateInsights(stats = null) {
-        const statsData = stats || this.stateManager.getState('stats');
-        if (!statsData) return [];
-        
-        const insights = [];
-        
-        // High-value leads insight
-        if (statsData.totalLeads > 0) {
-            const highValuePercentage = (statsData.highValueLeads / statsData.totalLeads) * 100;
-            
-            if (highValuePercentage >= 30) {
-                insights.push({
-                    type: 'success',
-                    icon: '🎯',
-                    title: 'Excellent Lead Quality',
-                    message: `${Math.round(highValuePercentage)}% of your leads are high-value matches!`
-                });
-            } else if (highValuePercentage >= 15) {
-                insights.push({
-                    type: 'info',
-                    icon: '📈',
-                    title: 'Good Lead Quality',
-                    message: `${Math.round(highValuePercentage)}% high-value leads. Consider refining your targeting.`
-                });
-            } else {
-                insights.push({
-                    type: 'warning',
-                    icon: '🔍',
-                    title: 'Improve Lead Quality',
-                    message: 'Focus on higher-engagement profiles to improve match scores.'
-                });
-            }
+generateInsights(statsData) {
+    const insights = [];
+    
+    // Performance insights based on new metrics
+    if (statsData.averageScore > 0) {
+        if (statsData.averageScore >= 80) {
+            insights.push({
+                type: 'success',
+                icon: '🎯',
+                title: 'Excellent Lead Quality',
+                message: `Your average analysis score is ${statsData.averageScore}/100. You're targeting high-quality leads!`
+            });
+        } else if (statsData.averageScore >= 60) {
+            insights.push({
+                type: 'info',
+                icon: '📈',
+                title: 'Good Progress',
+                message: `Average score: ${statsData.averageScore}/100. Consider focusing on higher-engagement profiles.`
+            });
+        } else {
+            insights.push({
+                type: 'warning',
+                icon: '🔍',
+                title: 'Improve Targeting',
+                message: `Average score: ${statsData.averageScore}/100. Refine your lead selection criteria.`
+            });
         }
-        
-        // Analysis depth insight
-        if (statsData.totalLeads > 0) {
-            const deepPercentage = (statsData.deepAnalyses / statsData.totalLeads) * 100;
-            
-            if (deepPercentage < 20) {
-                insights.push({
-                    type: 'tip',
-                    icon: '💡',
-                    title: 'Upgrade to Deep Analysis',
-                    message: 'Get personalized outreach messages and detailed insights.'
-                });
-            }
-        }
-        
-        // Credits insight
-        if (statsData.creditsRemaining < 10) {
+    }
+
+    // Conversion rate insights using new metrics
+    if (statsData.totalAnalyses > 5) {
+        if (statsData.conversionRate >= 30) {
+            insights.push({
+                type: 'success',
+                icon: '✨',
+                title: 'High Conversion Rate',
+                message: `${statsData.conversionRate}% of your analyses score 75+. Excellent targeting!`
+            });
+        } else if (statsData.conversionRate < 15) {
             insights.push({
                 type: 'warning',
                 icon: '⚠️',
-                title: 'Low Credits',
-                message: `Only ${statsData.creditsRemaining} credits remaining. Consider upgrading your plan.`
+                title: 'Low Conversion Rate',
+                message: `Only ${statsData.conversionRate}% score 75+. Consider refining your targeting.`
             });
         }
-        
-        // Render insights
-        this.renderInsights(insights);
-        
-        return insights;
     }
+
+    // Analysis depth insights
+    if (statsData.totalAnalyses > 0) {
+        const deepPercentage = Math.round(((statsData.deepAnalyses + statsData.xrayAnalyses) / statsData.totalAnalyses) * 100);
+        
+        if (deepPercentage < 20) {
+            insights.push({
+                type: 'tip',
+                icon: '💡',
+                title: 'Upgrade Analysis Depth',
+                message: 'Consider more deep/x-ray analyses for detailed insights and outreach messages.'
+            });
+        }
+    }
+
+    // Credits warning
+    if (statsData.creditsRemaining < 10) {
+        insights.push({
+            type: 'warning',
+            icon: '⚠️',
+            title: 'Low Credits',
+            message: `Only ${statsData.creditsRemaining} credits remaining. Consider upgrading your plan.`
+        });
+    }
+
+    // Activity insights
+    if (statsData.recentAnalyses === 0 && statsData.totalAnalyses > 0) {
+        insights.push({
+            type: 'info',
+            icon: '📅',
+            title: 'No Recent Activity',
+            message: 'No analyses in the past week. Time to find new leads!'
+        });
+    }
+
+    this.renderInsights(insights);
+    return insights;
+}
     
     renderInsights(insights) {
         const insightsContainer = document.getElementById('dashboard-insights');
