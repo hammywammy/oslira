@@ -1,5 +1,11 @@
 import type { Env } from '../types/interfaces.js';
-import { logger } from '../utils/logger.js';
+
+// Local logging function to avoid import issues in Worker environment
+function logger(level: 'info' | 'warn' | 'error', message: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  const logData = { timestamp, level, message, ...data };
+  console.log(JSON.stringify(logData));
+}
 
 interface SecretValue {
   apiKey: string;
