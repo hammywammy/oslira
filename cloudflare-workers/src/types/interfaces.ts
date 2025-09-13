@@ -3,6 +3,16 @@
 // ===============================================================================
 
 export interface Env {
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  AWS_REGION: string;
+  AWS_ACCOUNT_ID: string;
+  SECRETS_PREFIX: string;
+  
+  // Admin
+  ADMIN_TOKEN: string;
+  
+  // Supabase
   SUPABASE_URL: string;
   SUPABASE_SERVICE_ROLE: string;
   SUPABASE_ANON_KEY: string;
