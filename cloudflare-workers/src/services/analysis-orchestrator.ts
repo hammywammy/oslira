@@ -3,6 +3,7 @@ import { createMicroSnapshot } from './micro-snapshot.js';
 import { runTriage } from './triage.js';
 import { runPreprocessor } from './preprocessor.js';
 import { performAIAnalysis } from './ai-analysis.js';
+import { generateBusinessContext, ensureBusinessContext } from './business-context-generator.js';
 import { logger } from '../utils/logger.js';
 
 export interface OrchestrationResult {
@@ -40,18 +41,23 @@ export async function runAnalysis(
   const costs: any[] = [];
   const blocksUsed: string[] = [];
 
-  logger('info', 'Starting analysis orchestration', { 
-    username: profile.username,
-    analysisType,
-    business_name: business.business_name || business.name
-  }, requestId);
+// Ensure business context exists before analysis
+const businessContext = await ensureBusinessContext(business, env, requestId);
+const enrichedBusiness = { ...business, ...businessContext };
+
+logger('info', 'Starting analysis orchestration', { 
+  username: profile.username,
+  analysisType,
+  business_name: enrichedBusiness.business_name || enrichedBusiness.name,
+  has_one_liner: !!enrichedBusiness.business_one_liner
+}, requestId);
 
   try {
     // STEP 1: Always run triage
     const triageStart = Date.now();
-    const snapshot = createMicroSnapshot(profile);
-    const triageResponse = await runTriage(snapshot, business.business_one_liner, env, requestId);
-    triageTime = Date.now() - triageStart;
+const snapshot = createMicroSnapshot(profile);
+const triageResponse = await runTriage(snapshot, enrichedBusiness.business_one_liner, env, requestId);
+triageTime = Date.now() - triageStart;
     
     costs.push(triageResponse.costDetails);
     blocksUsed.push('triage');
@@ -122,14 +128,14 @@ export async function runAnalysis(
       preprocessor: preprocessorResult
     };
     
-    const analysisResponse = await performAIAnalysis(
-      profile, 
-      business, 
-      analysisType, 
-      env, 
-      requestId,
-      context
-    );
+const analysisResponse = await performAIAnalysis(
+  profile, 
+  enrichedBusiness, 
+  analysisType, 
+  env, 
+  requestId,
+  context
+);
     analysisTime = Date.now() - analysisStart;
     
     costs.push(analysisResponse.costDetails);
