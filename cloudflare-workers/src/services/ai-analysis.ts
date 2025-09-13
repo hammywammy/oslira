@@ -79,6 +79,13 @@ function parseChoiceSafe(choice: any): string {
   return '';
 }
 
+// Simple logging function to avoid import issues
+function log(level: string, message: string, data?: any, requestId?: string) {
+  const timestamp = new Date().toISOString();
+  const logData = { timestamp, level, message, requestId, ...data };
+  console.log(JSON.stringify(logData));
+}
+
 // ===============================================================================
 // MAIN ANALYSIS FUNCTION (UPDATED FOR NEW PAYLOAD STRUCTURE)
 // ===============================================================================
@@ -91,10 +98,7 @@ export async function performAIAnalysis(
   requestId: string
 ): Promise<AnalysisResult> {
   
-  // Import logger locally to ensure it's available in this function
-  const { logger } = await import('../utils/logger.js');
-  
-  logger('info', `Starting AI analysis with new payload structure`, {
+  log('info', `Starting AI analysis with new payload structure`, {
     username: profile.username,
     dataQuality: profile.dataQuality,
     scraperUsed: profile.scraperUsed,
@@ -130,7 +134,7 @@ export async function performAIAnalysis(
     // Transform the result to match our AnalysisResult interface
     const transformedResult = transformAnalysisResult(rawResult, analysisType, profile);
     
-    logger('info', `AI analysis completed with new payload structure`, {
+    log('info', `AI analysis completed with new payload structure`, {
       username: profile.username,
       score: transformedResult.score,
       engagementScore: transformedResult.engagement_score,
@@ -143,9 +147,7 @@ export async function performAIAnalysis(
     return transformedResult;
 
   } catch (error: any) {
-    // Import logger for error handling
-    const { logger } = await import('../utils/logger.js');
-    logger('error', 'AI analysis failed', { error: error.message, requestId });
+    log('error', 'AI analysis failed', { error: error.message, requestId });
     throw new Error(`AI analysis failed: ${error.message}`);
   }
 }
@@ -162,16 +164,13 @@ async function executeAnalysisWithRetry(
   maxRetries: number = 3
 ): Promise<any> {
   
-  // Import logger locally to ensure it's available in this function scope
-  const { logger } = await import('../utils/logger.js');
-  
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
   if (!openaiKey) throw new Error('OpenAI API key not available');
 
   const model = 'gpt-4o'; // Using GPT-4o for consistent results
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          logger('info', `Analysis attempt ${attempt}/${maxRetries}`, { requestId });
+          log('info', `Analysis attempt ${attempt}/${maxRetries}`, { requestId });
 
           const body = buildOpenAIChatBody({
             model,
@@ -219,7 +218,7 @@ async function executeAnalysisWithRetry(
             throw new Error(`Missing required score fields (attempt ${attempt})`);
           }
 
-          logger('info', 'Analysis completed successfully', { 
+          log('info', 'Analysis completed successfully', { 
             attempt, 
             score: parsedResult.score,
             requestId 
@@ -228,7 +227,7 @@ async function executeAnalysisWithRetry(
           return parsedResult;
 
         } catch (error: any) {
-          logger('warn', `Analysis attempt ${attempt} failed`, { 
+          log('warn', `Analysis attempt ${attempt} failed`, { 
             error: error.message, 
             requestId 
           });
@@ -334,7 +333,6 @@ export async function generateOutreachMessage(
   business: BusinessProfile,
   env: Env
 ): Promise<string> {
-  const { logger } = await import('../utils/logger.js');
   
   try {
     const prompt = buildOutreachMessagePrompt(profile, analysis, business);
@@ -369,7 +367,7 @@ export async function generateOutreachMessage(
     const content = parseChoiceSafe(response?.choices?.[0]);
     if (!content) throw new Error('Empty outreach message response');
 
-    logger('info', 'Outreach message generated successfully', { 
+    log('info', 'Outreach message generated successfully', { 
       username: profile.username,
       messageLength: content.length
     });
@@ -377,7 +375,7 @@ export async function generateOutreachMessage(
     return content;
 
   } catch (error: any) {
-    logger('error', 'Outreach message generation failed', { 
+    log('error', 'Outreach message generation failed', { 
       error: error.message,
       username: profile.username
     });
@@ -396,7 +394,6 @@ export async function generateQuickSummary(
   analysis: AnalysisResult,
   env: Env
 ): Promise<string> {
-  const { logger } = await import('../utils/logger.js');
   
   try {
     const prompt = buildQuickSummaryPrompt(profile, analysis);
@@ -435,7 +432,7 @@ export async function generateQuickSummary(
     return content || `${profile.username} analysis summary generated successfully.`;
 
   } catch (error: any) {
-    logger('warn', 'Quick summary generation failed, using fallback', { 
+    log('warn', 'Quick summary generation failed, using fallback', { 
       error: error.message,
       username: profile.username
     });
