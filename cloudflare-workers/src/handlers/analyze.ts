@@ -3,6 +3,9 @@ import type { Env, AnalysisRequest, ProfileData, AnalysisResult, AnalysisRespons
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
+import { createMicroSnapshot } from '../services/micro-snapshot.js';
+import { runTriage } from '../services/triage.js';
+import { ensureBusinessContext } from '../services/business-context-generator.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
@@ -22,8 +25,8 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       business_id 
     });
 
-    // Validate user and fetch business profile
-    const [userResult, business] = await Promise.all([
+// Validate user and fetch business profile with context
+    const [userResult, businessRaw] = await Promise.all([
       fetchUserAndCredits(user_id, c.env),
       fetchBusinessProfile(business_id, user_id, c.env)
     ]);
@@ -36,6 +39,10 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
         requestId
       ), 400);
     }
+
+    // Ensure business context exists
+    const businessContext = await ensureBusinessContext(businessRaw, c.env, requestId);
+    const business = { ...businessRaw, ...businessContext };
 
     // Check credit requirements
     const creditCost = analysis_type === 'deep' ? 2 : analysis_type === 'xray' ? 3 : 1;
@@ -54,7 +61,7 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       creditCost 
     });
 
-    // SCRAPE PROFILE DATA
+// SCRAPE PROFILE DATA
     let profileData: ProfileData;
     try {
       logger('info', 'Starting profile scraping', { username });
@@ -75,15 +82,59 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       ), 500);
     }
 
+    // RUN TRIAGE
+    let triageResult: any;
+    let triageCost: any;
+    try {
+      const snapshot = createMicroSnapshot(profileData);
+      const { result, costDetails } = await runTriage(
+        snapshot, 
+        business.business_one_liner, 
+        c.env, 
+        requestId
+      );
+      triageResult = result;
+      triageCost = costDetails;
+      
+      // Early exit if triage says skip
+      if (triageResult.early_exit) {
+        logger('info', 'Triage early exit', { 
+          username, 
+          lead_score: triageResult.lead_score,
+          data_richness: triageResult.data_richness
+        });
+        
+        return c.json(createStandardResponse(true, {
+          verdict: 'low_quality_lead',
+          triage: triageResult,
+          reason: triageResult.lead_score < 25 ? 'Poor business fit' : 'Insufficient data',
+          credits_used: 0, // No main analysis run
+          early_exit: true
+        }, undefined, requestId));
+      }
+      
+    } catch (triageError: any) {
+      logger('warn', 'Triage failed, continuing with full analysis', { error: triageError.message });
+      triageResult = null;
+      triageCost = null;
+    }
+
 // AI ANALYSIS
     let analysisResult: AnalysisResult;
-    let costDetails: any;
+    let analysisCost: any;
     try {
       logger('info', 'Starting AI analysis', { analysis_type, username: profileData.username });
       const { performAIAnalysis } = await import('../services/ai-analysis.js');
-      const analysisResponse = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
+      const analysisResponse = await performAIAnalysis(
+        profileData, 
+        business, 
+        analysis_type, 
+        c.env, 
+        requestId,
+        { triage: triageResult } // Pass triage context
+      );
       analysisResult = analysisResponse.result;
-      costDetails = analysisResponse.costDetails;
+      analysisCost = analysisResponse.costDetails;
       logger('info', 'AI analysis completed', { 
         score: analysisResult.score,
         confidence: analysisResult.confidence_level
@@ -159,18 +210,30 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       ), 500);
     }
 
-// UPDATE USER CREDITS
+// UPDATE USER CREDITS (Combine triage + analysis costs)
     try {
+      const totalActualCost = (triageCost?.actual_cost || 0) + (analysisCost?.actual_cost || 0);
+      const totalTokensIn = (triageCost?.tokens_in || 0) + (analysisCost?.tokens_in || 0);
+      const totalTokensOut = (triageCost?.tokens_out || 0) + (analysisCost?.tokens_out || 0);
+      
+      const combinedCostDetails = {
+        actual_cost: totalActualCost,
+        tokens_in: totalTokensIn,
+        tokens_out: totalTokensOut,
+        model_used: analysisCost?.model_used || 'multiple',
+        block_type: `triage+${analysis_type}`
+      };
+      
       const newBalance = userResult.credits - creditCost;
       await updateCreditsAndTransaction(
         user_id, 
         creditCost, 
         newBalance,
-        `${analysis_type} analysis`,
+        `${analysis_type} analysis with triage`,
         'use',
         c.env,
         run_id,
-        costDetails
+        combinedCostDetails
       );
       logger('info', 'Credits updated successfully', { 
         userId: user_id, 
