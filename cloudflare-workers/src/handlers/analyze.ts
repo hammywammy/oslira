@@ -1,5 +1,5 @@
 import { Context } from 'hono';
-import type { Env, AnalysisRequest, ProfileData, AnalysisResult } from '../types/interfaces.js';
+import type { Env, AnalysisRequest, ProfileData, AnalysisResult, AnalysisResponse } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
@@ -22,11 +22,12 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       business_id 
     });
 
-    // Validate user and check credits
+    // Validate user and fetch business profile
     const [userResult, business] = await Promise.all([
-  fetchUserAndCredits(user_id, c.env),
-  fetchBusinessProfile(business_id, user_id, c.env)
-]);
+      fetchUserAndCredits(user_id, c.env),
+      fetchBusinessProfile(business_id, user_id, c.env)
+    ]);
+    
     if (!userResult.isValid) {
       return c.json(createStandardResponse(
         false, 
@@ -57,8 +58,8 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
     let profileData: ProfileData;
     try {
       logger('info', 'Starting profile scraping', { username });
-const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
-profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
+      const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
+      profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
       logger('info', 'Profile scraping completed', { 
         username: profileData.username,
         followersCount: profileData.followersCount,
@@ -75,26 +76,26 @@ profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
     }
 
     // AI ANALYSIS
-// AI ANALYSIS  
-let analysisResult: AnalysisResult;
-try {
-  logger('info', 'Starting AI analysis', { analysis_type, username: profileData.username });
-  const { performAIAnalysis } = await import('../services/ai-analysis.js');
-  analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
-  logger('info', 'AI analysis completed', { 
-    score: analysisResult.score,
-    confidence: analysisResult.confidence_level
-  });
-} catch (analysisError: any) {
-  logger('error', 'AI analysis failed', { error: analysisError.message });
-  return c.json(createStandardResponse(
-    false, 
-    undefined, 
-    `AI analysis failed: ${analysisError.message}`, 
-    requestId
-  ), 500);
-}
-    // PREPARE DATA FOR NEW SCHEMA
+    let analysisResult: AnalysisResult;
+    try {
+      logger('info', 'Starting AI analysis', { analysis_type, username: profileData.username });
+      const { performAIAnalysis } = await import('../services/ai-analysis.js');
+      analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
+      logger('info', 'AI analysis completed', { 
+        score: analysisResult.score,
+        confidence: analysisResult.confidence_level
+      });
+    } catch (analysisError: any) {
+      logger('error', 'AI analysis failed', { error: analysisError.message });
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        `AI analysis failed: ${analysisError.message}`, 
+        requestId
+      ), 500);
+    }
+
+    // PREPARE DATA FOR DATABASE (NEW 3-TABLE STRUCTURE)
     const leadData = {
       user_id,
       business_id,
@@ -112,7 +113,7 @@ try {
       profile_url
     };
 
-    // Prepare analysis data based on type
+    // Prepare analysis data based on type (only for deep/xray)
     let analysisData = null;
     if (analysis_type === 'deep' || analysis_type === 'xray') {
       analysisData = {
@@ -143,9 +144,8 @@ try {
     // SAVE TO DATABASE (NEW 3-TABLE STRUCTURE)
     let run_id: string;
     try {
-      logger('info', 'Saving complete analysis to new schema');
       run_id = await saveCompleteAnalysis(leadData, analysisData, analysis_type, c.env);
-      logger('info', 'Database save successful', { run_id });
+      logger('info', 'Database save successful', { run_id, username: profileData.username });
     } catch (saveError: any) {
       logger('error', 'Database save failed', { error: saveError.message });
       return c.json(createStandardResponse(
@@ -156,50 +156,38 @@ try {
       ), 500);
     }
 
-    // UPDATE CREDITS
+    // UPDATE USER CREDITS
     try {
-      await updateCreditsAndTransaction(
-        user_id,
-        creditCost,
-        userResult.credits - creditCost,
-        `${analysis_type} analysis for @${profileData.username}`,
-        'use',
-        c.env,
-        run_id // Use run_id instead of lead_id
-      );
+      await updateCreditsAndTransaction(user_id, creditCost, run_id, c.env);
       logger('info', 'Credits updated successfully', { 
-        creditCost, 
-        remainingCredits: userResult.credits - creditCost 
+        userId: user_id, 
+        creditsUsed: creditCost,
+        remaining: userResult.credits - creditCost
       });
     } catch (creditError: any) {
       logger('error', 'Credit update failed', { error: creditError.message });
-      return c.json(createStandardResponse(
-        false, 
-        undefined, 
-        `Failed to log credit transaction: ${creditError.message}`, 
-        requestId
-      ), 500);
+      // Analysis completed but credit update failed - still return success
     }
 
-    // PREPARE RESPONSE (Updated for new schema)
-    const responseData = {
-      run_id, // Return run_id instead of lead_id
+    // PREPARE RESPONSE DATA
+    const responseData: AnalysisResponse = {
+      run_id,
       profile: {
         username: profileData.username,
         displayName: profileData.displayName,
         followersCount: profileData.followersCount,
         isVerified: profileData.isVerified,
         profilePicUrl: profileData.profilePicUrl,
-        dataQuality: profileData.dataQuality,
-        scraperUsed: profileData.scraperUsed
+        dataQuality: profileData.dataQuality || 'medium',
+        scraperUsed: profileData.scraperUsed || 'unknown'
       },
       analysis: {
-        overall_score: analysisResult.score, // Updated field name
-        niche_fit_score: analysisResult.niche_fit, // Updated field name
+        overall_score: analysisResult.score,
+        niche_fit_score: analysisResult.niche_fit,
         engagement_score: analysisResult.engagement_score,
         type: analysis_type,
         confidence_level: analysisResult.confidence_level,
-        summary_text: analysisResult.quick_summary, // Updated field name
+        summary_text: analysisResult.quick_summary,
         
         // Include detailed data for deep/xray analyses
         ...(analysis_type === 'deep' && {
@@ -235,7 +223,7 @@ try {
       metadata: {
         request_id: requestId,
         analysis_completed_at: new Date().toISOString(),
-        schema_version: '3.0' // Indicate new schema version
+        schema_version: '3.0'
       }
     };
 
