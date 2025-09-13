@@ -128,17 +128,17 @@ export async function performAIAnalysis(
     let prompt: string;
     let jsonSchema: any;
     
-    switch (analysisType) {
+switch (analysisType) {
       case 'light':
-        prompt = buildLightAnalysisPrompt(profile, business);
+        prompt = buildLightAnalysisPrompt(profile, business, context);
         jsonSchema = getLightAnalysisJsonSchema();
         break;
       case 'deep':
-        prompt = buildDeepAnalysisPrompt(profile, business);
+        prompt = buildDeepAnalysisPrompt(profile, business, context);
         jsonSchema = getDeepAnalysisJsonSchema();
         break;
       case 'xray':
-        prompt = buildXRayAnalysisPrompt(profile, business);
+        prompt = buildXRayAnalysisPrompt(profile, business, context);
         jsonSchema = getXRayAnalysisJsonSchema();
         break;
       default:
