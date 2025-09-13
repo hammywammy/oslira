@@ -69,13 +69,15 @@ is_active (boolean, default: true)
 
 primary_objective (text)
 
-summary (text, nullable) - NEW
+business_one_liner (text, nullable) - NEW
 
 phone_number (text, nullable) - NEW
 
 opt_in_sms (boolean, default: false) - NEW
 
 created_at, updated_at - NEW
+
+business_context_pack (text, nullable) - NEW
 
 
 
