@@ -91,6 +91,9 @@ export async function performAIAnalysis(
   requestId: string
 ): Promise<AnalysisResult> {
   
+  // Import logger locally to ensure it's available in this function
+  const { logger } = await import('../utils/logger.js');
+  
   logger('info', `Starting AI analysis with new payload structure`, {
     username: profile.username,
     dataQuality: profile.dataQuality,
@@ -139,7 +142,9 @@ export async function performAIAnalysis(
 
     return transformedResult;
 
-  } catch (error: any) {
+} catch (error: any) {
+    // Import logger for error handling
+    const { logger } = await import('../utils/logger.js');
     logger('error', 'AI analysis failed', { error: error.message, requestId });
     throw new Error(`AI analysis failed: ${error.message}`);
   }
@@ -157,7 +162,7 @@ async function executeAnalysisWithRetry(
   maxRetries: number = 3
 ): Promise<any> {
   
-  // Import logger locally to ensure it's available in this scope
+  // Import logger locally to ensure it's available throughout this function
   const { logger } = await import('../utils/logger.js');
   
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
