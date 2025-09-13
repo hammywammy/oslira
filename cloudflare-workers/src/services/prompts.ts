@@ -347,6 +347,7 @@ State if account likely above/below benchmark based on post count and account ag
 - Score <40: Wrong fit OR dead account OR spam signals
 
 Return JSON only. Make the decision binary: pursue or skip.
+`;
 }
 
 // ===============================================================================
