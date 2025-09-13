@@ -2,9 +2,8 @@ import { Context } from 'hono';
 import type { Env, BulkAnalysisRequest, BulkAnalysisResult, AnalysisResponse, ProfileData, AnalysisResult } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
-import { validateUser } from '../services/user-manager.js';
 import { extractUsername } from '../utils/validation.js';
-import { saveCompleteAnalysis, updateCreditsAndTransaction } from '../services/database.js';
+import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
 
 export async function handleBulkAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -61,8 +60,10 @@ export async function handleBulkAnalyze(c: Context<{ Bindings: Env }>): Promise<
       business_id 
     });
 
-    // Validate user and check credits
-    const userResult = await validateUser(user_id, c.env);
+const [userResult, business] = await Promise.all([
+  fetchUserAndCredits(user_id, c.env),
+  fetchBusinessProfile(business_id, user_id, c.env)
+]);
     if (!userResult.isValid) {
       return c.json(createStandardResponse(
         false, 
