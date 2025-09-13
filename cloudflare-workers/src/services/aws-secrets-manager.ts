@@ -14,22 +14,34 @@ export class AWSSecretsManager {
   private region: string;
 
 constructor(env: Env) {
-  this.accessKeyId = env.AWS_ACCESS_KEY_ID;
-  this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
+  console.log('AWSSecretsManager constructor called with env type:', typeof env);
+  console.log('Env keys available:', Object.keys(env));
+  
+  // Try to access each property individually
+  try {
+    this.accessKeyId = env.AWS_ACCESS_KEY_ID;
+    console.log('Access Key ID retrieved:', !!this.accessKeyId);
+  } catch (e) {
+    console.error('Failed to get AWS_ACCESS_KEY_ID:', e);
+    throw new Error(`Cannot access AWS_ACCESS_KEY_ID: ${e}`);
+  }
+  
+  try {
+    this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
+    console.log('Secret Access Key retrieved:', !!this.secretAccessKey);
+  } catch (e) {
+    console.error('Failed to get AWS_SECRET_ACCESS_KEY:', e);
+    throw new Error(`Cannot access AWS_SECRET_ACCESS_KEY: ${e}`);
+  }
+  
   this.region = env.AWS_REGION || 'us-east-1';
-
-  // Debug logging
-  console.log('AWS Constructor Debug:', {
-    hasAccessKey: !!env.AWS_ACCESS_KEY_ID,
-    hasSecretKey: !!env.AWS_SECRET_ACCESS_KEY,
-    accessKeyLength: env.AWS_ACCESS_KEY_ID?.length || 0,
-    secretKeyLength: env.AWS_SECRET_ACCESS_KEY?.length || 0,
-    region: this.region
-  });
+  console.log('Region set to:', this.region);
 
   if (!this.accessKeyId || !this.secretAccessKey) {
     throw new Error(`AWS credentials not configured - Access Key: ${!!this.accessKeyId}, Secret Key: ${!!this.secretAccessKey}`);
   }
+  
+  console.log('AWS credentials successfully configured');
 }
 
   async getSecret(secretName: string): Promise<string> {
