@@ -57,8 +57,8 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
     let profileData: ProfileData;
     try {
       logger('info', 'Starting profile scraping', { username });
-      const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
-      profileData = await scrapeInstagramProfile(profile_url, c.env);
+const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
+profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
       logger('info', 'Profile scraping completed', { 
         username: profileData.username,
         followersCount: profileData.followersCount,
