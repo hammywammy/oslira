@@ -78,8 +78,28 @@ profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
     let analysisResult: AnalysisResult;
     try {
       logger('info', 'Starting AI analysis', { analysis_type, username: profileData.username });
-      const { performAIAnalysis } = await import('../services/ai-analysis.js');
-      analysisResult = await performAIAnalysis(profileData, analysis_type, user_id, c.env);
+// Get business profile first
+const businessProfile = await fetchBusinessProfile(business_id, user_id, c.env);
+
+// AI ANALYSIS
+let analysisResult: AnalysisResult;
+try {
+  logger('info', 'Starting AI analysis', { analysis_type, username: profileData.username });
+  const { performAIAnalysis } = await import('../services/ai-analysis.js');
+  analysisResult = await performAIAnalysis(profileData, businessProfile, analysis_type, c.env, requestId);
+  logger('info', 'AI analysis completed', { 
+    score: analysisResult.score,
+    confidence: analysisResult.confidence_level
+  });
+} catch (analysisError: any) {
+  logger('error', 'AI analysis failed', { error: analysisError.message });
+  return c.json(createStandardResponse(
+    false, 
+    undefined, 
+    `AI analysis failed: ${analysisError.message}`, 
+    requestId
+  ), 500);
+}
       logger('info', 'AI analysis completed', { 
         score: analysisResult.score,
         confidence: analysisResult.confidence_level
