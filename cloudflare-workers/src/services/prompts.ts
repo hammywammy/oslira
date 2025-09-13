@@ -54,7 +54,7 @@ export function getLightAnalysisJsonSchema() {
               description: 'Summary of engagement patterns and metrics'
             }
           },
-          required: ['insights', 'audience_quality', 'engagement_summary']
+required: ['insights', 'audience_quality', 'basic_demographics', 'engagement_summary']
         }
       },
       required: ['score', 'engagement_score', 'niche_fit', 'quick_summary', 'confidence_level', 'light_payload']
