@@ -174,95 +174,131 @@ console.log(`✅ [LeadManager] Final result: ${enrichedLeads.length} unique lead
     // LEAD DETAILS - EXTRACTED FROM dashboard.js lines 1200-1350
     // ===============================================================================
     
-    async viewLead(leadId) {
-        try {
-            console.log('🔍 [LeadManager] Loading lead details:', leadId);
-            
-            const user = this.osliraApp?.user;
-            if (!this.supabase || !user) {
-                throw new Error('Authentication system not ready');
+async viewLead(leadId) {
+    console.log('🔍 [LeadManager] Loading lead details:', leadId);
+    
+    let lead = null;
+    let analysisData = null;
+    
+    try {
+        const user = await this.getUser();
+        if (!user) throw new Error('No authenticated user');
+        
+        // Check cache first
+        const cachedLeads = JSON.parse(localStorage.getItem('oslira_cached_leads') || '[]');
+        const cachedLead = cachedLeads.find(l => l.lead_id === leadId);
+        
+        if (cachedLead) {
+            lead = cachedLead;
+            // For cached leads, we might have runs data already
+            if (lead.runs && lead.runs.length > 0) {
+                analysisData = lead.runs[0]; // Most recent run
+            }
+        } else {
+            // Fetch from new 3-table structure
+            const { data: leadData, error: leadError } = await this.supabase
+                .from('leads')
+                .select(`
+                    lead_id,
+                    username,
+                    display_name,
+                    profile_picture_url,
+                    bio_text,
+                    external_website_url,
+                    follower_count,
+                    following_count,
+                    post_count,
+                    is_verified_account,
+                    is_private_account,
+                    is_business_account,
+                    platform_type,
+                    profile_url,
+                    first_discovered_at,
+                    runs(
+                        run_id,
+                        analysis_type,
+                        overall_score,
+                        niche_fit_score,
+                        engagement_score,
+                        summary_text,
+                        confidence_level,
+                        created_at,
+                        payloads(analysis_data)
+                    )
+                `)
+                .eq('lead_id', leadId)
+                .eq('user_id', user.id)
+                .order('created_at', { foreignTable: 'runs', ascending: false })
+                .single();
+                
+            if (leadError || !leadData) {
+                throw new Error('Lead not found or access denied');
             }
             
-            let lead = null;
-            let analysisData = null;
-            
-            // Try to find in cache first
-            const cachedLeads = this.stateManager.getState('leads');
-            const cachedLead = cachedLeads.find(l => l.id === leadId);
-            
-            if (cachedLead) {
-                lead = cachedLead;
-                if (lead.lead_analyses && lead.lead_analyses.length > 0) {
-                    analysisData = lead.lead_analyses[0];
-                }
-            } else {
-                // Fetch from database - EXACT QUERY FROM ORIGINAL
-                const { data: leadData, error: leadError } = await this.supabase
-                    .from('leads')
-                    .select(`
-                        id,
-                        username,
-                        profile_pic_url,
-                        platform,
-                        score,
-                        analysis_type,
-                        business_id,
-                        created_at,
-                        followers_count
-                    `)
-                    .eq('id', leadId)
-                    .eq('user_id', user.id)
-                    .single();
-                    
-                if (leadError || !leadData) {
-                    throw new Error('Lead not found or access denied');
-                }
+            // Transform data to match old interface for compatibility
+            lead = {
+                id: leadData.lead_id, // Keep old id field for compatibility
+                lead_id: leadData.lead_id,
+                username: leadData.username,
+                full_name: leadData.display_name,
+                profile_pic_url: leadData.profile_picture_url,
+                bio: leadData.bio_text,
+                external_url: leadData.external_website_url,
+                followers_count: leadData.follower_count,
+                following_count: leadData.following_count,
+                posts_count: leadData.post_count,
+                is_verified: leadData.is_verified_account,
+                is_private: leadData.is_private_account,
+                is_business_account: leadData.is_business_account,
+                platform: leadData.platform_type,
+                profile_url: leadData.profile_url,
+                created_at: leadData.first_discovered_at,
                 
-                lead = leadData;
+                // Map from latest run for compatibility
+                score: leadData.runs?.[0]?.overall_score || 0,
+                analysis_type: leadData.runs?.[0]?.analysis_type || 'light',
+                quick_summary: leadData.runs?.[0]?.summary_text,
+                runs: leadData.runs // Keep full runs data
+            };
+            
+            // Get analysis data from most recent run
+            if (leadData.runs && leadData.runs.length > 0) {
+                const latestRun = leadData.runs[0];
+                analysisData = {
+                    run_id: latestRun.run_id,
+                    engagement_score: latestRun.engagement_score,
+                    score_niche_fit: latestRun.niche_fit_score,
+                    score_total: latestRun.overall_score,
+                    summary_text: latestRun.summary_text,
+                    confidence_level: latestRun.confidence_level,
+                    created_at: latestRun.created_at
+                };
                 
-                // Fetch analysis data if it's a deep analysis - EXACT QUERY FROM ORIGINAL
-                if (lead.analysis_type === 'deep') {
-                    console.log('🔍 [LeadManager] Fetching deep analysis data...');
-                    
-                    const { data: deepAnalysis, error: analysisError } = await this.supabase
-                        .from('lead_analyses')
-                        .select(`
-                            engagement_score,
-                            score_niche_fit,
-                            score_total,
-                            outreach_message,
-                            selling_points,
-                            audience_quality,
-                            engagement_insights,
-                            avg_likes,
-                            avg_comments,
-                            engagement_rate,
-                            latest_posts,
-                            username
-                        `)
-                        .eq('lead_id', leadId)
-                        .single();
-                        
-                    if (analysisError) {
-                        console.warn('⚠️ [LeadManager] Deep analysis data not found:', analysisError.message);
-                    } else {
-                        analysisData = deepAnalysis;
-                        console.log('📈 [LeadManager] Analysis data loaded:', analysisData);
+                // If there's payload data, extract it
+                if (latestRun.payloads && latestRun.payloads.length > 0) {
+                    const payload = latestRun.payloads[0].analysis_data;
+                    if (payload) {
+                        // Map payload data to old format for compatibility
+                        analysisData.deep_summary = payload.deep_payload?.detailed_summary || payload.summary;
+                        analysisData.outreach_message = payload.deep_payload?.outreach_message;
+                        analysisData.selling_points = payload.deep_payload?.selling_points || payload.light_payload?.insights;
+                        analysisData.audience_quality = payload.light_payload?.audience_quality;
+                        analysisData.engagement_insights = payload.light_payload?.engagement_summary;
+                        analysisData.latest_posts = payload.profile_data?.latest_posts;
+                        analysisData.engagement_data = payload.profile_data?.engagement;
                     }
                 }
             }
-            
-            // Emit event
-            this.eventBus.emit(DASHBOARD_EVENTS.LEAD_VIEWED, { lead, analysisData });
-            
-            return { lead, analysisData };
-            
-        } catch (error) {
-            console.error('❌ [LeadManager] Error loading lead details:', error);
-            this.eventBus.emit(DASHBOARD_EVENTS.ERROR, error);
-            throw error;
         }
+        
+        console.log('✅ [LeadManager] Lead loaded successfully');
+        return { lead, analysisData };
+        
+    } catch (error) {
+        console.error('❌ [LeadManager] Failed to load lead:', error);
+        throw error;
     }
+}
     
     // ===============================================================================
     // LEAD OPERATIONS - EXTRACTED FROM dashboard.js
