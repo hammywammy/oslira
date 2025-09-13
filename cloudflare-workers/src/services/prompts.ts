@@ -273,44 +273,65 @@ export function buildLightAnalysisPrompt(profile: ProfileData, business: Busines
 
   return `# LIGHT ANALYSIS: Quick Business Fit Assessment
 
-## PROFILE DATA
-- **Username**: @${profile.username}
-- **Display Name**: ${profile.displayName || 'Not provided'}
-- **Bio**: "${profile.bio || 'No bio available'}"
+# LIGHT ANALYSIS: 10-Second Lead Check
+
+## PROFILE SNAPSHOT
+- **Handle**: @${profile.username}
 - **Followers**: ${profile.followersCount.toLocaleString()}
-- **Following**: ${profile.followingCount.toLocaleString()}
-- **Posts**: ${profile.postsCount.toLocaleString()}
-- **Verified**: ${profile.isVerified ? 'Yes' : 'No'}
-- **Business Account**: ${profile.isBusinessAccount ? 'Yes' : 'No'}
-- **Account Type**: ${profile.isPrivate ? 'Private' : 'Public'}
-- **Engagement**: ${engagementInfo}
+- **Verified**: ${profile.isVerified ? 'Yes ✓' : 'No'}
+- **Private**: ${profile.isPrivate ? 'Yes (LIMITED DATA)' : 'No'}
+- **Bio**: "${profile.bio || 'Empty'}"
+- **Link**: ${profile.externalUrl || 'None'}
+- **Posts**: ${profile.postsCount}
+- **Following**: ${profile.followingCount} (Ratio: ${(profile.followersCount/profile.followingCount).toFixed(1)}:1)
 
-## BUSINESS CONTEXT
-- **Company**: ${business.name}
-- **Industry**: ${business.industry}
-- **Target Audience**: ${business.target_audience}
-- **Value Proposition**: ${business.value_proposition}
-- **Pain Points We Solve**: ${business.pain_points?.join(', ') || 'Not specified'}
+## YOUR BUSINESS
+- **Company**: ${business.name} (${business.industry})
+- **Target**: ${business.target_audience}
+- **Goal**: ${business.value_proposition}
 
-## ANALYSIS REQUIREMENTS
+## MISSION: Quick Pass/Fail Decision
 
-Perform a quick business fit assessment. Provide:
+Generate a rapid lead assessment. Focus ONLY on what's visible from Instagram:
 
-1. **Overall Score** (0-100): Business partnership potential
-2. **Engagement Score** (0-100): Quality of audience engagement  
-3. **Niche Fit Score** (0-100): Alignment with our target market
-4. **Quick Summary**: 1-2 sentences for dashboard display
-5. **Confidence Level**: 0.0-1.0 based on available data quality
+### SCORING (0-100)
+- **score**: Partnership viability (0=waste of time, 100=pursue immediately)
+- **engagement_score**: Audience quality signal (high following/follower ratio = bot risk)
+- **niche_fit**: Match to ${business.target_audience}
+- **confidence_level**: Data reliability (0.2 if private, 0.5 if <1000 followers, else 0.7-0.9)
 
-6. **Light Payload**: Structured insights for quick decision making including:
-   - Key insights array (2-5 bullet points)
-   - Audience quality assessment
-   - Basic demographics insights  
-   - Engagement summary
+### LIGHT PAYLOAD REQUIREMENTS
 
-Focus on clear, actionable insights for rapid lead qualification. Be conservative with scores if data is limited.
+**insights** (2-5 bullets):
+- Follower tier: Nano (<10k), Micro (10-100k), Mid (100k-1M), Macro (1M+)
+- Follow ratio red flags (following > followers = likely spam)
+- Bio signals (email present? business category? CTAs?)
+- Content frequency estimate from posts/account age
+- Verification/business account as trust signals
 
-Return ONLY valid JSON matching the schema - no additional text.`;
+**audience_quality**: 
+- "High" = Verified OR business account with good follow ratio
+- "Medium" = Normal ratios, active posting
+- "Low" = Poor ratios, low posts, or private
+
+**basic_demographics**: 
+Extract ONLY from bio/username: language hints, location tags, niche keywords. 
+If nothing extractable: "No demographic signals in bio"
+
+**engagement_summary**: 
+With ${profile.followersCount} followers, estimate typical engagement:
+- Nano: 5-7% ER expected
+- Micro: 2-4% ER expected  
+- Mid: 1-2% ER expected
+- Macro: 0.5-1% ER expected
+State if account likely above/below benchmark based on post count and account age.
+
+### DECISION LOGIC
+- Score >70: Clear signals of fit + reachable + active
+- Score 40-70: Possible fit but needs deep analysis
+- Score <40: Wrong fit OR dead account OR spam signals
+
+Return JSON only. Make the decision binary: pursue or skip.
 }
 
 // ===============================================================================
@@ -326,62 +347,94 @@ export function buildDeepAnalysisPrompt(profile: ProfileData, business: Business
     ? `Recent content themes: ${profile.latestPosts.slice(0, 3).map(p => `"${p.caption?.slice(0, 100) || 'Visual content'}"...`).join(' | ')}`
     : 'Content analysis limited - no recent posts available';
 
-  return `# DEEP ANALYSIS: Comprehensive Partnership Assessment
+  return `
+  # DEEP ANALYSIS: Partnership Intelligence Report
 
-## PROFILE INTELLIGENCE
-- **Username**: @${profile.username}
-- **Display Name**: ${profile.displayName || 'Not provided'}
-- **Bio**: "${profile.bio || 'No bio available'}"
-- **External Link**: ${profile.externalUrl || 'None'}
-- **Followers**: ${profile.followersCount.toLocaleString()}
-- **Following**: ${profile.followingCount.toLocaleString()}
-- **Posts**: ${profile.postsCount.toLocaleString()}
-- **Verified**: ${profile.isVerified ? 'Yes' : 'No'}
-- **Business Account**: ${profile.isBusinessAccount ? 'Yes' : 'No'}
-- **Account Type**: ${profile.isPrivate ? 'Private' : 'Public'}
+## VERIFIED PROFILE DATA
+- **Handle**: @${profile.username}
+- **Metrics**: ${profile.followersCount.toLocaleString()} followers | ${profile.postsCount} posts
+- **Bio**: "${profile.bio || 'No bio'}"
+- **Link**: ${profile.externalUrl || 'No external link'}
+- **Status**: ${profile.isVerified ? 'Verified ✓' : 'Unverified'} | ${profile.isBusinessAccount ? 'Business' : 'Personal'}
 
-## ENGAGEMENT INTELLIGENCE
-${engagementInfo}
+## ACTUAL ENGAGEMENT DATA
+${(profile.engagement?.postsAnalyzed || 0) > 0 
+  ? `REAL METRICS from ${profile.engagement.postsAnalyzed} posts:
+    - Avg Likes: ${profile.engagement.avgLikes.toLocaleString()}
+    - Avg Comments: ${profile.engagement.avgComments.toLocaleString()}
+    - Engagement Rate: ${profile.engagement.engagementRate}%
+    - Total Interactions: ${profile.engagement.totalEngagement.toLocaleString()}`
+  : `ESTIMATED for ${profile.followersCount.toLocaleString()} followers (no post data available)`}
 
-## CONTENT INTELLIGENCE  
-${contentInfo}
+## CONTENT ANALYSIS
+${(profile.latestPosts?.length || 0) > 0 
+  ? `Latest ${profile.latestPosts.length} posts analyzed:
+    ${profile.latestPosts.slice(0, 3).map(p => 
+      `- ${p.likesCount.toLocaleString()} likes, ${p.commentsCount} comments: "${(p.caption || '').slice(0, 50)}..."`
+    ).join('\n    ')}`
+  : 'No recent posts available for analysis'}
 
 ## BUSINESS CONTEXT
 - **Company**: ${business.name}
 - **Industry**: ${business.industry}
-- **Target Audience**: ${business.target_audience}
-- **Value Proposition**: ${business.value_proposition}
-- **Pain Points We Address**: ${business.pain_points?.join(', ') || 'Not specified'}
-- **Unique Advantages**: ${business.unique_advantages?.join(', ') || 'Not specified'}
-- **Website**: ${business.website || 'Not provided'}
+- **Target**: ${business.target_audience}
+- **Value Prop**: ${business.value_proposition}
 
 ## DEEP ANALYSIS REQUIREMENTS
 
-Provide comprehensive partnership assessment including:
+### SCORING FRAMEWORK
+- **score**: Overall partnership value (0-100)
+- **engagement_score**: Based on ACTUAL data if available, else use follower-tier benchmarks
+- **niche_fit**: Alignment with ${business.target_audience}
+- **confidence_level**: ${profile.engagement?.postsAnalyzed ? '0.85-0.95 (real data)' : '0.4-0.6 (estimated)'}
 
-1. **Scoring Framework**:
-   - Overall Score (0-100): Total business partnership potential
-   - Engagement Score (0-100): Audience engagement quality and authenticity
-   - Niche Fit Score (0-100): Alignment with our target market and goals
-   - Quick Summary: 1-2 sentences for dashboard
-   - Confidence Level: 0.0-1.0 based on data richness
+### DEEP PAYLOAD - BE SPECIFIC
 
-2. **Deep Payload Structure**:
-   - **Deep Summary**: Comprehensive 4-6 sentence analysis of partnership potential
-   - **Selling Points**: 3-8 key reasons why this influencer is valuable
-   - **Outreach Message**: Personalized, compelling outreach message (150-250 words)
-   - **Engagement Breakdown**: Detailed metrics (avg_likes, avg_comments, engagement_rate)
-   - **Audience Insights**: Analysis of follower quality, demographics, and engagement patterns
-   - **Reasons**: 3-10 specific rationales for the scores and recommendations
+**deep_summary** (4-6 sentences):
+Start with engagement reality check. State actual ER% vs expected for their follower tier. Identify content patterns from captions/hashtags. Assess partnership viability based on measurable signals. End with specific recommendation.
 
-## OUTPUT REQUIREMENTS
-- Use REAL engagement data when available (marked as "REAL ENGAGEMENT DATA")
-- Be specific about partnership opportunities and potential ROI
-- Tailor outreach message to their content style and audience
-- Provide actionable insights for partnership decisions
-- Include engagement_breakdown using actual scraped data when available
+**selling_points** (3-8 bullets):
+ONLY claims you can defend with numbers:
+- "ER of ${profile.engagement?.engagementRate}% beats ${followerTier} average by X%"
+- "Consistent posting (${postsAnalyzed} posts in X days)"
+- "High comment ratio (${avgComments/avgLikes}%) suggests engaged community"
+- "Verified status + business account = platform trust"
+NO generic claims like "great content" or "strong influence"
 
-Return ONLY valid JSON matching the schema - no additional text.`;
+**outreach_message** (150-250 words):
+Open with specific metric ("Your ${profile.engagement?.engagementRate}% engagement with ${profile.followersCount.toLocaleString()} followers...")
+Reference actual content theme from their posts
+Propose specific collaboration format (Reel, Carousel, Story series)
+Include concrete success metric (target reach, engagement, conversions)
+End with clear CTA and contact preference
+
+**engagement_breakdown**:
+Use REAL data when available:
+- avg_likes: ${profile.engagement?.avgLikes || 0}
+- avg_comments: ${profile.engagement?.avgComments || 0}  
+- engagement_rate: ${profile.engagement?.engagementRate || 0}
+
+**audience_insights**:
+From actual post performance:
+- High engagement posts topics (from captions)
+- Comment patterns (questions vs praise vs emojis)
+- Posting time patterns if visible
+- Hashtag communities they engage
+
+**reasons** (3-10 specific points):
+Each must reference a metric or observation:
+- "ER of X% is Y% above category average"
+- "Bio contains email, suggesting openness to partnerships"
+- "Recent posts show collaborations with similar brands"
+- "${N} posts in last 30 days shows consistent activity"
+
+### DECISION OUTPUTS
+If score >75: Provide exact outreach angle and first message
+If score 50-75: List 2-3 tests to validate fit
+If score <50: State specific disqualifiers
+
+Return JSON only. Every claim must trace to profile data.
+  `;
 }
 
 // ===============================================================================
@@ -397,72 +450,140 @@ export function buildXRayAnalysisPrompt(profile: ProfileData, business: Business
     ? `Recent content analysis: ${profile.latestPosts.slice(0, 5).map(p => `"${p.caption?.slice(0, 150) || 'Visual content'}"...`).join(' | ')}`
     : 'Content analysis limited - profile access restricted';
 
-  return `# X-RAY ANALYSIS: Copywriter's Complete Intelligence Report
+  return `
+  # X-RAY ANALYSIS: Deep Psychological & Commercial Profiling
 
-## TARGET PROFILE
-- **Username**: @${profile.username}
-- **Display Name**: ${profile.displayName || 'Not provided'}
-- **Bio**: "${profile.bio || 'No bio available'}"
-- **External Link**: ${profile.externalUrl || 'None'}
-- **Audience Scale**: ${profile.followersCount.toLocaleString()} followers${profile.isVerified ? ' | VERIFIED' : ''}
-- **Authority Signals**: ${profile.isBusinessAccount ? 'Business Account' : 'Personal Brand'}
-- **Account Accessibility**: ${profile.isPrivate ? 'Private' : 'Public'}
+## PROFILE INTELLIGENCE
+- **Handle**: @${profile.username} (${profile.followersCount.toLocaleString()} followers)
+- **Verification**: ${profile.isVerified ? 'VERIFIED ✓ (trust signal)' : 'Unverified'}
+- **Account Type**: ${profile.isBusinessAccount ? 'Business Account' : 'Personal/Creator'}
+- **Bio Signals**: "${profile.bio || 'No bio'}"
+- **Link Strategy**: ${profile.externalUrl ? `Active (${profile.externalUrl.includes('linktr') ? 'Linktree' : 'Direct site'})` : 'No external link'}
 
-## ENGAGEMENT INTELLIGENCE
-${engagementInfo}
+## BEHAVIORAL DATA
+${(profile.engagement?.postsAnalyzed || 0) > 0 
+  ? `MEASURED BEHAVIOR from ${profile.engagement.postsAnalyzed} posts:
+    - Engagement: ${profile.engagement.engagementRate}% (${profile.engagement.avgLikes} likes, ${profile.engagement.avgComments} comments avg)
+    - Comment Ratio: ${((profile.engagement.avgComments/profile.engagement.avgLikes)*100).toFixed(1)}% (community engagement signal)
+    - Per-Post Reach: ~${((profile.engagement.avgLikes/profile.followersCount)*100).toFixed(1)}% of audience`
+  : 'Limited behavioral data - assessment based on profile signals'}
 
-## CONTENT INTELLIGENCE
-${contentInfo}
+## CONTENT PATTERNS
+${(profile.latestPosts?.length || 0) > 0 
+  ? `${profile.latestPosts.length} recent posts reveal:
+    ${profile.latestPosts.slice(0, 5).map(p => {
+      const wordCount = (p.caption || '').split(' ').length;
+      const hasQuestion = (p.caption || '').includes('?');
+      const hasEmoji = /[\u{1F300}-\u{1F9FF}]/u.test(p.caption || '');
+      const hasCTA = /(link|bio|shop|swipe|save|comment|share|tag)/i.test(p.caption || '');
+      return `- ${p.likesCount} likes: ${wordCount} words, ${hasQuestion ? 'question' : 'statement'}, ${hasEmoji ? 'emojis' : 'no emojis'}, ${hasCTA ? 'CTA present' : 'no CTA'}`;
+    }).join('\n    ')}`
+  : 'No content patterns available'}
 
 ## BUSINESS CONTEXT
-- **Client**: ${business.name} (${business.industry} industry)
-- **Target Market**: ${business.target_audience}
-- **Value Proposition**: ${business.value_proposition}
-- **Pain Points Addressed**: ${business.pain_points?.join(', ') || 'Not specified'}
-- **Competitive Advantages**: ${business.unique_advantages?.join(', ') || 'Not specified'}
-- **Company Website**: ${business.website || 'Not provided'}
+- **Your Company**: ${business.name} (${business.industry})
+- **Your Audience**: ${business.target_audience}
+- **Your Goal**: ${business.value_proposition}
 
-## X-RAY ANALYSIS MISSION
+## X-RAY INTELLIGENCE EXTRACTION
 
-As a master copywriter, perform complete psychological and commercial intelligence gathering. Provide:
+### SCORING (same as deep but with psychological confidence)
+- **score**: Partnership value (0-100)
+- **engagement_score**: Audience quality (0-100)
+- **niche_fit**: Strategic alignment (0-100)
+- **confidence_level**: ${profile.latestPosts?.length >= 5 ? '0.8-0.95' : '0.3-0.5'}
 
-### 1. CORE SCORING
-- **Overall Score** (0-100): Total business value and partnership potential
-- **Engagement Score** (0-100): Audience quality and engagement authenticity
-- **Niche Fit Score** (0-100): Strategic alignment with client objectives
-- **Quick Summary**: Executive summary for rapid assessment
-- **Confidence Level**: Analysis confidence based on data richness (0.0-1.0)
+### COPYWRITER PROFILE - Extract from Instagram patterns only
 
-### 2. COPYWRITER'S PROFILE INTELLIGENCE
-- **Demographics**: Age range, gender, location, lifestyle indicators
-- **Psychographics**: Personality type, values, communication style, emotional triggers
-- **Pain Points**: 2-6 specific problems, frustrations, and challenges they face
-- **Dreams & Desires**: 2-6 goals, aspirations, and outcomes they want to achieve
+**demographics**:
+Based on visual content + bio + captions:
+- Age signals: Caption formality, emoji usage, cultural references
+- Location: Tagged locations, timezone patterns, language
+- Lifestyle: Post locations (gym/travel/home), brand mentions
 
-### 3. COMMERCIAL INTELLIGENCE
-- **Budget Tier**: low-budget | mid-market | premium | luxury (based on lifestyle signals)
-- **Decision Role**: primary | influencer | gatekeeper | researcher (in purchase decisions)
-- **Buying Stage**: unaware | problem-aware | solution-aware | product-aware | ready-to-buy
-- **Objections**: 2-5 likely concerns and barriers to partnership/purchase
+**psychographics**:
+From content themes and caption style:
+- Values: What they celebrate/criticize in captions
+- Communication: Long vs short captions, question frequency, emoji density
+- Authority style: Educational vs entertainment vs inspiration
 
-### 4. PERSUASION STRATEGY MAPPING
-- **Primary Angle**: transformation | status | convenience | fear-of-missing-out | social-proof | authority
-- **Hook Style**: problem-agitation | curiosity-gap | social-proof | authority-positioning | story-based
-- **Proof Elements**: 3-7 types of evidence that would be most convincing to this person
-- **Communication Style**: casual-friendly | professional | authoritative | empathetic | energetic
+**pain_points** (2-6 from content):
+Look for complaint patterns, questions asked, problems mentioned:
+- "Posts about ${topic} suggest frustration with..."
+- "Asking followers about ${issue} indicates struggle with..."
+- "Collaboration requests suggest need for..."
 
-## ANALYSIS DEPTH REQUIREMENTS
-- Analyze bio language patterns for personality insights
-- Assess follower count vs engagement for audience quality
-- Evaluate content themes for interests and values
-- Identify status symbols and lifestyle indicators for budget assessment
-- Map communication style from content tone and interaction patterns
-- Project decision-making style based on content and engagement patterns
+**dreams_desires** (2-6 from content):
+From aspirational posts, goals mentioned, celebration posts:
+- "Celebrates ${achievement} suggesting values..."
+- "Posts about ${future} indicating desires..."
+- "Hashtags like #${tag} show aspiration toward..."
 
-## OUTPUT REQUIREMENTS
-Use actual engagement data when available (marked "REAL ENGAGEMENT DATA"). Be specific and actionable - this intelligence will drive high-value copywriting campaigns.
+### COMMERCIAL INTELLIGENCE - Based on observable signals
 
-Return ONLY valid JSON matching the schema - no additional text.`;
+**budget_tier**:
+- "luxury": Verified + >1M followers + brand collabs visible
+- "premium": 100k-1M followers + business account + professional content
+- "mid-market": 10k-100k followers + consistent posting
+- "low-budget": <10k followers or inconsistent activity
+
+**decision_role**:
+- "primary": Solopreneur/creator (no team visible)
+- "influencer": Part of network (collabs/mentions visible)
+- "gatekeeper": Business account with team mentions
+- "researcher": Asks audience for input frequently
+
+**buying_stage** (for partnerships):
+- "ready-to-buy": Email in bio + past collabs + business account
+- "product-aware": Mentions partnerships but no clear CTA
+- "solution-aware": Business account but no collab history
+- "problem-aware": Growing but not monetizing
+- "unaware": Personal account, no business signals
+
+**objections** (2-5 based on patterns):
+- From low engagement: "Audience quality concerns"
+- From irregular posting: "Consistency issues"
+- From no collab history: "Unproven partnership record"
+- From caption style: "Brand voice misalignment"
+
+### PERSUASION STRATEGY - How to approach based on their patterns
+
+**primary_angle**:
+- "transformation": If posts show before/after, growth, change
+- "status": If posts show achievements, milestones, recognition
+- "convenience": If posts emphasize ease, simplicity, efficiency
+- "fear-of-missing-out": If posts use urgency, limited time, exclusive
+- "social-proof": If posts show testimonials, community, numbers
+- "authority": If posts teach, guide, demonstrate expertise
+
+**hook_style** (based on their content style):
+- "problem-agitation": If they discuss pain points
+- "curiosity-gap": If they use questions, teasers
+- "social-proof": If they showcase results, testimonials
+- "authority-positioning": If they teach, educate
+- "story-based": If they share personal narratives
+
+**proof_elements** (3-7 they'd respond to):
+Based on what THEY use in content:
+- Numbers/metrics if they share stats
+- Visual proof if they post before/afters
+- Testimonials if they share feedback
+- Process proof if they show behind-scenes
+- Authority proof if they cite sources
+
+**communication_style** (match their tone):
+- "casual-friendly": Heavy emoji use, informal language
+- "professional": Business language, formal structure
+- "authoritative": Educational, factual, structured
+- "empathetic": Personal stories, emotional language
+- "energetic": Exclamations, caps, enthusiasm markers
+
+## CRITICAL REQUIREMENT
+Every insight must reference observable Instagram behavior. No external assumptions.
+Mark any field as "insufficient_data" if you can't defend it from the profile.
+
+Return JSON only. This is intelligence for high-stakes outreach - be precise.
+  `;
 }
 
 // ===============================================================================
