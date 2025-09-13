@@ -74,6 +74,14 @@ if (!analysis_type || !['light', 'deep', 'xray'].includes(analysis_type)) {
   };
 }
 export function validateProfileData(responseData: any, analysisType?: string): ProfileData {
+  if (!responseData) {
+    throw new Error('No response data received from scraper');
+  }
+  
+  if (typeof responseData !== 'object') {
+    throw new Error(`Invalid response data type: ${typeof responseData}`);
+  }
+
   try {
     logger('info', 'Starting CORRECTED profile data validation for nested posts structure', { 
       analysisType, 
