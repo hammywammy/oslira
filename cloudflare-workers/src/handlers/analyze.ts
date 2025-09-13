@@ -3,9 +3,8 @@ import type { Env, AnalysisRequest, ProfileData, AnalysisResult, AnalysisRespons
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
-import { createMicroSnapshot } from '../services/micro-snapshot.js';
-import { runTriage } from '../services/triage.js';
 import { ensureBusinessContext } from '../services/business-context-generator.js';
+import { runAnalysis } from '../services/analysis-orchestrator.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
@@ -82,72 +81,47 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       ), 500);
     }
 
-    // RUN TRIAGE
-    let triageResult: any;
-    let triageCost: any;
+    // RUN ORCHESTRATED ANALYSIS
+    let orchestrationResult: any;
     try {
-      const snapshot = createMicroSnapshot(profileData);
-      const { result, costDetails } = await runTriage(
-        snapshot, 
-        business.business_one_liner, 
-        c.env, 
+      orchestrationResult = await runAnalysis(
+        profileData,
+        business,
+        analysis_type,
+        c.env,
         requestId
       );
-      triageResult = result;
-      triageCost = costDetails;
-      
-      // Early exit if triage says skip
-      if (triageResult.early_exit) {
-        logger('info', 'Triage early exit', { 
-          username, 
-          lead_score: triageResult.lead_score,
-          data_richness: triageResult.data_richness
-        });
-        
+
+      // Handle early exit
+      if (orchestrationResult.verdict === 'early_exit') {
         return c.json(createStandardResponse(true, {
-          verdict: 'low_quality_lead',
-          triage: triageResult,
-          reason: triageResult.lead_score < 25 ? 'Poor business fit' : 'Insufficient data',
-          credits_used: 0, // No main analysis run
-          early_exit: true
+          ...orchestrationResult.result,
+          performance: orchestrationResult.performance,
+          credits_used: 0, // No credits charged for early exit
         }, undefined, requestId));
       }
-      
-    } catch (triageError: any) {
-      logger('warn', 'Triage failed, continuing with full analysis', { error: triageError.message });
-      triageResult = null;
-      triageCost = null;
-    }
 
-// AI ANALYSIS
-    let analysisResult: AnalysisResult;
-    let analysisCost: any;
-    try {
-      logger('info', 'Starting AI analysis', { analysis_type, username: profileData.username });
-      const { performAIAnalysis } = await import('../services/ai-analysis.js');
-      const analysisResponse = await performAIAnalysis(
-        profileData, 
-        business, 
-        analysis_type, 
-        c.env, 
-        requestId,
-        { triage: triageResult } // Pass triage context
-      );
-      analysisResult = analysisResponse.result;
-      analysisCost = analysisResponse.costDetails;
-      logger('info', 'AI analysis completed', { 
-        score: analysisResult.score,
-        confidence: analysisResult.confidence_level
-      });
-    } catch (analysisError: any) {
-      logger('error', 'AI analysis failed', { error: analysisError.message });
+      // Handle analysis error
+      if (orchestrationResult.verdict === 'error') {
+        return c.json(createStandardResponse(
+          false, 
+          undefined, 
+          `Analysis failed: ${orchestrationResult.result.error}`, 
+          requestId
+        ), 500);
+      }
+
+    } catch (orchestrationError: any) {
+      logger('error', 'Analysis orchestration failed', { error: orchestrationError.message });
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        `AI analysis failed: ${analysisError.message}`, 
+        `Analysis orchestration failed: ${orchestrationError.message}`, 
         requestId
       ), 500);
     }
+
+    const analysisResult = orchestrationResult.result;
 
     // PREPARE DATA FOR DATABASE (NEW 3-TABLE STRUCTURE)
     const leadData = {
@@ -210,18 +184,14 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       ), 500);
     }
 
-// UPDATE USER CREDITS (Combine triage + analysis costs)
+// UPDATE USER CREDITS
     try {
-      const totalActualCost = (triageCost?.actual_cost || 0) + (analysisCost?.actual_cost || 0);
-      const totalTokensIn = (triageCost?.tokens_in || 0) + (analysisCost?.tokens_in || 0);
-      const totalTokensOut = (triageCost?.tokens_out || 0) + (analysisCost?.tokens_out || 0);
-      
-      const combinedCostDetails = {
-        actual_cost: totalActualCost,
-        tokens_in: totalTokensIn,
-        tokens_out: totalTokensOut,
-        model_used: analysisCost?.model_used || 'multiple',
-        block_type: `triage+${analysis_type}`
+      const costDetails = {
+        actual_cost: orchestrationResult.totalCost.actual_cost,
+        tokens_in: orchestrationResult.totalCost.tokens_in,
+        tokens_out: orchestrationResult.totalCost.tokens_out,
+        model_used: orchestrationResult.totalCost.blocks_used.join('+'),
+        block_type: orchestrationResult.totalCost.blocks_used.join('+')
       };
       
       const newBalance = userResult.credits - creditCost;
@@ -229,11 +199,11 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
         user_id, 
         creditCost, 
         newBalance,
-        `${analysis_type} analysis with triage`,
+        `${analysis_type} analysis (${orchestrationResult.totalCost.blocks_used.join('+')})`,
         'use',
         c.env,
         run_id,
-        combinedCostDetails
+        costDetails
       );
       logger('info', 'Credits updated successfully', { 
         userId: user_id, 
@@ -297,10 +267,15 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
         used: creditCost,
         remaining: userResult.credits - creditCost
       },
-      metadata: {
+metadata: {
         request_id: requestId,
         analysis_completed_at: new Date().toISOString(),
-        schema_version: '3.0'
+        schema_version: '3.0',
+        orchestration: {
+          blocks_used: orchestrationResult.totalCost.blocks_used,
+          performance_ms: orchestrationResult.performance,
+          total_cost: orchestrationResult.totalCost.actual_cost
+        }
       }
     };
 
