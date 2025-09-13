@@ -13,6 +13,20 @@ app.use('*', cors({
   credentials: false  // Set to false when using wildcard origin
 }));
 
+app.get('/debug/raw-env', async (c) => {
+  return c.json({
+    allEnvKeys: Object.keys(c.env),
+    awsKeys: {
+      AWS_ACCESS_KEY_ID: typeof c.env.AWS_ACCESS_KEY_ID,
+      AWS_SECRET_ACCESS_KEY: typeof c.env.AWS_SECRET_ACCESS_KEY,
+    },
+    rawAccess: {
+      directAccessKeyId: c.env['AWS_ACCESS_KEY_ID'],
+      directSecretKey: c.env['AWS_SECRET_ACCESS_KEY']
+    }
+  });
+});
+
 // ===============================================================================
 // BASIC ENDPOINTS
 // ===============================================================================
