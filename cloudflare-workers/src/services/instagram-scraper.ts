@@ -194,10 +194,10 @@ const profileResponse = await callWithRetry(
 
       return fallbackProfile;
 
-    } else if (analysisType === 'xray') {
-      logger('info', 'X-Ray analysis: Using comprehensive data extraction');
-      // place logic here
-
+} else if (analysisType === 'xray') {
+      logger('info', 'X-Ray analysis: Using deep scraper for comprehensive data');
+      // X-ray uses same scraping as deep but different AI analysis
+      return scrapeInstagramProfile(username, 'deep', env);
     }
 
   } catch (error: any) {
