@@ -278,13 +278,13 @@ export async function saveCompleteAnalysis(
     // Step 1: Upsert lead record
     const lead_id = await upsertLead(leadData, env);
 
-    // Step 2: Insert analysis run
+// Step 2: Insert analysis run (pass analysisResult for scores, not analysisData)
     const run_id = await insertAnalysisRun(
       lead_id,
       leadData.user_id,
       leadData.business_id,
       analysisType,
-      analysisData,
+      analysisData || analysisResult, // Use analysisResult if analysisData is null
       env
     );
 
