@@ -41,7 +41,11 @@ NEW INDEXES: idx_users_username_lower (LOWER(username)), idx_users_email (email)
 NEW FUNCTIONS: validate_username() - Enforces 3–20 chars, alphanumeric + underscore/hyphen; get_user_by_username(text) - Username lookup for login
 
 
-BUSINESS_PROFILES (RLS ✅) - UPDATED SCHEMA
+BUSINESS_PROFILES (RLS ✅) - CONTEXT PACK SCHEMA
+business_one_liner (text, nullable) - NEW (140 chars max)
+business_context_pack (jsonb, nullable) - NEW
+context_version (text, default: 'v1.0') - NEW
+context_updated_at (timestamp with time zone, nullable) - NEW
 
 id (uuid, PK)
 
@@ -80,25 +84,22 @@ created_at, updated_at - NEW
 business_context_pack (text, nullable) - NEW
 
 
-
-CREDIT_TRANSACTIONS (RLS ✅) - UPDATED SCHEMA
-
+CREDIT_TRANSACTIONS (RLS ✅) - ENHANCED COST TRACKING
 id (uuid, PK)
-
 user_id (uuid, FK → users.id)
-
-lead_id (uuid, FK → leads.id, nullable)
-
-amount (integer, not null)
-
+run_id (uuid, FK → runs.run_id, nullable)
+amount (decimal, not null)
 type (text, not null)
-
 description (text, not null)
-
-created_at (timestamp with time zone, default: now()) - NEW
-
-env (text, nullable) - NEW
-
+actual_cost (decimal, nullable) - NEW
+tokens_in (integer, nullable) - NEW  
+tokens_out (integer, nullable) - NEW
+model_used (text, nullable) - NEW
+block_type (text, nullable) - NEW
+processing_duration_ms (integer, nullable) - NEW
+blocks_used (text, nullable) - NEW
+margin (decimal, nullable) - NEW
+created_at (timestamp with time zone, default: now())
 
 PAYMENTS (RLS ✅) - NEW TABLE
 
