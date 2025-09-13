@@ -98,6 +98,8 @@ export async function performAIAnalysis(
   requestId: string
 ): Promise<AnalysisResult> {
   
+  log('info', 'About to call getApiKey for OPENAI_API_KEY', { requestId });
+  
   log('info', `Starting AI analysis with new payload structure`, {
     username: profile.username,
     dataQuality: profile.dataQuality,
