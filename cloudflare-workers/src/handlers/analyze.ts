@@ -75,12 +75,15 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       ), 500);
     }
 
-    // AI ANALYSIS
+// AI ANALYSIS
     let analysisResult: AnalysisResult;
+    let costDetails: any;
     try {
       logger('info', 'Starting AI analysis', { analysis_type, username: profileData.username });
       const { performAIAnalysis } = await import('../services/ai-analysis.js');
-      analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
+      const analysisResponse = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
+      analysisResult = analysisResponse.result;
+      costDetails = analysisResponse.costDetails;
       logger('info', 'AI analysis completed', { 
         score: analysisResult.score,
         confidence: analysisResult.confidence_level
@@ -156,13 +159,24 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       ), 500);
     }
 
-    // UPDATE USER CREDITS
+// UPDATE USER CREDITS
     try {
-      await updateCreditsAndTransaction(user_id, creditCost, run_id, c.env);
+      const newBalance = userResult.credits - creditCost;
+      await updateCreditsAndTransaction(
+        user_id, 
+        creditCost, 
+        newBalance,
+        `${analysis_type} analysis`,
+        'use',
+        c.env,
+        run_id,
+        costDetails
+      );
       logger('info', 'Credits updated successfully', { 
         userId: user_id, 
         creditsUsed: creditCost,
-        remaining: userResult.credits - creditCost
+        actualCost: costDetails.actual_cost,
+        remaining: newBalance
       });
     } catch (creditError: any) {
       logger('error', 'Credit update failed', { error: creditError.message });
