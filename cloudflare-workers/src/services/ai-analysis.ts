@@ -172,15 +172,15 @@ async function executeAnalysisWithRetry(
   const model = 'gpt-4o'; // Using GPT-4o for consistent results
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          log('info', `Analysis attempt ${attempt}/${maxRetries}`, { requestId });
+log('info', `Analysis attempt ${attempt}/${maxRetries}`, undefined, requestId);
 
-          const body = buildOpenAIChatBody({
-            model,
-            messages: [
-              { 
-                role: 'system', 
-                content: 'You are an expert business analyst specializing in influencer partnerships. Return ONLY valid JSON matching the exact schema provided. No additional text, explanations, or markdown formatting.' 
-              },
+      const body = buildOpenAIChatBody({
+        model,
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are an expert business analyst specializing in influencer partnerships. Return ONLY valid JSON matching the exact schema provided. No additional text, explanations, or markdown formatting.' 
+          },
               { role: 'user', content: prompt }
             ],
             maxTokens: 4000,
@@ -220,19 +220,17 @@ async function executeAnalysisWithRetry(
             throw new Error(`Missing required score fields (attempt ${attempt})`);
           }
 
-          log('info', 'Analysis completed successfully', { 
+log('info', 'Analysis completed successfully', { 
             attempt, 
-            score: parsedResult.score,
-            requestId 
-          });
+            score: parsedResult.score
+          }, requestId);
 
           return parsedResult;
 
-        } catch (error: any) {
+} catch (error: any) {
           log('warn', `Analysis attempt ${attempt} failed`, { 
-            error: error.message, 
-            requestId 
-          });
+            error: error.message
+          }, requestId);
 
           if (attempt === maxRetries) {
             throw new Error(`All ${maxRetries} analysis attempts failed. Last error: ${error.message}`);
