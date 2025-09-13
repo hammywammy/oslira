@@ -461,7 +461,7 @@ Each must reference a metric or observation:
 - "ER of X% is Y% above category average"
 - "Bio contains email, suggesting openness to partnerships"
 - "Recent posts show collaborations with similar brands"
-- "${N} posts in last 30 days shows consistent activity"
+- "Recent posts show consistent activity"
 
 ### DECISION OUTPUTS
 If score >75: Provide exact outreach angle and first message
