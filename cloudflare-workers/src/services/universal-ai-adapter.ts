@@ -84,21 +84,21 @@ private async callGPT5Responses(config: ModelConfig, request: UniversalRequest):
     requestId: this.requestId
   });
 
-  const body = {
-    model: config.name,
-    input: [
-      { role: 'system', content: request.system_prompt },
-      { role: 'user', content: request.user_prompt }
-    ],
-    max_output_tokens: request.max_tokens,
-    temperature: request.temperature || 0.7,
-    ...(request.json_schema && {
-      response_format: {
-        type: 'json_schema',
-        json_schema: request.json_schema
-      }
-    })
-  };
+const body = {
+  model: config.name,
+  messages: [  // ✅ CORRECT
+    { role: 'system', content: request.system_prompt },
+    { role: 'user', content: request.user_prompt }
+  ],
+  max_completion_tokens: request.max_tokens, // ✅ CORRECT
+  temperature: request.temperature || 0.7,
+  ...(request.json_schema && {
+    response_format: {
+      type: 'json_schema',
+      json_schema: request.json_schema
+    }
+  })
+};
 
   logger('info', '📤 GPT-5 Request Body', {
     model: body.model,
@@ -112,10 +112,10 @@ private async callGPT5Responses(config: ModelConfig, request: UniversalRequest):
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openaiKey.substring(0, 10)}...`,
-      'Content-Type': 'application/json'
-    },
+headers: {
+  'Authorization': `Bearer ${openaiKey}`, // ✅ FULL KEY
+  'Content-Type': 'application/json'
+}
     body: JSON.stringify(body)
   });
 
