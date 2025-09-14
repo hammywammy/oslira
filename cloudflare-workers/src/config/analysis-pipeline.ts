@@ -117,7 +117,7 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       intelligence: 96,
       cost_per_1k_in: 1.25,
       cost_per_1k_out: 10.00,
-      max_context: 128000,
+      max_completion_tokens: 128000,
       api_format: 'gpt5_responses',
       backup: 'claude-sonnet-4'
     } as ModelConfig,
@@ -151,7 +151,7 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       intelligence: 64,
       cost_per_1k_in: 0.05,
       cost_per_1k_out: 0.40,
-      max_context: 64000,
+      max_completion_tokens: 64000,
       api_format: 'gpt5_responses',
       backup: 'gpt-5-mini'
     } as ModelConfig,
@@ -162,7 +162,7 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       intelligence: 80,
       cost_per_1k_in: 0.25,
       cost_per_1k_out: 2.00,
-      max_context: 64000,
+      max_completion_tokens: 64000,
       api_format: 'gpt5_responses'
     } as ModelConfig
   },
