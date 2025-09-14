@@ -82,6 +82,20 @@ export function validateProfileData(responseData: any, analysisType?: string): P
     throw new Error(`Invalid response data type: ${typeof responseData}`);
   }
 
+  // Check for profile not found case
+  if (Array.isArray(responseData) && responseData.length > 0) {
+    const profile = responseData[0];
+    const hasOnlyUsername = Object.keys(profile).length <= 2 && profile.username && !profile.followersCount;
+    if (hasOnlyUsername) {
+      throw new Error('PROFILE_NOT_FOUND');
+    }
+  } else if (!Array.isArray(responseData)) {
+    const hasOnlyUsername = Object.keys(responseData).length <= 2 && responseData.username && !responseData.followersCount;
+    if (hasOnlyUsername) {
+      throw new Error('PROFILE_NOT_FOUND');
+    }
+  }
+
   try {
     logger('info', 'Starting CORRECTED profile data validation for nested posts structure', { 
       analysisType, 
