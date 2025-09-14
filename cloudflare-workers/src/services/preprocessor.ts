@@ -96,31 +96,34 @@ function generateCacheKey(profile: ProfileData): string {
 
 async function getCachedPreprocessor(cacheKey: string, env: any): Promise<PreprocessorResult | null> {
   try {
-    if (!env.ANALYSIS_CACHE) return null;
+    if (!env.R2_CACHE_BUCKET) return null;
     
-    const cached = await env.ANALYSIS_CACHE.get(cacheKey, 'json');
-    if (cached && cached.expires > Date.now()) {
-      return cached.result;
+    const cached = await env.R2_CACHE_BUCKET.get(cacheKey);
+    if (!cached) return null;
+    
+    const cacheData = await cached.json();
+    if (cacheData.expires > Date.now()) {
+      return cacheData.result;
     }
     
     return null;
   } catch (error: any) {
-    console.warn('Cache read failed:', error.message);
+    console.warn('R2 cache read failed:', error.message);
     return null;
   }
 }
 
 async function cachePreprocessor(cacheKey: string, result: PreprocessorResult, env: any): Promise<void> {
   try {
-    if (!env.ANALYSIS_CACHE) return;
+    if (!env.R2_CACHE_BUCKET) return;
     
     const cacheData = {
       result,
       expires: Date.now() + (48 * 60 * 60 * 1000) // 48 hours
     };
     
-    await env.ANALYSIS_CACHE.put(cacheKey, JSON.stringify(cacheData));
+    await env.R2_CACHE_BUCKET.put(cacheKey, JSON.stringify(cacheData));
   } catch (error: any) {
-    console.warn('Cache write failed:', error.message);
+    console.warn('R2 cache write failed:', error.message);
   }
 }
