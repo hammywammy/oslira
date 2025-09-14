@@ -102,22 +102,3 @@ async function notifyConfigSubscribers(keyName: string, updatedBy: string, env: 
     }
   }
 }
-
-// Middleware to automatically trigger config change notifications
-export function createConfigChangeMiddleware() {
-  return async (keyName: string, updatedBy: string, env: any) => {
-    try {
-      // Trigger the config change handler
-      await fetch(`${env.WORKER_URL}/internal/config-changed`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${env.INTERNAL_API_TOKEN}`
-        },
-        body: JSON.stringify({ keyName, updatedBy })
-      });
-    } catch (error) {
-      logger('warn', 'Failed to trigger config change notification', { error: error.message });
-    }
-  };
-}
