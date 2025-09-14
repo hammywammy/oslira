@@ -278,15 +278,15 @@ export async function saveCompleteAnalysis(
     // Step 1: Upsert lead record
     const lead_id = await upsertLead(leadData, env);
 
-// Step 2: Insert analysis run (pass analysisResult for scores, not analysisData)
-    const run_id = await insertAnalysisRun(
-      lead_id,
-      leadData.user_id,
-      leadData.business_id,
-      analysisType,
-      analysisData || analysisResult, // Use analysisResult if analysisData is null
-      env
-    );
+// Step 2: Insert analysis run
+const run_id = await insertAnalysisRun(
+  lead_id,
+  leadData.user_id,
+  leadData.business_id,
+  analysisType,
+  analysisData, // Always use analysisData parameter
+  env
+);
 
     // Step 3: Insert analysis payload (if we have analysis data)
     if (analysisData && (analysisType === 'deep' || analysisType === 'xray')) {
