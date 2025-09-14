@@ -744,3 +744,186 @@ Write a 5-7 sentence executive summary that covers:
 
 Be specific, actionable, and executive-level. No preface or conclusion needed.`;
 }
+
+// Add these functions to the END of prompts.ts
+
+// ===============================================================================
+// TRIAGE FUNCTIONS
+// ===============================================================================
+
+export function getTriageJsonSchema() {
+  return {
+    name: 'TriageResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        lead_score: { type: 'integer', minimum: 0, maximum: 100 },
+        data_richness: { type: 'integer', minimum: 0, maximum: 100 },
+        confidence: { type: 'number', minimum: 0, maximum: 1 },
+        early_exit: { type: 'boolean' },
+        focus_points: { 
+          type: 'array', 
+          items: { type: 'string' }, 
+          minItems: 2, 
+          maxItems: 4 
+        }
+      },
+      required: ['lead_score', 'data_richness', 'confidence', 'early_exit', 'focus_points']
+    }
+  };
+}
+
+export function buildTriagePrompt(snapshot: any, businessOneLiner: string): string {
+  return `# LEAD TRIAGE: Quick Pass/Fail Decision
+
+## YOUR BUSINESS
+${businessOneLiner}
+
+## PROFILE SNAPSHOT
+- **Username**: @${snapshot.username}
+- **Followers**: ${snapshot.followers.toLocaleString()}
+- **Status**: ${snapshot.verified ? 'Verified ✓' : 'Unverified'} | ${snapshot.private ? 'Private ⚠️' : 'Public'}
+- **Bio**: "${snapshot.bio_short || 'No bio'}"
+- **External Links**: ${snapshot.external_domains.length > 0 ? snapshot.external_domains.join(', ') : 'None'}
+- **Recent Activity**: ~${snapshot.posts_30d} posts estimated
+- **Sample Content**: ${snapshot.top_captions.length > 0 ? 
+    snapshot.top_captions.map(cap => `"${cap}..."`).join(' | ') : 
+    'No captions available'}
+- **Engagement Data**: ${snapshot.engagement_signals ? 
+    `${snapshot.engagement_signals.avg_likes.toLocaleString()} avg likes, ${snapshot.engagement_signals.avg_comments} comments (${snapshot.engagement_signals.posts_analyzed} posts)` : 
+    'Not available'}
+
+## TASK: 10-Second Lead Decision
+
+Score this profile on two dimensions:
+
+**lead_score (0-100)**: Business fit potential
+- 80-100: Clear target match, obvious collaboration potential
+- 60-79: Good fit signals, worth deeper analysis  
+- 40-59: Possible fit but unclear value
+- 20-39: Weak signals, probably wrong audience
+- 0-19: Obviously wrong fit, different niche entirely
+
+**data_richness (0-100)**: Available information quality
+- 80-100: Rich content, engagement data, clear patterns
+- 60-79: Good content samples, some engagement signals
+- 40-59: Basic profile info, limited content visibility
+- 20-39: Minimal data, private account or sparse content
+- 0-19: Almost no usable information
+
+**confidence (0-1)**: How certain are you about these scores?
+
+**focus_points**: 2-4 specific observations that drove your scores
+
+## EARLY EXIT RULES
+- If lead_score < 25 OR data_richness < 20 → Set early_exit: true
+- Otherwise → Set early_exit: false
+
+Return ONLY JSON:
+{
+  "lead_score": 0-100,
+  "data_richness": 0-100, 
+  "confidence": 0-1,
+  "early_exit": true|false,
+  "focus_points": ["observation 1", "observation 2", "..."]
+}`;
+}
+
+// ===============================================================================
+// PREPROCESSOR FUNCTIONS
+// ===============================================================================
+
+export function getPreprocessorJsonSchema() {
+  return {
+    name: 'PreprocessorResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        posting_cadence: { type: 'string' },
+        content_themes: { 
+          type: 'array', 
+          items: { type: 'string' },
+          maxItems: 5
+        },
+        audience_signals: { 
+          type: 'array', 
+          items: { type: 'string' },
+          maxItems: 4
+        },
+        brand_mentions: { 
+          type: 'array', 
+          items: { type: 'string' }
+        },
+        engagement_patterns: { type: 'string' },
+        collaboration_history: { type: 'string' },
+        contact_readiness: { type: 'string' },
+        content_quality: { type: 'string' }
+      },
+      required: ['posting_cadence', 'content_themes', 'audience_signals', 'brand_mentions', 'engagement_patterns', 'collaboration_history', 'contact_readiness', 'content_quality']
+    }
+  };
+}
+
+export function buildPreprocessorPrompt(profile: any): string {
+  const postsData = profile.latestPosts || [];
+  const engagementData = profile.engagement || null;
+
+  return `# DATA EXTRACTION: Instagram Profile Facts
+
+## PROFILE OVERVIEW
+- **Username**: @${profile.username}
+- **Followers**: ${profile.followersCount.toLocaleString()}
+- **Bio**: "${profile.bio || 'No bio'}"
+- **External Link**: ${profile.externalUrl || 'None'}
+- **Account Type**: ${profile.isBusinessAccount ? 'Business' : 'Personal'} | ${profile.isVerified ? 'Verified' : 'Unverified'}
+
+## CONTENT ANALYSIS
+- **Posts Available**: ${postsData.length}
+- **Engagement Data**: ${engagementData ? 
+    `${engagementData.engagementRate}% rate (${engagementData.avgLikes} avg likes, ${engagementData.avgComments} comments)` : 
+    'Not available'}
+
+## POST SAMPLES
+${postsData.slice(0, 8).map((post, i) => 
+  `**Post ${i+1}**: ${post.likesCount.toLocaleString()} likes, ${post.commentsCount} comments
+  Caption: "${(post.caption || '').slice(0, 150)}${post.caption && post.caption.length > 150 ? '...' : ''}"`
+).join('\n')}
+
+## EXTRACTION TASK
+
+Based ONLY on observable data above, extract:
+
+**posting_cadence**: Frequency pattern (daily/weekly/sporadic/inactive)
+
+**content_themes**: Top 3-5 recurring topics/niches from captions and context
+
+**audience_signals**: 2-4 demographic/psychographic signals about followers from comments, content style, language
+
+**brand_mentions**: List any brand names, products, or companies mentioned
+
+**engagement_patterns**: Style of engagement (high comments vs likes, question-heavy, community-focused, etc)
+
+**collaboration_history**: Evidence of sponsorships, partnerships, or promotional content
+
+**contact_readiness**: Email in bio, business account, link in bio, or other contact signals
+
+**content_quality**: Production value assessment (professional/amateur/mixed)
+
+Extract ONLY what you can verify from the data provided. Use "insufficient_data" for unclear fields.
+
+Return ONLY JSON:
+{
+  "posting_cadence": "...",
+  "content_themes": ["theme1", "theme2", "theme3"],
+  "audience_signals": ["signal1", "signal2"],
+  "brand_mentions": ["brand1", "brand2"],
+  "engagement_patterns": "...",
+  "collaboration_history": "...",
+  "contact_readiness": "...",
+  "content_quality": "..."
+}`;
+}
