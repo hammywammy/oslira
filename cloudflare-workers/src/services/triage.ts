@@ -75,9 +75,8 @@ if (!modelConfig) throw new Error('Triage model config not found');
     // Parse result
     const result = JSON.parse(content) as TriageResult;
     
-    // Validate and apply early exit rules
-    const shouldExit = result.lead_score < 25 || result.data_richness < 20;
-    result.early_exit = shouldExit;
+// Remove early exit logic - always continue to full analysis
+    result.early_exit = false;
 
     console.log(`🔍 [Triage] Result: Score ${result.lead_score}, Data ${result.data_richness}, Exit: ${result.early_exit}`);
 
