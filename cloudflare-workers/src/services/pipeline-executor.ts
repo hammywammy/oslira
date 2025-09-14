@@ -106,13 +106,13 @@ export class PipelineExecutor {
     const modelName = selectModel(stage.type, stage.model_tier || context.model_tier || 'balanced', results);
     const prompt = this.generatePrompt(stage.type, context, results);
     
-    const response = await this.aiAdapter.call(modelName, [
-      { role: 'system', content: this.getSystemPrompt(stage.type) },
-      { role: 'user', content: prompt }
-    ], {
-      max_tokens: this.getMaxTokens(stage.type),
-      response_format: { type: 'json_object' }
-    });
+const response = await this.aiAdapter.executeRequest({
+  model_name: modelName,
+  system_prompt: this.getSystemPrompt(stage.type),
+  user_prompt: prompt,
+  max_tokens: this.getMaxTokens(stage.type),
+  response_format: 'json'
+});
 
     return {
       data: JSON.parse(response.content),
