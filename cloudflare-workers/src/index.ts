@@ -65,16 +65,6 @@ app.post('/v1/bulk-analyze', async (c) => {
   return handleBulkAnalyze(c);
 });
 
-// Legacy endpoint redirects to v1
-app.post('/analyze', async (c) => {
-  const { handleAnalyze } = await import('./handlers/analyze.js');
-  return handleAnalyze(c);
-});
-
-app.post('/bulk-analyze', async (c) => {
-  const { handleBulkAnalyze } = await import('./handlers/bulk-analyze.js');
-  return handleBulkAnalyze(c);
-});
 
 // Billing endpoints
 app.post('/stripe-webhook', async (c) => {
