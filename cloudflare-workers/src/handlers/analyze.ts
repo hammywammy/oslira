@@ -13,9 +13,23 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
   try {
     logger('info', 'Analysis request received', { requestId });
 
-    // Parse and validate request
-    const body = await c.req.json() as AnalysisRequest;
-    const { profile_url, username, analysis_type, business_id, user_id } = normalizeRequest(body);
+// Parse and validate request - NOW WITH PIPELINE CONFIG SUPPORT
+    const body = await c.req.json() as AnalysisRequest & {
+      workflow?: string;           // NEW: 'micro_only', 'auto', 'full'
+      model_tier?: string;        // NEW: 'premium', 'balanced', 'economy'
+      force_model?: string;       // NEW: Override specific model
+    };
+    
+    const { 
+      profile_url, 
+      username, 
+      analysis_type, 
+      business_id, 
+      user_id,
+      workflow = 'auto',           // NEW: Default to auto workflow
+      model_tier = 'balanced',     // NEW: Default to balanced tier
+      force_model                  // NEW: Optional model override
+    } = normalizeRequest(body);
 
     logger('info', 'Request validated', { 
       requestId, 
