@@ -6,7 +6,6 @@ import { normalizeRequest } from '../utils/validation.js';
 import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
 import { ensureBusinessContext } from '../services/business-context-generator.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
-import { FEATURE_FLAGS } from '../config/feature-flags.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -14,12 +13,11 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
   try {
     logger('info', 'Analysis request received', { requestId });
 
-    // Parse and validate request with full pipeline support
+    // Parse and validate request with pipeline support
     const body = await c.req.json() as AnalysisRequest & {
       workflow?: string;           // 'micro_only', 'auto', 'full'
       model_tier?: string;        // 'premium', 'balanced', 'economy'
       force_model?: string;       // Override specific model
-      use_pipeline?: boolean;     // Force pipeline system on/off
     };
     
     const { 
@@ -30,8 +28,7 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       user_id,
       workflow = 'auto',
       model_tier = 'balanced',
-      force_model,
-      use_pipeline = FEATURE_FLAGS.USE_PIPELINE_SYSTEM
+      force_model
     } = normalizeRequest(body);
 
     logger('info', 'Request validated', { 
@@ -40,8 +37,7 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       analysis_type, 
       business_id,
       workflow,
-      model_tier,
-      use_pipeline
+      model_tier
     });
 
     // Validate user and fetch business profile
@@ -65,97 +61,78 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        `Insufficient credits. Need ${creditCost}, have ${userResult.credits}`, 
+        `Insufficient credits. Required: ${creditCost}, Available: ${userResult.credits}`, 
         requestId
-      ), 402);
+      ), 400);
     }
 
-    logger('info', 'User validation passed', { 
-      userId: user_id, 
-      credits: userResult.credits, 
-      creditCost 
-    });
-
-    // SCRAPE PROFILE DATA
+    // SCRAPING: Get profile data
     let profileData: ProfileData;
     try {
-      logger('info', 'Starting profile scraping', { username });
-      const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
-      profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-      logger('info', 'Profile scraping completed', { 
-        username: profileData.username,
-        followersCount: profileData.followersCount,
-        dataQuality: profileData.dataQuality
-      });
-    } catch (scrapeError: any) {
-      // Handle profile not found specifically
-      if (scrapeError.message === 'PROFILE_NOT_FOUND') {
-        logger('info', 'Profile not found', { username });
-        return c.json(createStandardResponse(
-          false, 
-          undefined, 
-          'Instagram profile not found', 
-          requestId
-        ), 404);
-      }
+      const { scrapeProfile } = await import('../services/profile-scraper.js');
+      profileData = await scrapeProfile(profile_url, username, analysis_type, c.env, requestId);
       
-      logger('error', 'Profile scraping failed', { error: scrapeError.message });
+      if (!profileData.username) {
+        throw new Error('Profile scraping failed - no username returned');
+      }
+    } catch (scrapeError: any) {
+      logger('error', 'Profile scraping failed', { error: scrapeError.message, requestId });
       return c.json(createStandardResponse(
         false, 
         undefined, 
         `Profile scraping failed: ${scrapeError.message}`, 
         requestId
-      ), 500);
+      ), 400);
     }
 
-    // RUN PIPELINE-BASED ANALYSIS
-    let orchestrationResult: any;
+    // ANALYSIS: Execute pipeline system
+    let orchestrationResult;
     try {
-     // PIPELINE SYSTEM ONLY - Legacy system completely removed
-logger('info', 'Using pipeline system', { workflow, model_tier, requestId });
+      logger('info', 'Using pipeline system', { workflow, model_tier, requestId });
 
-// Ensure business context exists
-const enrichedBusiness = await ensureBusinessContext(business, c.env, requestId);
+      // Ensure business context exists
+      const enrichedBusiness = await ensureBusinessContext(business, c.env, requestId);
 
-// Create pipeline context
-const pipelineContext: PipelineContext = {
-  profile: profileData,
-  business: enrichedBusiness,
-  analysis_type: analysisType,
-  workflow,
-  model_tier: model_tier as 'premium' | 'balanced' | 'economy'
-};
+      // Create pipeline context
+      const pipelineContext: PipelineContext = {
+        profile: profileData,
+        business: enrichedBusiness,
+        analysis_type: analysis_type,
+        workflow,
+        model_tier: model_tier as 'premium' | 'balanced' | 'economy'
+      };
 
-// Execute pipeline
-const executor = new PipelineExecutor(c.env, requestId);
-const pipelineResult = await executor.execute(pipelineContext);
+      // Execute pipeline
+      const executor = new PipelineExecutor(c.env, requestId);
+      const pipelineResult = await executor.execute(pipelineContext);
 
-// Transform pipeline result to match interface
-orchestrationResult = {
-  result: transformPipelineResult(pipelineResult, analysis_type),
-  totalCost: {
-    actual_cost: pipelineResult.costs.reduce((sum, c) => sum + c.cost, 0),
-    tokens_in: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_in, 0),
-    tokens_out: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_out, 0),
-    blocks_used: pipelineResult.costs.map(c => c.stage),
-    total_blocks: pipelineResult.costs.length
-  },
-  performance: {
-    ...pipelineResult.performance,
-    total_ms: Object.values(pipelineResult.performance).reduce((sum: number, time: number) => sum + time, 0)
-  },
-  verdict: 'success',
-  workflow_used: pipelineResult.workflow_used
-};
+      // Transform pipeline result to match interface
+      orchestrationResult = {
+        result: transformPipelineResult(pipelineResult, analysis_type),
+        totalCost: {
+          actual_cost: pipelineResult.costs.reduce((sum, c) => sum + c.cost, 0),
+          tokens_in: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_in, 0),
+          tokens_out: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_out, 0),
+          blocks_used: pipelineResult.costs.map(c => c.stage),
+          total_blocks: pipelineResult.costs.length
+        },
+        performance: {
+          ...pipelineResult.performance,
+          total_ms: Object.values(pipelineResult.performance).reduce((sum: number, time: number) => sum + time, 0)
+        },
+        verdict: 'success',
+        workflow_used: pipelineResult.workflow_used
+      };
 
-logger('info', 'Pipeline analysis completed', {
-  username: profileData.username,
-  workflow_used: pipelineResult.workflow_used,
-  stages_executed: Object.keys(pipelineResult.results).length,
-  total_cost: orchestrationResult.totalCost.actual_cost,
-  requestId
-});
-      // Handle early exit (both systems)
+      logger('info', 'Pipeline analysis completed', {
+        username: profileData.username,
+        workflow_used: pipelineResult.workflow_used,
+        stages_executed: Object.keys(pipelineResult.results).length,
+        total_cost: orchestrationResult.totalCost.actual_cost,
+        requestId
+      });
+
+      // Handle early exit
       if (orchestrationResult.verdict === 'early_exit') {
         return c.json(createStandardResponse(true, {
           ...orchestrationResult.result,
@@ -164,7 +141,7 @@ logger('info', 'Pipeline analysis completed', {
         }, undefined, requestId));
       }
 
-      // Handle analysis error (both systems)
+      // Handle analysis error
       if (orchestrationResult.verdict === 'error') {
         return c.json(createStandardResponse(
           false, 
@@ -177,7 +154,7 @@ logger('info', 'Pipeline analysis completed', {
     } catch (orchestrationError: any) {
       logger('error', 'Analysis orchestration failed', { 
         error: orchestrationError.message,
-        system: use_pipeline ? 'pipeline' : 'legacy',
+        system: 'pipeline',
         requestId
       });
       return c.json(createStandardResponse(
@@ -228,18 +205,18 @@ logger('info', 'Pipeline analysis completed', {
           data_source: 'real_scraped_calculation'
         }) : null,
         
-        // Analysis metadata (enhanced with pipeline info)
+        // Analysis metadata (pipeline info)
         analysis_timestamp: new Date().toISOString(),
-        ai_model_used: use_pipeline ? 'pipeline_system' : 'gpt-4o',
+        ai_model_used: 'pipeline_system',
         scraperUsed: profileData.scraperUsed,
         dataQuality: profileData.dataQuality,
-        system_used: use_pipeline ? 'pipeline' : 'legacy',
-        workflow_used: orchestrationResult.workflow_used || null,
-        pipeline_metadata: use_pipeline ? {
+        system_used: 'pipeline',
+        workflow_used: orchestrationResult.workflow_used,
+        pipeline_metadata: {
           stages_executed: orchestrationResult.totalCost.blocks_used,
           workflow: orchestrationResult.workflow_used,
           model_tier: model_tier
-        } : null
+        }
       };
     }
 
@@ -276,79 +253,52 @@ logger('info', 'Pipeline analysis completed', {
         block_type: orchestrationResult.totalCost.blocks_used.join('+'),
         processing_duration_ms: orchestrationResult.performance.total_ms,
         blocks_used: orchestrationResult.totalCost.blocks_used,
-        system_used: use_pipeline ? 'pipeline' : 'legacy',
-        workflow_used: orchestrationResult.workflow_used || null
+        system_used: 'pipeline'
       };
-  
-      const newBalance = userResult.credits - finalCreditCost;
+
       await updateCreditsAndTransaction(
         user_id, 
         finalCreditCost, 
-        newBalance,
-        `${analysis_type} analysis (${orchestrationResult.totalCost.blocks_used.join('+')})`,
-        'use',
-        c.env,
-        run_id,
-        costDetails
+        analysis_type, 
+        run_id, 
+        costDetails,
+        c.env
       );
-  
-      logger('info', 'Credits updated with enhanced pipeline tracking', { 
-        userId: user_id, 
-        creditsCharged: finalCreditCost,
-        actualCost: costDetails.actual_cost,
-        margin: finalCreditCost - costDetails.actual_cost,
-        tokensCapped: totalTokens > 2200,
-        remaining: newBalance,
-        blocks: orchestrationResult.totalCost.blocks_used.join('+'),
-        processingMs: orchestrationResult.performance.total_ms,
-        systemUsed: use_pipeline ? 'pipeline' : 'legacy',
-        workflowUsed: orchestrationResult.workflow_used
-      });
     } catch (creditError: any) {
       logger('error', 'Credit update failed', { error: creditError.message });
-      // Analysis completed but credit update failed - still return success
+      // Continue - analysis was successful, credit update failure shouldn't break response
     }
 
-    // PREPARE ENHANCED RESPONSE DATA
+    // BUILD RESPONSE
     const responseData: AnalysisResponse = {
-      run_id,
-      profile: {
-        username: profileData.username,
-        displayName: profileData.displayName,
-        followersCount: profileData.followersCount,
-        isVerified: profileData.isVerified,
-        profilePicUrl: profileData.profilePicUrl,
-        dataQuality: profileData.dataQuality || 'medium',
-        scraperUsed: profileData.scraperUsed || 'unknown'
-      },
       analysis: {
-        overall_score: analysisResult.score,
-        niche_fit_score: analysisResult.niche_fit,
-        engagement_score: analysisResult.engagement_score,
-        type: analysis_type,
-        confidence_level: analysisResult.confidence_level,
-        summary_text: analysisResult.quick_summary,
+        username: profileData.username,
+        full_name: profileData.displayName,
+        bio: profileData.bio,
+        followers_count: profileData.followersCount,
+        following_count: profileData.followingCount,
+        posts_count: profileData.postsCount,
+        is_verified: profileData.isVerified,
+        is_private: profileData.isPrivate,
+        profile_pic_url: profileData.profilePicUrl,
+        external_url: profileData.externalUrl,
         
-        // Include detailed data for deep/xray analyses
-        ...(analysis_type === 'deep' && {
-          audience_quality: analysisResult.audience_quality,
-          selling_points: analysisResult.selling_points,
-          reasons: analysisResult.reasons,
-          deep_summary: analysisResult.deep_summary,
-          outreach_message: analysisData?.outreach_message || null,
-          engagement_breakdown: profileData.engagement ? {
-            avg_likes: profileData.engagement.avgLikes,
-            avg_comments: profileData.engagement.avgComments,
-            engagement_rate: profileData.engagement.engagementRate,
-            posts_analyzed: profileData.engagement.postsAnalyzed,
-            data_source: 'real_scraped_calculation'
-          } : {
-            data_source: 'no_real_data_available',
-            avg_likes: 0,
-            avg_comments: 0,
-            engagement_rate: 0
-          }
-        }),
+        // Analysis results
+        ...analysisResult,
+        
+        // Real engagement calculation
+        engagement: profileData.engagement ? {
+          avg_likes: profileData.engagement.avgLikes,
+          avg_comments: profileData.engagement.avgComments,
+          engagement_rate: profileData.engagement.engagementRate,
+          posts_analyzed: profileData.engagement.postsAnalyzed,
+          data_source: 'real_scraped_calculation'
+        } : {
+          data_source: 'no_real_data_available',
+          avg_likes: 0,
+          avg_comments: 0,
+          engagement_rate: 0
+        },
         
         ...(analysis_type === 'xray' && {
           copywriter_profile: analysisData?.copywriter_profile || {},
@@ -366,17 +316,15 @@ logger('info', 'Pipeline analysis completed', {
         request_id: requestId,
         analysis_completed_at: new Date().toISOString(),
         schema_version: '3.1', // Updated version for pipeline support
-        system_used: use_pipeline ? 'pipeline' : 'legacy',
-        workflow_used: orchestrationResult.workflow_used || null,
+        system_used: 'pipeline',
+        workflow_used: orchestrationResult.workflow_used,
         orchestration: {
           blocks_used: orchestrationResult.totalCost.blocks_used,
           performance_ms: orchestrationResult.performance,
           total_cost: orchestrationResult.totalCost.actual_cost,
-          ...(use_pipeline && {
-            pipeline_stages: Object.keys(orchestrationResult.performance),
-            model_tier: model_tier,
-            workflow: workflow
-          })
+          pipeline_stages: Object.keys(orchestrationResult.performance),
+          model_tier: model_tier,
+          workflow: workflow
         }
       }
     };
@@ -387,7 +335,7 @@ logger('info', 'Pipeline analysis completed', {
       overall_score: analysisResult.score,
       confidence: analysisResult.confidence_level,
       dataQuality: profileData.dataQuality,
-      systemUsed: use_pipeline ? 'pipeline' : 'legacy',
+      systemUsed: 'pipeline',
       workflowUsed: orchestrationResult.workflow_used
     });
 
@@ -404,7 +352,7 @@ logger('info', 'Pipeline analysis completed', {
   }
 }
 
-// Helper function to transform pipeline results to match legacy interface
+// Helper function to transform pipeline results to standard interface
 function transformPipelineResult(pipelineResult: any, analysisType: string): any {
   // Extract the final analysis result based on analysis type
   const mainAnalysisKey = 'main_analysis';  // Pipeline uses consistent naming
