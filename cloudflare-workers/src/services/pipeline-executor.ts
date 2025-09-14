@@ -154,10 +154,13 @@ export class PipelineExecutor {
     const business = context.business;
     
     switch (stageType) {
-      case 'triage':
-        return `Profile: @${profile.username}, ${profile.followersCount} followers, Bio: "${profile.bio || 'No bio'}"
+case 'triage':
+  return `@${profile.username} - ${profile.followersCount} followers
+Bio: "${profile.bio || 'No bio'}"
 Business: ${business.business_one_liner || business.name}
-Quickly assess if this profile is worth deeper analysis. Return JSON with lead_score (0-100), data_richness (0-100), confidence (0-1), early_exit (boolean), focus_points (array).`;
+
+Score this profile quickly. Return only valid JSON:
+{"lead_score": 0-100, "data_richness": 0-100, "confidence": 0-1, "early_exit": false, "focus_points": ["reason1", "reason2"]}`;
 
       case 'preprocessor':
         return `Profile: @${profile.username}
@@ -200,10 +203,10 @@ Generate a compelling one-liner description. Return JSON with business_one_liner
 
   private getMaxTokens(stageType: string): number {
     const limits = {
-      triage: 1000,
-      preprocessor: 1400,
-      analysis: 1800,
-      context: 1300
+      triage: 10000,
+      preprocessor: 14000,
+      analysis: 18000,
+      context: 13000
     };
     
     return limits[stageType] || 500;
