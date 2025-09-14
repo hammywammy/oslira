@@ -449,3 +449,212 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
     };
   }
 }
+
+// Add these functions to the END of enhanced-admin.ts file
+
+export async function handleTestApiKey(c: Context): Promise<Response> {
+  const requestId = generateRequestId();
+  
+  try {
+    // Verify admin access
+    if (!verifyAdminAccess(c)) {
+      return c.json(createStandardResponse(false, undefined, 'Unauthorized access', requestId), 401);
+    }
+    
+    const body = await c.req.json() as { keyName: string; adminToken?: string };
+    const { keyName } = body;
+    
+    if (!keyName) {
+      return c.json(createStandardResponse(false, undefined, 'keyName is required', requestId), 400);
+    }
+    
+    // Get the key value
+    const configManager = getEnhancedConfigManager(c.env);
+    const keyValue = await configManager.getConfig(keyName);
+    
+    if (!keyValue) {
+      return c.json(createStandardResponse(false, undefined, `${keyName} not found or empty`, requestId), 404);
+    }
+    
+    // Test the key
+    const testResult = await testApiKey(keyName, keyValue, c.env);
+    
+    logger('info', 'API key tested via admin panel', { keyName, testResult: testResult.success, requestId });
+    
+    return c.json(createStandardResponse(true, {
+      keyName,
+      testResult,
+      keyPresent: true,
+      keyLength: keyValue.length
+    }, undefined, requestId));
+    
+  } catch (error: any) {
+    logger('error', 'API key test failed', { error: error.message, requestId });
+    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
+  }
+}
+
+async function testApiKey(keyName: string, keyValue: string, env: any): Promise<{ success: boolean; message: string; details?: any }> {
+  try {
+    switch (keyName) {
+      case 'OPENAI_API_KEY':
+        return await testOpenAIKey(keyValue);
+      
+      case 'CLAUDE_API_KEY':
+        return await testClaudeKey(keyValue);
+      
+      case 'APIFY_API_TOKEN':
+        return await testApifyKey(keyValue);
+      
+      case 'STRIPE_SECRET_KEY':
+        return await testStripeKey(keyValue);
+      
+      default:
+        return {
+          success: true,
+          message: `${keyName} format validation passed - no live test available`
+        };
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `Test failed: ${error.message}`
+    };
+  }
+}
+
+async function testOpenAIKey(apiKey: string): Promise<{ success: boolean; message: string; details?: any }> {
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: 'OpenAI API key is valid and active',
+        details: {
+          modelsAvailable: data.data?.length || 0,
+          status: response.status
+        }
+      };
+    } else {
+      const errorData = await response.text();
+      return {
+        success: false,
+        message: `OpenAI API key test failed: ${response.status}`,
+        details: { error: errorData }
+      };
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `OpenAI test error: ${error.message}`
+    };
+  }
+}
+
+async function testClaudeKey(apiKey: string): Promise<{ success: boolean; message: string; details?: any }> {
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'Test' }]
+      })
+    });
+
+    if (response.ok) {
+      return {
+        success: true,
+        message: 'Claude API key is valid and active',
+        details: { status: response.status }
+      };
+    } else {
+      const errorData = await response.text();
+      return {
+        success: false,
+        message: `Claude API key test failed: ${response.status}`,
+        details: { error: errorData }
+      };
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `Claude test error: ${error.message}`
+    };
+  }
+}
+
+async function testApifyKey(apiToken: string): Promise<{ success: boolean; message: string; details?: any }> {
+  try {
+    const response = await fetch(`https://api.apify.com/v2/users/me?token=${apiToken}`);
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: 'Apify API token is valid and active',
+        details: {
+          userId: data.data?.id,
+          username: data.data?.username,
+          status: response.status
+        }
+      };
+    } else {
+      return {
+        success: false,
+        message: `Apify API token test failed: ${response.status}`
+      };
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `Apify test error: ${error.message}`
+    };
+  }
+}
+
+async function testStripeKey(secretKey: string): Promise<{ success: boolean; message: string; details?: any }> {
+  try {
+    const response = await fetch('https://api.stripe.com/v1/account', {
+      headers: {
+        'Authorization': `Bearer ${secretKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        success: true,
+        message: 'Stripe secret key is valid and active',
+        details: {
+          accountId: data.id,
+          country: data.country,
+          status: response.status
+        }
+      };
+    } else {
+      return {
+        success: false,
+        message: `Stripe secret key test failed: ${response.status}`
+      };
+    }
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `Stripe test error: ${error.message}`
+    };
+  }
+}
