@@ -37,7 +37,7 @@ export async function runTriage(
       model_name: modelName,
       system_prompt: 'You are a lead qualification expert. Analyze Instagram profiles quickly and return ONLY valid JSON.',
       user_prompt: buildTriagePrompt(snapshot, businessOneLiner),
-      max_tokens: 200,
+      max_tokens: 1000,
       json_schema: getTriageJsonSchema(),
       response_format: 'json'
     });
