@@ -7,7 +7,6 @@ import { PipelineExecutor, type PipelineContext } from '../services/pipeline-exe
 import { ensureBusinessContext } from '../services/business-context-generator.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
 import { FEATURE_FLAGS } from '../config/feature-flags.js';
-import { runAnalysis } from '../services/analysis-orchestrator.js'; // OLD SYSTEM FALLBACK
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -112,65 +111,50 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
     // RUN PIPELINE-BASED ANALYSIS
     let orchestrationResult: any;
     try {
-      if (use_pipeline) {
-        // NEW PIPELINE SYSTEM
-        logger('info', 'Using new pipeline system', { workflow, model_tier, requestId });
-        
-        // Ensure business context exists
-        const enrichedBusiness = await ensureBusinessContext(business, c.env, requestId);
-        
-        // Create pipeline context
-        const pipelineContext: PipelineContext = {
-          profile: profileData,
-          business: enrichedBusiness,
-          analysis_type: analysisType,
-          workflow,
-          model_tier: model_tier as 'premium' | 'balanced' | 'economy'
-        };
+     // PIPELINE SYSTEM ONLY - Legacy system completely removed
+logger('info', 'Using pipeline system', { workflow, model_tier, requestId });
 
-        // Execute pipeline
-        const executor = new PipelineExecutor(c.env, requestId);
-        const pipelineResult = await executor.execute(pipelineContext);
-        
-        // Transform pipeline result to match old interface
-        orchestrationResult = {
-          result: transformPipelineResult(pipelineResult, analysis_type),
-          totalCost: {
-            actual_cost: pipelineResult.costs.reduce((sum, c) => sum + c.cost, 0),
-            tokens_in: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_in, 0),
-            tokens_out: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_out, 0),
-            blocks_used: pipelineResult.costs.map(c => c.stage),
-            total_blocks: pipelineResult.costs.length
-          },
-          performance: {
-            ...pipelineResult.performance,
-            total_ms: Object.values(pipelineResult.performance).reduce((sum: number, time: number) => sum + time, 0)
-          },
-          verdict: 'success',
-          workflow_used: pipelineResult.workflow_used
-        };
-        
-        logger('info', 'Pipeline analysis completed', {
-          username: profileData.username,
-          workflow_used: pipelineResult.workflow_used,
-          stages_executed: Object.keys(pipelineResult.results).length,
-          total_cost: orchestrationResult.totalCost.actual_cost,
-          requestId
-        });
-        
-      } else {
-        // OLD SYSTEM FALLBACK
-        logger('info', 'Using legacy orchestrator system', { requestId });
-        
-        orchestrationResult = await runAnalysis(
-          profileData,
-          business,
-          analysis_type,
-          c.env,
-          requestId
-        );
-      }
+// Ensure business context exists
+const enrichedBusiness = await ensureBusinessContext(business, c.env, requestId);
 
+// Create pipeline context
+const pipelineContext: PipelineContext = {
+  profile: profileData,
+  business: enrichedBusiness,
+  analysis_type: analysisType,
+  workflow,
+  model_tier: model_tier as 'premium' | 'balanced' | 'economy'
+};
+
+// Execute pipeline
+const executor = new PipelineExecutor(c.env, requestId);
+const pipelineResult = await executor.execute(pipelineContext);
+
+// Transform pipeline result to match interface
+orchestrationResult = {
+  result: transformPipelineResult(pipelineResult, analysis_type),
+  totalCost: {
+    actual_cost: pipelineResult.costs.reduce((sum, c) => sum + c.cost, 0),
+    tokens_in: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_in, 0),
+    tokens_out: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_out, 0),
+    blocks_used: pipelineResult.costs.map(c => c.stage),
+    total_blocks: pipelineResult.costs.length
+  },
+  performance: {
+    ...pipelineResult.performance,
+    total_ms: Object.values(pipelineResult.performance).reduce((sum: number, time: number) => sum + time, 0)
+  },
+  verdict: 'success',
+  workflow_used: pipelineResult.workflow_used
+};
+
+logger('info', 'Pipeline analysis completed', {
+  username: profileData.username,
+  workflow_used: pipelineResult.workflow_used,
+  stages_executed: Object.keys(pipelineResult.results).length,
+  total_cost: orchestrationResult.totalCost.actual_cost,
+  requestId
+});
       // Handle early exit (both systems)
       if (orchestrationResult.verdict === 'early_exit') {
         return c.json(createStandardResponse(true, {
