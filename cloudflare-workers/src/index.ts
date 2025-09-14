@@ -53,6 +53,29 @@ app.get('/test-pipeline-config', async (c) => {
   }
 });
 
+// Add this endpoint to your index.ts file
+
+app.get('/test-gpt5', async (c) => {
+  const requestId = generateRequestId();
+  
+  try {
+    const { testGPT5Direct } = await import('./test/gpt5-test.js');
+    const result = await testGPT5Direct(c.env, requestId);
+    
+    return c.json({
+      success: true,
+      test_result: result,
+      requestId
+    });
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message,
+      requestId
+    }, 500);
+  }
+});
+
 // ===============================================================================
 // BASIC ENDPOINTS
 // ===============================================================================
