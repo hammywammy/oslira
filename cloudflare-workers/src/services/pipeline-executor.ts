@@ -282,10 +282,10 @@ export class PipelineExecutor {
 
   private getMaxTokens(stageType: string): number {
     const limits = {
-      triage: 200,
-      preprocessor: 400,
-      analysis: 800,
-      context: 300
+      triage: 1000,
+      preprocessor: 1400,
+      analysis: 1800,
+      context: 1300
     };
     
     return limits[stageType] || 500;
