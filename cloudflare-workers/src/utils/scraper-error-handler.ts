@@ -1,3 +1,5 @@
+import { logger } from './logger.js';
+
 export class ScraperErrorHandler {
   static transformError(error: any, username: string): Error {
     if (error.message.includes('not found') || error.message.includes('404')) {
