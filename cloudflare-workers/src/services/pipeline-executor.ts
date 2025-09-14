@@ -103,7 +103,8 @@ export class PipelineExecutor {
   }
 
   private async executeStage(stage: AnalysisStage, context: PipelineContext, results: Record<string, any>) {
-    const modelName = selectModel(stage.type, stage.model_tier || context.model_tier || 'balanced', results);
+const stageKey = stage.type === 'analysis' ? context.analysis_type : stage.type;
+const modelName = selectModel(stageKey, stage.model_tier || context.model_tier || 'balanced', results);
     const prompt = this.generatePrompt(stage.type, context, results);
     
     const response = await this.aiAdapter.executeRequest({
