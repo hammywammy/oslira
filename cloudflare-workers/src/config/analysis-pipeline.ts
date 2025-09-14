@@ -72,15 +72,12 @@ export const ANALYSIS_PIPELINE_CONFIG = {
             { field: 'analysis_type', operator: '==', value: 'deep', skip_if_true: false }
           ]
         },
-        { 
-          name: 'main_analysis', 
-          type: 'analysis', 
-          required: true,
-          model_tier: 'balanced', // Default tier
-          conditions: [
-            { field: 'triage.lead_score', operator: '>', value: 70, /* upgrade to premium if high score */ },
-          ]
-        }
+{ 
+  name: 'main_analysis', 
+  type: 'analysis', 
+  required: true,
+  model_tier: 'balanced' // Model tier upgrade handled in selectModel function
+}
       ]
     } as WorkflowConfig,
 
