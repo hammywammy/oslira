@@ -120,11 +120,6 @@ app.post('/admin/test-key', async (c) => {
   return handleTestApiKey(c);
 });
 
-app.post('/admin/get-config', async (c) => {
-  const { handleGetConfig } = await import('./handlers/admin.js');
-  return handleGetConfig(c);
-});
-
 
 // ===============================================================================
 // ERROR HANDLING
