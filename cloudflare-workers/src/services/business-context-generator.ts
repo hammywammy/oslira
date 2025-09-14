@@ -1,4 +1,6 @@
 import { getApiKey } from './enhanced-config-manager.js';
+import { UniversalAIAdapter, selectModel } from './universal-ai-adapter.js';
+import { getBusinessContextJsonSchema, buildBusinessContextPrompt } from './prompts.js';
 import { logger } from '../utils/logger.js';
 
 interface BusinessContextPack {
@@ -20,82 +22,30 @@ export async function generateBusinessContext(
   business: any,
   env: any,
   requestId: string
-): Promise<{ business_one_liner: string; business_context_pack: BusinessContextPack }> {
+): Promise<{ business_one_liner: string; business_context_pack: any }> {
   
   try {
-    const openaiKey = await getApiKey('OPENAI_API_KEY', env);
-    if (!openaiKey) throw new Error('OpenAI API key not available');
-
-    const prompt = `# BUSINESS CONTEXT EXTRACTION
-
-## INPUT BUSINESS
-- **Name**: ${business.business_name || business.name}
-- **Industry**: ${business.business_niche || business.industry}  
-- **Target**: ${business.target_audience}
-- **Value**: ${business.value_proposition}
-- **Problems**: ${business.target_problems}
-
-## TASK 1: Business One-Liner (140 chars max)
-Create: "I help [TARGET] achieve [OUTCOME] through [METHOD]"
-
-## TASK 2: Context Pack
-Extract 5 key elements:
-
-**niche**: Single industry/category (e.g., "fitness coaching", "ecommerce beauty")
-**value_prop**: Core benefit in 1 sentence  
-**must_avoid**: 3 profile types that are definitely wrong fit
-**priority_signals**: 4 Instagram signals that indicate good fit
-**tone_words**: 3 brand voice descriptors
-
-Return ONLY JSON:
-{
-  "business_one_liner": "...",
-  "business_context_pack": {
-    "niche": "...",
-    "value_prop": "...", 
-    "must_avoid": ["...", "...", "..."],
-    "priority_signals": ["...", "...", "...", "..."],
-    "tone_words": ["...", "...", "..."]
-  }
-}`;
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are a business analyst. Return only valid JSON matching the exact schema.' 
-          },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 400,
-        temperature: 0.3,
-        response_format: { type: 'json_object' }
-      })
+    // Use economy tier for context generation (GPT-5 nano)
+    const modelName = selectModel('context', 'economy');
+    
+    const aiAdapter = new UniversalAIAdapter(env, requestId);
+    const response = await aiAdapter.executeRequest({
+      model_name: modelName,
+      system_prompt: 'You are a business analyst. Return only valid JSON matching the exact schema.',
+      user_prompt: buildBusinessContextPrompt(business),
+      max_tokens: 400,
+      json_schema: getBusinessContextJsonSchema(),
+      response_format: 'json',
+      temperature: 0.3
     });
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API failed: ${response.status}`);
-    }
-
-    const result = await response.json();
-    const content = result.choices?.[0]?.message?.content;
-    
-    if (!content) {
-      throw new Error('Empty response from OpenAI');
-    }
-
-    const parsed = JSON.parse(content);
+    const parsed = JSON.parse(response.content);
     
     logger('info', 'Business context generated', {
       business_id: business.id,
       one_liner_length: parsed.business_one_liner?.length,
+      model_used: response.model_used,
+      cost: response.usage.total_cost,
       requestId
     });
 
@@ -109,7 +59,6 @@ Return ONLY JSON:
     throw error;
   }
 }
-
 export async function ensureBusinessContext(
   business: any,
   env: any,
