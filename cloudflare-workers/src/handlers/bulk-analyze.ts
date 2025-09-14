@@ -3,7 +3,7 @@ import type { Env, BulkAnalysisRequest, BulkAnalysisResult, AnalysisResponse } f
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
-import { processProfileComplete, calculateBulkCosts } from '../services/profile-processor.js';
+import { extractUsername, normalizeRequest } from '../utils/validation.js';
 
 export async function handleBulkAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -43,7 +43,7 @@ export async function handleBulkAnalyze(c: Context<{ Bindings: Env }>): Promise<
       return c.json(createStandardResponse(false, undefined, userResult.error, requestId), 400);
     }
 
-    // Calculate total credit cost
+    // Check credit requirements
     const creditCostPerAnalysis = analysis_type === 'deep' ? 2 : analysis_type === 'xray' ? 3 : 1;
     const totalCreditCost = profileCount * creditCostPerAnalysis;
     
@@ -109,18 +109,23 @@ export async function handleBulkAnalyze(c: Context<{ Bindings: Env }>): Promise<
     // Update credits for all successful analyses
     if (creditsUsed > 0) {
       try {
-        const newBalance = userResult.credits - creditsUsed;
         await updateCreditsAndTransaction(
           user_id,
           creditsUsed,
-          newBalance,
           `Bulk ${analysis_type} analysis - ${results.length} profiles`,
-          'use',
+          'bulk_analysis_run',
+          {
+            actual_cost: costDetails.totalActualCost,
+            tokens_in: 0, // Bulk doesn't track individual tokens
+            tokens_out: 0,
+            model_used: 'bulk_pipeline',
+            block_type: 'bulk_analysis'
+          },
           c.env
         );
         logger('info', 'Bulk credits updated successfully', { 
           creditsUsed, 
-          remainingCredits: newBalance 
+          remainingCredits: userResult.credits - creditsUsed 
         });
       } catch (creditError: any) {
         logger('error', 'Bulk credit update failed', { error: creditError.message });
@@ -153,4 +158,84 @@ export async function handleBulkAnalyze(c: Context<{ Bindings: Env }>): Promise<
     logger('error', 'Bulk analysis request failed', { error: error.message, requestId });
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
+}
+
+// ===============================================================================
+// HELPER FUNCTIONS - REPLACE PROFILE-PROCESSOR
+// ===============================================================================
+
+async function processProfileComplete(
+  profileUrl: string, 
+  analysisType: string, 
+  context: { user_id: string, business_id: string, business: any, env: any, requestId: string }
+): Promise<AnalysisResponse> {
+  try {
+    // Import analyze handler to reuse logic
+    const { handleAnalyze } = await import('./analyze.js');
+    
+    // Create mock request object for internal processing
+    const mockRequest = {
+      json: async () => ({
+        profile_url: profileUrl,
+        username: extractUsername(profileUrl),
+        analysis_type: analysisType,
+        business_id: context.business_id,
+        user_id: context.user_id
+      }),
+      header: () => null,
+      query: () => null
+    };
+    
+    const mockContext = {
+      env: context.env,
+      json: (data: any) => ({ data }),
+      req: mockRequest
+    };
+    
+    // Process through main analyze pipeline
+    const response = await handleAnalyze(mockContext as any);
+    const responseData = response.data;
+    
+    if (!responseData.success) {
+      throw new Error(responseData.error || 'Analysis failed');
+    }
+    
+    return responseData.data;
+    
+  } catch (error: any) {
+    logger('error', 'Profile processing failed', { 
+      profileUrl, 
+      error: error.message,
+      requestId: context.requestId 
+    });
+    throw error;
+  }
+}
+
+function calculateBulkCosts(results: AnalysisResponse[]): {
+  totalCredits: number;
+  totalActualCost: number;
+  avgCostPerAnalysis: number;
+  creditEfficiency: number;
+} {
+  if (results.length === 0) {
+    return {
+      totalCredits: 0,
+      totalActualCost: 0,
+      avgCostPerAnalysis: 0,
+      creditEfficiency: 0
+    };
+  }
+
+  const totalCredits = results.reduce((sum, result) => sum + (result.credits?.used || 0), 0);
+  const totalActualCost = results.reduce((sum, result) => sum + (result.credits?.actual_cost || 0), 0);
+  const avgCostPerAnalysis = totalCredits / results.length;
+  const creditEfficiency = totalActualCost > 0 ? (totalCredits / totalActualCost) : 0;
+
+  return {
+    totalCredits,
+    totalActualCost,
+    avgCostPerAnalysis: Math.round(avgCostPerAnalysis * 100) / 100,
+    creditEfficiency: Math.round(creditEfficiency * 100) / 100
+  };
 }
