@@ -3,6 +3,21 @@ import { fetchJson } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
 
 // ===============================================================================
+// SHARED UTILITIES
+// ===============================================================================
+
+const createHeaders = (env: Env) => ({
+  apikey: env.SUPABASE_SERVICE_ROLE,
+  Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+  'Content-Type': 'application/json'
+});
+
+const createPreferHeaders = (env: Env, prefer: string) => ({
+  ...createHeaders(env),
+  Prefer: prefer
+});
+
+// ===============================================================================
 // LEADS TABLE OPERATIONS
 // ===============================================================================
 
@@ -10,12 +25,6 @@ export async function upsertLead(
   leadData: any,
   env: Env
 ): Promise<string> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
   try {
     logger('info', 'Upserting lead record', { 
       username: leadData.username,
@@ -50,13 +59,11 @@ export async function upsertLead(
     };
 
     // Use UPSERT to handle duplicates
-    const upsertQuery = `
-      ${env.SUPABASE_URL}/rest/v1/leads?on_conflict=user_id,username,business_id
-    `;
+    const upsertQuery = `${env.SUPABASE_URL}/rest/v1/leads?on_conflict=user_id,username,business_id`;
 
     const leadResponse = await fetch(upsertQuery, {
       method: 'POST',
-      headers: { ...headers, Prefer: 'return=representation,resolution=merge-duplicates' },
+      headers: createPreferHeaders(env, 'return=representation,resolution=merge-duplicates'),
       body: JSON.stringify(cleanLeadData)
     });
 
@@ -93,12 +100,6 @@ export async function insertAnalysisRun(
   analysisResult: any,
   env: Env
 ): Promise<string> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
   try {
     logger('info', 'Inserting analysis run', { 
       lead_id, 
@@ -130,7 +131,7 @@ export async function insertAnalysisRun(
 
     const runResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/runs`, {
       method: 'POST',
-      headers: { ...headers, Prefer: 'return=representation' },
+      headers: createPreferHeaders(env, 'return=representation'),
       body: JSON.stringify(runData)
     });
 
@@ -168,12 +169,6 @@ export async function insertAnalysisPayload(
   analysisData: any,
   env: Env
 ): Promise<string> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
   try {
     logger('info', 'Inserting analysis payload', { 
       run_id, 
@@ -234,7 +229,7 @@ export async function insertAnalysisPayload(
 
     const payloadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/payloads`, {
       method: 'POST',
-      headers: { ...headers, Prefer: 'return=representation' },
+      headers: createPreferHeaders(env, 'return=representation'),
       body: JSON.stringify(payloadData)
     });
 
@@ -278,15 +273,15 @@ export async function saveCompleteAnalysis(
     // Step 1: Upsert lead record
     const lead_id = await upsertLead(leadData, env);
 
-// Step 2: Insert analysis run
-const run_id = await insertAnalysisRun(
-  lead_id,
-  leadData.user_id,
-  leadData.business_id,
-  analysisType,
-  analysisData, // Always use analysisData parameter
-  env
-);
+    // Step 2: Insert analysis run
+    const run_id = await insertAnalysisRun(
+      lead_id,
+      leadData.user_id,
+      leadData.business_id,
+      analysisType,
+      analysisData, // Always use analysisData parameter
+      env
+    );
 
     // Step 3: Insert analysis payload (if we have analysis data)
     if (analysisData && (analysisType === 'deep' || analysisType === 'xray')) {
@@ -325,12 +320,6 @@ export async function getDashboardLeads(
   env: Env,
   limit: number = 50
 ): Promise<any[]> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
   try {
     const query = `
       ${env.SUPABASE_URL}/rest/v1/leads?
@@ -342,7 +331,7 @@ export async function getDashboardLeads(
       &limit=${limit}
     `;
 
-    const response = await fetch(query, { headers });
+    const response = await fetch(query, { headers: createHeaders(env) });
 
     if (!response.ok) {
       throw new Error(`Dashboard query failed: ${response.status}`);
@@ -364,12 +353,6 @@ export async function getAnalysisDetails(
   user_id: string,
   env: Env
 ): Promise<any> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
   try {
     const query = `
       ${env.SUPABASE_URL}/rest/v1/runs?
@@ -378,7 +361,7 @@ export async function getAnalysisDetails(
       &leads.user_id=eq.${user_id}
     `;
 
-    const response = await fetch(query, { headers });
+    const response = await fetch(query, { headers: createHeaders(env) });
 
     if (!response.ok) {
       throw new Error(`Analysis details query failed: ${response.status}`);
@@ -399,17 +382,14 @@ export async function getAnalysisDetails(
 }
 
 // ===============================================================================
-// CREDIT SYSTEM (UNCHANGED)
+// CREDIT SYSTEM (ENHANCED WITH SHARED HEADERS)
 // ===============================================================================
 
 export async function updateCreditsAndTransaction(
   user_id: string,
   cost: number,
-  newBalance: number,
-  description: string,
-  transactionType: string,
-  env: Env,
-  run_id?: string,
+  analysisType: string,
+  run_id: string,
   costDetails?: {
     actual_cost: number;
     tokens_in: number;
@@ -418,15 +398,30 @@ export async function updateCreditsAndTransaction(
     block_type: string;
     processing_duration_ms?: number;
     blocks_used?: string[];
-  }
+  },
+  env: Env
 ): Promise<void> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
+  const headers = createHeaders(env);
 
   try {
+    // Get current user data to calculate new balance
+    const userResponse = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/users?select=credits&id=eq.${user_id}`,
+      { headers }
+    );
+
+    if (!userResponse.ok) {
+      throw new Error(`Failed to fetch user: ${userResponse.status}`);
+    }
+
+    const users = await userResponse.json();
+    if (!users.length) {
+      throw new Error('User not found');
+    }
+
+    const currentCredits = users[0].credits || 0;
+    const newBalance = Math.max(0, currentCredits - cost);
+
     // Update user credits
     await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
@@ -438,22 +433,22 @@ export async function updateCreditsAndTransaction(
       10000
     );
 
-// Create transaction record with enhanced cost tracking
-const transactionData = {
-  user_id,
-  amount: -cost,
-  type: transactionType,
-  description: description,
-  run_id: run_id || null,
-  actual_cost: costDetails?.actual_cost || null,
-  tokens_in: costDetails?.tokens_in || null,
-  tokens_out: costDetails?.tokens_out || null,
-  model_used: costDetails?.model_used || null,
-  block_type: costDetails?.block_type || null,
-  processing_duration_ms: costDetails?.processing_duration_ms || null,
-  blocks_used: costDetails?.blocks_used?.join('+') || null,
-  margin: cost - (costDetails?.actual_cost || 0) // Track profit margin
-};
+    // Create transaction record with enhanced cost tracking
+    const transactionData = {
+      user_id,
+      amount: -cost,
+      type: 'use',
+      description: `${analysisType} analysis`,
+      run_id: run_id,
+      actual_cost: costDetails?.actual_cost || null,
+      tokens_in: costDetails?.tokens_in || null,
+      tokens_out: costDetails?.tokens_out || null,
+      model_used: costDetails?.model_used || null,
+      block_type: costDetails?.block_type || null,
+      processing_duration_ms: costDetails?.processing_duration_ms || null,
+      blocks_used: costDetails?.blocks_used?.join('+') || null,
+      margin: cost - (costDetails?.actual_cost || 0) // Track profit margin
+    };
 
     await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
@@ -465,6 +460,13 @@ const transactionData = {
       10000
     );
 
+    logger('info', 'Credits and transaction updated successfully', { 
+      user_id, 
+      cost, 
+      newBalance,
+      margin: transactionData.margin 
+    });
+
   } catch (error: any) {
     logger('error', 'updateCreditsAndTransaction error:', error.message);
     throw new Error(`Failed to update credits: ${error.message}`);
@@ -473,15 +475,9 @@ const transactionData = {
 
 export async function fetchUserAndCredits(user_id: string, env: Env): Promise<any> {
   try {
-    const headers = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
-    };
-
     const response = await fetch(
       `${env.SUPABASE_URL}/rest/v1/users?select=*&id=eq.${user_id}`,
-      { headers }
+      { headers: createHeaders(env) }
     );
 
     if (!response.ok) {
@@ -508,15 +504,9 @@ export async function fetchUserAndCredits(user_id: string, env: Env): Promise<an
 
 export async function fetchBusinessProfile(business_id: string, user_id: string, env: Env): Promise<any> {
   try {
-    const headers = {
-      apikey: env.SUPABASE_SERVICE_ROLE,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-      'Content-Type': 'application/json'
-    };
-
     const response = await fetch(
       `${env.SUPABASE_URL}/rest/v1/business_profiles?select=*,business_one_liner,business_context_pack,context_version,context_updated_at&id=eq.${business_id}&user_id=eq.${user_id}`,
-      { headers }
+      { headers: createHeaders(env) }
     );
 
     if (!response.ok) {
