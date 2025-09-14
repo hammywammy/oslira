@@ -39,8 +39,7 @@ export async function runTriage(
       user_prompt: buildTriagePrompt(snapshot, businessOneLiner),
       max_tokens: 200,
       json_schema: getTriageJsonSchema(),
-      response_format: 'json',
-      temperature: 0.1
+      response_format: 'json'
     });
 
     const result = JSON.parse(response.content) as TriageResult;
