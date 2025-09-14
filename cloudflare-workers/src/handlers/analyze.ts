@@ -69,7 +69,18 @@ const [userResult, business] = await Promise.all([
         followersCount: profileData.followersCount,
         dataQuality: profileData.dataQuality
       });
-    } catch (scrapeError: any) {
+} catch (scrapeError: any) {
+      // Handle profile not found specifically
+      if (scrapeError.message === 'PROFILE_NOT_FOUND') {
+        logger('info', 'Profile not found', { username });
+        return c.json(createStandardResponse(
+          false, 
+          undefined, 
+          'Instagram profile not found', 
+          requestId
+        ), 404);
+      }
+      
       logger('error', 'Profile scraping failed', { error: scrapeError.message });
       return c.json(createStandardResponse(
         false, 
