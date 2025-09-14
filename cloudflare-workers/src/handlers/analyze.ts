@@ -238,16 +238,21 @@ const enrichedBusiness = business.business_one_liner || business.business_contex
 
 // UPDATE USER CREDITS - FIXED COST MODEL
 try {
-  const costDetails = {
-    actual_cost: orchestrationResult.totalCost.actual_cost,
-    tokens_in: orchestrationResult.totalCost.tokens_in,
-    tokens_out: orchestrationResult.totalCost.tokens_out,
-    model_used: orchestrationResult.totalCost.blocks_used.join('+'),
-    block_type: orchestrationResult.totalCost.blocks_used.join('+'),
-    processing_duration_ms: orchestrationResult.performance.total_ms,
-    blocks_used: orchestrationResult.totalCost.blocks_used,
-    system_used: 'pipeline'
-  };
+// Extract primary model (most expensive stage, typically main analysis)
+const primaryModel = orchestrationResult.totalCost.blocks_used.length > 0 
+  ? orchestrationResult.totalCost.blocks_used[orchestrationResult.totalCost.blocks_used.length - 1]
+  : 'unknown';
+
+const costDetails = {
+  actual_cost: orchestrationResult.totalCost.actual_cost,
+  tokens_in: orchestrationResult.totalCost.tokens_in,
+  tokens_out: orchestrationResult.totalCost.tokens_out,
+  model_used: primaryModel.substring(0, 20), // Truncate to DB limit
+  block_type: 'pipeline',
+  processing_duration_ms: orchestrationResult.performance.total_ms,
+  blocks_used: orchestrationResult.totalCost.blocks_used,
+  system_used: 'pipeline'
+};
 
 await updateCreditsAndTransaction(
       user_id, 
