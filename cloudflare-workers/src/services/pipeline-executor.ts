@@ -44,12 +44,6 @@ export class PipelineExecutor {
       throw new Error(`Unknown workflow: ${workflowName}`);
     }
 
-    logger('info', 'Starting pipeline execution', {
-      workflow: workflowName,
-      stages: workflow.stages.length,
-      requestId: this.requestId
-    });
-
     const results: Record<string, any> = {};
     const costs: Array<any> = [];
     const performance: Record<string, number> = {};
@@ -58,7 +52,6 @@ export class PipelineExecutor {
       const stageStart = Date.now();
       
       if (this.shouldSkipStage(stage, context, results)) {
-        logger('info', `Skipping stage: ${stage.name}`, { requestId: this.requestId });
         continue;
       }
 
@@ -75,21 +68,15 @@ export class PipelineExecutor {
           context.preprocessor = stageResult.data;
         }
 
-        logger('info', `Stage completed: ${stage.name}`, {
-          duration_ms: performance[stage.name],
-          cost: stageResult.cost.cost,
-          requestId: this.requestId
-        });
-
       } catch (error: any) {
         if (stage.required) {
           throw new Error(`Required stage ${stage.name} failed: ${error.message}`);
-        } else {
-          logger('warn', `Optional stage ${stage.name} failed, continuing`, {
-            error: error.message,
-            requestId: this.requestId
-          });
         }
+        
+        logger('warn', `Optional stage ${stage.name} failed, continuing`, {
+          error: error.message,
+          requestId: this.requestId
+        });
       }
     }
 
@@ -103,175 +90,105 @@ export class PipelineExecutor {
 
   private shouldSkipStage(stage: AnalysisStage, context: PipelineContext, results: Record<string, any>): boolean {
     if (!stage.conditions) return false;
-
+    
     for (const condition of stage.conditions) {
       const value = this.getContextValue(condition.field, context, results);
       const conditionMet = this.evaluateCondition(value, condition.operator, condition.value);
       
-      if (condition.skip_if_true && conditionMet) {
-        return true;
-      }
-      if (!condition.skip_if_true && !conditionMet) {
-        return true;
-      }
+      if (condition.skip_if_true && conditionMet) return true;
+      if (!condition.skip_if_true && !conditionMet) return true;
     }
-
+    
     return false;
+  }
+
+  private async executeStage(stage: AnalysisStage, context: PipelineContext, results: Record<string, any>) {
+    const modelName = selectModel(stage.type, stage.model_tier || context.model_tier || 'balanced', results);
+    const prompt = this.generatePrompt(stage.type, context, results);
+    
+    const response = await this.aiAdapter.call(modelName, [
+      { role: 'system', content: this.getSystemPrompt(stage.type) },
+      { role: 'user', content: prompt }
+    ], {
+      max_tokens: this.getMaxTokens(stage.type),
+      response_format: { type: 'json_object' }
+    });
+
+    return {
+      data: JSON.parse(response.content),
+      cost: {
+        stage: stage.name,
+        model: modelName,
+        cost: response.cost,
+        tokens_in: response.tokens_in,
+        tokens_out: response.tokens_out
+      }
+    };
   }
 
   private getContextValue(field: string, context: PipelineContext, results: Record<string, any>): any {
     const parts = field.split('.');
-    let value: any = context;
-
-    // Try context first, then results
+    let value: any = { ...context, ...results };
+    
     for (const part of parts) {
-      if (value && typeof value === 'object' && part in value) {
-        value = value[part];
-      } else {
-        // Try results
-        value = results;
-        for (const part of parts) {
-          if (value && typeof value === 'object' && part in value) {
-            value = value[part];
-          } else {
-            return undefined;
-          }
-        }
-        break;
-      }
+      value = value?.[part];
+      if (value === undefined) break;
     }
-
+    
     return value;
   }
 
-  private evaluateCondition(value: any, operator: string, expected: any): boolean {
+  private evaluateCondition(value: any, operator: string, expectedValue: any): boolean {
     switch (operator) {
-      case '>': return Number(value) > Number(expected);
-      case '<': return Number(value) < Number(expected);
-      case '==': return value === expected;
-      case 'contains': return String(value).includes(String(expected));
+      case '>': return Number(value) > Number(expectedValue);
+      case '<': return Number(value) < Number(expectedValue);
+      case '==': return value == expectedValue;
+      case 'contains': return String(value).includes(String(expectedValue));
       default: return false;
     }
   }
 
-  private async executeStage(
-    stage: AnalysisStage, 
-    context: PipelineContext, 
-    results: Record<string, any>
-  ): Promise<{ data: any; cost: any }> {
+  private generatePrompt(stageType: string, context: PipelineContext, results: Record<string, any>): string {
+    const profile = context.profile;
+    const business = context.business;
     
-    // Determine model tier - upgrade for high-value leads
-    let modelTier = stage.model_tier || context.model_tier || 'balanced';
-    if (context.triage?.lead_score > 70 && modelTier === 'balanced') {
-      modelTier = 'premium';
-    }
+    switch (stageType) {
+      case 'triage':
+        return `Profile: @${profile.username}, ${profile.followersCount} followers, Bio: "${profile.bio || 'No bio'}"
+Business: ${business.business_one_liner || business.name}
+Quickly assess if this profile is worth deeper analysis. Return JSON with lead_score (0-100), data_richness (0-100), confidence (0-1), early_exit (boolean), focus_points (array).`;
 
-    const modelName = selectModel(stage.type, modelTier, { triage: context.triage });
-    
-    // Get appropriate prompt and schema
-    const { prompt, jsonSchema } = await this.getStagePrompt(stage, context, results);
+      case 'preprocessor':
+        return `Profile: @${profile.username}
+Bio: "${profile.bio || 'No bio'}"
+Recent posts: ${profile.latestPosts?.slice(0, 3).map(p => p.caption?.slice(0, 100)).join(' | ') || 'No recent posts'}
+Extract key facts and themes. Return JSON with content_themes, posting_cadence, collaboration_history, contact_readiness.`;
 
-    const request = {
-      model_name: modelName,
-      system_prompt: this.getSystemPrompt(stage.type),
-      user_prompt: prompt,
-      max_tokens: this.getMaxTokens(stage.type),
-      response_format: jsonSchema ? 'json' : 'text',
-      json_schema: jsonSchema
-    };
+      case 'analysis':
+        const analysisType = context.analysis_type;
+        return `# ${analysisType.toUpperCase()} ANALYSIS
+Profile: @${profile.username} (${profile.followersCount} followers)
+Bio: "${profile.bio || 'No bio'}"
+Business Context: ${business.business_one_liner}
+${results.triage ? `Triage Score: ${results.triage.lead_score}/100` : ''}
+${results.preprocessor ? `Key Themes: ${results.preprocessor.content_themes?.join(', ') || 'Unknown'}` : ''}
 
-    const response = await this.aiAdapter.executeRequest(request);
+Analyze partnership potential. Return JSON with score, engagement_score, niche_fit, audience_quality, engagement_insights, selling_points, reasons.`;
 
-    let data;
-    if (jsonSchema) {
-      data = JSON.parse(response.content);
-    } else {
-      data = response.content;
-    }
+      case 'context':
+        return `Business: ${business.name}
+Industry: ${business.industry || 'Not specified'}
+Target Audience: ${business.target_audience || 'Not specified'}
+Generate a compelling one-liner description. Return JSON with business_one_liner.`;
 
-    return {
-      data,
-      cost: {
-        stage: stage.name,
-        model: response.model_used,
-        cost: response.usage.total_cost,
-        tokens_in: response.usage.input_tokens,
-        tokens_out: response.usage.output_tokens
-      }
-    };
-  }
-
-  private async getStagePrompt(
-    stage: AnalysisStage, 
-    context: PipelineContext, 
-    results: Record<string, any>
-  ): Promise<{ prompt: string; jsonSchema?: any }> {
-    
-    switch (stage.type) {
-      case 'triage': {
-        const { buildTriagePrompt, getTriageJsonSchema } = await import('./prompts.js');
-        return {
-          prompt: buildTriagePrompt(context.profile, context.business.business_one_liner),
-          jsonSchema: getTriageJsonSchema()
-        };
-      }
-      
-      case 'preprocessor': {
-        const { buildPreprocessorPrompt, getPreprocessorJsonSchema } = await import('./prompts.js');
-        return {
-          prompt: buildPreprocessorPrompt(context.profile),
-          jsonSchema: getPreprocessorJsonSchema()
-        };
-      }
-      
-      case 'analysis': {
-        if (context.analysis_type === 'light') {
-          const { buildLightAnalysisPrompt, getLightAnalysisJsonSchema } = await import('./prompts.js');
-          return {
-            prompt: buildLightAnalysisPrompt(context.profile, context.business, { 
-              triage: context.triage, 
-              preprocessor: context.preprocessor 
-            }),
-            jsonSchema: getLightAnalysisJsonSchema()
-          };
-        } else if (context.analysis_type === 'deep') {
-          const { buildDeepAnalysisPrompt, getDeepAnalysisJsonSchema } = await import('./prompts.js');
-          return {
-            prompt: buildDeepAnalysisPrompt(context.profile, context.business, { 
-              triage: context.triage, 
-              preprocessor: context.preprocessor 
-            }),
-            jsonSchema: getDeepAnalysisJsonSchema()
-          };
-        } else if (context.analysis_type === 'xray') {
-          const { buildXRayAnalysisPrompt, getXRayAnalysisJsonSchema } = await import('./prompts.js');
-          return {
-            prompt: buildXRayAnalysisPrompt(context.profile, context.business, { 
-              triage: context.triage, 
-              preprocessor: context.preprocessor 
-            }),
-            jsonSchema: getXRayAnalysisJsonSchema()
-          };
-        }
-        throw new Error(`Unknown analysis type: ${context.analysis_type}`);
-      }
-      
-      case 'context': {
-        const { buildBusinessContextPrompt, getBusinessContextJsonSchema } = await import('./prompts.js');
-        return {
-          prompt: buildBusinessContextPrompt(context.business),
-          jsonSchema: getBusinessContextJsonSchema()
-        };
-      }
-      
       default:
-        throw new Error(`Unknown stage type: ${stage.type}`);
+        return 'Analyze this data and return valid JSON.';
     }
   }
 
   private getSystemPrompt(stageType: string): string {
     const prompts = {
-      triage: 'You are a lead qualification expert. Analyze profiles quickly and return valid JSON.',
+      triage: 'You are a rapid assessment specialist. Analyze profiles quickly and return valid JSON.',
       preprocessor: 'You are a data extraction specialist. Extract structured facts from profiles.',
       analysis: 'You are a business analyst specializing in influencer partnerships. Return valid JSON.',
       context: 'You are a business strategist. Generate business context and one-liners.'
