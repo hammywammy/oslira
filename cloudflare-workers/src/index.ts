@@ -103,71 +103,6 @@ app.post('/ai/generate-insights', async (c) => {
   return handleGenerateInsights(c);
 });
 
-// Debug endpoints
-app.get('/debug-engagement/:username', async (c) => {
-  const { handleDebugEngagement } = await import('./handlers/debug.js');
-  return handleDebugEngagement(c);
-});
-
-app.get('/debug-scrape/:username', async (c) => {
-  const { handleDebugScrape } = await import('./handlers/debug.js');
-  return handleDebugScrape(c);
-});
-
-app.get('/debug-parsing/:username', async (c) => {
-  const { handleDebugParsing } = await import('./handlers/debug.js');
-  return handleDebugParsing(c);
-});
-
-app.get('/debug-env', async (c) => {
-  const { handleDebugEnv } = await import('./handlers/test.js');
-  return handleDebugEnv(c);
-});
-
-app.get('/test-orchestration', async (c) => {
-  const { runIntegrationTests } = await import('./test/orchestration-integration.js');
-  try {
-    const results = await runIntegrationTests(c.env);
-    const totalCost = results.reduce((sum, r) => sum + r.cost, 0);
-    const totalDuration = results.reduce((sum, r) => sum + r.duration_ms, 0);
-    const successCount = results.filter(r => r.success).length;
-    
-    return c.json({
-      success: true,
-      summary: {
-        total_tests: results.length,
-        passed: successCount,
-        failed: results.length - successCount,
-        total_cost: totalCost,
-        total_duration_ms: totalDuration
-      },
-      results
-    });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-// Test endpoints
-app.get('/test-supabase', async (c) => {
-  const { handleTestSupabase } = await import('./handlers/test.js');
-  return handleTestSupabase(c);
-});
-
-app.get('/test-apify', async (c) => {
-  const { handleTestApify } = await import('./handlers/test.js');
-  return handleTestApify(c);
-});
-
-app.get('/test-openai', async (c) => {
-  const { handleTestOpenAI } = await import('./handlers/test.js');
-  return handleTestOpenAI(c);
-});
-
-app.post('/test-post', async (c) => {
-  const { handleTestPost } = await import('./handlers/test.js');
-  return handleTestPost(c);
-});
-
 // Add these enhanced admin endpoints to your existing routes
 app.post('/admin/migrate-to-aws', async (c) => {
   const { handleMigrateToAWS } = await import('./handlers/enhanced-admin.js');
@@ -200,54 +135,6 @@ app.post('/admin/get-config', async (c) => {
   return handleGetConfig(c);
 });
 
-app.get('/test-pipeline-config', async (c) => {
-  try {
-    const { ANALYSIS_PIPELINE_CONFIG } = await import('./config/analysis-pipeline.js');
-    const { UniversalAIAdapter, selectModel } = await import('./services/universal-ai-adapter.js');
-    
-    // Test model selection
-    const tests = {
-      triage_economy: selectModel('triage', 'economy'),
-      light_balanced: selectModel('light', 'balanced'),
-      deep_premium: selectModel('deep', 'premium'),
-      xray_with_upgrade: selectModel('xray', 'balanced', { triage: { lead_score: 85 } })
-    };
-    
-    return c.json({
-      success: true,
-      config_loaded: true,
-      available_workflows: Object.keys(ANALYSIS_PIPELINE_CONFIG.workflows),
-      available_models: Object.keys(ANALYSIS_PIPELINE_CONFIG.models),
-      model_selection_tests: tests,
-      sample_workflow: ANALYSIS_PIPELINE_CONFIG.workflows.auto
-    });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
-
-// Add this endpoint to your index.ts file
-
-app.get('/test-gpt5', async (c) => {
-  const requestId = generateRequestId();
-  
-  try {
-    const { testGPT5Direct } = await import('./test/gpt5-test.js');
-    const result = await testGPT5Direct(c.env, requestId);
-    
-    return c.json({
-      success: true,
-      test_result: result,
-      requestId
-    });
-  } catch (error: any) {
-    return c.json({
-      success: false,
-      error: error.message,
-      requestId
-    }, 500);
-  }
-});
 
 // ===============================================================================
 // ERROR HANDLING
