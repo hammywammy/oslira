@@ -211,7 +211,7 @@ async function cachePreprocessor(cacheKey: string, result: PreprocessorResult, e
     console.error(`📋 [Preprocessor] Failed for @${profile.username}:`, error.message);
     throw new Error(`Preprocessor failed: ${error.message}`);
   }
-}
+
 
 function buildPreprocessorPrompt(profile: ProfileData): string {
   const postsData = profile.latestPosts || [];
