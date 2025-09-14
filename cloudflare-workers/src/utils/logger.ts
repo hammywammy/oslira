@@ -3,7 +3,11 @@ export function generateRequestId(): string {
 }
 
 export function logger(level: 'info' | 'warn' | 'error', message: string, data?: any, requestId?: string) {
-  const timestamp = new Date().toISOString();
-  const logData = { timestamp, level, message, requestId, ...data };
-  console.log(JSON.stringify(logData));
+  console.log(JSON.stringify({ 
+    timestamp: new Date().toISOString(), 
+    level, 
+    message, 
+    requestId, 
+    ...data 
+  }));
 }
