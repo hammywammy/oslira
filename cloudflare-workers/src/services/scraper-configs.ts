@@ -10,24 +10,40 @@ export interface ScraperConfig {
   priority: number; // Lower = higher priority
 }
 
-export const LIGHT_SCRAPER_CONFIG: ScraperConfig = {
-  name: 'light_profile',
-  endpoint: 'dSCLg0C3YEZ83HzYX',
-  timeout: 30000,
-  maxRetries: 3,
-  retryDelay: 2000,
-  priority: 1,
-  input: (username: string) => ({
-    usernames: [username],
-    resultsType: "details",
-    resultsLimit: 1,
-    addParentData: false
-  })
-};
+export const LIGHT_SCRAPER_CONFIGS: ScraperConfig[] = [
+  {
+    name: 'light_primary',
+    endpoint: 'dSCLg0C3YEZ83HzYX',
+    timeout: 30000,
+    maxRetries: 2,
+    retryDelay: 2000,
+    priority: 1,
+    input: (username: string) => ({
+      usernames: [username],
+      resultsType: "details",
+      resultsLimit: 1,
+      addParentData: false
+    })
+  },
+  {
+    name: 'light_secondary',
+    endpoint: 'shu8hvrXbJbY3Eb9W',
+    timeout: 30000,
+    maxRetries: 2,
+    retryDelay: 3000,
+    priority: 2,
+    input: (username: string) => ({
+      usernames: [username],
+      resultsType: "details",
+      resultsLimit: 1,
+      addParentData: false
+    })
+  }
+];
 
 export const DEEP_SCRAPER_CONFIGS: ScraperConfig[] = [
   {
-    name: 'primary_deep',
+    name: 'deep_primary',
     endpoint: 'shu8hvrXbJbY3Eb9W',
     timeout: 60000,
     maxRetries: 2,
@@ -42,61 +58,25 @@ export const DEEP_SCRAPER_CONFIGS: ScraperConfig[] = [
       addParentData: true
     })
   },
-  {
-    name: 'secondary_deep',
-    endpoint: 'apidojo/instagram-profile-scraper',
-    timeout: 45000,
-    maxRetries: 2,
-    retryDelay: 4000,
+    {
+    name: 'deep_secondary',
+    endpoint: 'dSCLg0C3YEZ83HzYX',
+    timeout: 90000,
+    maxRetries: 1,
+    retryDelay: 8000,
     priority: 2,
-    input: (username: string) => ({
-      username: username,
-      results_limit: 12
-    })
-  },
-  {
-    name: 'backup_deep',
-    endpoint: 'zuzka/instagram-scraper',
-    timeout: 50000,
-    maxRetries: 2,
-    retryDelay: 5000,
-    priority: 3,
     input: (username: string) => ({
       usernames: [username],
       resultsType: "details",
       resultsLimit: 1,
-      searchLimit: 12,
-      searchType: "hashtag",
-      addParentData: true,
-      extendOutputFunction: `($) => {
-        return {
-          posts: $('article').length,
-          engagement: $('.engagement').text() || 'N/A'
-        }
-      }`
-    })
-  },
-  {
-    name: 'fallback_deep',
-    endpoint: 'misceres/instagram-scraper',
-    timeout: 40000,
-    maxRetries: 1,
-    retryDelay: 6000,
-    priority: 4,
-    input: (username: string) => ({
-      handles: [username],
-      resultsLimit: 8,
-      proxy: {
-        useApifyProxy: true,
-        apifyProxyGroups: ["RESIDENTIAL"]
-      }
+      addParentData: false
     })
   }
 ];
 
 export const XRAY_SCRAPER_CONFIGS: ScraperConfig[] = [
   {
-    name: 'xray_comprehensive',
+    name: 'xray_primary',
     endpoint: 'shu8hvrXbJbY3Eb9W',
     timeout: 120000,
     maxRetries: 1,
@@ -108,28 +88,21 @@ export const XRAY_SCRAPER_CONFIGS: ScraperConfig[] = [
       resultsLimit: 50,
       searchLimit: 1,
       searchType: "hashtag",
-      addParentData: true,
-      extendScraper: true,
-      proxy: {
-        useApifyProxy: true,
-        apifyProxyGroups: ["RESIDENTIAL", "DATACENTER"]
-      }
+      addParentData: true
     })
   },
   {
-    name: 'xray_stories',
-    endpoint: 'apidojo/instagram-profile-scraper',
+    name: 'xray_secondary',
+    endpoint: 'dSCLg0C3YEZ83HzYX',
     timeout: 90000,
     maxRetries: 1,
     retryDelay: 8000,
     priority: 2,
     input: (username: string) => ({
-      username: username,
-      results_limit: 24,
-      include_stories: true,
-      include_highlights: true,
-      include_igtv: true,
-      include_reels: true
+      usernames: [username],
+      resultsType: "details",
+      resultsLimit: 1,
+      addParentData: false
     })
   }
 ];
