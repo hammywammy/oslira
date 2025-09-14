@@ -136,7 +136,7 @@ if (!modelConfig) throw new Error('Triage model config not found');
     console.error(`🔍 [Triage] Failed for @${snapshot.username}:`, error.message);
     throw new Error(`Triage failed: ${error.message}`);
   }
-}
+
 
 function buildTriagePrompt(snapshot: MicroSnapshot, businessOneLiner: string): string {
   return `# LEAD TRIAGE: Quick Pass/Fail Decision
