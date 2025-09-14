@@ -137,17 +137,25 @@ const response = await fetch('https://api.openai.com/v1/chat/completions', {
     throw new Error(`GPT-5 API error: ${response.status} - ${errorBody}`);
   }
 
-  const data = await response.json();
-  logger('info', '✅ GPT-5 Response Success', {
-    has_choices: !!data.choices,
-    choices_length: data.choices?.length,
-    has_usage: !!data.usage,
-    first_choice_content_length: data.choices?.[0]?.message?.content?.length,
-    usage_tokens: data.usage,
-    requestId: this.requestId
-  });
+const data = await response.json();
+logger('info', '✅ GPT-5 Response Success', {
+  has_choices: !!data.choices,
+  choices_length: data.choices?.length,
+  has_usage: !!data.usage,
+  first_choice_content_length: data.choices?.[0]?.message?.content?.length,
+  usage_tokens: data.usage,
+  full_response_structure: JSON.stringify(data, null, 2), // ✅ LOG FULL RESPONSE
+  requestId: this.requestId
+});
 
-  const content = data.choices?.[0]?.message?.content || '';
+const content = data.choices?.[0]?.message?.content || '';
+logger('info', '🔍 GPT-5 Content Extraction', {
+  content_extracted: content,
+  content_length: content.length,
+  has_message: !!data.choices?.[0]?.message,
+  message_keys: data.choices?.[0]?.message ? Object.keys(data.choices[0].message) : [],
+  requestId: this.requestId
+});
   const usage = data.usage || {};
 
   return {
