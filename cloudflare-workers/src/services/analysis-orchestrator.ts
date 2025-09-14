@@ -62,35 +62,12 @@ triageTime = Date.now() - triageStart;
     costs.push(triageResponse.costDetails);
     blocksUsed.push('triage');
     
-    // Check for early exit
-    if (triageResponse.result.early_exit) {
-      const totalTime = Date.now() - startTime;
-      
-      logger('info', 'Analysis orchestration: early exit', {
-        username: profile.username,
-        lead_score: triageResponse.result.lead_score,
-        data_richness: triageResponse.result.data_richness,
-        total_ms: totalTime
-      }, requestId);
-
-      return {
-        result: {
-          verdict: 'low_quality_lead',
-          triage: triageResponse.result,
-          reason: triageResponse.result.lead_score < 25 ? 'Poor business fit' : 'Insufficient data',
-          early_exit: true
-        },
-        totalCost: aggregateCosts(costs),
-        performance: {
-          triage_ms: triageTime,
-          preprocessor_ms: 0,
-          analysis_ms: 0,
-          total_ms: totalTime
-        },
-        verdict: 'early_exit',
-        early_exit_reason: triageResponse.result.lead_score < 25 ? 'poor_fit' : 'low_data'
-      };
-    }
+// Log triage results but continue analysis regardless
+    logger('info', 'Triage completed, proceeding to analysis', {
+      username: profile.username,
+      lead_score: triageResponse.result.lead_score,
+      data_richness: triageResponse.result.data_richness
+    }, requestId);
 
     // STEP 2: Determine if preprocessor is needed
     const needsPreprocessor = shouldRunPreprocessor(analysisType, triageResponse.result);
