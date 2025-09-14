@@ -1,7 +1,9 @@
-import type { ProfileData } from '../types/interfaces.js';
 import { MODEL_CONFIG, calculateCost } from '../config/models.js';
 import { getApiKey } from './enhanced-config-manager.js';
 import { callWithRetry } from '../utils/helpers.js';
+import type { ProfileData } from '../types/interfaces.js';
+import { UniversalAIAdapter, selectModel } from './universal-ai-adapter.js';
+import { getPreprocessorJsonSchema, buildPreprocessorPrompt } from './prompts.js';
 
 export interface PreprocessorResult {
   posting_cadence: string;
@@ -45,6 +47,103 @@ export async function runPreprocessor(
       }
     };
   }
+
+  console.log(`📋 [Preprocessor] Starting for @${profile.username}`);
+  
+  try {
+    // Use economy tier for preprocessor (GPT-5 nano or mini)
+    const modelName = selectModel('preprocessor', 'economy');
+    
+    const aiAdapter = new UniversalAIAdapter(env, requestId);
+    const response = await aiAdapter.executeRequest({
+      model_name: modelName,
+      system_prompt: 'You are a data extraction specialist. Extract structured facts from Instagram profiles. Only include what you can observe directly.',
+      user_prompt: buildPreprocessorPrompt(profile),
+      max_tokens: 400,
+      json_schema: getPreprocessorJsonSchema(),
+      response_format: 'json',
+      temperature: 0.2
+    });
+
+    const result = JSON.parse(response.content) as PreprocessorResult;
+    
+    // Cache for 24-72h
+    await cachePreprocessor(cacheKey, result, env);
+    
+    console.log(`📋 [Preprocessor] Completed for @${profile.username}, cached for 48h, model: ${response.model_used}`);
+
+    return {
+      result,
+      costDetails: {
+        actual_cost: response.usage.total_cost,
+        tokens_in: response.usage.input_tokens,
+        tokens_out: response.usage.output_tokens,
+        model_used: response.model_used,
+        block_type: 'preprocessor'
+      }
+    };
+
+  } catch (error: any) {
+    console.error(`📋 [Preprocessor] Failed:`, error.message);
+    throw new Error(`Preprocessor failed: ${error.message}`);
+  }
+}
+
+// Keep existing cache functions unchanged
+function generateCacheKey(profile: ProfileData): string {
+  const contentHash = profile.latestPosts?.slice(0, 3)
+    .map(p => `${p.id}-${p.likesCount}`)
+    .join('|') || 'no-posts';
+  
+  const profileHash = `${profile.username}-${profile.followersCount}-${profile.postsCount}`;
+  
+  return `preproc:${profileHash}:${contentHash}`;
+}
+
+async function getCachedPreprocessor(cacheKey: string, env: any): Promise<PreprocessorResult | null> {
+  try {
+    if (!env.R2_CACHE_BUCKET) return null;
+    
+    const cached = await env.R2_CACHE_BUCKET.get(cacheKey);
+    if (!cached) return null;
+    
+    const data = await cached.json();
+    
+    const cacheAge = Date.now() - new Date(data.cached_at).getTime();
+    if (cacheAge > 48 * 60 * 60 * 1000) {
+      await env.R2_CACHE_BUCKET.delete(cacheKey);
+      return null;
+    }
+    
+    return data.result;
+  } catch {
+    return null;
+  }
+}
+
+async function cachePreprocessor(cacheKey: string, result: PreprocessorResult, env: any): Promise<void> {
+  try {
+    if (!env.R2_CACHE_BUCKET) return;
+    
+    const cacheData = {
+      result,
+      cached_at: new Date().toISOString(),
+      ttl_hours: 48
+    };
+    
+    await env.R2_CACHE_BUCKET.put(
+      cacheKey, 
+      JSON.stringify(cacheData),
+      {
+        httpMetadata: {
+          contentType: 'application/json'
+        }
+      }
+    );
+  } catch (error) {
+    console.warn('Failed to cache preprocessor result:', error);
+  }
+}
 
   const openaiKey = await getApiKey('OPENAI_API_KEY', env);
   if (!openaiKey) throw new Error('OpenAI API key not available');
