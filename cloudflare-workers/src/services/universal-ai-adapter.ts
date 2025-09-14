@@ -75,13 +75,22 @@ private async callGPT5Responses(config: ModelConfig, request: UniversalRequest):
   const openaiKey = await getApiKey('OPENAI_API_KEY', this.env);
   if (!openaiKey) throw new Error('OpenAI API key not available');
 
+  logger('info', '🚀 GPT-5 Request Starting', {
+    model: config.name,
+    max_tokens: request.max_tokens,
+    has_json_schema: !!request.json_schema,
+    response_format: request.response_format,
+    temperature: request.temperature,
+    requestId: this.requestId
+  });
+
   const body = {
     model: config.name,
-    messages: [
+    input: [
       { role: 'system', content: request.system_prompt },
       { role: 'user', content: request.user_prompt }
     ],
-    max_completion_tokens: request.max_tokens,
+    max_output_tokens: request.max_tokens,
     temperature: request.temperature || 0.7,
     ...(request.json_schema && {
       response_format: {
@@ -91,20 +100,54 @@ private async callGPT5Responses(config: ModelConfig, request: UniversalRequest):
     })
   };
 
+  logger('info', '📤 GPT-5 Request Body', {
+    model: body.model,
+    input_length: body.input?.length,
+    max_output_tokens: body.max_output_tokens,
+    has_response_format: !!body.response_format,
+    response_format_type: body.response_format?.type,
+    temperature: body.temperature,
+    requestId: this.requestId
+  });
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${openaiKey}`,
+      'Authorization': `Bearer ${openaiKey.substring(0, 10)}...`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(body)
   });
 
+  logger('info', '📥 GPT-5 Response Status', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+    headers: Object.fromEntries(response.headers.entries()),
+    requestId: this.requestId
+  });
+
   if (!response.ok) {
-    throw new Error(`GPT-5 API error: ${response.status}`);
+    const errorBody = await response.text();
+    logger('error', '❌ GPT-5 API Error Details', {
+      status: response.status,
+      statusText: response.statusText,
+      errorBody: errorBody,
+      requestId: this.requestId
+    });
+    throw new Error(`GPT-5 API error: ${response.status} - ${errorBody}`);
   }
 
   const data = await response.json();
+  logger('info', '✅ GPT-5 Response Success', {
+    has_choices: !!data.choices,
+    choices_length: data.choices?.length,
+    has_usage: !!data.usage,
+    first_choice_content_length: data.choices?.[0]?.message?.content?.length,
+    usage_tokens: data.usage,
+    requestId: this.requestId
+  });
+
   const content = data.choices?.[0]?.message?.content || '';
   const usage = data.usage || {};
 
@@ -119,55 +162,6 @@ private async callGPT5Responses(config: ModelConfig, request: UniversalRequest):
     provider: config.provider
   };
 }
-
-  private async callGPTChat(config: ModelConfig, request: UniversalRequest): Promise<UniversalResponse> {
-    const openaiKey = await getApiKey('OPENAI_API_KEY', this.env);
-    if (!openaiKey) throw new Error('OpenAI API key not available');
-
-    const body = {
-      model: config.name,
-      messages: [
-        { role: 'system', content: request.system_prompt },
-        { role: 'user', content: request.user_prompt }
-      ],
-      max_tokens: request.max_tokens,
-      temperature: request.temperature || 0.7,
-      ...(request.json_schema && {
-        response_format: {
-          type: 'json_schema',
-          json_schema: request.json_schema
-        }
-      })
-    };
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-      throw new Error(`GPT Chat API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || '';
-    const usage = data.usage || {};
-
-    return {
-      content,
-      usage: {
-        input_tokens: usage.prompt_tokens || 0,
-        output_tokens: usage.completion_tokens || 0,
-        total_cost: this.calculateCost(usage.prompt_tokens || 0, usage.completion_tokens || 0, config)
-      },
-      model_used: config.name,
-      provider: config.provider
-    };
-  }
 
   private async callClaudeMessages(config: ModelConfig, request: UniversalRequest): Promise<UniversalResponse> {
     const claudeKey = await getApiKey('CLAUDE_API_KEY', this.env);
