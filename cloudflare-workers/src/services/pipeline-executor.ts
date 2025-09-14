@@ -212,70 +212,74 @@ Generate a compelling one-liner description. Return JSON with business_one_liner
   private getJsonSchema(stageType: string): any {
     // Return appropriate JSON schema for each stage type
     switch (stageType) {
-      case 'triage':
-        return {
-          name: 'TriageResult',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              lead_score: { type: 'integer', minimum: 0, maximum: 100 },
-              data_richness: { type: 'integer', minimum: 0, maximum: 100 },
-              confidence: { type: 'number', minimum: 0, maximum: 1 },
-              early_exit: { type: 'boolean' },
-              focus_points: { type: 'array', items: { type: 'string' } }
-            },
-            required: ['lead_score', 'data_richness', 'confidence', 'early_exit', 'focus_points']
-          }
-        };
+case 'triage':
+  return {
+    name: 'TriageResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        lead_score: { type: 'integer', minimum: 0, maximum: 100 },
+        data_richness: { type: 'integer', minimum: 0, maximum: 100 },
+        confidence: { type: 'number', minimum: 0, maximum: 1 },
+        early_exit: { type: 'boolean' },
+        focus_points: { type: 'array', items: { type: 'string' } }
+      },
+      required: ['lead_score', 'data_richness', 'confidence', 'early_exit', 'focus_points']
+    }
+  };
 
-      case 'preprocessor':
-        return {
-          name: 'PreprocessorResult',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              content_themes: { type: 'array', items: { type: 'string' } },
-              posting_cadence: { type: 'string' },
-              collaboration_history: { type: 'string' },
-              contact_readiness: { type: 'string' }
-            },
-            required: ['content_themes', 'posting_cadence', 'collaboration_history', 'contact_readiness']
-          }
-        };
+case 'preprocessor':
+  return {
+    name: 'PreprocessorResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        content_themes: { type: 'array', items: { type: 'string' } },
+        posting_cadence: { type: 'string' },
+        collaboration_history: { type: 'string' },
+        contact_readiness: { type: 'string' }
+      },
+      required: ['content_themes', 'posting_cadence', 'collaboration_history', 'contact_readiness']
+    }
+  };
 
-      case 'analysis':
-        return {
-          name: 'AnalysisResult',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              score: { type: 'integer', minimum: 0, maximum: 100 },
-              engagement_score: { type: 'integer', minimum: 0, maximum: 100 },
-              niche_fit: { type: 'integer', minimum: 0, maximum: 100 },
-              audience_quality: { type: 'string' },
-              engagement_insights: { type: 'string' },
-              selling_points: { type: 'array', items: { type: 'string' } },
-              reasons: { type: 'array', items: { type: 'string' } }
-            },
-            required: ['score', 'engagement_score', 'niche_fit', 'audience_quality', 'engagement_insights', 'selling_points', 'reasons']
-          }
-        };
+case 'analysis':
+  return {
+    name: 'AnalysisResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        score: { type: 'integer', minimum: 0, maximum: 100 },
+        engagement_score: { type: 'integer', minimum: 0, maximum: 100 },
+        niche_fit: { type: 'integer', minimum: 0, maximum: 100 },
+        audience_quality: { type: 'string' },
+        engagement_insights: { type: 'string' },
+        selling_points: { type: 'array', items: { type: 'string' } },
+        reasons: { type: 'array', items: { type: 'string' } }
+      },
+      required: ['score', 'engagement_score', 'niche_fit', 'audience_quality', 'engagement_insights', 'selling_points', 'reasons']
+    }
+  };
 
-      case 'context':
-        return {
-          name: 'ContextResult',
-          strict: true,
-          schema: {
-            type: 'object',
-            properties: {
-              business_one_liner: { type: 'string' }
-            },
-            required: ['business_one_liner']
-          }
-        };
+case 'context':
+  return {
+    name: 'ContextResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        business_one_liner: { type: 'string' }
+      },
+      required: ['business_one_liner']
+    }
+  };
 
       default:
         return undefined;
