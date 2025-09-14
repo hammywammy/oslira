@@ -21,7 +21,7 @@ export async function testGPT5Direct(env: any, requestId: string) {
           { role: 'system', content: 'You are a helpful assistant.' },
           { role: 'user', content: 'Say hello in JSON format with a "message" field.' }
         ],
-        max_tokens: 50,
+        max_completion_tokens: 50,
         response_format: { type: 'json_object' }
       })
     });
@@ -49,7 +49,7 @@ export async function testGPT5Direct(env: any, requestId: string) {
           { role: 'system', content: 'You are a helpful assistant.' },
           { role: 'user', content: 'Say hello in JSON format with a "message" field.' }
         ],
-        max_tokens: 50,
+        max_completion_tokens: 50,
         response_format: { type: 'json_object' }
       })
     });
@@ -77,7 +77,7 @@ export async function testGPT5Direct(env: any, requestId: string) {
           { role: 'system', content: 'You are a helpful assistant.' },
           { role: 'user', content: 'Say hello in JSON format with a "message" field.' }
         ],
-        max_tokens: 50,
+        max_completion_tokens: 50,
         response_format: { type: 'json_object' }
       })
     });
