@@ -4,7 +4,6 @@ import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
 import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
-import { ensureBusinessContext } from '../services/business-context-generator.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
