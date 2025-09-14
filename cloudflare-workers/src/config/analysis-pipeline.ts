@@ -101,8 +101,8 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       name: 'claude-opus-4.1',
       provider: 'claude',
       intelligence: 100,
-      cost_per_1k_in: 15.00,
-      cost_per_1k_out: 75.00,
+      cost_per_1m_in: 15.00,
+      cost_per_1m_out: 75.00,
       max_context: 200000,
       api_format: 'claude_messages',
       backup: 'gpt-5'
@@ -112,8 +112,8 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       name: 'gpt-5',
       provider: 'openai',
       intelligence: 96,
-      cost_per_1k_in: 1.25,
-      cost_per_1k_out: 10.00,
+      cost_per_1m_in: 1.25,
+      cost_per_1m_out: 10.00,
       max_completion_tokens: 128000,
       api_format: 'gpt5_responses',
       backup: 'claude-sonnet-4'
@@ -124,8 +124,8 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       name: 'claude-sonnet-4',
       provider: 'claude',
       intelligence: 90,
-      cost_per_1k_in: 3.00,
-      cost_per_1k_out: 15.00,
+      cost_per_1m_in: 3.00,
+      cost_per_1m_out: 15.00,
       max_context: 200000,
       api_format: 'claude_messages',
       backup: 'gpt-4o'
@@ -135,8 +135,8 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       name: 'gpt-4o',
       provider: 'openai',
       intelligence: 88,
-      cost_per_1k_in: 2.50,
-      cost_per_1k_out: 10.00,
+      cost_per_1m_in: 2.50,
+      cost_per_1m_out: 10.00,
       max_context: 128000,
       api_format: 'gpt_chat'
     } as ModelConfig,
@@ -146,8 +146,8 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       name: 'gpt-5-nano',
       provider: 'openai',
       intelligence: 64,
-      cost_per_1k_in: 0.05,
-      cost_per_1k_out: 0.40,
+      cost_per_1m_in: 0.05,
+      cost_per_1m_out: 0.40,
       max_completion_tokens: 64000,
       api_format: 'gpt5_responses',
       backup: 'gpt-5-mini'
@@ -157,8 +157,8 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       name: 'gpt-5-mini',
       provider: 'openai',
       intelligence: 80,
-      cost_per_1k_in: 0.25,
-      cost_per_1k_out: 2.00,
+      cost_per_1m_in: 0.25,
+      cost_per_1m_out: 2.00,
       max_completion_tokens: 64000,
       api_format: 'gpt5_responses'
     } as ModelConfig
