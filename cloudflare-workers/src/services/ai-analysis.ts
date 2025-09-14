@@ -17,6 +17,7 @@ import {
 } from './prompts.js';
 
 import { MODEL_CONFIG, calculateCost } from '../config/models.js';
+import { UniversalAIAdapter, selectModel } from './universal-ai-adapter.js';
 // ===============================================================================
 // HELPER FUNCTIONS
 // ===============================================================================
@@ -25,7 +26,177 @@ const isGPT5 = (m: string) => /^gpt-5/i.test(m);
 
 type ChatMsg = { role: 'system'|'user'|'assistant'; content: string };
 
+export async function performAIAnalysis(
+  profile: ProfileData,
+  business: BusinessProfile,
+  analysisType: 'light' | 'deep' | 'xray',
+  env: Env,
+  requestId: string,
+  context?: {
+    triage?: any;
+    preprocessor?: any;
+  },
+  modelTier: 'premium' | 'balanced' | 'economy' = 'balanced' // NEW: Support tier selection
+): Promise<{
+  result: AnalysisResult;
+  costDetails: {
+    actual_cost: number;
+    tokens_in: number;
+    tokens_out: number;
+    model_used: string;
+    block_type: string;
+  };
+}> {
+  
+  console.log(`🤖 [AI Analysis] Starting ${analysisType} analysis with ${modelTier} tier`);
 
+  try {
+    // Select model based on analysis type and tier
+    const modelName = selectModel(analysisType, modelTier, context);
+    console.log(`🤖 [AI Analysis] Selected model: ${modelName}`);
+
+    // Get appropriate prompt and schema
+    let prompt: string;
+    let jsonSchema: any;
+    
+    switch (analysisType) {
+      case 'light':
+        prompt = buildLightAnalysisPrompt(profile, business, context);
+        jsonSchema = getLightAnalysisJsonSchema();
+        break;
+      case 'deep':
+        prompt = buildDeepAnalysisPrompt(profile, business, context);
+        jsonSchema = getDeepAnalysisJsonSchema();
+        break;
+      case 'xray':
+        prompt = buildXRayAnalysisPrompt(profile, business, context);
+        jsonSchema = getXRayAnalysisJsonSchema();
+        break;
+      default:
+        throw new Error(`Unsupported analysis type: ${analysisType}`);
+    }
+
+    // Execute via universal adapter
+    const aiAdapter = new UniversalAIAdapter(env, requestId);
+    const response = await aiAdapter.executeRequest({
+      model_name: modelName,
+      system_prompt: getSystemPrompt(analysisType),
+      user_prompt: prompt,
+      max_tokens: getMaxTokens(analysisType),
+      json_schema: jsonSchema,
+      response_format: 'json'
+    });
+
+    // Parse and transform result
+    const rawResult = JSON.parse(response.content);
+    const transformedResult = transformAnalysisResult(rawResult, analysisType, profile);
+
+    console.log(`🤖 [AI Analysis] Completed with model: ${response.model_used}, cost: $${response.usage.total_cost.toFixed(4)}`);
+
+    return {
+      result: transformedResult,
+      costDetails: {
+        actual_cost: response.usage.total_cost,
+        tokens_in: response.usage.input_tokens,
+        tokens_out: response.usage.output_tokens,
+        model_used: response.model_used,
+        block_type: analysisType
+      }
+    };
+
+  } catch (error: any) {
+    console.error(`🤖 [AI Analysis] Failed:`, error.message);
+    throw new Error(`AI analysis failed: ${error.message}`);
+  }
+}
+
+function getSystemPrompt(analysisType: string): string {
+  const prompts = {
+    light: 'You are an expert business analyst specializing in influencer partnerships. Return ONLY valid JSON matching the exact schema provided.',
+    deep: 'You are an expert business analyst specializing in influencer partnerships. Provide comprehensive analysis. Return ONLY valid JSON matching the exact schema provided.',
+    xray: 'You are an expert business analyst and psychological profiler specializing in influencer partnerships. Provide deep psychological insights. Return ONLY valid JSON matching the exact schema provided.'
+  };
+  
+  return prompts[analysisType] || prompts.light;
+}
+
+function getMaxTokens(analysisType: string): number {
+  const limits = {
+    light: 500,
+    deep: 800,
+    xray: 1200
+  };
+  
+  return limits[analysisType] || 500;
+}
+
+function transformAnalysisResult(
+  rawResult: any,
+  analysisType: 'light' | 'deep' | 'xray',
+  profile: ProfileData
+): AnalysisResult {
+  // Extract core scores and metadata
+  const baseResult: AnalysisResult = {
+    score: rawResult.score || 0,
+    engagement_score: rawResult.engagement_score || 0,
+    niche_fit: rawResult.niche_fit || 0,
+    quick_summary: rawResult.quick_summary || '',
+    confidence_level: rawResult.confidence_level || calculateConfidenceLevel(profile, analysisType),
+    audience_quality: 'Medium',
+    engagement_insights: '',
+    selling_points: [],
+    reasons: []
+  };
+
+  // Transform payload-specific data
+  switch (analysisType) {
+    case 'light':
+      if (rawResult.light_payload) {
+        baseResult.audience_quality = rawResult.light_payload.audience_quality || 'Medium';
+        baseResult.engagement_insights = rawResult.light_payload.engagement_summary || '';
+        baseResult.selling_points = rawResult.light_payload.insights || [];
+        baseResult.reasons = rawResult.light_payload.insights || [];
+      }
+      break;
+
+    case 'deep':
+      if (rawResult.deep_payload) {
+        baseResult.deep_summary = rawResult.deep_payload.deep_summary;
+        baseResult.selling_points = rawResult.deep_payload.selling_points || [];
+        baseResult.reasons = rawResult.deep_payload.reasons || [];
+        baseResult.outreach_message = rawResult.deep_payload.outreach_message;
+        baseResult.audience_quality = 'High';
+        baseResult.engagement_insights = rawResult.deep_payload.audience_insights || '';
+        
+        if (rawResult.deep_payload.engagement_breakdown) {
+          baseResult.avg_likes = rawResult.deep_payload.engagement_breakdown.avg_likes;
+          baseResult.avg_comments = rawResult.deep_payload.engagement_breakdown.avg_comments;
+          baseResult.engagement_rate = rawResult.deep_payload.engagement_breakdown.engagement_rate;
+        }
+      }
+      break;
+
+    case 'xray':
+      if (rawResult.xray_payload) {
+        baseResult.audience_quality = 'Premium';
+        baseResult.engagement_insights = `Commercial Intelligence: ${rawResult.xray_payload.commercial_intelligence?.budget_tier || 'Unknown'} budget tier`;
+        
+        baseResult.selling_points = [
+          ...(rawResult.xray_payload.copywriter_profile?.pain_points || []),
+          ...(rawResult.xray_payload.copywriter_profile?.dreams_desires || [])
+        ];
+        baseResult.reasons = rawResult.xray_payload.persuasion_strategy?.key_messages || [];
+        
+        // Store X-ray specific data
+        baseResult.copywriter_profile = rawResult.xray_payload.copywriter_profile;
+        baseResult.commercial_intelligence = rawResult.xray_payload.commercial_intelligence;
+        baseResult.persuasion_strategy = rawResult.xray_payload.persuasion_strategy;
+      }
+      break;
+  }
+
+  return baseResult;
+}
 function buildOpenAIChatBody(opts: {
   model: string;
   messages: ChatMsg[];
@@ -86,98 +257,6 @@ function log(level: string, message: string, data?: any, requestId?: string) {
   const timestamp = new Date().toISOString();
   const logData = { timestamp, level, message, requestId, ...data };
   console.log(JSON.stringify(logData));
-}
-
-// ===============================================================================
-// MAIN ANALYSIS FUNCTION (UPDATED FOR NEW PAYLOAD STRUCTURE)
-// ===============================================================================
-
-export async function performAIAnalysis(
-  profile: ProfileData,
-  business: BusinessProfile,
-  analysisType: 'light' | 'deep' | 'xray',
-  env: Env,
-  requestId: string,
-  context?: {
-    triage?: any;
-    preprocessor?: any;
-  }
-): Promise<{
-  result: AnalysisResult;
-  costDetails: {
-    actual_cost: number;
-    tokens_in: number;
-    tokens_out: number;
-    model_used: string;
-    block_type: string;
-  };
-}> {
-  
-  log('info', 'About to call getApiKey for OPENAI_API_KEY', { requestId });
-  
-  log('info', `Starting AI analysis with new payload structure`, {
-    username: profile.username,
-    dataQuality: profile.dataQuality,
-    scraperUsed: profile.scraperUsed,
-    hasRealEngagement: (profile.engagement?.postsAnalyzed || 0) > 0,
-    analysisType
-  }, requestId);
-
-  try {
-    // Get the appropriate prompt and schema based on analysis type
-    let prompt: string;
-    let jsonSchema: any;
-    
-switch (analysisType) {
-      case 'light':
-        prompt = buildLightAnalysisPrompt(profile, business, context);
-        jsonSchema = getLightAnalysisJsonSchema();
-        break;
-      case 'deep':
-        prompt = buildDeepAnalysisPrompt(profile, business, context);
-        jsonSchema = getDeepAnalysisJsonSchema();
-        break;
-      case 'xray':
-        prompt = buildXRayAnalysisPrompt(profile, business, context);
-        jsonSchema = getXRayAnalysisJsonSchema();
-        break;
-      default:
-        throw new Error(`Unsupported analysis type: ${analysisType}`);
-    }
-
-// Execute the analysis
-    const { result: rawResult, costDetails } = await executeAnalysisWithRetry(
-      prompt, 
-      jsonSchema, 
-      env, 
-      requestId, 
-      analysisType
-    );
-    
-    // Transform the result to match our AnalysisResult interface
-    const transformedResult = transformAnalysisResult(rawResult, analysisType, profile);
-
-    return {
-      result: transformedResult,
-      costDetails
-    };
-    
-    log('info', `AI analysis completed with new payload structure`, {
-      username: profile.username,
-      score: transformedResult.score,
-      engagementScore: transformedResult.engagement_score,
-      nicheFit: transformedResult.niche_fit,
-      confidence: transformedResult.confidence_level,
-      payloadType: analysisType,
-      usedRealData: (profile.engagement?.postsAnalyzed || 0) > 0
-    }, requestId);
-
-    return transformedResult;
-
-  } catch (error: any) {
-    log('error', 'AI analysis failed', { error: error.message, requestId });
-    throw new Error(`AI analysis failed: ${error.message}`);
-  }
 }
 
 // ===============================================================================
