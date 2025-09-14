@@ -1,5 +1,10 @@
 import { ScraperErrorHandler, withScraperRetry } from '../utils/scraper-error-handler.js';
 import { LIGHT_SCRAPER_CONFIG, DEEP_SCRAPER_CONFIGS, buildScraperUrl } from './scraper-configs.js';
+import { callWithRetry } from '../utils/helpers.js';
+import { validateProfileData } from '../utils/validation.js';
+import { getApiKey } from './enhanced-config-manager.js';
+import { logger } from '../utils/logger.js';
+import type { AnalysisType, Env, ProfileData } from '../types/interfaces.js';
 
 export async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
   const apifyToken = await getApiKey('APIFY_API_TOKEN', env);
@@ -18,11 +23,13 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
       return await scrapeDeepProfile(username, apifyToken);
     }
 
-  } catch (error: any) {
+} catch (error: any) {
     const transformedError = ScraperErrorHandler.transformError(error, username);
     logger('error', 'All scraping methods failed', { username, error: transformedError.message });
     throw transformedError;
   }
+
+  throw new Error(`Unsupported analysis type: ${analysisType}`);
 }
 
 async function scrapeLightProfile(username: string, token: string): Promise<ProfileData> {
