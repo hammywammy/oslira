@@ -110,14 +110,14 @@ const body = {
     requestId: this.requestId
   });
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-headers: {
-  'Authorization': `Bearer ${openaiKey}`, // ✅ FULL KEY
-  'Content-Type': 'application/json'
-}
-    body: JSON.stringify(body)
-  });
+const response = await fetch('https://api.openai.com/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${openaiKey}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify(body)
+});
 
   logger('info', '📥 GPT-5 Response Status', {
     status: response.status,
