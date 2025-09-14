@@ -262,11 +262,11 @@ logger('info', '🔍 GPT-5 Content Extraction', {
     };
   }
 
-  private calculateCost(inputTokens: number, outputTokens: number, config: ModelConfig): number {
-    const inputCost = (inputTokens / 1000) * config.cost_per_1k_in;
-    const outputCost = (outputTokens / 1000) * config.cost_per_1k_out;
-    return inputCost + outputCost;
-  }
+private calculateCost(inputTokens: number, outputTokens: number, config: ModelConfig): number {
+  const inputCost = (inputTokens / 1000000) * config.cost_per_1m_in;
+  const outputCost = (outputTokens / 1000000) * config.cost_per_1m_out;
+  return inputCost + outputCost;
+}
 }
 
 // Model Selection Logic
