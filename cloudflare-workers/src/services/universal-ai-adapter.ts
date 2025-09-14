@@ -91,7 +91,6 @@ const body = {
     { role: 'user', content: request.user_prompt }
   ],
   max_completion_tokens: request.max_tokens, // ✅ CORRECT
-  temperature: request.temperature || 0.7,
   ...(request.json_schema && {
     response_format: {
       type: 'json_schema',
