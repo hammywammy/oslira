@@ -1,5 +1,5 @@
 import { ScraperErrorHandler, withScraperRetry } from '../utils/scraper-error-handler.js';
-import { LIGHT_SCRAPER_CONFIG, DEEP_SCRAPER_CONFIGS, buildScraperUrl } from './scraper-configs.js';
+import { LIGHT_SCRAPER_CONFIGS, DEEP_SCRAPER_CONFIGS, buildScraperUrl } from './scraper-configs.js';
 import { callWithRetry } from '../utils/helpers.js';
 import { validateProfileData } from '../utils/validation.js';
 import { getApiKey } from './enhanced-config-manager.js';
@@ -15,9 +15,9 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
   logger('info', 'Starting profile scraping', { username, analysisType });
 
   try {
-    if (analysisType === 'light') {
-      return await scrapeLightProfile(username, apifyToken);
-    } 
+if (analysisType === 'light') {
+  return await scrapeWithConfigs(username, apifyToken, LIGHT_SCRAPER_CONFIGS);
+}
     
     if (analysisType === 'deep' || analysisType === 'xray') {
       return await scrapeDeepProfile(username, apifyToken);
@@ -32,24 +32,29 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
   throw new Error(`Unsupported analysis type: ${analysisType}`);
 }
 
-async function scrapeLightProfile(username: string, token: string): Promise<ProfileData> {
-  const url = buildScraperUrl(LIGHT_SCRAPER_CONFIG.endpoint, token);
-  
-  const response = await callWithRetry(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(LIGHT_SCRAPER_CONFIG.input(username))
-  }, 3, 2000, 30000);
+async function scrapeWithConfigs(username: string, token: string, configs: ScraperConfig[]): Promise<ProfileData> {
+  const scraperAttempts = configs.map(config => 
+    async () => {
+      const url = buildScraperUrl(config.endpoint, token);
+      const response = await callWithRetry(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config.input(username))
+      }, config.maxRetries, config.retryDelay, config.timeout);
 
-  if (!response || !Array.isArray(response) || response.length === 0) {
-    throw new Error('PROFILE_NOT_FOUND');
-  }
+      if (!response || !Array.isArray(response) || response.length === 0) {
+        throw new Error(`${config.name} returned no usable data`);
+      }
 
-  const profileData = validateProfileData(response[0], 'light');
-  profileData.scraperUsed = 'light';
-  profileData.dataQuality = 'medium';
-  
-  return profileData;
+      const profileData = validateProfileData(response[0], 'light');
+      profileData.scraperUsed = config.name;
+      profileData.dataQuality = 'medium';
+      
+      return profileData;
+    }
+  );
+
+  return await withScraperRetry(scraperAttempts, username);
 }
 
 async function scrapeDeepProfile(username: string, token: string): Promise<ProfileData> {
