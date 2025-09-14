@@ -255,3 +255,193 @@ export async function runBulkAnalysis(
   
   return results;
 }
+
+// Add these new schema functions for pipeline support
+
+export function getTriageJsonSchema() {
+  return {
+    name: 'TriageResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        lead_score: { type: 'integer', minimum: 0, maximum: 100 },
+        data_richness: { type: 'integer', minimum: 0, maximum: 100 },
+        confidence: { type: 'number', minimum: 0, maximum: 1 },
+        early_exit: { type: 'boolean' },
+        focus_points: { 
+          type: 'array', 
+          items: { type: 'string' }, 
+          minItems: 2, 
+          maxItems: 4 
+        }
+      },
+      required: ['lead_score', 'data_richness', 'confidence', 'early_exit', 'focus_points']
+    }
+  };
+}
+
+export function getPreprocessorJsonSchema() {
+  return {
+    name: 'PreprocessorResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        posting_cadence: { type: 'string' },
+        content_themes: { 
+          type: 'array', 
+          items: { type: 'string' },
+          maxItems: 5
+        },
+        audience_signals: { 
+          type: 'array', 
+          items: { type: 'string' },
+          maxItems: 4
+        },
+        brand_mentions: { 
+          type: 'array', 
+          items: { type: 'string' }
+        },
+        engagement_patterns: { type: 'string' },
+        collaboration_history: { type: 'string' },
+        contact_readiness: { type: 'string' },
+        content_quality: { type: 'string' }
+      },
+      required: ['posting_cadence', 'content_themes', 'audience_signals', 'brand_mentions', 'engagement_patterns', 'collaboration_history', 'contact_readiness', 'content_quality']
+    }
+  };
+}
+
+export function getBusinessContextJsonSchema() {
+  return {
+    name: 'BusinessContext',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        business_one_liner: { 
+          type: 'string', 
+          maxLength: 140,
+          description: 'I help [TARGET] achieve [OUTCOME] through [METHOD]'
+        },
+        business_context_pack: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            niche: { type: 'string' },
+            value_prop: { type: 'string' },
+            must_avoid: { 
+              type: 'array', 
+              items: { type: 'string' },
+              minItems: 3,
+              maxItems: 3
+            },
+            priority_signals: { 
+              type: 'array', 
+              items: { type: 'string' },
+              minItems: 4,
+              maxItems: 4
+            },
+            tone_words: { 
+              type: 'array', 
+              items: { type: 'string' },
+              minItems: 3,
+              maxItems: 3
+            }
+          },
+          required: ['niche', 'value_prop', 'must_avoid', 'priority_signals', 'tone_words']
+        }
+      },
+      required: ['business_one_liner', 'business_context_pack']
+    }
+  };
+}
+
+export function buildTriagePrompt(profile: any, businessOneLiner: string): string {
+  return `# LEAD TRIAGE: Quick Pass/Fail Decision
+
+## YOUR BUSINESS
+${businessOneLiner}
+
+## PROFILE SNAPSHOT
+- **Username**: @${profile.username}
+- **Followers**: ${profile.followers?.toLocaleString() || 0}
+- **Status**: ${profile.verified ? 'Verified ✓' : 'Unverified'} | ${profile.private ? 'Private ⚠️' : 'Public'}
+- **Bio**: "${profile.bio_short || 'No bio'}"
+- **External Links**: ${profile.external_domains?.length > 0 ? profile.external_domains.join(', ') : 'None'}
+- **Recent Activity**: ~${profile.posts_30d || 0} posts estimated
+- **Engagement Data**: ${profile.engagement_signals ? 
+    `${profile.engagement_signals.avg_likes?.toLocaleString() || 0} avg likes, ${profile.engagement_signals.avg_comments || 0} comments (${profile.engagement_signals.posts_analyzed || 0} posts)` : 
+    'Not available'}
+
+## TASK: 10-Second Lead Decision
+
+Score this profile on two dimensions:
+
+**lead_score (0-100)**: Business fit potential
+- 80-100: Clear target match, obvious collaboration potential
+- 60-79: Good fit signals, worth deeper analysis  
+- 40-59: Possible fit but unclear value
+- 20-39: Weak signals, probably wrong audience
+- 0-19: Obviously wrong fit, different niche entirely
+
+**data_richness (0-100)**: Available information quality
+**confidence (0-1)**: How certain are you about these scores?
+**early_exit**: Set to false (always continue to full analysis)
+**focus_points**: 2-4 specific observations that drove your scores
+
+Return ONLY JSON matching the exact schema.`;
+}
+
+export function buildPreprocessorPrompt(profile: any): string {
+  const postsData = profile.latestPosts || [];
+  const engagementData = profile.engagement || null;
+
+  return `# DATA EXTRACTION: Instagram Profile Facts
+
+## PROFILE OVERVIEW
+- **Username**: @${profile.username}
+- **Followers**: ${profile.followersCount?.toLocaleString() || 0}
+- **Bio**: "${profile.bio || 'No bio'}"
+- **External Link**: ${profile.externalUrl || 'None'}
+- **Account Type**: ${profile.isBusinessAccount ? 'Business' : 'Personal'} | ${profile.isVerified ? 'Verified' : 'Unverified'}
+
+## CONTENT ANALYSIS
+- **Posts Available**: ${postsData.length}
+- **Engagement Data**: ${engagementData ? 
+    `${engagementData.engagementRate}% rate (${engagementData.avgLikes} avg likes, ${engagementData.avgComments} comments)` : 
+    'Not available'}
+
+Extract observable facts only. Return structured data based ONLY on what you can see.
+
+Return ONLY JSON matching the exact schema.`;
+}
+
+export function buildBusinessContextPrompt(business: any): string {
+  return `# BUSINESS CONTEXT EXTRACTION
+
+## INPUT BUSINESS
+- **Name**: ${business.business_name || business.name}
+- **Industry**: ${business.business_niche || business.industry}  
+- **Target**: ${business.target_audience}
+- **Value**: ${business.value_proposition}
+- **Problems**: ${business.target_problems}
+
+## TASK 1: Business One-Liner (140 chars max)
+Create: "I help [TARGET] achieve [OUTCOME] through [METHOD]"
+
+## TASK 2: Context Pack
+Extract 5 key elements:
+
+**niche**: Single industry/category (e.g., "fitness coaching", "ecommerce beauty")
+**value_prop**: Core benefit in 1 sentence  
+**must_avoid**: 3 profile types that are definitely wrong fit
+**priority_signals**: 4 Instagram signals that indicate good fit
+**tone_words**: 3 brand voice descriptors
+
+Return ONLY JSON matching the exact schema.`;
+}
