@@ -27,6 +27,32 @@ app.get('/debug/raw-env', async (c) => {
   });
 });
 
+app.get('/test-pipeline-config', async (c) => {
+  try {
+    const { ANALYSIS_PIPELINE_CONFIG } = await import('./config/analysis-pipeline.js');
+    const { UniversalAIAdapter, selectModel } = await import('./services/universal-ai-adapter.js');
+    
+    // Test model selection
+    const tests = {
+      triage_economy: selectModel('triage', 'economy'),
+      light_balanced: selectModel('light', 'balanced'),
+      deep_premium: selectModel('deep', 'premium'),
+      xray_with_upgrade: selectModel('xray', 'balanced', { triage: { lead_score: 85 } })
+    };
+    
+    return c.json({
+      success: true,
+      config_loaded: true,
+      available_workflows: Object.keys(ANALYSIS_PIPELINE_CONFIG.workflows),
+      available_models: Object.keys(ANALYSIS_PIPELINE_CONFIG.models),
+      model_selection_tests: tests,
+      sample_workflow: ANALYSIS_PIPELINE_CONFIG.workflows.auto
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
 // ===============================================================================
 // BASIC ENDPOINTS
 // ===============================================================================
