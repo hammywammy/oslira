@@ -41,9 +41,19 @@ export async function runAnalysis(
   const costs: any[] = [];
   const blocksUsed: string[] = [];
 
-// Ensure business context exists before analysis
-const businessContext = await ensureBusinessContext(business, env, requestId);
-const enrichedBusiness = { ...business, ...businessContext };
+// Use existing business context from database
+const enrichedBusiness = {
+  ...business,
+  business_one_liner: business.business_one_liner || null,
+  business_context_pack: business.business_context_pack || null
+};
+
+// Only generate if missing (fallback for incomplete data)
+if (!enrichedBusiness.business_one_liner || !enrichedBusiness.business_context_pack) {
+  logger('warn', 'Business context missing, generating fallback', { business_id: business.id, requestId });
+  const generatedContext = await ensureBusinessContext(business, env, requestId);
+  Object.assign(enrichedBusiness, generatedContext);
+}
 
 logger('info', 'Starting analysis orchestration', { 
   username: profile.username,
