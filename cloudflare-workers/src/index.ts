@@ -27,54 +27,7 @@ app.get('/debug/raw-env', async (c) => {
   });
 });
 
-app.get('/test-pipeline-config', async (c) => {
-  try {
-    const { ANALYSIS_PIPELINE_CONFIG } = await import('./config/analysis-pipeline.js');
-    const { UniversalAIAdapter, selectModel } = await import('./services/universal-ai-adapter.js');
-    
-    // Test model selection
-    const tests = {
-      triage_economy: selectModel('triage', 'economy'),
-      light_balanced: selectModel('light', 'balanced'),
-      deep_premium: selectModel('deep', 'premium'),
-      xray_with_upgrade: selectModel('xray', 'balanced', { triage: { lead_score: 85 } })
-    };
-    
-    return c.json({
-      success: true,
-      config_loaded: true,
-      available_workflows: Object.keys(ANALYSIS_PIPELINE_CONFIG.workflows),
-      available_models: Object.keys(ANALYSIS_PIPELINE_CONFIG.models),
-      model_selection_tests: tests,
-      sample_workflow: ANALYSIS_PIPELINE_CONFIG.workflows.auto
-    });
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500);
-  }
-});
 
-// Add this endpoint to your index.ts file
-
-app.get('/test-gpt5', async (c) => {
-  const requestId = generateRequestId();
-  
-  try {
-    const { testGPT5Direct } = await import('./test/gpt5-test.js');
-    const result = await testGPT5Direct(c.env, requestId);
-    
-    return c.json({
-      success: true,
-      test_result: result,
-      requestId
-    });
-  } catch (error: any) {
-    return c.json({
-      success: false,
-      error: error.message,
-      requestId
-    }, 500);
-  }
-});
 
 // ===============================================================================
 // BASIC ENDPOINTS
@@ -112,15 +65,15 @@ app.post('/v1/bulk-analyze', async (c) => {
   return handleBulkAnalyze(c);
 });
 
-// Legacy redirects
+// Legacy endpoint redirects to v1
 app.post('/analyze', async (c) => {
-  const { handleLegacyAnalyze } = await import('./handlers/legacy.js');
-  return handleLegacyAnalyze(c);
+  const { handleAnalyze } = await import('./handlers/analyze.js');
+  return handleAnalyze(c);
 });
 
 app.post('/bulk-analyze', async (c) => {
-  const { handleLegacyBulkAnalyze } = await import('./handlers/legacy.js');
-  return handleLegacyBulkAnalyze(c);
+  const { handleBulkAnalyze } = await import('./handlers/bulk-analyze.js');
+  return handleBulkAnalyze(c);
 });
 
 // Billing endpoints
@@ -245,6 +198,55 @@ app.post('/admin/test-key', async (c) => {
 app.post('/admin/get-config', async (c) => {
   const { handleGetConfig } = await import('./handlers/admin.js');
   return handleGetConfig(c);
+});
+
+app.get('/test-pipeline-config', async (c) => {
+  try {
+    const { ANALYSIS_PIPELINE_CONFIG } = await import('./config/analysis-pipeline.js');
+    const { UniversalAIAdapter, selectModel } = await import('./services/universal-ai-adapter.js');
+    
+    // Test model selection
+    const tests = {
+      triage_economy: selectModel('triage', 'economy'),
+      light_balanced: selectModel('light', 'balanced'),
+      deep_premium: selectModel('deep', 'premium'),
+      xray_with_upgrade: selectModel('xray', 'balanced', { triage: { lead_score: 85 } })
+    };
+    
+    return c.json({
+      success: true,
+      config_loaded: true,
+      available_workflows: Object.keys(ANALYSIS_PIPELINE_CONFIG.workflows),
+      available_models: Object.keys(ANALYSIS_PIPELINE_CONFIG.models),
+      model_selection_tests: tests,
+      sample_workflow: ANALYSIS_PIPELINE_CONFIG.workflows.auto
+    });
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Add this endpoint to your index.ts file
+
+app.get('/test-gpt5', async (c) => {
+  const requestId = generateRequestId();
+  
+  try {
+    const { testGPT5Direct } = await import('./test/gpt5-test.js');
+    const result = await testGPT5Direct(c.env, requestId);
+    
+    return c.json({
+      success: true,
+      test_result: result,
+      requestId
+    });
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: error.message,
+      requestId
+    }, 500);
+  }
 });
 
 // ===============================================================================
