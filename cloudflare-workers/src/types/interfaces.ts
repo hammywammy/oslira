@@ -335,7 +335,7 @@ export interface CreditTransaction {
   amount: number;
   type: 'use' | 'purchase' | 'refund' | 'bonus';
   description: string;
-  run_id?: string; // Updated from lead_id
+  run_id: string; // REQUIRED - no legacy lead_id support
   created_at: string;
 }
 
@@ -363,35 +363,6 @@ export interface BulkAnalysisResult {
   credits_remaining: number;
 }
 
-// ===============================================================================
-// MIGRATION INTERFACES (FOR TRANSITION PERIOD)
-// ===============================================================================
-
-export interface LegacyLeadData {
-  id: string; // Old lead_id
-  username: string;
-  full_name?: string;
-  bio?: string;
-  followers_count: number;
-  profile_pic_url?: string;
-  external_url?: string;
-  score: number; // Will map to runs.overall_score
-  analysis_type: string; // Will map to runs.analysis_type
-  quick_summary?: string; // Will map to runs.summary_text
-  created_at: string;
-}
-
-export interface LegacyAnalysisData {
-  lead_id: string;
-  engagement_score: number;
-  niche_fit: number;
-  deep_summary?: string;
-  selling_points?: string[];
-  outreach_message?: string;
-  latest_posts?: any;
-  engagement_data?: any;
-  created_at: string;
-}
 
 // ===============================================================================
 // EXPORT ALL TYPES
