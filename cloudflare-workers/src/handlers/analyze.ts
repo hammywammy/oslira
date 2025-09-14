@@ -4,7 +4,6 @@ import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
 import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
-import { ensureBusinessContext } from '../services/business-context-generator.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
@@ -90,8 +89,10 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
     try {
       logger('info', 'Using pipeline system', { workflow, model_tier, requestId });
 
-      // Ensure business context exists
-      const enrichedBusiness = await ensureBusinessContext(business, c.env, requestId);
+// Get business context if available
+const enrichedBusiness = business.business_one_liner || business.business_context_pack ? 
+  business : 
+  await fetchBusinessProfile(business_id, user_id, c.env);
 
       // Create pipeline context
       const pipelineContext: PipelineContext = {
