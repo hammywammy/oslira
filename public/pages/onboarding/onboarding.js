@@ -466,27 +466,45 @@
 function validateStep(stepNumber) {
     console.log(`🔍 [Onboarding] Validating step ${stepNumber}`);
     
-    switch (stepNumber) {
-        case 1: // Business Info
-            const businessName = getFieldValue('business_name');
-            return validateBusinessName(businessName);
-            
-        case 2: // Business Niche
-            return getFieldValue('business_niche') !== '';
-            
-        case 3: // Target Audience
-            return getFieldValue('target_audience').trim().length > 0;
-            
-        case 4: // Success Outcome - NOW MANDATORY
-            const successOutcome = getFieldValue('success_outcome');
-            return validateSuccessOutcome(successOutcome);
-            
-        case 5: // Communication Style - NOW PROPERLY ENFORCED
-            return validateCommunicationStyle();
-            
-        default:
-            return true;
+    const fieldsForStep = stepFields[stepNumber];
+    if (!fieldsForStep) return true;
+    
+    let isValid = true;
+    
+    for (const fieldId of fieldsForStep) {
+        const rules = validationRules[fieldId];
+        if (!rules) continue;
+        
+        const value = getFieldValue(fieldId);
+        
+        // Required field validation
+        if (rules.required && (!value || value.trim().length === 0)) {
+            showFieldError(fieldId, `This field is required`);
+            isValid = false;
+            continue;
+        }
+        
+        // Character limit validation
+        if (CHARACTER_LIMITS[fieldId]) {
+            if (!validateCharacterLimit(fieldId)) {
+                isValid = false;
+                continue;
+            }
+        }
+        
+        // Minimum length validation
+        if (rules.minLength && value.length > 0 && value.length < rules.minLength) {
+            showFieldError(fieldId, `Minimum ${rules.minLength} characters required`);
+            isValid = false;
+        }
+        
+        // Clear errors for valid fields
+        if (value && value.trim().length > 0) {
+            clearFieldError(fieldId);
+        }
     }
+    
+    return isValid;
 }
 
 // =============================================================================
@@ -638,6 +656,33 @@ function clearValidationError(fieldName) {
     }
 }
 
+    function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    const errorElement = document.getElementById(`${fieldId}-error`);
+    
+    if (field) {
+        field.classList.remove('error');
+    }
+    
+    if (errorElement) {
+        errorElement.style.display = 'none';
+        errorElement.textContent = '';
+    }
+}
+
+function clearAllErrors() {
+    // Clear all field errors
+    Object.keys(validationRules).forEach(fieldId => {
+        clearFieldError(fieldId);
+    });
+    
+    // Clear submission errors
+    const submissionError = document.getElementById('submission-error');
+    if (submissionError) {
+        submissionError.style.display = 'none';
+    }
+}
+
 function highlightCommunicationChoices() {
     // Add visual emphasis to communication style choices
     const choiceCards = document.querySelectorAll('[data-choice-group="communication_style"]');
@@ -716,13 +761,23 @@ function showStepValidationFailed() {
         }
     }
     
-    function validatePhoneNumber(phone) {
-        // Remove all non-digits
-        const cleaned = phone.replace(/\D/g, '');
-        
-        // Check if it's a reasonable phone number length
-        return cleaned.length >= 10 && cleaned.length <= 15;
+function validatePhoneNumber(phone) {
+    if (!phone || phone.trim().length === 0) {
+        return true; // Phone is optional
     }
+    
+    // Remove all non-digits
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Check if it's a reasonable phone number length
+    if (cleaned.length < 10 || cleaned.length > 15) {
+        showFieldError('phone-number', 'Please enter a valid phone number (10-15 digits)');
+        return false;
+    }
+    
+    clearFieldError('phone-number');
+    return true;
+}
     
     // =============================================================================
     // EVENT LISTENERS
@@ -1017,6 +1072,24 @@ console.log('✅ [Onboarding] User record verified, proceeding with onboarding..
             errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
+
+    // =============================================================================
+// SKIP FUNCTIONS - MISSING CRITICAL FUNCTIONS
+// =============================================================================
+
+window.skipPhoneStep = function() {
+    console.log('⏭️ [Onboarding] Skipping phone step');
+    nextStep();
+};
+
+window.skipStep = function() {
+    console.log('⏭️ [Onboarding] Skipping current step');
+    if (currentStep < totalSteps) {
+        nextStep();
+    } else {
+        submitOnboarding();
+    }
+};
     
     function createSubmissionError() {
         const errorDiv = document.createElement('div');
