@@ -2,7 +2,7 @@
 // ONBOARDING RULES & BUSINESS LOGIC
 // =============================================================================
 
-export class OnboardingRules {
+class OnboardingRules {
     constructor() {
         this.TOTAL_STEPS = 9;
         
@@ -65,29 +65,19 @@ export class OnboardingRules {
         
         // Business niche to CTA mapping for smart defaults
         this.CTA_DEFAULTS = {
-            'business': 'book-call',      // Business Services → Book a Call
-            'coaching': 'book-call',      // Coaching → Book a Call  
-            'finance': 'book-call',       // Finance → Book a Call
-            'real-estate': 'book-call',   // Real Estate → Book a Call
-            'technology': 'visit-website', // Technology → Visit Website
-            'ecommerce': 'visit-website', // E-commerce → Visit Website
-            'education': 'send-email',    // Education → Send Email
-            'marketing': 'send-email',    // Marketing → Send Email
-            'fitness': 'send-dm',         // Fitness → Send DM
-            'beauty': 'send-dm',          // Beauty → Send DM
-            'fashion': 'send-dm',         // Fashion → Send DM
-            'food': 'send-dm',            // Food → Send DM
-            'travel': 'send-dm'           // Travel → Send DM
+            'coaching': 'Book Your Free Discovery Call',
+            'consulting': 'Schedule a Strategy Session',
+            'e-commerce': 'Shop Now - Free Shipping',
+            'saas': 'Start Your Free Trial',
+            'real-estate': 'Get Your Free Property Valuation',
+            'fitness': 'Join Our Fitness Challenge',
+            'education': 'Enroll in Our Next Cohort',
+            'agency': 'Get Your Free Marketing Audit',
+            'healthcare': 'Book Your Consultation',
+            'legal': 'Schedule Your Free Case Review'
         };
         
-        // Valid choices for select fields
-        this.VALID_CHOICES = {
-            'communication-style': ['professional', 'casual', 'friendly', 'direct', 'consultative'],
-            'primary-objective': ['lead-generation', 'brand-awareness', 'sales', 'networking'],
-            'preferred-cta': ['book-call', 'visit-website', 'send-email', 'send-dm']
-        };
-        
-        // Pattern validation
+        // Field validation patterns
         this.VALIDATION_PATTERNS = {
             'business-name': /^[a-zA-Z0-9\s\-'&\.]+$/,
             'phone-number': /^\+?[\d\s\-()]{10,}$/,
@@ -141,44 +131,30 @@ export class OnboardingRules {
         if (!validPattern.test(trimmed)) {
             return { 
                 valid: false, 
-                message: 'Business name contains invalid characters. Only letters, numbers, spaces, hyphens, apostrophes, and periods are allowed.' 
+                message: 'Business name contains invalid characters. Only letters, numbers, spaces, hyphens, apostrophes, and periods are allowed.'
             };
         }
         
-        const hasLetterOrNumber = /[a-zA-Z0-9]/.test(trimmed);
-        if (!hasLetterOrNumber) {
-            return { valid: false, message: 'Business name must contain at least one letter or number' };
-        }
-        
         return { valid: true, message: '' };
     }
     
-    validateSuccessOutcome(successOutcome) {
-        const trimmed = successOutcome.trim();
+    validateSuccessOutcome(outcome) {
+        const trimmed = outcome.trim();
         
         if (trimmed.length === 0) {
-            return { valid: false, message: 'Please describe what results you deliver to your clients' };
-        }
-        
-        const wordCount = trimmed.split(/\s+/).filter(word => word.length > 0).length;
-        if (wordCount < 3) {
-            return { valid: false, message: 'Please provide a more detailed description (at least 3 words)' };
+            return { valid: false, message: 'Success outcome is required' };
         }
         
         if (trimmed.length < 10) {
-            return { valid: false, message: 'Please provide a more detailed description (at least 10 characters)' };
+            return { valid: false, message: 'Please provide more detail about your success outcome' };
         }
         
         return { valid: true, message: '' };
     }
     
-    validateCommunicationStyle(selectedStyle) {
-        if (!selectedStyle || selectedStyle === null || selectedStyle === '') {
-            return { valid: false, message: 'Please select how you prefer to communicate' };
-        }
-        
-        if (!this.VALID_CHOICES['communication-style'].includes(selectedStyle)) {
-            return { valid: false, message: 'Please select a valid communication style' };
+    validateCommunicationStyle(style) {
+        if (!style || style.trim().length === 0) {
+            return { valid: false, message: 'Communication style is required' };
         }
         
         return { valid: true, message: '' };
