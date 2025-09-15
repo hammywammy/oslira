@@ -96,17 +96,16 @@ export const ANALYSIS_PIPELINE_CONFIG = {
 
   // Model Configurations
   models: {
-    // Premium Tier Models
-    'claude-opus-4.1': {
-      name: 'claude-opus-4.1',
-      provider: 'claude',
-      intelligence: 100,
-      cost_per_1m_in: 15.00,
-      cost_per_1m_out: 75.00,
-      max_context: 200000,
-      api_format: 'claude_messages',
-      backup: 'gpt-5'
-    } as ModelConfig,
+'claude-opus-4-1-20250805': {
+  name: 'claude-opus-4-1-20250805',
+  provider: 'claude',
+  intelligence: 100,
+  cost_per_1m_in: 15.00,
+  cost_per_1m_out: 75.00,
+  max_context: 200000,
+  api_format: 'claude_messages',
+  backup: 'gpt-5'
+} as ModelConfig,
 
     'gpt-5': {
       name: 'gpt-5',
@@ -181,16 +180,16 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       balanced: 'gpt-4o',
       economy: 'gpt-5-mini'
     },
-    deep: {
-      premium: 'claude-opus-4.1',
-      balanced: 'gpt-5',
-      economy: 'claude-sonnet-4'
-    },
-    xray: {
-      premium: 'claude-opus-4.1',
-      balanced: 'claude-sonnet-4', 
-      economy: 'gpt-5'
-    },
+deep: {
+  premium: 'claude-opus-4-1-20250805',
+  balanced: 'gpt-5',
+  economy: 'claude-sonnet-4'
+},
+xray: {
+  premium: 'claude-opus-4-1-20250805',
+  balanced: 'claude-sonnet-4', 
+  economy: 'gpt-5'
+},
     context: {
       premium: 'gpt-5-mini',
       balanced: 'gpt-5-mini',
