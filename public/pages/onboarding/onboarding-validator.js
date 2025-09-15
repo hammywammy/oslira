@@ -2,11 +2,9 @@
 // ONBOARDING VALIDATION ENGINE
 // =============================================================================
 
-import { OnboardingRules } from './onboarding-rules.js';
-
-export class OnboardingValidator {
+class OnboardingValidator {
     constructor() {
-        this.rules = new OnboardingRules();
+        this.rules = new window.OnboardingRules();
         this.errors = new Map();
         this.characterCounters = new Map();
         this.initialized = false;
@@ -58,65 +56,54 @@ export class OnboardingValidator {
             .form-input.warning,
             .form-textarea.warning,
             .form-select.warning {
-                border-color: var(--color-orange-500, #f97316);
-                box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+                border-color: var(--color-orange-500, #f97316) !important;
             }
             
-            /* Enhanced Error States */
             .form-input.error,
             .form-textarea.error,
             .form-select.error {
-                border-color: var(--color-red-500, #ef4444);
-                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-            }
-            
-            .field-error {
                 border-color: var(--color-red-500, #ef4444) !important;
-                box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+                animation: highlightPulse 2s ease-in-out;
             }
             
-            /* Character Counter Animations */
-            .character-counter {
-                transition: all 0.2s ease;
-            }
-            
-            .character-counter.warning,
-            .character-counter.limit-reached {
-                animation: pulse 0.5s ease-in-out;
-            }
-            
-            @keyframes pulse {
-                0% { opacity: 1; }
-                50% { opacity: 0.7; }
-                100% { opacity: 1; }
-            }
-            
-            /* Validation Error Messages */
-            .validation-error {
+            /* Error Message Styles */
+            .field-error {
                 color: var(--color-red-600, #dc2626);
                 font-size: 0.875rem;
                 margin-top: 0.25rem;
-                display: block;
-            }
-            
-            .validation-notification {
-                background-color: rgba(239, 68, 68, 0.1);
-                border: 1px solid rgba(239, 68, 68, 0.3);
-                color: var(--color-red-700, #b91c1c);
-                padding: 1rem;
-                border-radius: 8px;
-                margin-bottom: 1rem;
                 display: flex;
                 align-items: center;
                 gap: 0.5rem;
             }
             
-            .has-error .onboarding-form-label {
-                color: var(--color-red-600, #dc2626);
+            .field-error i {
+                font-size: 1rem;
             }
             
-            .choice-required-highlight {
-                animation: highlightPulse 1s ease-in-out 3;
+            /* Validation Notification */
+            .validation-notification {
+                background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.05) 100%);
+                border: 1px solid rgba(239, 68, 68, 0.3);
+                border-radius: 12px;
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                color: var(--color-red-700, #b91c1c);
+                font-weight: 500;
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+            }
+            
+            .validation-notification i {
+                color: var(--color-red-600, #dc2626);
+                font-size: 1.25rem;
+            }
+            
+            .onboarding-form-group.has-error .onboarding-form-input,
+            .onboarding-form-group.has-error .onboarding-form-textarea,
+            .onboarding-form-group.has-error .onboarding-form-select {
                 border-color: var(--color-red-500, #ef4444) !important;
             }
             
@@ -223,19 +210,41 @@ export class OnboardingValidator {
                                  truncatedText + 
                                  currentText.substring(field.selectionEnd);
                     
-                    // Show warning
-                    this.showFieldError(fieldId, `Pasted text was truncated to ${limits.max} characters`);
+                    // Update cursor position
+                    const newCursorPos = cursorPos + truncatedText.length;
+                    field.setSelectionRange(newCursorPos, newCursorPos);
                     
-                    // Clear warning after 3 seconds
-                    setTimeout(() => {
-                        this.clearFieldError(fieldId);
-                    }, 3000);
+                    // Update character counter
+                    this.updateCharacterCounter(fieldId);
                     
-                    // Update counter
-                    setTimeout(() => this.updateCharacterCounter(fieldId), 10);
+                    // Show truncation warning
+                    this.showTruncationWarning(fieldId, pastedText.length - truncatedText.length);
                 }
             });
         });
+    }
+    
+    showTruncationWarning(fieldId, truncatedChars) {
+        // Remove existing warning
+        const existingWarning = document.getElementById(`${fieldId}-truncation-warning`);
+        if (existingWarning) {
+            existingWarning.remove();
+        }
+        
+        // Create new warning
+        const warning = document.createElement('div');
+        warning.id = `${fieldId}-truncation-warning`;
+        warning.className = 'field-error';
+        warning.innerHTML = `<i class="fas fa-scissors"></i> Text was truncated by ${truncatedChars} characters to fit the limit.`;
+        
+        // Insert after field
+        const field = document.getElementById(fieldId);
+        field.parentNode.insertBefore(warning, field.nextSibling);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            warning.remove();
+        }, 3000);
     }
     
     // =============================================================================
@@ -243,35 +252,56 @@ export class OnboardingValidator {
     // =============================================================================
     
     setupRealTimeValidation() {
-        // Setup character counter updates
-        Object.keys(this.rules.CHARACTER_LIMITS).forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
+        // Add input event listeners for real-time feedback
+        const fields = document.querySelectorAll('input, textarea, select');
+        
+        fields.forEach(field => {
+            // Character counter updates
+            if (this.rules.getCharacterLimits(field.id)) {
                 field.addEventListener('input', () => {
-                    this.updateCharacterCounter(fieldId);
-                    this.validateCharacterLimit(fieldId);
+                    this.updateCharacterCounter(field.id);
                 });
             }
-        });
-        
-        // Setup phone number formatting
-        const phoneInput = document.getElementById('phone-number');
-        if (phoneInput) {
-            phoneInput.addEventListener('input', (e) => {
-                e.target.value = this.rules.formatPhoneNumber(e.target.value);
-                this.updatePhoneOptInVisibility();
+            
+            // Real-time validation on blur
+            field.addEventListener('blur', () => {
+                if (field.value.trim().length > 0) {
+                    this.validateField(field.id);
+                }
             });
-        }
+        });
     }
     
-    updatePhoneOptInVisibility() {
-        const phoneInput = document.getElementById('phone-number');
-        const smsOptInGroup = document.getElementById('sms-opt-in-group');
+    validateField(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (!field) return true;
         
-        if (phoneInput && smsOptInGroup) {
-            const value = phoneInput.value.trim();
-            smsOptInGroup.style.display = value.length > 0 ? 'block' : 'none';
+        const value = field.value.trim();
+        const rules = this.rules.getValidationRules(fieldId);
+        
+        // Clear previous errors
+        this.clearFieldError(fieldId);
+        
+        // Skip validation if field is empty and not required
+        if (!rules || (!rules.required && value.length === 0)) {
+            return true;
         }
+        
+        // Character limit validation
+        const charLimitResult = this.validateCharacterLimit(fieldId, value);
+        if (!charLimitResult.valid && !charLimitResult.warning) {
+            this.showFieldError(fieldId, charLimitResult.message);
+            return false;
+        }
+        
+        // Business logic validation
+        const businessValidation = this.validateBusinessLogic(fieldId, value);
+        if (!businessValidation.valid) {
+            this.showFieldError(fieldId, businessValidation.message);
+            return false;
+        }
+        
+        return true;
     }
     
     // =============================================================================
@@ -383,52 +413,55 @@ export class OnboardingValidator {
     // =============================================================================
     
     showFieldError(fieldId, message) {
-        // Clear existing error first
-        this.clearFieldError(fieldId);
+        // Store error
+        this.errors.set(fieldId, message);
         
+        // Get field and container
         const field = document.getElementById(fieldId);
         if (!field) return;
         
-        // Add error styling to field
-        field.classList.add('field-error', 'error');
-        
-        // Create error message element
-        const errorElement = document.createElement('div');
-        errorElement.className = 'validation-error';
-        errorElement.id = `${fieldId}-error`;
-        errorElement.textContent = message;
-        
-        // Insert error message after the field or counter
-        const counter = document.getElementById(`${fieldId}-counter`);
-        const insertAfter = counter || field;
-        insertAfter.parentNode.insertBefore(errorElement, insertAfter.nextSibling);
-        
-        // Add error styling to field container
         const fieldContainer = field.closest('.onboarding-form-group') || field.closest('.form-group');
+        
+        // Add error styling
+        field.classList.add('error');
         if (fieldContainer) {
             fieldContainer.classList.add('has-error');
         }
         
-        // Store error reference
-        this.errors.set(fieldId, errorElement);
+        // Remove existing error message
+        const existingError = document.getElementById(`${fieldId}-error`);
+        if (existingError) {
+            existingError.remove();
+        }
         
-        console.log(`❌ [OnboardingValidator] Field error: ${fieldId} - ${message}`);
+        // Create error message element
+        const errorElement = document.createElement('div');
+        errorElement.id = `${fieldId}-error`;
+        errorElement.className = 'field-error';
+        errorElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+        
+        // Insert error message after field (or after counter if exists)
+        const counter = document.getElementById(`${fieldId}-counter`);
+        const insertAfter = counter || field;
+        insertAfter.parentNode.insertBefore(errorElement, insertAfter.nextSibling);
     }
     
     clearFieldError(fieldId) {
-        // Remove error element
-        const errorElement = this.errors.get(fieldId) || document.getElementById(`${fieldId}-error`);
-        if (errorElement) {
-            errorElement.remove();
-            this.errors.delete(fieldId);
-        }
+        // Remove stored error
+        this.errors.delete(fieldId);
         
-        // Remove error styling from field
+        // Remove error styling
         const field = document.getElementById(fieldId);
         if (field) {
-            field.classList.remove('field-error', 'error', 'warning');
+            field.classList.remove('error', 'warning');
             
-            // Remove error styling from container
+            // Remove error message
+            const errorElement = document.getElementById(`${fieldId}-error`);
+            if (errorElement) {
+                errorElement.remove();
+            }
+            
+            // Remove container error styling
             const fieldContainer = field.closest('.onboarding-form-group') || field.closest('.form-group');
             if (fieldContainer) {
                 fieldContainer.classList.remove('has-error');
@@ -479,84 +512,214 @@ export class OnboardingValidator {
         const notification = document.createElement('div');
         notification.className = 'validation-notification';
         notification.innerHTML = `
-            <i class="fas fa-exclamation-circle"></i>
-            <span>Please complete all required fields before continuing</span>
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>Please complete all required fields before continuing.</span>
         `;
         
-        const currentStepElement = document.querySelector('.onboarding-step.active');
-        if (currentStepElement) {
-            currentStepElement.insertBefore(notification, currentStepElement.firstChild);
+        const currentStep = document.querySelector('.onboarding-step:not([style*="display: none"])');
+        if (currentStep) {
+            currentStep.insertBefore(notification, currentStep.firstChild);
+            notification.scrollIntoView({ behavior: 'smooth', block: 'center' });
             
+            // Auto-remove after 5 seconds
             setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 4000);
+                notification.remove();
+            }, 5000);
         }
     }
     
-    highlightCommunicationChoices() {
-        const choiceCards = document.querySelectorAll('[data-choice-group="communication_style"]');
-        choiceCards.forEach(card => {
-            card.classList.add('choice-required-highlight');
-            setTimeout(() => {
-                card.classList.remove('choice-required-highlight');
-            }, 3000);
-        });
-    }
-    
-// =============================================================================
-    // UTILITY METHODS
     // =============================================================================
-    
-    getFieldUsageStats() {
-        const stats = {};
-        
-        Object.keys(this.rules.CHARACTER_LIMITS).forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            const limits = this.rules.CHARACTER_LIMITS[fieldId];
-            
-            if (field && limits) {
-                const currentLength = field.value.length;
-                const percentage = (currentLength / limits.max * 100).toFixed(1);
-                
-                stats[fieldId] = {
-                    current: currentLength,
-                    max: limits.max,
-                    percentage: parseFloat(percentage),
-                    utilization: percentage >= 80 ? 'high' : percentage >= 50 ? 'medium' : 'low'
-                };
-            }
-        });
-        
-        return stats;
-    }
-    
-    logFieldUsage() {
-        const stats = this.getFieldUsageStats();
-        console.log('📊 [OnboardingValidator] Field usage statistics:', stats);
-        
-        // Track high-utilization fields
-        const highUtilizationFields = Object.entries(stats)
-            .filter(([_, data]) => data.utilization === 'high')
-            .map(([fieldId, _]) => fieldId);
-        
-        if (highUtilizationFields.length > 0) {
-            console.log('⚠️ [OnboardingValidator] High character utilization fields:', highUtilizationFields);
-        }
-    }
+    // UTILITY FUNCTIONS
+    // =============================================================================
     
     isInitialized() {
         return this.initialized;
     }
     
-    reset() {
+    getFieldErrors() {
+        return Array.from(this.errors.entries());
+    }
+    
+    hasErrors() {
+        return this.errors.size > 0;
+    }
+    
+logFieldUsage() {
+        const fields = document.querySelectorAll('input, textarea, select');
+        const usage = {};
+        
+        fields.forEach(field => {
+            if (field.value && field.value.trim().length > 0) {
+                usage[field.id] = {
+                    length: field.value.length,
+                    wordCount: field.value.trim().split(/\s+/).length,
+                    completed: true
+                };
+            } else {
+                usage[field.id] = {
+                    length: 0,
+                    wordCount: 0,
+                    completed: false
+                };
+            }
+        });
+        
+        console.log('📊 [OnboardingValidator] Field usage statistics:', usage);
+        return usage;
+    }
+    
+    showValidationSummary() {
+        const errors = this.getFieldErrors();
+        if (errors.length === 0) {
+            console.log('✅ [OnboardingValidator] All fields valid');
+            return;
+        }
+        
+        console.log('❌ [OnboardingValidator] Validation errors:');
+        errors.forEach(([fieldId, message]) => {
+            console.log(`  - ${fieldId}: ${message}`);
+        });
+    }
+    
+    // =============================================================================
+    // ADVANCED VALIDATION HELPERS
+    // =============================================================================
+    
+    validateFieldWithDebounce(fieldId, delay = 500) {
+        // Clear existing timeout for this field
+        if (this.debounceTimeouts && this.debounceTimeouts[fieldId]) {
+            clearTimeout(this.debounceTimeouts[fieldId]);
+        }
+        
+        // Initialize debounce timeouts if not exists
+        if (!this.debounceTimeouts) {
+            this.debounceTimeouts = {};
+        }
+        
+        // Set new timeout
+        this.debounceTimeouts[fieldId] = setTimeout(() => {
+            this.validateField(fieldId);
+        }, delay);
+    }
+    
+    highlightIncompleteFields() {
+        const currentStep = document.querySelector('.onboarding-step:not([style*="display: none"])');
+        if (!currentStep) return;
+        
+        const fields = currentStep.querySelectorAll('input, textarea, select');
+        let incompleteFields = [];
+        
+        fields.forEach(field => {
+            const rules = this.rules.getValidationRules(field.id);
+            if (rules && rules.required && (!field.value || field.value.trim().length === 0)) {
+                field.classList.add('warning');
+                incompleteFields.push(field.id);
+            }
+        });
+        
+        return incompleteFields;
+    }
+    
+    focusFirstErrorField() {
+        if (this.errors.size === 0) return false;
+        
+        const firstErrorFieldId = this.errors.keys().next().value;
+        const field = document.getElementById(firstErrorFieldId);
+        
+        if (field) {
+            field.focus();
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return true;
+        }
+        
+        return false;
+    }
+    
+    getValidationProgress() {
+        const allFields = document.querySelectorAll('input, textarea, select');
+        let completed = 0;
+        let total = 0;
+        
+        allFields.forEach(field => {
+            const rules = this.rules.getValidationRules(field.id);
+            if (rules && rules.required) {
+                total++;
+                if (field.value && field.value.trim().length > 0) {
+                    completed++;
+                }
+            }
+        });
+        
+        return {
+            completed,
+            total,
+            percentage: total > 0 ? Math.round((completed / total) * 100) : 0
+        };
+    }
+    
+    showProgressIndicator() {
+        const progress = this.getValidationProgress();
+        console.log(`📈 [OnboardingValidator] Progress: ${progress.completed}/${progress.total} (${progress.percentage}%)`);
+        
+        // Update any progress indicators in the UI
+        const progressBar = document.querySelector('.validation-progress-bar');
+        if (progressBar) {
+            progressBar.style.width = `${progress.percentage}%`;
+        }
+        
+        const progressText = document.querySelector('.validation-progress-text');
+        if (progressText) {
+            progressText.textContent = `${progress.completed} of ${progress.total} completed`;
+        }
+        
+        return progress;
+    }
+    
+    // =============================================================================
+    // CLEANUP & DESTROY
+    // =============================================================================
+    
+    destroy() {
+        // Clear all timeouts
+        if (this.debounceTimeouts) {
+            Object.values(this.debounceTimeouts).forEach(timeout => {
+                clearTimeout(timeout);
+            });
+            this.debounceTimeouts = {};
+        }
+        
+        // Clear all errors
         this.clearAllErrors();
+        
+        // Remove event listeners (if we stored references)
+        // Note: In a production system, you'd want to store listener references for proper cleanup
+        
+        // Clear internal state
         this.errors.clear();
         this.characterCounters.clear();
-        console.log('🔄 [OnboardingValidator] Reset complete');
+        this.initialized = false;
+        
+        console.log('🧹 [OnboardingValidator] Validator destroyed and cleaned up');
+    }
+    
+    // =============================================================================
+    // DEBUG UTILITIES
+    // =============================================================================
+    
+    debugValidationState() {
+        return {
+            initialized: this.initialized,
+            errors: Object.fromEntries(this.errors),
+            characterCounters: Array.from(this.characterCounters.keys()),
+            progress: this.getValidationProgress(),
+            rules: {
+                totalSteps: this.rules.getTotalSteps(),
+                characterLimits: Object.keys(this.rules.CHARACTER_LIMITS),
+                validationRules: Object.keys(this.rules.VALIDATION_RULES)
+            }
+        };
     }
 }
 
-// Export to window for non-module usage  
+// Export to window for non-module usage
 window.OnboardingValidator = OnboardingValidator;
