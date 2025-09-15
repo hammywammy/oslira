@@ -6,33 +6,29 @@ class OnboardingRules {
     constructor() {
         this.TOTAL_STEPS = 9;
         
-        // Step-field mapping for 9 steps
-        this.STEP_FIELDS = {
-            1: ['primary-objective'],    // Primary Objective
-            2: ['business-name'],        // Business Name
-            3: ['business-niche'],       // Business Niche  
-            4: ['target-audience'],      // Target Audience
-            5: ['value-proposition'],    // Value Proposition
-            6: ['communication-tone'],   // Communication Style
-            7: ['preferred-cta'],        // CTA Preference
-            8: ['phone-number'],         // Phone Number (optional)
-            9: ['key-results']           // Key Results (optional, moved to end)
-        };
+this.STEP_FIELDS = {
+    1: ['primary-objective'],
+    2: ['company-name', 'industry', 'company-size'],
+    3: ['target-description'],
+    4: ['budget', 'monthly-lead-goal'],
+    5: ['challenges'],
+    6: ['communication-tone'],
+    7: ['integrations'],
+    8: ['team-size', 'campaign-manager'],
+    9: []
+};
         
-        // Validation rules for each field
-        this.VALIDATION_RULES = {
-            'business-name': { required: true, minLength: 2 },
-            'business-niche': { required: true, minLength: 3 },
-            'target-audience': { required: true, minLength: 10 },
-            'target-problems': { required: true, minLength: 20 },
-            'value-proposition': { required: true, minLength: 20 },
-            'success-outcome': { required: true, minLength: 10 },
-            'call-to-action': { required: true, minLength: 5 },
-            'communication-style': { required: true },
-            'message-example': { required: true, minLength: 50 },
-            'primary-objective': { required: true },
-            'phone-number': { required: false }
-        };
+this.VALIDATION_RULES = {
+    'primary-objective': { required: true },
+    'company-name': { required: true, minLength: 2 },
+    'industry': { required: true },
+    'company-size': { required: true },
+    'target-description': { required: true, minLength: 10 },
+    'budget': { required: true },
+    'communication-tone': { required: false },
+    'team-size': { required: false },
+    'campaign-manager': { required: false }
+};
         
         // Character limits for each field (optimized for AI summary generation)
         this.CHARACTER_LIMITS = {
