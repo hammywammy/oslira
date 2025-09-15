@@ -8,7 +8,8 @@ import type { AnalysisType, Env, ProfileData } from '../types/interfaces.js';
 
 export async function scrapeInstagramProfile(username: string, analysisType: AnalysisType, env: Env): Promise<ProfileData> {
   // Check R2 cache first for profile data
-  const cacheKey = `profile:${username}:${analysisType}`;
+// Use username-only cache key - profile data is same regardless of analysis type
+const cacheKey = `profile:${username}`;
   
   try {
     if (env.R2_CACHE_BUCKET) {
@@ -44,19 +45,42 @@ try {
 
   // Cache profile for ALL analysis types
   try {
-    const cacheTTL = analysisType === 'light' ? 6 * 60 * 60 * 1000 : // 6 hours
-                     analysisType === 'deep' ? 4 * 60 * 60 * 1000 :  // 4 hours  
-                     2 * 60 * 60 * 1000; // 2 hours for xray
+// Use longer TTL for higher-quality data
+const cacheTTL = analysisType === 'xray' ? 8 * 60 * 60 * 1000 : // 8 hours - highest quality
+                 analysisType === 'deep' ? 6 * 60 * 60 * 1000 :  // 6 hours - medium quality
+                 4 * 60 * 60 * 1000; // 4 hours - basic quality
     
-    if (env.R2_CACHE_BUCKET) {
-      const cacheData = {
-        profile: profileData,
-        expires: Date.now() + cacheTTL,
-        cached_at: new Date().toISOString(),
-        analysis_type: analysisType
-      };
-      
-      await env.R2_CACHE_BUCKET.put(cacheKey, JSON.stringify(cacheData));
+if (env.R2_CACHE_BUCKET) {
+  // Check if we already have cached data for this profile
+  let existingCache = null;
+  try {
+    const existing = await env.R2_CACHE_BUCKET.get(cacheKey);
+    if (existing) {
+      existingCache = await existing.json();
+    }
+  } catch (e) {
+    // Ignore cache read errors
+  }
+
+  // Use longest TTL if we're upgrading the cache (e.g., light -> deep -> xray)
+  const analysisLevel = analysisType === 'xray' ? 3 : analysisType === 'deep' ? 2 : 1;
+  const existingLevel = existingCache?.analysis_level || 0;
+  const useNewTTL = analysisLevel >= existingLevel;
+
+  const cacheData = {
+    profile: profileData,
+    expires: useNewTTL ? Date.now() + cacheTTL : existingCache?.expires || Date.now() + cacheTTL,
+    cached_at: new Date().toISOString(),
+    analysis_type: analysisType,
+    analysis_level: analysisLevel,
+    username: profileData.username,
+    followers: profileData.followersCount,
+    data_quality: profileData.dataQuality,
+    scraper_used: profileData.scraperUsed,
+    last_updated_by: analysisType
+  };
+  
+  await env.R2_CACHE_BUCKET.put(cacheKey, JSON.stringify(cacheData));
       logger('info', 'Profile cached successfully', { 
         username, 
         analysisType, 
