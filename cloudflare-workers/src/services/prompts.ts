@@ -346,7 +346,7 @@ State if account likely above/below benchmark based on post count and account ag
 - Score 40-70: Possible fit but needs deep analysis
 - Score <40: Wrong fit OR dead account OR spam signals
 
-Return JSON only. Make the decision binary: pursue or skip.
+Always return valid JSON only. Do not include markdown formatting or code blocks.
 `;
 }
 
@@ -468,7 +468,7 @@ If score >75: Provide exact outreach angle and first message
 If score 50-75: List 2-3 tests to validate fit
 If score <50: State specific disqualifiers
 
-Return JSON only. Every claim must trace to profile data.
+Always return valid JSON only. Do not include markdown formatting or code blocks. Every claim must trace to profile data.
   `;
 }
 
@@ -639,7 +639,7 @@ Based on what THEY use in content:
 Every insight must reference observable Instagram behavior. No external assumptions.
 Mark any field as "insufficient_data" if you can't defend it from the profile.
 
-Return JSON only. This is intelligence for high-stakes outreach - be precise.
+Always return valid JSON only. Do not include markdown formatting or code blocks. This is intelligence for high-stakes outreach - be precise.
   `;
 }
 
@@ -821,7 +821,7 @@ Score this profile on two dimensions:
 - If lead_score < 25 OR data_richness < 20 → Set early_exit: true
 - Otherwise → Set early_exit: false
 
-Return ONLY JSON:
+Return valid JSON without markdown code blocks or formatting:
 {
   "lead_score": 0-100,
   "data_richness": 0-100, 
@@ -915,7 +915,7 @@ Based ONLY on observable data above, extract:
 
 Extract ONLY what you can verify from the data provided. Use "insufficient_data" for unclear fields.
 
-Return ONLY JSON:
+Return valid JSON without markdown code blocks or formatting:
 {
   "posting_cadence": "...",
   "content_themes": ["theme1", "theme2", "theme3"],
