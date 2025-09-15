@@ -140,17 +140,16 @@ deep_fast: {
       backup: 'claude-sonnet-4'
     } as ModelConfig,
 
-    // Balanced Tier Models
-    'claude-sonnet-4': {
-      name: 'claude-sonnet-4',
-      provider: 'claude',
-      intelligence: 90,
-      cost_per_1m_in: 3.00,
-      cost_per_1m_out: 15.00,
-      max_context: 200000,
-      api_format: 'claude_messages',
-      backup: 'gpt-4o'
-    } as ModelConfig,
+'claude-sonnet-4': {
+  name: 'claude-3-5-sonnet-20241022',
+  provider: 'claude',
+  intelligence: 90,
+  cost_per_1m_in: 3.00,
+  cost_per_1m_out: 15.00,
+  max_context: 200000,
+  api_format: 'claude_messages',
+  backup: 'gpt-4o'
+} as ModelConfig,
 
     'gpt-4o': {
       name: 'gpt-4o',
