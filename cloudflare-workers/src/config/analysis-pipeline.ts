@@ -222,6 +222,11 @@ xray: {
   premium: 'claude-opus-4-1-20250805',
   balanced: 'gpt-5', 
   economy: 'gpt-5'
+},
+context: {
+  premium: 'gpt-5-mini',
+  balanced: 'gpt-5-mini',
+  economy: 'gpt-5-mini'
 }
   },
 
