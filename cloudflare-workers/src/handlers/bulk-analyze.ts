@@ -11,6 +11,37 @@ export async function handleBulkAnalyze(c: Context<{ Bindings: Env }>): Promise<
   try {
     logger('info', 'Bulk analysis request received', { requestId });
 
+    //NEEDS PROPER IMPLEMENTATION
+    // Group profiles by analysis type and process in batches
+const batchAnalyze = async (profiles: string[], analysisType: string, context: any) => {
+  // For light analysis, batch multiple profiles in single AI call
+  if (analysisType === 'light' && profiles.length > 1) {
+    const batchSize = 5;
+    const batches = [];
+    
+    for (let i = 0; i < profiles.length; i += batchSize) {
+      const batch = profiles.slice(i, i + batchSize);
+      const batchPrompt = buildBatchLightAnalysisPrompt(batch, context.business);
+      
+      // Single AI call for multiple profiles
+      const batchResult = await aiAdapter.executeRequest({
+        model_name: 'gpt-5-mini',
+        system_prompt: 'Analyze multiple profiles efficiently',
+        user_prompt: batchPrompt,
+        max_tokens: 2000 * batch.length,
+        response_format: 'json'
+      });
+      
+      batches.push(parseBatchResults(batchResult));
+    }
+    
+    return batches.flat();
+  }
+  
+  // Fall back to individual processing for deep/xray
+  return processIndividually(profiles, analysisType, context);
+};
+    
     // Parse and validate request
     const body = await c.req.json() as BulkAnalysisRequest;
     const { profiles, analysis_type, business_id, user_id } = body;
