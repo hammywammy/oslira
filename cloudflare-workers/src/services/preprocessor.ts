@@ -92,11 +92,13 @@ console.log(`📋 [Preprocessor] Cache miss, running analysis for @${profile.use
 }
 
 function generateCacheKey(profile: ProfileData): string {
-  const contentHash = profile.latestPosts?.slice(0, 5)
-    .map(p => `${p.shortCode}:${p.likesCount}:${p.commentsCount}`)
+  // Round follower count to nearest 1000 to avoid cache misses on small changes
+  const followerBucket = Math.floor(profile.followersCount / 1000) * 1000;
+  const contentHash = profile.latestPosts?.slice(0, 3) // Reduce to 3 posts for stability
+    .map(p => `${p.shortCode}`)
     .join('|') || 'no-posts';
   
-  return `preprocessor:${profile.username}:${profile.followersCount}:${contentHash}`;
+  return `preprocessor:v2:${profile.username}:${followerBucket}:${contentHash}`;
 }
 
 async function getCachedPreprocessor(cacheKey: string, env: any): Promise<PreprocessorResult | null> {
