@@ -183,21 +183,18 @@ Return JSON with exactly this structure:
         'anthropic-version': '2023-06-01',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: 'claude-opus-4-1-20250805',
-        max_tokens: 2000,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a business analyst specializing in influencer partnerships. Return valid JSON only.'
-          },
-          {
-            role: 'user',
-            content: deepAnalysisPrompt
-          }
-        ],
-        temperature: 0.2
-      })
+body: JSON.stringify({
+  model: 'claude-opus-4-1-20250805',
+  max_tokens: 2000,
+  system: 'You are a business analyst specializing in influencer partnerships. Return valid JSON only.',
+  messages: [
+    {
+      role: 'user',
+      content: deepAnalysisPrompt
+    }
+  ],
+  temperature: 0.2
+})
     });
 
     if (!claudeResponse.ok) {
