@@ -31,6 +31,19 @@ export async function upsertLead(
       business_id: leadData.business_id
     });
 
+    logger('info', 'Upserting lead record', { 
+  username: leadData.username,
+  business_id: leadData.business_id,
+  raw_following_data: {
+    followingCount: leadData.followingCount,
+    following_count: leadData.following_count,
+    postsCount: leadData.postsCount,
+    posts_count: leadData.posts_count,
+    followersCount: leadData.followersCount,
+    followers_count: leadData.followers_count
+  }
+});
+
     const cleanLeadData = {
       user_id: leadData.user_id,
       business_id: leadData.business_id,
@@ -40,9 +53,8 @@ export async function upsertLead(
       bio_text: leadData.bio || null,
       external_website_url: leadData.external_url || leadData.externalUrl || null,
       
-      // Profile metrics
-      follower_count: parseInt(leadData.followers_count || leadData.followersCount) || 0,
-      following_count: parseInt(leadData.following_count || leadData.followingCount) || 0,
+following_count: parseInt(leadData.followingCount || leadData.following_count) || 0,
+post_count: parseInt(leadData.postsCount || leadData.posts_count) || 0,
       post_count: parseInt(leadData.posts_count || leadData.postsCount) || 0,
       
       // Profile attributes
@@ -57,6 +69,19 @@ export async function upsertLead(
       // Update timestamp
       last_updated_at: new Date().toISOString()
     };
+
+    logger('info', 'Clean lead data before upsert', {
+  username: cleanLeadData.username,
+  follower_count: cleanLeadData.follower_count,
+  following_count: cleanLeadData.following_count,
+  post_count: cleanLeadData.post_count,
+  original_fields_available: {
+    followingCount: !!leadData.followingCount,
+    following_count: !!leadData.following_count,
+    postsCount: !!leadData.postsCount,
+    posts_count: !!leadData.posts_count
+  }
+});
 
     // Use UPSERT to handle duplicates
     const upsertQuery = `${env.SUPABASE_URL}/rest/v1/leads?on_conflict=user_id,username,business_id`;
