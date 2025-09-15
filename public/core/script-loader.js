@@ -55,6 +55,8 @@ this.coreScripts = [
 'onboarding': {
     scripts: [
         '/core/form-manager.js',
+        '/pages/onboarding/onboarding-rules.js',
+        '/pages/onboarding/onboarding-validator.js', 
         '/pages/onboarding/onboarding.js'
     ],
     requiresAuth: true,
