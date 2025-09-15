@@ -292,3 +292,28 @@ async function cacheProfileData(
     });
   }
 }
+//NEEDS IMPLEMENTATION
+function calculateEngagementTrends(posts: any[]): any {
+  if (posts.length < 3) return null;
+  
+  // Sort by timestamp
+  const sortedPosts = posts.sort((a, b) => 
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+  
+  // Calculate engagement for recent vs older posts
+  const recentThird = Math.floor(posts.length / 3);
+  const recentPosts = sortedPosts.slice(0, recentThird);
+  const olderPosts = sortedPosts.slice(recentThird);
+  
+  const recentER = calculateAverageER(recentPosts);
+  const olderER = calculateAverageER(olderPosts);
+  
+  return {
+    trend: recentER > olderER ? 'growing' : 'declining',
+    trendPercentage: ((recentER - olderER) / olderER * 100).toFixed(1),
+    recentEngagement: recentER,
+    historicalEngagement: olderER,
+    volatility: calculateVolatility(posts)
+  };
+}
