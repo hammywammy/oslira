@@ -171,16 +171,18 @@ async initialize() {
         
         console.log('✅ [ScriptLoader] Initialization complete');
         
-        // **CRITICAL FIX:** Dispatch the scripts loaded event
-        const scriptsLoadedEvent = new CustomEvent('oslira:scripts:loaded', {
-            detail: {
-                page: currentPage,
-                loadedScripts: Array.from(this.loadedScripts),
-                timestamp: Date.now()
-            }
-        });
-        window.dispatchEvent(scriptsLoadedEvent);
-        console.log('📡 [ScriptLoader] oslira:scripts:loaded event dispatched');
+// Ensure event dispatches after a minimal delay to allow all scripts to settle
+setTimeout(() => {
+    const scriptsLoadedEvent = new CustomEvent('oslira:scripts:loaded', {
+        detail: {
+            page: currentPage,
+            loadedScripts: Array.from(this.loadedScripts),
+            timestamp: Date.now()
+        }
+    });
+    window.dispatchEvent(scriptsLoadedEvent);
+    console.log('📡 [ScriptLoader] oslira:scripts:loaded event dispatched');
+}, 50);
         
     } catch (error) {
         console.error('❌ [ScriptLoader] Initialization failed:', error);
