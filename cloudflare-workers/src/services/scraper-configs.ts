@@ -6,41 +6,6 @@ export interface ScraperConfig {
   timeout: number;
   maxRetries: number;
   retryDelay: number;
-  input: (username: string) => any;
-  priority: number; // Lower = higher priority
-}
-
-export interface ScraperConfig {
-  name: string;
-  endpoint: string;
-  timeout: number;
-  maxRetries: number;
-  retryDelay: number;
-  priority: number;
-  input: (username: string) => any;
-  fieldMapping: ScraperFieldMapping; // ADD THIS
-}
-
-export interface ScraperFieldMapping {
-  username: string[];
-  displayName: string[];
-  bio: string[];
-  followersCount: string[];
-  followingCount: string[];
-  postsCount: string[];
-  isVerified: string[];
-  isPrivate: string[];
-  profilePicUrl: string[];
-  externalUrl: string[];
-  isBusinessAccount: string[];
-}
-
-export interface ScraperConfig {
-  name: string;
-  endpoint: string;
-  timeout: number;
-  maxRetries: number;
-  retryDelay: number;
   priority: number;
   input: (username: string) => any;
   fieldMapping: ScraperFieldMapping;
@@ -216,30 +181,34 @@ export function buildScraperUrl(endpoint: string, token: string): string {
   }
 }
 
-export function getScraperConfigs(analysisType: 'light' | 'deep' | 'xray'): ScraperConfig[] {
-  switch (analysisType) {
-    case 'light':
-      return [LIGHT_SCRAPER_CONFIG];
-    case 'deep':
-      return DEEP_SCRAPER_CONFIGS.sort((a, b) => a.priority - b.priority);
-    case 'xray':
-      return [...XRAY_SCRAPER_CONFIGS, ...DEEP_SCRAPER_CONFIGS].sort((a, b) => a.priority - b.priority);
-    default:
-      return [LIGHT_SCRAPER_CONFIG];
+// Dynamic field extraction using mappings
+export function extractFieldValue(data: any, fieldMapping: string[]): any {
+  for (const field of fieldMapping) {
+    if (data[field] !== undefined && data[field] !== null) {
+      return data[field];
+    }
   }
+  return null;
 }
 
-// Request Options Builder
-export function buildRequestOptions(config: ScraperConfig, username: string): RequestInit {
+export function validateAndTransformScraperData(
+  data: any, 
+  config: ScraperConfig
+): any {
+  const mapping = config.fieldMapping;
+  
   return {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'InstagramAnalyzer/2.0',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify(config.input(username)),
-    signal: AbortSignal.timeout(config.timeout)
+    username: extractFieldValue(data, mapping.username),
+    displayName: extractFieldValue(data, mapping.displayName) || '',
+    bio: extractFieldValue(data, mapping.bio) || '',
+    followersCount: parseInt(extractFieldValue(data, mapping.followersCount)?.toString() || '0') || 0,
+    followingCount: parseInt(extractFieldValue(data, mapping.followingCount)?.toString() || '0') || 0,
+    postsCount: parseInt(extractFieldValue(data, mapping.postsCount)?.toString() || '0') || 0,
+    isVerified: Boolean(extractFieldValue(data, mapping.isVerified)),
+    isPrivate: Boolean(extractFieldValue(data, mapping.isPrivate)),
+    profilePicUrl: extractFieldValue(data, mapping.profilePicUrl) || '',
+    externalUrl: extractFieldValue(data, mapping.externalUrl) || '',
+    isBusinessAccount: Boolean(extractFieldValue(data, mapping.isBusinessAccount))
   };
 }
 
@@ -321,7 +290,7 @@ export function classifyScraperError(error: any): keyof typeof SCRAPER_ERROR_PAT
   return 'UNKNOWN';
 }
 
-// Cost Calculation (if needed for monitoring)
+// Cost Calculation for monitoring
 export const SCRAPER_COSTS = {
   light: { compute_units: 0.1, credits: 1 },
   deep: { compute_units: 0.3, credits: 2 },
@@ -335,35 +304,4 @@ export function calculateScraperCost(analysisType: 'light' | 'deep' | 'xray', sc
   const multiplier = scraperUsed.includes('backup') || scraperUsed.includes('fallback') ? 1.5 : 1.0;
   
   return baseCost * multiplier;
-}
-
-// Dynamic field extraction using mappings
-export function extractFieldValue(data: any, fieldMapping: string[]): any {
-  for (const field of fieldMapping) {
-    if (data[field] !== undefined && data[field] !== null) {
-      return data[field];
-    }
-  }
-  return null;
-}
-
-export function validateAndTransformScraperData(
-  data: any, 
-  config: ScraperConfig
-): any {
-  const mapping = config.fieldMapping;
-  
-  return {
-    username: extractFieldValue(data, mapping.username),
-    displayName: extractFieldValue(data, mapping.displayName) || '',
-    bio: extractFieldValue(data, mapping.bio) || '',
-    followersCount: parseInt(extractFieldValue(data, mapping.followersCount)?.toString() || '0') || 0,
-    followingCount: parseInt(extractFieldValue(data, mapping.followingCount)?.toString() || '0') || 0,
-    postsCount: parseInt(extractFieldValue(data, mapping.postsCount)?.toString() || '0') || 0,
-    isVerified: Boolean(extractFieldValue(data, mapping.isVerified)),
-    isPrivate: Boolean(extractFieldValue(data, mapping.isPrivate)),
-    profilePicUrl: extractFieldValue(data, mapping.profilePicUrl) || '',
-    externalUrl: extractFieldValue(data, mapping.externalUrl) || '',
-    isBusinessAccount: Boolean(extractFieldValue(data, mapping.isBusinessAccount))
-  };
 }
