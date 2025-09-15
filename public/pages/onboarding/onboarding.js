@@ -76,6 +76,7 @@
     
 function showOnboardingForm() {
     hideElement('loading-state');
+    hideElement('error-state');  // Explicitly hide error state
     showElement('onboarding-form');
     document.body.style.visibility = 'visible';
     
