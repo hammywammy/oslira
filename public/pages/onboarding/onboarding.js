@@ -1,10 +1,6 @@
 (function() {
     'use strict';
 
-        window.addEventListener('oslira:scripts:loaded', async () => {
-        // Initialize modular components after dependencies are loaded
-        const rules = new window.OnboardingRules();
-        const validator = new window.OnboardingValidator();
     // =============================================================================
     // STATE VARIABLES
     // =============================================================================
@@ -13,11 +9,9 @@
     let user = null;
     let supabase = null;
     let currentStep = 1;
-    
-    // Initialize modular components
-    const rules = new OnboardingRules();
-    const validator = new OnboardingValidator();
-    const totalSteps = rules.getTotalSteps();
+    let rules = null;
+    let validator = null;
+    let totalSteps = null;
     
     // =============================================================================
     // INITIALIZATION
@@ -27,6 +21,12 @@
     window.addEventListener('oslira:scripts:loaded', async () => {
         try {
             console.log('📝 [Onboarding] Scripts loaded, initializing...');
+            
+            // Initialize modular components after dependencies are loaded
+            rules = new window.OnboardingRules();
+            validator = new window.OnboardingValidator();
+            totalSteps = rules.getTotalSteps();
+            
             await initialize();
             
         } catch (error) {
