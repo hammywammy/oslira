@@ -55,7 +55,6 @@ export async function upsertLead(
       
 following_count: parseInt(leadData.followingCount || leadData.following_count) || 0,
 post_count: parseInt(leadData.postsCount || leadData.posts_count) || 0,
-      post_count: parseInt(leadData.posts_count || leadData.postsCount) || 0,
       
       // Profile attributes
       is_verified_account: leadData.is_verified || leadData.isVerified || false,
