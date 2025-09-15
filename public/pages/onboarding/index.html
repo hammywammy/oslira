@@ -344,6 +344,32 @@
             align-items: center;
             gap: 12px;
         }
+
+        .form-error {
+    color: #e53e3e;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: none;
+}
+
+.form-input.error,
+.form-textarea.error,
+.form-select.error {
+    border-color: #e53e3e;
+    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
+}
+
+.validation-notification {
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
     </style>
 </head>
 <body>
@@ -694,14 +720,14 @@
                     <div class="form-error" id="phone-number-error"></div>
                 </div>
                 
-                <div class="form-group">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="opt-in-sms" checked>
-                        <label for="opt-in-sms" class="checkbox-label">
-                            I'd like to receive promotional SMS updates
-                        </label>
-                    </div>
-                </div>
+<div class="form-group" id="sms-opt-in-group" style="display: none;">
+    <div class="checkbox-group">
+        <input type="checkbox" id="opt-in-sms" checked>
+        <label for="opt-in-sms" class="checkbox-label">
+            I'd like to receive promotional SMS updates
+        </label>
+    </div>
+</div>
                 
                 <div class="button-group">
                     <button type="button" class="btn btn-secondary" onclick="prevStep()">Back</button>
