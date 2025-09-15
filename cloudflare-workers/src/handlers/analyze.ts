@@ -170,22 +170,22 @@ const enrichedBusiness = business.business_one_liner || business.business_contex
     const analysisResult = orchestrationResult.result;
 
     // PREPARE DATA FOR DATABASE (3-TABLE STRUCTURE)
-    const leadData = {
-      user_id,
-      business_id,
-      username: profileData.username,
-      full_name: profileData.displayName,
-      profile_pic_url: profileData.profilePicUrl,
-      bio: profileData.bio,
-      external_url: profileData.externalUrl,
-      followers_count: profileData.followersCount,
-      following_count: profileData.followingCount,
-      posts_count: profileData.postsCount,
-      is_verified: profileData.isVerified,
-      is_private: profileData.isPrivate,
-      is_business_account: profileData.isBusinessAccount || false,
-      profile_url
-    };
+const leadData = {
+  user_id,
+  business_id,
+  username: profileData.username,
+  full_name: profileData.displayName,
+  profile_pic_url: profileData.profilePicUrl,
+  bio: profileData.bio,
+  external_url: profileData.externalUrl,
+  followersCount: profileData.followersCount,
+  followsCount: profileData.followingCount,  // Use followsCount to match scraper
+  postsCount: profileData.postsCount,
+  is_verified: profileData.isVerified,
+  is_private: profileData.isPrivate,
+  is_business_account: profileData.isBusinessAccount || false,
+  profile_url
+};
 
     // Prepare analysis data based on type (deep/xray only)
     let analysisData = null;
