@@ -107,11 +107,12 @@ light_fast: {
   ]
 } as WorkflowConfig,
 
-    deep_fast: {
+deep_fast: {
   name: 'deep_fast',
-  description: 'Speed-optimized deep analysis - skip triage and preprocessor',
+  description: 'Speed-optimized deep analysis with caching',
   stages: [
     { name: 'context_generation', type: 'context', required: true, model_tier: 'economy' },
+    { name: 'preprocessor', type: 'preprocessor', required: false, model_tier: 'economy' },
     { name: 'main_analysis', type: 'analysis', required: true, model_tier: 'balanced' }
   ]
 } as WorkflowConfig
@@ -204,8 +205,8 @@ light: {
   economy: 'gpt-5-nano'
 },
 deep: {
-  premium: 'claude-opus-4-1-20250805',
-  balanced: 'gpt-5',
+  premium: 'gpt-5',
+  balanced: 'claude-sonnet-4',
   economy: 'claude-sonnet-4'
 },
 xray: {
