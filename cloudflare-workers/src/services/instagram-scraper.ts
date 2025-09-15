@@ -67,20 +67,35 @@ if (env.R2_CACHE_BUCKET) {
   const existingLevel = existingCache?.analysis_level || 0;
   const useNewTTL = analysisLevel >= existingLevel;
 
-  const cacheData = {
-    profile: profileData,
-    expires: useNewTTL ? Date.now() + cacheTTL : existingCache?.expires || Date.now() + cacheTTL,
-    cached_at: new Date().toISOString(),
-    analysis_type: analysisType,
-    analysis_level: analysisLevel,
-    username: profileData.username,
-    followers: profileData.followersCount,
-    data_quality: profileData.dataQuality,
-    scraper_used: profileData.scraperUsed,
-    last_updated_by: analysisType
-  };
-  
-  await env.R2_CACHE_BUCKET.put(cacheKey, JSON.stringify(cacheData));
+const cacheData = {
+  profile: profileData,
+  expires: Date.now() + cacheTTL,
+  cached_at: new Date().toISOString(),
+  analysis_type: analysisType,
+  username: profileData.username,
+  followers: profileData.followersCount,
+  data_quality: profileData.dataQuality,
+  scraper_used: profileData.scraperUsed
+};
+
+// Debug what we're caching
+logger('info', 'Preparing to cache profile data', {
+  username,
+  profileDataKeys: Object.keys(profileData),
+  profileDataSize: JSON.stringify(profileData).length,
+  cacheDataSize: JSON.stringify(cacheData).length,
+  hasProfile: !!profileData,
+  profileUsername: profileData?.username,
+  profileFollowers: profileData?.followersCount
+});
+
+const cachePayload = JSON.stringify(cacheData);
+logger('info', 'Cache payload prepared', {
+  payloadSize: cachePayload.length,
+  payloadPreview: cachePayload.substring(0, 200)
+});
+
+await env.R2_CACHE_BUCKET.put(cacheKey, cachePayload);
       logger('info', 'Profile cached successfully', { 
         username, 
         analysisType, 
