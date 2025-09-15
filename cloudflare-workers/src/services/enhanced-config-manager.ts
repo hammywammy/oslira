@@ -274,10 +274,13 @@ constructor(private env: Env) {
 
     return status;
   }
-
 private async getFromSupabase(keyName: string): Promise<string> {
-  // Get the service role key from AWS first
-  const serviceRoleKey = await this.getConfig('SUPABASE_SERVICE_ROLE');
+  // FIXED: Use environment variable directly to avoid circular dependency
+  const serviceRoleKey = this.env.SUPABASE_SERVICE_ROLE;
+  
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE not found in environment variables');
+  }
   
   const headers = {
     apikey: serviceRoleKey,
