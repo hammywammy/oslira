@@ -177,16 +177,11 @@ Bio: "${profile.bio || 'No bio'}"
 Recent posts: ${profile.latestPosts?.slice(0, 3).map(p => p.caption?.slice(0, 100)).join(' | ') || 'No recent posts'}
 Extract key facts and themes. Return JSON with content_themes, posting_cadence, collaboration_history, contact_readiness.`;
 
-      case 'analysis':
-        const analysisType = context.analysis_type;
-        return `# ${analysisType.toUpperCase()} ANALYSIS
-Profile: @${profile.username} (${profile.followersCount} followers)
-Bio: "${profile.bio || 'No bio'}"
-Business Context: ${business.business_one_liner}
-${results.triage ? `Triage Score: ${results.triage.lead_score}/100` : ''}
-${results.preprocessor ? `Key Themes: ${results.preprocessor.content_themes?.join(', ') || 'Unknown'}` : ''}
-
-Analyze partnership potential. Return JSON with score, engagement_score, niche_fit, audience_quality, engagement_insights, selling_points, reasons.`;
+case 'analysis':
+  const contextStr = results.triage ? `Score:${results.triage.lead_score}` : '';
+  const themesStr = results.preprocessor?.content_themes?.slice(0,3).join(',') || '';
+  return `@${profile.username}|${profile.followersCount}f|"${(profile.bio || '').slice(0,50)}"|${business.business_one_liner}|${contextStr}|${themesStr}
+Return JSON: score(0-100), engagement_score(0-100), niche_fit(0-100), audience_quality, engagement_insights, selling_points[], reasons[]`;
 
       case 'context':
         return `Business: ${business.name}
