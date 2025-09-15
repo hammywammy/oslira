@@ -119,6 +119,12 @@ app.post('/admin/test-key', async (c) => {
   return handleTestApiKey(c);
 });
 
+// Business context generation endpoint
+app.post('/v1/generate-business-context', async (c) => {
+  const { handleGenerateBusinessContext } = await import('./handlers/generate-business-context.js');
+  return handleGenerateBusinessContext(c);
+});
+
 
 // ===============================================================================
 // ERROR HANDLING
