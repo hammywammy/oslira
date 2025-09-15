@@ -8,18 +8,17 @@
      LAYOUT & CONTAINER
      ============================================================================= */
   
-  .onboarding-body {
-    @apply bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900 min-h-screen text-white overflow-x-hidden;
-  }
-  
-  .onboarding-container {
-    @apply relative min-h-screen flex items-center justify-center p-4;
-  }
-  
-  .onboarding-wrapper {
-    @apply w-full max-w-2xl mx-auto;
-  }
+.onboarding-body {
+  @apply bg-gray-950 min-h-screen text-white overflow-x-hidden;
+}
 
+.onboarding-container {
+  @apply relative min-h-screen flex items-start justify-center p-4 pt-8;
+}
+
+.onboarding-wrapper {
+  @apply w-full max-w-3xl mx-auto;
+}
   /* =============================================================================
      BACKGROUND ELEMENTS
      ============================================================================= */
@@ -120,11 +119,11 @@
     animation: fadeInUp 0.6s ease-out;
   }
   
-  .onboarding-card {
-    @apply bg-white/5 border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
+.onboarding-card {
+  @apply bg-gray-900/80 border border-gray-700/50 rounded-2xl p-6 md:p-8 shadow-xl;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
 
   /* =============================================================================
      STEP HEADERS
@@ -245,16 +244,13 @@
     @apply sr-only; /* ❌ removed peer */
   }
   
-  .onboarding-choice-content {
-    @apply bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-  }
-  
-  .onboarding-choice-input:checked + .onboarding-choice-content {
-    @apply border-violet-400 bg-violet-500/10 shadow-xl shadow-violet-500/20;
-    animation: radioSelect 0.3s ease-out;
-  }
+.onboarding-choice-content {
+  @apply bg-gray-800/90 border border-gray-600/50 rounded-xl p-4 transition-all duration-200;
+}
+
+.onboarding-choice-input:checked + .onboarding-choice-content {
+  @apply border-blue-400 bg-blue-500/20 ring-2 ring-blue-400/30;
+}
   
   .onboarding-choice-header {
     @apply flex items-center mb-4;
@@ -322,15 +318,13 @@
     -webkit-backdrop-filter: blur(16px);
   }
   
-  .onboarding-btn-skip {
-    @apply px-6 py-3 bg-white/5 border border-white/20 text-white/70 rounded-xl transition-all duration-200;
-  }
-  
-  .onboarding-btn-primary {
-    @apply relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 transform;
-    position: relative;
-    overflow: hidden;
-  }
+.onboarding-btn-primary {
+  @apply px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200;
+}
+
+.onboarding-btn-skip {
+  @apply px-6 py-3 bg-transparent border border-gray-600 text-gray-300 hover:text-white hover:border-gray-500 rounded-lg transition-all duration-200;
+}
   
   .onboarding-btn-primary::before {
     content: '';
