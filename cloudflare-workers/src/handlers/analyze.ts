@@ -40,11 +40,19 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       model_tier
     });
 
-    // Validate user and fetch business profile
-    const [userResult, business] = await Promise.all([
-      fetchUserAndCredits(user_id, c.env),
-      fetchBusinessProfile(business_id, user_id, c.env)
-    ]);
+// Start all non-dependent operations in parallel
+const [userResult, business, cachedProfile] = await Promise.all([
+  fetchUserAndCredits(user_id, c.env),
+  fetchBusinessProfile(business_id, user_id, c.env),
+  checkProfileCache(username, c.env) // New function to check R2 cache early
+]);
+
+// Skip scraping if cached profile is fresh
+if (cachedProfile && cachedProfile.expires > Date.now()) {
+  profileData = cachedProfile.data;
+} else {
+  profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
+}
     
     if (!userResult.isValid) {
       return c.json(createStandardResponse(
