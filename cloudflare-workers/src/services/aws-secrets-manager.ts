@@ -20,17 +20,26 @@ export class AWSSecretsManager {
   private region: string;
 
 constructor(env: Env) {
-  console.log('AWSSecretsManager constructor called with env type:', typeof env);
-  console.log('Env keys available:', Object.keys(env));
-  
-  // Try to access each property individually
-  try {
-    this.accessKeyId = env.AWS_ACCESS_KEY_ID;
-    console.log('Access Key ID retrieved:', !!this.accessKeyId);
-  } catch (e) {
-    console.error('Failed to get AWS_ACCESS_KEY_ID:', e);
-    throw new Error(`Cannot access AWS_ACCESS_KEY_ID: ${e}`);
+  // Cloudflare Workers environment variables are accessed directly
+  this.accessKeyId = env.AWS_ACCESS_KEY_ID || '';
+  this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY || '';
+  this.region = env.AWS_REGION || 'us-east-1';
+
+  if (!this.accessKeyId || !this.secretAccessKey) {
+    logger('error', 'AWS credentials not configured', {
+      hasAccessKey: !!this.accessKeyId,
+      hasSecretKey: !!this.secretAccessKey
+    });
+    // Don't throw - gracefully degrade to Supabase-only mode
+    this.configured = false;
+  } else {
+    this.configured = true;
   }
+}
+
+isConfigured(): boolean {
+  return this.configured;
+}
   
   try {
     this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
