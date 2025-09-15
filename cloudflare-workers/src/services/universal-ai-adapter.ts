@@ -134,11 +134,12 @@ private async callGPT5Responses(config: ModelConfig, request: UniversalRequest):
 
 const body = {
   model: config.name,
-  messages: [  // ✅ CORRECT
+  messages: [
     { role: 'system', content: request.system_prompt },
     { role: 'user', content: request.user_prompt }
   ],
-  max_completion_tokens: request.max_tokens, // ✅ CORRECT
+  max_completion_tokens: request.max_tokens,
+  temperature: request.temperature || 0.1,
   ...(request.json_schema && {
     response_format: {
       type: 'json_schema',
