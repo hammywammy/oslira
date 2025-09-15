@@ -324,14 +324,17 @@ class OnboardingValidator {
             const value = getFieldValueFn(fieldId);
             
             // Required field validation
-            if (rules.required && (!value || value.trim().length === 0)) {
-                this.showFieldError(fieldId, 'This field is required');
+// Required field validation
+const trimmedValue = Array.isArray(value) ? (value.length === 0 ? '' : value.join(',')) : (value || '').trim();
+if (rules.required && (!value || trimmedValue.length === 0)) {
+    this.showFieldError(fieldId, 'This field is required');
                 isValid = false;
                 continue;
             }
             
-            // Skip further validation if field is empty and not required
-            if (!value || value.trim().length === 0) continue;
+// Skip further validation if field is empty and not required
+const processedValue = Array.isArray(value) ? (value.length === 0 ? '' : value.join(',')) : (value || '');
+if (!processedValue || processedValue.trim().length === 0) continue;
             
             // Character limit validation
             const charLimitResult = this.validateCharacterLimit(fieldId, value);
