@@ -55,31 +55,29 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       ]
     } as WorkflowConfig,
 
-    // AI-driven conditional execution
-    auto: {
-      name: 'auto',
-      description: 'AI decides preprocessing based on data quality',
-      stages: [
-        { name: 'context_generation', type: 'context', required: true, model_tier: 'economy' },
-        { name: 'triage', type: 'triage', required: true, model_tier: 'economy' },
-        { 
-          name: 'preprocessor', 
-          type: 'preprocessor', 
-          required: false, 
-          model_tier: 'economy',
-          conditions: [
-            { field: 'triage.data_richness', operator: '>', value: 70 },
-            { field: 'analysis_type', operator: '==', value: 'deep', skip_if_true: false }
-          ]
-        },
-{ 
-  name: 'main_analysis', 
-  type: 'analysis', 
-  required: true,
-  model_tier: 'balanced' // Model tier upgrade handled in selectModel function
-}
+auto: {
+  name: 'auto',
+  description: 'AI decides preprocessing based on data quality',
+  stages: [
+    { name: 'triage', type: 'triage', required: true, model_tier: 'economy' },
+    { 
+      name: 'preprocessor', 
+      type: 'preprocessor', 
+      required: false, 
+      model_tier: 'economy',
+      conditions: [
+        { field: 'triage.data_richness', operator: '>', value: 70 },
+        { field: 'analysis_type', operator: '==', value: 'deep', skip_if_true: false }
       ]
-    } as WorkflowConfig,
+    },
+    { 
+      name: 'main_analysis', 
+      type: 'analysis', 
+      required: true,
+      model_tier: 'balanced'
+    }
+  ]
+} as WorkflowConfig,
 
     // Run everything regardless
     full: {
@@ -187,38 +185,32 @@ deep_fast: {
     } as ModelConfig
   },
 
-  // Analysis Type to Model Mappings
-  analysis_mappings: {
-    triage: {
-      premium: 'gpt-5-nano',
-      balanced: 'gpt-5-nano', 
-      economy: 'gpt-5-nano'
-    },
-    preprocessor: {
-      premium: 'gpt-5-mini',
-      balanced: 'gpt-5-mini',
-      economy: 'gpt-5-nano'
-    },
-light: {
-  premium: 'gpt-5-mini',
-  balanced: 'gpt-5-mini',
-  economy: 'gpt-5-nano'
-},
-deep: {
-  premium: 'gpt-5',
-  balanced: 'claude-sonnet-4',
-  economy: 'claude-sonnet-4'
-},
+analysis_mappings: {
+  triage: {
+    premium: 'gpt-5-nano',
+    balanced: 'gpt-5-nano', 
+    economy: 'gpt-5-nano'
+  },
+  preprocessor: {
+    premium: 'gpt-5-nano',
+    balanced: 'gpt-5-nano',
+    economy: 'gpt-5-nano'
+  },
+  light: {
+    premium: 'gpt-5-nano',
+    balanced: 'gpt-5-nano',
+    economy: 'gpt-5-nano'
+  },
+  deep: {
+    premium: 'gpt-5',
+    balanced: 'gpt-5',
+    economy: 'gpt-5-mini'
+  },
 xray: {
   premium: 'claude-opus-4-1-20250805',
-  balanced: 'claude-sonnet-4', 
+  balanced: 'gpt-5', 
   economy: 'gpt-5'
-},
-    context: {
-      premium: 'gpt-5-mini',
-      balanced: 'gpt-5-mini',
-      economy: 'gpt-5-nano'
-    }
+}
   },
 
   // Default Settings
