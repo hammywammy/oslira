@@ -132,7 +132,7 @@ export async function insertAnalysisRun(
       score: analysisResult.score
     });
 
-    const runData = {
+const runData = {
       lead_id,
       user_id,
       business_id,
@@ -144,16 +144,28 @@ export async function insertAnalysisRun(
       niche_fit_score: Math.round(parseFloat(analysisResult.niche_fit) || 0),
       engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0),
       
-      // Quick reference data
-      summary_text: analysisResult.quick_summary || null,
-      confidence_level: parseFloat(analysisResult.confidence_level) || null,
+      // Quick reference data - FIXED TO ENSURE NON-NULL VALUES
+      summary_text: analysisResult.quick_summary || 
+                   analysisResult.summary_text || 
+                   `${analysisType} analysis completed - Score: ${Math.round(parseFloat(analysisResult.score) || 0)}/100`,
+      confidence_level: parseFloat(analysisResult.confidence_level) || 
+                       parseFloat(analysisResult.confidence) || 
+                       (analysisType === 'light' ? 0.6 : analysisType === 'deep' ? 0.75 : 0.85),
       
       // Processing metadata
       run_status: 'completed',
-      ai_model_used: 'gpt-4o',
+      ai_model_used: analysisResult.pipeline_metadata?.workflow_used || 'pipeline_system',
       analysis_completed_at: new Date().toISOString()
     };
 
+    logger('info', 'Run data prepared for database insert', {
+      lead_id,
+      analysis_type: analysisType,
+      summary_text: runData.summary_text,
+      confidence_level: runData.confidence_level,
+      summary_length: runData.summary_text?.length,
+      confidence_is_number: typeof runData.confidence_level === 'number'
+    });
     const runResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/runs`, {
       method: 'POST',
       headers: createPreferHeaders(env, 'return=representation'),
@@ -424,7 +436,8 @@ export async function updateCreditsAndTransaction(
     processing_duration_ms?: number;
     blocks_used?: string[];
   },
-  env: Env
+  env: Env,
+  lead_id?: string // ADD LEAD_ID PARAMETER
 ): Promise<void> {
   const headers = createHeaders(env);
 
@@ -458,13 +471,14 @@ export async function updateCreditsAndTransaction(
       10000
     );
 
-    // Create transaction record with enhanced cost tracking
+// Create transaction record with enhanced cost tracking
     const transactionData = {
       user_id,
       amount: -cost,
       type: 'use',
       description: `${analysisType} analysis`,
       run_id: run_id,
+      lead_id: lead_id || null, // ADD LEAD_ID TO TRANSACTION
       actual_cost: costDetails?.actual_cost || null,
       tokens_in: costDetails?.tokens_in || null,
       tokens_out: costDetails?.tokens_out || null,
@@ -474,6 +488,15 @@ export async function updateCreditsAndTransaction(
       blocks_used: costDetails?.blocks_used?.join('+') || null,
       margin: cost - (costDetails?.actual_cost || 0) // Track profit margin
     };
+
+    logger('info', 'Transaction data prepared', {
+      user_id,
+      run_id,
+      lead_id,
+      amount: transactionData.amount,
+      description: transactionData.description,
+      has_lead_id: !!lead_id
+    });
 
     await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
@@ -548,5 +571,29 @@ export async function fetchBusinessProfile(business_id: string, user_id: string,
   } catch (error: any) {
     logger('error', 'fetchBusinessProfile failed', { error: error.message });
     throw new Error(`Business profile fetch failed: ${error.message}`);
+  }
+}
+
+export async function getLeadIdFromRun(run_id: string, env: Env): Promise<string> {
+  try {
+    const response = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/runs?select=lead_id&run_id=eq.${run_id}`,
+      { headers: createHeaders(env) }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch run: ${response.status}`);
+    }
+
+    const runs = await response.json();
+    if (!runs.length) {
+      throw new Error('Run not found');
+    }
+
+    return runs[0].lead_id;
+
+  } catch (error: any) {
+    logger('error', 'getLeadIdFromRun failed', { error: error.message, run_id });
+    throw new Error(`Failed to get lead_id from run: ${error.message}`);
   }
 }
