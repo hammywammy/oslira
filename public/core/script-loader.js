@@ -52,11 +52,14 @@ this.coreScripts = [
                 enableTailwind: true
             },
             
-            'onboarding': {
-                scripts: ['/pages/onboarding/onboarding.js'],
-                requiresAuth: true,
-                enableTailwind: true
-            },
+'onboarding': {
+    scripts: [
+        '/core/form-manager.js',
+        '/pages/onboarding/onboarding.js'
+    ],
+    requiresAuth: true,
+    enableTailwind: true
+},
             
             'auth': {
                 scripts: ['/pages/auth/auth.js'],
