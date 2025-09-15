@@ -4,7 +4,7 @@
   "description": "AI-powered lead generation platform frontend",
   "type": "module",
   "scripts": {
-    "build": "node build-with-aws-config.js && npm run build:tailwind",
+    "build": "npm run build:tailwind && node build-with-aws-config.js",
     "build:tailwind": "npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify",
     "build:tailwind:watch": "npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --watch",
     "migrate:components": "node migration-script.js",
