@@ -1,13 +1,10 @@
-// =============================================================================
-// ONBOARDING.JS - Main Controller with Modular Architecture
-// =============================================================================
-
-import { OnboardingRules } from './onboarding-rules.js';
-import { OnboardingValidator } from './onboarding-validator.js';
-
 (function() {
     'use strict';
-    
+
+        window.addEventListener('oslira:scripts:loaded', async () => {
+        // Initialize modular components after dependencies are loaded
+        const rules = new window.OnboardingRules();
+        const validator = new window.OnboardingValidator();
     // =============================================================================
     // STATE VARIABLES
     // =============================================================================
