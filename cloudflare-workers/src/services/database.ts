@@ -53,7 +53,8 @@ export async function upsertLead(
       bio_text: leadData.bio || null,
       external_website_url: leadData.external_url || leadData.externalUrl || null,
       
-following_count: parseInt(leadData.followingCount || leadData.following_count) || 0,
+follower_count: parseInt(leadData.followersCount || leadData.followers_count) || 0,
+following_count: parseInt(leadData.followsCount || leadData.following_count) || 0,
 post_count: parseInt(leadData.postsCount || leadData.posts_count) || 0,
       
       // Profile attributes
@@ -71,7 +72,7 @@ post_count: parseInt(leadData.postsCount || leadData.posts_count) || 0,
 
     logger('info', 'Clean lead data before upsert', {
   username: cleanLeadData.username,
-  follower_count: cleanLeadData.follower_count,
+  follower_count: cleanLeadData.followersCount,
   following_count: cleanLeadData.following_count,
   post_count: cleanLeadData.post_count,
   original_fields_available: {
