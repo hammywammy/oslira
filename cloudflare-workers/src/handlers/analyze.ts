@@ -222,21 +222,6 @@ const leadData = {
       };
     }
 
-    // SAVE TO DATABASE (3-TABLE STRUCTURE)
-    let run_id: string;
-    try {
-      run_id = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
-      logger('info', 'Database save successful', { run_id, username: profileData.username });
-    } catch (saveError: any) {
-      logger('error', 'Database save failed', { error: saveError.message });
-      return c.json(createStandardResponse(
-        false, 
-        undefined, 
-        `Database save failed: ${saveError.message}`,
-        requestId
-      ), 500);
-    }
-
    // SAVE TO DATABASE (3-TABLE STRUCTURE)
     let run_id: string;
     let lead_id: string; // ADD LEAD_ID VARIABLE
