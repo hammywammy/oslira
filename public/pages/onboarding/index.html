@@ -4,14 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Account Setup - Oslira</title>
-<link rel="icon" href="/assets/images/oslira-logo.png">
-<link rel="stylesheet" href="/src/styles.css">
+    <link rel="icon" href="/assets/images/oslira-logo.png">
+    <link rel="stylesheet" href="/assets/css/tailwind.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         
         * {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(30px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        @keyframes pulse-ring {
+            0% { 
+                opacity: 0.4;
+                transform: scale(0.95);
+            }
+            50% { 
+                opacity: 0.8;
+                transform: scale(1.05);
+            }
+            100% { 
+                opacity: 0.4;
+                transform: scale(0.95);
+            }
+        }
+
+        @keyframes radioSelect {
+            0% { 
+                transform: scale(1); 
+            }
+            50% { 
+                transform: scale(1.02); 
+            }
+            100% { 
+                transform: scale(1); 
+            }
         }
     </style>
 </head>
@@ -82,700 +120,809 @@
                         <div class="onboarding-step-icon bg-gradient-to-r from-emerald-400 to-cyan-400">
                             <i class="fas fa-bullseye text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-emerald-200">What's your main goal?</h2>
-                        <p class="onboarding-step-description">Choose your primary objective to help us tailor your experience</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">What's your primary objective?</h2>
+                        <p class="onboarding-step-description">Help us understand your main goal so we can personalize your experience</p>
                     </div>
 
                     <div class="onboarding-choice-grid">
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="primary-objective" value="lead-generation" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="radio" name="objective" value="lead-generation" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-400 to-green-400">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-blue-500 to-cyan-500">
                                         <i class="fas fa-users"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Generate Leads</h3>
+                                    <h3 class="onboarding-choice-title">Generate Quality Leads</h3>
                                 </div>
-                                <p class="onboarding-choice-description">Find and connect with potential customers who need your services</p>
+                                <p class="onboarding-choice-description">Find and engage with potential customers who match your ideal buyer profile</p>
+                                <p class="onboarding-choice-hint">Best for businesses looking to expand their customer base</p>
                             </div>
                         </label>
 
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="primary-objective" value="brand-awareness" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="radio" name="objective" value="sales-automation" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-violet-400 to-purple-400">
-                                        <i class="fas fa-bullhorn"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-pink-500">
+                                        <i class="fas fa-robot"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Brand Awareness</h3>
+                                    <h3 class="onboarding-choice-title">Automate Sales Process</h3>
                                 </div>
-                                <p class="onboarding-choice-description">Increase visibility and recognition of your brand in the market</p>
+                                <p class="onboarding-choice-description">Streamline your sales pipeline with intelligent automation and follow-ups</p>
+                                <p class="onboarding-choice-hint">Perfect for scaling your sales operations efficiently</p>
                             </div>
                         </label>
 
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="primary-objective" value="sales" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="radio" name="objective" value="market-research" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-amber-400 to-orange-400">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-500 to-teal-500">
                                         <i class="fas fa-chart-line"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Drive Sales</h3>
+                                    <h3 class="onboarding-choice-title">Market Intelligence</h3>
                                 </div>
-                                <p class="onboarding-choice-description">Convert prospects into paying customers and increase revenue</p>
+                                <p class="onboarding-choice-description">Gather insights about your market, competitors, and industry trends</p>
+                                <p class="onboarding-choice-hint">Ideal for strategic planning and competitive analysis</p>
                             </div>
                         </label>
 
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="primary-objective" value="networking" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="radio" name="objective" value="customer-retention" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-cyan-400 to-blue-400">
-                                        <i class="fas fa-handshake"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-orange-500 to-red-500">
+                                        <i class="fas fa-heart"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Network & Partner</h3>
+                                    <h3 class="onboarding-choice-title">Improve Customer Retention</h3>
                                 </div>
-                                <p class="onboarding-choice-description">Build professional relationships and strategic partnerships</p>
+                                <p class="onboarding-choice-description">Enhance customer satisfaction and reduce churn with personalized engagement</p>
+                                <p class="onboarding-choice-hint">Great for businesses focusing on customer lifetime value</p>
                             </div>
                         </label>
                     </div>
 
-                    <div class="onboarding-nav">
-                        <div></div>
-                        <button onclick="nextStep()" class="onboarding-btn-primary">
-                            <span class="onboarding-btn-content">
-                                Continue
-                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
-                            </span>
-                        </button>
+                    <div class="onboarding-tip onboarding-tip-info">
+                        <div class="onboarding-tip-icon">
+                            <i class="fas fa-lightbulb text-blue-400"></i>
+                        </div>
+                        <div class="onboarding-tip-text">
+                            <strong>Pro tip:</strong> You can adjust these settings later in your dashboard. Don't worry about making the perfect choice right now!
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 2: Business Name -->
+            <!-- Step 2: Company Information -->
             <div id="step-2" class="onboarding-step">
                 <div class="onboarding-card">
                     <div class="onboarding-step-header">
-                        <div class="onboarding-step-icon bg-gradient-to-r from-blue-400 to-indigo-400">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-blue-400 to-purple-400">
                             <i class="fas fa-building text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-blue-200">What's your business name?</h2>
-                        <p class="onboarding-step-description">This will help us personalize your outreach messages</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">Tell us about your business</h2>
+                        <p class="onboarding-step-description">This helps us customize our AI algorithms for your specific industry and needs</p>
                     </div>
 
                     <div class="onboarding-form-group">
-                        <div class="onboarding-form-field group">
-                            <label class="onboarding-form-label">Business Name *</label>
-                            <div class="relative">
-                                <input type="text" id="business-name" maxlength="100" 
-                                       class="onboarding-form-input"
-                                       placeholder="e.g. Acme Digital Marketing">
-                                <div class="onboarding-form-icon">
-                                    <i class="fas fa-building"></i>
-                                </div>
-                            </div>
-                            <div class="onboarding-counter-row">
-                                <div id="business-name-error" class="onboarding-error-message hidden"></div>
-                                <div id="business-name-counter" class="onboarding-counter onboarding-counter-normal">0/100</div>
+                        <label for="company-name" class="onboarding-form-label">Company Name *</label>
+                        <div class="relative">
+                            <input type="text" id="company-name" name="company-name" required 
+                                   class="onboarding-form-input focus:outline-none hover:border-white/40" 
+                                   placeholder="Enter your company name">
+                            <div class="onboarding-form-icon">
+                                <i class="fas fa-building"></i>
                             </div>
                         </div>
                     </div>
 
-                    <div class="onboarding-nav">
-                        <button onclick="prevStep()" class="onboarding-btn-back">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            Back
-                        </button>
-                        <button onclick="nextStep()" class="onboarding-btn-primary group">
-                            <span class="onboarding-btn-content">
-                                Continue
-                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
-                            </span>
-                        </button>
+                    <div class="onboarding-form-group">
+                        <label for="industry" class="onboarding-form-label">Industry *</label>
+                        <div class="relative">
+                            <select id="industry" name="industry" required class="onboarding-form-input focus:outline-none hover:border-white/40">
+                                <option value="">Select your industry</option>
+                                <option value="technology">Technology</option>
+                                <option value="healthcare">Healthcare</option>
+                                <option value="finance">Finance</option>
+                                <option value="real-estate">Real Estate</option>
+                                <option value="retail">Retail</option>
+                                <option value="manufacturing">Manufacturing</option>
+                                <option value="consulting">Consulting</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="education">Education</option>
+                                <option value="other">Other</option>
+                            </select>
+                            <div class="onboarding-form-icon">
+                                <i class="fas fa-industry"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="onboarding-form-group">
+                        <label for="company-size" class="onboarding-form-label">Company Size *</label>
+                        <div class="onboarding-choice-grid-3">
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="company-size" value="1-10" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-green-500 to-emerald-500">
+                                            <i class="fas fa-seedling"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">1-10</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Small team</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="company-size" value="11-50" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-blue-500 to-cyan-500">
+                                            <i class="fas fa-users"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">11-50</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Growing company</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="company-size" value="51+" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-pink-500">
+                                            <i class="fas fa-building"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">51+</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Enterprise</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="onboarding-form-group">
+                        <label for="website" class="onboarding-form-label">Website URL</label>
+                        <div class="relative">
+                            <input type="url" id="website" name="website" 
+                                   class="onboarding-form-input focus:outline-none hover:border-white/40" 
+                                   placeholder="https://yourcompany.com">
+                            <div class="onboarding-form-icon">
+                                <i class="fas fa-globe"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 3: Business Niche -->
+            <!-- Step 3: Target Audience -->
             <div id="step-3" class="onboarding-step">
                 <div class="onboarding-card">
                     <div class="onboarding-step-header">
-                        <div class="onboarding-step-icon bg-gradient-to-r from-pink-400 to-rose-400">
-                            <i class="fas fa-tags text-white text-xl"></i>
+                        <div class="onboarding-step-icon bg-gradient-to-r from-purple-400 to-pink-400">
+                            <i class="fas fa-crosshairs text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-pink-200">What's your business niche?</h2>
-                        <p class="onboarding-step-description">Choose the category that best describes your business</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">Define your ideal customer</h2>
+                        <p class="onboarding-step-description">Help our AI understand who you want to reach</p>
                     </div>
 
-                    <div class="onboarding-choice-grid-3">
-                        <label class="onboarding-choice-card group">
-                            <input type="radio" name="business-niche" value="business" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content text-center">
-                                <i class="fas fa-briefcase text-2xl mb-3 text-white/80"></i>
-                                <h3 class="onboarding-choice-title mb-1">Business Services</h3>
-                                <p class="onboarding-choice-description text-xs">Consulting, Legal, Finance</p>
+                    <div class="onboarding-form-group">
+                        <label for="target-description" class="onboarding-form-label">Describe your ideal customer *</label>
+                        <div class="relative">
+                            <textarea id="target-description" name="target-description" required rows="4" maxlength="500"
+                                      class="onboarding-form-textarea focus:outline-none hover:border-white/40" 
+                                      placeholder="Example: Small business owners in the healthcare industry who need patient management solutions. They typically have 10-50 employees and are looking to improve operational efficiency..."></textarea>
+                        </div>
+                        <div class="onboarding-counter-row">
+                            <div class="onboarding-tip onboarding-tip-success">
+                                <div class="onboarding-tip-icon">
+                                    <i class="fas fa-check-circle text-emerald-400"></i>
+                                </div>
+                                <div class="onboarding-tip-text">
+                                    Include demographics, pain points, and business characteristics for better targeting
+                                </div>
                             </div>
-                        </label>
-
-                        <label class="onboarding-choice-card">
-                            <input type="radio" name="business-niche" value="coaching" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content text-center">
-                                <i class="fas fa-user-tie text-2xl mb-3 text-white/80"></i>
-                                <h3 class="onboarding-choice-title mb-1">Coaching</h3>
-                                <p class="onboarding-choice-description text-xs">Life, Business, Career</p>
+                            <div class="onboarding-counter onboarding-counter-normal" id="target-counter">
+                                0/500
                             </div>
-                        </label>
-
-                        <label class="onboarding-choice-card">
-                            <input type="radio" name="business-niche" value="technology" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content text-center">
-                                <i class="fas fa-laptop-code text-2xl mb-3 text-white/80"></i>
-                                <h3 class="onboarding-choice-title mb-1">Technology</h3>
-                                <p class="onboarding-choice-description text-xs">Software, Apps, SaaS</p>
-                            </div>
-                        </label>
-
-                        <label class="onboarding-choice-card">
-                            <input type="radio" name="business-niche" value="marketing" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content text-center">
-                                <i class="fas fa-bullhorn text-2xl mb-3 text-white/80"></i>
-                                <h3 class="onboarding-choice-title mb-1">Marketing</h3>
-                                <p class="onboarding-choice-description text-xs">Digital, Social, Content</p>
-                            </div>
-                        </label>
-
-                        <label class="onboarding-choice-card">
-                            <input type="radio" name="business-niche" value="ecommerce" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content text-center">
-                                <i class="fas fa-shopping-cart text-2xl mb-3 text-white/80"></i>
-                                <h3 class="onboarding-choice-title mb-1">E-commerce</h3>
-                                <p class="onboarding-choice-description text-xs">Retail, Products, Store</p>
-                            </div>
-                        </label>
-
-                        <label class="onboarding-choice-card">
-                            <input type="radio" name="business-niche" value="real-estate" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content text-center">
-                                <i class="fas fa-home text-2xl mb-3 text-white/80"></i>
-                                <h3 class="onboarding-choice-title mb-1">Real Estate</h3>
-                                <p class="onboarding-choice-description text-xs">Residential, Commercial</p>
-                            </div>
-                        </label>
+                        </div>
                     </div>
 
-                    <div class="onboarding-nav">
-                        <button onclick="prevStep()" class="onboarding-btn-back">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            Back
-                        </button>
-                        <button onclick="nextStep()" class="onboarding-btn-primary">
-                            <span class="onboarding-btn-content">
-                                Continue
-                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
-                            </span>
-                        </button>
+                    <div class="onboarding-form-group">
+                        <label class="onboarding-form-label">Target Company Size</label>
+                        <div class="onboarding-choice-grid-3">
+                            <label class="onboarding-choice-card">
+                                <input type="checkbox" name="target-size" value="startup" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-yellow-500 to-orange-500">
+                                            <i class="fas fa-rocket"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Startups</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">1-10 employees</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="checkbox" name="target-size" value="smb" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-blue-500 to-cyan-500">
+                                            <i class="fas fa-users"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">SMB</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">11-200 employees</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="checkbox" name="target-size" value="enterprise" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-pink-500">
+                                            <i class="fas fa-building"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Enterprise</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">200+ employees</p>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 4: Target Audience -->
+            <!-- Step 4: Budget & Goals -->
             <div id="step-4" class="onboarding-step">
                 <div class="onboarding-card">
                     <div class="onboarding-step-header">
-                        <div class="onboarding-step-icon bg-gradient-to-r from-teal-400 to-cyan-400">
-                            <i class="fas fa-users-cog text-white text-xl"></i>
+                        <div class="onboarding-step-icon bg-gradient-to-r from-emerald-400 to-teal-400">
+                            <i class="fas fa-dollar-sign text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-teal-200">Who is your target audience?</h2>
-                        <p class="onboarding-step-description">Describe your ideal customers so we can find similar prospects</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">Budget & Goals</h2>
+                        <p class="onboarding-step-description">Set your investment level and success metrics</p>
                     </div>
 
                     <div class="onboarding-form-group">
-                        <div class="onboarding-form-field">
-                            <label class="onboarding-form-label">Target Audience *</label>
-                            <div class="relative">
-                                <textarea id="target-audience" rows="4" maxlength="500"
-                                         class="onboarding-form-textarea"
-                                         placeholder="e.g. Small business owners (10-100 employees) who struggle with digital marketing and want to increase online sales. They typically have revenues between $500K-$5M and are willing to invest in growth."></textarea>
-                                <div class="onboarding-form-icon">
-                                    <i class="fas fa-users"></i>
+                        <label class="onboarding-form-label">Monthly Budget Range *</label>
+                        <div class="onboarding-choice-grid">
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="budget" value="under-1000" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-green-500 to-emerald-500">
+                                            <i class="fas fa-seedling"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Under $1,000</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Perfect for getting started</p>
                                 </div>
-                            </div>
-                            <div class="onboarding-counter-row">
-                                <div id="target-audience-error" class="onboarding-error-message hidden"></div>
-                                <div id="target-audience-counter" class="onboarding-counter onboarding-counter-normal">0/500</div>
-                            </div>
-                            <div class="onboarding-tip onboarding-tip-info">
-                                <i class="fas fa-lightbulb text-teal-400 onboarding-tip-icon"></i>
-                                <p class="onboarding-tip-text text-teal-200">
-                                    <strong>Tip:</strong> Be specific about industry, company size, pain points, and budget range. The more detailed, the better our AI can target similar prospects.
-                                </p>
-                            </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="budget" value="1000-5000" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-blue-500 to-cyan-500">
+                                            <i class="fas fa-chart-line"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">$1,000 - $5,000</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Growth-focused investment</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="budget" value="5000-15000" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-pink-500">
+                                            <i class="fas fa-rocket"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">$5,000 - $15,000</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Aggressive scaling</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="budget" value="15000-plus" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-yellow-500 to-orange-500">
+                                            <i class="fas fa-crown"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">$15,000+</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Enterprise-level commitment</p>
+                                </div>
+                            </label>
                         </div>
                     </div>
 
-                    <div class="onboarding-nav">
-                        <button onclick="prevStep()" class="onboarding-btn-back">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            Back
-                        </button>
-                        <button onclick="nextStep()" class="onboarding-btn-primary">
-                            <span class="onboarding-btn-content">
-                                Continue
-                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
-                            </span>
-                        </button>
+                    <div class="onboarding-form-group">
+                        <label for="monthly-lead-goal" class="onboarding-form-label">Monthly Lead Goal</label>
+                        <div class="relative">
+                            <input type="number" id="monthly-lead-goal" name="monthly-lead-goal" min="1" max="10000"
+                                   class="onboarding-form-input focus:outline-none hover:border-white/40" 
+                                   placeholder="How many leads do you want per month?">
+                            <div class="onboarding-form-icon">
+                                <i class="fas fa-target"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 5: Value Proposition -->
+            <!-- Step 5: Current Challenges -->
             <div id="step-5" class="onboarding-step">
                 <div class="onboarding-card">
                     <div class="onboarding-step-header">
-                        <div class="onboarding-step-icon bg-gradient-to-r from-amber-400 to-orange-400">
-                            <i class="fas fa-gem text-white text-xl"></i>
+                        <div class="onboarding-step-icon bg-gradient-to-r from-red-400 to-pink-400">
+                            <i class="fas fa-exclamation-triangle text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-amber-200">What's your unique value proposition?</h2>
-                        <p class="onboarding-step-description">What makes you different from competitors? What unique value do you provide?</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">What challenges are you facing?</h2>
+                        <p class="onboarding-step-description">Understanding your pain points helps us provide better solutions</p>
                     </div>
 
-                    <div class="onboarding-form-group">
-                        <div class="onboarding-form-field">
-                            <label class="onboarding-form-label">Value Proposition *</label>
-                            <div class="relative">
-                                <textarea id="value-proposition" rows="4" maxlength="300"
-                                         class="onboarding-form-textarea"
-                                         placeholder="e.g. Unlike generic marketing agencies, we specialize exclusively in B2B SaaS companies and guarantee 3x lead growth within 90 days using our proprietary AI-driven targeting system, or you don't pay."></textarea>
-                                <div class="onboarding-form-icon">
-                                    <i class="fas fa-gem"></i>
+                    <div class="onboarding-choice-grid">
+                        <label class="onboarding-choice-card">
+                            <input type="checkbox" name="challenges" value="low-quality-leads" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-yellow-500 to-orange-500">
+                                        <i class="fas fa-thumbs-down"></i>
+                                    </div>
+                                    <h4 class="onboarding-choice-title">Low-Quality Leads</h4>
                                 </div>
+                                <p class="onboarding-choice-description">Getting leads that don't convert</p>
                             </div>
-                            <div class="onboarding-counter-row">
-                                <div id="value-proposition-error" class="onboarding-error-message hidden"></div>
-                                <div id="value-proposition-counter" class="onboarding-counter onboarding-counter-normal">0/300</div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="checkbox" name="challenges" value="time-consuming" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-red-500 to-pink-500">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <h4 class="onboarding-choice-title">Time-Consuming Process</h4>
+                                </div>
+                                <p class="onboarding-choice-description">Manual prospecting takes too long</p>
                             </div>
-                            <div class="onboarding-tip onboarding-tip-warning">
-                                <i class="fas fa-star text-amber-400 onboarding-tip-icon"></i>
-                                <p class="onboarding-tip-text text-amber-200">
-                                    <strong>Make it compelling:</strong> Focus on specific outcomes, unique methods, and what sets you apart. Include guarantees, timeframes, or measurable results if possible.
-                                </p>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="checkbox" name="challenges" value="expensive-tools" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-blue-500">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </div>
+                                    <h4 class="onboarding-choice-title">Expensive Tools</h4>
+                                </div>
+                                <p class="onboarding-choice-description">Current solutions cost too much</p>
                             </div>
-                        </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="checkbox" name="challenges" value="lack-personalization" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-cyan-500 to-blue-500">
+                                        <i class="fas fa-user-slash"></i>
+                                    </div>
+                                    <h4 class="onboarding-choice-title">Lack of Personalization</h4>
+                                </div>
+                                <p class="onboarding-choice-description">Generic outreach gets ignored</p>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="checkbox" name="challenges" value="poor-data-quality" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-500 to-teal-500">
+                                        <i class="fas fa-database"></i>
+                                    </div>
+                                    <h4 class="onboarding-choice-title">Poor Data Quality</h4>
+                                </div>
+                                <p class="onboarding-choice-description">Outdated or inaccurate contact information</p>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="checkbox" name="challenges" value="difficult-scaling" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-indigo-500 to-purple-500">
+                                        <i class="fas fa-chart-line"></i>
+                                    </div>
+                                    <h4 class="onboarding-choice-title">Difficult to Scale</h4>
+                                </div>
+                                <p class="onboarding-choice-description">Hard to increase outreach volume</p>
+                            </div>
+                        </label>
                     </div>
 
-                    <div class="onboarding-nav">
-                        <button onclick="prevStep()" class="onboarding-btn-back">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            Back
-                        </button>
-                        <button onclick="nextStep()" class="onboarding-btn-primary">
-                            <span class="onboarding-btn-content">
-                                Continue
-                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
-                            </span>
-                        </button>
+                    <div class="onboarding-tip onboarding-tip-warning">
+                        <div class="onboarding-tip-icon">
+                            <i class="fas fa-info-circle text-yellow-400"></i>
+                        </div>
+                        <div class="onboarding-tip-text">
+                            Select all that apply. Our AI will prioritize solutions for your biggest challenges.
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 6: Communication Style -->
+            <!-- Step 6: Communication Preferences -->
             <div id="step-6" class="onboarding-step">
                 <div class="onboarding-card">
                     <div class="onboarding-step-header">
-                        <div class="onboarding-step-icon bg-gradient-to-r from-indigo-400 to-purple-400">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-blue-400 to-cyan-400">
                             <i class="fas fa-comments text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-indigo-200">How do you prefer to communicate?</h2>
-                        <p class="onboarding-step-description">Choose the tone that best represents your brand personality</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">How do you prefer to communicate?</h2>
+                        <p class="onboarding-step-description">We'll customize outreach methods based on your preferences</p>
                     </div>
 
-                    <div class="onboarding-choice-grid">
+                    <div class="onboarding-choice-grid-3">
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="communication-tone" value="professional" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="checkbox" name="communication" value="email" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-slate-400 to-gray-400">
-                                        <i class="fas fa-user-tie"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-blue-500 to-cyan-500">
+                                        <i class="fas fa-envelope"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Professional</h3>
+                                    <h4 class="onboarding-choice-title">Email</h4>
                                 </div>
-                                <p class="onboarding-choice-description">Formal, authoritative, and business-focused communication style</p>
-                                <div class="onboarding-choice-hint">"We deliver enterprise-grade solutions..."</div>
+                                <p class="onboarding-choice-description">Professional email outreach</p>
                             </div>
                         </label>
 
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="communication-tone" value="friendly" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="checkbox" name="communication" value="linkedin" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-green-400 to-emerald-400">
-                                        <i class="fas fa-smile"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-blue-600 to-blue-800">
+                                        <i class="fab fa-linkedin"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Friendly</h3>
+                                    <h4 class="onboarding-choice-title">LinkedIn</h4>
                                 </div>
-                                <p class="onboarding-choice-description">Warm, approachable, and personable communication style</p>
-                                <div class="onboarding-choice-hint">"Hi there! We'd love to help you..."</div>
+                                <p class="onboarding-choice-description">Social selling via LinkedIn</p>
                             </div>
                         </label>
 
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="communication-tone" value="direct" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="checkbox" name="communication" value="phone" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-red-400 to-pink-400">
-                                        <i class="fas fa-bullseye"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-500 to-teal-500">
+                                        <i class="fas fa-phone"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Direct</h3>
+                                    <h4 class="onboarding-choice-title">Phone</h4>
                                 </div>
-                                <p class="onboarding-choice-description">Straight to the point, no-nonsense communication style</p>
-                                <div class="onboarding-choice-hint">"We increase sales by 40%. Interested?"</div>
-                            </div>
-                        </label>
-
-                        <label class="onboarding-choice-card">
-                            <input type="radio" name="communication-tone" value="consultative" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
-                                <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-blue-400 to-cyan-400">
-                                        <i class="fas fa-handshake"></i>
-                                    </div>
-                                    <h3 class="onboarding-choice-title">Consultative</h3>
-                                </div>
-                                <p class="onboarding-choice-description">Advisory, educational, and solution-focused approach</p>
-                                <div class="onboarding-choice-hint">"Have you considered the impact of..."</div>
+                                <p class="onboarding-choice-description">Direct phone outreach</p>
                             </div>
                         </label>
                     </div>
 
-                    <div class="onboarding-nav">
-                        <button onclick="prevStep()" class="onboarding-btn-back">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            Back
-                        </button>
-                        <button onclick="nextStep()" class="onboarding-btn-primary">
-                            <span class="onboarding-btn-content">
-                                Continue
-                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
-                            </span>
-                        </button>
+                    <div class="onboarding-form-group">
+                        <label for="outreach-tone" class="onboarding-form-label">Preferred Communication Tone</label>
+                        <div class="onboarding-choice-grid-3">
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="tone" value="professional" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-slate-500 to-gray-600">
+                                            <i class="fas fa-tie"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Professional</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Formal and business-focused</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="tone" value="friendly" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-yellow-500 to-orange-500">
+                                            <i class="fas fa-smile"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Friendly</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Approachable and personable</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="tone" value="casual" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-pink-500">
+                                            <i class="fas fa-coffee"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Casual</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Relaxed and conversational</p>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 7: Call to Action Preference -->
+            <!-- Step 7: Integration Preferences -->
             <div id="step-7" class="onboarding-step">
                 <div class="onboarding-card">
                     <div class="onboarding-step-header">
-                        <div class="onboarding-step-icon bg-gradient-to-r from-emerald-400 to-teal-400">
-                            <i class="fas fa-mouse-pointer text-white text-xl"></i>
+                        <div class="onboarding-step-icon bg-gradient-to-r from-purple-400 to-indigo-400">
+                            <i class="fas fa-plug text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-emerald-200">What's your preferred call-to-action?</h2>
-                        <p class="onboarding-step-description">How would you like prospects to take the next step?</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">Connect your tools</h2>
+                        <p class="onboarding-step-description">Which tools are you currently using? (Optional but recommended)</p>
                     </div>
 
                     <div class="onboarding-choice-grid">
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="preferred-cta" value="book-call" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="checkbox" name="integrations" value="salesforce" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-400 to-green-400">
-                                        <i class="fas fa-calendar-alt"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-blue-500 to-cyan-500">
+                                        <i class="fas fa-cloud"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Book a Call</h3>
+                                    <h4 class="onboarding-choice-title">Salesforce</h4>
                                 </div>
-                                <p class="onboarding-choice-description">Schedule a consultation or discovery call to discuss their needs</p>
-                                <div class="onboarding-choice-hint">Best for: High-value services, consulting</div>
+                                <p class="onboarding-choice-description">CRM integration for seamless data sync</p>
                             </div>
                         </label>
 
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="preferred-cta" value="visit-website" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="checkbox" name="integrations" value="hubspot" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-blue-400 to-indigo-400">
-                                        <i class="fas fa-globe"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-orange-500 to-red-500">
+                                        <i class="fas fa-hubspot"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Visit Website</h3>
+                                    <h4 class="onboarding-choice-title">HubSpot</h4>
                                 </div>
-                                <p class="onboarding-choice-description">Direct them to your website to learn more about your offerings</p>
-                                <div class="onboarding-choice-hint">Best for: SaaS, e-commerce, content marketing</div>
+                                <p class="onboarding-choice-description">Marketing and sales automation</p>
                             </div>
                         </label>
 
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="preferred-cta" value="send-email" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="checkbox" name="integrations" value="pipedrive" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-purple-400 to-pink-400">
-                                        <i class="fas fa-envelope"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-500 to-teal-500">
+                                        <i class="fas fa-funnel-dollar"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Send Email</h3>
+                                    <h4 class="onboarding-choice-title">Pipedrive</h4>
                                 </div>
-                                <p class="onboarding-choice-description">Encourage them to send you an email to start the conversation</p>
-                                <div class="onboarding-choice-hint">Best for: Agencies, freelancers, B2B services</div>
+                                <p class="onboarding-choice-description">Sales pipeline management</p>
                             </div>
                         </label>
 
                         <label class="onboarding-choice-card">
-                            <input type="radio" name="preferred-cta" value="send-dm" class="onboarding-choice-input">
-                            <div class="onboarding-choice-content">
+                            <input type="checkbox" name="integrations" value="mailchimp" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
                                 <div class="onboarding-choice-header">
-                                    <div class="onboarding-choice-icon bg-gradient-to-r from-pink-400 to-rose-400">
-                                        <i class="fas fa-comment"></i>
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-yellow-500 to-orange-500">
+                                        <i class="fas fa-envelope-open-text"></i>
                                     </div>
-                                    <h3 class="onboarding-choice-title">Send DM</h3>
+                                    <h4 class="onboarding-choice-title">Mailchimp</h4>
                                 </div>
-                                <p class="onboarding-choice-description">Invite them to send a direct message on social media platforms</p>
-                                <div class="onboarding-choice-hint">Best for: Personal brands, creative services, B2C</div>
+                                <p class="onboarding-choice-description">Email marketing platform</p>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="checkbox" name="integrations" value="zapier" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-pink-500">
+                                        <i class="fas fa-bolt"></i>
+                                    </div>
+                                    <h4 class="onboarding-choice-title">Zapier</h4>
+                                </div>
+                                <p class="onboarding-choice-description">Workflow automation</p>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="checkbox" name="integrations" value="slack" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-purple-600 to-indigo-600">
+                                        <i class="fab fa-slack"></i>
+                                    </div>
+                                    <h4 class="onboarding-choice-title">Slack</h4>
+                                </div>
+                                <p class="onboarding-choice-description">Team communication and notifications</p>
                             </div>
                         </label>
                     </div>
-<div class="onboarding-nav">
-                        <button onclick="prevStep()" class="onboarding-btn-back">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            Back
-                        </button>
-                        <button onclick="nextStep()" class="onboarding-btn-primary">
-                            <span class="onboarding-btn-content">
-                                Continue
-                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
-                            </span>
-                        </button>
+
+                    <div class="onboarding-tip onboarding-tip-info">
+                        <div class="onboarding-tip-icon">
+                            <i class="fas fa-lightbulb text-blue-400"></i>
+                        </div>
+                        <div class="onboarding-tip-text">
+                            Don't worry if your tool isn't listed. You can add custom integrations later or we can help you set them up.
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 8: Phone Number (Optional) -->
+            <!-- Step 8: Team Setup -->
             <div id="step-8" class="onboarding-step">
                 <div class="onboarding-card">
                     <div class="onboarding-step-header">
-                        <div class="onboarding-step-icon bg-gradient-to-r from-cyan-400 to-blue-400">
-                            <i class="fas fa-phone text-white text-xl"></i>
+                        <div class="onboarding-step-icon bg-gradient-to-r from-indigo-400 to-purple-400">
+                            <i class="fas fa-users-cog text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-cyan-200">Phone number for notifications?</h2>
-                        <p class="onboarding-step-description">Get SMS updates about your lead generation campaigns (optional)</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">Team Setup</h2>
+                        <p class="onboarding-step-description">Configure team access and permissions</p>
                     </div>
 
                     <div class="onboarding-form-group">
-                        <div class="onboarding-form-field">
-                            <label class="onboarding-form-label">Phone Number (Optional)</label>
-                            <div class="relative">
-                                <input type="tel" id="phone-number" maxlength="20"
-                                       class="onboarding-form-input"
-                                       placeholder="+1 (555) 123-4567">
-                                <div class="onboarding-form-icon">
-                                    <i class="fas fa-phone"></i>
+                        <label for="team-members" class="onboarding-form-label">How many team members will use Oslira?</label>
+                        <div class="onboarding-choice-grid-3">
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="team-size" value="just-me" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-blue-500 to-cyan-500">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Just me</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Solo entrepreneur</p>
                                 </div>
-                            </div>
-                            <div class="onboarding-counter-row">
-                                <div id="phone-number-error" class="onboarding-error-message hidden"></div>
-                                <div id="phone-number-counter" class="onboarding-counter onboarding-counter-normal">0/20</div>
-                            </div>
-                        </div>
+                            </label>
 
-                        <div id="sms-opt-in-group" class="hidden">
-                            <div class="flex items-center space-x-3 p-4 bg-blue-500/10 border border-blue-400/30 rounded-xl">
-                                <input type="checkbox" id="opt-in-sms" class="w-5 h-5 bg-white/10 border border-white/30 rounded focus:ring-2 focus:ring-blue-400 text-blue-400">
-                                <label for="opt-in-sms" class="text-blue-200 text-sm">
-                                    <strong>Yes, send me SMS updates</strong> about campaign performance, new leads, and important notifications
-                                </label>
-                            </div>
-                        </div>
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="team-size" value="small-team" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-500 to-teal-500">
+                                            <i class="fas fa-users"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Small team (2-5)</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Growing business</p>
+                                </div>
+                            </label>
 
-                        <div class="onboarding-tip onboarding-tip-info">
-                            <i class="fas fa-info-circle text-cyan-400 onboarding-tip-icon"></i>
-                            <p class="onboarding-tip-text text-cyan-200">
-                                <strong>Privacy note:</strong> Your phone number is encrypted and only used for campaign notifications. You can opt out anytime. We never share your information with third parties.
-                            </p>
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="team-size" value="large-team" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-pink-500">
+                                            <i class="fas fa-building"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Large team (6+)</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Enterprise organization</p>
+                                </div>
+                            </label>
                         </div>
                     </div>
 
-                    <div class="onboarding-nav">
-                        <button onclick="prevStep()" class="onboarding-btn-back">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            Back
-                        </button>
-                        <div class="onboarding-nav-right">
-                            <button onclick="skipPhoneStep()" class="onboarding-btn-skip">
-                                Skip
-                            </button>
-                            <button onclick="nextStep()" class="onboarding-btn-primary">
-                                <span class="onboarding-btn-content">
-                                    Continue
-                                    <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
-                                </span>
-                            </button>
+                    <div class="onboarding-form-group">
+                        <label class="onboarding-form-label">Who will primarily manage the campaigns?</label>
+                        <div class="onboarding-choice-grid">
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="campaign-manager" value="myself" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-blue-500 to-cyan-500">
+                                            <i class="fas fa-user-tie"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Myself</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">I'll handle everything personally</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="campaign-manager" value="sales-team" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-500 to-teal-500">
+                                            <i class="fas fa-handshake"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Sales Team</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Dedicated sales professionals</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="campaign-manager" value="marketing-team" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-purple-500 to-pink-500">
+                                            <i class="fas fa-bullhorn"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Marketing Team</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Marketing specialists</p>
+                                </div>
+                            </label>
+
+                            <label class="onboarding-choice-card">
+                                <input type="radio" name="campaign-manager" value="mixed-team" class="onboarding-choice-input">
+                                <div class="onboarding-choice-content hover:border-white/40 hover:scale-105">
+                                    <div class="onboarding-choice-header">
+                                        <div class="onboarding-choice-icon bg-gradient-to-r from-yellow-500 to-orange-500">
+                                            <i class="fas fa-users-cog"></i>
+                                        </div>
+                                        <h4 class="onboarding-choice-title">Mixed Team</h4>
+                                    </div>
+                                    <p class="onboarding-choice-description">Collaborative approach</p>
+                                </div>
+                            </label>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Step 9: Key Results -->
+            <!-- Step 9: Final Review & Launch -->
             <div id="step-9" class="onboarding-step">
                 <div class="onboarding-card">
                     <div class="onboarding-step-header">
-                        <div class="onboarding-step-icon bg-gradient-to-r from-yellow-400 to-amber-400">
-                            <i class="fas fa-trophy text-white text-xl"></i>
+                        <div class="onboarding-step-icon bg-gradient-to-r from-emerald-400 to-teal-400">
+                            <i class="fas fa-check-circle text-white text-xl"></i>
                         </div>
-                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-yellow-200">What results do you deliver?</h2>
-                        <p class="onboarding-step-description">Describe the key benefits and outcomes your clients typically see</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-white/80 bg-clip-text">You're all set!</h2>
+                        <p class="onboarding-step-description">Review your setup and launch your AI-powered lead generation</p>
                     </div>
 
-                    <div class="onboarding-form-group">
-                        <div class="onboarding-form-field">
-                            <label class="onboarding-form-label">Key Results/Benefits (Optional)</label>
-                            <div class="relative">
-                                <textarea id="key-results" rows="4" maxlength="800"
-                                         class="onboarding-form-textarea"
-                                         placeholder="e.g. Clients typically see 50% more qualified leads within 30 days, 3x improvement in conversion rates, and average ROI of 400%. Most clients recover their investment in the first month and see continued growth for years."></textarea>
-                                <div class="onboarding-form-icon">
-                                    <i class="fas fa-trophy"></i>
-                                </div>
-                            </div>
-                            <div class="onboarding-counter-row">
-                                <div id="key-results-error" class="onboarding-error-message hidden"></div>
-                                <div id="key-results-counter" class="onboarding-counter onboarding-counter-normal">0/800</div>
-                            </div>
-                            <div class="onboarding-tip onboarding-tip-success">
-                                <i class="fas fa-chart-line text-yellow-400 onboarding-tip-icon"></i>
-                                <p class="onboarding-tip-text text-yellow-200">
-                                    <strong>Pro tip:</strong> Include specific metrics, timeframes, and real outcomes. Numbers and percentages make your value proposition more credible and compelling.
-                                </p>
-                            </div>
-                        </div>
+                    <div id="setup-summary" class="onboarding-summary">
+                        <!-- Summary content will be populated by JavaScript -->
                     </div>
 
-                    <div class="onboarding-nav">
-                        <button onclick="prevStep()" class="onboarding-btn-back">
-                            <i class="fas fa-arrow-left mr-2"></i>
-                            Back
-                        </button>
-                        <div class="onboarding-nav-right">
-                            <button onclick="skipStep()" class="onboarding-btn-skip">
-                                Skip for now
-                            </button>
-                            <button onclick="submitOnboarding()" class="onboarding-btn-success group">
-                                <span class="onboarding-btn-content">
-                                    <i class="fas fa-check mr-3"></i>
-                                    Complete Setup
-                                </span>
-                            </button>
+                    <div class="onboarding-tip onboarding-tip-success">
+                        <div class="onboarding-tip-icon">
+                            <i class="fas fa-rocket text-emerald-400"></i>
+                        </div>
+                        <div class="onboarding-tip-text">
+                            <strong>Ready to launch!</strong> Our AI will start analyzing your preferences and building your first campaign. You can always adjust these settings later.
                         </div>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- Navigation -->
+            <div class="onboarding-nav">
+                <button type="button" id="back-btn" class="onboarding-btn-back hover:bg-white/20 hover:scale-105" style="display: none;">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back
+                </button>
+                <div class="onboarding-nav-right">
+                    <button type="button" id="skip-btn" class="onboarding-btn-skip hover:bg-white/10">
+                        Skip for now
+                    </button>
+                    <button type="button" id="next-btn" class="onboarding-btn-primary hover:scale-105 hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="onboarding-btn-content">
+                            <span id="next-text">Continue</span>
+                            <i class="onboarding-btn-arrow group-hover:translate-x-1 fas fa-arrow-right"></i>
+                        </span>
+                    </button>
+                    <button type="button" id="finish-btn" class="onboarding-btn-success hover:scale-105 hover:shadow-xl" style="display: none;">
+                        <span class="onboarding-btn-content">
+                            <i class="fas fa-rocket mr-3"></i>
+                            Launch Dashboard
+                            <i class="onboarding-btn-arrow group-hover:translate-x-1 fas fa-arrow-right ml-3"></i>
+                        </span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- Scripts -->
-    <script src="/core/script-loader.js"></script>
-    <script>
-        // Character counter functionality
-        function setupCharacterCounters() {
-            const fields = {
-                'business-name': 100,
-                'target-audience': 500,
-                'value-proposition': 300,
-                'key-results': 800,
-                'phone-number': 20
-            };
-            
-            Object.entries(fields).forEach(([fieldId, maxLength]) => {
-                const field = document.getElementById(fieldId);
-                const counter = document.getElementById(fieldId + '-counter');
-                
-                if (field && counter) {
-                    field.addEventListener('input', () => {
-                        const currentLength = field.value.length;
-                        const percentage = (currentLength / maxLength) * 100;
-                        
-                        counter.textContent = `${currentLength}/${maxLength}`;
-                        
-                        // Remove existing classes
-                        counter.classList.remove('onboarding-counter-normal', 'onboarding-counter-warning', 'onboarding-counter-danger');
-                        
-                        // Add appropriate class
-                        if (percentage >= 90) {
-                            counter.classList.add('onboarding-counter-danger');
-                            field.classList.add('onboarding-field-error');
-                        } else if (percentage >= 75) {
-                            counter.classList.add('onboarding-counter-warning');
-                            field.classList.remove('onboarding-field-error');
-                            field.classList.add('onboarding-field-warning');
-                        } else {
-                            counter.classList.add('onboarding-counter-normal');
-                            field.classList.remove('onboarding-field-error', 'onboarding-field-warning');
-                        }
-                    });
-                    
-                    // Initialize counter
-                    field.dispatchEvent(new Event('input'));
-                }
-            });
-        }
-        
-        // Phone number formatting and SMS opt-in visibility
-        function setupPhoneHandling() {
-            const phoneInput = document.getElementById('phone-number');
-            const smsOptInGroup = document.getElementById('sms-opt-in-group');
-            
-            if (phoneInput && smsOptInGroup) {
-                phoneInput.addEventListener('input', (e) => {
-                    const value = e.target.value.trim();
-                    
-                    // Show/hide SMS opt-in based on phone input
-                    if (value.length > 0) {
-                        smsOptInGroup.classList.remove('hidden');
-                    } else {
-                        smsOptInGroup.classList.add('hidden');
-                    }
-                    
-                    // Format phone number (simple US formatting)
-                    const cleaned = value.replace(/\D/g, '');
-                    if (cleaned.length <= 10) {
-                        if (cleaned.length >= 6) {
-                            e.target.value = cleaned.replace(/(\d{3})(\d{3})(\d{0,4})/, '($1) $2-$3');
-                        } else if (cleaned.length >= 3) {
-                            e.target.value = cleaned.replace(/(\d{3})(\d{0,3})/, '($1) $2');
-                        }
-                    }
-                });
-            }
-        }
-        
-        // Initialize when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {
-            setupCharacterCounters();
-            setupPhoneHandling();
-        });
-        
-        // Enhanced step visibility management
-        function showStep(stepNumber) {
-            // Hide all steps
-            for (let i = 1; i <= 9; i++) {
-                const step = document.getElementById(`step-${i}`);
-                if (step) {
-                    step.classList.remove('active');
-                    step.classList.add('hidden');
-                }
-            }
-            
-            // Show current step
-            const currentStep = document.getElementById(`step-${stepNumber}`);
-            if (currentStep) {
-                currentStep.classList.remove('hidden');
-                currentStep.classList.add('active');
-                
-                // Focus first input
-                setTimeout(() => {
-                    const firstInput = currentStep.querySelector('input, textarea, select');
-                    if (firstInput && firstInput.type !== 'radio') {
-                        firstInput.focus();
-                    }
-                }, 100);
-            }
-        }
-    </script>
-</body>
-</html>
