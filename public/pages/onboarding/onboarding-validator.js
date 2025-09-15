@@ -357,6 +357,30 @@ class OnboardingValidator {
         
         return isValid;
     }
+
+    showStepValidationFailed() {
+    console.log('[OnboardingValidator] Showing step validation failed message');
+    
+    // Show the validation error div
+    const errorDiv = document.getElementById('validation-error');
+    if (errorDiv) {
+        errorDiv.classList.remove('hidden');
+        errorDiv.style.display = 'block';
+        
+        // Hide after 4 seconds
+        setTimeout(() => {
+            errorDiv.classList.add('hidden');
+            errorDiv.style.display = 'none';
+        }, 4000);
+    }
+    
+    // Scroll to first error field
+    const firstErrorField = document.querySelector('.onboarding-field-error');
+    if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstErrorField.focus();
+    }
+}
     
     validateCharacterLimit(fieldId, value = null) {
         const field = document.getElementById(fieldId);
