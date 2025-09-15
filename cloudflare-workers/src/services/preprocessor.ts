@@ -28,22 +28,27 @@ export async function runPreprocessor(
   };
 }> {
   
-  // Check R2 cache first
-  const cacheKey = generateCacheKey(profile);
-  const cached = await getCachedPreprocessor(cacheKey, env);
-  if (cached) {
-    console.log(`📋 [Preprocessor] Cache hit for @${profile.username}`);
-    return {
-      result: cached,
-      costDetails: {
-        actual_cost: 0,
-        tokens_in: 0,
-        tokens_out: 0,
-        model_used: 'cached',
-        block_type: 'preprocessor'
-      }
-    };
-  }
+// Check R2 cache first
+const cacheKey = generateCacheKey(profile);
+console.log(`📋 [Preprocessor] Generated cache key: ${cacheKey}`);
+console.log(`📋 [Preprocessor] R2_CACHE_BUCKET available: ${!!env.R2_CACHE_BUCKET}`);
+
+const cached = await getCachedPreprocessor(cacheKey, env);
+if (cached) {
+  console.log(`📋 [Preprocessor] Cache hit for @${profile.username}`);
+  return {
+    result: cached,
+    costDetails: {
+      actual_cost: 0,
+      tokens_in: 0,
+      tokens_out: 0,
+      model_used: 'cached',
+      block_type: 'preprocessor'
+    }
+  };
+}
+
+console.log(`📋 [Preprocessor] Cache miss, running analysis for @${profile.username}`);
 
   console.log(`📋 [Preprocessor] Starting for @${profile.username}`);
   
