@@ -107,25 +107,33 @@ const stageKey = stage.type === 'analysis' ? context.analysis_type : stage.type;
 const modelName = selectModel(stageKey, stage.model_tier || context.model_tier || 'balanced', results);
     const prompt = this.generatePrompt(stage.type, context, results);
     
-    const response = await this.aiAdapter.executeRequest({
-      model_name: modelName,
-      system_prompt: this.getSystemPrompt(stage.type),
-      user_prompt: prompt,
-      max_tokens: this.getMaxTokens(stage.type),
-      response_format: 'json',
-      json_schema: this.getJsonSchema(stage.type)
-    });
+const response = await this.aiAdapter.executeRequest({
+  model_name: modelName,
+  system_prompt: this.getSystemPrompt(stage.type),
+  user_prompt: prompt,
+  max_tokens: this.getMaxTokens(stage.type),
+  response_format: 'json',
+  json_schema: this.getJsonSchema(stage.type)
+});
 
-    return {
-      data: JSON.parse(response.content),
-      cost: {
-        stage: stage.name,
-        model: modelName,
-        cost: response.usage.total_cost,
-        tokens_in: response.usage.input_tokens,
-        tokens_out: response.usage.output_tokens
-      }
-    };
+// Clean Claude's markdown formatting if present
+let cleanContent = response.content.trim();
+if (cleanContent.startsWith('```json')) {
+  cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+} else if (cleanContent.startsWith('```')) {
+  cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+}
+
+return {
+  data: JSON.parse(cleanContent),
+  cost: {
+    stage: stage.name,
+    model: modelName,
+    cost: response.usage.total_cost,
+    tokens_in: response.usage.input_tokens,
+    tokens_out: response.usage.output_tokens
+  }
+};
   }
 
   private getContextValue(field: string, context: PipelineContext, results: Record<string, any>): any {
