@@ -21,7 +21,7 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
         }
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     logger('warn', 'Cache read failed, continuing with scraping', { error: error.message });
   }
 
@@ -109,8 +109,9 @@ async function scrapeDeepProfile(username: string, token: string): Promise<Profi
     };
   });
 
-  const profileData = await withScraperRetry(scraperAttempts, username);
+const profileData = await withScraperRetry(scraperAttempts, username);
 
+  // Cache profile data
   try {
     // Cache profile for 2-6 hours based on analysis type
     const cacheTTL = analysisType === 'light' ? 6 * 60 * 60 * 1000 : // 6 hours
@@ -127,7 +128,7 @@ async function scrapeDeepProfile(username: string, token: string): Promise<Profi
       await env.R2_CACHE_BUCKET.put(cacheKey, JSON.stringify(cacheData));
       logger('info', 'Profile cached successfully', { username, analysisType, ttl_hours: cacheTTL / (60 * 60 * 1000) });
     }
-  } catch (error) {
+  } catch (error: any) {
     logger('warn', 'Profile caching failed', { error: error.message });
   }
 
