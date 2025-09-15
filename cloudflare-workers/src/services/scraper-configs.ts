@@ -10,106 +10,196 @@ export interface ScraperConfig {
   priority: number; // Lower = higher priority
 }
 
-export const LIGHT_SCRAPER_CONFIGS: ScraperConfig[] = [
-  {
-    name: 'light_primary',
+export interface ScraperConfig {
+  name: string;
+  endpoint: string;
+  timeout: number;
+  maxRetries: number;
+  retryDelay: number;
+  priority: number;
+  input: (username: string) => any;
+  fieldMapping: ScraperFieldMapping; // ADD THIS
+}
+
+export interface ScraperFieldMapping {
+  username: string[];
+  displayName: string[];
+  bio: string[];
+  followersCount: string[];
+  followingCount: string[];
+  postsCount: string[];
+  isVerified: string[];
+  isPrivate: string[];
+  profilePicUrl: string[];
+  externalUrl: string[];
+  isBusinessAccount: string[];
+}
+
+export interface ScraperConfig {
+  name: string;
+  endpoint: string;
+  timeout: number;
+  maxRetries: number;
+  retryDelay: number;
+  priority: number;
+  input: (username: string) => any;
+  fieldMapping: ScraperFieldMapping;
+}
+
+export interface ScraperFieldMapping {
+  username: string[];
+  displayName: string[];
+  bio: string[];
+  followersCount: string[];
+  followingCount: string[];
+  postsCount: string[];
+  isVerified: string[];
+  isPrivate: string[];
+  profilePicUrl: string[];
+  externalUrl: string[];
+  isBusinessAccount: string[];
+}
+
+// Base scraper definitions - NO DUPLICATION
+const BASE_SCRAPERS = {
+  dS_basic: {
+    name: 'dS_basic',
     endpoint: 'dSCLg0C3YEZ83HzYX',
     timeout: 30000,
     maxRetries: 2,
     retryDelay: 2000,
-    priority: 1,
+    priority: 2,
     input: (username: string) => ({
       usernames: [username],
       resultsType: "details",
       resultsLimit: 1,
       addParentData: false
-    })
+    }),
+    fieldMapping: {
+      username: ['username'],
+      displayName: ['fullName', 'displayName'],
+      bio: ['biography', 'bio'],
+      followersCount: ['followersCount'],
+      followingCount: ['followsCount'], // CRITICAL: dS uses followsCount
+      postsCount: ['postsCount'],
+      isVerified: ['verified', 'isVerified'],
+      isPrivate: ['private', 'isPrivate'],
+      profilePicUrl: ['profilePicUrl'],
+      externalUrl: ['externalUrl', 'website'],
+      isBusinessAccount: ['isBusinessAccount']
+    }
   },
-  {
-    name: 'light_secondary',
+  
+  shu_light: {
+    name: 'shu_light',
     endpoint: 'shu8hvrXbJbY3Eb9W',
     timeout: 30000,
     maxRetries: 2,
     retryDelay: 3000,
-    priority: 2,
+    priority: 1,
     input: (username: string) => ({
-      usernames: [username],
-      resultsType: "details",
+      addParentData: false,
+      directUrls: [`https://instagram.com/${username}/`],
+      enhanceUserSearchWithFacebookPage: false,
+      isUserReelFeedURL: false,
+      isUserTaggedFeedURL: false,
       resultsLimit: 1,
-      addParentData: false
-    })
-  }
-];
-
-export const DEEP_SCRAPER_CONFIGS: ScraperConfig[] = [
-{
-  name: 'deep_primary',
-  endpoint: 'shu8hvrXbJbY3Eb9W',
-  timeout: 60000,
-  maxRetries: 2,
-  retryDelay: 3000,
-  priority: 1,
-  input: (username: string) => ({
-    addParentData: false,
-    directUrls: [`https://instagram.com/${username}/`],
-    enhanceUserSearchWithFacebookPage: false,
-    isUserReelFeedURL: false,
-    isUserTaggedFeedURL: false,
-    resultsLimit: 12,
-    resultsType: "details",
-    searchType: "hashtag"
-  })
-},
-    {
-    name: 'deep_secondary',
-    endpoint: 'dSCLg0C3YEZ83HzYX',
-    timeout: 90000,
+      resultsType: "details",
+      searchType: "hashtag"
+    }),
+    fieldMapping: {
+      username: ['username'],
+      displayName: ['fullName', 'displayName'],
+      bio: ['biography', 'bio'],
+      followersCount: ['followersCount'],
+      followingCount: ['followsCount'], // CRITICAL: shu also uses followsCount
+      postsCount: ['postsCount'],
+      isVerified: ['verified', 'isVerified'],
+      isPrivate: ['private', 'isPrivate'],
+      profilePicUrl: ['profilePicUrl', 'profilePicUrlHD'],
+      externalUrl: ['externalUrl', 'website'],
+      isBusinessAccount: ['isBusinessAccount']
+    }
+  },
+  
+  shu_deep: {
+    name: 'shu_deep',
+    endpoint: 'shu8hvrXbJbY3Eb9W',
+    timeout: 60000,
+    maxRetries: 2,
+    retryDelay: 3000,
+    priority: 1,
+    input: (username: string) => ({
+      addParentData: false,
+      directUrls: [`https://instagram.com/${username}/`],
+      enhanceUserSearchWithFacebookPage: false,
+      isUserReelFeedURL: false,
+      isUserTaggedFeedURL: false,
+      resultsLimit: 12,
+      resultsType: "details",
+      searchType: "hashtag"
+    }),
+    fieldMapping: {
+      username: ['username'],
+      displayName: ['fullName', 'displayName'],
+      bio: ['biography', 'bio'],
+      followersCount: ['followersCount'],
+      followingCount: ['followsCount'], // CRITICAL
+      postsCount: ['postsCount'],
+      isVerified: ['verified', 'isVerified'],
+      isPrivate: ['private', 'isPrivate'],
+      profilePicUrl: ['profilePicUrl', 'profilePicUrlHD'],
+      externalUrl: ['externalUrl', 'website'],
+      isBusinessAccount: ['isBusinessAccount']
+    }
+  },
+  
+  shu_xray: {
+    name: 'shu_xray',
+    endpoint: 'shu8hvrXbJbY3Eb9W',
+    timeout: 120000,
     maxRetries: 1,
-    retryDelay: 8000,
-    priority: 2,
+    retryDelay: 10000,
+    priority: 1,
     input: (username: string) => ({
-      usernames: [username],
+      addParentData: false,
+      directUrls: [`https://instagram.com/${username}/`],
+      enhanceUserSearchWithFacebookPage: false,
+      isUserReelFeedURL: false,
+      isUserTaggedFeedURL: false,
+      resultsLimit: 50,
       resultsType: "details",
-      resultsLimit: 1,
-      addParentData: false
-    })
+      searchType: "hashtag"
+    }),
+    fieldMapping: {
+      username: ['username'],
+      displayName: ['fullName', 'displayName'],
+      bio: ['biography', 'bio'],
+      followersCount: ['followersCount'],
+      followingCount: ['followsCount'], // CRITICAL
+      postsCount: ['postsCount'],
+      isVerified: ['verified', 'isVerified'],
+      isPrivate: ['private', 'isPrivate'],
+      profilePicUrl: ['profilePicUrl', 'profilePicUrlHD'],
+      externalUrl: ['externalUrl', 'website'],
+      isBusinessAccount: ['isBusinessAccount']
+    }
   }
-];
+} as const;
 
-export const XRAY_SCRAPER_CONFIGS: ScraperConfig[] = [
-{
-  name: 'xray_primary',
-  endpoint: 'shu8hvrXbJbY3Eb9W',
-  timeout: 120000,
-  maxRetries: 1,
-  retryDelay: 10000,
-  priority: 1,
-  input: (username: string) => ({
-    addParentData: false,
-    directUrls: [`https://instagram.com/${username}/`],
-    enhanceUserSearchWithFacebookPage: false,
-    isUserReelFeedURL: false,
-    isUserTaggedFeedURL: false,
-    resultsLimit: 50,
-    resultsType: "details",
-    searchType: "hashtag"
-  })
-},
-  {
-    name: 'xray_secondary',
-    endpoint: 'dSCLg0C3YEZ83HzYX',
-    timeout: 90000,
-    maxRetries: 1,
-    retryDelay: 8000,
-    priority: 2,
-    input: (username: string) => ({
-      usernames: [username],
-      resultsType: "details",
-      resultsLimit: 1,
-      addParentData: false
-    })
+// Dynamic configuration builder - NO DUPLICATION
+export function getScraperConfigs(analysisType: 'light' | 'deep' | 'xray'): ScraperConfig[] {
+  switch (analysisType) {
+    case 'light':
+      return [BASE_SCRAPERS.shu_light, BASE_SCRAPERS.dS_basic];
+    case 'deep':
+      return [BASE_SCRAPERS.shu_deep, BASE_SCRAPERS.dS_basic];
+    case 'xray':
+      return [BASE_SCRAPERS.shu_xray, BASE_SCRAPERS.shu_deep, BASE_SCRAPERS.dS_basic];
+    default:
+      return [BASE_SCRAPERS.shu_light, BASE_SCRAPERS.dS_basic];
   }
-];
+}
 
 // API Endpoints and Base URLs
 export const APIFY_BASE_URL = 'https://api.apify.com/v2/acts';
@@ -245,4 +335,35 @@ export function calculateScraperCost(analysisType: 'light' | 'deep' | 'xray', sc
   const multiplier = scraperUsed.includes('backup') || scraperUsed.includes('fallback') ? 1.5 : 1.0;
   
   return baseCost * multiplier;
+}
+
+// Dynamic field extraction using mappings
+export function extractFieldValue(data: any, fieldMapping: string[]): any {
+  for (const field of fieldMapping) {
+    if (data[field] !== undefined && data[field] !== null) {
+      return data[field];
+    }
+  }
+  return null;
+}
+
+export function validateAndTransformScraperData(
+  data: any, 
+  config: ScraperConfig
+): any {
+  const mapping = config.fieldMapping;
+  
+  return {
+    username: extractFieldValue(data, mapping.username),
+    displayName: extractFieldValue(data, mapping.displayName) || '',
+    bio: extractFieldValue(data, mapping.bio) || '',
+    followersCount: parseInt(extractFieldValue(data, mapping.followersCount)?.toString() || '0') || 0,
+    followingCount: parseInt(extractFieldValue(data, mapping.followingCount)?.toString() || '0') || 0,
+    postsCount: parseInt(extractFieldValue(data, mapping.postsCount)?.toString() || '0') || 0,
+    isVerified: Boolean(extractFieldValue(data, mapping.isVerified)),
+    isPrivate: Boolean(extractFieldValue(data, mapping.isPrivate)),
+    profilePicUrl: extractFieldValue(data, mapping.profilePicUrl) || '',
+    externalUrl: extractFieldValue(data, mapping.externalUrl) || '',
+    isBusinessAccount: Boolean(extractFieldValue(data, mapping.isBusinessAccount))
+  };
 }
