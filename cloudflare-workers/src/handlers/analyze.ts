@@ -4,7 +4,7 @@ import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
 import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
-import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.ts';
+import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -19,17 +19,17 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       force_model?: string;       // Override specific model
     };
     
-const { 
-  profile_url, 
-  username, 
-  analysis_type, 
-  business_id, 
-  user_id,
-workflow = analysis_type === 'light' ? 'light_fast' : 
-           analysis_type === 'deep' ? 'deep_fast' : 'auto',
-  model_tier = analysis_type === 'light' ? 'economy' : 'balanced',
-  force_model
-} = normalizeRequest(body);
+    const { 
+      profile_url, 
+      username, 
+      analysis_type, 
+      business_id, 
+      user_id,
+      workflow = analysis_type === 'light' ? 'light_fast' : 
+                 analysis_type === 'deep' ? 'deep_fast' : 'auto',
+      model_tier = analysis_type === 'light' ? 'economy' : 'balanced',
+      force_model
+    } = normalizeRequest(body);
 
     logger('info', 'Request validated', { 
       requestId, 
@@ -66,7 +66,7 @@ workflow = analysis_type === 'light' ? 'light_fast' :
       ), 400);
     }
 
-    // SCRAPING: Get profile data - FIXED IMPORT
+    // SCRAPING: Get profile data
     let profileData: ProfileData;
     try {
       const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
@@ -90,10 +90,10 @@ workflow = analysis_type === 'light' ? 'light_fast' :
     try {
       logger('info', 'Using pipeline system', { workflow, model_tier, requestId });
 
-// Get business context if available
-const enrichedBusiness = business.business_one_liner || business.business_context_pack ? 
-  business : 
-  await fetchBusinessProfile(business_id, user_id, c.env);
+      // Get business context if available
+      const enrichedBusiness = business.business_one_liner || business.business_context_pack ? 
+        business : 
+        await fetchBusinessProfile(business_id, user_id, c.env);
 
       // Create pipeline context
       const pipelineContext: PipelineContext = {
@@ -170,144 +170,132 @@ const enrichedBusiness = business.business_one_liner || business.business_contex
     const analysisResult = orchestrationResult.result;
 
     // PREPARE DATA FOR DATABASE (3-TABLE STRUCTURE)
-const leadData = {
-  user_id,
-  business_id,
-  username: profileData.username,
-  full_name: profileData.displayName,
-  profile_pic_url: profileData.profilePicUrl,
-  bio: profileData.bio,
-  external_url: profileData.externalUrl,
-  followersCount: profileData.followersCount,
-  followsCount: profileData.followingCount,  // Use followsCount to match scraper
-  postsCount: profileData.postsCount,
-  is_verified: profileData.isVerified,
-  is_private: profileData.isPrivate,
-  is_business_account: profileData.isBusinessAccount || false,
-  profile_url
-};
+    const leadData = {
+      user_id,
+      business_id,
+      username: profileData.username,
+      full_name: profileData.displayName,
+      profile_pic_url: profileData.profilePicUrl,
+      bio: profileData.bio,
+      external_url: profileData.externalUrl,
+      followersCount: profileData.followersCount,
+      followsCount: profileData.followingCount,  // Use followsCount to match scraper
+      postsCount: profileData.postsCount,
+      is_verified: profileData.isVerified,
+      is_private: profileData.isPrivate,
+      is_business_account: profileData.isBusinessAccount || false,
+      profile_url
+    };
 
-    // Prepare analysis data based on type (deep/xray only)
-    let analysisData = null;
-    if (analysis_type === 'deep' || analysis_type === 'xray') {
-      analysisData = {
-        ...analysisResult,
-        // Engagement data from scraping
-        avg_likes: profileData.engagement?.avgLikes || 0,
-        avg_comments: profileData.engagement?.avgComments || 0,
-        engagement_rate: profileData.engagement?.engagementRate || 0,
-        
-        // Structured data
-        latest_posts: profileData.latestPosts ? JSON.stringify(profileData.latestPosts) : null,
-        engagement_data: profileData.engagement ? JSON.stringify({
-          avg_likes: profileData.engagement.avgLikes,
-          avg_comments: profileData.engagement.avgComments,
-          engagement_rate: profileData.engagement.engagementRate,
-          posts_analyzed: profileData.engagement.postsAnalyzed,
-          data_source: 'real_scraped_calculation'
-        }) : null,
-        
-        // Analysis metadata (pipeline info)
-        analysis_timestamp: new Date().toISOString(),
-        ai_model_used: 'pipeline_system',
-        scraperUsed: profileData.scraperUsed,
-        dataQuality: profileData.dataQuality,
-        system_used: 'pipeline',
-        workflow_used: orchestrationResult.workflow_used,
-        pipeline_metadata: {
-          stages_executed: orchestrationResult.totalCost.blocks_used,
-          workflow: orchestrationResult.workflow_used,
-          model_tier: model_tier
-        }
-      };
-    }
-
-   // SAVE TO DATABASE (3-TABLE STRUCTURE)
+    // SAVE TO DATABASE AND UPDATE CREDITS
     let run_id: string;
-    let lead_id: string; // ADD LEAD_ID VARIABLE
+    let lead_id: string;
     try {
+      // Step 1: Save analysis to database
       run_id = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
       
-      // GET LEAD_ID for credit transaction
-      const { getLeadIdFromRun } = await import('../services/database.js');
+      // Step 2: Get lead_id for credit transaction
       lead_id = await getLeadIdFromRun(run_id, c.env);
       
       logger('info', 'Database save successful', { 
         run_id, 
         lead_id,
         username: profileData.username 
-      }); 
+      });
 
-// UPDATE USER CREDITS - INCLUDE LEAD_ID
-try {
-// Extract primary model (most expensive stage, typically main analysis)
-const primaryModel = orchestrationResult.totalCost.blocks_used.length > 0 
-  ? orchestrationResult.totalCost.blocks_used[orchestrationResult.totalCost.blocks_used.length - 1]
-  : 'unknown';
+      // Step 3: Update user credits with lead_id
+      const primaryModel = orchestrationResult.totalCost.blocks_used.length > 0 
+        ? orchestrationResult.totalCost.blocks_used[orchestrationResult.totalCost.blocks_used.length - 1]
+        : 'unknown';
 
-const costDetails = {
-  actual_cost: orchestrationResult.totalCost.actual_cost,
-  tokens_in: orchestrationResult.totalCost.tokens_in,
-  tokens_out: orchestrationResult.totalCost.tokens_out,
-  model_used: primaryModel.substring(0, 20), // Truncate to DB limit
-  block_type: 'pipeline',
-  processing_duration_ms: orchestrationResult.performance.total_ms,
-  blocks_used: orchestrationResult.totalCost.blocks_used,
-  system_used: 'pipeline'
-};
+      const costDetails = {
+        actual_cost: orchestrationResult.totalCost.actual_cost,
+        tokens_in: orchestrationResult.totalCost.tokens_in,
+        tokens_out: orchestrationResult.totalCost.tokens_out,
+        model_used: primaryModel.substring(0, 20), // Truncate to DB limit
+        block_type: 'pipeline',
+        processing_duration_ms: orchestrationResult.performance.total_ms,
+        blocks_used: orchestrationResult.totalCost.blocks_used,
+        system_used: 'pipeline'
+      };
 
-await updateCreditsAndTransaction(
-      user_id, 
-      creditCost, 
-      analysis_type, 
-      run_id,
-      costDetails,
-      c.env,
-      lead_id // ADD LEAD_ID PARAMETER
-    );
-    } catch (creditError: any) {
-      logger('error', 'Credit update failed', { error: creditError.message });
-      // Continue - analysis was successful, credit update failure shouldn't break response
+      await updateCreditsAndTransaction(
+        user_id, 
+        creditCost, 
+        analysis_type, 
+        run_id,
+        costDetails,
+        c.env,
+        lead_id
+      );
+
+      logger('info', 'Credits updated successfully', { 
+        user_id, 
+        creditCost, 
+        run_id, 
+        lead_id 
+      });
+
+    } catch (saveError: any) {
+      logger('error', 'Database save or credit update failed', { 
+        error: saveError.message,
+        username: profileData.username,
+        requestId
+      });
+      return c.json(createStandardResponse(
+        false, 
+        undefined, 
+        `Database operation failed: ${saveError.message}`,
+        requestId
+      ), 500);
     }
 
     // BUILD RESPONSE
     const responseData: AnalysisResponse = {
-      analysis: {
+      run_id: run_id,
+      profile: {
         username: profileData.username,
-        full_name: profileData.displayName,
-        bio: profileData.bio,
-        followers_count: profileData.followersCount,
-        following_count: profileData.followingCount,
-        posts_count: profileData.postsCount,
-        is_verified: profileData.isVerified,
-        is_private: profileData.isPrivate,
-        profile_pic_url: profileData.profilePicUrl,
-        external_url: profileData.externalUrl,
+        displayName: profileData.displayName,
+        followersCount: profileData.followersCount,
+        isVerified: profileData.isVerified,
+        profilePicUrl: profileData.profilePicUrl,
+        dataQuality: profileData.dataQuality || 'medium',
+        scraperUsed: profileData.scraperUsed || 'unknown'
+      },
+      analysis: {
+        overall_score: analysisResult.score,
+        niche_fit_score: analysisResult.niche_fit,
+        engagement_score: analysisResult.engagement_score,
+        type: analysis_type,
+        confidence_level: analysisResult.confidence_level,
+        summary_text: analysisResult.quick_summary,
         
-        // Analysis results
-        ...analysisResult,
+        // Additional analysis fields based on type
+        audience_quality: analysisResult.audience_quality,
+        selling_points: analysisResult.selling_points || [],
+        reasons: analysisResult.reasons || [],
         
-        // Real engagement calculation
-        engagement: profileData.engagement ? {
-          avg_likes: profileData.engagement.avgLikes,
-          avg_comments: profileData.engagement.avgComments,
-          engagement_rate: profileData.engagement.engagementRate,
-          posts_analyzed: profileData.engagement.postsAnalyzed,
-          data_source: 'real_scraped_calculation'
-        } : {
-          data_source: 'no_real_data_available',
-          avg_likes: 0,
-          avg_comments: 0,
-          engagement_rate: 0
-        },
+        // Deep analysis fields
+        ...(analysis_type === 'deep' && {
+          deep_summary: analysisResult.deep_summary,
+          outreach_message: analysisResult.outreach_message,
+          engagement_breakdown: profileData.engagement ? {
+            avg_likes: profileData.engagement.avgLikes,
+            avg_comments: profileData.engagement.avgComments,
+            engagement_rate: profileData.engagement.engagementRate,
+            posts_analyzed: profileData.engagement.postsAnalyzed,
+            data_source: 'real_scraped_calculation'
+          } : null
+        }),
         
+        // X-Ray analysis fields
         ...(analysis_type === 'xray' && {
-          copywriter_profile: analysisData?.copywriter_profile || {},
-          commercial_intelligence: analysisData?.commercial_intelligence || {},
-          persuasion_strategy: analysisData?.persuasion_strategy || {}
+          copywriter_profile: analysisResult.copywriter_profile || {},
+          commercial_intelligence: analysisResult.commercial_intelligence || {},
+          persuasion_strategy: analysisResult.persuasion_strategy || {}
         })
       },
-credits: {
+      credits: {
         used: creditCost,
         remaining: userResult.credits - creditCost,
         actual_cost: orchestrationResult.totalCost.actual_cost,
@@ -316,7 +304,7 @@ credits: {
       metadata: {
         request_id: requestId,
         analysis_completed_at: new Date().toISOString(),
-        schema_version: '3.1', // Updated version for pipeline support
+        schema_version: '3.1',
         system_used: 'pipeline',
         workflow_used: orchestrationResult.workflow_used,
         orchestration: {
@@ -332,6 +320,7 @@ credits: {
 
     logger('info', 'Analysis completed successfully', { 
       run_id, 
+      lead_id,
       username: profileData.username, 
       overall_score: analysisResult.score,
       confidence: analysisResult.confidence_level,
@@ -353,9 +342,10 @@ credits: {
   }
 }
 
+// Helper function to transform pipeline results to standard interface
 function transformPipelineResult(pipelineResult: any, analysisType: string): any {
   // Extract the final analysis result based on analysis type
-  const mainAnalysisKey = 'main_analysis';  // Pipeline uses consistent naming
+  const mainAnalysisKey = 'main_analysis';
   const mainResult = pipelineResult.results[mainAnalysisKey] || 
                      pipelineResult.results.analysis ||
                      pipelineResult.results[`${analysisType}_analysis`];
