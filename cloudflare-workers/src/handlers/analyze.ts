@@ -237,7 +237,23 @@ const leadData = {
       ), 500);
     }
 
-// UPDATE USER CREDITS - FIXED COST MODEL
+   // SAVE TO DATABASE (3-TABLE STRUCTURE)
+    let run_id: string;
+    let lead_id: string; // ADD LEAD_ID VARIABLE
+    try {
+      run_id = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
+      
+      // GET LEAD_ID for credit transaction
+      const { getLeadIdFromRun } = await import('../services/database.js');
+      lead_id = await getLeadIdFromRun(run_id, c.env);
+      
+      logger('info', 'Database save successful', { 
+        run_id, 
+        lead_id,
+        username: profileData.username 
+      }); 
+
+// UPDATE USER CREDITS - INCLUDE LEAD_ID
 try {
 // Extract primary model (most expensive stage, typically main analysis)
 const primaryModel = orchestrationResult.totalCost.blocks_used.length > 0 
@@ -259,9 +275,10 @@ await updateCreditsAndTransaction(
       user_id, 
       creditCost, 
       analysis_type, 
-      run_id, 
+      run_id,
       costDetails,
-      c.env
+      c.env,
+      lead_id // ADD LEAD_ID PARAMETER
     );
     } catch (creditError: any) {
       logger('error', 'Credit update failed', { error: creditError.message });
@@ -351,7 +368,6 @@ credits: {
   }
 }
 
-// Helper function to transform pipeline results to standard interface
 function transformPipelineResult(pipelineResult: any, analysisType: string): any {
   // Extract the final analysis result based on analysis type
   const mainAnalysisKey = 'main_analysis';  // Pipeline uses consistent naming
@@ -363,9 +379,19 @@ function transformPipelineResult(pipelineResult: any, analysisType: string): any
     throw new Error('No analysis result found in pipeline output');
   }
   
-  // Transform to match expected format, including pipeline metadata
-  return {
+  // Ensure required fields for database save
+  const transformedResult = {
     ...mainResult,
+    // Ensure summary_text is present
+    quick_summary: mainResult.quick_summary || 
+                   mainResult.summary_text || 
+                   `${analysisType} analysis completed - Score: ${mainResult.score || 0}/100`,
+    
+    // Ensure confidence_level is present
+    confidence_level: mainResult.confidence_level || 
+                     mainResult.confidence || 
+                     (analysisType === 'light' ? 0.6 : analysisType === 'deep' ? 0.75 : 0.85),
+    
     // Add pipeline-specific metadata for debugging/monitoring
     pipeline_metadata: {
       triage: pipelineResult.results.triage,
@@ -375,4 +401,14 @@ function transformPipelineResult(pipelineResult: any, analysisType: string): any
       stages_executed: Object.keys(pipelineResult.results)
     }
   };
+  
+  logger('info', 'Pipeline result transformation', {
+    analysis_type: analysisType,
+    has_quick_summary: !!transformedResult.quick_summary,
+    has_confidence_level: !!transformedResult.confidence_level,
+    quick_summary: transformedResult.quick_summary,
+    confidence_level: transformedResult.confidence_level
+  });
+  
+  return transformedResult;
 }
