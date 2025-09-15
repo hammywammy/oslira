@@ -37,11 +37,11 @@ this.VALIDATION_RULES = {
                 max: 100,
                 reason: 'Business names are typically 2-100 characters'
             },
-            'target-audience': {
-                min: 20,
-                max: 500,
-                reason: 'Detailed audience description for AI analysis'
-            },
+'target-description': {
+    min: 20,
+    max: 500,
+    reason: 'Detailed audience description for AI analysis'
+},
             'value-proposition': {
                 min: 20,
                 max: 300,
