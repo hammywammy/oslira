@@ -158,7 +158,6 @@
   }
   
   .onboarding-form-field {
-    @apply group;
   }
   
   .onboarding-form-label {
@@ -254,7 +253,7 @@
   }
   
   .onboarding-choice-card {
-    @apply relative group cursor-pointer;
+    @apply relative cursor-pointer;
   }
   
   .onboarding-choice-input {
@@ -350,9 +349,9 @@
   }
   
   .onboarding-btn-primary {
-    @apply group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl;
-    @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-violet-500/25;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl;
+  @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-violet-500/25;
+  @apply disabled:opacity-50 disabled:cursor-not-allowed;
     position: relative;
     overflow: hidden;
   }
@@ -377,8 +376,8 @@
   }
   
   .onboarding-btn-success {
-    @apply group relative px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-2xl;
-    @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/25;
+  @apply relative px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-2xl;
+  @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/25;
   }
 
   /* =============================================================================
