@@ -557,3 +557,6 @@ export class OnboardingValidator {
         console.log('🔄 [OnboardingValidator] Reset complete');
     }
 }
+
+// Export to window for non-module usage  
+window.OnboardingValidator = OnboardingValidator;
