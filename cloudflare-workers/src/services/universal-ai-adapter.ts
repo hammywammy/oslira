@@ -222,15 +222,15 @@ logger('info', '🔍 GPT-5 Content Extraction', {
     const claudeKey = await getApiKey('CLAUDE_API_KEY', this.env);
     if (!claudeKey) throw new Error('Claude API key not available');
 
-    const body = {
-      model: config.name,
-      system: request.system_prompt,
-      messages: [
-        { role: 'user', content: request.user_prompt }
-      ],
-      max_tokens: request.max_tokens,
-      temperature: request.temperature || 0.7
-    };
+const body = {
+  model: config.name,
+  system: `${request.system_prompt}\n\nIMPORTANT: Return only raw JSON without markdown formatting, code blocks, or backticks. Start your response directly with { and end with }.`,
+  messages: [
+    { role: 'user', content: request.user_prompt }
+  ],
+  max_tokens: request.max_tokens,
+  temperature: request.temperature || 0.1  // Lower temperature for more consistent formatting
+};
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
