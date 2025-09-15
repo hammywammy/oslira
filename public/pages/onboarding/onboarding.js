@@ -74,17 +74,20 @@
     // UI MANAGEMENT
     // =============================================================================
     
-    function showOnboardingForm() {
-        hideElement('loading-state');
-        showElement('onboarding-form');
-        document.body.style.visibility = 'visible';
-        updateProgress();
-        
-        // Pre-fill user data
-        prefillUserData();
-        
-        console.log('✅ [Onboarding] Onboarding form displayed');
-    }
+function showOnboardingForm() {
+    hideElement('loading-state');
+    showElement('onboarding-form');
+    document.body.style.visibility = 'visible';
+    
+    // Initialize the form with step 1 after rules are loaded
+    showStep(1);
+    updateProgress();
+    
+    // Pre-fill user data
+    prefillUserData();
+    
+    console.log('✅ [Onboarding] Onboarding form displayed');
+}
     
     function showError(message) {
         hideElement('loading-state');
@@ -461,15 +464,11 @@
         }
     }
     
-    // =============================================================================
-    // INITIALIZATION
-    // =============================================================================
-    
-    // Initialize the form
-    showStep(1);
-    
-    console.log('📝 [Onboarding] Main controller loaded successfully');
-    console.log('🔢 Rules configured for', totalSteps, 'steps');
-    console.log('✅ Validator initialized:', validator.isInitialized());
+// =============================================================================
+// INITIALIZATION
+// =============================================================================
+
+// Don't initialize step immediately - wait for proper initialization
+console.log('📝 [Onboarding] Main controller loaded successfully');
 
 })();
