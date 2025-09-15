@@ -268,21 +268,27 @@ private calculateCost(inputTokens: number, outputTokens: number, config: ModelCo
 }
 }
 
-// Model Selection Logic
 export function selectModel(
   stage: string, 
   modelTier: 'premium' | 'balanced' | 'economy',
-  context?: { triage?: { lead_score: number } }
+  context?: { triage?: { lead_score: number }, tokenCount?: number }
 ): string {
   const mapping = ANALYSIS_PIPELINE_CONFIG.analysis_mappings[stage];
-  if (!mapping) {
-    throw new Error(`No model mapping found for stage: ${stage}`);
+  
+  // For short prompts, always use nano model regardless of tier
+  if (context?.tokenCount && context.tokenCount < 500) {
+    return 'gpt-5-nano';
   }
-
-  // Dynamic tier upgrade for high-value leads
-  if (context?.triage?.lead_score && context.triage.lead_score > 70 && modelTier === 'balanced') {
+  
+  // High-value leads get upgraded
+  if (context?.triage?.lead_score && context.triage.lead_score > 80) {
     return mapping.premium || mapping.balanced;
   }
-
+  
+  // Low-value leads get downgraded
+  if (context?.triage?.lead_score && context.triage.lead_score < 30) {
+    return 'gpt-5-nano';
+  }
+  
   return mapping[modelTier];
 }
