@@ -25,7 +25,8 @@ const {
   analysis_type, 
   business_id, 
   user_id,
-  workflow = analysis_type === 'light' ? 'light_fast' : 'auto',
+workflow = analysis_type === 'light' ? 'light_fast' : 
+           analysis_type === 'deep' ? 'deep_fast' : 'auto',
   model_tier = analysis_type === 'light' ? 'economy' : 'balanced',
   force_model
 } = normalizeRequest(body);
