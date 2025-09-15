@@ -53,9 +53,9 @@ export async function upsertLead(
       bio_text: leadData.bio || null,
       external_website_url: leadData.external_url || leadData.externalUrl || null,
       
-follower_count: parseInt(leadData.followersCount || leadData.followers_count) || 0,
-following_count: parseInt(leadData.followsCount || leadData.following_count) || 0,
-post_count: parseInt(leadData.postsCount || leadData.posts_count) || 0,
+  follower_count: parseInt(leadData.followersCount || leadData.follower_count || '0'),
+  following_count: parseInt(leadData.followsCount || leadData.followingCount || leadData.following_count || '0'),
+  post_count: parseInt(leadData.postsCount || leadData.post_count || '0'),
       
       // Profile attributes
       is_verified_account: leadData.is_verified || leadData.isVerified || false,
