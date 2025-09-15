@@ -105,6 +105,15 @@ light_fast: {
       model_tier: 'economy'
     }
   ]
+} as WorkflowConfig,
+
+    deep_fast: {
+  name: 'deep_fast',
+  description: 'Speed-optimized deep analysis - skip triage and preprocessor',
+  stages: [
+    { name: 'context_generation', type: 'context', required: true, model_tier: 'economy' },
+    { name: 'main_analysis', type: 'analysis', required: true, model_tier: 'balanced' }
+  ]
 } as WorkflowConfig
   },
 
