@@ -15,19 +15,75 @@
     let currentStep = 1;
     const totalSteps = 9; // Updated to 9 steps
     
-    // Form validation rules - Updated with all new fields
-    const validationRules = {
-        'primary-objective': { required: true },
-        'business-name': { required: true, minLength: 2 },
-        'business-niche': { required: true },
-        'target-audience': { required: true, minLength: 20 },
-        'value-proposition': { required: true, minLength: 20 },
-        'communication-tone': { required: true },
-        'preferred-cta': { required: true },
-        'phone-number': { required: false }, // Optional
-        'key-results': { required: false } // Optional (moved to end)
-    };
-    
+// =============================================================================
+// VALIDATION CONFIGURATION
+// =============================================================================
+
+const stepFields = {
+    1: ['business-name'],
+    2: ['business-niche'],
+    3: ['target-audience'],
+    4: ['target-problems'],
+    5: ['value-proposition'],
+    6: ['success-outcome'],
+    7: ['call-to-action'],
+    8: ['communication-style'],
+    9: ['message-example'],
+    10: ['primary-objective', 'phone-number'] // Phone is optional
+};
+
+const validationRules = {
+    'business-name': { required: true, minLength: 2 },
+    'business-niche': { required: true, minLength: 3 },
+    'target-audience': { required: true, minLength: 10 },
+    'target-problems': { required: true, minLength: 20 },
+    'value-proposition': { required: true, minLength: 20 },
+    'success-outcome': { required: true, minLength: 10 },
+    'call-to-action': { required: true, minLength: 5 },
+    'communication-style': { required: true },
+    'message-example': { required: true, minLength: 50 },
+    'primary-objective': { required: true },
+    'phone-number': { required: false }
+};
+
+function showSubmissionError(message) {
+    const errorElement = document.getElementById('submission-error');
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        // Fallback: create error element
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'submission-error';
+        errorDiv.className = 'validation-notification';
+        errorDiv.textContent = message;
+        
+        const form = document.querySelector('.onboarding-form');
+        if (form) {
+            form.insertBefore(errorDiv, form.firstChild);
+            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+}
+
+function showSubmissionProgress() {
+    const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Creating Profile...';
+        submitButton.classList.add('loading');
+    }
+}
+
+function hideSubmissionProgress() {
+    const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
+    if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Complete Onboarding';
+        submitButton.classList.remove('loading');
+    }
+}
     // Character limits for each field (optimized for AI summary generation)
     const CHARACTER_LIMITS = {
         // Text inputs
@@ -457,11 +513,39 @@
     }
     
     
-    function prevStep() {
-        if (currentStep > 1) {
-            showStep(currentStep - 1);
+function prevStep() {
+    if (currentStep > 1) {
+        // Clear any validation errors from current step
+        clearAllErrors();
+        
+        // Hide current step
+        const currentStepElement = document.getElementById(`step-${currentStep}`);
+        if (currentStepElement) {
+            currentStepElement.style.display = 'none';
         }
+        
+        // Show previous step
+        currentStep--;
+        const prevStepElement = document.getElementById(`step-${currentStep}`);
+        if (prevStepElement) {
+            prevStepElement.style.display = 'block';
+            
+            // Focus first input in previous step
+            const firstInput = prevStepElement.querySelector('input, textarea, select');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 100);
+            }
+        }
+        
+        // Update progress
+        updateProgress();
+        
+        // Update navigation buttons
+        updateNavigationButtons();
+        
+        console.log(`⬅️ [Onboarding] Moved back to step ${currentStep}`);
     }
+}
     
 function validateStep(stepNumber) {
     console.log(`🔍 [Onboarding] Validating step ${stepNumber}`);
@@ -701,26 +785,65 @@ function highlightCommunicationChoices() {
 
 // Also enhance the nextStep function to provide better user feedback
 function nextStep() {
-    const isValid = validateStep(currentStep);
-    
-    if (!isValid) {
-        console.log(`❌ [Onboarding] Step ${currentStep} validation failed`);
-        
-        // Show user feedback
-        showStepValidationFailed();
-        return;
-    }
-    
-    // Handle smart defaults
-    if (currentStep === 3) { // After business niche selection
-        setSmartDefaults();
-    }
-    
     if (currentStep < totalSteps) {
-        showStep(currentStep + 1);
-        console.log(`✅ [Onboarding] Moved to step ${currentStep}`);
+        // Validate current step before proceeding
+        if (!validateStep(currentStep)) {
+            console.log(`❌ [Onboarding] Step ${currentStep} validation failed`);
+            return;
+        }
+        
+        // Clear any existing errors
+        clearAllErrors();
+        
+        // Hide current step
+        const currentStepElement = document.getElementById(`step-${currentStep}`);
+        if (currentStepElement) {
+            currentStepElement.style.display = 'none';
+        }
+        
+        // Show next step
+        currentStep++;
+        const nextStepElement = document.getElementById(`step-${currentStep}`);
+        if (nextStepElement) {
+            nextStepElement.style.display = 'block';
+            
+            // Focus first input in new step
+            const firstInput = nextStepElement.querySelector('input, textarea, select');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 100);
+            }
+        }
+        
+        // Update progress
+        updateProgress();
+        
+        // Update navigation buttons
+        updateNavigationButtons();
+        
+        console.log(`➡️ [Onboarding] Moved to step ${currentStep}`);
     } else {
-        completeOnboarding();
+        // At final step, submit instead
+        submitOnboarding();
+    }
+}
+
+function updateNavigationButtons() {
+    const prevButton = document.querySelector('[onclick="prevStep()"]');
+    const nextButton = document.querySelector('[onclick="nextStep()"]');
+    const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
+    
+    // Show/hide previous button
+    if (prevButton) {
+        prevButton.style.display = currentStep > 1 ? 'inline-flex' : 'none';
+    }
+    
+    // Update next/submit button
+    if (currentStep === totalSteps) {
+        if (nextButton) nextButton.style.display = 'none';
+        if (submitButton) submitButton.style.display = 'inline-flex';
+    } else {
+        if (nextButton) nextButton.style.display = 'inline-flex';
+        if (submitButton) submitButton.style.display = 'none';
     }
 }
 
@@ -860,6 +983,22 @@ function validatePhoneNumber(phone) {
         const field = document.getElementById(fieldId);
         return field ? field.value.trim() : '';
     }
+
+function sanitizePhoneNumber(phone) {
+    if (!phone) return '';
+    
+    // Remove all non-numeric characters except + for international
+    const cleaned = phone.replace(/[^\d+]/g, '');
+    
+    // Validate international format
+    if (cleaned.startsWith('+')) {
+        return cleaned.length <= 16 ? cleaned : cleaned.substring(0, 16);
+    }
+    
+    // Domestic format - remove leading 1 if present
+    const domesticCleaned = cleaned.replace(/^1/, '');
+    return domesticCleaned.length <= 10 ? domesticCleaned : domesticCleaned.substring(0, 10);
+}
     
     function getPhoneData() {
         const countryCode = document.getElementById('country-code').value;
@@ -946,132 +1085,120 @@ function validatePhoneNumber(phone) {
     // ONBOARDING SUBMISSION
     // =============================================================================
     
-    async function submitOnboarding() {
-        if (!validateStep(totalSteps)) {
-            console.log('❌ [Onboarding] Final step validation failed');
+async function submitOnboarding() {
+    console.log('📤 [Onboarding] Starting submission process');
+    
+    try {
+        showSubmissionProgress();
+        
+        // Collect form data
+        const formData = {
+            business_name: getFieldValue('business-name'),
+            business_niche: getFieldValue('business-niche'),
+            target_audience: getFieldValue('target-audience'),
+            target_problems: getFieldValue('target-problems'),
+            value_proposition: getFieldValue('value-proposition'),
+            communication_style: getFieldValue('communication-style'),
+            message_example: getFieldValue('message-example'),
+            success_outcome: getFieldValue('success-outcome'),
+            call_to_action: getFieldValue('call-to-action'),
+            primary_objective: getFieldValue('primary-objective'),
+            phone_number: sanitizePhoneNumber(getFieldValue('phone-number')),
+            opt_in_sms: document.getElementById('opt-in-sms')?.checked || false
+        };
+        
+        // Validate all fields
+        if (!validateAllFields(formData)) {
+            hideSubmissionProgress();
             return;
         }
         
-        const submitBtn = document.querySelector('#step-' + totalSteps + ' .btn-primary');
-        if (!submitBtn) return;
+        console.log('🧠 [Onboarding] Generating business context via AI...');
         
-        // Show loading state
-        const originalText = submitBtn.textContent;
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Saving...';
+        // Call Cloudflare Worker to generate context using GPT-5 Mini
+        const contextResponse = await window.OsliraApiClient.request('/v1/generate-business-context', {
+            method: 'POST',
+            data: {
+                business_data: formData,
+                user_id: window.OsliraAuth.getSession()?.user?.id,
+                request_type: 'onboarding_context_generation'
+            }
+        });
         
-        try {
-            console.log('💾 [Onboarding] Submitting onboarding data...');
+        if (!contextResponse.success) {
+            throw new Error(contextResponse.error || 'Failed to generate business context');
+        }
+        
+        console.log('✅ [Onboarding] Business context generated successfully');
+        
+        // Combine form data with AI-generated context
+        const profileData = {
+            ...formData,
+            business_one_liner: contextResponse.data.business_one_liner,
+            business_context_pack: contextResponse.data.business_context_pack,
+            context_version: contextResponse.data.context_version || 'v1.0',
+            context_updated_at: new Date().toISOString()
+        };
+        
+        console.log('📝 [Onboarding] Submitting complete profile:', {
+            business_name: profileData.business_name,
+            one_liner_length: profileData.business_one_liner?.length,
+            context_pack_size: JSON.stringify(profileData.business_context_pack).length,
+            ai_generated: true
+        });
+        
+        // Submit to API
+        const response = await window.OsliraApiClient.request('/business-profiles', {
+            method: 'POST',
+            data: profileData
+        });
+        
+        if (response.success) {
+            console.log('✅ [Onboarding] Profile created successfully with AI context');
             
-            // Get phone data
-            const phoneData = getPhoneData();
-            
-            // Collect form data for business_profiles table
-            const businessProfileData = {
-                user_id: user.id,
-                primary_objective: getFieldValue('primary-objective'),
-                business_name: getFieldValue('business-name'),
-                business_niche: getFieldValue('business-niche'),
-                target_audience: getFieldValue('target-audience'),
-                target_problems: `Common challenges faced by ${getFieldValue('target-audience')} that ${getFieldValue('business-name')} addresses.`,
-                value_proposition: getFieldValue('value-proposition'),
-                communication_style: getFieldValue('communication-tone'),
-                message_example: `Hi! I noticed you're interested in ${getFieldValue('business-niche')}. ${getFieldValue('value-proposition')} Would you like to learn more?`,
-                success_outcome: getFieldValue('key-results') || null,
-                call_to_action: getFieldValue('preferred-cta'),
-                phone_number: phoneData?.phone || null,
-                opt_in_sms: phoneData?.opt_in_sms || false,
-                is_active: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            };
-            
-console.log('💾 [Onboarding] Verifying user record exists (should already exist from auth)...');
-
-// Verify user record exists - DO NOT CREATE, only check
-const { data: existingUser, error: checkError } = await supabase
-    .from('users')
-    .select('id, email, onboarding_completed')
-    .eq('id', user.id)
-    .single();
-
-if (checkError || !existingUser) {
-    console.error('❌ [Onboarding] User record missing - this should not happen:', checkError);
-    throw new Error('User record not found. Please complete signup first.');
-}
-
-if (existingUser.onboarding_completed) {
-    console.log('⚠️ [Onboarding] User already completed onboarding, redirecting...');
-    window.location.href = '/dashboard';
-    return;
-}
-
-console.log('✅ [Onboarding] User record verified, proceeding with onboarding...');  
-
-            console.log('💾 [Onboarding] Creating business profile...', businessProfileData);
-
-            // Insert business profile
-            const { data: businessProfile, error: businessError } = await supabase
-                .from('business_profiles')
-                .insert([businessProfileData])
-                .select()
-                .single();
-            
-            if (businessError) {
-                throw businessError;
-            }
-            
-            console.log('✅ [Onboarding] Business profile created:', businessProfile.id);
-            
-            // Update user onboarding_completed status
-            console.log('💾 [Onboarding] Updating user onboarding status...');
-            const { data: updatedUser, error: userError } = await supabase
-                .from('users')
-                .update({ 
-                    onboarding_completed: true,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', user.id)
-                .select();
-
-            if (userError) {
-                console.error('❌ [Onboarding] Failed to update user status:', userError);
-                throw userError;
-            }
-
-            console.log('✅ [Onboarding] User onboarding status updated:', updatedUser);
-            console.log('✅ [Onboarding] Onboarding completed successfully');
-            
-            // Show success state
-            submitBtn.textContent = 'Complete! Redirecting...';
+            // Update user onboarding status
+            await window.OsliraAuth.updateUserOnboardingStatus(true);
             
             // Redirect to dashboard
-            setTimeout(() => {
-                window.location.href = '/dashboard';
-            }, 1500);
-            
-        } catch (error) {
-            console.error('❌ [Onboarding] Submission failed:', error);
-            
-            // Reset button
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            
-            // Show error
-            let errorMessage = 'Failed to save your information. Please try again.';
-            if (error.message) {
-                errorMessage = error.message;
-            }
-            
-            // Show error at bottom of form
-            const errorContainer = document.getElementById('submission-error') || createSubmissionError();
-            errorContainer.textContent = errorMessage;
-            errorContainer.style.display = 'block';
-            
-            // Scroll to error
-            errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            window.location.href = '/dashboard';
+        } else {
+            throw new Error(response.error || 'Failed to create profile');
         }
+        
+    } catch (error) {
+        console.error('❌ [Onboarding] Submission failed:', error);
+        showSubmissionError(error.message);
+        hideSubmissionProgress();
     }
+}
+    
+function validateAllFields(profileData) {
+    let hasErrors = false;
+    
+    // Check all required fields
+    const requiredFields = [
+        { key: 'business_name', label: 'Business Name' },
+        { key: 'business_niche', label: 'Business Niche' },
+        { key: 'target_audience', label: 'Target Audience' },
+        { key: 'target_problems', label: 'Target Problems' },
+        { key: 'value_proposition', label: 'Value Proposition' },
+        { key: 'success_outcome', label: 'Success Outcome' },
+        { key: 'call_to_action', label: 'Call to Action' }
+    ];
+    
+    requiredFields.forEach(field => {
+        if (!profileData[field.key] || profileData[field.key].trim().length === 0) {
+            console.error(`❌ Missing required field: ${field.label}`);
+            hasErrors = true;
+        }
+    });
+    
+    if (hasErrors) {
+        showSubmissionError('Please complete all required fields before submitting.');
+    }
+    
+    return !hasErrors;
+}
 
     // =============================================================================
 // SKIP FUNCTIONS - MISSING CRITICAL FUNCTIONS
