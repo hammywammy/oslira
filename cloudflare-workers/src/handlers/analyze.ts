@@ -19,16 +19,16 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       force_model?: string;       // Override specific model
     };
     
-    const { 
-      profile_url, 
-      username, 
-      analysis_type, 
-      business_id, 
-      user_id,
-      workflow = 'auto',
-      model_tier = 'balanced',
-      force_model
-    } = normalizeRequest(body);
+const { 
+  profile_url, 
+  username, 
+  analysis_type, 
+  business_id, 
+  user_id,
+  workflow = analysis_type === 'light' ? 'light_fast' : 'auto',
+  model_tier = analysis_type === 'light' ? 'economy' : 'balanced',
+  force_model
+} = normalizeRequest(body);
 
     logger('info', 'Request validated', { 
       requestId, 
