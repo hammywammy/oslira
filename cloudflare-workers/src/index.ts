@@ -27,21 +27,6 @@ app.get('/debug/raw-env', async (c) => {
   });
 });
 
-// Claude Opus 4.1 test endpoints
-app.get('/test/claude-opus', async (c) => {
-  const { handleTestClaudeOpus } = await import('./handlers/test-claude-opus.js');
-  return handleTestClaudeOpus(c);
-});
-
-app.get('/test/claude-opus-deep', async (c) => {
-  const { handleTestClaudeOpusDeepAnalysis } = await import('./handlers/test-claude-opus.js');
-  return handleTestClaudeOpusDeepAnalysis(c);
-});
-
-app.get('/test/claude-opus-pipeline', async (c) => {
-  const { handleTestClaudeOpusPipeline } = await import('./handlers/test-claude-opus.js');
-  return handleTestClaudeOpusPipeline(c);
-});
 
 // ===============================================================================
 // BASIC ENDPOINTS
