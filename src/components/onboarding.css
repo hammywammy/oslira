@@ -1,534 +1,512 @@
+/* =============================================================================
+ * MODERN ONBOARDING CSS - TAILWIND @apply DIRECTIVES
+ * =============================================================================
+ */
+
 @layer components {
   /* =============================================================================
-     ONBOARDING PAGE LAYOUT
+     LAYOUT & CONTAINER
      ============================================================================= */
   
-  .onboarding-page-body {
-    @apply bg-gradient-to-br from-blue-600 via-purple-600 to-blue-800 min-h-screen text-white;
+  .onboarding-body {
+    @apply bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900 min-h-screen text-white overflow-x-hidden;
   }
-
+  
   .onboarding-container {
-    @apply max-w-2xl mx-auto px-6 py-8 min-h-screen flex flex-col justify-center;
+    @apply relative min-h-screen flex items-center justify-center p-4;
+  }
+  
+  .onboarding-wrapper {
+    @apply w-full max-w-2xl mx-auto;
   }
 
   /* =============================================================================
-     ONBOARDING HEADER
+     BACKGROUND ELEMENTS
      ============================================================================= */
+  
+  .onboarding-bg {
+    @apply fixed inset-0 overflow-hidden pointer-events-none;
+  }
+  
+  .onboarding-bg-orb {
+    @apply absolute w-80 h-80 rounded-full blur-3xl;
+  }
+  
+  .onboarding-bg-orb-1 {
+    @apply -top-40 -right-40 bg-gradient-to-r from-pink-500/30 to-violet-500/30;
+    animation: pulse-ring 2s ease-out infinite;
+  }
+  
+  .onboarding-bg-orb-2 {
+    @apply -bottom-40 -left-40 bg-gradient-to-r from-blue-500/30 to-cyan-500/30;
+    animation: pulse-ring 2s ease-out infinite;
+    animation-delay: 3s;
+  }
+  
+  .onboarding-bg-orb-3 {
+    @apply top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-emerald-500/20 to-teal-500/20;
+    animation: pulse-ring 2s ease-out infinite;
+    animation-delay: 1.5s;
+  }
 
+  /* =============================================================================
+     HEADER & BRANDING
+     ============================================================================= */
+  
   .onboarding-header {
     @apply text-center mb-12;
+    animation: fadeInUp 0.6s ease-out;
   }
-
+  
   .onboarding-logo {
-    @apply text-4xl font-bold mb-2;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    @apply inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-violet-500 to-purple-500 rounded-2xl mb-6 shadow-2xl shadow-violet-500/25;
   }
-
+  
+  .onboarding-title {
+    @apply text-4xl md:text-5xl font-bold mb-4;
+    background: linear-gradient(to right, #fff, #c4b5fd, #fff);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 6s ease infinite;
+  }
+  
   .onboarding-subtitle {
-    @apply text-lg opacity-90 font-normal;
+    @apply text-xl text-white/80 max-w-lg mx-auto leading-relaxed;
   }
 
   /* =============================================================================
      PROGRESS BAR
      ============================================================================= */
-
-  .onboarding-progress-container {
-    @apply my-8;
+  
+  .onboarding-progress {
+    @apply mb-12;
+    animation: slideInRight 0.5s ease-out;
   }
-
+  
+  .onboarding-progress-info {
+    @apply flex items-center justify-between text-sm text-white/60 mb-3;
+  }
+  
   .onboarding-progress-bar {
-    @apply h-2 bg-white/20 rounded-full overflow-hidden;
+    @apply h-3 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm;
   }
-
+  
   .onboarding-progress-fill {
-    @apply h-full bg-gradient-to-r from-white to-blue-200 rounded-full transition-all duration-500 ease-out;
+    @apply h-full bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 rounded-full transform origin-left;
+    transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
   }
-
-  .onboarding-progress-text {
-    @apply text-center text-sm mt-3 opacity-75;
+  
+  .onboarding-progress-fill::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent;
+    animation: progressShimmer 2s infinite;
   }
 
   /* =============================================================================
-     ONBOARDING STEPS
+     STEP CONTAINERS
      ============================================================================= */
-
+  
   .onboarding-step {
     @apply hidden;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
+  
   .onboarding-step.active {
-    @apply block animate-fadeInUp;
+    @apply block;
+    animation: fadeInUp 0.6s ease-out;
   }
-
-  .onboarding-step-header {
-    @apply text-center mb-8;
-  }
-
-  .onboarding-step-title {
-    @apply text-2xl font-bold mb-3;
-  }
-
-  .onboarding-step-description {
-    @apply text-lg opacity-90 leading-relaxed;
-  }
-
-  /* =============================================================================
-     ONBOARDING CARDS
-     ============================================================================= */
-
+  
   .onboarding-card {
-    @apply bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-8 mb-8;
-  }
-
-  .onboarding-card-content {
-    @apply space-y-6;
+    @apply bg-white/5 border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
   }
 
   /* =============================================================================
-     FORM COMPONENTS
+     STEP HEADERS
      ============================================================================= */
+  
+  .onboarding-step-header {
+    @apply text-center mb-10;
+  }
+  
+  .onboarding-step-icon {
+    @apply w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl;
+  }
+  
+  .onboarding-step-title {
+    @apply text-3xl font-bold mb-4;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .onboarding-step-description {
+    @apply text-white/70 text-lg;
+  }
 
+  /* =============================================================================
+     FORM ELEMENTS
+     ============================================================================= */
+  
   .onboarding-form-group {
-    @apply space-y-2;
+    @apply space-y-6 mb-10;
   }
-
+  
+  .onboarding-form-field {
+    @apply group;
+  }
+  
   .onboarding-form-label {
-    @apply block text-sm font-medium text-white/90;
+    @apply block text-sm font-medium text-white/90 mb-3;
   }
-
+  
   .onboarding-form-input {
-    @apply w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200;
+    @apply w-full px-6 py-4 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent;
+    @apply transition-all duration-300;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
-
+  
+  .onboarding-form-input:hover {
+    @apply border-white/40;
+  }
+  
   .onboarding-form-textarea {
-    @apply w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200 resize-none;
+    @apply w-full px-6 py-4 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg resize-none;
+    @apply focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent;
+    @apply transition-all duration-300;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
-
-  .onboarding-form-select {
-    @apply w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-200;
+  
+  .onboarding-form-textarea:hover {
+    @apply border-white/40;
   }
-
-  .onboarding-form-checkbox {
-    @apply w-5 h-5 bg-white/10 border border-white/30 rounded focus:ring-2 focus:ring-white/50 text-white;
-  }
-
-  .onboarding-form-radio {
-    @apply w-5 h-5 bg-white/10 border border-white/30 focus:ring-2 focus:ring-white/50 text-white;
+  
+  .onboarding-form-icon {
+    @apply absolute inset-y-0 right-4 flex items-center text-white/30;
   }
 
   /* =============================================================================
-     CHOICE CARDS
+     CHARACTER COUNTERS
      ============================================================================= */
+  
+  .onboarding-counter-row {
+    @apply flex justify-between items-center mt-2;
+  }
+  
+  .onboarding-counter {
+    @apply text-sm font-mono transition-all duration-200;
+  }
+  
+  .onboarding-counter-normal {
+    @apply text-white/50;
+  }
+  
+  .onboarding-counter-warning {
+    @apply text-yellow-400 font-semibold;
+  }
+  
+  .onboarding-counter-danger {
+    @apply text-red-400 font-bold;
+    animation: pulse 0.5s ease-in-out;
+  }
 
+  /* =============================================================================
+     VALIDATION STATES
+     ============================================================================= */
+  
+  .onboarding-field-error {
+    @apply border-red-400 shadow-red-400/10;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  }
+  
+  .onboarding-field-warning {
+    @apply border-yellow-400 shadow-yellow-400/10;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  }
+  
+  .onboarding-field-success {
+    @apply border-emerald-400 shadow-emerald-400/10;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+  }
+  
+  .onboarding-error-message {
+    @apply text-red-400 text-sm;
+  }
+
+  /* =============================================================================
+     CHOICE CARDS (RADIO BUTTONS)
+     ============================================================================= */
+  
   .onboarding-choice-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4 mb-10;
   }
-
+  
+  .onboarding-choice-grid-3 {
+    @apply grid grid-cols-2 md:grid-cols-3 gap-4 mb-10;
+  }
+  
   .onboarding-choice-card {
-    @apply bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg p-6 cursor-pointer transition-all duration-200 hover:bg-white/20 hover:border-white/50;
+    @apply relative group cursor-pointer;
   }
-
-  .onboarding-choice-card.selected {
-    @apply bg-white/20 border-white/60 ring-2 ring-white/40;
+  
+  .onboarding-choice-input {
+    @apply peer sr-only;
   }
-
+  
+  .onboarding-choice-content {
+    @apply bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300;
+    @apply hover:border-white/40;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  
+  .onboarding-choice-content:hover {
+    @apply transform scale-105;
+  }
+  
+  .onboarding-choice-input:checked + .onboarding-choice-content {
+    @apply border-violet-400 bg-violet-500/10 shadow-xl shadow-violet-500/20;
+    animation: radioSelect 0.3s ease-out;
+  }
+  
+  .onboarding-choice-header {
+    @apply flex items-center mb-4;
+  }
+  
   .onboarding-choice-icon {
-    @apply w-12 h-12 mx-auto mb-3 text-2xl;
+    @apply w-12 h-12 rounded-xl flex items-center justify-center mr-4 text-white;
   }
-
+  
   .onboarding-choice-title {
-    @apply text-center font-semibold mb-2;
+    @apply text-xl font-semibold text-white;
   }
-
+  
   .onboarding-choice-description {
-    @apply text-center text-sm opacity-80;
+    @apply text-white/60 leading-relaxed;
+  }
+  
+  .onboarding-choice-hint {
+    @apply text-white/40 text-xs italic mt-3;
   }
 
   /* =============================================================================
-     PLAN SELECTION
+     INFO BOXES & TIPS
      ============================================================================= */
-
-  .onboarding-plan-grid {
-    @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+  
+  .onboarding-tip {
+    @apply mt-3 p-3 rounded-xl border flex items-start space-x-3;
   }
-
-  .onboarding-plan-card {
-    @apply bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 cursor-pointer transition-all duration-200 hover:bg-white/20 hover:border-white/50 relative;
+  
+  .onboarding-tip-info {
+    @apply bg-blue-500/10 border-blue-400/30;
   }
-
-  .onboarding-plan-card.selected {
-    @apply bg-white/20 border-white/60 ring-2 ring-white/40;
+  
+  .onboarding-tip-success {
+    @apply bg-emerald-500/10 border-emerald-400/30;
   }
-
-  .onboarding-plan-card.recommended::before {
-    content: 'Recommended';
-    @apply absolute -top-3 left-1/2 transform -translate-x-1/2 bg-white text-blue-600 px-3 py-1 rounded-full text-xs font-bold;
+  
+  .onboarding-tip-warning {
+    @apply bg-yellow-500/10 border-yellow-400/30;
   }
-
-  .onboarding-plan-name {
-    @apply text-xl font-bold mb-2;
+  
+  .onboarding-tip-icon {
+    @apply mt-0.5 flex-shrink-0;
   }
-
-  .onboarding-plan-price {
-    @apply text-3xl font-bold mb-1;
-  }
-
-  .onboarding-plan-period {
-    @apply text-sm opacity-75 mb-4;
-  }
-
-  .onboarding-plan-features {
-    @apply space-y-2;
-  }
-
-  .onboarding-plan-feature {
-    @apply flex items-center gap-2 text-sm;
-  }
-
-  .onboarding-plan-feature-icon {
-    @apply w-4 h-4 text-green-300;
+  
+  .onboarding-tip-text {
+    @apply text-sm;
   }
 
   /* =============================================================================
      NAVIGATION BUTTONS
      ============================================================================= */
-
-  .onboarding-navigation {
-    @apply flex justify-between items-center mt-8;
+  
+  .onboarding-nav {
+    @apply flex justify-between;
   }
-
+  
+  .onboarding-nav-right {
+    @apply flex space-x-3;
+  }
+  
   .onboarding-btn-back {
-    @apply px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/30 text-white rounded-lg hover:bg-white/20 transition-all duration-200;
+    @apply px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl;
+    @apply hover:bg-white/20 transition-all duration-200 transform hover:scale-105;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
-
-  .onboarding-btn-next {
-    @apply px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg hover:bg-white/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
+  
   .onboarding-btn-skip {
-    @apply text-white/70 hover:text-white underline text-sm transition-colors duration-200;
+    @apply px-6 py-3 bg-white/5 border border-white/20 text-white/70 rounded-xl;
+    @apply hover:bg-white/10 hover:text-white transition-all duration-200;
+  }
+  
+  .onboarding-btn-primary {
+    @apply group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl;
+    @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-violet-500/25;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .onboarding-btn-primary::before {
+    content: '';
+    @apply absolute top-0 left-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent;
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+  
+  .onboarding-btn-primary:hover::before {
+    transform: translateX(100%);
+  }
+  
+  .onboarding-btn-content {
+    @apply flex items-center;
+  }
+  
+  .onboarding-btn-arrow {
+    @apply ml-3 transition-transform duration-300 group-hover:translate-x-1;
+  }
+  
+  .onboarding-btn-success {
+    @apply group relative px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-2xl;
+    @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/25;
   }
 
   /* =============================================================================
-     WELCOME STEP
+     LOADING & ERROR STATES
      ============================================================================= */
-
-  .onboarding-welcome-icon {
-    @apply w-24 h-24 mx-auto mb-6 text-6xl;
+  
+  .onboarding-loading {
+    @apply fixed inset-0 flex items-center justify-center z-50 bg-gradient-to-br from-violet-900/95 via-purple-900/95 to-indigo-900/95;
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
   }
-
-  .onboarding-welcome-title {
-    @apply text-3xl font-bold text-center mb-4;
-  }
-
-  .onboarding-welcome-description {
-    @apply text-xl text-center opacity-90 leading-relaxed mb-8;
-  }
-
-  .onboarding-welcome-features {
-    @apply grid grid-cols-1 md:grid-cols-3 gap-6 mb-8;
-  }
-
-  .onboarding-welcome-feature {
+  
+  .onboarding-loading-content {
     @apply text-center;
   }
-
-  .onboarding-welcome-feature-icon {
-    @apply w-16 h-16 mx-auto mb-3 bg-white/20 rounded-xl flex items-center justify-center text-2xl;
-  }
-
-  .onboarding-welcome-feature-title {
-    @apply font-semibold mb-2;
-  }
-
-  .onboarding-welcome-feature-description {
-    @apply text-sm opacity-80;
-  }
-
-  /* =============================================================================
-     COMPLETION STEP
-     ============================================================================= */
-
-  .onboarding-complete-icon {
-    @apply w-24 h-24 mx-auto mb-6 text-green-300 text-6xl;
-  }
-
-  .onboarding-complete-title {
-    @apply text-3xl font-bold text-center mb-4;
-  }
-
-  .onboarding-complete-description {
-    @apply text-xl text-center opacity-90 leading-relaxed mb-8;
-  }
-
-  .onboarding-complete-summary {
-    @apply bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl p-6 mb-8;
-  }
-
-  .onboarding-complete-summary-title {
-    @apply font-semibold mb-4;
-  }
-
-  .onboarding-complete-summary-list {
-    @apply space-y-2;
-  }
-
-  .onboarding-complete-summary-item {
-    @apply flex items-center gap-3;
-  }
-
-  .onboarding-complete-summary-icon {
-    @apply w-5 h-5 text-green-300;
-  }
-
-  /* =============================================================================
-     LOADING STATES
-     ============================================================================= */
-
-  .onboarding-loading {
-    @apply text-center py-8;
-  }
-
+  
   .onboarding-loading-spinner {
-    @apply w-8 h-8 mx-auto mb-4 animate-spin rounded-full border-2 border-white/30 border-t-white;
+    @apply relative mb-8 mx-auto;
   }
-
-  .onboarding-loading-text {
-    @apply text-lg opacity-90;
+  
+  .onboarding-loading-ring {
+    @apply w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin;
   }
-
-  /* =============================================================================
-     ERROR STATES
-     ============================================================================= */
-
+  
+  .onboarding-loading-ring-reverse {
+    @apply absolute inset-0 w-16 h-16 border-4 border-transparent border-t-violet-400 rounded-full animate-spin;
+    animation-direction: reverse;
+    animation-duration: 1.5s;
+  }
+  
   .onboarding-error {
-    @apply bg-red-500/20 border border-red-400/50 rounded-lg p-4 mb-6;
-  }
-
-  .onboarding-error-title {
-    @apply font-semibold mb-2;
-  }
-
-  .onboarding-error-message {
-    @apply text-sm opacity-90;
-  }
-
-  /* =============================================================================
-     ANIMATIONS
-     ============================================================================= */
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  .animate-fadeInUp {
-    animation: fadeInUp 0.5s ease-out;
-  }
-
-  @keyframes slideInRight {
-    from {
-      opacity: 0;
-      transform: translateX(30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  .animate-slideInRight {
-    animation: slideInRight 0.5s ease-out;
+    @apply fixed inset-0 flex items-center justify-center z-50 bg-gradient-to-br from-red-900/95 via-purple-900/95 to-indigo-900/95 hidden;
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
   }
 
   /* =============================================================================
      RESPONSIVE DESIGN
      ============================================================================= */
-
+  
   @media (max-width: 768px) {
-    .onboarding-container {
-      @apply px-4 py-6;
-    }
-
-    .onboarding-logo {
-      @apply text-3xl;
-    }
-
-    .onboarding-step-title {
-      @apply text-xl;
-    }
-
-    .onboarding-step-description {
-      @apply text-base;
-    }
-
     .onboarding-card {
       @apply p-6;
     }
-
-    .onboarding-choice-grid,
-    .onboarding-plan-grid {
-      @apply grid-cols-1;
+    
+    .onboarding-title {
+      @apply text-3xl;
     }
-
-    .onboarding-welcome-features {
-      @apply grid-cols-1 gap-4;
-    }
-
-    .onboarding-navigation {
-      @apply flex-col gap-4;
-    }
-
-    .onboarding-btn-back,
-    .onboarding-btn-next {
-      @apply w-full;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .onboarding-container {
-      @apply px-3;
-    }
-
-    .onboarding-welcome-title,
-    .onboarding-complete-title {
+    
+    .onboarding-step-title {
       @apply text-2xl;
     }
-
-    .onboarding-welcome-description,
-    .onboarding-complete-description {
-      @apply text-lg;
+    
+    .onboarding-choice-grid,
+    .onboarding-choice-grid-3 {
+      @apply grid-cols-1 gap-3;
     }
-
-    .onboarding-plan-card {
-      @apply p-4;
+    
+    .onboarding-nav {
+      @apply flex-col space-y-3;
     }
-  }
-
-  /* =============================================================================
-     ACCESSIBILITY ENHANCEMENTS
-     ============================================================================= */
-
-  .onboarding-form-input:focus-visible,
-  .onboarding-form-textarea:focus-visible,
-  .onboarding-form-select:focus-visible,
-  .onboarding-choice-card:focus-visible,
-  .onboarding-plan-card:focus-visible,
-  .onboarding-btn-back:focus-visible,
-  .onboarding-btn-next:focus-visible {
-    @apply outline-none ring-2 ring-white/50 ring-offset-2 ring-offset-transparent;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .onboarding-step.active {
-      animation: none;
-    }
-
-    .animate-fadeInUp,
-    .animate-slideInRight {
-      animation: none;
-    }
-
-    .onboarding-progress-fill,
-    .onboarding-choice-card,
-    .onboarding-plan-card,
+    
     .onboarding-btn-back,
-    .onboarding-btn-next {
-      @apply transition-none;
-    }
-
-    .onboarding-loading-spinner {
-      animation: none;
+    .onboarding-btn-primary,
+    .onboarding-btn-success {
+      @apply w-full justify-center;
     }
   }
+}
 
-  @media (prefers-contrast: high) {
-    .onboarding-card,
-    .onboarding-choice-card,
-    .onboarding-plan-card,
-    .onboarding-complete-summary {
-      @apply border-2 border-white;
-    }
-
-    .onboarding-form-input,
-    .onboarding-form-textarea,
-    .onboarding-form-select {
-      @apply border-2;
-    }
-  }
-
-  /* =============================================================================
-     PRINT STYLES
-     ============================================================================= */
-
-  @media print {
-    .onboarding-page-body {
-      @apply bg-white text-black;
-    }
-
-    .onboarding-navigation,
-    .onboarding-btn-back,
-    .onboarding-btn-next,
-    .onboarding-btn-skip {
-      @apply hidden;
-    }
-
-    .onboarding-card,
-    .onboarding-choice-card,
-    .onboarding-plan-card {
-      @apply bg-white border border-gray-300;
-    }
-  }
-  /* =============================================================================
-   VALIDATION ERROR STYLES
+/* =============================================================================
+   ANIMATIONS & KEYFRAMES
    ============================================================================= */
 
-.field-error {
-    @apply border-red-400 bg-red-50/10;
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.validation-error {
-    @apply text-red-300 text-sm mt-2 flex items-center gap-2;
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
-.validation-error::before {
-    content: '⚠️';
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
 
-.has-error .onboarding-form-label {
-    @apply text-red-300;
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 
-.choice-required-highlight {
-    @apply ring-2 ring-red-400 ring-opacity-75 animate-pulse;
+@keyframes radioSelect {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
 }
 
-.validation-notification {
-    @apply bg-red-500/20 border border-red-400/50 rounded-lg p-4 mb-6 flex items-center gap-3 animate-slideInDown;
+@keyframes progressShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
-.validation-notification i {
-    @apply text-red-300 text-lg;
+/* =============================================================================
+   ACCESSIBILITY & PREFERENCES
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
-.validation-notification span {
-    @apply text-red-200 font-medium;
-}
-
-@keyframes slideInDown {
-    from {
-        opacity: 0;
-        transform: translateY(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+@media (prefers-contrast: high) {
+  .onboarding-card {
+    @apply border-2 border-white;
+  }
+  
+  .onboarding-choice-content {
+    @apply border-2;
+  }
+  
+  .onboarding-form-input,
+  .onboarding-form-textarea {
+    @apply border-2;
+  }
 }
