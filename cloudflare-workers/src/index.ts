@@ -27,6 +27,16 @@ app.get('/debug/raw-env', async (c) => {
   });
 });
 
+// Add these lines after the analytics endpoints
+app.get('/test/claude-opus', async (c) => {
+  const { handleTestClaudeOpus } = await import('./handlers/test-claude-opus.js');
+  return handleTestClaudeOpus(c);
+});
+
+app.get('/test/claude-opus-thinking', async (c) => {
+  const { handleTestClaudeOpusThinking } = await import('./handlers/test-claude-opus.js');
+  return handleTestClaudeOpusThinking(c);
+});
 
 
 // ===============================================================================
