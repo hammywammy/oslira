@@ -34,14 +34,11 @@ const cacheKey = `profile:${username}`;
   logger('info', 'Starting profile scraping', { username, analysisType });
 let profileData: ProfileData;
 
-try {
-  if (analysisType === 'light') {
-    profileData = await scrapeWithConfigs(username, apifyToken, LIGHT_SCRAPER_CONFIGS);
-  } else if (analysisType === 'deep' || analysisType === 'xray') {
-    profileData = await scrapeDeepProfile(username, apifyToken);
-  } else {
-    throw new Error(`Unsupported analysis type: ${analysisType}`);
-  }
+// Use dynamic config selection - eliminates duplication
+  const { getScraperConfigs } = await import('./scraper-configs.js');
+  const scraperConfigs = getScraperConfigs(analysisType);
+  
+  profileData = await scrapeWithConfigs(username, apifyToken, scraperConfigs);
 
   // Cache profile for ALL analysis types
   try {
@@ -124,69 +121,6 @@ await env.R2_CACHE_BUCKET.put(cacheKey, cachePayload);
 
 async function scrapeWithConfigs(username: string, token: string, configs: ScraperConfig[]): Promise<ProfileData> {
   const scraperAttempts = configs.map(config => 
-    async () => {
-      const url = buildScraperUrl(config.endpoint, token);
-      const response = await callWithRetry(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config.input(username))
-      }, config.maxRetries, config.retryDelay, config.timeout);
-
-      if (!response || !Array.isArray(response) || response.length === 0) {
-        throw new Error(`${config.name} returned no usable data`);
-      }
-
-      const profileData = validateProfileData(response[0], 'light');
-      profileData.scraperUsed = config.name;
-      profileData.dataQuality = 'medium';
-      
-      return profileData;
-    }
-  );
-
-  return await withScraperRetry(scraperAttempts, username);
-}
-
-async function scrapeDeepProfile(username: string, token: string): Promise<ProfileData> {
-  // Create retry attempts for each deep scraper config
-  const scraperAttempts = DEEP_SCRAPER_CONFIGS.map(config => 
-    async () => {
-      const url = buildScraperUrl(config.endpoint, token);
-      const response = await callWithRetry(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config.input(username))
-      }, 2, 3000, 60000);
-
-      if (!response || !Array.isArray(response) || response.length === 0) {
-        throw new Error(`${config.name} returned no usable data`);
-      }
-
-      const profileData = validateProfileData(response, 'deep');
-      profileData.scraperUsed = config.name;
-      profileData.dataQuality = response.filter(item => item.shortCode).length >= 3 ? 'high' : 'medium';
-      
-      return profileData;
-    }
-  );
-
-// Add light scraper fallback
-  scraperAttempts.push(async () => {
-    logger('warn', 'All deep scrapers failed, using light fallback with NO ENGAGEMENT DATA');
-    const lightProfile = await scrapeLightProfile(username, token);
-    return {
-      ...lightProfile,
-      engagement: undefined, // Explicitly no fake data
-      scraperUsed: 'light_fallback',
-      dataQuality: 'low'
-    };
-  });
-
-  return await withScraperRetry(scraperAttempts, username);
-}
-
-async function scrapeLightProfile(username: string, token: string): Promise<ProfileData> {
-  const scraperAttempts = LIGHT_SCRAPER_CONFIGS.map(config => 
     async () => {
       const url = buildScraperUrl(config.endpoint, token);
       const response = await callWithRetry(url, {
