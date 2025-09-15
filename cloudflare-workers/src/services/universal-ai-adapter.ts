@@ -228,8 +228,7 @@ const body = {
   messages: [
     { role: 'user', content: request.user_prompt }
   ],
-  max_tokens: request.max_tokens,
-  temperature: request.temperature || 0.1  // Lower temperature for more consistent formatting
+  max_tokens: request.max_tokens
 };
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
