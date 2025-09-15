@@ -55,6 +55,20 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       ]
     } as WorkflowConfig,
 
+    light_ultra_fast: {
+  name: 'light_ultra_fast',
+  description: 'Single-stage light analysis with micro model',
+  stages: [
+    { 
+      name: 'light_analysis', 
+      type: 'analysis', 
+      required: true, 
+      model_tier: 'economy',
+      model_override: 'gpt-5-nano' // Force cheapest model
+    }
+  ]
+} as WorkflowConfig,
+
 auto: {
   name: 'auto',
   description: 'AI decides preprocessing based on data quality',
