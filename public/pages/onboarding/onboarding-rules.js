@@ -306,3 +306,6 @@ export class OnboardingRules {
         return stepNumber >= 1 && stepNumber <= this.TOTAL_STEPS;
     }
 }
+
+// Export to window for non-module usage
+window.OnboardingRules = OnboardingRules;
