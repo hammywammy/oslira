@@ -96,16 +96,25 @@ function generateCacheKey(profile: ProfileData): string {
 
 async function getCachedPreprocessor(cacheKey: string, env: any): Promise<PreprocessorResult | null> {
   try {
-    if (!env.R2_CACHE_BUCKET) return null;
+    if (!env.R2_CACHE_BUCKET) {
+      console.log(`📋 [Preprocessor] R2_CACHE_BUCKET not available`);
+      return null;
+    }
     
+    console.log(`📋 [Preprocessor] Checking R2 cache for key: ${cacheKey}`);
     const cached = await env.R2_CACHE_BUCKET.get(cacheKey);
-    if (!cached) return null;
+    if (!cached) {
+      console.log(`📋 [Preprocessor] No cache entry found`);
+      return null;
+    }
     
     const cacheData = await cached.json();
     if (cacheData.expires > Date.now()) {
+      console.log(`📋 [Preprocessor] Cache hit! Data valid until ${new Date(cacheData.expires)}`);
       return cacheData.result;
     }
     
+    console.log(`📋 [Preprocessor] Cache expired`);
     return null;
   } catch (error: any) {
     console.warn('R2 cache read failed:', error.message);
