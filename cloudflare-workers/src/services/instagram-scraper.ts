@@ -31,20 +31,54 @@ export async function scrapeInstagramProfile(username: string, analysisType: Ana
   }
 
   logger('info', 'Starting profile scraping', { username, analysisType });
+let profileData: ProfileData;
+
+try {
+  if (analysisType === 'light') {
+    profileData = await scrapeWithConfigs(username, apifyToken, LIGHT_SCRAPER_CONFIGS);
+  } else if (analysisType === 'deep' || analysisType === 'xray') {
+    profileData = await scrapeDeepProfile(username, apifyToken);
+  } else {
+    throw new Error(`Unsupported analysis type: ${analysisType}`);
+  }
+
+  // Cache profile for ALL analysis types
   try {
-if (analysisType === 'light') {
-  return await scrapeWithConfigs(username, apifyToken, LIGHT_SCRAPER_CONFIGS);
-}
+    const cacheTTL = analysisType === 'light' ? 6 * 60 * 60 * 1000 : // 6 hours
+                     analysisType === 'deep' ? 4 * 60 * 60 * 1000 :  // 4 hours  
+                     2 * 60 * 60 * 1000; // 2 hours for xray
     
-    if (analysisType === 'deep' || analysisType === 'xray') {
-      return await scrapeDeepProfile(username, apifyToken);
+    if (env.R2_CACHE_BUCKET) {
+      const cacheData = {
+        profile: profileData,
+        expires: Date.now() + cacheTTL,
+        cached_at: new Date().toISOString(),
+        analysis_type: analysisType
+      };
+      
+      await env.R2_CACHE_BUCKET.put(cacheKey, JSON.stringify(cacheData));
+      logger('info', 'Profile cached successfully', { 
+        username, 
+        analysisType, 
+        ttl_hours: cacheTTL / (60 * 60 * 1000),
+        cache_key: cacheKey
+      });
     }
+  } catch (cacheError: any) {
+    logger('warn', 'Profile caching failed', { 
+      username,
+      analysisType,
+      error: cacheError.message 
+    });
+  }
+
+  return profileData;
 
 } catch (error: any) {
-    const transformedError = ScraperErrorHandler.transformError(error, username);
-    logger('error', 'All scraping methods failed', { username, error: transformedError.message });
-    throw transformedError;
-  }
+  const transformedError = ScraperErrorHandler.transformError(error, username);
+  logger('error', 'All scraping methods failed', { username, error: transformedError.message });
+  throw transformedError;
+}
 
   throw new Error(`Unsupported analysis type: ${analysisType}`);
 }
@@ -109,30 +143,7 @@ async function scrapeDeepProfile(username: string, token: string): Promise<Profi
     };
   });
 
-const profileData = await withScraperRetry(scraperAttempts, username);
-
-  // Cache profile data
-  try {
-    // Cache profile for 2-6 hours based on analysis type
-    const cacheTTL = analysisType === 'light' ? 6 * 60 * 60 * 1000 : // 6 hours
-                     analysisType === 'deep' ? 4 * 60 * 60 * 1000 :  // 4 hours  
-                     2 * 60 * 60 * 1000; // 2 hours for xray
-    
-    if (env.R2_CACHE_BUCKET) {
-      const cacheData = {
-        profile: profileData,
-        expires: Date.now() + cacheTTL,
-        cached_at: new Date().toISOString()
-      };
-      
-      await env.R2_CACHE_BUCKET.put(cacheKey, JSON.stringify(cacheData));
-      logger('info', 'Profile cached successfully', { username, analysisType, ttl_hours: cacheTTL / (60 * 60 * 1000) });
-    }
-  } catch (error: any) {
-    logger('warn', 'Profile caching failed', { error: error.message });
-  }
-
-  return profileData;
+  return await withScraperRetry(scraperAttempts, username);
 }
 
 async function scrapeLightProfile(username: string, token: string): Promise<ProfileData> {
