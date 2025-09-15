@@ -42,22 +42,24 @@ export const LIGHT_SCRAPER_CONFIGS: ScraperConfig[] = [
 ];
 
 export const DEEP_SCRAPER_CONFIGS: ScraperConfig[] = [
-  {
-    name: 'deep_primary',
-    endpoint: 'shu8hvrXbJbY3Eb9W',
-    timeout: 60000,
-    maxRetries: 2,
-    retryDelay: 3000,
-    priority: 1,
-    input: (username: string) => ({
-      usernames: [username],
-      resultsType: "posts",
-      resultsLimit: 12,
-      searchLimit: 1,
-      searchType: "hashtag",
-      addParentData: true
-    })
-  },
+{
+  name: 'deep_primary',
+  endpoint: 'shu8hvrXbJbY3Eb9W',
+  timeout: 60000,
+  maxRetries: 2,
+  retryDelay: 3000,
+  priority: 1,
+  input: (username: string) => ({
+    addParentData: false,
+    directUrls: [`https://instagram.com/${username}/`],
+    enhanceUserSearchWithFacebookPage: false,
+    isUserReelFeedURL: false,
+    isUserTaggedFeedURL: false,
+    resultsLimit: 12,
+    resultsType: "details",
+    searchType: "hashtag"
+  })
+},
     {
     name: 'deep_secondary',
     endpoint: 'dSCLg0C3YEZ83HzYX',
@@ -75,22 +77,24 @@ export const DEEP_SCRAPER_CONFIGS: ScraperConfig[] = [
 ];
 
 export const XRAY_SCRAPER_CONFIGS: ScraperConfig[] = [
-  {
-    name: 'xray_primary',
-    endpoint: 'shu8hvrXbJbY3Eb9W',
-    timeout: 120000,
-    maxRetries: 1,
-    retryDelay: 10000,
-    priority: 1,
-    input: (username: string) => ({
-      usernames: [username],
-      resultsType: "posts",
-      resultsLimit: 50,
-      searchLimit: 1,
-      searchType: "hashtag",
-      addParentData: true
-    })
-  },
+{
+  name: 'xray_primary',
+  endpoint: 'shu8hvrXbJbY3Eb9W',
+  timeout: 120000,
+  maxRetries: 1,
+  retryDelay: 10000,
+  priority: 1,
+  input: (username: string) => ({
+    addParentData: false,
+    directUrls: [`https://instagram.com/${username}/`],
+    enhanceUserSearchWithFacebookPage: false,
+    isUserReelFeedURL: false,
+    isUserTaggedFeedURL: false,
+    resultsLimit: 50,
+    resultsType: "details",
+    searchType: "hashtag"
+  })
+},
   {
     name: 'xray_secondary',
     endpoint: 'dSCLg0C3YEZ83HzYX',
