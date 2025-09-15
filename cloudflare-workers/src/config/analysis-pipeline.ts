@@ -91,7 +91,21 @@ export const ANALYSIS_PIPELINE_CONFIG = {
         { name: 'preprocessor', type: 'preprocessor', required: true, model_tier: 'economy' },
         { name: 'main_analysis', type: 'analysis', required: true, model_tier: 'balanced' }
       ]
-    } as WorkflowConfig
+    } as WorkflowConfig,
+
+    // Add after existing workflows
+light_fast: {
+  name: 'light_fast',
+  description: 'Speed-optimized light analysis - single stage only',
+  stages: [
+    { 
+      name: 'light_analysis', 
+      type: 'analysis', 
+      required: true, 
+      model_tier: 'economy'
+    }
+  ]
+} as WorkflowConfig
   },
 
   // Model Configurations
@@ -175,11 +189,11 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       balanced: 'gpt-5-mini',
       economy: 'gpt-5-nano'
     },
-    light: {
-      premium: 'gpt-5',
-      balanced: 'gpt-4o',
-      economy: 'gpt-5-mini'
-    },
+light: {
+  premium: 'gpt-5-mini',
+  balanced: 'gpt-5-mini',
+  economy: 'gpt-5-nano'
+},
 deep: {
   premium: 'claude-opus-4-1-20250805',
   balanced: 'gpt-5',
