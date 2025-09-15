@@ -259,17 +259,58 @@ function showOnboardingForm() {
     // DATA COLLECTION & UTILITIES
     // =============================================================================
     
-    function getFieldValue(fieldId) {
-        // Handle radio buttons
-        if (fieldId === 'primary-objective') {
-            const radioButton = document.querySelector('input[name="primary-objective"]:checked');
-            return radioButton ? radioButton.value : '';
-        }
-        
-        if (fieldId === 'communication-tone') {
-            const radioButton = document.querySelector('input[name="communication-tone"]:checked');
-            return radioButton ? radioButton.value : '';
-        }
+function getFieldValue(fieldId) {
+    // Handle radio buttons
+    if (fieldId === 'primary-objective') {
+        const radioButton = document.querySelector('input[name="primary-objective"]:checked');
+        return radioButton ? radioButton.value : '';
+    }
+    
+    if (fieldId === 'company-size') {
+        const radioButton = document.querySelector('input[name="company-size"]:checked');
+        return radioButton ? radioButton.value : '';
+    }
+    
+    if (fieldId === 'budget') {
+        const radioButton = document.querySelector('input[name="budget"]:checked');
+        return radioButton ? radioButton.value : '';
+    }
+    
+    if (fieldId === 'communication-tone') {
+        const radioButton = document.querySelector('input[name="communication-tone"]:checked');
+        return radioButton ? radioButton.value : '';
+    }
+    
+    if (fieldId === 'team-size') {
+        const radioButton = document.querySelector('input[name="team-size"]:checked');
+        return radioButton ? radioButton.value : '';
+    }
+    
+    if (fieldId === 'campaign-manager') {
+        const radioButton = document.querySelector('input[name="campaign-manager"]:checked');
+        return radioButton ? radioButton.value : '';
+    }
+    
+    // Handle checkbox groups (return arrays)
+    if (fieldId === 'target-size') {
+        const checkboxes = document.querySelectorAll('input[name="target-size"]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+    
+    if (fieldId === 'challenges') {
+        const checkboxes = document.querySelectorAll('input[name="challenges"]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+    
+    if (fieldId === 'communication') {
+        const checkboxes = document.querySelectorAll('input[name="communication"]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+    
+    if (fieldId === 'integrations') {
+        const checkboxes = document.querySelectorAll('input[name="integrations"]:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
         
         if (fieldId === 'preferred-cta') {
             const radioButton = document.querySelector('input[name="preferred-cta"]:checked');
