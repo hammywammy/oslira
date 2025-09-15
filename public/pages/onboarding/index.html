@@ -7,185 +7,146 @@
     <link rel="icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/src/components/onboarding.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         
         * {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-        
-        /* Custom animations */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes slideInRight {
-            from { opacity: 0; transform: translateX(30px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        @keyframes pulse-ring {
-            0% { transform: scale(0.8); opacity: 1; }
-            100% { transform: scale(2.4); opacity: 0; }
-        }
-        
-        @keyframes gradient-shift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        .animate-fadeInUp { animation: fadeInUp 0.6s ease-out; }
-        .animate-slideInRight { animation: slideInRight 0.5s ease-out; }
-        .animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
-        .animate-gradient { animation: gradient-shift 6s ease infinite; }
-        
-        /* Glass morphism effects */
-        .glass { backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-        .glass-strong { backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); }
-        
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); }
-        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 3px; }
-        
-        /* Character counter animations */
-        .counter-warning { color: #f59e0b; font-weight: 600; }
-        .counter-danger { color: #ef4444; font-weight: 700; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-violet-900 via-purple-900 to-indigo-900 min-h-screen text-white overflow-x-hidden">
+<body class="onboarding-body">
     <!-- Animated background elements -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none">
-        <div class="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-r from-pink-500/30 to-violet-500/30 rounded-full blur-3xl animate-pulse-ring"></div>
-        <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-r from-blue-500/30 to-cyan-500/30 rounded-full blur-3xl animate-pulse-ring" style="animation-delay: 3s;"></div>
-        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-emerald-500/20 to-teal-500/20 rounded-full blur-3xl animate-pulse-ring" style="animation-delay: 1.5s;"></div>
+    <div class="onboarding-bg">
+        <div class="onboarding-bg-orb onboarding-bg-orb-1"></div>
+        <div class="onboarding-bg-orb onboarding-bg-orb-2"></div>
+        <div class="onboarding-bg-orb onboarding-bg-orb-3"></div>
     </div>
 
     <!-- Loading State -->
-    <div id="loading-state" class="fixed inset-0 flex items-center justify-center z-50 bg-gradient-to-br from-violet-900/95 via-purple-900/95 to-indigo-900/95 glass-strong">
-        <div class="text-center">
-            <div class="relative mb-8">
-                <div class="w-16 h-16 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto"></div>
-                <div class="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-violet-400 rounded-full animate-spin mx-auto" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+    <div id="loading-state" class="onboarding-loading">
+        <div class="onboarding-loading-content">
+            <div class="onboarding-loading-spinner">
+                <div class="onboarding-loading-ring"></div>
+                <div class="onboarding-loading-ring-reverse"></div>
             </div>
-            <h2 class="text-2xl font-bold bg-gradient-to-r from-white to-violet-200 bg-clip-text text-transparent mb-2">Setting up your account</h2>
+            <h2 class="onboarding-title">Setting up your account</h2>
             <p class="text-white/70">This will only take a moment...</p>
         </div>
     </div>
 
     <!-- Error State -->
-    <div id="error-state" class="fixed inset-0 flex items-center justify-center z-50 bg-gradient-to-br from-red-900/95 via-purple-900/95 to-indigo-900/95 glass-strong hidden">
+    <div id="error-state" class="onboarding-error">
         <div class="max-w-md mx-auto text-center p-8">
             <div class="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
             </div>
             <h2 class="text-2xl font-bold text-white mb-4">Something went wrong</h2>
             <p id="error-message" class="text-white/70 mb-6">Failed to load the setup form.</p>
-            <button onclick="window.location.reload()" class="px-6 py-3 bg-white text-gray-900 font-semibold rounded-xl hover:bg-white/90 transition-all duration-200 transform hover:scale-105">
-                Try again
+            <button onclick="window.location.reload()" class="onboarding-btn-primary">
+                <span class="onboarding-btn-content">Try again</span>
             </button>
         </div>
     </div>
 
     <!-- Main Onboarding Container -->
-    <div id="onboarding-form" class="relative min-h-screen flex items-center justify-center p-4 hidden">
-        <div class="w-full max-w-2xl mx-auto">
+    <div id="onboarding-form" class="onboarding-container hidden">
+        <div class="onboarding-wrapper">
             
             <!-- Header -->
-            <div class="text-center mb-12 animate-fadeInUp">
-                <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-violet-500 to-purple-500 rounded-2xl mb-6 shadow-2xl shadow-violet-500/25">
+            <div class="onboarding-header">
+                <div class="onboarding-logo">
                     <i class="fas fa-rocket text-white text-2xl"></i>
                 </div>
-                <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white via-violet-200 to-white bg-clip-text text-transparent mb-4 animate-gradient bg-300%">
-                    Welcome to Oslira
-                </h1>
-                <p class="text-xl text-white/80 max-w-lg mx-auto leading-relaxed">
+                <h1 class="onboarding-title">Welcome to Oslira</h1>
+                <p class="onboarding-subtitle">
                     Let's create your AI-powered lead generation profile in just a few steps
                 </p>
             </div>
 
             <!-- Progress Bar -->
-            <div class="mb-12 animate-slideInRight">
-                <div class="flex items-center justify-between text-sm text-white/60 mb-3">
+            <div class="onboarding-progress">
+                <div class="onboarding-progress-info">
                     <span>Step <span id="progress-step">1</span> of 9</span>
                     <span id="progress-percent">11%</span>
                 </div>
-                <div class="h-3 bg-white/10 rounded-full overflow-hidden glass">
-                    <div id="progress-fill" class="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 rounded-full transition-all duration-700 ease-out transform origin-left" style="width: 11%;"></div>
+                <div class="onboarding-progress-bar">
+                    <div id="progress-fill" class="onboarding-progress-fill" style="width: 11%;"></div>
                 </div>
             </div>
 
             <!-- Step 1: Primary Objective -->
-            <div id="step-1" class="step animate-fadeInUp">
-                <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-                    <div class="text-center mb-10">
-                        <div class="w-16 h-16 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-emerald-500/25">
+            <div id="step-1" class="onboarding-step active">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-emerald-400 to-cyan-400">
                             <i class="fas fa-bullseye text-white text-xl"></i>
                         </div>
-                        <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">What's your main goal?</h2>
-                        <p class="text-white/70 text-lg">Choose your primary objective to help us tailor your experience</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-emerald-200">What's your main goal?</h2>
+                        <p class="onboarding-step-description">Choose your primary objective to help us tailor your experience</p>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="primary-objective" value="lead-generation" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-emerald-400 peer-checked:bg-emerald-500/10 peer-checked:shadow-xl peer-checked:shadow-emerald-500/20 hover:border-white/40 group-hover:scale-105">
-                                <div class="flex items-center mb-4">
-                                    <div class="w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-xl flex items-center justify-center mr-4">
-                                        <i class="fas fa-users text-white"></i>
+                    <div class="onboarding-choice-grid">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="primary-objective" value="lead-generation" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-400 to-green-400">
+                                        <i class="fas fa-users"></i>
                                     </div>
-                                    <h3 class="text-xl font-semibold text-white">Generate Leads</h3>
+                                    <h3 class="onboarding-choice-title">Generate Leads</h3>
                                 </div>
-                                <p class="text-white/60 leading-relaxed">Find and connect with potential customers who need your services</p>
+                                <p class="onboarding-choice-description">Find and connect with potential customers who need your services</p>
                             </div>
                         </label>
 
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="primary-objective" value="brand-awareness" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-violet-400 peer-checked:bg-violet-500/10 peer-checked:shadow-xl peer-checked:shadow-violet-500/20 hover:border-white/40 group-hover:scale-105">
-                                <div class="flex items-center mb-4">
-                                    <div class="w-12 h-12 bg-gradient-to-r from-violet-400 to-purple-400 rounded-xl flex items-center justify-center mr-4">
-                                        <i class="fas fa-bullhorn text-white"></i>
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="primary-objective" value="brand-awareness" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-violet-400 to-purple-400">
+                                        <i class="fas fa-bullhorn"></i>
                                     </div>
-                                    <h3 class="text-xl font-semibold text-white">Brand Awareness</h3>
+                                    <h3 class="onboarding-choice-title">Brand Awareness</h3>
                                 </div>
-                                <p class="text-white/60 leading-relaxed">Increase visibility and recognition of your brand in the market</p>
+                                <p class="onboarding-choice-description">Increase visibility and recognition of your brand in the market</p>
                             </div>
                         </label>
 
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="primary-objective" value="sales" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-amber-400 peer-checked:bg-amber-500/10 peer-checked:shadow-xl peer-checked:shadow-amber-500/20 hover:border-white/40 group-hover:scale-105">
-                                <div class="flex items-center mb-4">
-                                    <div class="w-12 h-12 bg-gradient-to-r from-amber-400 to-orange-400 rounded-xl flex items-center justify-center mr-4">
-                                        <i class="fas fa-chart-line text-white"></i>
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="primary-objective" value="sales" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-amber-400 to-orange-400">
+                                        <i class="fas fa-chart-line"></i>
                                     </div>
-                                    <h3 class="text-xl font-semibold text-white">Drive Sales</h3>
+                                    <h3 class="onboarding-choice-title">Drive Sales</h3>
                                 </div>
-                                <p class="text-white/60 leading-relaxed">Convert prospects into paying customers and increase revenue</p>
+                                <p class="onboarding-choice-description">Convert prospects into paying customers and increase revenue</p>
                             </div>
                         </label>
 
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="primary-objective" value="networking" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-cyan-400 peer-checked:bg-cyan-500/10 peer-checked:shadow-xl peer-checked:shadow-cyan-500/20 hover:border-white/40 group-hover:scale-105">
-                                <div class="flex items-center mb-4">
-                                    <div class="w-12 h-12 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-xl flex items-center justify-center mr-4">
-                                        <i class="fas fa-handshake text-white"></i>
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="primary-objective" value="networking" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-cyan-400 to-blue-400">
+                                        <i class="fas fa-handshake"></i>
                                     </div>
-                                    <h3 class="text-xl font-semibold text-white">Network & Partner</h3>
+                                    <h3 class="onboarding-choice-title">Network & Partner</h3>
                                 </div>
-                                <p class="text-white/60 leading-relaxed">Build professional relationships and strategic partnerships</p>
+                                <p class="onboarding-choice-description">Build professional relationships and strategic partnerships</p>
                             </div>
                         </label>
                     </div>
 
-                    <div class="flex justify-end">
-                        <button onclick="nextStep()" class="group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/25 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
-                            <span class="flex items-center">
+                    <div class="onboarding-nav">
+                        <div></div>
+                        <button onclick="nextStep()" class="onboarding-btn-primary">
+                            <span class="onboarding-btn-content">
                                 Continue
-                                <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform duration-300"></i>
+                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
                             </span>
                         </button>
                     </div>
@@ -193,43 +154,43 @@
             </div>
 
             <!-- Step 2: Business Name -->
-            <div id="step-2" class="step hidden">
-                <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-                    <div class="text-center mb-10">
-                        <div class="w-16 h-16 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-blue-500/25">
+            <div id="step-2" class="onboarding-step">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-blue-400 to-indigo-400">
                             <i class="fas fa-building text-white text-xl"></i>
                         </div>
-                        <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">What's your business name?</h2>
-                        <p class="text-white/70 text-lg">This will help us personalize your outreach messages</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-blue-200">What's your business name?</h2>
+                        <p class="onboarding-step-description">This will help us personalize your outreach messages</p>
                     </div>
 
-                    <div class="space-y-6 mb-10">
-                        <div class="group">
-                            <label class="block text-sm font-medium text-white/90 mb-3">Business Name *</label>
+                    <div class="onboarding-form-group">
+                        <div class="onboarding-form-field">
+                            <label class="onboarding-form-label">Business Name *</label>
                             <div class="relative">
                                 <input type="text" id="business-name" maxlength="100" 
-                                       class="w-full px-6 py-4 bg-white/5 glass border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all duration-300 group-hover:border-white/40"
+                                       class="onboarding-form-input"
                                        placeholder="e.g. Acme Digital Marketing">
-                                <div class="absolute inset-y-0 right-4 flex items-center">
-                                    <i class="fas fa-building text-white/30"></i>
+                                <div class="onboarding-form-icon">
+                                    <i class="fas fa-building"></i>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center mt-2">
-                                <div id="business-name-error" class="text-red-400 text-sm hidden"></div>
-                                <div id="business-name-counter" class="text-white/50 text-sm font-mono">0/100</div>
+                            <div class="onboarding-counter-row">
+                                <div id="business-name-error" class="onboarding-error-message hidden"></div>
+                                <div id="business-name-counter" class="onboarding-counter onboarding-counter-normal">0/100</div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex justify-between">
-                        <button onclick="prevStep()" class="px-6 py-3 bg-white/10 glass border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-200 transform hover:scale-105">
+                    <div class="onboarding-nav">
+                        <button onclick="prevStep()" class="onboarding-btn-back">
                             <i class="fas fa-arrow-left mr-2"></i>
                             Back
                         </button>
-                        <button onclick="nextStep()" class="group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/25 transform hover:scale-105">
-                            <span class="flex items-center">
+                        <button onclick="nextStep()" class="onboarding-btn-primary">
+                            <span class="onboarding-btn-content">
                                 Continue
-                                <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform duration-300"></i>
+                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
                             </span>
                         </button>
                     </div>
@@ -237,81 +198,81 @@
             </div>
 
             <!-- Step 3: Business Niche -->
-            <div id="step-3" class="step hidden">
-                <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-                    <div class="text-center mb-10">
-                        <div class="w-16 h-16 bg-gradient-to-r from-pink-400 to-rose-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-pink-500/25">
+            <div id="step-3" class="onboarding-step">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-pink-400 to-rose-400">
                             <i class="fas fa-tags text-white text-xl"></i>
                         </div>
-                        <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-pink-200 bg-clip-text text-transparent">What's your business niche?</h2>
-                        <p class="text-white/70 text-lg">Choose the category that best describes your business</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-pink-200">What's your business niche?</h2>
+                        <p class="onboarding-step-description">Choose the category that best describes your business</p>
                     </div>
 
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-10">
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="business-niche" value="business" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-4 text-center transition-all duration-300 peer-checked:border-pink-400 peer-checked:bg-pink-500/10 peer-checked:shadow-xl peer-checked:shadow-pink-500/20 hover:border-white/40 group-hover:scale-105">
+                    <div class="onboarding-choice-grid-3">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="business-niche" value="business" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content text-center">
                                 <i class="fas fa-briefcase text-2xl mb-3 text-white/80"></i>
-                                <h3 class="font-semibold text-white mb-1">Business Services</h3>
-                                <p class="text-white/60 text-xs">Consulting, Legal, Finance</p>
+                                <h3 class="onboarding-choice-title mb-1">Business Services</h3>
+                                <p class="onboarding-choice-description text-xs">Consulting, Legal, Finance</p>
                             </div>
                         </label>
 
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="business-niche" value="coaching" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-4 text-center transition-all duration-300 peer-checked:border-pink-400 peer-checked:bg-pink-500/10 peer-checked:shadow-xl peer-checked:shadow-pink-500/20 hover:border-white/40 group-hover:scale-105">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="business-niche" value="coaching" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content text-center">
                                 <i class="fas fa-user-tie text-2xl mb-3 text-white/80"></i>
-                                <h3 class="font-semibold text-white mb-1">Coaching</h3>
-                                <p class="text-white/60 text-xs">Life, Business, Career</p>
+                                <h3 class="onboarding-choice-title mb-1">Coaching</h3>
+                                <p class="onboarding-choice-description text-xs">Life, Business, Career</p>
                             </div>
                         </label>
 
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="business-niche" value="technology" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-4 text-center transition-all duration-300 peer-checked:border-pink-400 peer-checked:bg-pink-500/10 peer-checked:shadow-xl peer-checked:shadow-pink-500/20 hover:border-white/40 group-hover:scale-105">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="business-niche" value="technology" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content text-center">
                                 <i class="fas fa-laptop-code text-2xl mb-3 text-white/80"></i>
-                                <h3 class="font-semibold text-white mb-1">Technology</h3>
-                                <p class="text-white/60 text-xs">Software, Apps, SaaS</p>
+                                <h3 class="onboarding-choice-title mb-1">Technology</h3>
+                                <p class="onboarding-choice-description text-xs">Software, Apps, SaaS</p>
                             </div>
                         </label>
 
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="business-niche" value="marketing" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-4 text-center transition-all duration-300 peer-checked:border-pink-400 peer-checked:bg-pink-500/10 peer-checked:shadow-xl peer-checked:shadow-pink-500/20 hover:border-white/40 group-hover:scale-105">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="business-niche" value="marketing" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content text-center">
                                 <i class="fas fa-bullhorn text-2xl mb-3 text-white/80"></i>
-                                <h3 class="font-semibold text-white mb-1">Marketing</h3>
-                                <p class="text-white/60 text-xs">Digital, Social, Content</p>
+                                <h3 class="onboarding-choice-title mb-1">Marketing</h3>
+                                <p class="onboarding-choice-description text-xs">Digital, Social, Content</p>
                             </div>
                         </label>
 
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="business-niche" value="ecommerce" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-4 text-center transition-all duration-300 peer-checked:border-pink-400 peer-checked:bg-pink-500/10 peer-checked:shadow-xl peer-checked:shadow-pink-500/20 hover:border-white/40 group-hover:scale-105">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="business-niche" value="ecommerce" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content text-center">
                                 <i class="fas fa-shopping-cart text-2xl mb-3 text-white/80"></i>
-                                <h3 class="font-semibold text-white mb-1">E-commerce</h3>
-                                <p class="text-white/60 text-xs">Retail, Products, Store</p>
+                                <h3 class="onboarding-choice-title mb-1">E-commerce</h3>
+                                <p class="onboarding-choice-description text-xs">Retail, Products, Store</p>
                             </div>
                         </label>
 
-                        <label class="relative group cursor-pointer">
-                            <input type="radio" name="business-niche" value="real-estate" class="peer sr-only">
-                            <div class="glass bg-white/5 border border-white/20 rounded-2xl p-4 text-center transition-all duration-300 peer-checked:border-pink-400 peer-checked:bg-pink-500/10 peer-checked:shadow-xl peer-checked:shadow-pink-500/20 hover:border-white/40 group-hover:scale-105">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="business-niche" value="real-estate" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content text-center">
                                 <i class="fas fa-home text-2xl mb-3 text-white/80"></i>
-                                <h3 class="font-semibold text-white mb-1">Real Estate</h3>
-                                <p class="text-white/60 text-xs">Residential, Commercial</p>
+                                <h3 class="onboarding-choice-title mb-1">Real Estate</h3>
+                                <p class="onboarding-choice-description text-xs">Residential, Commercial</p>
                             </div>
                         </label>
                     </div>
 
-                    <div class="flex justify-between">
-                        <button onclick="prevStep()" class="px-6 py-3 bg-white/10 glass border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-200 transform hover:scale-105">
+                    <div class="onboarding-nav">
+                        <button onclick="prevStep()" class="onboarding-btn-back">
                             <i class="fas fa-arrow-left mr-2"></i>
                             Back
                         </button>
-                        <button onclick="nextStep()" class="group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/25 transform hover:scale-105">
-                            <span class="flex items-center">
+                        <button onclick="nextStep()" class="onboarding-btn-primary">
+                            <span class="onboarding-btn-content">
                                 Continue
-                                <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform duration-300"></i>
+                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
                             </span>
                         </button>
                     </div>
@@ -319,70 +280,406 @@
             </div>
 
             <!-- Step 4: Target Audience -->
-            <div id="step-4" class="step hidden">
-                <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-                    <div class="text-center mb-10">
-                        <div class="w-16 h-16 bg-gradient-to-r from-teal-400 to-cyan-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-teal-500/25">
+            <div id="step-4" class="onboarding-step">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-teal-400 to-cyan-400">
                             <i class="fas fa-users-cog text-white text-xl"></i>
                         </div>
-                        <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-teal-200 bg-clip-text text-transparent">Who is your target audience?</h2>
-                        <p class="text-white/70 text-lg">Describe your ideal customers so we can find similar prospects</p>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-teal-200">Who is your target audience?</h2>
+                        <p class="onboarding-step-description">Describe your ideal customers so we can find similar prospects</p>
                     </div>
 
-                    <div class="space-y-6 mb-10">
-                        <div class="group">
-                            <label class="block text-sm font-medium text-white/90 mb-3">Target Audience *</label>
+                    <div class="onboarding-form-group">
+                        <div class="onboarding-form-field">
+                            <label class="onboarding-form-label">Target Audience *</label>
                             <div class="relative">
                                 <textarea id="target-audience" rows="4" maxlength="500"
-                                         class="w-full px-6 py-4 bg-white/5 glass border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all duration-300 resize-none group-hover:border-white/40"
+                                         class="onboarding-form-textarea"
                                          placeholder="e.g. Small business owners (10-100 employees) who struggle with digital marketing and want to increase online sales. They typically have revenues between $500K-$5M and are willing to invest in growth."></textarea>
-                                <div class="absolute top-4 right-4">
-                                    <i class="fas fa-users text-white/30"></i>
+                                <div class="onboarding-form-icon">
+                                    <i class="fas fa-users"></i>
                                 </div>
                             </div>
-                            <div class="flex justify-between items-center mt-2">
-                                <div id="target-audience-error" class="text-red-400 text-sm hidden"></div>
-                                <div id="target-audience-counter" class="text-white/50 text-sm font-mono">0/500</div>
+                            <div class="onboarding-counter-row">
+                                <div id="target-audience-error" class="onboarding-error-message hidden"></div>
+                                <div id="target-audience-counter" class="onboarding-counter onboarding-counter-normal">0/500</div>
                             </div>
-                            <div class="mt-3 p-3 bg-teal-500/10 border border-teal-400/30 rounded-xl">
-                                <div class="flex items-start space-x-3">
-                                    <i class="fas fa-lightbulb text-teal-400 mt-0.5 flex-shrink-0"></i>
-                                    <p class="text-teal-200 text-sm">
-                                        <strong>Tip:</strong> Be specific about industry, company size, pain points, and budget range. The more detailed, the better our AI can target similar prospects.
-                                    </p>
-                                </div>
+                            <div class="onboarding-tip onboarding-tip-info">
+                                <i class="fas fa-lightbulb text-teal-400 onboarding-tip-icon"></i>
+                                <p class="onboarding-tip-text text-teal-200">
+                                    <strong>Tip:</strong> Be specific about industry, company size, pain points, and budget range. The more detailed, the better our AI can target similar prospects.
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex justify-between">
-                        <button onclick="prevStep()" class="px-6 py-3 bg-white/10 glass border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-200 transform hover:scale-105">
+                    <div class="onboarding-nav">
+                        <button onclick="prevStep()" class="onboarding-btn-back">
                             <i class="fas fa-arrow-left mr-2"></i>
                             Back
                         </button>
-                        <button onclick="nextStep()" class="group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/25 transform hover:scale-105">
-                            <span class="flex items-center">
+                        <button onclick="nextStep()" class="onboarding-btn-primary">
+                            <span class="onboarding-btn-content">
                                 Continue
-                                <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform duration-300"></i>
+                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
                             </span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Continue with remaining steps using the same modern design patterns... -->
-            <!-- For brevity, I'll continue with the remaining steps in the next artifact -->
+            <!-- Step 5: Value Proposition -->
+            <div id="step-5" class="onboarding-step">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-amber-400 to-orange-400">
+                            <i class="fas fa-gem text-white text-xl"></i>
+                        </div>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-amber-200">What's your unique value proposition?</h2>
+                        <p class="onboarding-step-description">What makes you different from competitors? What unique value do you provide?</p>
+                    </div>
+
+                    <div class="onboarding-form-group">
+                        <div class="onboarding-form-field">
+                            <label class="onboarding-form-label">Value Proposition *</label>
+                            <div class="relative">
+                                <textarea id="value-proposition" rows="4" maxlength="300"
+                                         class="onboarding-form-textarea"
+                                         placeholder="e.g. Unlike generic marketing agencies, we specialize exclusively in B2B SaaS companies and guarantee 3x lead growth within 90 days using our proprietary AI-driven targeting system, or you don't pay."></textarea>
+                                <div class="onboarding-form-icon">
+                                    <i class="fas fa-gem"></i>
+                                </div>
+                            </div>
+                            <div class="onboarding-counter-row">
+                                <div id="value-proposition-error" class="onboarding-error-message hidden"></div>
+                                <div id="value-proposition-counter" class="onboarding-counter onboarding-counter-normal">0/300</div>
+                            </div>
+                            <div class="onboarding-tip onboarding-tip-warning">
+                                <i class="fas fa-star text-amber-400 onboarding-tip-icon"></i>
+                                <p class="onboarding-tip-text text-amber-200">
+                                    <strong>Make it compelling:</strong> Focus on specific outcomes, unique methods, and what sets you apart. Include guarantees, timeframes, or measurable results if possible.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="onboarding-nav">
+                        <button onclick="prevStep()" class="onboarding-btn-back">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Back
+                        </button>
+                        <button onclick="nextStep()" class="onboarding-btn-primary">
+                            <span class="onboarding-btn-content">
+                                Continue
+                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 6: Communication Style -->
+            <div id="step-6" class="onboarding-step">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-indigo-400 to-purple-400">
+                            <i class="fas fa-comments text-white text-xl"></i>
+                        </div>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-indigo-200">How do you prefer to communicate?</h2>
+                        <p class="onboarding-step-description">Choose the tone that best represents your brand personality</p>
+                    </div>
+
+                    <div class="onboarding-choice-grid">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="communication-tone" value="professional" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-slate-400 to-gray-400">
+                                        <i class="fas fa-user-tie"></i>
+                                    </div>
+                                    <h3 class="onboarding-choice-title">Professional</h3>
+                                </div>
+                                <p class="onboarding-choice-description">Formal, authoritative, and business-focused communication style</p>
+                                <div class="onboarding-choice-hint">"We deliver enterprise-grade solutions..."</div>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="communication-tone" value="friendly" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-green-400 to-emerald-400">
+                                        <i class="fas fa-smile"></i>
+                                    </div>
+                                    <h3 class="onboarding-choice-title">Friendly</h3>
+                                </div>
+                                <p class="onboarding-choice-description">Warm, approachable, and personable communication style</p>
+                                <div class="onboarding-choice-hint">"Hi there! We'd love to help you..."</div>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="communication-tone" value="direct" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-red-400 to-pink-400">
+                                        <i class="fas fa-bullseye"></i>
+                                    </div>
+                                    <h3 class="onboarding-choice-title">Direct</h3>
+                                </div>
+                                <p class="onboarding-choice-description">Straight to the point, no-nonsense communication style</p>
+                                <div class="onboarding-choice-hint">"We increase sales by 40%. Interested?"</div>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="communication-tone" value="consultative" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-blue-400 to-cyan-400">
+                                        <i class="fas fa-handshake"></i>
+                                    </div>
+                                    <h3 class="onboarding-choice-title">Consultative</h3>
+                                </div>
+                                <p class="onboarding-choice-description">Advisory, educational, and solution-focused approach</p>
+                                <div class="onboarding-choice-hint">"Have you considered the impact of..."</div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="onboarding-nav">
+                        <button onclick="prevStep()" class="onboarding-btn-back">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Back
+                        </button>
+                        <button onclick="nextStep()" class="onboarding-btn-primary">
+                            <span class="onboarding-btn-content">
+                                Continue
+                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 7: Call to Action Preference -->
+            <div id="step-7" class="onboarding-step">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-emerald-400 to-teal-400">
+                            <i class="fas fa-mouse-pointer text-white text-xl"></i>
+                        </div>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-emerald-200">What's your preferred call-to-action?</h2>
+                        <p class="onboarding-step-description">How would you like prospects to take the next step?</p>
+                    </div>
+
+                    <div class="onboarding-choice-grid">
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="preferred-cta" value="book-call" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-emerald-400 to-green-400">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </div>
+                                    <h3 class="onboarding-choice-title">Book a Call</h3>
+                                </div>
+                                <p class="onboarding-choice-description">Schedule a consultation or discovery call to discuss their needs</p>
+                                <div class="onboarding-choice-hint">Best for: High-value services, consulting</div>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="preferred-cta" value="visit-website" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-blue-400 to-indigo-400">
+                                        <i class="fas fa-globe"></i>
+                                    </div>
+                                    <h3 class="onboarding-choice-title">Visit Website</h3>
+                                </div>
+                                <p class="onboarding-choice-description">Direct them to your website to learn more about your offerings</p>
+                                <div class="onboarding-choice-hint">Best for: SaaS, e-commerce, content marketing</div>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="preferred-cta" value="send-email" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-purple-400 to-pink-400">
+                                        <i class="fas fa-envelope"></i>
+                                    </div>
+                                    <h3 class="onboarding-choice-title">Send Email</h3>
+                                </div>
+                                <p class="onboarding-choice-description">Encourage them to send you an email to start the conversation</p>
+                                <div class="onboarding-choice-hint">Best for: Agencies, freelancers, B2B services</div>
+                            </div>
+                        </label>
+
+                        <label class="onboarding-choice-card">
+                            <input type="radio" name="preferred-cta" value="send-dm" class="onboarding-choice-input">
+                            <div class="onboarding-choice-content">
+                                <div class="onboarding-choice-header">
+                                    <div class="onboarding-choice-icon bg-gradient-to-r from-pink-400 to-rose-400">
+                                        <i class="fas fa-comment"></i>
+                                    </div>
+                                    <h3 class="onboarding-choice-title">Send DM</h3>
+                                </div>
+                                <p class="onboarding-choice-description">Invite them to send a direct message on social media platforms</p>
+                                <div class="onboarding-choice-hint">Best for: Personal brands, creative services, B2C</div>
+                            </div>
+                        </label>
+                    </div>
+<div class="onboarding-nav">
+                        <button onclick="prevStep()" class="onboarding-btn-back">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Back
+                        </button>
+                        <button onclick="nextStep()" class="onboarding-btn-primary">
+                            <span class="onboarding-btn-content">
+                                Continue
+                                <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 8: Phone Number (Optional) -->
+            <div id="step-8" class="onboarding-step">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-cyan-400 to-blue-400">
+                            <i class="fas fa-phone text-white text-xl"></i>
+                        </div>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-cyan-200">Phone number for notifications?</h2>
+                        <p class="onboarding-step-description">Get SMS updates about your lead generation campaigns (optional)</p>
+                    </div>
+
+                    <div class="onboarding-form-group">
+                        <div class="onboarding-form-field">
+                            <label class="onboarding-form-label">Phone Number (Optional)</label>
+                            <div class="relative">
+                                <input type="tel" id="phone-number" maxlength="20"
+                                       class="onboarding-form-input"
+                                       placeholder="+1 (555) 123-4567">
+                                <div class="onboarding-form-icon">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                            </div>
+                            <div class="onboarding-counter-row">
+                                <div id="phone-number-error" class="onboarding-error-message hidden"></div>
+                                <div id="phone-number-counter" class="onboarding-counter onboarding-counter-normal">0/20</div>
+                            </div>
+                        </div>
+
+                        <div id="sms-opt-in-group" class="hidden">
+                            <div class="flex items-center space-x-3 p-4 bg-blue-500/10 border border-blue-400/30 rounded-xl">
+                                <input type="checkbox" id="opt-in-sms" class="w-5 h-5 bg-white/10 border border-white/30 rounded focus:ring-2 focus:ring-blue-400 text-blue-400">
+                                <label for="opt-in-sms" class="text-blue-200 text-sm">
+                                    <strong>Yes, send me SMS updates</strong> about campaign performance, new leads, and important notifications
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="onboarding-tip onboarding-tip-info">
+                            <i class="fas fa-info-circle text-cyan-400 onboarding-tip-icon"></i>
+                            <p class="onboarding-tip-text text-cyan-200">
+                                <strong>Privacy note:</strong> Your phone number is encrypted and only used for campaign notifications. You can opt out anytime. We never share your information with third parties.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="onboarding-nav">
+                        <button onclick="prevStep()" class="onboarding-btn-back">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Back
+                        </button>
+                        <div class="onboarding-nav-right">
+                            <button onclick="skipPhoneStep()" class="onboarding-btn-skip">
+                                Skip
+                            </button>
+                            <button onclick="nextStep()" class="onboarding-btn-primary">
+                                <span class="onboarding-btn-content">
+                                    Continue
+                                    <i class="fas fa-arrow-right onboarding-btn-arrow"></i>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 9: Key Results -->
+            <div id="step-9" class="onboarding-step">
+                <div class="onboarding-card">
+                    <div class="onboarding-step-header">
+                        <div class="onboarding-step-icon bg-gradient-to-r from-yellow-400 to-amber-400">
+                            <i class="fas fa-trophy text-white text-xl"></i>
+                        </div>
+                        <h2 class="onboarding-step-title bg-gradient-to-r from-white to-yellow-200">What results do you deliver?</h2>
+                        <p class="onboarding-step-description">Describe the key benefits and outcomes your clients typically see</p>
+                    </div>
+
+                    <div class="onboarding-form-group">
+                        <div class="onboarding-form-field">
+                            <label class="onboarding-form-label">Key Results/Benefits (Optional)</label>
+                            <div class="relative">
+                                <textarea id="key-results" rows="4" maxlength="800"
+                                         class="onboarding-form-textarea"
+                                         placeholder="e.g. Clients typically see 50% more qualified leads within 30 days, 3x improvement in conversion rates, and average ROI of 400%. Most clients recover their investment in the first month and see continued growth for years."></textarea>
+                                <div class="onboarding-form-icon">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                            </div>
+                            <div class="onboarding-counter-row">
+                                <div id="key-results-error" class="onboarding-error-message hidden"></div>
+                                <div id="key-results-counter" class="onboarding-counter onboarding-counter-normal">0/800</div>
+                            </div>
+                            <div class="onboarding-tip onboarding-tip-success">
+                                <i class="fas fa-chart-line text-yellow-400 onboarding-tip-icon"></i>
+                                <p class="onboarding-tip-text text-yellow-200">
+                                    <strong>Pro tip:</strong> Include specific metrics, timeframes, and real outcomes. Numbers and percentages make your value proposition more credible and compelling.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="onboarding-nav">
+                        <button onclick="prevStep()" class="onboarding-btn-back">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Back
+                        </button>
+                        <div class="onboarding-nav-right">
+                            <button onclick="skipStep()" class="onboarding-btn-skip">
+                                Skip for now
+                            </button>
+                            <button onclick="submitOnboarding()" class="onboarding-btn-success">
+                                <span class="onboarding-btn-content">
+                                    <i class="fas fa-check mr-3"></i>
+                                    Complete Setup
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="/core/script-loader.js"></script>
     <script>
         // Character counter functionality
         function setupCharacterCounters() {
             const fields = {
                 'business-name': 100,
-                'target-audience': 500
+                'target-audience': 500,
+                'value-proposition': 300,
+                'key-results': 800,
+                'phone-number': 20
             };
             
             Object.entries(fields).forEach(([fieldId, maxLength]) => {
@@ -395,13 +692,21 @@
                         const percentage = (currentLength / maxLength) * 100;
                         
                         counter.textContent = `${currentLength}/${maxLength}`;
-                        counter.className = 'text-sm font-mono ';
+                        
+                        // Remove existing classes
+                        counter.classList.remove('onboarding-counter-normal', 'onboarding-counter-warning', 'onboarding-counter-danger');
+                        
+                        // Add appropriate class
                         if (percentage >= 90) {
-                            counter.className += 'counter-danger';
+                            counter.classList.add('onboarding-counter-danger');
+                            field.classList.add('onboarding-field-error');
                         } else if (percentage >= 75) {
-                            counter.className += 'counter-warning';
+                            counter.classList.add('onboarding-counter-warning');
+                            field.classList.remove('onboarding-field-error');
+                            field.classList.add('onboarding-field-warning');
                         } else {
-                            counter.className += 'text-white/50';
+                            counter.classList.add('onboarding-counter-normal');
+                            field.classList.remove('onboarding-field-error', 'onboarding-field-warning');
                         }
                     });
                     
@@ -411,354 +716,67 @@
             });
         }
         
+        // Phone number formatting and SMS opt-in visibility
+        function setupPhoneHandling() {
+            const phoneInput = document.getElementById('phone-number');
+            const smsOptInGroup = document.getElementById('sms-opt-in-group');
+            
+            if (phoneInput && smsOptInGroup) {
+                phoneInput.addEventListener('input', (e) => {
+                    const value = e.target.value.trim();
+                    
+                    // Show/hide SMS opt-in based on phone input
+                    if (value.length > 0) {
+                        smsOptInGroup.classList.remove('hidden');
+                    } else {
+                        smsOptInGroup.classList.add('hidden');
+                    }
+                    
+                    // Format phone number (simple US formatting)
+                    const cleaned = value.replace(/\D/g, '');
+                    if (cleaned.length <= 10) {
+                        if (cleaned.length >= 6) {
+                            e.target.value = cleaned.replace(/(\d{3})(\d{3})(\d{0,4})/, '($1) $2-$3');
+                        } else if (cleaned.length >= 3) {
+                            e.target.value = cleaned.replace(/(\d{3})(\d{0,3})/, '($1) $2');
+                        }
+                    }
+                });
+            }
+        }
+        
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
             setupCharacterCounters();
+            setupPhoneHandling();
         });
+        
+        // Enhanced step visibility management
+        function showStep(stepNumber) {
+            // Hide all steps
+            for (let i = 1; i <= 9; i++) {
+                const step = document.getElementById(`step-${i}`);
+                if (step) {
+                    step.classList.remove('active');
+                    step.classList.add('hidden');
+                }
+            }
+            
+            // Show current step
+            const currentStep = document.getElementById(`step-${stepNumber}`);
+            if (currentStep) {
+                currentStep.classList.remove('hidden');
+                currentStep.classList.add('active');
+                
+                // Focus first input
+                setTimeout(() => {
+                    const firstInput = currentStep.querySelector('input, textarea, select');
+                    if (firstInput && firstInput.type !== 'radio') {
+                        firstInput.focus();
+                    }
+                }, 100);
+            }
+        }
     </script>
 </body>
 </html>
-
-<!-- Step 5: Value Proposition -->
-<div id="step-5" class="step hidden">
-    <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-        <div class="text-center mb-10">
-            <div class="w-16 h-16 bg-gradient-to-r from-amber-400 to-orange-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-amber-500/25">
-                <i class="fas fa-gem text-white text-xl"></i>
-            </div>
-            <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-amber-200 bg-clip-text text-transparent">What's your unique value proposition?</h2>
-            <p class="text-white/70 text-lg">What makes you different from competitors? What unique value do you provide?</p>
-        </div>
-
-        <div class="space-y-6 mb-10">
-            <div class="group">
-                <label class="block text-sm font-medium text-white/90 mb-3">Value Proposition *</label>
-                <div class="relative">
-                    <textarea id="value-proposition" rows="4" maxlength="300"
-                             class="w-full px-6 py-4 bg-white/5 glass border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all duration-300 resize-none group-hover:border-white/40"
-                             placeholder="e.g. Unlike generic marketing agencies, we specialize exclusively in B2B SaaS companies and guarantee 3x lead growth within 90 days using our proprietary AI-driven targeting system, or you don't pay."></textarea>
-                    <div class="absolute top-4 right-4">
-                        <i class="fas fa-gem text-white/30"></i>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mt-2">
-                    <div id="value-proposition-error" class="text-red-400 text-sm hidden"></div>
-                    <div id="value-proposition-counter" class="text-white/50 text-sm font-mono">0/300</div>
-                </div>
-                <div class="mt-3 p-3 bg-amber-500/10 border border-amber-400/30 rounded-xl">
-                    <div class="flex items-start space-x-3">
-                        <i class="fas fa-star text-amber-400 mt-0.5 flex-shrink-0"></i>
-                        <p class="text-amber-200 text-sm">
-                            <strong>Make it compelling:</strong> Focus on specific outcomes, unique methods, and what sets you apart. Include guarantees, timeframes, or measurable results if possible.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex justify-between">
-            <button onclick="prevStep()" class="px-6 py-3 bg-white/10 glass border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-200 transform hover:scale-105">
-                <i class="fas fa-arrow-left mr-2"></i>
-                Back
-            </button>
-            <button onclick="nextStep()" class="group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/25 transform hover:scale-105">
-                <span class="flex items-center">
-                    Continue
-                    <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform duration-300"></i>
-                </span>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Step 6: Communication Style -->
-<div id="step-6" class="step hidden">
-    <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-        <div class="text-center mb-10">
-            <div class="w-16 h-16 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-indigo-500/25">
-                <i class="fas fa-comments text-white text-xl"></i>
-            </div>
-            <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-transparent">How do you prefer to communicate?</h2>
-            <p class="text-white/70 text-lg">Choose the tone that best represents your brand personality</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <label class="relative group cursor-pointer">
-                <input type="radio" name="communication-tone" value="professional" class="peer sr-only">
-                <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-indigo-400 peer-checked:bg-indigo-500/10 peer-checked:shadow-xl peer-checked:shadow-indigo-500/20 hover:border-white/40 group-hover:scale-105">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-slate-400 to-gray-400 rounded-xl flex items-center justify-center mr-4">
-                            <i class="fas fa-user-tie text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white">Professional</h3>
-                    </div>
-                    <p class="text-white/60 leading-relaxed">Formal, authoritative, and business-focused communication style</p>
-                    <div class="mt-3 text-xs text-white/40 italic">"We deliver enterprise-grade solutions..."</div>
-                </div>
-            </label>
-
-            <label class="relative group cursor-pointer">
-                <input type="radio" name="communication-tone" value="friendly" class="peer sr-only">
-                <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-indigo-400 peer-checked:bg-indigo-500/10 peer-checked:shadow-xl peer-checked:shadow-indigo-500/20 hover:border-white/40 group-hover:scale-105">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-400 rounded-xl flex items-center justify-center mr-4">
-                            <i class="fas fa-smile text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white">Friendly</h3>
-                    </div>
-                    <p class="text-white/60 leading-relaxed">Warm, approachable, and personable communication style</p>
-                    <div class="mt-3 text-xs text-white/40 italic">"Hi there! We'd love to help you..."</div>
-                </div>
-            </label>
-
-            <label class="relative group cursor-pointer">
-                <input type="radio" name="communication-tone" value="direct" class="peer sr-only">
-                <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-indigo-400 peer-checked:bg-indigo-500/10 peer-checked:shadow-xl peer-checked:shadow-indigo-500/20 hover:border-white/40 group-hover:scale-105">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-red-400 to-pink-400 rounded-xl flex items-center justify-center mr-4">
-                            <i class="fas fa-bullseye text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white">Direct</h3>
-                    </div>
-                    <p class="text-white/60 leading-relaxed">Straight to the point, no-nonsense communication style</p>
-                    <div class="mt-3 text-xs text-white/40 italic">"We increase sales by 40%. Interested?"</div>
-                </div>
-            </label>
-
-            <label class="relative group cursor-pointer">
-                <input type="radio" name="communication-tone" value="consultative" class="peer sr-only">
-                <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-indigo-400 peer-checked:bg-indigo-500/10 peer-checked:shadow-xl peer-checked:shadow-indigo-500/20 hover:border-white/40 group-hover:scale-105">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-xl flex items-center justify-center mr-4">
-                            <i class="fas fa-handshake text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white">Consultative</h3>
-                    </div>
-                    <p class="text-white/60 leading-relaxed">Advisory, educational, and solution-focused approach</p>
-                    <div class="mt-3 text-xs text-white/40 italic">"Have you considered the impact of..."</div>
-                </div>
-            </label>
-        </div>
-
-        <div class="flex justify-between">
-            <button onclick="prevStep()" class="px-6 py-3 bg-white/10 glass border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-200 transform hover:scale-105">
-                <i class="fas fa-arrow-left mr-2"></i>
-                Back
-            </button>
-            <button onclick="nextStep()" class="group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/25 transform hover:scale-105">
-                <span class="flex items-center">
-                    Continue
-                    <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform duration-300"></i>
-                </span>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Step 7: Call to Action Preference -->
-<div id="step-7" class="step hidden">
-    <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-        <div class="text-center mb-10">
-            <div class="w-16 h-16 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-emerald-500/25">
-                <i class="fas fa-mouse-pointer text-white text-xl"></i>
-            </div>
-            <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-emerald-200 bg-clip-text text-transparent">What's your preferred call-to-action?</h2>
-            <p class="text-white/70 text-lg">How would you like prospects to take the next step?</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <label class="relative group cursor-pointer">
-                <input type="radio" name="preferred-cta" value="book-call" class="peer sr-only">
-                <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-emerald-400 peer-checked:bg-emerald-500/10 peer-checked:shadow-xl peer-checked:shadow-emerald-500/20 hover:border-white/40 group-hover:scale-105">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-emerald-400 to-green-400 rounded-xl flex items-center justify-center mr-4">
-                            <i class="fas fa-calendar-alt text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white">Book a Call</h3>
-                    </div>
-                    <p class="text-white/60 leading-relaxed">Schedule a consultation or discovery call to discuss their needs</p>
-                    <div class="mt-3 text-xs text-white/40 italic">Best for: High-value services, consulting</div>
-                </div>
-            </label>
-
-            <label class="relative group cursor-pointer">
-                <input type="radio" name="preferred-cta" value="visit-website" class="peer sr-only">
-                <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-emerald-400 peer-checked:bg-emerald-500/10 peer-checked:shadow-xl peer-checked:shadow-emerald-500/20 hover:border-white/40 group-hover:scale-105">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-xl flex items-center justify-center mr-4">
-                            <i class="fas fa-globe text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white">Visit Website</h3>
-                    </div>
-                    <p class="text-white/60 leading-relaxed">Direct them to your website to learn more about your offerings</p>
-                    <div class="mt-3 text-xs text-white/40 italic">Best for: SaaS, e-commerce, content marketing</div>
-                </div>
-            </label>
-
-            <label class="relative group cursor-pointer">
-                <input type="radio" name="preferred-cta" value="send-email" class="peer sr-only">
-                <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-emerald-400 peer-checked:bg-emerald-500/10 peer-checked:shadow-xl peer-checked:shadow-emerald-500/20 hover:border-white/40 group-hover:scale-105">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-400 rounded-xl flex items-center justify-center mr-4">
-                            <i class="fas fa-envelope text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white">Send Email</h3>
-                    </div>
-                    <p class="text-white/60 leading-relaxed">Encourage them to send you an email to start the conversation</p>
-                    <div class="mt-3 text-xs text-white/40 italic">Best for: Agencies, freelancers, B2B services</div>
-                </div>
-            </label>
-
-            <label class="relative group cursor-pointer">
-                <input type="radio" name="preferred-cta" value="send-dm" class="peer sr-only">
-                <div class="glass bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300 peer-checked:border-emerald-400 peer-checked:bg-emerald-500/10 peer-checked:shadow-xl peer-checked:shadow-emerald-500/20 hover:border-white/40 group-hover:scale-105">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-pink-400 to-rose-400 rounded-xl flex items-center justify-center mr-4">
-                            <i class="fas fa-comment text-white"></i>
-                        </div>
-                        <h3 class="text-xl font-semibold text-white">Send DM</h3>
-                    </div>
-                    <p class="text-white/60 leading-relaxed">Invite them to send a direct message on social media platforms</p>
-                    <div class="mt-3 text-xs text-white/40 italic">Best for: Personal brands, creative services, B2C</div>
-                </div>
-            </label>
-        </div>
-
-        <div class="flex justify-between">
-            <button onclick="prevStep()" class="px-6 py-3 bg-white/10 glass border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-200 transform hover:scale-105">
-                <i class="fas fa-arrow-left mr-2"></i>
-                Back
-            </button>
-            <button onclick="nextStep()" class="group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/25 transform hover:scale-105">
-                <span class="flex items-center">
-                    Continue
-                    <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform duration-300"></i>
-                </span>
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Step 8: Phone Number (Optional) -->
-<div id="step-8" class="step hidden">
-    <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-        <div class="text-center mb-10">
-            <div class="w-16 h-16 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-cyan-500/25">
-                <i class="fas fa-phone text-white text-xl"></i>
-            </div>
-            <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-cyan-200 bg-clip-text text-transparent">Phone number for notifications?</h2>
-            <p class="text-white/70 text-lg">Get SMS updates about your lead generation campaigns (optional)</p>
-        </div>
-
-        <div class="space-y-6 mb-10">
-            <div class="group">
-                <label class="block text-sm font-medium text-white/90 mb-3">Phone Number (Optional)</label>
-                <div class="relative">
-                    <input type="tel" id="phone-number" maxlength="20"
-                           class="w-full px-6 py-4 bg-white/5 glass border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all duration-300 group-hover:border-white/40"
-                           placeholder="+1 (555) 123-4567">
-                    <div class="absolute inset-y-0 right-4 flex items-center">
-                        <i class="fas fa-phone text-white/30"></i>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mt-2">
-                    <div id="phone-number-error" class="text-red-400 text-sm hidden"></div>
-                    <div id="phone-number-counter" class="text-white/50 text-sm font-mono">0/20</div>
-                </div>
-            </div>
-
-            <div id="sms-opt-in-group" class="hidden">
-                <div class="flex items-center space-x-3 p-4 bg-blue-500/10 border border-blue-400/30 rounded-xl">
-                    <input type="checkbox" id="opt-in-sms" class="w-5 h-5 bg-white/10 border border-white/30 rounded focus:ring-2 focus:ring-blue-400 text-blue-400">
-                    <label for="opt-in-sms" class="text-blue-200 text-sm">
-                        <strong>Yes, send me SMS updates</strong> about campaign performance, new leads, and important notifications
-                    </label>
-                </div>
-            </div>
-
-            <div class="p-4 bg-cyan-500/10 border border-cyan-400/30 rounded-xl">
-                <div class="flex items-start space-x-3">
-                    <i class="fas fa-info-circle text-cyan-400 mt-0.5 flex-shrink-0"></i>
-                    <p class="text-cyan-200 text-sm">
-                        <strong>Privacy note:</strong> Your phone number is encrypted and only used for campaign notifications. You can opt out anytime. We never share your information with third parties.
-                    </p>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex justify-between">
-            <button onclick="prevStep()" class="px-6 py-3 bg-white/10 glass border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-200 transform hover:scale-105">
-                <i class="fas fa-arrow-left mr-2"></i>
-                Back
-            </button>
-            <div class="flex space-x-3">
-                <button onclick="skipPhoneStep()" class="px-6 py-3 bg-white/5 border border-white/20 text-white/70 rounded-xl hover:bg-white/10 hover:text-white transition-all duration-200">
-                    Skip
-                </button>
-                <button onclick="nextStep()" class="group relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/25 transform hover:scale-105">
-                    <span class="flex items-center">
-                        Continue
-                        <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform duration-300"></i>
-                    </span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Step 9: Key Results -->
-<div id="step-9" class="step hidden">
-    <div class="glass bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 md:p-12 shadow-2xl shadow-black/20">
-        <div class="text-center mb-10">
-            <div class="w-16 h-16 bg-gradient-to-r from-yellow-400 to-amber-400 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-xl shadow-yellow-500/25">
-                <i class="fas fa-trophy text-white text-xl"></i>
-            </div>
-            <h2 class="text-3xl font-bold mb-4 bg-gradient-to-r from-white to-yellow-200 bg-clip-text text-transparent">What results do you deliver?</h2>
-            <p class="text-white/70 text-lg">Describe the key benefits and outcomes your clients typically see</p>
-        </div>
-
-        <div class="space-y-6 mb-10">
-            <div class="group">
-                <label class="block text-sm font-medium text-white/90 mb-3">Key Results/Benefits (Optional)</label>
-                <div class="relative">
-                    <textarea id="key-results" rows="4" maxlength="800"
-                             class="w-full px-6 py-4 bg-white/5 glass border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent transition-all duration-300 resize-none group-hover:border-white/40"
-                             placeholder="e.g. Clients typically see 50% more qualified leads within 30 days, 3x improvement in conversion rates, and average ROI of 400%. Most clients recover their investment in the first month and see continued growth for years."></textarea>
-                    <div class="absolute top-4 right-4">
-                        <i class="fas fa-trophy text-white/30"></i>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mt-2">
-                    <div id="key-results-error" class="text-red-400 text-sm hidden"></div>
-                    <div id="key-results-counter" class="text-white/50 text-sm font-mono">0/800</div>
-                </div>
-                <div class="mt-3 p-3 bg-yellow-500/10 border border-yellow-400/30 rounded-xl">
-                    <div class="flex items-start space-x-3">
-                        <i class="fas fa-chart-line text-yellow-400 mt-0.5 flex-shrink-0"></i>
-                        <p class="text-yellow-200 text-sm">
-                            <strong>Pro tip:</strong> Include specific metrics, timeframes, and real outcomes. Numbers and percentages make your value proposition more credible and compelling.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex justify-between">
-            <button onclick="prevStep()" class="px-6 py-3 bg-white/10 glass border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-200 transform hover:scale-105">
-                <i class="fas fa-arrow-left mr-2"></i>
-                Back
-            </button>
-            <div class="flex space-x-3">
-                <button onclick="skipStep()" class="px-6 py-3 bg-white/5 border border-white/20 text-white/70 rounded-xl hover:bg-white/10 hover:text-white transition-all duration-200">
-                    Skip for now
-                </button>
-                <button onclick="submitOnboarding()" class="group relative px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-2xl transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/25 transform hover:scale-105">
-                    <span class="flex items-center">
-                        <i class="fas fa-check mr-3"></i>
-                        Complete Setup
-                    </span>
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
