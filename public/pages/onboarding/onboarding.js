@@ -76,18 +76,19 @@
     
 function showOnboardingForm() {
     hideElement('loading-state');
-    hideElement('error-state');  // Explicitly hide error state
+    hideElement('error-state');  
     showElement('onboarding-form');
     document.body.style.visibility = 'visible';
     
-    // Initialize the form with step 1 after rules are loaded
+    // Initialize step management
+    currentStep = 1;
     showStep(1);
-    updateProgress();
+    updateNavigationButtons();
     
     // Pre-fill user data
     prefillUserData();
     
-    console.log('✅ [Onboarding] Onboarding form displayed');
+    console.log('[Onboarding] Onboarding form displayed, starting at step 1');
 }
     
     function showError(message) {
@@ -97,16 +98,43 @@ function showOnboardingForm() {
         showElement('error-state');
         document.body.style.visibility = 'visible';
     }
+function hideElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.style.display = 'none';
+        element.classList.add('hidden');
+    }
+}
+
+function showElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.style.display = 'block';
+        element.classList.remove('hidden');
+    }
+}
+
+function updateNavigationButtons() {
+    const prevButton = document.getElementById('back-btn');
+    const nextButton = document.getElementById('next-btn');
+    const submitButton = document.getElementById('finish-btn');
     
-    function hideElement(id) {
-        const el = document.getElementById(id);
-        if (el) el.classList.add('hidden');
+    // Show/hide previous button
+    if (prevButton) {
+        prevButton.style.display = currentStep > 1 ? 'inline-flex' : 'none';
     }
     
-    function showElement(id) {
-        const el = document.getElementById(id);
-        if (el) el.classList.remove('hidden');
+    // Update next/submit button
+    if (currentStep === totalSteps) {
+        if (nextButton) nextButton.style.display = 'none';
+        if (submitButton) submitButton.style.display = 'inline-flex';
+    } else {
+        if (nextButton) nextButton.style.display = 'inline-flex';
+        if (submitButton) submitButton.style.display = 'none';
     }
+    
+    console.log(`[Onboarding] Navigation buttons updated for step ${currentStep}`);
+}
     
     function updateProgress() {
         const progress = (currentStep / totalSteps) * 100;
@@ -133,107 +161,134 @@ function showOnboardingForm() {
     // STEP NAVIGATION
     // =============================================================================
     
-    function showStep(stepNumber) {
-        if (!rules.isValidStep(stepNumber)) return;
+function showStep(stepNumber) {
+    console.log(`[Onboarding] Showing step ${stepNumber}`);
+    
+    // Hide all steps
+    for (let i = 1; i <= totalSteps; i++) {
+        const step = document.getElementById(`step-${i}`);
+        if (step) {
+            step.classList.remove('active');
+            step.style.display = 'none';
+        }
+    }
+    
+    // Show target step
+    const targetStep = document.getElementById(`step-${stepNumber}`);
+    if (targetStep) {
+        targetStep.classList.add('active');
+        targetStep.style.display = 'block';
+        console.log(`[Onboarding] Step ${stepNumber} is now visible`);
+    } else {
+        console.error(`[Onboarding] Step ${stepNumber} element not found!`);
+    }
+    
+    // Update progress
+    updateProgress();
+    
+    // Focus on first input
+    setTimeout(() => {
+        const firstInput = document.querySelector(`#step-${stepNumber} input, #step-${stepNumber} select, #step-${stepNumber} textarea`);
+        if (firstInput) {
+            firstInput.focus();
+        }
+    }, 100);
+}
+    
+function prevStep() {
+    if (currentStep > 1) {
+        validator.clearAllErrors();
         
-        // Hide all steps
-        for (let i = 1; i <= totalSteps; i++) {
-            hideElement(`step-${i}`);
+        // Hide current step
+        const currentStepElement = document.getElementById(`step-${currentStep}`);
+        if (currentStepElement) {
+            currentStepElement.classList.remove('active');
+            currentStepElement.style.display = 'none';
         }
         
-        // Show current step
-        showElement(`step-${stepNumber}`);
+        // Move to previous step
+        currentStep--;
         
-        // Update progress
-        currentStep = stepNumber;
-        updateProgress();
-        
-        // Focus on first input
-        setTimeout(() => {
-            const firstInput = document.querySelector(`#step-${stepNumber} input, #step-${stepNumber} select, #step-${stepNumber} textarea`);
+        // Show previous step
+        const prevStepElement = document.getElementById(`step-${currentStep}`);
+        if (prevStepElement) {
+            prevStepElement.classList.add('active');
+            prevStepElement.style.display = 'block';
+            
+            // Focus first input in previous step
+            const firstInput = prevStepElement.querySelector('input, textarea, select');
             if (firstInput) {
-                firstInput.focus();
+                setTimeout(() => firstInput.focus(), 100);
             }
-        }, 100);
+        }
         
-        console.log(`👀 [Onboarding] Showing step ${stepNumber}`);
+        updateProgress();
+        updateNavigationButtons();
+        
+        console.log(`[Onboarding] Moved back to step ${currentStep}`);
     }
+}
     
-    function prevStep() {
-        if (currentStep > 1) {
-            validator.clearAllErrors();
+function nextStep() {
+    console.log(`[Onboarding] nextStep called, currentStep: ${currentStep}, totalSteps: ${totalSteps}`);
+    
+    if (currentStep < totalSteps) {
+        // Validate current step before proceeding
+        if (!validator.validateStep(currentStep, getFieldValue)) {
+            console.log(`[Onboarding] Step ${currentStep} validation failed`);
             
-            // Hide current step
-            const currentStepElement = document.getElementById(`step-${currentStep}`);
-            if (currentStepElement) {
-                currentStepElement.style.display = 'none';
-            }
-            
-            // Show previous step
-            currentStep--;
-            const prevStepElement = document.getElementById(`step-${currentStep}`);
-            if (prevStepElement) {
-                prevStepElement.style.display = 'block';
+            // Show validation error message
+            const errorDiv = document.getElementById('validation-error');
+            if (errorDiv) {
+                errorDiv.classList.remove('hidden');
+                errorDiv.style.display = 'block';
                 
-                // Focus first input in previous step
-                const firstInput = prevStepElement.querySelector('input, textarea, select');
-                if (firstInput) {
-                    setTimeout(() => firstInput.focus(), 100);
-                }
+                // Hide error after 3 seconds
+                setTimeout(() => {
+                    errorDiv.classList.add('hidden');
+                    errorDiv.style.display = 'none';
+                }, 3000);
             }
             
-            // Update progress
-            updateProgress();
-            updateNavigationButtons();
-            
-            console.log(`⬅️ [Onboarding] Moved back to step ${currentStep}`);
+            return;
         }
-    }
-    
-    function nextStep() {
-        if (currentStep < totalSteps) {
-            // Validate current step before proceeding
-            if (!validator.validateStep(currentStep, getFieldValue)) {
-                console.log(`❌ [Onboarding] Step ${currentStep} validation failed`);
-                validator.showStepValidationFailed();
-                return;
+        
+        validator.clearAllErrors();
+        
+        // Hide current step
+        const currentStepElement = document.getElementById(`step-${currentStep}`);
+        if (currentStepElement) {
+            currentStepElement.classList.remove('active');
+            currentStepElement.style.display = 'none';
+        }
+        
+        // Move to next step
+        currentStep++;
+        
+        // Show next step
+        const nextStepElement = document.getElementById(`step-${currentStep}`);
+        if (nextStepElement) {
+            nextStepElement.classList.add('active');
+            nextStepElement.style.display = 'block';
+            
+            // Focus first input in new step
+            const firstInput = nextStepElement.querySelector('input, textarea, select');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 100);
             }
-            
-            // Apply smart defaults when moving to certain steps
-            if (currentStep === 6) { // Moving to CTA step
-                setSmartDefaults();
-            }
-            
-            validator.clearAllErrors();
-            
-            // Hide current step
-            const currentStepElement = document.getElementById(`step-${currentStep}`);
-            if (currentStepElement) {
-                currentStepElement.style.display = 'none';
-            }
-            
-            // Show next step
-            currentStep++;
-            const nextStepElement = document.getElementById(`step-${currentStep}`);
-            if (nextStepElement) {
-                nextStepElement.style.display = 'block';
-                
-                // Focus first input in new step
-                const firstInput = nextStepElement.querySelector('input, textarea, select');
-                if (firstInput) {
-                    setTimeout(() => firstInput.focus(), 100);
-                }
-            }
-            
-            updateProgress();
-            updateNavigationButtons();
-            
-            console.log(`➡️ [Onboarding] Moved to step ${currentStep}`);
         } else {
-            // At final step, submit instead
-            submitOnboarding();
+            console.error(`Step ${currentStep} element not found!`);
         }
+        
+        updateProgress();
+        updateNavigationButtons();
+        
+        console.log(`[Onboarding] Moved to step ${currentStep}`);
+    } else {
+        // At final step, submit instead
+        submitOnboarding();
     }
+}
     
     function updateNavigationButtons() {
         const prevButton = document.querySelector('[onclick="prevStep()"]');
@@ -260,10 +315,14 @@ function showOnboardingForm() {
     // =============================================================================
     
 function getFieldValue(fieldId) {
+    console.log(`[Onboarding] Getting field value for: ${fieldId}`);
+    
     // Handle radio buttons
     if (fieldId === 'primary-objective') {
         const radioButton = document.querySelector('input[name="primary-objective"]:checked');
-        return radioButton ? radioButton.value : '';
+        const value = radioButton ? radioButton.value : '';
+        console.log(`[Onboarding] primary-objective value: ${value}`);
+        return value;
     }
     
     if (fieldId === 'company-size') {
@@ -311,16 +370,13 @@ function getFieldValue(fieldId) {
         const checkboxes = document.querySelectorAll('input[name="integrations"]:checked');
         return Array.from(checkboxes).map(cb => cb.value);
     }
-        
-        if (fieldId === 'preferred-cta') {
-            const radioButton = document.querySelector('input[name="preferred-cta"]:checked');
-            return radioButton ? radioButton.value : '';
-        }
-        
-        // Handle regular fields
-        const field = document.getElementById(fieldId);
-        return field ? field.value.trim() : '';
-    }
+    
+    // Handle regular input fields
+    const field = document.getElementById(fieldId);
+    const value = field ? field.value.trim() : '';
+    console.log(`[Onboarding] ${fieldId} value: ${value}`);
+    return value;
+}
     
     function setSmartDefaults() {
         console.log('🧠 [Onboarding] Setting smart defaults...');
