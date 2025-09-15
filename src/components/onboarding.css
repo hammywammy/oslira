@@ -1,5 +1,5 @@
 /* =============================================================================
- * MODERN ONBOARDING CSS - TAILWIND @apply DIRECTIVES
+ * MODERN ONBOARDING CSS - TAILWIND @apply DIRECTIVES (Tailwind v3 safe)
  * =============================================================================
  */
 
@@ -157,35 +157,20 @@
     @apply space-y-6 mb-10;
   }
   
-  .onboarding-form-field {
-  }
-  
   .onboarding-form-label {
     @apply block text-sm font-medium text-white/90 mb-3;
   }
   
   .onboarding-form-input {
-    @apply w-full px-6 py-4 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg;
-    @apply focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent;
-    @apply transition-all duration-300;
+    @apply w-full px-6 py-4 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg transition-all duration-300;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-  }
-  
-  .onboarding-form-input:hover {
-    @apply border-white/40;
   }
   
   .onboarding-form-textarea {
-    @apply w-full px-6 py-4 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg resize-none;
-    @apply focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent;
-    @apply transition-all duration-300;
+    @apply w-full px-6 py-4 bg-white/5 border border-white/20 rounded-2xl text-white placeholder-white/50 text-lg resize-none transition-all duration-300;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-  }
-  
-  .onboarding-form-textarea:hover {
-    @apply border-white/40;
   }
   
   .onboarding-form-icon {
@@ -257,18 +242,13 @@
   }
   
   .onboarding-choice-input {
-    @apply peer sr-only;
+    @apply sr-only; /* ❌ removed peer */
   }
   
   .onboarding-choice-content {
     @apply bg-white/5 border border-white/20 rounded-2xl p-6 transition-all duration-300;
-    @apply hover:border-white/40;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-  }
-  
-  .onboarding-choice-content:hover {
-    @apply transform scale-105;
   }
   
   .onboarding-choice-input:checked + .onboarding-choice-content {
@@ -337,21 +317,17 @@
   }
   
   .onboarding-btn-back {
-    @apply px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl;
-    @apply hover:bg-white/20 transition-all duration-200 transform hover:scale-105;
+    @apply px-6 py-3 bg-white/10 border border-white/20 text-white rounded-xl transition-all duration-200 transform;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
   
   .onboarding-btn-skip {
-    @apply px-6 py-3 bg-white/5 border border-white/20 text-white/70 rounded-xl;
-    @apply hover:bg-white/10 hover:text-white transition-all duration-200;
+    @apply px-6 py-3 bg-white/5 border border-white/20 text-white/70 rounded-xl transition-all duration-200;
   }
   
   .onboarding-btn-primary {
-  @apply relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl;
-  @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-violet-500/25;
-  @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply relative px-8 py-4 bg-gradient-to-r from-violet-500 to-purple-500 text-white font-semibold rounded-2xl transition-all duration-300 transform;
     position: relative;
     overflow: hidden;
   }
@@ -372,12 +348,11 @@
   }
   
   .onboarding-btn-arrow {
-    @apply ml-3 transition-transform duration-300 group-hover:translate-x-1;
+    @apply ml-3 transition-transform duration-300;
   }
   
   .onboarding-btn-success {
-  @apply relative px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-2xl;
-  @apply transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-emerald-500/25;
+    @apply relative px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-2xl transition-all duration-300 transform;
   }
 
   /* =============================================================================
@@ -445,67 +420,5 @@
     .onboarding-btn-success {
       @apply w-full justify-center;
     }
-  }
-}
-
-/* =============================================================================
-   ANIMATIONS & KEYFRAMES
-   ============================================================================= */
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideInRight {
-  from { opacity: 0; transform: translateX(30px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes pulse-ring {
-  0% { transform: scale(0.8); opacity: 1; }
-  100% { transform: scale(2.4); opacity: 0; }
-}
-
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-@keyframes radioSelect {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); }
-}
-
-@keyframes progressShimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-}
-
-/* =============================================================================
-   ACCESSIBILITY & PREFERENCES
-   ============================================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-@media (prefers-contrast: high) {
-  .onboarding-card {
-    @apply border-2 border-white;
-  }
-  
-  .onboarding-choice-content {
-    @apply border-2;
-  }
-  
-  .onboarding-form-input,
-  .onboarding-form-textarea {
-    @apply border-2;
   }
 }
