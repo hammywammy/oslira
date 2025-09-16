@@ -88,11 +88,11 @@ async preResolveAsyncDependencies() {
         let attempts = 0;
         let supabase = null;
         
-        while (attempts < 50) {
+while (attempts < 50) {
             if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
                 const client = window.SimpleAuth.supabase();
-                if (client?.from) {
-                    supabase = window.SimpleAuth.supabase();
+                if (client?.from && typeof client.from === 'function') {
+                    supabase = client; // Use the client directly, not the function
                     console.log('✅ [DashboardApp] Got initialized Supabase client from SimpleAuth');
                     break;
                 }
@@ -194,24 +194,6 @@ container.registerFactory('analysisFunctions', async () => {
         container.registerFactory('stateManager', (eventBus) => {
             return new DashboardStateManager(eventBus);
         }, ['eventBus']);
-        
-        // Register external dependencies - delay Supabase until SimpleAuth is ready
-        container.registerFactory('supabase', async () => {
-            // Wait for SimpleAuth to initialize its Supabase client
-            let attempts = 0;
-            while (attempts < 50) {
-                if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
-                    const client = window.SimpleAuth.supabase();
-                    if (client?.from) {
-                        console.log('✅ [DependencyContainer] Got initialized Supabase client from SimpleAuth');
-                        return window.SimpleAuth.supabase();
-                    }
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            throw new Error('SimpleAuth Supabase client not ready');
-        }, []);
 
         // Register OsliraApp as a getter that always checks the global
         container.registerSingleton('osliraApp', new Proxy({}, {
