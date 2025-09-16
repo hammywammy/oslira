@@ -221,9 +221,10 @@ class LeadRenderer {
         }
         
         // Professional profile picture with enhanced fallback
-        const profilePicUrl = lead.profile_pic_url;
+        const profilePicUrl = lead.profile_picture_url;
         const username = lead.username || 'unknown';
-        const fullName = lead.full_name || '';
+        const fullName = lead.display_name || '';
+        
         
 const profilePicHtml = profilePicUrl
     ? `<img src="https://images.weserv.nl/?url=${encodeURIComponent(profilePicUrl)}&w=64&h=64&fit=cover&mask=circle&errorredirect=https://via.placeholder.com/64x64/3B82F6/FFFFFF?text=${username.charAt(0).toUpperCase()}" 
