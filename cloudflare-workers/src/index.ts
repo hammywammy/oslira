@@ -125,6 +125,31 @@ app.post('/v1/generate-business-context', async (c) => {
   return handleGenerateBusinessContext(c);
 });
 
+app.post('/business-profiles', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
+app.get('/business-profiles', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
+app.get('/business-profiles/:id', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
+app.put('/business-profiles/:id', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
+app.delete('/business-profiles/:id', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
 
 // ===============================================================================
 // ERROR HANDLING
