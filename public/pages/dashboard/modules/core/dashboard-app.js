@@ -347,7 +347,7 @@ container.registerFactory('analysisFunctions', async () => {
     }
 }
     
-    async waitForAuth(timeout = 10000) {
+async waitForAuth(timeout = 10000) {
         console.log('🔐 [DashboardApp] Waiting for authentication...');
         
         return new Promise((resolve) => {
@@ -355,12 +355,12 @@ container.registerFactory('analysisFunctions', async () => {
             const maxAttempts = timeout / 100;
             
             const checkAuth = () => {
-                // Check window.OsliraApp directly instead of cached dependency
+                // Check window.OsliraApp directly and SimpleAuth availability
                 const osliraApp = window.OsliraApp;
                 const user = osliraApp?.user;
-                const supabase = this.container.get('supabase');
+                const simpleAuth = window.SimpleAuth;
                 
-                if (user && supabase) {
+                if (user && simpleAuth?.supabase) {
                     console.log('✅ [DashboardApp] Authentication verified');
                     resolve(true);
                     return;
