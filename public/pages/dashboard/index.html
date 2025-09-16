@@ -1480,22 +1480,35 @@ async function submitResearch() {
         // 9. CLOSE MODAL AND REFRESH
         closeResearchModal();
 
-        // Refresh the leads table
-        console.log('🔄 [Dashboard] Refreshing leads table...');
-        try {
-            // Try multiple refresh methods in order of preference
-            if (window.dashboard?._app?.refreshLeads) {
-                await window.dashboard._app.refreshLeads();
-                console.log('✅ [Dashboard] Leads refreshed via dashboard app');
-            } else if (window.location.pathname.includes('dashboard')) {
-                // Simple page reload as fallback
-                console.log('🔄 [Dashboard] Page reload fallback');
-                window.location.reload();
-            }
-        } catch (refreshError) {
-            console.error('❌ [Dashboard] Refresh failed, using page reload:', refreshError);
+// Refresh the leads table
+console.log('🔄 [Dashboard] Refreshing leads table...');
+try {
+    // Wait a moment for the data to be saved
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Try dashboard app refresh first
+    if (window.DashboardApp?.instance?.refreshLeads) {
+        await window.DashboardApp.instance.refreshLeads();
+        console.log('✅ [Dashboard] Leads refreshed via DashboardApp instance');
+    } else if (window.dashboard?._app?.refreshLeads) {
+        await window.dashboard._app.refreshLeads();
+        console.log('✅ [Dashboard] Leads refreshed via dashboard app');
+    } else {
+        // Fallback: emit refresh event
+        if (window.DashboardEventBus?.instance) {
+            window.DashboardEventBus.instance.emit('data:refresh', { source: 'api-success' });
+            console.log('✅ [Dashboard] Refresh event emitted');
+        } else {
+            // Final fallback: reload page
+            console.log('🔄 [Dashboard] Using page reload fallback');
             window.location.reload();
         }
+    }
+} catch (refreshError) {
+    console.error('❌ [Dashboard] Refresh failed:', refreshError);
+    // Don't reload immediately - let user see any error messages
+    setTimeout(() => window.location.reload(), 2000);
+}
         
     } catch (error) {
         console.error('💥 [Dashboard] Unexpected error:', error);
