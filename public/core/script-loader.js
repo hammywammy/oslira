@@ -308,6 +308,31 @@ if (pageConfig.stylesheets) {
     }
 }
 }
+
+    // =============================================================================
+// API CLIENT INITIALIZATION  
+// =============================================================================
+
+initializeApiClient() {
+    // Ensure dependencies are available
+    if (!window.OsliraConfig || !window.OsliraAuth) {
+        console.error('❌ [ScriptLoader] Cannot initialize API client - missing dependencies');
+        return;
+    }
+    
+    try {
+        // Create API client instance with proper dependencies
+        window.OsliraApiClient = new window.OsliraApiClient(
+            window.OsliraConfig, 
+            window.OsliraAuth
+        );
+        
+        console.log('✅ [ScriptLoader] API client initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ [ScriptLoader] API client initialization failed:', error);
+    }
+}
     
     extractScriptName(scriptPath) {
         return scriptPath.split('/').pop().replace('.js', '');
@@ -492,31 +517,6 @@ if (window.location.hostname === 'localhost' || window.location.hostname.include
         reload: (name) => window.ScriptLoader.reloadScript(name),
         instance: () => window.ScriptLoader
     };
-}
-
-    // =============================================================================
-// API CLIENT INITIALIZATION  
-// =============================================================================
-
-initializeApiClient() {
-    // Ensure dependencies are available
-    if (!window.OsliraConfig || !window.OsliraAuth) {
-        console.error('❌ [ScriptLoader] Cannot initialize API client - missing dependencies');
-        return;
-    }
-    
-    try {
-        // Create API client instance with proper dependencies
-        window.OsliraApiClient = new window.OsliraApiClient(
-            window.OsliraConfig, 
-            window.OsliraAuth
-        );
-        
-        console.log('✅ [ScriptLoader] API client initialized successfully');
-        
-    } catch (error) {
-        console.error('❌ [ScriptLoader] API client initialization failed:', error);
-    }
 }
 
 } // End of ScriptLoader class declaration check
