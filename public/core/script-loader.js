@@ -26,6 +26,7 @@ class ScriptLoader {
         this.pageConfigs = {
             'dashboard': {
                 scripts: [
+                    '/core/sidebar/sidebar-manager.js',
                     '/pages/dashboard/modules/core/event-bus.js',
                     '/pages/dashboard/modules/core/state-manager.js',
                     '/pages/dashboard/modules/core/dependency-container.js',
