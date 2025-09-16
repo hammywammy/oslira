@@ -1,9 +1,26 @@
 class OsliraApiClient {
-    constructor(config, auth) {
-        this.baseUrl = config.WORKER_URL || config.workerUrl;
-        this.auth = auth;
-        this.timeout = 30000;
+constructor(config, auth) {
+    console.log('🔍 [ApiClient] Constructor called with:', {
+        config: config,
+        configKeys: config ? Object.keys(config) : 'null',
+        WORKER_URL: config?.WORKER_URL,
+        workerUrl: config?.workerUrl,
+        hasAuth: !!auth
+    });
+    
+    this.baseUrl = config?.WORKER_URL || config?.workerUrl;
+    this.auth = auth;
+    this.timeout = 30000;
+    
+    console.log('✅ [ApiClient] Initialized with baseUrl:', this.baseUrl);
+    
+    if (!this.baseUrl) {
+        console.error('❌ [ApiClient] CRITICAL: baseUrl is undefined!', {
+            configReceived: config,
+            availableKeys: config ? Object.keys(config) : 'none'
+        });
     }
+}
     
     async request(endpoint, options = {}) {
         const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
