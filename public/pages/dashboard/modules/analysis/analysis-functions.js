@@ -17,6 +17,19 @@ class AnalysisFunctions {
         
         console.log('🔍 [AnalysisFunctions] Initialized');
     }
+
+    init() {
+    console.log('🔧 [AnalysisFunctions] Initializing...');
+    
+    // Setup global methods for onclick handlers
+    this.setupGlobalMethods();
+    
+    // Setup event listeners
+    this.setupEventListeners();
+    
+    console.log('✅ [AnalysisFunctions] Initialization complete');
+    return this;
+}
     
     async openLeadAnalysisModal(leadId) {
     console.log('🔍 Opening lead analysis modal for:', leadId);
