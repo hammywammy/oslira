@@ -78,10 +78,15 @@ class DashboardApp {
         console.log('📋 [DashboardApp] Registering core dependencies...');
         container.registerSingleton('eventBus', new DashboardEventBus());
 
-        // Analysis Functions - must call init() to setup global methods
+// Analysis Functions - wait for window.AnalysisFunctions to be available
 container.registerFactory('analysisFunctions', () => {
+    if (!window.AnalysisFunctions) {
+        throw new Error('AnalysisFunctions not loaded yet. Ensure script loading order is correct.');
+    }
     const instance = new window.AnalysisFunctions(container);
-    instance.init(); // This sets up the global methods including openLeadAnalysisModal
+    if (typeof instance.init === 'function') {
+        instance.init(); // This sets up the global methods including openLeadAnalysisModal
+    }
     return instance;
 });
         
