@@ -49,13 +49,19 @@ await this.preResolveAsyncDependencies();
             // Wait for auth and load initial data
             await this.setupInitialData();
             
-            this.initialized = true;
+this.initialized = true;
 
-// Expose global instance for debugging and external access
+// Expose instance globally for external access
 window.DashboardApp = window.DashboardApp || {};
 window.DashboardApp.instance = this;
 
+// Also expose on window.dashboard for backward compatibility
+if (window.dashboard) {
+    window.dashboard._app = this;
+}
+
 console.log('✅ [DashboardApp] Initialized in', Date.now() - this.initStartTime, 'ms');
+            
             const initTime = Date.now() - this.initStartTime;
             
             console.log(`✅ [DashboardApp] Initialization completed in ${initTime}ms`);
@@ -144,10 +150,10 @@ async refreshLeads() {
         });
         
         console.log('✅ [DashboardApp] Leads refreshed successfully');
+        return true;
     } catch (error) {
         console.error('❌ [DashboardApp] Failed to refresh leads:', error);
-        // Fallback to page reload
-        window.location.reload();
+        return false;
     }
 }
     
@@ -355,11 +361,32 @@ container.registerFactory('analysisFunctions', async () => {
             const statsCalculator = this.container.get('statsCalculator');
             await statsCalculator.refreshStats();
             
-        } catch (error) {
-            console.error('❌ [DashboardApp] Initial data setup failed:', error);
-            this.displayErrorState(error);
+} catch (error) {
+    console.error('❌ [DashboardApp] Initial data setup failed:', error);
+    
+    // Check if it's a schema mismatch error
+    if (error.message && error.message.includes('column') && error.message.includes('does not exist')) {
+        console.warn('⚠️ [DashboardApp] Database schema mismatch detected');
+        
+        // Set empty state to prevent errors
+        const stateManager = this.container.get('stateManager');
+        stateManager.batchUpdate({
+            leads: [],
+            filteredLeads: [],
+            isLoading: false,
+            loadingMessage: 'Database schema update needed',
+            error: 'The database structure has changed. Please contact support.'
+        });
+        
+        // Display user-friendly error
+        if (window.Alert) {
+            window.Alert.warning('Database structure has been updated. Some features may be limited.');
         }
+    } else {
+        // Re-throw for other errors
+        throw error;
     }
+}
     
     async waitForAuth(timeout = 10000) {
         console.log('🔐 [DashboardApp] Waiting for authentication...');
