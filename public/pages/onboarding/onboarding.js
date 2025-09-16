@@ -518,8 +518,10 @@ async function submitOnboarding() {
         
         console.log('📝 [Onboarding] Submitting profile data directly...');
         
-        // Submit directly to business profiles endpoint
-        const response = await window.OsliraApiClient.createBusinessProfile(formData);
+const response = await window.OsliraApiClient.request('/business-profiles', {
+    method: 'POST',
+    body: JSON.stringify(formData)
+});
         
         if (!response.success) {
             throw new Error(response.error || 'Failed to create business profile');
