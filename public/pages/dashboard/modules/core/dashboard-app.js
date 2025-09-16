@@ -346,6 +346,7 @@ container.registerFactory('analysisFunctions', async () => {
         throw error;
     }
 }
+}
     
 async waitForAuth(timeout = 10000) {
         console.log('🔐 [DashboardApp] Waiting for authentication...');
