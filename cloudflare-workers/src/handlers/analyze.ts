@@ -5,7 +5,6 @@ import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
 import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
-import { checkProfileCache } from '../services/instagram-scraper.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -47,9 +46,6 @@ const [userResult, business] = await Promise.all([
   fetchBusinessProfile(business_id, user_id, c.env)
 ]);
 
-// Scrape profile (with built-in caching)
-const profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-    
     if (!userResult.isValid) {
       return c.json(createStandardResponse(
         false, 
@@ -70,6 +66,8 @@ const profileData = await scrapeInstagramProfile(username, analysis_type, c.env)
       ), 400);
     }
 
+    // Scrape profile with error handling
+    let profileData: ProfileData;
     try {
       const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
       profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
@@ -77,6 +75,14 @@ const profileData = await scrapeInstagramProfile(username, analysis_type, c.env)
       if (!profileData.username) {
         throw new Error('Profile scraping failed - no username returned');
       }
+      
+      logger('info', 'Profile scraping completed', { 
+        username: profileData.username,
+        followers: profileData.followersCount,
+        dataQuality: profileData.dataQuality,
+        requestId
+      });
+      
     } catch (scrapeError: any) {
       logger('error', 'Profile scraping failed', { error: scrapeError.message, requestId });
       return c.json(createStandardResponse(
@@ -86,7 +92,6 @@ const profileData = await scrapeInstagramProfile(username, analysis_type, c.env)
         requestId
       ), 400);
     }
-
     // ANALYSIS: Execute pipeline system
     let orchestrationResult;
     try {
