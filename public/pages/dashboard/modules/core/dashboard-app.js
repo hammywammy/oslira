@@ -267,47 +267,6 @@ container.registerFactory('analysisFunctions', async () => {
     }
     
     // ===============================================================================
-    // ASYNC DEPENDENCY RESOLUTION
-    // ===============================================================================
-    
-    async preResolveAsyncDependencies() {
-        try {
-            // Pre-resolve the Supabase client before any modules try to use it
-            console.log('🔄 [DashboardApp] Resolving Supabase dependency...');
-            
-            // Wait for SimpleAuth to initialize its Supabase client
-            let attempts = 0;
-            let supabase = null;
-            
-            while (attempts < 50) {
-                if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
-                    const client = window.SimpleAuth.supabase();
-                    if (client?.from) {
-                        supabase = window.SimpleAuth.supabase();
-                        console.log('✅ [DashboardApp] Got initialized Supabase client from SimpleAuth');
-                        break;
-                    }
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-                attempts++;
-            }
-            
-            if (!supabase) {
-                throw new Error('SimpleAuth Supabase client not ready after timeout');
-            }
-            
-            // Replace the async factory with the resolved instance
-            this.container.registerSingleton('supabase', supabase);
-            
-            console.log('✅ [DashboardApp] Supabase dependency resolved and cached');
-            
-        } catch (error) {
-            console.error('❌ [DashboardApp] Failed to resolve async dependencies:', error);
-            throw error;
-        }
-    }
-    
-    // ===============================================================================
     // INITIALIZATION HELPERS
     // ===============================================================================
     
