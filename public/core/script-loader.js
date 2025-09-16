@@ -24,25 +24,25 @@ class ScriptLoader {
         
         // Page-specific script configurations
         this.pageConfigs = {
-            'dashboard': {
-                scripts: [
-                    '/core/sidebar/sidebar-manager.js',
-                    '/pages/dashboard/modules/core/event-bus.js',
-                    '/pages/dashboard/modules/core/state-manager.js',
-                    '/pages/dashboard/modules/core/dependency-container.js',
-                    '/pages/dashboard/modules/core/dashboard-app.js',
-                    '/pages/dashboard/dashboard.js',
-                    '/pages/dashboard/modules/analysis/analysis-modal.js',
-                    '/pages/dashboard/modules/analysis/analysis-queue.js',
-                    '/pages/dashboard/modules/bulk/bulk-upload.js',
-                    '/pages/dashboard/modules/business/business-manager.js',
-                    '/pages/dashboard/modules/leads/lead-manager.js',
-                    '/pages/dashboard/modules/leads/lead-renderer.js',
-                    '/pages/dashboard/modules/realtime/realtime-manager.js',
-                    '/pages/dashboard/modules/stats/stats-calculator.js',
-                    '/pages/dashboard/modules/ui/modal-manager.js',
-                    '/pages/dashboard/modules/analysis/analysis-functions.js'
-                ],
+'dashboard': {
+    scripts: [
+        '/core/sidebar/sidebar-manager.js',
+        '/pages/dashboard/modules/core/event-bus.js',
+        '/pages/dashboard/modules/core/state-manager.js',
+        '/pages/dashboard/modules/core/dependency-container.js',
+        '/pages/dashboard/modules/analysis/analysis-functions.js',
+        '/pages/dashboard/modules/analysis/analysis-modal.js',
+        '/pages/dashboard/modules/analysis/analysis-queue.js',
+        '/pages/dashboard/modules/bulk/bulk-upload.js',
+        '/pages/dashboard/modules/business/business-manager.js',
+        '/pages/dashboard/modules/leads/lead-manager.js',
+        '/pages/dashboard/modules/leads/lead-renderer.js',
+        '/pages/dashboard/modules/realtime/realtime-manager.js',
+        '/pages/dashboard/modules/stats/stats-calculator.js',
+        '/pages/dashboard/modules/ui/modal-manager.js',
+        '/pages/dashboard/modules/core/dashboard-app.js',
+        '/pages/dashboard/dashboard.js'
+    ],
                 requiresAuth: true,
                 enableTailwind: true
             },
