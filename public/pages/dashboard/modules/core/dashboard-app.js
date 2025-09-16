@@ -32,9 +32,26 @@ class DashboardApp {
                 throw new Error('Dependency validation failed: ' + JSON.stringify(validation.issues));
             }
             
-            // Pre-resolve async dependencies BEFORE module initialization
-            console.log('🔧 [DashboardApp] Pre-resolving async dependencies...');
-            await this.preResolveAsyncDependencies();
+/**
+ * Pre-resolve async dependencies that other modules depend on
+ */
+async preResolveAsyncDependencies() {
+    console.log('🔧 [DashboardApp] Pre-resolving critical async dependencies...');
+    
+    try {
+        // Force resolve analysisFunctions before other module initialization
+        await this.container.get('analysisFunctions');
+        console.log('✅ [DashboardApp] AnalysisFunctions pre-resolved');
+        
+        // Pre-resolve supabase client
+        await this.container.get('supabase');
+        console.log('✅ [DashboardApp] Supabase client pre-resolved');
+        
+    } catch (error) {
+        console.error('❌ [DashboardApp] Pre-resolution failed:', error);
+        throw error;
+    }
+}
             
             // Initialize all modules
             console.log('🔄 [DashboardApp] Initializing modules...');
@@ -78,16 +95,26 @@ class DashboardApp {
         console.log('📋 [DashboardApp] Registering core dependencies...');
         container.registerSingleton('eventBus', new DashboardEventBus());
 
-// Analysis Functions - wait for window.AnalysisFunctions to be available
-container.registerFactory('analysisFunctions', () => {
-    if (!window.AnalysisFunctions) {
-        throw new Error('AnalysisFunctions not loaded yet. Ensure script loading order is correct.');
+// Analysis Functions - async factory with polling for availability
+container.registerFactory('analysisFunctions', async () => {
+    // Poll for AnalysisFunctions availability
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    while (attempts < maxAttempts) {
+        if (window.AnalysisFunctions && typeof window.AnalysisFunctions === 'function') {
+            console.log('✅ [DependencyContainer] AnalysisFunctions available after', attempts, 'attempts');
+            const instance = new window.AnalysisFunctions(container);
+            if (typeof instance.init === 'function') {
+                instance.init(); // This sets up the global methods including openLeadAnalysisModal
+            }
+            return instance;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
     }
-    const instance = new window.AnalysisFunctions(container);
-    if (typeof instance.init === 'function') {
-        instance.init(); // This sets up the global methods including openLeadAnalysisModal
-    }
-    return instance;
+    
+    throw new Error(`AnalysisFunctions not loaded after ${maxAttempts} attempts. Check script loading order.`);
 });
         
         // State manager depends on event bus
