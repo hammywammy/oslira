@@ -81,4 +81,20 @@ class ApiError extends Error {
     }
 }
 
+// Export class for instantiation, not instance
 window.OsliraApiClient = OsliraApiClient;
+window.ApiError = ApiError;
+
+// Debug helper for development
+if (window.location.hostname === 'localhost' || window.location.hostname.includes('staging')) {
+    window.debugApiClient = {
+        getInstance: () => window.OsliraApiClient,
+        testConnection: async () => {
+            if (window.OsliraApiClient && window.OsliraApiClient.health) {
+                return await window.OsliraApiClient.health();
+            } else {
+                throw new Error('API Client not properly initialized');
+            }
+        }
+    };
+}
