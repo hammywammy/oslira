@@ -70,8 +70,6 @@ const profileData = await scrapeInstagramProfile(username, analysis_type, c.env)
       ), 400);
     }
 
-    // SCRAPING: Get profile data
-    let profileData: ProfileData;
     try {
       const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
       profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
