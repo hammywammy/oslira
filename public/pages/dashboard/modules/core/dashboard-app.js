@@ -32,26 +32,9 @@ class DashboardApp {
                 throw new Error('Dependency validation failed: ' + JSON.stringify(validation.issues));
             }
             
-/**
- * Pre-resolve async dependencies that other modules depend on
- */
-async preResolveAsyncDependencies() {
-    console.log('🔧 [DashboardApp] Pre-resolving critical async dependencies...');
-    
-    try {
-        // Force resolve analysisFunctions before other module initialization
-        await this.container.get('analysisFunctions');
-        console.log('✅ [DashboardApp] AnalysisFunctions pre-resolved');
-        
-        // Pre-resolve supabase client
-        await this.container.get('supabase');
-        console.log('✅ [DashboardApp] Supabase client pre-resolved');
-        
-    } catch (error) {
-        console.error('❌ [DashboardApp] Pre-resolution failed:', error);
-        throw error;
-    }
-}
+// Pre-resolve async dependencies BEFORE module initialization
+console.log('🔧 [DashboardApp] Pre-resolving async dependencies...');
+await this.preResolveAsyncDependencies();
             
             // Initialize all modules
             console.log('🔄 [DashboardApp] Initializing modules...');
@@ -83,6 +66,27 @@ async preResolveAsyncDependencies() {
             throw error;
         }
     }
+
+    /**
+ * Pre-resolve async dependencies that other modules depend on
+ */
+async preResolveAsyncDependencies() {
+    console.log('🔧 [DashboardApp] Pre-resolving critical async dependencies...');
+    
+    try {
+        // Force resolve analysisFunctions before other module initialization
+        await this.container.get('analysisFunctions');
+        console.log('✅ [DashboardApp] AnalysisFunctions pre-resolved');
+        
+        // Pre-resolve supabase client
+        await this.container.get('supabase');
+        console.log('✅ [DashboardApp] Supabase client pre-resolved');
+        
+    } catch (error) {
+        console.error('❌ [DashboardApp] Pre-resolution failed:', error);
+        throw error;
+    }
+}
     
     // ===============================================================================
     // DEPENDENCY CONTAINER SETUP
