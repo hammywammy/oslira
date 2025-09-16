@@ -18,6 +18,7 @@ export class AWSSecretsManager {
   private accessKeyId: string;
   private secretAccessKey: string;
   private region: string;
+  private configured: boolean;
 
 constructor(env: Env) {
   // Cloudflare Workers environment variables are accessed directly
@@ -39,24 +40,6 @@ constructor(env: Env) {
 
 isConfigured(): boolean {
   return this.configured;
-}
-  
-  try {
-    this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
-    console.log('Secret Access Key retrieved:', !!this.secretAccessKey);
-  } catch (e) {
-    console.error('Failed to get AWS_SECRET_ACCESS_KEY:', e);
-    throw new Error(`Cannot access AWS_SECRET_ACCESS_KEY: ${e}`);
-  }
-  
-  this.region = env.AWS_REGION || 'us-east-1';
-  console.log('Region set to:', this.region);
-
-  if (!this.accessKeyId || !this.secretAccessKey) {
-    throw new Error(`AWS credentials not configured - Access Key: ${!!this.accessKeyId}, Secret Key: ${!!this.secretAccessKey}`);
-  }
-  
-  console.log('AWS credentials successfully configured');
 }
 
   async getSecret(secretName: string): Promise<string> {
