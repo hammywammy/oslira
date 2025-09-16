@@ -50,6 +50,12 @@ await this.preResolveAsyncDependencies();
             await this.setupInitialData();
             
             this.initialized = true;
+
+// Expose global instance for debugging and external access
+window.DashboardApp = window.DashboardApp || {};
+window.DashboardApp.instance = this;
+
+console.log('✅ [DashboardApp] Initialized in', Date.now() - this.initStartTime, 'ms');
             const initTime = Date.now() - this.initStartTime;
             
             console.log(`✅ [DashboardApp] Initialization completed in ${initTime}ms`);
@@ -67,24 +73,81 @@ await this.preResolveAsyncDependencies();
         }
     }
 
-    /**
- * Pre-resolve async dependencies that other modules depend on
- */
 async preResolveAsyncDependencies() {
-    console.log('🔧 [DashboardApp] Pre-resolving critical async dependencies...');
-    
     try {
-        // Force resolve analysisFunctions before other module initialization
-        await this.container.get('analysisFunctions');
-        console.log('✅ [DashboardApp] AnalysisFunctions pre-resolved');
+        // Pre-resolve the Supabase client before any modules try to use it
+        console.log('🔄 [DashboardApp] Resolving Supabase dependency...');
         
-        // Pre-resolve supabase client
-        await this.container.get('supabase');
-        console.log('✅ [DashboardApp] Supabase client pre-resolved');
+        // Wait for SimpleAuth to initialize its Supabase client
+        let attempts = 0;
+        let supabase = null;
+        
+        while (attempts < 50) {
+            if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
+                const client = window.SimpleAuth.supabase();
+                if (client?.from) {
+                    supabase = window.SimpleAuth.supabase();
+                    console.log('✅ [DashboardApp] Got initialized Supabase client from SimpleAuth');
+                    break;
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        if (!supabase) {
+            throw new Error('SimpleAuth Supabase client not ready after timeout');
+        }
+        
+        // Replace the async factory with the resolved instance
+        this.container.registerSingleton('supabase', supabase);
+        
+        console.log('✅ [DashboardApp] Supabase dependency resolved and cached');
+        
+        // ALSO pre-resolve analysisFunctions async factory
+        console.log('🔄 [DashboardApp] Resolving AnalysisFunctions dependency...');
+        const analysisFunctions = await this.container.getAsync('analysisFunctions');
+        
+        // Replace the async factory with the resolved instance
+        this.container.registerSingleton('analysisFunctions', analysisFunctions);
+        console.log('✅ [DashboardApp] AnalysisFunctions dependency resolved and cached');
         
     } catch (error) {
-        console.error('❌ [DashboardApp] Pre-resolution failed:', error);
+        console.error('❌ [DashboardApp] Failed to resolve async dependencies:', error);
         throw error;
+    }
+}
+
+    // ===============================================================================
+// PUBLIC API METHODS
+// ===============================================================================
+
+async refreshLeads() {
+    console.log('🔄 [DashboardApp] Refreshing leads...');
+    
+    try {
+        if (!this.initialized) {
+            console.warn('⚠️ [DashboardApp] Not initialized, attempting recovery...');
+            await this.init();
+        }
+        
+        const leadManager = this.container.get('leadManager');
+        await leadManager.loadDashboardData();
+        
+        const statsCalculator = this.container.get('statsCalculator');
+        await statsCalculator.refreshStats();
+        
+        const eventBus = this.container.get('eventBus');
+        eventBus.emit(window.DASHBOARD_EVENTS.DATA_REFRESH, {
+            source: 'manual',
+            timestamp: Date.now()
+        });
+        
+        console.log('✅ [DashboardApp] Leads refreshed successfully');
+    } catch (error) {
+        console.error('❌ [DashboardApp] Failed to refresh leads:', error);
+        // Fallback to page reload
+        window.location.reload();
     }
 }
     
