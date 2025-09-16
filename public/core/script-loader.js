@@ -298,17 +298,17 @@ class ScriptLoader {
             throw error;
         }
         
-        // CRITICAL: Initialize API client after all scripts are loaded
-        if (pageConfig.scripts.includes('/core/api-client.js')) {
-            this.initializeApiClient();
-        }
+// CRITICAL: Initialize API client after all scripts are loaded
+if (pageConfig.scripts.includes('/core/api-client.js')) {
+    await this.initializeApiClient();
+}
     }
     
     // =============================================================================
     // API CLIENT INITIALIZATION  
     // =============================================================================
     
-initializeApiClient() {
+async initializeApiClient() {
     // Ensure dependencies are available
     if (!window.OsliraConfig || !window.OsliraAuth) {
         console.error('❌ [ScriptLoader] Cannot initialize API client - missing dependencies');
@@ -316,20 +316,24 @@ initializeApiClient() {
     }
     
     try {
-        // Get config and ensure worker URL is available
-        const config = {
-            WORKER_URL: window.OsliraConfig.workerUrl || window.OsliraConfig.WORKER_URL,
-            ...window.OsliraConfig
-        };
+        // Wait for config to be fully loaded
+        const configObj = await window.OsliraConfig.getConfig();
         
-        console.log('🔍 [ScriptLoader] API client config:', { 
-            workerUrl: config.WORKER_URL,
-            hasAuth: !!window.OsliraAuth 
+        console.log('🔍 [ScriptLoader] Raw config object:', {
+            configObj: configObj,
+            keys: Object.keys(configObj),
+            workerUrl: configObj.workerUrl,
+            WORKER_URL: configObj.WORKER_URL
+        });
+        
+        console.log('🔍 [ScriptLoader] Environment details:', {
+            envWorkerUrl: window.OsliraEnv?.WORKER_URL,
+            envConfig: window.OsliraEnv
         });
         
         // Create API client instance with proper dependencies
         window.OsliraApiClient = new window.OsliraApiClient(
-            config, 
+            configObj, 
             window.OsliraAuth
         );
         
