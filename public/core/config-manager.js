@@ -150,6 +150,14 @@ class ConfigManager {
 if (window.OsliraEnv?.WORKER_URL) {
     this.config.workerUrl = window.OsliraEnv.WORKER_URL;
     this.config.WORKER_URL = window.OsliraEnv.WORKER_URL; // Also set uppercase version for API client
+    
+    console.log('🔧 [Config] Worker URL set:', {
+        envWorkerUrl: window.OsliraEnv.WORKER_URL,
+        configWorkerUrl: this.config.workerUrl,
+        configWORKER_URL: this.config.WORKER_URL
+    });
+} else {
+    console.warn('⚠️ [Config] No WORKER_URL from environment:', window.OsliraEnv);
 }
         
         // Validate required fields
