@@ -155,25 +155,39 @@ async getAsync(name) {
         const factoryNames = Array.from(this.factories.keys());
         const sortedFactories = this.topologicalSort(factoryNames);
         
-        // Initialize factories in dependency order
-        for (const factoryName of sortedFactories) {
-            if (!this.factories.get(factoryName).instance) {
-                try {
-                    const instance = this.get(factoryName);
-                    
-                    // Call init method if it exists
-                    if (instance && typeof instance.init === 'function') {
-                        console.log(`🔧 [DependencyContainer] Initializing: ${factoryName}`);
-                        await instance.init();
-                    }
-                    
-                    this.initializationOrder.push(factoryName);
-                } catch (error) {
-                    console.error(`❌ [DependencyContainer] Failed to initialize ${factoryName}:`, error);
-                    throw error;
+// Initialize factories in dependency order
+for (const factoryName of sortedFactories) {
+    if (!this.factories.get(factoryName).instance) {
+        try {
+            // Skip async factories that haven't been pre-resolved
+            const factoryInfo = this.factories.get(factoryName);
+            if (!factoryInfo.instance) {
+                // Check if it's an async factory
+                const result = factoryInfo.factory();
+                if (result && typeof result.then === 'function') {
+                    console.warn(`⚠️ [DependencyContainer] Skipping async factory '${factoryName}' - should be pre-resolved`);
+                    continue;
                 }
             }
+            
+            const instance = this.get(factoryName);
+            
+            // Call init method if it exists
+            if (instance && typeof instance.init === 'function') {
+                console.log(`🔧 [DependencyContainer] Initializing: ${factoryName}`);
+                await instance.init();
+            }
+            
+            this.initializationOrder.push(factoryName);
+        } catch (error) {
+            console.error(`❌ [DependencyContainer] Failed to initialize ${factoryName}:`, error);
+            // Don't throw for non-critical failures
+            if (factoryName === 'analysisFunctions' || factoryName === 'supabase') {
+                throw error; // Critical dependencies
+            }
         }
+    }
+}
         
         // Initialize singletons that have init methods
         for (const [name, instance] of this.singletons.entries()) {
