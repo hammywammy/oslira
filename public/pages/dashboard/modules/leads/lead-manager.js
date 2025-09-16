@@ -52,27 +52,66 @@ class LeadManager {
                 businessId: selectedBusinessId
             });
             
-            // Load leads with analysis data - EXACT QUERY FROM ORIGINAL
-            const { data: leadsData, error: leadsError } = await this.supabase
-                .from('leads')
-                .select(`
-                    id,
-                    username,
-                    profile_pic_url,
-                    platform,
-                    score,
-                    analysis_type,
-                    business_id,
-                    created_at,
-                    followers_count,
-                    profile_url,
-                    quick_summary
-                `)
-                .eq('user_id', user.id)
-                .eq('business_id', selectedBusinessId)
-                .order('created_at', { ascending: false })
-                .limit(50);
-                
+const { data: leads, error } = await supabase
+    .from('leads')
+    .select(`
+        lead_id,
+        username,
+        display_name,
+        profile_picture_url,
+        bio_text,
+        follower_count,
+        following_count,
+        post_count,
+        is_verified_account,
+        platform_type,
+        profile_url,
+        user_id,
+        business_id,
+        first_discovered_at,
+        runs (
+            id,
+            analysis_type,
+            overall_score,
+            niche_fit_score,
+            engagement_score,
+            summary_text,
+            confidence_level,
+            created_at
+        )
+    `)
+    .eq('user_id', userId)
+    .eq('business_id', businessId)
+    .order('first_discovered_at', { ascending: false })
+    .limit(50);
+
+            if (leads) {
+    const processedLeads = leads.map(lead => {
+        // Get the most recent run
+        const latestRun = lead.runs && lead.runs.length > 0
+            ? lead.runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+            : null;
+        
+        return {
+            ...lead,
+            // Add backward compatibility fields
+            profile_pic_url: lead.profile_picture_url,
+            followers_count: lead.follower_count,
+            platform: lead.platform_type || 'instagram',
+            created_at: lead.first_discovered_at,
+            // Add analysis data from latest run
+            score: latestRun?.overall_score || 0,
+            analysis_type: latestRun?.analysis_type || 'none',
+            quick_summary: latestRun?.summary_text || '',
+            niche_fit_score: latestRun?.niche_fit_score || 0,
+            engagement_score: latestRun?.engagement_score || 0,
+            latest_run_id: latestRun?.id
+        };
+    });
+    
+    return processedLeads;
+}
+            
             if (leadsError) {
                 console.error('❌ [LeadManager] Leads query error:', leadsError);
                 throw leadsError;
