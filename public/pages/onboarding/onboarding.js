@@ -55,7 +55,20 @@
         user = session.user;
         supabase = window.SimpleAuth.supabase;
         
-        console.log('✅ [Onboarding] User authenticated:', user.email);
+console.log('✅ [Onboarding] User authenticated:', user.email);
+
+// Verify critical dependencies before proceeding
+if (!window.OsliraApiClient) {
+    console.error('❌ [Onboarding] API client not available');
+    showError('System initialization incomplete. Please refresh the page.');
+    return;
+}
+
+if (typeof window.OsliraApiClient.request !== 'function') {
+    console.error('❌ [Onboarding] API client not properly instantiated');
+    showError('API client initialization failed. Please refresh the page.');
+    return;
+}
         
         // Initialize validator
         validator.initialize();
@@ -518,6 +531,11 @@ async function submitOnboarding() {
         
         console.log('📝 [Onboarding] Submitting profile data directly...');
         
+// Verify API client is properly initialized
+if (!window.OsliraApiClient || typeof window.OsliraApiClient.request !== 'function') {
+    throw new Error('API client not properly initialized. Please refresh the page.');
+}
+
 const response = await window.OsliraApiClient.request('/business-profiles', {
     method: 'POST',
     body: JSON.stringify(formData)
