@@ -671,7 +671,7 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
 }
 
 // Helper function for copying outreach message
-function copyOutreachMessage() {
+ copyOutreachMessage() {
     const messageElement = document.getElementById('outreachMessage');
     if (messageElement) {
         navigator.clipboard.writeText(messageElement.textContent).then(() => {
