@@ -62,7 +62,7 @@ this.coreScripts = [
     ],
     requiresAuth: true,
     enableTailwind: true
-}
+},
             
             'auth': {
                 scripts: ['/pages/auth/auth.js'],
