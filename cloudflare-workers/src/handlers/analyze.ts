@@ -5,6 +5,7 @@ import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
 import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
+import { checkProfileCache } from '../services/instagram-scraper.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -41,18 +42,13 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
     });
 
 // Start all non-dependent operations in parallel
-const [userResult, business, cachedProfile] = await Promise.all([
+const [userResult, business] = await Promise.all([
   fetchUserAndCredits(user_id, c.env),
-  fetchBusinessProfile(business_id, user_id, c.env),
-  checkProfileCache(username, c.env) // New function to check R2 cache early
+  fetchBusinessProfile(business_id, user_id, c.env)
 ]);
 
-// Skip scraping if cached profile is fresh
-if (cachedProfile && cachedProfile.expires > Date.now()) {
-  profileData = cachedProfile.data;
-} else {
-  profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-}
+// Scrape profile (with built-in caching)
+const profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
     
     if (!userResult.isValid) {
       return c.json(createStandardResponse(
