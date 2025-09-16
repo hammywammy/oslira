@@ -54,6 +54,7 @@ this.coreScripts = [
             
 'onboarding': {
     scripts: [
+        '/core/api-client.js',
         '/core/form-manager.js',
         '/pages/onboarding/onboarding-rules.js',
         '/pages/onboarding/onboarding-validator.js', 
@@ -61,7 +62,7 @@ this.coreScripts = [
     ],
     requiresAuth: true,
     enableTailwind: true
-},
+}
             
             'auth': {
                 scripts: ['/pages/auth/auth.js'],
