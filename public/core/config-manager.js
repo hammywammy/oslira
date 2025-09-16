@@ -146,10 +146,11 @@ class ConfigManager {
             this.config.authCallbackUrl = window.OsliraEnv.AUTH_CALLBACK_URL;
         }
         
-        // Override worker URL with environment-specific one
-        if (window.OsliraEnv?.WORKER_URL) {
-            this.config.workerUrl = window.OsliraEnv.WORKER_URL;
-        }
+// Override worker URL with environment-specific one
+if (window.OsliraEnv?.WORKER_URL) {
+    this.config.workerUrl = window.OsliraEnv.WORKER_URL;
+    this.config.WORKER_URL = window.OsliraEnv.WORKER_URL; // Also set uppercase version for API client
+}
         
         // Validate required fields
         this.validateConfiguration();
