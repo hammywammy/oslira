@@ -317,3 +317,50 @@ function calculateEngagementTrends(posts: any[]): any {
     volatility: calculateVolatility(posts)
   };
 }
+
+export async function checkProfileCache(username: string, env: Env): Promise<{data: ProfileData, expires: number} | null> {
+  const cacheKey = `profile:${username}`;
+  
+  try {
+    if (!env.R2_CACHE_BUCKET) {
+      logger('warn', 'R2_CACHE_BUCKET not available for cache check');
+      return null;
+    }
+    
+    logger('info', 'Checking profile cache', { username, cacheKey });
+    const cached = await env.R2_CACHE_BUCKET.get(cacheKey);
+    
+    if (!cached) {
+      logger('info', 'No cached profile found', { username });
+      return null;
+    }
+    
+    const cacheData = await cached.json();
+    
+    if (cacheData.expires > Date.now()) {
+      logger('info', 'Profile cache hit', { 
+        username, 
+        expires: new Date(cacheData.expires).toISOString(),
+        quality: cacheData.profile?.dataQuality 
+      });
+      
+      return {
+        data: cacheData.profile,
+        expires: cacheData.expires
+      };
+    }
+    
+    logger('info', 'Profile cache expired', { 
+      username, 
+      expired_at: new Date(cacheData.expires).toISOString() 
+    });
+    return null;
+    
+  } catch (error: any) {
+    logger('error', 'Profile cache check failed', { 
+      username, 
+      error: error.message 
+    });
+    return null;
+  }
+}
