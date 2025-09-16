@@ -1453,9 +1453,9 @@ async buildAnalysisModal(leadId) {
     }  
 }
 
-// Export for module system
+// Export for module system - CORRECT FORMAT
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AnalysisFunctions };
+    module.exports = AnalysisFunctions;
 } else {
     window.AnalysisFunctions = AnalysisFunctions;
 }
