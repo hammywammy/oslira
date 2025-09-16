@@ -527,7 +527,7 @@ const formData = {
                 method: 'POST',
                 data: {
                     business_data: formData,
-                    user_id: window.OsliraAuth.getSession()?.user?.id,
+                    user_id: window.OsliraAuth.getCurrentUser()?.id,
                     request_type: 'onboarding_context_generation'
                 }
             });
