@@ -1,6 +1,6 @@
 class OsliraApiClient {
     constructor(config, auth) {
-        this.baseUrl = config.WORKER_URL;
+        this.baseUrl = config.WORKER_URL || config.workerUrl;
         this.auth = auth;
         this.timeout = 30000;
     }
