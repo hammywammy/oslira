@@ -13,35 +13,35 @@ class ScriptLoader {
         this.failedScripts = new Set();
         this.loadingPromises = new Map();
         
-// Core script loading order (must load in sequence)
-this.coreScripts = [
-    'env-manager',
-    'supabase',
-    'config-manager', 
-    'auth-manager',
-    'simple-app'
-];
+        // Core script loading order (must load in sequence)
+        this.coreScripts = [
+            'env-manager',
+            'supabase',
+            'config-manager', 
+            'auth-manager',
+            'simple-app'
+        ];
         
         // Page-specific script configurations
         this.pageConfigs = {
-'dashboard': {
-    scripts: [
-        '/pages/dashboard/modules/core/event-bus.js',
-        '/pages/dashboard/modules/core/state-manager.js',
-        '/pages/dashboard/modules/core/dependency-container.js',
-        '/pages/dashboard/modules/core/dashboard-app.js',
-        '/pages/dashboard/dashboard.js',
-        '/pages/dashboard/modules/analysis/analysis-modal.js',
-        '/pages/dashboard/modules/analysis/analysis-queue.js',
-        '/pages/dashboard/modules/bulk/bulk-upload.js',
-        '/pages/dashboard/modules/business/business-manager.js',
-        '/pages/dashboard/modules/leads/lead-manager.js',
-        '/pages/dashboard/modules/leads/lead-renderer.js',
-        '/pages/dashboard/modules/realtime/realtime-manager.js',
-        '/pages/dashboard/modules/stats/stats-calculator.js',
-        '/pages/dashboard/modules/ui/modal-manager.js',
-        '/pages/dashboard/modules/analysis/analysis-functions.js'
-    ],
+            'dashboard': {
+                scripts: [
+                    '/pages/dashboard/modules/core/event-bus.js',
+                    '/pages/dashboard/modules/core/state-manager.js',
+                    '/pages/dashboard/modules/core/dependency-container.js',
+                    '/pages/dashboard/modules/core/dashboard-app.js',
+                    '/pages/dashboard/dashboard.js',
+                    '/pages/dashboard/modules/analysis/analysis-modal.js',
+                    '/pages/dashboard/modules/analysis/analysis-queue.js',
+                    '/pages/dashboard/modules/bulk/bulk-upload.js',
+                    '/pages/dashboard/modules/business/business-manager.js',
+                    '/pages/dashboard/modules/leads/lead-manager.js',
+                    '/pages/dashboard/modules/leads/lead-renderer.js',
+                    '/pages/dashboard/modules/realtime/realtime-manager.js',
+                    '/pages/dashboard/modules/stats/stats-calculator.js',
+                    '/pages/dashboard/modules/ui/modal-manager.js',
+                    '/pages/dashboard/modules/analysis/analysis-functions.js'
+                ],
                 requiresAuth: true,
                 enableTailwind: true
             },
@@ -52,17 +52,17 @@ this.coreScripts = [
                 enableTailwind: true
             },
             
-'onboarding': {
-    scripts: [
-        '/core/api-client.js',
-        '/core/form-manager.js',
-        '/pages/onboarding/onboarding-rules.js',
-        '/pages/onboarding/onboarding-validator.js', 
-        '/pages/onboarding/onboarding.js'
-    ],
-    requiresAuth: true,
-    enableTailwind: true
-},
+            'onboarding': {
+                scripts: [
+                    '/core/api-client.js',
+                    '/core/form-manager.js',
+                    '/pages/onboarding/onboarding-rules.js',
+                    '/pages/onboarding/onboarding-validator.js', 
+                    '/pages/onboarding/onboarding.js'
+                ],
+                requiresAuth: true,
+                enableTailwind: true
+            },
             
             'auth': {
                 scripts: ['/pages/auth/auth.js'],
@@ -99,57 +99,66 @@ this.coreScripts = [
                 requiresAuth: true,
                 enableTailwind: true
             },
-            // In the pageConfigs object, add these:
-'about': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'pricing': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'case-studies': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'help': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'security-page': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'privacy': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'terms': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'refund': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'status': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-},
-'disclaimer': {
-    scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
-    requiresAuth: false,
-    enableTailwind: true
-}
+            
+            'about': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'pricing': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'case-studies': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'help': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'security-page': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'privacy': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'terms': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'refund': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'status': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            },
+            
+            'disclaimer': {
+                scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
+                requiresAuth: false,
+                enableTailwind: true
+            }
         };
     }
     
@@ -157,182 +166,168 @@ this.coreScripts = [
     // MAIN INITIALIZATION
     // =============================================================================
     
-async initialize() {
-    try {
-        console.log('🚀 [ScriptLoader] Initializing...');
-        
-        // Load core scripts first
-        await this.loadCoreScripts();
-        
-        // Determine current page and load page-specific scripts
-        const currentPage = window.OsliraEnv?.CURRENT_PAGE || 'home';
-        console.log(`📄 [ScriptLoader] Loading scripts for page: ${currentPage}`);
-        
-        await this.loadPageScripts(currentPage);
-        
-        console.log('✅ [ScriptLoader] Initialization complete');
-        
-// Ensure event dispatches after a minimal delay to allow all scripts to settle
-setTimeout(() => {
-    const scriptsLoadedEvent = new CustomEvent('oslira:scripts:loaded', {
-        detail: {
-            page: currentPage,
-            loadedScripts: Array.from(this.loadedScripts),
-            timestamp: Date.now()
+    async initialize() {
+        try {
+            console.log('🚀 [ScriptLoader] Initializing...');
+            
+            // Load core scripts first
+            await this.loadCoreScripts();
+            
+            // Determine current page and load page-specific scripts
+            const currentPage = window.OsliraEnv?.CURRENT_PAGE || 'home';
+            console.log(`📄 [ScriptLoader] Loading scripts for page: ${currentPage}`);
+            
+            await this.loadPageScripts(currentPage);
+            
+            console.log('✅ [ScriptLoader] Initialization complete');
+            
+            // Ensure event dispatches after a minimal delay to allow all scripts to settle
+            setTimeout(() => {
+                const scriptsLoadedEvent = new CustomEvent('oslira:scripts:loaded', {
+                    detail: {
+                        page: currentPage,
+                        loadedScripts: Array.from(this.loadedScripts),
+                        timestamp: Date.now()
+                    }
+                });
+                window.dispatchEvent(scriptsLoadedEvent);
+                console.log('📡 [ScriptLoader] oslira:scripts:loaded event dispatched');
+            }, 50);
+            
+        } catch (error) {
+            console.error('❌ [ScriptLoader] Initialization failed:', error);
+            this.handleInitializationError(error);
         }
-    });
-    window.dispatchEvent(scriptsLoadedEvent);
-    console.log('📡 [ScriptLoader] oslira:scripts:loaded event dispatched');
-}, 50);
-        
-    } catch (error) {
-        console.error('❌ [ScriptLoader] Initialization failed:', error);
-        this.handleInitializationError(error);
     }
-}
     
     // =============================================================================
     // CORE SCRIPT LOADING
     // =============================================================================
     
-async loadCoreScripts() {
-    console.log('🔧 [ScriptLoader] Loading core scripts...');
-    
-    for (const scriptName of this.coreScripts) {
-        let scriptPath;
+    async loadCoreScripts() {
+        console.log('🔧 [ScriptLoader] Loading core scripts...');
         
-// Handle external CDN scripts
-if (scriptName === 'supabase') {
-    scriptPath = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-} else {
-    scriptPath = `/core/${scriptName}.js`;
-}
-        
-        try {
-            await this.loadScript(scriptName, scriptPath);
+        for (const scriptName of this.coreScripts) {
+            let scriptPath;
             
-// Verify the script exposed its global object
-const globalName = this.getGlobalName(scriptName);
-if (globalName && !window[globalName]) {
-    throw new Error(`Critical script ${scriptName} failed to expose global ${globalName}`);
-} else if (scriptName === 'supabase' && !window.supabase?.createClient) {
-    throw new Error('Supabase CDN failed to expose createClient function');
-}
+            // Handle external CDN scripts
+            if (scriptName === 'supabase') {
+                scriptPath = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+            } else {
+                scriptPath = `/core/${scriptName}.js`;
+            }
             
-            // Give each core script time to initialize
-            await this.wait(100);
-            
-        } catch (error) {
-            console.error(`❌ [ScriptLoader] Core script ${scriptName} failed:`, error);
-            throw error;
+            try {
+                await this.loadScript(scriptName, scriptPath);
+                
+                // Verify the script exposed its global object
+                const globalName = this.getGlobalName(scriptName);
+                if (globalName && !window[globalName]) {
+                    throw new Error(`Critical script ${scriptName} failed to expose global ${globalName}`);
+                } else if (scriptName === 'supabase' && !window.supabase?.createClient) {
+                    throw new Error('Supabase CDN failed to expose createClient function');
+                }
+                
+                // Give each core script time to initialize
+                await this.wait(100);
+                
+            } catch (error) {
+                console.error(`❌ [ScriptLoader] Core script ${scriptName} failed:`, error);
+                throw error;
+            }
         }
     }
-}
     
-getGlobalName(scriptName) {
-    const globalMap = {
-        'env-manager': 'OsliraEnv',
-        'supabase': null, // Supabase CDN doesn't expose a simple global - will check differently
-        'config-manager': 'OsliraConfig', 
-        'auth-manager': 'OsliraAuth'
-    };
-    return globalMap[scriptName];
-}
+    getGlobalName(scriptName) {
+        const globalMap = {
+            'env-manager': 'OsliraEnv',
+            'supabase': null, // Supabase CDN doesn't expose a simple global - will check differently
+            'config-manager': 'OsliraConfig', 
+            'auth-manager': 'OsliraAuth'
+        };
+        return globalMap[scriptName];
+    }
     
     // =============================================================================
     // PAGE SCRIPT LOADING
     // =============================================================================
-async loadPageScripts(pageName) {
-    const pageConfig = this.pageConfigs[pageName];
     
-    if (!pageConfig) {
-        console.log(`ℹ️  [ScriptLoader] No scripts configured for page: ${pageName}`);
-        return;
-    }
-    
-    console.log(`📦 [ScriptLoader] Loading ${pageConfig.scripts.length} scripts for ${pageName}`);
-    
-    // Load sidebar for authenticated pages
-    if (pageConfig.requiresAuth && pageName !== 'auth' && pageName !== 'onboarding') {
-        await this.loadScript('sidebar-manager', '/core/sidebar/sidebar-manager.js');
-    }
-    
-    // Load stylesheets for this page FIRST
-if (pageConfig.stylesheets) {
-    const stylesheetPromises = pageConfig.stylesheets.map(async (stylePath) => {
-        const styleName = this.extractScriptName(stylePath);
-        // Verify CSS file exists before attempting load
-        return this.loadStylesheet(styleName, stylePath).catch(error => {
-            console.warn(`⚠️ [ScriptLoader] Stylesheet ${styleName} failed, continuing without it`);
+    async loadPageScripts(pageName) {
+        const pageConfig = this.pageConfigs[pageName];
+        
+        if (!pageConfig) {
+            console.log(`ℹ️  [ScriptLoader] No scripts configured for page: ${pageName}`);
+            return;
+        }
+        
+        console.log(`📦 [ScriptLoader] Loading ${pageConfig.scripts.length} scripts for ${pageName}`);
+        
+        // Load sidebar for authenticated pages
+        if (pageConfig.requiresAuth && pageName !== 'auth' && pageName !== 'onboarding') {
+            await this.loadScript('sidebar-manager', '/core/sidebar/sidebar-manager.js');
+        }
+        
+        // Load stylesheets for this page FIRST
+        if (pageConfig.stylesheets) {
+            const stylesheetPromises = pageConfig.stylesheets.map(async (stylePath) => {
+                const styleName = this.extractScriptName(stylePath);
+                return this.loadStylesheet(styleName, stylePath).catch(error => {
+                    console.warn(`⚠️ [ScriptLoader] Stylesheet ${styleName} failed, continuing without it`);
+                });
+            });
+                
+            try {
+                await Promise.all(stylesheetPromises);
+                console.log(`✅ [ScriptLoader] All stylesheets loaded for ${pageName}`);
+            } catch (error) {
+                console.error(`❌ [ScriptLoader] Failed to load stylesheets for ${pageName}:`, error);
+            }
+        }
+        
+        // Load page scripts in parallel
+        const loadPromises = pageConfig.scripts.map(async (scriptPath) => {
+            const scriptName = this.extractScriptName(scriptPath);
+            return this.loadScript(scriptName, scriptPath);
         });
-    });
         
         try {
-            await Promise.all(stylesheetPromises);
-            console.log(`✅ [ScriptLoader] All stylesheets loaded for ${pageName}`);
+            await Promise.all(loadPromises);
+            console.log(`✅ [ScriptLoader] All scripts loaded for ${pageName}`);
         } catch (error) {
-            console.error(`❌ [ScriptLoader] Failed to load stylesheets for ${pageName}:`, error);
+            console.error(`❌ [ScriptLoader] Failed to load scripts for ${pageName}:`, error);
+            throw error;
+        }
+        
+        // CRITICAL: Initialize API client after all scripts are loaded
+        if (pageConfig.scripts.includes('/core/api-client.js')) {
+            this.initializeApiClient();
         }
     }
     
-// Load page-specific scripts
-for (const script of pageConfig.scripts) {
-    const scriptName = this.extractScriptName(script);
-    await this.loadScript(scriptName, script);
-}
-
-// CRITICAL: Initialize API client after auth-manager is loaded
-if (pageConfig.scripts.includes('/core/api-client.js')) {
-    this.initializeApiClient();
-}
-    
-    try {
-        await Promise.all(loadPromises);
-        console.log(`✅ [ScriptLoader] All scripts loaded for ${pageName}`);
-    } catch (error) {
-        console.error(`❌ [ScriptLoader] Failed to load scripts for ${pageName}:`, error);
-        // Continue execution even if some page scripts fail
-    }
-    // Load stylesheets for this page
-if (pageConfig.stylesheets) {
-    const stylesheetPromises = pageConfig.stylesheets.map(async (stylePath) => {
-        const styleName = this.extractScriptName(stylePath);
-        return this.loadStylesheet(styleName, stylePath);
-    });
-    
-    try {
-        await Promise.all(stylesheetPromises);
-        console.log(`✅ [ScriptLoader] All stylesheets loaded for ${pageName}`);
-    } catch (error) {
-        console.error(`❌ [ScriptLoader] Failed to load stylesheets for ${pageName}:`, error);
-    }
-}
-}
-
     // =============================================================================
-// API CLIENT INITIALIZATION  
-// =============================================================================
-
-initializeApiClient() {
-    // Ensure dependencies are available
-    if (!window.OsliraConfig || !window.OsliraAuth) {
-        console.error('❌ [ScriptLoader] Cannot initialize API client - missing dependencies');
-        return;
-    }
+    // API CLIENT INITIALIZATION  
+    // =============================================================================
     
-    try {
-        // Create API client instance with proper dependencies
-        window.OsliraApiClient = new window.OsliraApiClient(
-            window.OsliraConfig, 
-            window.OsliraAuth
-        );
+    initializeApiClient() {
+        // Ensure dependencies are available
+        if (!window.OsliraConfig || !window.OsliraAuth) {
+            console.error('❌ [ScriptLoader] Cannot initialize API client - missing dependencies');
+            return;
+        }
         
-        console.log('✅ [ScriptLoader] API client initialized successfully');
-        
-    } catch (error) {
-        console.error('❌ [ScriptLoader] API client initialization failed:', error);
+        try {
+            // Create API client instance with proper dependencies
+            window.OsliraApiClient = new window.OsliraApiClient(
+                window.OsliraConfig, 
+                window.OsliraAuth
+            );
+            
+            console.log('✅ [ScriptLoader] API client initialized successfully');
+            
+        } catch (error) {
+            console.error('❌ [ScriptLoader] API client initialization failed:', error);
+        }
     }
-}
     
     extractScriptName(scriptPath) {
         return scriptPath.split('/').pop().replace('.js', '');
@@ -386,35 +381,36 @@ initializeApiClient() {
         this.loadingPromises.set(name, promise);
         return promise;
     }
+    
     async loadStylesheet(name, href) {
-    // Check if already loaded
-    if (this.loadedScripts.has(name)) {
-        return;
+        // Check if already loaded
+        if (this.loadedScripts.has(name)) {
+            return;
+        }
+        
+        console.log(`🎨 [ScriptLoader] Loading stylesheet: ${name} from ${href}`);
+        
+        const promise = new Promise((resolve, reject) => {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            
+            link.onload = () => {
+                console.log(`✅ [ScriptLoader] ${name} stylesheet loaded`);
+                this.loadedScripts.add(name);
+                resolve();
+            };
+            
+            link.onerror = () => {
+                console.error(`❌ [ScriptLoader] Failed to load stylesheet ${name}`);
+                reject(new Error(`Failed to load stylesheet: ${name}`));
+            };
+            
+            document.head.appendChild(link);
+        });
+        
+        return promise;
     }
-    
-    console.log(`🎨 [ScriptLoader] Loading stylesheet: ${name} from ${href}`);
-    
-    const promise = new Promise((resolve, reject) => {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = href;
-        
-        link.onload = () => {
-            console.log(`✅ [ScriptLoader] ${name} stylesheet loaded`);
-            this.loadedScripts.add(name);
-            resolve();
-        };
-        
-        link.onerror = () => {
-            console.error(`❌ [ScriptLoader] Failed to load stylesheet ${name}`);
-            reject(new Error(`Failed to load stylesheet: ${name}`));
-        };
-        
-        document.head.appendChild(link);
-    });
-    
-    return promise;
-}
     
     // =============================================================================
     // ERROR HANDLING
