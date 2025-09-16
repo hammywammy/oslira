@@ -275,11 +275,16 @@ if (pageConfig.stylesheets) {
         }
     }
     
-    // Load page scripts in parallel
-    const loadPromises = pageConfig.scripts.map(async (scriptPath) => {
-        const scriptName = this.extractScriptName(scriptPath);
-        return this.loadScript(scriptName, scriptPath);
-    });
+// Load page-specific scripts
+for (const script of pageConfig.scripts) {
+    const scriptName = this.extractScriptName(script);
+    await this.loadScript(scriptName, script);
+}
+
+// CRITICAL: Initialize API client after auth-manager is loaded
+if (pageConfig.scripts.includes('/core/api-client.js')) {
+    this.initializeApiClient();
+}
     
     try {
         await Promise.all(loadPromises);
@@ -487,6 +492,31 @@ if (window.location.hostname === 'localhost' || window.location.hostname.include
         reload: (name) => window.ScriptLoader.reloadScript(name),
         instance: () => window.ScriptLoader
     };
+}
+
+    // =============================================================================
+// API CLIENT INITIALIZATION  
+// =============================================================================
+
+initializeApiClient() {
+    // Ensure dependencies are available
+    if (!window.OsliraConfig || !window.OsliraAuth) {
+        console.error('❌ [ScriptLoader] Cannot initialize API client - missing dependencies');
+        return;
+    }
+    
+    try {
+        // Create API client instance with proper dependencies
+        window.OsliraApiClient = new window.OsliraApiClient(
+            window.OsliraConfig, 
+            window.OsliraAuth
+        );
+        
+        console.log('✅ [ScriptLoader] API client initialized successfully');
+        
+    } catch (error) {
+        console.error('❌ [ScriptLoader] API client initialization failed:', error);
+    }
 }
 
 } // End of ScriptLoader class declaration check
