@@ -148,6 +148,11 @@ class DashboardApp {
         container.registerFactory('modalManager', () => {
             return new ModalManager(container);
         }, []);
+        // Register UI components
+container.registerFactory('dashboardHeader', () => new window.DashboardHeader(container));
+container.registerFactory('statsCards', () => new window.StatsCards(container));
+container.registerFactory('leadsTable', () => new window.LeadsTable(container));
+container.registerFactory('insightsPanel', () => new window.InsightsPanel(container));
         
         console.log('✅ [DashboardApp] All dependencies registered');
         return container;
