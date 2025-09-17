@@ -24,14 +24,22 @@ await container.initialize();
 const businessManager = container.get('businessManager');
 await businessManager.loadBusinesses();
 
-// Load lead data after businesses are loaded
+// Render dashboard UI first to create table structure
+console.log('🎨 [DashboardCore] Rendering dashboard UI...');
+await this.renderDashboardUI(container);
+
+// Initialize LeadRenderer after UI is rendered
+console.log('🔧 [DashboardCore] Initializing LeadRenderer...');
+const leadRenderer = container.get('leadRenderer');
+if (leadRenderer && !leadRenderer.initialized) {
+    leadRenderer.init();
+    leadRenderer.initialized = true;
+}
+
+// Load lead data after UI and renderer are ready
 console.log('📊 [DashboardCore] Loading lead data...');
 const leadManager = container.get('leadManager');
 await leadManager.loadDashboardData();
-
-// Render dashboard UI after data is loaded
-console.log('🎨 [DashboardCore] Rendering dashboard UI...');
-await this.renderDashboardUI(container);
             
             console.log('✅ [DashboardCore] Initialization completed');
             return true;
