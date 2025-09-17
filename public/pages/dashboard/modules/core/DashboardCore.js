@@ -19,9 +19,7 @@ class DashboardCore {
             // Initialize all modules
             console.log('🔄 [DashboardCore] Initializing modules...');
             await container.initialize();
-            
- // Wait for auth and load initial data
-            await this.setupInitialData(container);
+
             
             // Trigger business loading after all dependencies are initialized
             const businessManager = container.get('businessManager');
