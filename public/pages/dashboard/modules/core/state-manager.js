@@ -296,18 +296,38 @@ class DashboardStateManager {
         }, obj);
     }
     
-    setNestedValue(obj, path, value) {
-        const keys = path.split('.');
-        const lastKey = keys.pop();
-        const target = keys.reduce((current, key) => {
-            if (!(key in current)) {
-                current[key] = {};
-            }
-            return current[key];
-        }, obj);
-        
-        target[lastKey] = value;
+setNestedValue(obj, path, value) {
+    if (!path || typeof path !== 'string') {
+        console.error('❌ [StateManager] Invalid path for setNestedValue:', path);
+        return;
     }
+    
+    const keys = path.split('.');
+    const lastKey = keys.pop();
+    
+    if (lastKey === undefined || lastKey === '') {
+        console.error('❌ [StateManager] Invalid lastKey for path:', path);
+        return;
+    }
+    
+    const target = keys.reduce((current, key) => {
+        if (!current || typeof current !== 'object') {
+            console.error('❌ [StateManager] Cannot navigate to key:', key, 'in path:', path);
+            return {};
+        }
+        if (!(key in current)) {
+            current[key] = {};
+        }
+        return current[key];
+    }, obj);
+    
+    if (!target || typeof target !== 'object') {
+        console.error('❌ [StateManager] Invalid target for setting value at path:', path);
+        return;
+    }
+    
+    target[lastKey] = value;
+}
     
     notifySubscribers(path, value, oldValue) {
         const subscribers = this.subscribers.get(path);
