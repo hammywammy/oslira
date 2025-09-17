@@ -27,14 +27,13 @@ class BusinessManager {
         // Listen for auth changes
         this.eventBus.on('auth:changed', this.handleAuthChange.bind(this));
         
-// Load businesses if user is already authenticated
-        // Note: Business loading will be triggered by DashboardCore after all dependencies are ready
-        if (this.osliraApp?.user) {
-            console.log('👤 [BusinessManager] User available at init:', this.osliraApp.user.email);
-            console.log('📋 [BusinessManager] Business loading deferred to DashboardCore initialization');
-        } else {
-            console.warn('⚠️ [BusinessManager] No user data available at init');
-        }
+// Business loading will be controlled by TimingManager
+if (this.osliraApp?.user) {
+    console.log('👤 [BusinessManager] User available at init:', this.osliraApp.user.email);
+    console.log('📋 [BusinessManager] Business loading deferred to TimingManager');
+} else {
+    console.warn('⚠️ [BusinessManager] No user data available at init');
+}
         
         console.log('✅ [BusinessManager] Event listeners initialized');
     }
