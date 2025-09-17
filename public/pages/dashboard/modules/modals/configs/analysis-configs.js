@@ -8,43 +8,41 @@ class AnalysisConfigs {
         this.registerDefaultConfigs();
     }
 
-    registerDefaultConfigs() {
-        // Light Analysis Configuration
-        this.configs.set('light', {
-            components: [
-                'header',
-                'summary',
-                'upgradeNotice'
-            ]
-        });
+registerDefaultConfigs() {
+    // Light Analysis Configuration
+    this.configs.set('light', {
+        components: [
+            'heroHeader',
+            'aiSummary',
+            'lightAnalysisNotice'
+        ]
+    });
 
-        // Deep Analysis Configuration  
-        this.configs.set('deep', {
-            components: [
-                'header',
-                'summary',
-                'sellingPoints',
-                'reasons',
-                'engagementMetrics',
-                'audienceInsights',
-                'outreachMessage'
-            ]
-        });
+    // Deep Analysis Configuration  
+    this.configs.set('deep', {
+        components: [
+            'heroHeader',
+            'metricsGrid',
+            'aiSummary',
+            'sellingPoints',
+            'outreachMessage',
+            'engagementInsights'
+        ]
+    });
 
-        // X-Ray Analysis Configuration
-        this.configs.set('xray', {
-            components: [
-                'header',
-                'summary',
-                'sellingPoints',
-                'reasons',
-                'engagementMetrics',
-                'audienceInsights',
-                'outreachMessage'
-                // Future: Add xray-specific components like 'copywriterProfile', 'commercialIntelligence'
-            ]
-        });
-    }
+    // X-Ray Analysis Configuration
+    this.configs.set('xray', {
+        components: [
+            'heroHeader',
+            'metricsGrid', 
+            'aiSummary',
+            'sellingPoints',
+            'outreachMessage',
+            'engagementInsights',
+            'reasons'
+        ]
+    });
+}
 
     getConfig(analysisType) {
         return this.configs.get(analysisType) || this.configs.get('light');
