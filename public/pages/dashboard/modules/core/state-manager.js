@@ -298,21 +298,21 @@ class DashboardStateManager {
     
 setNestedValue(obj, path, value) {
     if (!path || typeof path !== 'string') {
-        console.error('❌ [StateManager] Invalid path for setNestedValue:', path);
+        console.error('Invalid path for setNestedValue:', path);
         return;
     }
     
     const keys = path.split('.');
     const lastKey = keys.pop();
     
-    if (lastKey === undefined || lastKey === '') {
-        console.error('❌ [StateManager] Invalid lastKey for path:', path);
+    if (!lastKey) {
+        console.error('Invalid lastKey for path:', path);
         return;
     }
     
     const target = keys.reduce((current, key) => {
         if (!current || typeof current !== 'object') {
-            console.error('❌ [StateManager] Cannot navigate to key:', key, 'in path:', path);
+            console.error('Cannot navigate to key:', key, 'in path:', path);
             return {};
         }
         if (!(key in current)) {
@@ -322,7 +322,7 @@ setNestedValue(obj, path, value) {
     }, obj);
     
     if (!target || typeof target !== 'object') {
-        console.error('❌ [StateManager] Invalid target for setting value at path:', path);
+        console.error('Invalid target for setting value at path:', path);
         return;
     }
     
