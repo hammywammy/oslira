@@ -14,14 +14,14 @@ class ScriptLoader {
         this.loadingPromises = new Map();
         
         // Core script loading order (must load in sequence)
-        this.coreScripts = [
+this.coreScripts = [
             'env-manager',
+            'timing-manager',  // Add this
             'supabase',
             'config-manager', 
             'auth-manager',
             'simple-app'
         ];
-        
         // Page-specific script configurations
         this.pageConfigs = {
 'dashboard': {
@@ -289,15 +289,19 @@ class ScriptLoader {
     // PAGE SCRIPT LOADING
     // =============================================================================
     
-    async loadPageScripts(pageName) {
-        const pageConfig = this.pageConfigs[pageName];
+async loadPageScripts(pageName) {
+        console.log(`📄 [ScriptLoader] Loading scripts for page: ${pageName}`);
         
+        const pageConfig = this.pageConfigs[pageName];
         if (!pageConfig) {
-            console.log(`ℹ️  [ScriptLoader] No scripts configured for page: ${pageName}`);
+            console.warn(`⚠️ [ScriptLoader] No configuration found for page: ${pageName}`);
             return;
         }
         
         console.log(`📦 [ScriptLoader] Loading ${pageConfig.scripts.length} scripts for ${pageName}`);
+        
+        // Load timing manager first for centralized control
+        await this.loadScript('timing-manager', '/core/timing-manager.js');
         
         // Load sidebar for authenticated pages
         if (pageConfig.requiresAuth && pageName !== 'auth' && pageName !== 'onboarding') {
