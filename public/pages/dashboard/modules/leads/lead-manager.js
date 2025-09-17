@@ -65,11 +65,13 @@ console.log('🔍 [LeadManager] Debug - supabase instance:', this.supabase);
 const { data: leads, error: leadsError } = await this.supabase
 .from('leads')
 .select(`
-  lead_id, username, display_name, profile_picture_url, 
-  platform_type, follower_count, first_discovered_at,
-  runs!inner(
-    analysis_type, overall_score, niche_fit_score, 
-    engagement_score, created_at
+  lead_id, username, display_name, profile_picture_url, bio_text,
+  platform_type, follower_count, following_count, post_count,
+  is_verified_account, profile_url, user_id, business_id,
+  first_discovered_at, last_updated_at,
+  runs(
+    run_id, analysis_type, overall_score, niche_fit_score, 
+    engagement_score, summary_text, confidence_level, created_at
   )
 `)
 .eq('user_id', user.id)
