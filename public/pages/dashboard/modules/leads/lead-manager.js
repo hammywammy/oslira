@@ -96,28 +96,30 @@ const { data: leads, error: leadsError } = await this.supabase
     .limit(50);
 
             if (leads) {
-    const processedLeads = leads.map(lead => {
-        // Get the most recent run
-        const latestRun = lead.runs && lead.runs.length > 0
-            ? lead.runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
-            : null;
-        
-        return {
-            ...lead,
-            // Add backward compatibility fields
-            profile_pic_url: lead.profile_picture_url,
-            followers_count: lead.follower_count,
-            platform: lead.platform_type || 'instagram',
-            created_at: lead.first_discovered_at,
-            // Add analysis data from latest run
-            score: latestRun?.overall_score || 0,
-            analysis_type: latestRun?.analysis_type || 'none',
-            quick_summary: latestRun?.summary_text || '',
-            niche_fit_score: latestRun?.niche_fit_score || 0,
-            engagement_score: latestRun?.engagement_score || 0,
-            latest_run_id: latestRun?.run_id
-        };
-    });
+const processedLeads = leads.map(lead => {
+    // Get the most recent run
+    const latestRun = lead.runs && lead.runs.length > 0
+        ? lead.runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+        : null;
+    
+    return {
+        ...lead,
+        // Fix ID mapping - UI expects 'id' but DB has 'lead_id'
+        id: lead.lead_id,
+        // Add backward compatibility fields
+        profile_pic_url: lead.profile_picture_url,
+        followers_count: lead.follower_count,
+        platform: lead.platform_type || 'instagram',
+        created_at: lead.first_discovered_at,
+        // Analysis data from latest run
+        score: latestRun?.overall_score || 0,
+        analysis_type: latestRun?.analysis_type || 'none',
+        quick_summary: latestRun?.summary_text || '',
+        niche_fit_score: latestRun?.niche_fit_score || 0,
+        engagement_score: latestRun?.engagement_score || 0,
+        latest_run_id: latestRun?.run_id
+    };
+});
     
     return processedLeads;
 }
