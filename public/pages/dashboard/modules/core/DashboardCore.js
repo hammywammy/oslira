@@ -108,8 +108,6 @@ class DashboardCore {
             
             console.log('👤 [DashboardCore] User authenticated:', osliraApp.user.email);
             
-            // Load data in sequence
-            await this.loadInitialData(container);
             
         } catch (error) {
             console.error('❌ [DashboardCore] Initial data setup failed:', error);
@@ -120,28 +118,6 @@ class DashboardCore {
                 throw error;
             }
         }
-    }
-    
-    /**
-     * Load dashboard data in proper sequence
-     */
-    static async loadInitialData(container) {
-        const businessManager = container.get('businessManager');
-        const realtimeManager = container.get('realtimeManager');
-        const leadManager = container.get('leadManager');
-        const statsCalculator = container.get('statsCalculator');
-        
-        // Load business profiles first
-        await businessManager.loadBusinesses();
-        
-        // Setup real-time connections
-        await realtimeManager.setupRealtimeSubscription();
-        
-        // Load dashboard data
-        await leadManager.loadDashboardData();
-        
-        // Calculate initial stats
-        await statsCalculator.refreshStats();
     }
     
     /**
