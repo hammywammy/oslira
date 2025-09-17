@@ -62,8 +62,8 @@ console.log('🔍 [LeadManager] Debug - supabase instance:', this.supabase);
                 throw new Error('Database connection not ready - supabase client invalid');
             }
             
-            const { data: leads, error } = await this.supabase
-                .from('leads')
+const { data: leads, error: leadsError } = await this.supabase
+    .from('leads')
     .select(`
         lead_id,
         username,
@@ -122,10 +122,10 @@ console.log('🔍 [LeadManager] Debug - supabase instance:', this.supabase);
     return processedLeads;
 }
             
-            if (leadsError) {
-                console.error('❌ [LeadManager] Leads query error:', leadsError);
-                throw leadsError;
-            }
+if (leadsError) {
+    console.error('❌ [LeadManager] Leads query error:', leadsError);
+    throw leadsError;
+}
             
             console.log(`📊 [LeadManager] Loaded ${leadsData?.length || 0} leads from database`);
             
