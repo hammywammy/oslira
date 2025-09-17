@@ -25,24 +25,61 @@ class ScriptLoader {
         // Page-specific script configurations
         this.pageConfigs = {
 'dashboard': {
-    scripts: [
-        '/core/sidebar/sidebar-manager.js',
-        '/pages/dashboard/modules/core/event-bus.js',
-        '/pages/dashboard/modules/core/state-manager.js',
-        '/pages/dashboard/modules/core/dependency-container.js',
-        '/pages/dashboard/modules/analysis/analysis-functions.js',
-        '/pages/dashboard/modules/analysis/analysis-modal.js',
-        '/pages/dashboard/modules/analysis/analysis-queue.js',
-        '/pages/dashboard/modules/bulk/bulk-upload.js',
-        '/pages/dashboard/modules/business/business-manager.js',
-        '/pages/dashboard/modules/leads/lead-manager.js',
-        '/pages/dashboard/modules/leads/lead-renderer.js',
-        '/pages/dashboard/modules/realtime/realtime-manager.js',
-        '/pages/dashboard/modules/stats/stats-calculator.js',
-        '/pages/dashboard/modules/ui/modal-manager.js',
-        '/pages/dashboard/modules/core/dashboard-app.js',
-        '/pages/dashboard/dashboard.js'
-    ],
+  scripts: [
+    '/core/sidebar/sidebar-manager.js',
+
+    // core
+    '/pages/dashboard/modules/core/DashboardCore.js',
+    '/pages/dashboard/modules/core/DashboardErrorSystem.js',
+    '/pages/dashboard/modules/core/DashboardEventSystem.js',
+    '/pages/dashboard/modules/core/dashboard-app.js',
+    '/pages/dashboard/modules/core/dependency-container.js',
+    '/pages/dashboard/modules/core/event-bus.js',
+    '/pages/dashboard/modules/core/state-manager.js',
+
+    // analysis
+    '/pages/dashboard/modules/analysis/analysis-functions.js',
+    '/pages/dashboard/modules/analysis/analysis-modal.js',
+    '/pages/dashboard/modules/analysis/analysis-queue.js',
+
+    // bulk
+    '/pages/dashboard/modules/bulk/bulk-upload.js',
+
+    // business
+    '/pages/dashboard/modules/business/business-manager.js',
+
+    // handlers
+    '/pages/dashboard/modules/handlers/lead-analysis-handlers.js',
+    '/pages/dashboard/modules/handlers/research-handlers.js',
+
+    // leads
+    '/pages/dashboard/modules/leads/lead-manager.js',
+    '/pages/dashboard/modules/leads/lead-renderer.js',
+
+    // modals
+    '/pages/dashboard/modules/modals/lead-analysis-modal.js',
+    '/pages/dashboard/modules/modals/research-modal.js',
+
+    // realtime
+    '/pages/dashboard/modules/realtime/realtime-manager.js',
+
+    // stats
+    '/pages/dashboard/modules/stats/stats-calculator.js',
+
+    // ui
+    '/pages/dashboard/modules/ui/dashboard-header.js',
+    '/pages/dashboard/modules/ui/dashboard-styles.js',
+    '/pages/dashboard/modules/ui/insights-panel.js',
+    '/pages/dashboard/modules/ui/leads-table.js',
+    '/pages/dashboard/modules/ui/modal-manager.js',
+    '/pages/dashboard/modules/ui/stats-cards.js',
+
+    // entrypoints
+    '/pages/dashboard/modules/analysis/analysis-queue.js',
+    '/pages/dashboard/dashboard.js'
+  ]
+},
+
                 requiresAuth: true,
                 enableTailwind: true
             },
