@@ -258,11 +258,36 @@ class TimingManager {
             return;
         }
         
+// Simple-app needs special handling since it creates OsliraApp with user data
+        if (itemName === 'simple-app') {
+            await this.waitForSimpleApp();
+            return;
+        }
+        
         // Default: just wait for global to be available
         const globalName = this.getGlobalName(itemName);
         if (globalName) {
             await this.waitForGlobal(globalName, 3000);
         }
+    }
+    async waitForSimpleApp() {
+        // First wait for OsliraSimpleApp to exist
+        await this.waitForGlobal('OsliraSimpleApp', 3000);
+        
+        // Then wait for it to be initialized
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds
+        
+        while (attempts < maxAttempts) {
+            if (window.OsliraSimpleApp?.isInitialized()) {
+                console.log('✅ [TimingManager] OsliraSimpleApp initialized');
+                return;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+            attempts++;
+        }
+        
+        throw new Error('OsliraSimpleApp failed to initialize within timeout');
     }
     
     async initializeSupabaseClient() {
