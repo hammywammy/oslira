@@ -62,6 +62,7 @@ this.coreScripts = [
                     
                     // Modals (KEEP THESE - they're different functions)
                     '/pages/dashboard/modules/modals/research-modal.js',
+                    '/pages/dashboard/modules/ui/stats-cards.js',
                     
                     // Real-time systems
                     '/pages/dashboard/modules/realtime/realtime-manager.js',
