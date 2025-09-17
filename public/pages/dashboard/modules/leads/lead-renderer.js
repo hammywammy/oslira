@@ -58,7 +58,7 @@ displayLeads(leads = null) {
                           this.stateManager.getState('visibleLeads') || 
                           this.stateManager.getState('filteredLeads') || 
                           this.stateManager.getState('leads');
-    const tableBody = document.getElementById('leads-table-body');
+    let tableBody = document.getElementById('leads-table-body');
     const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
     
     // ENHANCED DEBUGGING
@@ -82,7 +82,7 @@ if (!tableBody) {
         return;
     }
     // Continue with the newly created table body
-    tableBody = newTableBody;
+    tableBody = newTableBody; // Now this works
 }
     
     console.log(`🎨 [LeadRenderer] Displaying ${leadsToDisplay?.length || 0} leads with enhanced styling`);
