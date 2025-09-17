@@ -52,22 +52,33 @@ class LeadRenderer {
     // MAIN DISPLAY FUNCTION
     // ===============================================================================
     
-    displayLeads(leads = null) {
-        // Use visibleLeads for pagination support, fallback to filteredLeads, then all leads
-        const leadsToDisplay = leads || 
-                              this.stateManager.getState('visibleLeads') || 
-                              this.stateManager.getState('filteredLeads') || 
-                              this.stateManager.getState('leads');
-        const tableBody = document.getElementById('leads-table-body');
-        const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
-        
-        if (!tableBody) {
-            console.warn('⚠️ [LeadRenderer] Table body element not found');
-            this.createTableStructureIfMissing();
-            return;
-        }
-        
-        console.log(`🎨 [LeadRenderer] Displaying ${leadsToDisplay.length} leads with enhanced styling`);
+displayLeads(leads = null) {
+    // Use visibleLeads for pagination support, fallback to filteredLeads, then all leads
+    const leadsToDisplay = leads || 
+                          this.stateManager.getState('visibleLeads') || 
+                          this.stateManager.getState('filteredLeads') || 
+                          this.stateManager.getState('leads');
+    const tableBody = document.getElementById('leads-table-body');
+    const selectedLeads = this.stateManager.getState('selectedLeads') || new Set();
+    
+    // ENHANCED DEBUGGING
+    console.log('🔍 [LeadRenderer] DEBUG displayLeads called with:', {
+        providedLeads: leads?.length || 'null',
+        visibleLeads: this.stateManager.getState('visibleLeads')?.length || 'none',
+        filteredLeads: this.stateManager.getState('filteredLeads')?.length || 'none', 
+        allLeads: this.stateManager.getState('leads')?.length || 'none',
+        finalLeadsToDisplay: leadsToDisplay?.length || 'none',
+        isLoading: this.stateManager.getState('isLoading'),
+        tableBodyExists: !!tableBody
+    });
+    
+    if (!tableBody) {
+        console.warn('⚠️ [LeadRenderer] Table body element not found');
+        this.createTableStructureIfMissing();
+        return;
+    }
+    
+    console.log(`🎨 [LeadRenderer] Displaying ${leadsToDisplay?.length || 0} leads with enhanced styling`);
         
         // Show loading state if needed
         if (this.stateManager.getState('isLoading')) {
@@ -563,12 +574,34 @@ return `
     }
 
 renderEmptyState(tableBody) {
-        tableBody.innerHTML = '';
-        const emptyState = document.getElementById('empty-state');
-        if (emptyState) {
-            emptyState.classList.remove('hidden');
-        }
+    console.log('📭 [LeadRenderer] Rendering empty state');
+    
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="6" class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center space-y-4">
+                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">No leads found</h3>
+                        <p class="text-sm text-gray-500 mt-1">Your lead pipeline is empty. Start by analyzing new leads.</p>
+                    </div>
+                    <button onclick="window.openResearchModal?.()" class="mt-4 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                        Add First Lead
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+    
+    const emptyState = document.getElementById('empty-state');
+    if (emptyState) {
+        emptyState.classList.remove('hidden');
     }
+}
 
     // ===============================================================================
     // LEGACY COMPATIBILITY METHODS
