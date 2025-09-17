@@ -293,20 +293,28 @@ class LeadManager {
                     created_at: latestRun.created_at
                 };
                 
-                // If there's payload data, extract it
-                if (latestRun.payloads && latestRun.payloads.length > 0) {
-                    const payload = latestRun.payloads[0].analysis_data;
-                    if (payload) {
-                        // Map payload data to old format for compatibility
-                        analysisData.deep_summary = payload.deep_payload?.detailed_summary || payload.summary;
-                        analysisData.outreach_message = payload.deep_payload?.outreach_message;
-                        analysisData.selling_points = payload.deep_payload?.selling_points || payload.light_payload?.insights;
-                        analysisData.audience_quality = payload.light_payload?.audience_quality;
-                        analysisData.engagement_insights = payload.light_payload?.engagement_summary;
-                        analysisData.latest_posts = payload.profile_data?.latest_posts;
-                        analysisData.engagement_data = payload.profile_data?.engagement;
-                    }
-                }
+// If there's payload data, extract it using new schema structure
+if (latestRun.payloads && latestRun.payloads.length > 0) {
+    const payload = latestRun.payloads[0].analysis_data;
+    if (payload) {
+        // New payload structure mapping
+        analysisData.reasons = payload.reasons || [];
+        analysisData.deep_summary = payload.deep_summary;
+        analysisData.latest_posts = payload.latest_posts;
+        analysisData.selling_points = payload.selling_points || [];
+        analysisData.outreach_message = payload.outreach_message;
+        analysisData.audience_insights = payload.audience_insights;
+        analysisData.engagement_breakdown = payload.engagement_breakdown || {
+            avg_likes: 0,
+            avg_comments: 0,
+            engagement_rate: 0
+        };
+        
+        // Legacy compatibility for older fields
+        analysisData.audience_quality = 'Medium'; // Default since not in new format
+        analysisData.engagement_insights = payload.audience_insights || 'No engagement insights available';
+    }
+}
             }
             
             console.log('✅ [LeadManager] Lead loaded successfully');
