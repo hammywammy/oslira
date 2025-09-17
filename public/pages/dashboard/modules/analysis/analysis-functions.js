@@ -89,8 +89,10 @@ buildAnalysisModalHTML(lead, analysisData, leadId) {
         return;
     }
     
-    // Updated deep analysis detection to include xray
-    const isDeepAnalysis = lead.analysis_type === 'deep' || lead.analysis_type === 'xray';
+// Updated analysis type detection for all three types
+const isLightAnalysis = lead.analysis_type === 'light';
+const isDeepAnalysis = lead.analysis_type === 'deep' || lead.analysis_type === 'xray';
+const isXrayAnalysis = lead.analysis_type === 'xray';
     const hasDeepData = isDeepAnalysis && analysisData && (analysisData.deep_summary || analysisData.summary_text);
     
     // Updated summary text mapping for new schema
