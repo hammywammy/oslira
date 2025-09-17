@@ -416,8 +416,6 @@ function createDashboardContainer() {
     container.registerSingleton('eventBus', new DashboardEventBus());
     container.registerSingleton('stateManager', new DashboardStateManager(container.get('eventBus')));
     
-    // Register external dependencies
-    container.registerSingleton('supabase', window.supabase);
     container.registerSingleton('osliraApp', window.OsliraApp);
     
     // Register API wrapper if available
