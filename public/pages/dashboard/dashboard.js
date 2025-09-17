@@ -478,7 +478,7 @@ console.log('📄 [Dashboard] Dashboard initializer ready');
             if (window.OsliraApp && window.SimpleAuth && !dashboardInitializer.initialized) {
                 console.log('📄 [Dashboard] Dependencies detected via polling, initializing...');
                 clearInterval(pollForDependencies);
-                await initializeDashboard();
+                await dashboardInitializer.init();
             }
         }, 100); // Check every 100ms instead of 500ms
         
