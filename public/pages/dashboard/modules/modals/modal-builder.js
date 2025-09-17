@@ -27,16 +27,17 @@ class ModalBuilder {
             .filter(section => section !== null)
             .join('');
         
-        // Wrap in modal container with premium styling if applicable
-        const modalContent = `
-            <div class="overflow-y-auto max-h-[90vh]">
-                <!-- Main Content - with premium glow if 90+ score -->
-                <div class="relative ${isPremium ? 'premium-modal-glow' : ''}" style="animation: staggerReveal 0.6s ease-out;">
-                    ${sections}
-                </div>
-                ${this.renderFooter()}
-            </div>
-        `;
+// Wrap in modal container with premium styling and content wrapper
+const modalContent = `
+    <div class="overflow-y-auto max-h-[90vh]">
+        <!-- Main Content - with premium glow if 90+ score -->
+        <div class="relative ${isPremium ? 'premium-modal-glow' : ''}" style="animation: staggerReveal 0.6s ease-out;">
+            ${sections}
+            ${this.wrapInContentContainer('')}
+        </div>
+        ${this.renderFooter()}
+    </div>
+`;
 
         // Initialize animations after render
         setTimeout(() => {
