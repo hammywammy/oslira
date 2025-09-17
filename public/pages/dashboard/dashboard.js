@@ -465,35 +465,12 @@ const dashboardInitializer = new DashboardInitializer();
 // Initialize immediately if DOM is ready, or when it becomes ready
 const startDashboard = async () => {
     try {
-        console.log('📄 [Dashboard] Starting dashboard auto-initialization...');
+console.log('📄 [Dashboard] Dashboard initializer ready');
         
-        const initializeDashboard = async () => {
-            try {
-                if (dashboardInitializer.initialized) {
-                    console.log('📄 [Dashboard] Already initialized, skipping');
-                    return;
-                }
-                console.log('📄 [Dashboard] Auto-initializing dashboard...');
-                await dashboardInitializer.init();
-            } catch (error) {
-                console.error('❌ [Dashboard] Auto-initialization failed:', error);
-            }
-        };
-
-// Enhanced dependency and DOM ready check
-const checkReady = () => {
-    const hasRequiredGlobals = window.OsliraApp && window.SimpleAuth;
-    const isDOMReady = document.readyState === 'complete' || 
-                       (document.readyState === 'interactive' && document.querySelector('.dashboard'));
-    
-    return hasRequiredGlobals && isDOMReady;
-};
-
-if (checkReady()) {
-    console.log('📄 [Dashboard] All dependencies and DOM ready, initializing immediately');
-    await initializeDashboard();
-    return;
-}
+        // Initialization will be controlled by TimingManager
+        window.addEventListener('oslira:timing:ready', () => {
+            console.log('📄 [Dashboard] TimingManager ready, dashboard can proceed');
+        });
         
         // 2. Polling with shorter interval for faster response
         console.log('📄 [Dashboard] Setting up dependency polling...');
