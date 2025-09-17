@@ -300,8 +300,8 @@ async loadPageScripts(pageName) {
         
         console.log(`📦 [ScriptLoader] Loading ${pageConfig.scripts.length} scripts for ${pageName}`);
         
-        // Load timing manager first for centralized control
-        await this.loadScript('timing-manager', '../public/core/timing-manager.js');
+// Load timing manager first for centralized control
+await this.loadScript('timing-manager', '/core/timing-manager.js');
         
         // Load sidebar for authenticated pages
         if (pageConfig.requiresAuth && pageName !== 'auth' && pageName !== 'onboarding') {
@@ -505,10 +505,16 @@ async initializeApiClient() {
     wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
+
     
+    
+// =============================================================================
+    // PUBLIC API METHODS
     // =============================================================================
-    // PUBLIC DEBUG API
-    // =============================================================================
+    
+    isLoaded(scriptName) {
+        return this.loadedScripts.has(scriptName);
+    }
     
     getLoadedScripts() {
         return Array.from(this.loadedScripts);
@@ -519,18 +525,34 @@ async initializeApiClient() {
     }
     
     async reloadScript(name) {
+        // Remove from loaded and failed sets
         this.loadedScripts.delete(name);
         this.failedScripts.delete(name);
-        this.loadingPromises.delete(name);
         
-        const pageConfig = this.pageConfigs[window.OsliraEnv?.CURRENT_PAGE];
-        const scriptPath = pageConfig?.scripts.find(path => path.includes(name));
-        
-        if (scriptPath) {
-            await this.loadScript(name, scriptPath);
+        // Find the script path from core scripts or page configs
+        let scriptPath;
+        if (this.coreScripts.includes(name)) {
+            scriptPath = name === 'supabase' ? 
+                'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2' : 
+                `/core/${name}.js`;
         } else {
-            console.error(`Script ${name} not found in current page configuration`);
+            // Search in page configs for the script path
+            for (const pageConfig of Object.values(this.pageConfigs)) {
+                const found = pageConfig.scripts?.find(path => 
+                    this.extractScriptName(path) === name
+                );
+                if (found) {
+                    scriptPath = found;
+                    break;
+                }
+            }
         }
+        
+        if (!scriptPath) {
+            throw new Error(`Could not find script path for: ${name}`);
+        }
+        
+        return this.loadScript(name, scriptPath);
     }
 }
 
