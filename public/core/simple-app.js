@@ -246,6 +246,9 @@ const { data: userData, error } = await this.auth.supabase()
 // Create global instance
 window.OsliraSimpleApp = new OsliraSimpleApp();
 
+// CRITICAL: Also expose as OsliraApp for TimingManager compatibility
+window.OsliraApp = window.OsliraSimpleApp;
+
 // Auto-initialize when scripts are loaded
 window.addEventListener('oslira:scripts:loaded', async () => {
     // Skip auto-initialization on public pages
