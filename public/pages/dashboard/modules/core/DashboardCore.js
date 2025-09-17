@@ -24,6 +24,11 @@ await container.initialize();
 const businessManager = container.get('businessManager');
 await businessManager.loadBusinesses();
 
+// Load lead data after businesses are loaded
+console.log('📊 [DashboardCore] Loading lead data...');
+const leadManager = container.get('leadManager');
+await leadManager.loadDashboardData();
+
 // Render dashboard UI after data is loaded
 console.log('🎨 [DashboardCore] Rendering dashboard UI...');
 await this.renderDashboardUI(container);
