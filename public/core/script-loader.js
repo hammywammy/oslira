@@ -61,6 +61,9 @@ this.coreScripts = [
     '/pages/dashboard/modules/leads/lead-manager.js',
     '/pages/dashboard/modules/leads/lead-renderer.js',
 
+    // modals (KEEP THESE - they're different functions)
+    '/pages/dashboard/modules/modals/research-modal.js',        // Research New Lead modal
+
     // realtime
     '/pages/dashboard/modules/realtime/realtime-manager.js',
 
