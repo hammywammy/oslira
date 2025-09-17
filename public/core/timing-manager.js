@@ -270,25 +270,31 @@ class TimingManager {
             await this.waitForGlobal(globalName, 3000);
         }
     }
-    async waitForSimpleApp() {
-        // First wait for OsliraSimpleApp to exist
-        await this.waitForGlobal('OsliraSimpleApp', 3000);
-        
-        // Then wait for it to be initialized
-        let attempts = 0;
-        const maxAttempts = 50; // 5 seconds
-        
-        while (attempts < maxAttempts) {
-            if (window.OsliraSimpleApp?.isInitialized()) {
+async waitForSimpleApp() {
+    // First wait for OsliraSimpleApp to exist
+    await this.waitForGlobal('OsliraSimpleApp', 3000);
+    
+    // Then wait for it to be initialized
+    let attempts = 0;
+    const maxAttempts = 50; // 5 seconds
+    
+    while (attempts < maxAttempts) {
+        try {
+            if (window.OsliraSimpleApp?.isInitialized && 
+                typeof window.OsliraSimpleApp.isInitialized === 'function' && 
+                window.OsliraSimpleApp.isInitialized()) {
                 console.log('✅ [TimingManager] OsliraSimpleApp initialized');
                 return;
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
+        } catch (error) {
+            console.warn('⚠️ [TimingManager] Error checking OsliraSimpleApp initialization:', error);
         }
-        
-        throw new Error('OsliraSimpleApp failed to initialize within timeout');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
     }
+    
+    throw new Error('OsliraSimpleApp failed to initialize within timeout');
+}
     
     async initializeSupabaseClient() {
         let attempts = 0;
@@ -339,19 +345,19 @@ class TimingManager {
         });
     }
     
-    getGlobalName(scriptName) {
-        const globalMappings = {
-            'env-manager': 'OsliraEnv',
-            'config-manager': 'OsliraConfig', 
-            'auth-manager': 'OsliraAuth',
-            'simple-app': 'OsliraApp',
-            'business-manager': 'BusinessManager',
-            'lead-manager': 'LeadManager',
-            'modal-manager': 'ModalManager'
-        };
-        
-        return globalMappings[scriptName];
-    }
+getGlobalName(scriptName) {
+    const globalMappings = {
+        'env-manager': 'OsliraEnv',
+        'config-manager': 'OsliraConfig', 
+        'auth-manager': 'OsliraAuth',
+        'simple-app': 'OsliraSimpleApp', // Use OsliraSimpleApp directly, not alias
+        'business-manager': 'BusinessManager',
+        'lead-manager': 'LeadManager',
+        'modal-manager': 'ModalManager'
+    };
+    
+    return globalMappings[scriptName];
+}
     
     dispatchReadyEvent() {
         const event = new CustomEvent('oslira:timing:ready', {
