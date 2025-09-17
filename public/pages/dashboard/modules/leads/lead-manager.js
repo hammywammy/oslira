@@ -80,7 +80,7 @@ const { data: leads, error: leadsError } = await this.supabase
         business_id,
         first_discovered_at,
         runs (
-            id,
+            run_id,
             analysis_type,
             overall_score,
             niche_fit_score,
@@ -115,7 +115,7 @@ const { data: leads, error: leadsError } = await this.supabase
             quick_summary: latestRun?.summary_text || '',
             niche_fit_score: latestRun?.niche_fit_score || 0,
             engagement_score: latestRun?.engagement_score || 0,
-            latest_run_id: latestRun?.id
+            latest_run_id: latestRun?.run_id
         };
     });
     
