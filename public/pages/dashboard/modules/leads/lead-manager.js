@@ -58,9 +58,12 @@ console.log('🔍 [LeadManager] Debug - supabase instance:', this.supabase);
             console.log('🔍 [LeadManager] Debug - supabase.from type:', typeof this.supabase?.from);
             console.log('🔍 [LeadManager] Debug - container contents:', Object.keys(this.container.dependencies || {}));
             
-            if (!this.supabase || typeof this.supabase.from !== 'function') {
-                throw new Error('Database connection not ready - supabase client invalid');
-            }
+if (!this.supabase) {
+    console.warn('⚠️ [LeadManager] Supabase client not available, skipping load');
+    this.stateManager.setState('isLoading', false);
+    this.eventBus.emit(DASHBOARD_EVENTS.LOADING_END, 'leads');
+    return [];
+}
             
 const { data: leads, error: leadsError } = await this.supabase
 .from('leads')
@@ -646,18 +649,18 @@ async viewLead(leadId) {
     }
 
 get supabase() {
-        try {
-            const client = this.container.get('supabase');
-            if (!client || typeof client.from !== 'function') {
-                console.warn('⚠️ [LeadManager] Supabase client not ready yet');
-                return null;
-            }
-            return client;
-        } catch (error) {
-            console.warn('⚠️ [LeadManager] Supabase client not available:', error.message);
+    try {
+        const client = this.container.get('supabase');
+        if (!client || typeof client.from !== 'function') {
+            console.warn('⚠️ [LeadManager] Supabase client not ready yet');
             return null;
         }
+        return client;
+    } catch (error) {
+        console.warn('⚠️ [LeadManager] Supabase client not available:', error.message);
+        return null;
     }
+}
 
     
     // ===============================================================================
