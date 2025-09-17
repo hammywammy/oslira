@@ -63,19 +63,19 @@ console.log('🔍 [LeadManager] Debug - supabase instance:', this.supabase);
             }
             
 const { data: leads, error: leadsError } = await this.supabase
-    .from('leads')
+.from('leads')
 .select(`
-  lead_id, username, display_name, profile_picture_url, platform_type,
-  follower_count, first_discovered_at, last_updated_at,
-  runs(
-    run_id, analysis_type, overall_score, niche_fit_score, 
-    engagement_score, summary_text, confidence_level, created_at
+  lead_id, username, display_name, profile_picture_url, 
+  platform_type, follower_count, first_discovered_at,
+  runs!inner(
+    analysis_type, overall_score, niche_fit_score, 
+    engagement_score, created_at
   )
 `)
 .eq('user_id', user.id)
 .eq('business_id', selectedBusinessId)
-    .order('first_discovered_at', { ascending: false })
-    .limit(50);
+.order('created_at', { foreignTable: 'runs', ascending: false })
+
 
             if (leads) {
 const processedLeads = leads.map(lead => {
@@ -168,14 +168,18 @@ if (leadsError) {
                 }
             }
             
-            // Combine leads with their analysis data - EXACT LOGIC FROM ORIGINAL
-            const enrichedLeads = leadsData?.map(lead => ({
-                ...lead,
-                lead_analyses: lead.analysis_type === 'deep' && analysisDataMap.has(lead.id) 
-                    ? [analysisDataMap.get(lead.id)] 
-                    : []
-            })) || [];
-            
+ // Transform leads to expected format with runs data
+const enrichedLeads = (leadsData || []).map(lead => ({
+    ...lead,
+    id: lead.lead_id,
+    platform: lead.platform_type, 
+    score: lead.runs?.[0]?.overall_score || 0,
+    analysis_type: lead.runs?.[0]?.analysis_type || 'light',
+    created_at: lead.first_discovered_at,
+    // Keep original fields for compatibility
+    lead_analyses: lead.runs || []
+}));
+
 // RIGHT BEFORE stateManager.batchUpdate() add:
 console.log('🔍 [DEBUG] About to update state with:', {
     enrichedLeadsLength: enrichedLeads?.length,
@@ -183,7 +187,7 @@ console.log('🔍 [DEBUG] About to update state with:', {
     aboutToCallBatchUpdate: true
 });
 
-// Existing state update:
+// Update state
 this.stateManager.batchUpdate({
     'leads': enrichedLeads,
     'allLeads': enrichedLeads, 
@@ -191,44 +195,43 @@ this.stateManager.batchUpdate({
 });
 
 console.log('🔍 [DEBUG] State update completed');
-            
-            // Clear selection
-            this.stateManager.setState('selectedLeads', new Set());
-            
-            // Cache the data
-            this.dataCache.set('leads', enrichedLeads);
-            this.lastRefresh = new Date().toISOString();
-            
-            // Update global cache
-            if (this.osliraApp.cache) {
-                this.osliraApp.cache.leads = enrichedLeads;
-                this.osliraApp.cache.lastRefresh = this.lastRefresh;
-            }
-            
+
+// Clear selection
+this.stateManager.setState('selectedLeads', new Set());
+
+// Cache the data
+this.dataCache.set('leads', enrichedLeads);
+this.lastRefresh = new Date().toISOString();
+
+// Update global cache
+if (this.osliraApp.cache) {
+    this.osliraApp.cache.leads = enrichedLeads;
+    this.osliraApp.cache.lastRefresh = this.lastRefresh;
+}
+
 console.log(`✅ [LeadManager] Final result: ${enrichedLeads.length} unique leads`);
-            
-            // Initialize pagination with new data
-            this.stateManager.setState('filteredLeads', enrichedLeads);
-            if (window.dashboard?.updatePagination) {
-                window.dashboard.updatePagination();
-            }
-            
-            // Emit events
-            this.eventBus.emit(DASHBOARD_EVENTS.LEADS_LOADED, enrichedLeads);
-            this.eventBus.emit(DASHBOARD_EVENTS.DATA_LOADED, { leads: enrichedLeads });
-            
-            return enrichedLeads;
-            
-        } catch (error) {
-            console.error('❌ [LeadManager] Error loading leads:', error);
-            this.eventBus.emit(DASHBOARD_EVENTS.DATA_ERROR, error);
-            throw error;
-            
-        } finally {
-            this.stateManager.setState('isLoading', false);
-            this.eventBus.emit(DASHBOARD_EVENTS.LOADING_END, 'leads');
-        }
-    }
+
+// Initialize pagination with new data
+this.stateManager.setState('filteredLeads', enrichedLeads);
+if (window.dashboard?.updatePagination) {
+    window.dashboard.updatePagination();
+}
+
+// Emit events
+this.eventBus.emit(DASHBOARD_EVENTS.LEADS_LOADED, enrichedLeads);
+this.eventBus.emit(DASHBOARD_EVENTS.DATA_LOADED, { leads: enrichedLeads });
+
+return enrichedLeads;
+
+} catch (error) {
+    console.error('❌ [LeadManager] Error loading leads:', error);
+    this.eventBus.emit(DASHBOARD_EVENTS.DATA_ERROR, error);
+    throw error;
+    
+} finally {
+    this.stateManager.setState('isLoading', false);
+    this.eventBus.emit(DASHBOARD_EVENTS.LOADING_END, 'leads');
+}
     
     // ===============================================================================
     // LEAD DETAILS - EXTRACTED FROM dashboard.js lines 1200-1350
