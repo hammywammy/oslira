@@ -1,5 +1,5 @@
 // ===============================================================================
-// MODAL COMPONENTS SYSTEM - Modular Analysis Modal Builder
+// MODAL COMPONENTS SYSTEM - Complete Modular Analysis Modal Builder
 // ===============================================================================
 
 class ModalComponents {
@@ -21,115 +21,218 @@ class ModalComponents {
     }
 
     // ===============================================================================
+    // UTILITY METHODS
+    // ===============================================================================
+    
+    getProfileImageUrl(lead) {
+        const url = lead.profile_picture_url || lead.profile_pic_url;
+        return url ? 
+            `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=160&h=160&fit=cover&mask=circle` : 
+            '/assets/images/default-avatar.png';
+    }
+
+    getScoreGradient(score) {
+        if (score >= 85) return 'from-emerald-400 via-green-500 to-teal-600';
+        if (score >= 70) return 'from-blue-400 via-indigo-500 to-purple-600';
+        if (score >= 55) return 'from-yellow-400 via-orange-500 to-red-500';
+        if (score >= 40) return 'from-orange-400 via-red-500 to-pink-600';
+        return 'from-gray-400 via-slate-500 to-gray-600';
+    }
+
+    getMainScore(lead, analysisData, isDeepAnalysis) {
+        return isDeepAnalysis ? 
+            (analysisData?.score_total || analysisData?.overall_score || lead.score) : 
+            lead.score;
+    }
+
+    isPremiumLead(score) {
+        return score >= 90;
+    }
+
+    // ===============================================================================
+    // ANIMATION METHODS
+    // ===============================================================================
+    
+    animateScoreAndCircle(scoreElement, circleElement, targetScore) {
+        let currentScore = 0;
+        const duration = 2000;
+        const frameDuration = 16;
+        const totalFrames = duration / frameDuration;
+        const increment = targetScore / totalFrames;
+        const circumference = 251.2;
+        
+        const animate = () => {
+            currentScore += increment;
+            
+            if (currentScore >= targetScore) {
+                currentScore = targetScore;
+            }
+            
+            scoreElement.textContent = Math.round(currentScore);
+            
+            const progress = currentScore / 100;
+            const offset = circumference - (progress * circumference);
+            circleElement.style.strokeDashoffset = offset;
+            
+            if (currentScore < targetScore) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    }
+
+    initializeStaggeredReveals(container) {
+        const staggerElements = container.querySelectorAll('.stagger-reveal');
+        staggerElements.forEach((el, index) => {
+            const currentDelay = el.style.animationDelay || `${index * 0.1}s`;
+            el.style.animationDelay = currentDelay;
+        });
+    }
+
+    initializeCountUpAnimations(container) {
+        const countElements = container.querySelectorAll('.count-up');
+        countElements.forEach((el, index) => {
+            setTimeout(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    }
+
+    initializeParticleSystem(container) {
+        const particles = container.querySelectorAll('.particle');
+        particles.forEach(particle => {
+            setInterval(() => {
+                particle.style.animationDuration = `${2 + Math.random() * 2}s`;
+            }, 3000);
+        });
+    }
+
+    // ===============================================================================
     // DEFAULT COMPONENTS LIBRARY
     // ===============================================================================
     
     registerDefaultComponents() {
-        // Universal Header - Same for all analysis types
-        this.registerComponent('header', {
-            render: (lead, analysisData) => `
-                <div class="relative bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
-                    <div class="flex items-center space-x-4">
-                        <img src="${this.getProfileImageUrl(lead)}" alt="@${lead.username}" 
-                             class="w-20 h-20 rounded-full border-4 border-white/20 shadow-lg">
-                        <div class="flex-1">
-                            <h2 class="text-2xl font-bold">@${lead.username}</h2>
-                            <p class="text-white/90">${lead.display_name || ''}</p>
-                            <div class="flex items-center space-x-4 mt-2">
-                                <span class="px-3 py-1 bg-white/20 rounded-full text-sm">
-                                    ${(lead.follower_count || 0).toLocaleString()} followers
-                                </span>
-                                <span class="px-3 py-1 bg-white/20 rounded-full text-sm">
-                                    Score: ${lead.overall_score || 0}/100
-                                </span>
-                                <span class="px-3 py-1 bg-white/20 rounded-full text-sm analysis-type-badge">
-                                    ${this.getAnalysisTypeLabel(lead.analysis_type)}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `
-        });
-
-        // Universal Summary - Consistent styling across types
-        this.registerComponent('summary', {
-            render: (lead, analysisData) => `
-                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-                    <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
-                        <span class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm mr-2">📋</span>
-                        Analysis Summary
-                    </h3>
-                    <p class="text-gray-700 leading-relaxed">${this.getSummaryText(lead, analysisData)}</p>
-                </div>
-            `
-        });
-
-        // Selling Points - Reusable across deep/xray
-        this.registerComponent('sellingPoints', {
-            condition: (lead, analysisData) => analysisData?.selling_points?.length > 0,
-            render: (lead, analysisData) => `
-                <div class="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-                    <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
-                        <span class="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm mr-2">✓</span>
-                        Key Selling Points
-                    </h3>
-                    <ul class="space-y-2">
-                        ${analysisData.selling_points.map(point => `
-                            <li class="flex items-start">
-                                <span class="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                                <span class="text-sm text-gray-700">${point}</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                </div>
-            `
-        });
-
-        // Reasons - For deep/xray analysis
-        this.registerComponent('reasons', {
-            condition: (lead, analysisData) => analysisData?.reasons?.length > 0,
-            render: (lead, analysisData) => `
-                <div class="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-                    <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
-                        <span class="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm mr-2">💡</span>
-                        Analysis Reasons
-                    </h3>
-                    <ul class="space-y-2">
-                        ${analysisData.reasons.map(reason => `
-                            <li class="flex items-start">
-                                <span class="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                                <span class="text-sm text-gray-700">${reason}</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                </div>
-            `
-        });
-
-        // Engagement Metrics - For deep/xray
-        this.registerComponent('engagementMetrics', {
-            condition: (lead, analysisData) => analysisData?.engagement_breakdown,
+        
+        // ===============================================================================
+        // ANIMATED HERO HEADER COMPONENT
+        // ===============================================================================
+        this.registerComponent('heroHeader', {
             render: (lead, analysisData) => {
-                const engagement = analysisData.engagement_breakdown;
+                const isLightAnalysis = lead.analysis_type === 'light';
+                const isDeepAnalysis = lead.analysis_type === 'deep' || lead.analysis_type === 'xray';
+                const mainScore = this.getMainScore(lead, analysisData, isDeepAnalysis);
+                const isPremium = this.isPremiumLead(mainScore);
+                const profileImageUrl = this.getProfileImageUrl(lead);
+                const scoreGradient = this.getScoreGradient(mainScore);
+
                 return `
-                    <div class="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-                        <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
-                            <span class="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm mr-2">📊</span>
-                            Engagement Metrics
-                        </h3>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-sm text-gray-600">Average Likes</p>
-                                <p class="text-lg font-semibold text-gray-800">${engagement.avg_likes?.toLocaleString() || 0}</p>
+                    <!-- Premium celebration particles for 90+ scores only -->
+                    ${isPremium ? `
+                        <div class="celebration-particle" style="top: 10%; left: 10%; animation-delay: 0s;"></div>
+                        <div class="celebration-particle" style="top: 15%; left: 85%; animation-delay: 0.5s;"></div>
+                        <div class="celebration-particle" style="top: 80%; left: 15%; animation-delay: 1s;"></div>
+                        <div class="celebration-particle" style="top: 75%; left: 80%; animation-delay: 1.5s;"></div>
+                    ` : ''}
+
+                    <!-- Animated Hero Header -->
+                    <div class="relative bg-gradient-to-br ${scoreGradient} gradient-shift p-8 text-white overflow-hidden">
+                        <!-- Floating Particles -->
+                        <div class="absolute inset-0 overflow-hidden">
+                            <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+                            <div class="particle" style="left: 25%; animation-delay: 0.8s;"></div>
+                            <div class="particle" style="left: 45%; animation-delay: 1.2s;"></div>
+                            <div class="particle" style="left: 65%; animation-delay: 0.4s;"></div>
+                            <div class="particle" style="left: 85%; animation-delay: 1.6s;"></div>
+                        </div>
+                        
+                        <!-- Glassmorphism overlay -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/5 backdrop-blur-[1px]"></div>
+                        
+                        <div class="relative z-10">
+                            <!-- Profile Section -->
+                            <div class="flex items-center justify-between mb-8 stagger-reveal" style="animation-delay: 0.1s;">
+                                <div class="flex items-center space-x-6">
+                                    <div class="relative hover-3d">
+                                        <!-- Pulsing rings around profile -->
+                                        <div class="pulse-ring w-20 h-20"></div>
+                                        <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
+                                        
+                                        <img src="${profileImageUrl}" 
+                                             alt="Profile" 
+                                             class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect"
+                                             onerror="this.src='/assets/images/default-avatar.png'">
+                                        ${(lead.is_verified_account || lead.is_verified) ? `
+                                            <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
+                                                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+                                                </svg>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    
+                                    <div class="space-y-2">
+                                        <h1 class="text-3xl font-bold text-white count-up">
+                                            ${lead.display_name || lead.full_name || lead.username}
+                                        </h1>
+                                        <p class="text-xl text-white/90 count-up" style="animation-delay: 0.2s;">@${lead.username}</p>
+                                        
+                                        ${lead.profile_url ? `
+                                            <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
+                                               class="inline-flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm font-semibold">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                </svg>
+                                                <span>View Profile</span>
+                                            </a>
+                                        ` : ''}
+                                        
+                                        <div class="flex items-center space-x-3">
+                                            ${(lead.is_business_account) ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Business</span>' : ''}
+                                            ${(lead.is_private_account || lead.is_private) ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Private</span>' : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Animated Score Ring -->
+                                <div class="relative">
+                                    <div class="w-32 h-32 relative">
+                                        <!-- Background circle -->
+                                        <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                                            <circle cx="50" cy="50" r="40" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"/>
+                                            <circle id="scoreRing" cx="50" cy="50" r="40" stroke="white" stroke-width="8" fill="none"
+                                                    stroke-dasharray="251.2"
+                                                    stroke-dashoffset="251.2"
+                                                    stroke-linecap="round"/>
+                                        </svg>
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <div class="text-center">
+                                                <div id="scoreDisplay" class="text-4xl font-bold text-white score-count-up" style="animation-delay: 0.5s;">0</div>
+                                                <div class="text-sm text-white/80">Score</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Average Comments</p>
-                                <p class="text-lg font-semibold text-gray-800">${engagement.avg_comments?.toLocaleString() || 0}</p>
-                            </div>
-                            <div class="col-span-2">
-                                <p class="text-sm text-gray-600">Engagement Rate</p>
-                                <p class="text-lg font-semibold text-gray-800">${engagement.engagement_rate || 0}%</p>
+                            
+                            <!-- Animated Stats Grid -->
+                            <div class="grid grid-cols-3 gap-4 stagger-reveal" style="animation-delay: 0.2s;">
+                                <div class="group bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 hover-3d shimmer-effect transition-all duration-500 hover:bg-white/25">
+                                    <div class="text-2xl font-bold text-white count-up group-hover:scale-110 transition-transform duration-300" style="animation-delay: 0.6s;">${(lead.follower_count || lead.followers_count || 0).toLocaleString()}</div>
+                                    <div class="text-sm text-white/80">Followers</div>
+                                    <div class="absolute top-2 right-2 w-2 h-2 bg-green-400 rounded-full subtle-icon-pulse"></div>
+                                </div>
+                                <div class="group bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 hover-3d shimmer-effect transition-all duration-500 hover:bg-white/25">
+                                    <div class="text-2xl font-bold text-white count-up group-hover:scale-110 transition-transform duration-300" style="animation-delay: 0.8s;">${(lead.following_count || 0).toLocaleString()}</div>
+                                    <div class="text-sm text-white/80">Following</div>
+                                    <div class="absolute top-2 right-2 w-2 h-2 bg-blue-400 rounded-full subtle-icon-pulse" style="animation-delay: 0.5s;"></div>
+                                </div>
+                                <div class="group bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/20 hover-3d shimmer-effect transition-all duration-500 hover:bg-white/25">
+                                    <div class="text-2xl font-bold text-white count-up group-hover:scale-110 transition-transform duration-300" style="animation-delay: 1s;">${(lead.post_count || lead.posts_count || 0).toLocaleString()}</div>
+                                    <div class="text-sm text-white/80">Posts</div>
+                                    <div class="absolute top-2 right-2 w-2 h-2 bg-purple-400 rounded-full subtle-icon-pulse" style="animation-delay: 1s;"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -137,91 +240,417 @@ class ModalComponents {
             }
         });
 
-        // Audience Insights - For deep/xray
-        this.registerComponent('audienceInsights', {
-            condition: (lead, analysisData) => analysisData?.audience_insights,
+        // ===============================================================================
+        // DEEP ANALYSIS METRICS GRID COMPONENT
+        // ===============================================================================
+        this.registerComponent('metricsGrid', {
+            condition: (lead, analysisData) => lead.analysis_type === 'deep' || lead.analysis_type === 'xray',
             render: (lead, analysisData) => `
-                <div class="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4 mb-4">
-                    <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
-                        <span class="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm mr-2">👥</span>
-                        Audience Insights
-                    </h3>
-                    <p class="text-sm text-gray-700 leading-relaxed">${analysisData.audience_insights}</p>
+                <!-- Animated Metrics Grid -->
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-3 stagger-reveal" style="animation-delay: 0.3s;">
+                    <!-- Engagement Card -->
+                    <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-pink-50 to-rose-100 p-6 shadow-2xl border border-pink-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
+                        <div class="absolute -top-4 -right-4 w-20 h-20 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite;"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                                    <svg class="w-6 h-6 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent count-up">${analysisData?.engagement_score || 0}</div>
+                                    <div class="text-sm text-pink-600/80">Engagement</div>
+                                </div>
+                            </div>
+                            
+                            <h3 class="text-lg font-bold text-gray-900 mb-3">Engagement Metrics</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Avg. Likes</span>
+                                    <span class="font-bold text-pink-700 count-up">${(analysisData?.avg_likes || 0).toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Avg. Comments</span>
+                                    <span class="font-bold text-pink-700 count-up">${(analysisData?.avg_comments || 0).toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Rate</span>
+                                    <span class="font-bold text-pink-700 count-up">${analysisData?.engagement_rate ? `${analysisData.engagement_rate.toFixed(2)}%` : 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Niche Fit Card -->
+                    <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-100 p-6 shadow-2xl border border-blue-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
+                        <div class="absolute -top-4 -left-4 w-20 h-20 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 1s;"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                                    <svg class="w-6 h-6 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent count-up">${analysisData?.score_niche_fit || analysisData?.niche_fit_score || 0}</div>
+                                    <div class="text-sm text-blue-600/80">Niche Fit</div>
+                                </div>
+                            </div>
+                            
+                            <h3 class="text-lg font-bold text-gray-900 mb-3">Target Alignment</h3>
+                            <div class="space-y-3">
+                                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-2000 ease-out progress-bar" 
+                                         style="width: ${analysisData?.score_niche_fit || analysisData?.niche_fit_score || 0}%; animation-delay: 1s;"></div>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Audience Quality</span>
+                                    <span class="px-2 py-1 rounded-full text-xs font-bold ${
+                                        analysisData?.audience_quality === 'High' ? 'bg-green-500 text-white' :
+                                        analysisData?.audience_quality === 'Medium' ? 'bg-yellow-500 text-white' :
+                                        'bg-red-500 text-white'
+                                    }">${analysisData?.audience_quality || 'Unknown'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Followers Card -->
+                    <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-50 to-emerald-100 p-6 shadow-2xl border border-green-200/50 hover-3d shimmer-effect transition-all duration-700 hover:shadow-3xl">
+                        <div class="absolute -bottom-4 -right-4 w-20 h-20 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 2s;"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg group-hover:rotate-12 transition-transform duration-500">
+                                    <svg class="w-6 h-6 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent count-up">${(lead.follower_count || lead.followers_count || 0) > 1000 ? ((lead.follower_count || lead.followers_count || 0) / 1000).toFixed(1) + 'K' : (lead.follower_count || lead.followers_count || 0)}</div>
+                                    <div class="text-sm text-green-600/80">Followers</div>
+                                </div>
+                            </div>
+                            
+                            <h3 class="text-lg font-bold text-gray-900 mb-3">Reach Potential</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Category</span>
+                                    <span class="px-2 py-1 rounded-full text-xs font-bold ${
+                                        (lead.follower_count || lead.followers_count || 0) >= 10000 ? 'bg-purple-500 text-white' :
+                                        (lead.follower_count || lead.followers_count || 0) >= 1000 ? 'bg-blue-500 text-white' :
+                                        'bg-gray-500 text-white'
+                                    }">${(lead.follower_count || lead.followers_count || 0) >= 10000 ? 'Macro' : (lead.follower_count || lead.followers_count || 0) >= 1000 ? 'Micro' : 'Nano'}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">Engagement Rate</span>
+                                    <span class="font-bold text-green-700">${analysisData?.engagement_rate ? `${analysisData.engagement_rate.toFixed(2)}%` : 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `
         });
 
-        // Outreach Message - For deep/xray
+        // ===============================================================================
+        // AI SUMMARY COMPONENT
+        // ===============================================================================
+        this.registerComponent('aiSummary', {
+            render: (lead, analysisData) => {
+                const isDeepAnalysis = lead.analysis_type === 'deep' || lead.analysis_type === 'xray';
+                const hasDeepData = isDeepAnalysis && analysisData && (analysisData.deep_summary || analysisData.summary_text);
+                const summaryText = hasDeepData ? 
+                    (analysisData.deep_summary || analysisData.summary_text) : 
+                    (lead.quick_summary || analysisData?.summary_text || 'No summary available for this lead.');
+
+                return `
+                    <!-- AI Summary with Morphing Border -->
+                    <div class="group relative overflow-hidden rounded-3xl bg-white p-8 shadow-2xl border-2 border-transparent bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-border hover-3d stagger-reveal" style="animation-delay: 0.4s;">
+                        <div class="absolute inset-[2px] bg-white rounded-3xl"></div>
+                        <div class="relative z-10">
+                            <div class="flex items-center space-x-4 mb-6">
+                                <div class="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                    <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                    </svg>
+                                </div>
+                                <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">AI Analysis Summary</h3>
+                            </div>
+                            <p class="text-gray-700 leading-relaxed text-lg font-light">${summaryText}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // ===============================================================================
+        // SELLING POINTS COMPONENT
+        // ===============================================================================
+        this.registerComponent('sellingPoints', {
+            condition: (lead, analysisData) => analysisData?.selling_points && analysisData.selling_points.length > 0,
+            render: (lead, analysisData) => `
+                <!-- Selling Points with Staggered Animation -->
+                <div class="group rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-100 p-8 shadow-2xl border border-yellow-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.5s;">
+                    <div class="flex items-center space-x-4 mb-6">
+                        <div class="p-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                            <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">Key Selling Points</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${analysisData.selling_points.map((point, index) => `
+                            <div class="group/item flex items-start space-x-4 p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-yellow-200/50 hover-3d shimmer-effect transition-all duration-500 hover:bg-white hover:shadow-xl count-up" style="animation-delay: ${0.6 + (index * 0.1)}s;">
+                                <div class="w-10 h-10 bg-gradient-to-br from-yellow-500 to-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-lg">
+                                    ${index + 1}
+                                </div>
+                                <span class="text-gray-700 font-medium leading-relaxed">${point}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `
+        });
+
+        // ===============================================================================
+        // OUTREACH MESSAGE COMPONENT
+        // ===============================================================================
         this.registerComponent('outreachMessage', {
             condition: (lead, analysisData) => analysisData?.outreach_message,
             render: (lead, analysisData) => `
-                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4 mb-4">
-                    <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
-                        <span class="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm mr-2">✉️</span>
-                        Suggested Outreach Message
-                    </h3>
-                    <div class="bg-white p-3 rounded text-sm text-gray-700 border border-gray-200 leading-relaxed">
-                        ${analysisData.outreach_message.replace(/\n/g, '<br>')}
+                <!-- Outreach Message with Glowing Border -->
+                <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 to-pink-100 p-8 shadow-2xl border-2 border-purple-200/50 hover-3d stagger-reveal" style="animation-delay: 0.6s;">
+                    <!-- Animated border gradient -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-1000"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center space-x-4">
+                                <div class="p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                    <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.405L3 21l2.595-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
+                                    </svg>
+                                </div>
+                                <h3 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Ready-to-Send Message</h3>
+                            </div>
+                            <button onclick="copyOutreachMessage()" class="group/btn relative overflow-hidden px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 shimmer-effect">
+                                <span class="relative z-10 flex items-center space-x-2">
+                                    <svg class="w-5 h-5 group-hover/btn:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span>Copy Message</span>
+                                </span>
+                            </button>
+                        </div>
+                        <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border-2 border-purple-200/50 shadow-inner">
+                            <p class="text-gray-700 leading-relaxed text-lg font-light" id="outreachMessage">${analysisData.outreach_message}</p>
+                        </div>
                     </div>
-                    <button onclick="copyToClipboard('${analysisData.outreach_message.replace(/'/g, "\\'")}')" 
-                            class="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm">
-                        Copy Message
-                    </button>
                 </div>
             `
         });
 
-        // Light Analysis Upgrade Notice
-        this.registerComponent('upgradeNotice', {
-            condition: (lead, analysisData) => lead.analysis_type === 'light',
+        // ===============================================================================
+        // ENGAGEMENT INSIGHTS COMPONENT
+        // ===============================================================================
+        this.registerComponent('engagementInsights', {
+            condition: (lead, analysisData) => analysisData?.engagement_insights,
             render: (lead, analysisData) => `
-                <div class="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                    <h3 class="font-semibold text-gray-800 mb-3 flex items-center">
-                        <span class="w-6 h-6 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-sm mr-2">⚡</span>
-                        Quick Analysis Complete
-                    </h3>
-                    <p class="text-sm text-gray-700 mb-3">This is a quick analysis. Upgrade to Profile or X-Ray analysis for detailed insights, engagement metrics, and personalized outreach messages.</p>
-                    <button onclick="upgradeAnalysis('${lead.lead_id}', 'deep')" 
-                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm mr-2">
-                        Upgrade to Profile
-                    </button>
-                    <button onclick="upgradeAnalysis('${lead.lead_id}', 'xray')" 
-                            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm">
-                        Upgrade to X-Ray
-                    </button>
+                <!-- Insights with Floating Elements -->
+                <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-teal-50 to-cyan-100 p-8 shadow-2xl border border-teal-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.7s;">
+                    <!-- Floating geometric shapes -->
+                    <div class="absolute top-4 right-4 w-8 h-8 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full opacity-30 group-hover:scale-150 transition-transform duration-1000" style="animation: float 4s ease-in-out infinite;"></div>
+                    <div class="absolute bottom-8 left-8 w-6 h-6 bg-gradient-to-br from-cyan-400 to-teal-500 rotate-45 opacity-20 group-hover:rotate-180 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 1s;"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="p-4 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">Pro Insights</h3>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed text-lg font-light">${analysisData.engagement_insights}</p>
+                    </div>
                 </div>
             `
         });
+
+        // ===============================================================================
+        // LIGHT ANALYSIS UPGRADE NOTICE COMPONENT
+        // ===============================================================================
+        this.registerComponent('lightAnalysisNotice', {
+            condition: (lead, analysisData) => lead.analysis_type === 'light',
+            render: (lead, analysisData) => {
+                const summaryText = lead.quick_summary || analysisData?.summary_text || 'Basic profile analysis shows potential for outreach.';
+                
+                return `
+                    <!-- Light Analysis with Animated Elements -->
+                    <div class="group relative overflow-hidden rounded-3xl bg-white p-12 shadow-2xl border-2 border-blue-200/50 text-center hover-3d stagger-reveal" style="animation-delay: 0.3s;">
+                        <!-- Pulsing background orbs -->
+                        <div class="absolute top-8 left-8 w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full opacity-10 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite;"></div>
+                        <div class="absolute bottom-8 right-8 w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full opacity-10 group-hover:scale-150 transition-transform duration-1000" style="animation: float 4s ease-in-out infinite; animation-delay: 1s;"></div>
+                        
+                        <div class="relative z-10 space-y-6">
+                            <div class="mx-auto w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-2xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-10 h-10 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent count-up">Light Analysis Complete</h3>
+                            <p class="text-gray-600 text-lg font-light max-w-2xl mx-auto count-up" style="animation-delay: 0.3s;">
+                                ${summaryText}
+                            </p>
+                            <p class="text-gray-500 max-w-xl mx-auto count-up" style="animation-delay: 0.6s;">
+                                For detailed engagement metrics, audience insights, and personalized outreach messages, run a deep analysis.
+                            </p>
+                            <button onclick="startDeepAnalysis('${lead.username}')" class="group/btn relative overflow-hidden px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-500 shimmer-effect count-up" style="animation-delay: 0.9s;">
+                                <span class="relative z-10 flex items-center space-x-3">
+                                    <svg class="w-6 h-6 group-hover/btn:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                    <span>Run Deep Analysis</span>
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // ===============================================================================
+        // REASONS COMPONENT (If needed for specific analysis types)
+        // ===============================================================================
+        this.registerComponent('reasons', {
+            condition: (lead, analysisData) => analysisData?.reasons && analysisData.reasons.length > 0,
+            render: (lead, analysisData) => `
+                <!-- Reasons Section -->
+                <div class="group rounded-3xl bg-gradient-to-br from-indigo-50 to-blue-100 p-8 shadow-2xl border border-indigo-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.5s;">
+                    <div class="flex items-center space-x-4 mb-6">
+                        <div class="p-4 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                            <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">Why This Lead Matters</h3>
+                    </div>
+                    <div class="space-y-4">
+                        ${analysisData.reasons.map((reason, index) => `
+                            <div class="flex items-start space-x-4 p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-indigo-200/50 hover-3d transition-all duration-300 count-up" style="animation-delay: ${0.6 + (index * 0.1)}s;">
+                                <div class="w-6 h-6 bg-gradient-to-br from-indigo-500 to-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                    ${index + 1}
+                                </div>
+                                <span class="text-gray-700 font-medium">${reason}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `
+        });
+
+        // ===============================================================================
+        // AUDIENCE INSIGHTS COMPONENT
+        // ===============================================================================
+        this.registerComponent('audienceInsights', {
+            condition: (lead, analysisData) => analysisData?.audience_insights,
+            render: (lead, analysisData) => `
+                <!-- Audience Insights -->
+                <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50 to-green-100 p-8 shadow-2xl border border-emerald-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.7s;">
+                    <div class="absolute top-4 left-4 w-10 h-10 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite;"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center space-x-4 mb-6">
+                            <div class="p-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">Audience Intelligence</h3>
+                        </div>
+                        <p class="text-gray-700 leading-relaxed text-lg font-light">${analysisData.audience_insights}</p>
+                    </div>
+                </div>
+            `
+        });
+
+        // ===============================================================================
+        // ENGAGEMENT METRICS COMPONENT (Alternative to metricsGrid if needed separately)
+        // ===============================================================================
+        this.registerComponent('engagementMetrics', {
+            condition: (lead, analysisData) => (lead.analysis_type === 'deep' || lead.analysis_type === 'xray') && analysisData?.engagement_score,
+            render: (lead, analysisData) => `
+                <!-- Detailed Engagement Metrics -->
+                <div class="group rounded-3xl bg-gradient-to-br from-pink-50 to-rose-100 p-8 shadow-2xl border border-pink-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.4s;">
+                    <div class="flex items-center space-x-4 mb-6">
+                        <div class="p-4 bg-gradient-to-br from-pink-500 to-rose-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                            <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">Engagement Analysis</h3>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-pink-200/50">
+                            <div class="text-2xl font-bold text-pink-700 count-up">${analysisData?.engagement_score || 0}</div>
+                            <div class="text-sm text-gray-600">Score</div>
+                        </div>
+                        <div class="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-pink-200/50">
+                            <div class="text-2xl font-bold text-pink-700 count-up">${(analysisData?.avg_likes || 0).toLocaleString()}</div>
+                            <div class="text-sm text-gray-600">Avg Likes</div>
+                        </div>
+                        <div class="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-pink-200/50">
+                            <div class="text-2xl font-bold text-pink-700 count-up">${(analysisData?.avg_comments || 0).toLocaleString()}</div>
+                            <div class="text-sm text-gray-600">Avg Comments</div>
+                        </div>
+                        <div class="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-pink-200/50">
+                            <div class="text-2xl font-bold text-pink-700 count-up">${analysisData?.engagement_rate ? `${analysisData.engagement_rate.toFixed(2)}%` : 'N/A'}</div>
+                            <div class="text-sm text-gray-600">Rate</div>
+                        </div>
+                    </div>
+                </div>
+            `
+        });
+
     }
 
     // ===============================================================================
-    // UTILITY METHODS
+    // POST-RENDER INITIALIZATION
     // ===============================================================================
     
-    getProfileImageUrl(lead) {
-        return (lead.profile_picture_url || lead.profile_pic_url) ? 
-            `https://images.weserv.nl/?url=${encodeURIComponent(lead.profile_picture_url || lead.profile_pic_url)}&w=160&h=160&fit=cover&mask=circle` : 
-            '/assets/images/default-avatar.png';
-    }
+    initializeAnimations(container, lead, analysisData) {
+        const isDeepAnalysis = lead.analysis_type === 'deep' || lead.analysis_type === 'xray';
+        const mainScore = this.getMainScore(lead, analysisData, isDeepAnalysis);
+        
+        // Initialize score animation
+        setTimeout(() => {
+            const scoreDisplay = container.querySelector('#scoreDisplay');
+            const scoreRing = container.querySelector('#scoreRing');
+            
+            if (scoreDisplay && scoreRing) {
+                this.animateScoreAndCircle(scoreDisplay, scoreRing, mainScore);
+            }
 
-    getAnalysisTypeLabel(type) {
-        const labels = {
-            light: 'Quick Analysis',
-            deep: 'Profile Analysis', 
-            xray: 'X-Ray Analysis'
-        };
-        return labels[type] || 'Unknown';
-    }
-
-    getSummaryText(lead, analysisData) {
-        return analysisData?.audience_insights || 
-               analysisData?.summary_text || 
-               lead.quick_summary || 
-               'No summary available for this lead.';
+            // Initialize staggered reveals
+            this.initializeStaggeredReveals(container);
+            
+            // Trigger count-up animations
+            this.initializeCountUpAnimations(container);
+            
+            // Initialize particle systems
+            this.initializeParticleSystem(container);
+            
+        }, 100);
     }
 }
 
-// Export component system
+// Export
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = ModalComponents;
 } else {
