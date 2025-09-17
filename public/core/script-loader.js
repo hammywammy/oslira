@@ -77,8 +77,7 @@ class ScriptLoader {
     // entrypoints
     '/pages/dashboard/modules/analysis/analysis-queue.js',
     '/pages/dashboard/dashboard.js'
-  ]
-},
+  ],
 
                 requiresAuth: true,
                 enableTailwind: true
