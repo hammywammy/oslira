@@ -301,7 +301,7 @@ async loadPageScripts(pageName) {
         console.log(`📦 [ScriptLoader] Loading ${pageConfig.scripts.length} scripts for ${pageName}`);
         
         // Load timing manager first for centralized control
-        await this.loadScript('timing-manager', '/core/timing-manager.js');
+        await this.loadScript('timing-manager', 'public/core/timing-manager.js');
         
         // Load sidebar for authenticated pages
         if (pageConfig.requiresAuth && pageName !== 'auth' && pageName !== 'onboarding') {
