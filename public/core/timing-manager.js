@@ -274,26 +274,16 @@ async waitForSimpleApp() {
     // First wait for OsliraSimpleApp to exist
     await this.waitForGlobal('OsliraSimpleApp', 3000);
     
-    // Then wait for it to be initialized
-    let attempts = 0;
-    const maxAttempts = 50; // 5 seconds
-    
-    while (attempts < maxAttempts) {
-        try {
-            if (window.OsliraSimpleApp?.isInitialized && 
-                typeof window.OsliraSimpleApp.isInitialized === 'function' && 
-                window.OsliraSimpleApp.isInitialized()) {
-                console.log('✅ [TimingManager] OsliraSimpleApp initialized');
-                return;
-            }
-        } catch (error) {
-            console.warn('⚠️ [TimingManager] Error checking OsliraSimpleApp initialization:', error);
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
+    // Then manually initialize it since we control the timing
+    try {
+        console.log('🚀 [TimingManager] Manually initializing OsliraSimpleApp...');
+        await window.OsliraSimpleApp.initialize();
+        console.log('✅ [TimingManager] OsliraSimpleApp initialized');
+        return;
+    } catch (error) {
+        console.error('❌ [TimingManager] Failed to initialize OsliraSimpleApp:', error);
+        throw new Error('OsliraSimpleApp failed to initialize within timeout');
     }
-    
-    throw new Error('OsliraSimpleApp failed to initialize within timeout');
 }
     
     async initializeSupabaseClient() {
@@ -400,10 +390,11 @@ window.OsliraTimingManager = new TimingManager();
 // Auto-start when scripts are loaded
 window.addEventListener('oslira:scripts:loaded', async () => {
     try {
+        // Small delay to ensure all script globals are available
+        await new Promise(resolve => setTimeout(resolve, 100));
         await window.OsliraTimingManager.executeInitialization();
     } catch (error) {
         console.error('❌ [TimingManager] Global initialization failed:', error);
     }
 });
-
 console.log('🕐 [TimingManager] Module loaded and ready');
