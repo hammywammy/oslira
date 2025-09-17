@@ -90,8 +90,8 @@ console.log('🔍 [LeadManager] Debug - supabase instance:', this.supabase);
             created_at
         )
     `)
-    .eq('user_id', userId)
-    .eq('business_id', businessId)
+.eq('user_id', user.id)
+.eq('business_id', selectedBusinessId)
     .order('first_discovered_at', { ascending: false })
     .limit(50);
 
