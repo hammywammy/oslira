@@ -249,6 +249,7 @@ window.OsliraSimpleApp = new OsliraSimpleApp();
 // CRITICAL: Also expose as OsliraApp for TimingManager compatibility
 window.OsliraApp = window.OsliraSimpleApp;
 
+// Remove auto-initialization - let timing-manager handle it
 // Auto-initialize when scripts are loaded
 window.addEventListener('oslira:scripts:loaded', async () => {
     // Skip auto-initialization on public pages
@@ -257,17 +258,7 @@ window.addEventListener('oslira:scripts:loaded', async () => {
         return;
     }
     
-    try {
-        console.log('🚀 [SimpleApp] Scripts loaded, initializing access control...');
-        await window.OsliraSimpleApp.initialize();
-    } catch (error) {
-        console.error('❌ [SimpleApp] Auto-initialization failed:', error);
-        
-        // Show user-friendly error if possible
-        if (window.location.pathname !== '/auth') {
-            console.log('🚫 [SimpleApp] Redirecting to auth due to initialization failure');
-            window.location.href = '/auth';
-        }
-    }
+    // Don't auto-initialize - timing-manager will handle this
+    console.log('📱 [SimpleApp] Ready for timing-manager initialization');
 });
 console.log('📱 SimpleApp ready for initialization');
