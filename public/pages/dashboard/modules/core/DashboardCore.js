@@ -109,6 +109,12 @@ static async renderDashboardUI(container) {
         if (insightsPanel && insightsPanel.renderInsightsPanel) {
             document.getElementById('insights-panel').innerHTML = insightsPanel.renderInsightsPanel();
         }
+
+        // Inject dashboard styles
+const stylesContainer = document.getElementById('dynamic-styles');
+if (stylesContainer && window.DashboardStyles) {
+    stylesContainer.innerHTML = window.DashboardStyles.getInlineStyles();
+}
         
         // Initialize Feather icons after rendering
         if (window.feather) {
