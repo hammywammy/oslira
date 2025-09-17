@@ -52,12 +52,18 @@ class LeadManager {
                 businessId: selectedBusinessId
             });
 
-                        if (!this.supabase) {
-                throw new Error('Database connection not ready');
+            
+console.log('🔍 [LeadManager] Debug - supabase instance:', this.supabase);
+            console.log('🔍 [LeadManager] Debug - supabase type:', typeof this.supabase);
+            console.log('🔍 [LeadManager] Debug - supabase.from type:', typeof this.supabase?.from);
+            console.log('🔍 [LeadManager] Debug - container contents:', Object.keys(this.container.dependencies || {}));
+            
+            if (!this.supabase || typeof this.supabase.from !== 'function') {
+                throw new Error('Database connection not ready - supabase client invalid');
             }
             
-const { data: leads, error } = await supabase
-    .from('leads')
+            const { data: leads, error } = await this.supabase
+                .from('leads')
     .select(`
         lead_id,
         username,
