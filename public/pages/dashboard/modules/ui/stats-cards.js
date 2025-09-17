@@ -7,6 +7,18 @@ class StatsCards {
         this.stateManager = container.get('stateManager');
     }
 
+    init() {
+    this.setupEventHandlers();
+}
+
+setupEventHandlers() {
+    // Make filterByPriority globally available
+    window.filterByPriority = (priority) => {
+        console.log(`🔍 Filtering by priority: ${priority}`);
+        this.eventBus.emit('filter:priority', { priority });
+    };
+}
+
     renderPriorityCards() {
         return `
 <!-- Lead Priority Overview -->
