@@ -231,7 +231,7 @@ return enrichedLeads;
 } finally {
     this.stateManager.setState('isLoading', false);
     this.eventBus.emit(DASHBOARD_EVENTS.LOADING_END, 'leads');
-}
+}}
     
     // ===============================================================================
     // LEAD DETAILS - EXTRACTED FROM dashboard.js lines 1200-1350
@@ -713,3 +713,6 @@ if (typeof module !== 'undefined' && module.exports) {
 } else {
     window.LeadManager = LeadManager;
 }
+
+// Ensure immediate global availability
+window.LeadManager = LeadManager;
