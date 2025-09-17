@@ -163,6 +163,57 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Global function bindings for UI elements
+window.openResearchModal = function() {
+    if (window.dashboard?.container?.get('researchHandlers')) {
+        window.dashboard.container.get('researchHandlers').openResearchModal();
+    } else if (window.ResearchHandlers) {
+        new window.ResearchHandlers().openResearchModal();
+    }
+};
+
+window.closeResearchModal = function() {
+    if (window.dashboard?.container?.get('researchHandlers')) {
+        window.dashboard.container.get('researchHandlers').closeResearchModal();
+    } else if (window.ResearchHandlers) {
+        new window.ResearchHandlers().closeResearchModal();
+    }
+};
+
+window.submitResearch = function() {
+    if (window.dashboard?.container?.get('researchHandlers')) {
+        window.dashboard.container.get('researchHandlers').submitResearch();
+    } else if (window.ResearchHandlers) {
+        new window.ResearchHandlers().submitResearch();
+    }
+};
+
+window.toggleNotifications = function() {
+    if (window.dashboard?.container?.get('dashboardHeader')) {
+        window.dashboard.container.get('dashboardHeader').toggleNotifications();
+    } else {
+        // Fallback direct DOM manipulation
+        const dropdown = document.getElementById('notificationsDropdown');
+        if (dropdown) {
+            dropdown.classList.toggle('hidden');
+        }
+    }
+};
+
+window.filterByPriority = function(priority) {
+    if (window.dashboard?.container?.get('statsCards')) {
+        window.dashboard.container.get('statsCards').filterByPriority(priority);
+    } else {
+        console.log('Filtering by priority:', priority);
+    }
+};
+
+window.clearAllSelections = function() {
+    if (window.dashboard?.container?.get('leadRenderer')) {
+        window.dashboard.container.get('leadRenderer').clearAllSelections();
+    }
+};
+
 // Close dropdowns when clicking outside
 document.addEventListener('click', function(event) {
     const notifDropdown = document.getElementById('notificationsDropdown');
