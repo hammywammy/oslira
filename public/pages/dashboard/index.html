@@ -16,131 +16,162 @@
 <!-- Main Container with Gradient Background -->
 <div class="min-h-screen dashboard-gradient-bg relative">
     <div class="wave-overlay"></div>
-        <div class="wave-pattern"></div>
+    <div class="wave-pattern"></div>
+    
+    <!-- Sidebar Container -->
+    <div id="sidebar-container"></div>
+    
+    <!-- Main Content -->
+    <main class="main-content" style="margin-left: 256px; transition: margin-left 0.3s ease; padding-top: 2rem; height: 100vh; overflow-y: auto; padding-bottom: 2rem;">
         
-        <!-- Sidebar Container -->
-        <div id="sidebar-container"></div>
+        <!-- Header Section -->
+        <div id="dashboard-header">
+            <!-- Will be rendered by dashboard-header.js -->
+        </div>
         
-        <!-- Main Content -->
-        <main class="main-content" style="margin-left: 256px; transition: margin-left 0.3s ease; padding-top: 2rem; height: 100vh; overflow-y: auto; padding-bottom: 2rem;">
+        <!-- Dashboard Content -->
+        <div class="px-6">
             
-            <!-- Header Section -->
-            <div id="dashboard-header"></div>
+            <!-- Stats Cards -->
+            <div id="priority-cards">
+                <!-- Will be rendered by stats-cards.js -->
+            </div>
             
-<!-- Dashboard Content -->
-<div class="px-6">
-    <!-- Stats Cards -->
-    <div id="priority-cards">
-        <!-- Loading placeholder -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-8 bg-gray-200 rounded w-1/2"></div>
+            <!-- Performance Metrics -->
+            <div id="performance-metrics">
+                <!-- Will be rendered by stats-cards.js -->
             </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-8 bg-gray-200 rounded w-1/2"></div>
+            
+            <!-- Recent Lead Research Section -->
+            <div id="leads-section" class="mb-8">
+                <div class="glass-white rounded-2xl overflow-hidden">
+                    <!-- Table Header -->
+                    <div class="p-6 border-b border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800">Recent Lead Research</h3>
+                                <p class="text-sm text-gray-500 mt-1">Individual leads with AI-generated scores and status</p>
+                            </div>
+                            <div class="flex items-center space-x-3">
+                                <!-- Filter Dropdown -->
+                                <select id="platform-filter" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option>All Platforms</option>
+                                    <option>LinkedIn</option>
+                                    <option>Instagram</option>
+                                    <option>Twitter</option>
+                                </select>
+                                <!-- Sort Dropdown -->
+                                <select id="sort-filter" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                    <option>Sort by: Recent</option>
+                                    <option>Sort by: Score</option>
+                                    <option>Sort by: Name</option>
+                                    <option>Sort by: Followers</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Table Content -->
+                    <div class="leads-table-container overflow-x-auto">
+                        <table class="leads-table w-full border-separate border-spacing-0">
+                            <thead class="bg-gradient-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10">
+                                <tr class="border-b border-slate-200/60">
+                                    <th class="pl-12 pr-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 280px;">Lead Profile</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 160px;">Platform</th>
+                                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 240px;">Intelligence Score</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 180px;">Analysis Type</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 140px;">Date Added</th>
+                                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider" style="width: 140px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leads-table-body" class="divide-y divide-slate-200/60 bg-white">
+                                <!-- Leads will be populated by lead-renderer.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Table Footer with Pagination -->
+                    <div class="p-4 border-t border-gray-100 bg-gray-50/50">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-gray-600">
+                                Showing <span class="font-medium" id="results-count">1-10</span> of <span class="font-medium" id="total-count">85</span> leads
+                            </p>
+                            <div class="flex items-center space-x-2">
+                                <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">Previous</button>
+                                <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg">1</button>
+                                <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">2</button>
+                                <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">3</button>
+                                <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div class="h-8 bg-gray-200 rounded w-1/2"></div>
+            
+            <!-- Insights Panel -->
+            <div id="insights-panel">
+                <!-- Will be rendered by insights-panel.js -->
+            </div>
+            
+        </div>
+        
+        <!-- Bulk Actions Toolbar (hidden by default) -->
+        <div id="bulk-actions-toolbar" class="hidden fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-xl shadow-lg border border-gray-200 px-6 py-3 z-40">
+            <div class="flex items-center space-x-4">
+                <span id="selection-count" class="text-sm font-medium text-gray-700">0 selected</span>
+                <div class="flex items-center space-x-2">
+                    <button class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        Bulk Analyze
+                    </button>
+                    <button class="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                        Export
+                    </button>
+                    <button class="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                        Delete
+                    </button>
+                </div>
+                <button onclick="clearAllSelections()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>
         </div>
+        
+    </main>
+    
+    <!-- Modal Containers - These will be populated by modal-manager.js -->
+    <div id="modal-containers">
+        <!-- Research Modal -->
+        <div id="researchModal"></div>
+        <!-- Lead Analysis Modal -->
+        <div id="leadAnalysisModal"></div>
+        <!-- Bulk Import Modal -->
+        <div id="bulkImportModal"></div>
+        <!-- Duplicate Lead Modal -->
+        <div id="duplicateModal"></div>
     </div>
     
-    <div id="performance-metrics">
-        <!-- Loading placeholder -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-                <div class="h-6 bg-gray-200 rounded w-1/3"></div>
-            </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-                <div class="h-6 bg-gray-200 rounded w-1/3"></div>
-            </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-                <div class="h-6 bg-gray-200 rounded w-1/3"></div>
-            </div>
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 animate-pulse">
-                <div class="h-4 bg-gray-200 rounded w-2/3 mb-2"></div>
-                <div class="h-6 bg-gray-200 rounded w-1/3"></div>
-            </div>
-        </div>
-    </div>
-    
-<!-- Table Content -->
-<div class="leads-table-container overflow-x-auto">
-    <table class="leads-table w-full border-separate border-spacing-0">
-        <thead class="bg-gradient-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10">
-            <tr class="border-b border-slate-200/60">
-                <th class="pl-12 pr-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 280px;">Lead Profile</th>
-                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 160px;">Platform</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 240px;">Intelligence Score</th>
-                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 180px;">Analysis Type</th>
-                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 140px;">Date Added</th>
-                <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider" style="width: 140px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody id="leads-table-body" class="divide-y divide-slate-200/60 bg-white">
-            <!-- Leads will be populated by JavaScript -->
-        </tbody>
-    </table>
 </div>
-    
-    <!-- Insights Panel -->
-    <div id="insights-panel">
-        <div class="bg-white rounded-xl p-6 shadow-sm border border-gray-200 animate-pulse">
-            <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-            <div class="h-4 bg-gray-200 rounded w-full mb-2"></div>
-            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-        </div>
-    </div>
-</div>
-        </main>
-    </div>
-    
-    <!-- Modal Containers -->
-    <div id="research-modal"></div>
-    <div id="lead-analysis-modal"></div>
-    <div id="bulk-import-modal"></div>
-    <div id="duplicate-modal"></div>
-    
-    <!-- Initialize Dashboard -->
-    <script>
-        // Initialize Feather Icons
+
+<!-- Global Function Bindings Script -->
+<script>
+// Initialize Feather Icons when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof feather !== 'undefined') {
         feather.replace();
-        
-        // Initialize counter animations
-        const counters = document.querySelectorAll('.count-animation');
-        counters.forEach(counter => {
-            const target = parseInt(counter.innerText);
-            let count = 0;
-            const increment = target / 50;
-            
-            const updateCount = () => {
-                if (count < target) {
-                    count += increment;
-                    counter.innerText = Math.ceil(count);
-                    setTimeout(updateCount, 20);
-                } else {
-                    counter.innerText = target;
-                }
-            };
-            
-            updateCount();
-        });
-        
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(event) {
-            const notifDropdown = document.getElementById('notificationsDropdown');
-            const notifButton = event.target.closest('.notification-badge');
-            
-            if (notifDropdown && !notifButton && !notifDropdown.contains(event.target)) {
-                notifDropdown.classList.add('hidden');
-            }
-        });
-    </script>
+    }
+});
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(event) {
+    const notifDropdown = document.getElementById('notificationsDropdown');
+    const notifButton = event.target.closest('.notification-badge');
+    
+    if (notifDropdown && !notifButton && !notifDropdown.contains(event.target)) {
+        notifDropdown.classList.add('hidden');
+    }
+});
+</script>
 </body>
 </html>
