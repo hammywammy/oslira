@@ -213,22 +213,45 @@ if (!tableBody) {
         
         const platformConfig = getPlatformConfig(lead.platform);
         
-        // Enhanced analysis type badge
-        const analysisConfig = lead.analysis_type === 'deep' 
-            ? { 
+// Enhanced analysis type badge with updated 3-type system
+const getAnalysisConfig = (analysisType) => {
+    switch (analysisType) {
+        case 'light':
+            return { 
+                class: 'bg-gradient-to-br from-emerald-50 to-green-50 text-emerald-700 hover:from-emerald-100 hover:to-green-100', 
+                label: 'Quick', 
+                icon: '⚡',
+                gradient: 'from-emerald-400 to-green-500',
+                iconBg: 'bg-emerald-100'
+            };
+        case 'deep':
+            return { 
+                class: 'bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 hover:from-blue-100 hover:to-indigo-100', 
+                label: 'Profile', 
+                icon: '👤',
+                gradient: 'from-blue-400 to-indigo-500',
+                iconBg: 'bg-blue-100'
+            };
+        case 'xray':
+            return { 
                 class: 'bg-gradient-to-br from-purple-50 to-violet-50 text-purple-700 hover:from-purple-100 hover:to-violet-100', 
-                label: 'Deep Analysis', 
-                icon: '🔍',
+                label: 'X-Ray Analysis', 
+                icon: '🔬',
                 gradient: 'from-purple-400 to-violet-500',
                 iconBg: 'bg-purple-100'
-            }
-            : { 
+            };
+        default:
+            return { 
                 class: 'bg-gradient-to-br from-slate-50 to-gray-50 text-slate-600 hover:from-slate-100 hover:to-gray-100', 
-                label: 'Light Analysis', 
-                icon: '👁️',
+                label: 'Unknown', 
+                icon: '❓',
                 gradient: 'from-slate-400 to-gray-500',
                 iconBg: 'bg-slate-100'
             };
+    }
+};
+
+const analysisConfig = getAnalysisConfig(lead.analysis_type);
 
         // Enhanced date formatting
         const dateKey = lead.updated_at || lead.created_at;
