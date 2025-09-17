@@ -150,7 +150,11 @@ class DashboardApp {
         }, []);
         // Register UI components
 container.registerFactory('dashboardHeader', () => new window.DashboardHeader(container));
-container.registerFactory('statsCards', () => new window.StatsCards(container));
+container.registerFactory('statsCards', () => {
+    const instance = new window.StatsCards(container);
+    if (instance.init) instance.init();
+    return instance;
+});
 container.registerFactory('leadsTable', () => new window.LeadsTable(container));
 container.registerFactory('insightsPanel', () => new window.InsightsPanel(container));
         
