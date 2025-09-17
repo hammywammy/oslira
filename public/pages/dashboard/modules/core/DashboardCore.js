@@ -98,11 +98,16 @@ static async renderDashboardUI(container) {
             }
         }
         
-        // Render leads table
-        const leadsTable = container.get('leadsTable');
-        if (leadsTable && leadsTable.renderTableContainer) {
-            document.getElementById('leads-table').innerHTML = leadsTable.renderTableContainer();
-        }
+// Render leads table - check for correct container ID
+const leadsTable = container.get('leadsTable');
+if (leadsTable && leadsTable.renderTableContainer) {
+    const leadsSection = document.getElementById('leads-section');
+    if (leadsSection) {
+        leadsSection.innerHTML = leadsTable.renderTableContainer();
+    } else {
+        console.error('❌ [DashboardCore] leads-section element not found');
+    }
+}
         
         // Render insights panel
         const insightsPanel = container.get('insightsPanel');
