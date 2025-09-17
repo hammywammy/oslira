@@ -25,58 +25,60 @@ this.coreScripts = [
         // Page-specific script configurations
         this.pageConfigs = {
 'dashboard': {
-  scripts: [
-    '/core/sidebar/sidebar-manager.js',
-
-    // core
-    '/pages/dashboard/modules/core/DashboardCore.js',
-    '/pages/dashboard/modules/core/DashboardErrorSystem.js',
-    '/pages/dashboard/modules/core/DashboardEventSystem.js',
-    '/pages/dashboard/modules/core/dashboard-app.js',
-    '/pages/dashboard/modules/core/dependency-container.js',
-    '/pages/dashboard/modules/core/event-bus.js',
-    '/pages/dashboard/modules/core/state-manager.js',
-
-    // modals system (MUST load before analysis-functions)
-    '/pages/dashboard/modules/modals/components/modal-components.js',
-    '/pages/dashboard/modules/modals/configs/analysis-configs.js',
-    '/pages/dashboard/modules/modals/modal-builder.js',
-
-    // analysis (now depends on modal system)
-    '/pages/dashboard/modules/analysis/analysis-functions.js',
-    '/pages/dashboard/modules/analysis/analysis-modal.js',
-    '/pages/dashboard/modules/analysis/analysis-queue.js',
-
-    // bulk
-    '/pages/dashboard/modules/bulk/bulk-upload.js',
-
-    // business
-    '/pages/dashboard/modules/business/business-manager.js',
-
-    // handlers
-    '/pages/dashboard/modules/handlers/lead-analysis-handlers.js',
-    '/pages/dashboard/modules/handlers/research-handlers.js',
-
-    // leads
-    '/pages/dashboard/modules/leads/lead-manager.js',
-    '/pages/dashboard/modules/leads/lead-renderer.js',
-
-    // modals (KEEP THESE - they're different functions)
-    '/pages/dashboard/modules/modals/research-modal.js',        // Research New Lead modal
-
-    // realtime
-    '/pages/dashboard/modules/realtime/realtime-manager.js',
-
-    // stats
-    '/pages/dashboard/modules/stats/stats-calculator.js',
-
-    // ui
-    '/pages/dashboard/modules/ui/dashboard-header.js',
-    '/pages/dashboard/modules/ui/dashboard-styles.js',
-    '/pages/dashboard/modules/ui/insights-panel.js',
-    '/pages/dashboard/modules/ui/leads-table.js',
-    '/pages/dashboard/modules/ui/modal-manager.js'
-  ],
+                scripts: [
+                    // Core infrastructure (load first)
+                    '/core/sidebar/sidebar-manager.js',
+                    
+                    // Dashboard core systems (must load in order)
+                    '/pages/dashboard/modules/core/DashboardCore.js',
+                    '/pages/dashboard/modules/core/DashboardErrorSystem.js',
+                    '/pages/dashboard/modules/core/DashboardEventSystem.js',
+                    '/pages/dashboard/modules/core/dashboard-app.js',
+                    '/pages/dashboard/modules/core/dependency-container.js',
+                    '/pages/dashboard/modules/core/event-bus.js',
+                    '/pages/dashboard/modules/core/state-manager.js',
+                    
+                    // Modal system (CRITICAL: Must load before analysis-functions)
+                    '/pages/dashboard/modules/modals/components/modal-components.js',
+                    '/pages/dashboard/modules/modals/configs/analysis-configs.js', 
+                    '/pages/dashboard/modules/modals/modal-builder.js',
+                    
+                    // Analysis system (depends on modal system)
+                    '/pages/dashboard/modules/analysis/analysis-functions.js',
+                    '/pages/dashboard/modules/analysis/analysis-modal.js',
+                    '/pages/dashboard/modules/analysis/analysis-queue.js',
+                    
+                    // Business logic modules
+                    '/pages/dashboard/modules/bulk/bulk-upload.js',
+                    '/pages/dashboard/modules/business/business-manager.js',
+                    
+                    // Event handlers
+                    '/pages/dashboard/modules/handlers/lead-analysis-handlers.js',
+                    '/pages/dashboard/modules/handlers/research-handlers.js',
+                    
+                    // Lead management
+                    '/pages/dashboard/modules/leads/lead-manager.js',
+                    '/pages/dashboard/modules/leads/lead-renderer.js',
+                    
+                    // Modals (KEEP THESE - they're different functions)
+                    '/pages/dashboard/modules/modals/research-modal.js',
+                    
+                    // Real-time systems
+                    '/pages/dashboard/modules/realtime/realtime-manager.js',
+                    
+                    // Statistics and calculations
+                    '/pages/dashboard/modules/stats/stats-calculator.js',
+                    
+                    // UI components
+                    '/pages/dashboard/modules/ui/dashboard-header.js',
+                    '/pages/dashboard/modules/ui/dashboard-styles.js',
+                    '/pages/dashboard/modules/ui/insights-panel.js',
+                    '/pages/dashboard/modules/ui/leads-table.js',
+                    '/pages/dashboard/modules/ui/modal-manager.js',
+                    
+                    // Main dashboard application (must load last)
+                    '/pages/dashboard/dashboard.js'
+                ],
 
                 requiresAuth: true,
                 enableTailwind: true
