@@ -72,11 +72,18 @@ displayLeads(leads = null) {
         tableBodyExists: !!tableBody
     });
     
-    if (!tableBody) {
-        console.warn('⚠️ [LeadRenderer] Table body element not found');
-        this.createTableStructureIfMissing();
+if (!tableBody) {
+    console.warn('⚠️ [LeadRenderer] Table body element not found, creating structure...');
+    this.createTableStructureIfMissing();
+    // Try to get the table body again after creating structure
+    const newTableBody = document.getElementById('leads-table-body');
+    if (!newTableBody) {
+        console.error('❌ [LeadRenderer] Could not create table structure');
         return;
     }
+    // Continue with the newly created table body
+    tableBody = newTableBody;
+}
     
     console.log(`🎨 [LeadRenderer] Displaying ${leadsToDisplay?.length || 0} leads with enhanced styling`);
         
