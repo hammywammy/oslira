@@ -16,14 +16,17 @@ class DashboardCore {
             // Pre-resolve async dependencies BEFORE module initialization
             await this.preResolveAsyncDependencies(container);
             
-            // Initialize all modules
-            console.log('🔄 [DashboardCore] Initializing modules...');
-            await container.initialize();
+// Initialize all modules
+console.log('🔄 [DashboardCore] Initializing modules...');
+await container.initialize();
 
-            
-            // Trigger business loading after all dependencies are initialized
-            const businessManager = container.get('businessManager');
-            await businessManager.loadBusinesses();
+// Trigger business loading after all dependencies are initialized
+const businessManager = container.get('businessManager');
+await businessManager.loadBusinesses();
+
+// Render dashboard UI after data is loaded
+console.log('🎨 [DashboardCore] Rendering dashboard UI...');
+await this.renderDashboardUI(container);
             
             console.log('✅ [DashboardCore] Initialization completed');
             return true;
@@ -72,6 +75,47 @@ class DashboardCore {
         
         throw new Error('SimpleAuth Supabase client not ready after timeout');
     }
+
+    /**
+ * Render all dashboard UI components
+ */
+static async renderDashboardUI(container) {
+    try {
+        // Render header
+        const dashboardHeader = container.get('dashboardHeader');
+        if (dashboardHeader) {
+            document.getElementById('dashboard-header').innerHTML = dashboardHeader.renderHeader();
+        }
+        
+        // Render stats cards
+        const statsCards = container.get('statsCards');
+        if (statsCards) {
+            document.getElementById('priority-cards').innerHTML = statsCards.renderStatsCards();
+        }
+        
+        // Render leads table
+        const leadsTable = container.get('leadsTable');
+        if (leadsTable) {
+            document.getElementById('leads-table').innerHTML = leadsTable.renderTableContainer();
+        }
+        
+        // Render insights panel
+        const insightsPanel = container.get('insightsPanel');
+        if (insightsPanel) {
+            document.getElementById('insights-panel').innerHTML = insightsPanel.renderInsightsPanel();
+        }
+        
+        // Initialize Feather icons after rendering
+        if (window.feather) {
+            window.feather.replace();
+        }
+        
+        console.log('✅ [DashboardCore] Dashboard UI rendered');
+        
+    } catch (error) {
+        console.error('❌ [DashboardCore] UI rendering failed:', error);
+    }
+}
     
     /**
      * Setup initial dashboard data
