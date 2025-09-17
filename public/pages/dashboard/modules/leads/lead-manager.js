@@ -97,27 +97,45 @@ const { data: leads, error: leadsError } = await this.supabase
 
             if (leads) {
 const processedLeads = leads.map(lead => {
-    // Get the most recent run
+    // Get the most recent run - the runs are already joined
     const latestRun = lead.runs && lead.runs.length > 0
         ? lead.runs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
         : null;
     
     return {
-        ...lead,
-        // Fix ID mapping - UI expects 'id' but DB has 'lead_id'
-        id: lead.lead_id,
-        // Add backward compatibility fields
+        // Map database fields to UI expected fields
+        id: lead.lead_id,  // Critical: UI expects 'id' not 'lead_id'
+        username: lead.username,
+        display_name: lead.display_name,
+        profile_picture_url: lead.profile_picture_url,
+        bio_text: lead.bio_text,
+        follower_count: lead.follower_count,
+        following_count: lead.following_count,
+        post_count: lead.post_count,
+        is_verified_account: lead.is_verified_account,
+        platform_type: lead.platform_type,
+        profile_url: lead.profile_url,
+        user_id: lead.user_id,
+        business_id: lead.business_id,
+        first_discovered_at: lead.first_discovered_at,
+        
+        // Backward compatibility fields
         profile_pic_url: lead.profile_picture_url,
         followers_count: lead.follower_count,
         platform: lead.platform_type || 'instagram',
         created_at: lead.first_discovered_at,
-        // Analysis data from latest run
+        
+        // Analysis data from runs table (via JOIN)
         score: latestRun?.overall_score || 0,
         analysis_type: latestRun?.analysis_type || 'none',
         quick_summary: latestRun?.summary_text || '',
         niche_fit_score: latestRun?.niche_fit_score || 0,
         engagement_score: latestRun?.engagement_score || 0,
-        latest_run_id: latestRun?.run_id
+        latest_run_id: latestRun?.run_id,
+        confidence_level: latestRun?.confidence_level || 0,
+        
+        // Keep original runs data for reference
+        runs: lead.runs || []
     };
 });
     
