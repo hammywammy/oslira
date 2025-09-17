@@ -37,7 +37,12 @@ this.coreScripts = [
     '/pages/dashboard/modules/core/event-bus.js',
     '/pages/dashboard/modules/core/state-manager.js',
 
-    // analysis
+    // modals system (MUST load before analysis-functions)
+    '/pages/dashboard/modules/modals/components/modal-components.js',
+    '/pages/dashboard/modules/modals/configs/analysis-configs.js',
+    '/pages/dashboard/modules/modals/modal-builder.js',
+
+    // analysis (now depends on modal system)
     '/pages/dashboard/modules/analysis/analysis-functions.js',
     '/pages/dashboard/modules/analysis/analysis-modal.js',
     '/pages/dashboard/modules/analysis/analysis-queue.js',
@@ -56,10 +61,6 @@ this.coreScripts = [
     '/pages/dashboard/modules/leads/lead-manager.js',
     '/pages/dashboard/modules/leads/lead-renderer.js',
 
-    // modals
-    '/pages/dashboard/modules/modals/lead-analysis-modal.js',
-    '/pages/dashboard/modules/modals/research-modal.js',
-
     // realtime
     '/pages/dashboard/modules/realtime/realtime-manager.js',
 
@@ -71,12 +72,7 @@ this.coreScripts = [
     '/pages/dashboard/modules/ui/dashboard-styles.js',
     '/pages/dashboard/modules/ui/insights-panel.js',
     '/pages/dashboard/modules/ui/leads-table.js',
-    '/pages/dashboard/modules/ui/modal-manager.js',
-    '/pages/dashboard/modules/ui/stats-cards.js',
-
-    // entrypoints
-    '/pages/dashboard/modules/analysis/analysis-queue.js',
-    '/pages/dashboard/dashboard.js'
+    '/pages/dashboard/modules/ui/modal-manager.js'
   ],
 
                 requiresAuth: true,
