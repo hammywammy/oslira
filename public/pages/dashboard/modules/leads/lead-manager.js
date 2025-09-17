@@ -176,12 +176,21 @@ if (leadsError) {
                     : []
             })) || [];
             
-            // Update state
-            this.stateManager.batchUpdate({
-                'leads': enrichedLeads,
-                'allLeads': enrichedLeads,
-                'filteredLeads': enrichedLeads
-            });
+// RIGHT BEFORE stateManager.batchUpdate() add:
+console.log('🔍 [DEBUG] About to update state with:', {
+    enrichedLeadsLength: enrichedLeads?.length,
+    sampleLead: enrichedLeads?.[0],
+    aboutToCallBatchUpdate: true
+});
+
+// Existing state update:
+this.stateManager.batchUpdate({
+    'leads': enrichedLeads,
+    'allLeads': enrichedLeads, 
+    'filteredLeads': enrichedLeads
+});
+
+console.log('🔍 [DEBUG] State update completed');
             
             // Clear selection
             this.stateManager.setState('selectedLeads', new Set());
