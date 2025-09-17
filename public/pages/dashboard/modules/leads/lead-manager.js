@@ -51,6 +51,10 @@ class LeadManager {
                 userId: user.id,
                 businessId: selectedBusinessId
             });
+
+                        if (!this.supabase) {
+                throw new Error('Database connection not ready');
+            }
             
 const { data: leads, error } = await supabase
     .from('leads')
@@ -619,8 +623,19 @@ async viewLead(leadId) {
         this.loadDashboardData();
     }
 
-    get supabase() {
-    return this.container.get('supabase');
+get supabase() {
+        try {
+            const client = this.container.get('supabase');
+            if (!client || typeof client.from !== 'function') {
+                console.warn('⚠️ [LeadManager] Supabase client not ready yet');
+                return null;
+            }
+            return client;
+        } catch (error) {
+            console.warn('⚠️ [LeadManager] Supabase client not available:', error.message);
+            return null;
+        }
+    }
 }
     
     // ===============================================================================
