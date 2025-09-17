@@ -42,71 +42,10 @@
                 <!-- Will be rendered by stats-cards.js -->
             </div>
             
-            <!-- Recent Lead Research Section -->
-            <div id="leads-section" class="mb-8">
-                <div class="glass-white rounded-2xl overflow-hidden">
-                    <!-- Table Header -->
-                    <div class="p-6 border-b border-gray-100">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-800">Recent Lead Research</h3>
-                                <p class="text-sm text-gray-500 mt-1">Individual leads with AI-generated scores and status</p>
-                            </div>
-                            <div class="flex items-center space-x-3">
-                                <!-- Filter Dropdown -->
-                                <select id="platform-filter" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                    <option>All Platforms</option>
-                                    <option>LinkedIn</option>
-                                    <option>Instagram</option>
-                                    <option>Twitter</option>
-                                </select>
-                                <!-- Sort Dropdown -->
-                                <select id="sort-filter" class="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                    <option>Sort by: Recent</option>
-                                    <option>Sort by: Score</option>
-                                    <option>Sort by: Name</option>
-                                    <option>Sort by: Followers</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Table Content -->
-                    <div class="leads-table-container overflow-x-auto">
-                        <table class="leads-table w-full border-separate border-spacing-0">
-                            <thead class="bg-gradient-to-r from-slate-50 to-slate-100/80 backdrop-blur-sm sticky top-0 z-10">
-                                <tr class="border-b border-slate-200/60">
-                                    <th class="pl-12 pr-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 280px;">Lead Profile</th>
-                                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 160px;">Platform</th>
-                                    <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 240px;">Intelligence Score</th>
-                                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 180px;">Analysis Type</th>
-                                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200/40" style="width: 140px;">Date Added</th>
-                                    <th class="px-6 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider" style="width: 140px;">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="leads-table-body" class="divide-y divide-slate-200/60 bg-white">
-                                <!-- Leads will be populated by lead-renderer.js -->
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Table Footer with Pagination -->
-                    <div class="p-4 border-t border-gray-100 bg-gray-50/50">
-                        <div class="flex items-center justify-between">
-                            <p class="text-sm text-gray-600">
-                                Showing <span class="font-medium" id="results-count">1-10</span> of <span class="font-medium" id="total-count">85</span> leads
-                            </p>
-                            <div class="flex items-center space-x-2">
-                                <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">Previous</button>
-                                <button class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg">1</button>
-                                <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">2</button>
-                                <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">3</button>
-                                <button class="px-3 py-1.5 text-sm text-gray-600 hover:bg-white rounded-lg transition-colors">Next</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+<!-- Recent Lead Research Section -->
+<div id="leads-section" class="mb-8">
+    <!-- Will be completely rendered by leads-table.js -->
+</div>
             
             <!-- Insights Panel -->
             <div id="insights-panel">
