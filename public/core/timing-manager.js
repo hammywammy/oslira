@@ -14,23 +14,27 @@ class TimingManager {
         console.log('🕐 [TimingManager] Initialized');
     }
     
-    setupInitPhases() {
-        // Phase 1: Core Environment
-        this.addPhase('core', {
-            order: 1,
-            items: ['env-manager', 'config-manager', 'supabase'],
-            dependencies: [],
-            critical: true
-        });
-        
-        // Phase 2: Authentication
-        this.addPhase('auth', {
-            order: 2,
-            items: ['auth-manager', 'simple-app'],
-            dependencies: ['core'],
-            critical: true
-        });
-        
+setupInitPhases() {
+    const currentPage = window.OsliraEnv?.CURRENT_PAGE || 'unknown';
+    
+    // Phase 1: Core Environment (all pages)
+    this.addPhase('core', {
+        order: 1,
+        items: ['env-manager', 'config-manager', 'supabase'],
+        dependencies: [],
+        critical: true
+    });
+    
+    // Phase 2: Authentication (all pages except public)
+    this.addPhase('auth', {
+        order: 2,
+        items: ['auth-manager', 'simple-app'],
+        dependencies: ['core'],
+        critical: true
+    });
+    
+    // Only add dashboard phases for dashboard page
+    if (currentPage === 'dashboard') {
         // Phase 3: Dashboard Infrastructure
         this.addPhase('dashboard-core', {
             order: 3,
@@ -90,6 +94,7 @@ class TimingManager {
             critical: false
         });
     }
+}
     
     addPhase(name, config) {
         this.initPhases.set(name, {
