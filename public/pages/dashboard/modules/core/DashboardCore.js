@@ -76,32 +76,37 @@ await this.renderDashboardUI(container);
         throw new Error('SimpleAuth Supabase client not ready after timeout');
     }
 
-    /**
+/**
  * Render all dashboard UI components
  */
 static async renderDashboardUI(container) {
     try {
         // Render header
         const dashboardHeader = container.get('dashboardHeader');
-        if (dashboardHeader) {
+        if (dashboardHeader && dashboardHeader.renderHeader) {
             document.getElementById('dashboard-header').innerHTML = dashboardHeader.renderHeader();
         }
         
         // Render stats cards
         const statsCards = container.get('statsCards');
         if (statsCards) {
-            document.getElementById('priority-cards').innerHTML = statsCards.renderStatsCards();
+            if (statsCards.renderPriorityCards) {
+                document.getElementById('priority-cards').innerHTML = statsCards.renderPriorityCards();
+            }
+            if (statsCards.renderPerformanceMetrics) {
+                document.getElementById('performance-metrics').innerHTML = statsCards.renderPerformanceMetrics();
+            }
         }
         
         // Render leads table
         const leadsTable = container.get('leadsTable');
-        if (leadsTable) {
+        if (leadsTable && leadsTable.renderTableContainer) {
             document.getElementById('leads-table').innerHTML = leadsTable.renderTableContainer();
         }
         
         // Render insights panel
         const insightsPanel = container.get('insightsPanel');
-        if (insightsPanel) {
+        if (insightsPanel && insightsPanel.renderInsightsPanel) {
             document.getElementById('insights-panel').innerHTML = insightsPanel.renderInsightsPanel();
         }
         
