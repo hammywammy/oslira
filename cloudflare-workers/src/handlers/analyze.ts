@@ -349,7 +349,6 @@ const [userResult, business] = await Promise.all([
   }
 }
 
-// Helper function to transform pipeline results to standard interface
 function transformPipelineResult(pipelineResult: any, analysisType: string): any {
   // Extract the final analysis result based on analysis type
   const mainAnalysisKey = 'main_analysis';
@@ -361,9 +360,20 @@ function transformPipelineResult(pipelineResult: any, analysisType: string): any
     throw new Error('No analysis result found in pipeline output');
   }
   
+  // For X-Ray, flatten the nested payload structure
+  let flattenedResult = { ...mainResult };
+  if (analysisType === 'xray' && mainResult.xray_payload) {
+    flattenedResult = {
+      ...mainResult,
+      copywriter_profile: mainResult.xray_payload.copywriter_profile,
+      commercial_intelligence: mainResult.xray_payload.commercial_intelligence,
+      persuasion_strategy: mainResult.xray_payload.persuasion_strategy
+    };
+  }
+  
   // Ensure required fields for database save
   const transformedResult = {
-    ...mainResult,
+    ...flattenedResult,
     // Ensure summary_text is present
     quick_summary: mainResult.quick_summary || 
                    mainResult.summary_text || 
