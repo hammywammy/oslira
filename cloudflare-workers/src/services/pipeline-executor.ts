@@ -1,7 +1,7 @@
 import { ANALYSIS_PIPELINE_CONFIG, type WorkflowConfig, type AnalysisStage } from '../config/analysis-pipeline.js';
 import { UniversalAIAdapter, selectModel } from './universal-ai-adapter.js';
 import { logger } from '../utils/logger.js';
-import { buildXRayAnalysisPrompt, buildDeepAnalysisPrompt, buildLightAnalysisPrompt } from './prompts.js';
+import { buildXRayAnalysisPrompt, buildDeepAnalysisPrompt, buildLightAnalysisPrompt, buildMarketCompletionPrompt, getTriageJsonSchema, getPreprocessorJsonSchema, getLightAnalysisJsonSchema, getDeepAnalysisJsonSchema, getXRayAnalysisJsonSchema } from './prompts.js';
 
 export interface PipelineContext {
   profile: any;
@@ -198,6 +198,9 @@ case 'analysis':
     });
   }
 
+case 'market_completion':
+  return buildMarketCompletionPrompt(profile, context.business, results.xray_stage1);
+
       case 'context':
         return `Business: ${business.name}
 Industry: ${business.industry || 'Not specified'}
@@ -232,22 +235,50 @@ Generate a compelling one-liner description. Return JSON with business_one_liner
   }
 
 private getJsonSchema(stageType: string): any {
-    const { getTriageJsonSchema, getPreprocessorJsonSchema, getLightAnalysisJsonSchema, getDeepAnalysisJsonSchema, getXRayAnalysisJsonSchema } = require('./prompts.js');
+    // Import functions are already at top of file
     
     switch (stageType) {
       case 'triage':
         return getTriageJsonSchema();
       case 'preprocessor':
         return getPreprocessorJsonSchema();
-      case 'analysis':
-        // Use proper schema based on analysis type from context
-        if (this.currentAnalysisType === 'xray') {
-          return getXRayAnalysisJsonSchema();
-        } else if (this.currentAnalysisType === 'deep') {
-          return getDeepAnalysisJsonSchema();
-        } else {
-          return getLightAnalysisJsonSchema();
-        }
+case 'analysis':
+  // Use proper schema based on analysis type from context
+  if (this.currentAnalysisType === 'xray') {
+    return getXRayAnalysisJsonSchema();
+  } else if (this.currentAnalysisType === 'deep') {
+    return getDeepAnalysisJsonSchema();
+  } else {
+    return getLightAnalysisJsonSchema();
+  }
+
+case 'market_completion':
+  return {
+    name: 'MarketCompletionResult',
+    strict: true,
+    schema: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        complete_demographics: { type: 'string' },
+        complete_psychographics: { type: 'string' },
+        current_struggles: { type: 'array', items: { type: 'string' } },
+        night_worries: { type: 'array', items: { type: 'string' } },
+        worst_case_scenarios: { type: 'array', items: { type: 'string' } },
+        ideal_outcomes: { type: 'array', items: { type: 'string' } },
+        aspirational_goals: { type: 'array', items: { type: 'string' } },
+        emotional_rewards: { type: 'array', items: { type: 'string' } },
+        one_big_promise: { type: 'string' },
+        existing_solution_gaps: { type: 'array', items: { type: 'string' } },
+        product_service_details: { type: 'string' },
+        key_benefits: { type: 'array', items: { type: 'string' } },
+        common_objections: { type: 'array', items: { type: 'string' } },
+        implementation_concerns: { type: 'array', items: { type: 'string' } },
+        time_commitment_worries: { type: 'array', items: { type: 'string' } }
+      },
+      required: ['complete_demographics', 'complete_psychographics', 'current_struggles', 'night_worries', 'worst_case_scenarios', 'ideal_outcomes', 'aspirational_goals', 'emotional_rewards', 'one_big_promise', 'existing_solution_gaps', 'product_service_details', 'key_benefits', 'common_objections', 'implementation_concerns', 'time_commitment_worries']
+    }
+  };
 
 case 'context':
   return {
