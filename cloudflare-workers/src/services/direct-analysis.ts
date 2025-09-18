@@ -38,10 +38,10 @@ const response = await this.aiAdapter.executeRequest({
   model_name: 'gpt-5-nano',
   system_prompt: 'Rate leads fast. Return JSON only.',
   user_prompt: buildSpeedLightAnalysisPrompt(profile, business),
-  max_tokens: 800,
+  max_tokens: 2500                                                   ,
   json_schema: getLightAnalysisJsonSchema(),
   response_format: 'json',
-  temperature: 0.1
+  temperature: 0.0
 });
 
     const processingTime = Date.now() - startTime;
