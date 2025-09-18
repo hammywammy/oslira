@@ -553,22 +553,43 @@ ${(profile.latestPosts?.length || 0) > 0
 ### COPYWRITER PROFILE - Extract from Instagram patterns only
 
 **demographics**:
-Based on visual content + bio + captions:
-- Age signals: Caption formality, emoji usage, cultural references
-- Location: Tagged locations, timezone patterns, language
-- Lifestyle: Post locations (gym/travel/home), brand mentions
+Extract observable + infer missing from niche patterns:
+- Age Range: [Infer from content sophistication, cultural references, tech usage, business stage indicators]
+- Gender Identity: [From name, pronouns, content style if evident; otherwise state 'inferred from content patterns']  
+- Income Level: [Estimate from lifestyle signals, business account status, tools mentioned, audience size monetization potential]
+- Professional Background: [Bio + inferred career stage from content authority level and teaching approach]
+- Education Level: [Content complexity, vocabulary, concept familiarity, teaching methodology]
+- Family Status: [References to family, time allocation patterns, content scheduling, life stage indicators]
+- Geographic Location: [Bio location, cultural references, timezone activity, language patterns]
+- Cultural Background: [Language use, cultural references, value systems, community affiliations]
+- Values & Beliefs: [Explicit + inferred from content themes, causes supported, language choices]
+- Social Status: [Influence level, community position, verification status, collaboration patterns]
 
 **psychographics**:
-From content themes and caption style:
-- Values: What they celebrate/criticize in captions
-- Communication: Long vs short captions, question frequency, emoji density
-- Authority style: Educational vs entertainment vs inspiration
+Deep behavioral inference from content + niche positioning:
+- Core Personality Traits: [Extract from content tone + infer typical traits for faith-forward entrepreneurs in education niche]
+- Hobbies & Interests: [Mentioned + likely interests for copywriting educators: business books, skill development, faith content]
+- Day-to-Day Routines: [Posting patterns + typical schedules for content creators in this niche]
+- Media Consumption: [Referenced + infer: business podcasts, educational YouTube, copywriting resources, faith content]
+- Buying Psychology: [Infer from niche: ROI-focused, proof-driven, community-influenced decisions]
+- Decision-Making Style: [Caption style + niche patterns: research-heavy, value-alignment priority, testimonial-weighted]
+- Community & Social Circles: [Explicit + infer: entrepreneur networks, faith communities, copywriting circles, online education groups]
 
 **pain_points** (2-6 from content):
 Look for complaint patterns, questions asked, problems mentioned:
 - "Posts about specific topics suggest frustration with relevant issues"
 - "Asking followers about problems indicates struggle with those areas"
 - "Collaboration requests suggest need for partnerships"
+**current_struggles**: [Daily operational frustrations inferred from niche challenges],
+**night_worries**: [Anxiety triggers common to copywriting educators: student success, income stability, platform changes],
+**worst_case_scenarios**: [Nightmare outcomes they work to avoid: audience loss, reputation damage, income disruption],
+**ideal_outcomes**: [Success vision for copywriting educators],
+**aspirational_goals**: [Bigger life visions beyond immediate business],
+**emotional_rewards**: [Internal satisfaction drivers: impact, recognition, financial freedom],
+**one_big_promise**: [Primary transformation they offer students],
+**existing_solution_gaps**: [Market problems in copywriting education space],
+**implementation_concerns**: [Typical objections to new tools/services],
+**time_commitment_worries**: [Bandwidth concerns for busy educators]
 
 **dreams_desires** (2-6 from content):
 From aspirational posts, goals mentioned, celebration posts:
