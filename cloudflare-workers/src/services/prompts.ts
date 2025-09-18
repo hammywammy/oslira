@@ -350,10 +350,6 @@ Always return valid JSON only. Do not include markdown formatting or code blocks
 `;
 }
 
-// ===============================================================================
-// DEEP ANALYSIS PROMPTS  
-// ===============================================================================
-
 export function buildDeepAnalysisPrompt(
   profile: ProfileData, 
   business: BusinessProfile,
@@ -362,114 +358,29 @@ export function buildDeepAnalysisPrompt(
     preprocessor?: any;
   }
 ): string {
-const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 
-    ? `REAL ENGAGEMENT DATA: ${profile.engagement.engagementRate}% rate (${profile.engagement.avgLikes} avg likes, ${profile.engagement.avgComments} avg comments across ${profile.engagement.postsAnalyzed} posts)`
-    : `Estimated engagement based on ${profile.followersCount.toLocaleString()} followers`;
+  const hasEngagement = profile.engagement?.postsAnalyzed > 0;
+  const engagementData = hasEngagement 
+    ? `${profile.engagement.engagementRate}% ER (${profile.engagement.avgLikes} likes, ${profile.engagement.avgComments} comments, ${profile.engagement.postsAnalyzed} posts)`
+    : `No engagement data (${profile.followersCount} followers)`;
 
-  const triageContext = context?.triage ? `
-## TRIAGE INSIGHTS  
-- **Lead Score**: ${context.triage.lead_score}/100 (${context.triage.confidence * 100}% confidence)
-- **Focus Areas**: ${context.triage.focus_points?.join(', ') || 'General analysis'}
-` : '';
+  const recentContent = profile.latestPosts?.slice(0, 2).map(p => 
+    `"${p.caption?.slice(0, 40)}..." (${p.likesCount} likes)`
+  ).join(' | ') || 'No recent posts';
 
-  const preprocessorContext = context?.preprocessor ? `
-## EXTRACTED PROFILE FACTS
-- **Content Themes**: ${context.preprocessor.content_themes?.join(', ') || 'Unknown'}
-- **Posting Pattern**: ${context.preprocessor.posting_cadence || 'Unknown'}
-- **Collaboration History**: ${context.preprocessor.collaboration_history || 'No evidence'}
-- **Contact Readiness**: ${context.preprocessor.contact_readiness || 'Unknown'}
-- **Brand Mentions**: ${context.preprocessor.brand_mentions?.join(', ') || 'None found'}
-` : '';
+  return `PARTNERSHIP ANALYSIS
 
-  const contentInfo = (profile.latestPosts?.length || 0) > 0 
-    ? `Recent content themes: ${profile.latestPosts.slice(0, 3).map(p => `"${p.caption?.slice(0, 100) || 'Visual content'}"...`).join(' | ')}`
-    : 'Content analysis limited - no recent posts available';
+Profile: @${profile.username}
+Followers: ${profile.followersCount.toLocaleString()} | Posts: ${profile.postsCount}
+Bio: "${profile.bio || 'None'}"
+Status: ${profile.isVerified ? 'Verified' : 'Unverified'} ${profile.isBusinessAccount ? 'Business' : 'Personal'}
+Contact: ${profile.externalUrl ? 'Has link' : 'No link'}
+Engagement: ${engagementData}
+Recent: ${recentContent}
 
-  return `
-  # DEEP ANALYSIS: Partnership Intelligence Report
+Business: ${business.name} targeting ${business.target_audience}
 
-## VERIFIED PROFILE DATA
-- **Handle**: @${profile.username}
-- **Metrics**: ${profile.followersCount.toLocaleString()} followers | ${profile.postsCount} posts
-- **Bio**: "${profile.bio || 'No bio'}"
-- **Link**: ${profile.externalUrl || 'No external link'}
-- **Status**: ${profile.isVerified ? 'Verified ✓' : 'Unverified'} | ${profile.isBusinessAccount ? 'Business' : 'Personal'}
-
-## ACTUAL ENGAGEMENT DATA
-${profile.engagement && profile.engagement.postsAnalyzed > 0
-  ? `REAL METRICS from ${profile.engagement.postsAnalyzed} posts:
-    - Avg Likes: ${profile.engagement.avgLikes.toLocaleString()}
-    - Avg Comments: ${profile.engagement.avgComments.toLocaleString()}
-    - Engagement Rate: ${profile.engagement.engagementRate}%
-    - Total Interactions: ${profile.engagement.totalEngagement.toLocaleString()}`
-  : `ESTIMATED for ${profile.followersCount.toLocaleString()} followers (no post data available)`}
-
-## CONTENT ANALYSIS
-${(profile.latestPosts?.length || 0) > 0 
-  ? `Latest ${profile.latestPosts.length} posts analyzed:
-    ${profile.latestPosts.slice(0, 3).map(p => 
-      `- ${p.likesCount.toLocaleString()} likes, ${p.commentsCount} comments: "${(p.caption || '').slice(0, 50)}..."`
-    ).join('\n    ')}`
-  : 'No recent posts available for analysis'}
-
-## BUSINESS CONTEXT
-- **Company**: ${business.name}
-- **Industry**: ${business.industry}
-- **Target**: ${business.target_audience}
-- **Value Prop**: ${business.value_proposition}
-
-## DEEP ANALYSIS REQUIREMENTS
-
-### SCORING FRAMEWORK
-- **score**: Overall partnership value (0-100)
-- **engagement_score**: Based on ACTUAL data if available, else use follower-tier benchmarks
-- **niche_fit**: Alignment with ${business.target_audience}
-- **confidence_level**: ${profile.engagement?.postsAnalyzed ? '0.85-0.95 (real data)' : '0.4-0.6 (estimated)'}
-
-### DEEP PAYLOAD - BE SPECIFIC
-
-**deep_summary** (4-6 sentences):
-Start with engagement reality check. State actual ER% vs expected for their follower tier. Identify content patterns from captions/hashtags. Assess partnership viability based on measurable signals. End with specific recommendation.
-
-**selling_points** (3-8 bullets):
-ONLY claims you can defend with numbers:
-- "ER of ${profile.engagement?.engagementRate}% beats follower tier average"
-- "Consistent posting (${profile.latestPosts?.length || 0} recent posts)"
-- "High comment ratio suggests engaged community"
-- "Verified status + business account = platform trust"
-NO generic claims like "great content" or "strong influence"
-
-**outreach_message** (150-250 words):
-Open with specific metric about their engagement rate and follower count
-Reference actual content theme from their posts
-Propose specific collaboration format (Reel, Carousel, Story series)
-Include concrete success metric (target reach, engagement, conversions)
-End with clear CTA and contact preference
-
-**engagement_breakdown**:
-Use REAL data when available from profile.engagement object
-
-**audience_insights**:
-From actual post performance:
-- High engagement posts topics (from captions)
-- Comment patterns (questions vs praise vs emojis)
-- Posting time patterns if visible
-- Hashtag communities they engage
-
-**reasons** (3-10 specific points):
-Each must reference a metric or observation:
-- "ER of X% is Y% above category average"
-- "Bio contains email, suggesting openness to partnerships"
-- "Recent posts show collaborations with similar brands"
-- "Recent posts show consistent activity"
-
-### DECISION OUTPUTS
-If score >75: Provide exact outreach angle and first message
-If score 50-75: List 2-3 tests to validate fit
-If score <50: State specific disqualifiers
-
-Always return valid JSON only. Do not include markdown formatting or code blocks. Every claim must trace to profile data.
-  `;
+Score collaboration potential (0-100) and generate outreach strategy.
+Return JSON with deep_summary, selling_points, outreach_message, engagement_breakdown, audience_insights, reasons.`;
 }
 
 export function buildXRayAnalysisPrompt(
@@ -480,43 +391,20 @@ export function buildXRayAnalysisPrompt(
     preprocessor?: any;
   }
 ): string {
-  return `# X-RAY STAGE 1: Observable Data Extraction
+  const contentSample = profile.latestPosts?.slice(0, 3).map(p => 
+    `"${p.caption?.slice(0, 50)}..." (${p.likesCount}♡ ${p.commentsCount}💬)`
+  ).join(' | ') || 'No posts';
 
-## PROFILE INTELLIGENCE
-- **Handle**: @${profile.username} (${profile.followersCount.toLocaleString()} followers)
-- **Bio**: "${profile.bio || 'No bio'}"
-- **Account**: ${profile.isVerified ? 'Verified' : 'Unverified'} | ${profile.isBusinessAccount ? 'Business' : 'Personal'}
-- **Link**: ${profile.externalUrl || 'No external link'}
+  return `X-RAY PROFILE ANALYSIS
 
-## CONTENT PATTERNS
-${(profile.latestPosts?.length || 0) > 0 
-  ? `${profile.latestPosts.length} posts analyzed:
-    ${profile.latestPosts.slice(0, 5).map(p => 
-      `- "${(p.caption || '').slice(0, 100)}..." (${p.likesCount} likes, ${p.commentsCount} comments)`
-    ).join('\n    ')}`
-  : 'No content available'}
+@${profile.username} (${profile.followersCount} followers)
+Bio: "${profile.bio || 'None'}"
+Type: ${profile.isVerified ? '✓' : ''}${profile.isBusinessAccount ? 'Biz' : 'Personal'}
+Content: ${contentSample}
 
-## TASK: Extract Observable Data Only
-
-Generate ONLY what you can observe from Instagram. No speculation beyond clear patterns.
-
-### SCORING
-- **score**: Partnership viability (0-100)
-- **engagement_score**: Audience quality (0-100) 
-- **niche_fit**: Business alignment (0-100)
-- **confidence_level**: 0.7-0.9
-
-### OBSERVABLE EXTRACTION
-
-**demographics**: Age/gender/location/income ONLY if clearly evident. Otherwise state "insufficient_data"
-
-**psychographics**: Communication style, posting patterns, interests ONLY from visible content
-
-**pain_points**: Problems/frustrations mentioned in posts or bio. Maximum 3-5 specific observations.
-
-**dreams_desires**: Goals/aspirations mentioned in posts or bio. Maximum 3-5 specific observations.
-
-Return valid JSON without markdown formatting.`;
+Extract observable demographics, psychographics, pain_points, dreams_desires from visible data only.
+Score partnership viability for ${business.target_audience} business.
+Return JSON with xray_payload structure.`;
 }
 
 export function buildMarketCompletionPrompt(
@@ -696,59 +584,17 @@ export function getTriageJsonSchema() {
 }
 
 export function buildTriagePrompt(snapshot: any, businessOneLiner: string): string {
-  return `# LEAD TRIAGE: Quick Pass/Fail Decision
+  return `TRIAGE: ${businessOneLiner}
 
-## YOUR BUSINESS
-${businessOneLiner}
+@${snapshot.username} - ${snapshot.followers} followers
+${snapshot.verified ? '✓' : ''}${snapshot.private ? 'Private' : 'Public'} | "${snapshot.bio_short || 'No bio'}"
+Links: ${snapshot.external_domains.join(',') || 'None'}
+Posts: ~${snapshot.posts_30d} recent
+Content: ${snapshot.top_captions.slice(0, 2).map(cap => `"${cap.slice(0, 30)}"`).join(' | ') || 'None'}
+Engagement: ${snapshot.engagement_signals ? `${snapshot.engagement_signals.avg_likes} likes avg` : 'Unknown'}
 
-## PROFILE SNAPSHOT
-- **Username**: @${snapshot.username}
-- **Followers**: ${snapshot.followers.toLocaleString()}
-- **Status**: ${snapshot.verified ? 'Verified ✓' : 'Unverified'} | ${snapshot.private ? 'Private ⚠️' : 'Public'}
-- **Bio**: "${snapshot.bio_short || 'No bio'}"
-- **External Links**: ${snapshot.external_domains.length > 0 ? snapshot.external_domains.join(', ') : 'None'}
-- **Recent Activity**: ~${snapshot.posts_30d} posts estimated
-- **Sample Content**: ${snapshot.top_captions.length > 0 ? 
-    snapshot.top_captions.map(cap => `"${cap}..."`).join(' | ') : 
-    'No captions available'}
-- **Engagement Data**: ${snapshot.engagement_signals ? 
-    `${snapshot.engagement_signals.avg_likes.toLocaleString()} avg likes, ${snapshot.engagement_signals.avg_comments} comments (${snapshot.engagement_signals.posts_analyzed} posts)` : 
-    'Not available'}
-
-## TASK: 10-Second Lead Decision
-
-Score this profile on two dimensions:
-
-**lead_score (0-100)**: Business fit potential
-- 80-100: Clear target match, obvious collaboration potential
-- 60-79: Good fit signals, worth deeper analysis  
-- 40-59: Possible fit but unclear value
-- 20-39: Weak signals, probably wrong audience
-- 0-19: Obviously wrong fit, different niche entirely
-
-**data_richness (0-100)**: Available information quality
-- 80-100: Rich content, engagement data, clear patterns
-- 60-79: Good content samples, some engagement signals
-- 40-59: Basic profile info, limited content visibility
-- 20-39: Minimal data, private account or sparse content
-- 0-19: Almost no usable information
-
-**confidence (0-1)**: How certain are you about these scores?
-
-**focus_points**: 2-4 specific observations that drove your scores
-
-## EARLY EXIT RULES
-- If lead_score < 25 OR data_richness < 20 → Set early_exit: true
-- Otherwise → Set early_exit: false
-
-Return valid JSON without markdown code blocks or formatting:
-{
-  "lead_score": 0-100,
-  "data_richness": 0-100, 
-  "confidence": 0-1,
-  "early_exit": true|false,
-  "focus_points": ["observation 1", "observation 2", "..."]
-}`;
+Score lead_score (0-100), data_richness (0-100), confidence (0-1), early_exit (bool), focus_points (2-4 items).
+JSON only.`;
 }
 
 // ===============================================================================
@@ -789,61 +635,96 @@ export function getPreprocessorJsonSchema() {
 }
 
 export function buildPreprocessorPrompt(profile: any): string {
-  const postsData = profile.latestPosts || [];
-  const engagementData = profile.engagement || null;
+  const posts = profile.latestPosts?.slice(0, 4).map(p => 
+    `"${p.caption?.slice(0, 60)}..." (${p.likesCount}♡)`
+  ).join(' | ') || 'No posts';
 
-  return `# DATA EXTRACTION: Instagram Profile Facts
+  return `DATA EXTRACT: @${profile.username}
 
-## PROFILE OVERVIEW
-- **Username**: @${profile.username}
-- **Followers**: ${profile.followersCount.toLocaleString()}
-- **Bio**: "${profile.bio || 'No bio'}"
-- **External Link**: ${profile.externalUrl || 'None'}
-- **Account Type**: ${profile.isBusinessAccount ? 'Business' : 'Personal'} | ${profile.isVerified ? 'Verified' : 'Unverified'}
+${profile.followersCount} followers | ${profile.isBusinessAccount ? 'Business' : 'Personal'}
+Bio: "${profile.bio || 'None'}"
+Link: ${profile.externalUrl ? 'Yes' : 'No'}
+Engagement: ${profile.engagement?.engagementRate || 'Unknown'}%
+Posts: ${posts}
 
-## CONTENT ANALYSIS
-- **Posts Available**: ${postsData.length}
-- **Engagement Data**: ${engagementData ? 
-    `${engagementData.engagementRate}% rate (${engagementData.avgLikes} avg likes, ${engagementData.avgComments} comments)` : 
-    'Not available'}
+Extract posting_cadence, content_themes, audience_signals, brand_mentions, engagement_patterns, collaboration_history, contact_readiness, content_quality.
+JSON only.`;
+}
 
-## POST SAMPLES
-${postsData.slice(0, 8).map((post, i) => 
-  `**Post ${i+1}**: ${post.likesCount.toLocaleString()} likes, ${post.commentsCount} comments
-  Caption: "${(post.caption || '').slice(0, 150)}${post.caption && post.caption.length > 150 ? '...' : ''}"`
-).join('\n')}
+export function buildSpeedLightAnalysisPrompt(
+  profile: ProfileData, 
+  business: BusinessProfile
+): string {
+  const followRatio = profile.followingCount > 0 ? 
+    Math.round(profile.followersCount / profile.followingCount) : 0;
+    
+  return `LEAD SCORE for ${business.target_audience}
 
-## EXTRACTION TASK
+@${profile.username} - ${profile.followersCount.toLocaleString()} followers (${followRatio}:1 ratio)
+Bio: "${profile.bio || 'No bio'}"
+Status: ${profile.isBusinessAccount ? 'Business' : 'Personal'} | ${profile.isVerified ? 'Verified' : 'Unverified'}
+Contact: ${profile.externalUrl ? 'Website linked' : 'No link'} | ${profile.bio?.includes('@') || profile.bio?.includes('email') ? 'Email signals' : 'DM only'}
+Activity: ${profile.postsCount} posts, ${profile.latestPosts?.length || 0} recent
 
-Based ONLY on observable data above, extract:
-
-**posting_cadence**: Frequency pattern (daily/weekly/sporadic/inactive)
-
-**content_themes**: Top 3-5 recurring topics/niches from captions and context
-
-**audience_signals**: 2-4 demographic/psychographic signals about followers from comments, content style, language
-
-**brand_mentions**: List any brand names, products, or companies mentioned
-
-**engagement_patterns**: Style of engagement (high comments vs likes, question-heavy, community-focused, etc)
-
-**collaboration_history**: Evidence of sponsorships, partnerships, or promotional content
-
-**contact_readiness**: Email in bio, business account, link in bio, or other contact signals
-
-**content_quality**: Production value assessment (professional/amateur/mixed)
-
-Extract ONLY what you can verify from the data provided. Use "insufficient_data" for unclear fields.
-
-Return valid JSON without markdown code blocks or formatting:
+Return JSON:
 {
-  "posting_cadence": "...",
-  "content_themes": ["theme1", "theme2", "theme3"],
-  "audience_signals": ["signal1", "signal2"],
-  "brand_mentions": ["brand1", "brand2"],
-  "engagement_patterns": "...",
-  "collaboration_history": "...",
-  "contact_readiness": "...",
-  "content_quality": "..."
+  "score": 0-100,
+  "engagement_score": 0-100, 
+  "niche_fit": 0-100,
+  "quick_summary": "One sentence: why this lead fits/doesn't fit",
+  "confidence_level": 0.6,
+  "light_payload": {
+    "insights": ["Key insight 1", "Key insight 2"],
+    "audience_quality": "High|Medium|Low",
+    "basic_demographics": "Observable demographics or 'None'",
+    "engagement_summary": "Engagement assessment based on follower tier"
+  }
 }`;
+}
+
+export function getSpeedLightAnalysisJsonSchema() {
+  return getLightAnalysisJsonSchema(); // Reuse existing schema
+}
+
+export interface PreScreenResult {
+  shouldProcess: boolean;
+  earlyScore?: number;
+  reason?: string;
+}
+
+export function preScreenProfile(
+  profile: ProfileData, 
+  business: BusinessProfile
+): PreScreenResult {
+  // Instant rejection criteria
+  if (profile.isPrivate && profile.followersCount < 1000) {
+    return {
+      shouldProcess: false,
+      earlyScore: 15,
+      reason: 'Private account with low followers - no analysis possible'
+    };
+  }
+  
+  if (profile.followersCount === 0) {
+    return {
+      shouldProcess: false,
+      earlyScore: 0,
+      reason: 'Account has no followers'
+    };
+  }
+  
+  // Suspicious ratio check
+  const followRatio = profile.followingCount > 0 ? 
+    profile.followersCount / profile.followingCount : 999;
+    
+  if (followRatio < 0.1 && profile.followersCount > 1000) {
+    return {
+      shouldProcess: false,
+      earlyScore: 20,
+      reason: 'Suspicious follow ratio indicates bot/spam account'
+    };
+  }
+  
+  // All checks passed
+  return { shouldProcess: true };
 }
