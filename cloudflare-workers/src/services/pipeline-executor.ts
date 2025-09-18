@@ -1,6 +1,7 @@
 import { ANALYSIS_PIPELINE_CONFIG, type WorkflowConfig, type AnalysisStage } from '../config/analysis-pipeline.js';
 import { UniversalAIAdapter, selectModel } from './universal-ai-adapter.js';
 import { logger } from '../utils/logger.js';
+import { buildXRayAnalysisPrompt, buildDeepAnalysisPrompt, buildLightAnalysisPrompt } from './prompts.js';
 
 export interface PipelineContext {
   profile: any;
@@ -29,6 +30,7 @@ export class PipelineExecutor {
   private aiAdapter: UniversalAIAdapter;
   private env: any;
   private requestId: string;
+  private currentAnalysisType: string = 'light';
 
   constructor(env: any, requestId: string) {
     this.env = env;
@@ -36,7 +38,8 @@ export class PipelineExecutor {
     this.aiAdapter = new UniversalAIAdapter(env, requestId);
   }
 
-  async execute(context: PipelineContext): Promise<PipelineResult> {
+async execute(context: PipelineContext): Promise<PipelineResult> {
+    this.currentAnalysisType = context.analysis_type; // Store for schema selection
     const workflowName = context.workflow || ANALYSIS_PIPELINE_CONFIG.defaults.workflow;
     const workflow = ANALYSIS_PIPELINE_CONFIG.workflows[workflowName];
     
@@ -178,10 +181,22 @@ Recent posts: ${profile.latestPosts?.slice(0, 3).map(p => p.caption?.slice(0, 10
 Extract key facts and themes. Return JSON with content_themes, posting_cadence, collaboration_history, contact_readiness.`;
 
 case 'analysis':
-  const contextStr = results.triage ? `Score:${results.triage.lead_score}` : '';
-  const themesStr = results.preprocessor?.content_themes?.slice(0,3).join(',') || '';
-  return `@${profile.username}|${profile.followersCount}f|"${(profile.bio || '').slice(0,50)}"|${business.business_one_liner}|${contextStr}|${themesStr}
-Return JSON: score(0-100), engagement_score(0-100), niche_fit(0-100), audience_quality, engagement_insights, selling_points[], reasons[]`;
+  if (context.analysis_type === 'xray') {
+    return buildXRayAnalysisPrompt(profile, context.business, {
+      triage: results.triage,
+      preprocessor: results.preprocessor
+    });
+  } else if (context.analysis_type === 'deep') {
+    return buildDeepAnalysisPrompt(profile, context.business, {
+      triage: results.triage,
+      preprocessor: results.preprocessor
+    });
+  } else {
+    return buildLightAnalysisPrompt(profile, context.business, {
+      triage: results.triage,
+      preprocessor: results.preprocessor
+    });
+  }
 
       case 'context':
         return `Business: ${business.name}
@@ -216,63 +231,23 @@ Generate a compelling one-liner description. Return JSON with business_one_liner
     return limits[stageType] || 500;
   }
 
-  private getJsonSchema(stageType: string): any {
-    // Return appropriate JSON schema for each stage type
+private getJsonSchema(stageType: string): any {
+    const { getTriageJsonSchema, getPreprocessorJsonSchema, getLightAnalysisJsonSchema, getDeepAnalysisJsonSchema, getXRayAnalysisJsonSchema } = require('./prompts.js');
+    
     switch (stageType) {
-case 'triage':
-  return {
-    name: 'TriageResult',
-    strict: true,
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        lead_score: { type: 'integer', minimum: 0, maximum: 100 },
-        data_richness: { type: 'integer', minimum: 0, maximum: 100 },
-        confidence: { type: 'number', minimum: 0, maximum: 1 },
-        early_exit: { type: 'boolean' },
-        focus_points: { type: 'array', items: { type: 'string' } }
-      },
-      required: ['lead_score', 'data_richness', 'confidence', 'early_exit', 'focus_points']
-    }
-  };
-
-case 'preprocessor':
-  return {
-    name: 'PreprocessorResult',
-    strict: true,
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        content_themes: { type: 'array', items: { type: 'string' } },
-        posting_cadence: { type: 'string' },
-        collaboration_history: { type: 'string' },
-        contact_readiness: { type: 'string' }
-      },
-      required: ['content_themes', 'posting_cadence', 'collaboration_history', 'contact_readiness']
-    }
-  };
-
-case 'analysis':
-  return {
-    name: 'AnalysisResult',
-    strict: true,
-    schema: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        score: { type: 'integer', minimum: 0, maximum: 100 },
-        engagement_score: { type: 'integer', minimum: 0, maximum: 100 },
-        niche_fit: { type: 'integer', minimum: 0, maximum: 100 },
-        audience_quality: { type: 'string' },
-        engagement_insights: { type: 'string' },
-        selling_points: { type: 'array', items: { type: 'string' } },
-        reasons: { type: 'array', items: { type: 'string' } }
-      },
-      required: ['score', 'engagement_score', 'niche_fit', 'audience_quality', 'engagement_insights', 'selling_points', 'reasons']
-    }
-  };
+      case 'triage':
+        return getTriageJsonSchema();
+      case 'preprocessor':
+        return getPreprocessorJsonSchema();
+      case 'analysis':
+        // Use proper schema based on analysis type from context
+        if (this.currentAnalysisType === 'xray') {
+          return getXRayAnalysisJsonSchema();
+        } else if (this.currentAnalysisType === 'deep') {
+          return getDeepAnalysisJsonSchema();
+        } else {
+          return getLightAnalysisJsonSchema();
+        }
 
 case 'context':
   return {
