@@ -10,7 +10,7 @@ export interface PipelineContext {
   triage?: any;
   preprocessor?: any;
   workflow?: string;
-  model_tier?: 'premium' | 'balanced' | 'economy';
+  model_tier?: 'premium' | 'balanced' | 'economy'; // Keep for backward compatibility but unused
 }
 
 export interface PipelineResult {
@@ -107,7 +107,7 @@ async execute(context: PipelineContext): Promise<PipelineResult> {
 
   private async executeStage(stage: AnalysisStage, context: PipelineContext, results: Record<string, any>) {
 const stageKey = stage.type === 'analysis' ? context.analysis_type : stage.type;
-const modelName = selectModel(stageKey, stage.model_tier || context.model_tier || 'balanced', results);
+const modelName = selectModel(stageKey); // Remove tier parameter - now uses fixed mapping
     const prompt = this.generatePrompt(stage.type, context, results);
     
 const response = await this.aiAdapter.executeRequest({
@@ -161,11 +161,15 @@ return {
     }
   }
 
-  private generatePrompt(stageType: string, context: PipelineContext, results: Record<string, any>): string {
+private generatePrompt(stageType: string, context: PipelineContext, results: Record<string, any>): string {
     const profile = context.profile;
     const business = context.business;
     
     switch (stageType) {
+      case 'speed_analysis':
+        const { buildSpeedLightAnalysisPrompt } = require('./prompts.js');
+        return buildSpeedLightAnalysisPrompt(profile, business);
+        
 case 'triage':
   return `@${profile.username} - ${profile.followersCount} followers
 Bio: "${profile.bio || 'No bio'}"
@@ -242,6 +246,9 @@ private getJsonSchema(stageType: string): any {
         return getTriageJsonSchema();
       case 'preprocessor':
         return getPreprocessorJsonSchema();
+case 'speed_analysis':
+  return getLightAnalysisJsonSchema(); // Same structure, different prompt
+  
 case 'analysis':
   // Use proper schema based on analysis type from context
   if (this.currentAnalysisType === 'xray') {
