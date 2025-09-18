@@ -12,52 +12,11 @@ export function getLightAnalysisJsonSchema() {
       type: 'object',
       additionalProperties: false,
       properties: {
-        // Core scores (for runs table)
         score: { type: 'integer', minimum: 0, maximum: 100 },
-        engagement_score: { type: 'integer', minimum: 0, maximum: 100 },
-        niche_fit: { type: 'integer', minimum: 0, maximum: 100 },
-        quick_summary: { 
-          type: 'string', 
-          maxLength: 200,
-          description: 'Short 1-2 sentence summary for dashboard lists'
-        },
-        confidence_level: { 
-          type: 'number', 
-          minimum: 0, 
-          maximum: 1,
-          description: 'Confidence in analysis from 0.0 to 1.0'
-        },
-        
-        // Light payload structure (for payloads table)
-        light_payload: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            insights: { 
-              type: 'array', 
-              items: { type: 'string' }, 
-              minItems: 2, 
-              maxItems: 5,
-              description: 'Key insights about this profile for quick decision making'
-            },
-            audience_quality: { 
-              type: 'string',
-              enum: ['High', 'Medium', 'Low'],
-              description: 'Assessment of audience quality and engagement'
-            },
-            basic_demographics: { 
-              type: 'string',
-              description: 'Basic audience demographics and characteristics'
-            },
-            engagement_summary: { 
-              type: 'string',
-              description: 'Summary of engagement patterns and metrics'
-            }
-          },
-required: ['insights', 'audience_quality', 'basic_demographics', 'engagement_summary']
-        }
+        summary: { type: 'string', maxLength: 100 },
+        confidence: { type: 'number', minimum: 0.0, maximum: 1.0 }
       },
-      required: ['score', 'engagement_score', 'niche_fit', 'quick_summary', 'confidence_level', 'light_payload']
+      required: ['score', 'summary', 'confidence']
     }
   };
 }
@@ -654,17 +613,13 @@ JSON only.`;
 export function buildSpeedLightAnalysisPrompt(
   profile: ProfileData, 
   business: BusinessProfile
-): string {
-  const followRatio = profile.followingCount > 0 ? 
-    Math.round(profile.followersCount / profile.followingCount) : 0;
-    
-  return `Quick score: @${profile.username} for ${business.business_name || business.target_audience}
+): string {    
+  return `Score @${profile.username} (${profile.followersCount} followers) for ${business.target_audience || business.business_name}
 
-${profile.followersCount} followers | ${profile.isBusinessAccount ? 'Business' : 'Personal'}
 Bio: "${profile.bio || 'No bio'}"
-${profile.externalUrl ? 'Has website' : 'No website'}
+Business: ${profile.isBusinessAccount ? 'Yes' : 'No'}
 
-Rate fit 0-100, write one summary line. JSON format only.`;
+Return JSON: {"score": 0-100, "summary": "one sentence why", "confidence": 0.8}`;
 }
 
 export function getSpeedLightAnalysisJsonSchema() {
