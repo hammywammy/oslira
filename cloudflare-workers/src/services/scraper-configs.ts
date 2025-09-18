@@ -27,19 +27,16 @@ export interface ScraperFieldMapping {
 
 // Base scraper definitions - NO DUPLICATION
 const BASE_SCRAPERS = {
-  dS_basic: {
-    name: 'dS_basic',
-    endpoint: 'dSCLg0C3YEZ83HzYX',
-    timeout: 30000,
-    maxRetries: 2,
-    retryDelay: 2000,
-    priority: 2,
-    input: (username: string) => ({
-      usernames: [username],
-      resultsType: "details",
-      resultsLimit: 1,
-      addParentData: false
-    }),
+dS_basic: {
+  name: 'dS_basic',
+  endpoint: 'dSCLg0C3YEZ83HzYX',
+  timeout: 30000,
+  maxRetries: 2,
+  retryDelay: 2000,
+  priority: 2,
+  input: (username: string) => ({
+    usernames: [username]
+  }),
     fieldMapping: {
       username: ['username'],
       displayName: ['fullName', 'displayName'],
@@ -152,17 +149,28 @@ const BASE_SCRAPERS = {
   }
 } as const;
 
-// Dynamic configuration builder - NO DUPLICATION
 export function getScraperConfigs(analysisType: 'light' | 'deep' | 'xray'): ScraperConfig[] {
-  switch (analysisType) {
-    case 'light':
-      return [BASE_SCRAPERS.shu_light, BASE_SCRAPERS.dS_basic];
-    case 'deep':
+  // Force dSCLg0C3YEZ83HzYX for all profile scraping - faster and more data
+  return [BASE_SCRAPERS.dS_basic];
+}
+
+// Keep old function for future specialized scraping (posts, stories, etc.)
+export function getScraperConfigsAdvanced(
+  scrapeType: 'profile' | 'posts' | 'stories' | 'hashtags', 
+  analysisType: 'light' | 'deep' | 'xray'
+): ScraperConfig[] {
+  switch (scrapeType) {
+    case 'profile':
+      return [BASE_SCRAPERS.dS_basic]; // Always use dS for profiles
+    case 'posts':
+      // Future: Use shu scrapers for detailed post content
       return [BASE_SCRAPERS.shu_deep, BASE_SCRAPERS.dS_basic];
-    case 'xray':
-      return [BASE_SCRAPERS.shu_xray, BASE_SCRAPERS.shu_deep, BASE_SCRAPERS.dS_basic];
+    case 'stories':
+      return [BASE_SCRAPERS.shu_light];
+    case 'hashtags':
+      return [BASE_SCRAPERS.shu_xray];
     default:
-      return [BASE_SCRAPERS.shu_light, BASE_SCRAPERS.dS_basic];
+      return [BASE_SCRAPERS.dS_basic];
   }
 }
 
