@@ -428,22 +428,19 @@ async function executeOptimizedAnalysis(
   env: any,
   requestId: string
 ): Promise<any> {
-  // Import direct analysis executor
+  // Enrich business context
+  const { fetchBusinessProfile } = await import('../services/database.js');
+  const enrichedBusiness = business.business_one_liner ? 
+    business : 
+    await fetchBusinessProfile(business.business_id, business.user_id, env);
+
   const { DirectAnalysisExecutor } = await import('../services/direct-analysis.js');
   const directExecutor = new DirectAnalysisExecutor(env, requestId);
 
   let directResult: any;
-  
-  // Execute direct analysis based on type
   switch (analysisType) {
     case 'light':
-// Get enriched business context
-const { fetchBusinessProfile } = await import('../services/database.js');
-const enrichedBusiness = business.business_one_liner || business.business_context_pack ? 
-  business : 
-  await fetchBusinessProfile(business.business_id || business.id, business.user_id, env);
-
-directResult = await directExecutor.executeLight(profileData, enrichedBusiness);
+      directResult = await directExecutor.executeLight(profileData, enrichedBusiness);
       break;
     case 'deep':
       directResult = await directExecutor.executeDeep(profileData, business);
