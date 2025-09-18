@@ -41,6 +41,31 @@ const batchAnalyze = async (profiles: string[], analysisType: string, context: a
   // Fall back to individual processing for deep/xray
   return processIndividually(profiles, analysisType, context);
 };
+
+    function createSmartBatches(profiles: string[], analysisType: string): string[][] {
+  // Conservative batching based on analysis complexity
+  const batchSizes = {
+    light: 8,   // Light analysis is fast, bigger batches
+    deep: 5,    // Medium complexity
+    xray: 3     // Complex analysis, smaller batches
+  };
+  
+  const batchSize = batchSizes[analysisType] || 5;
+  const batches = [];
+  
+  for (let i = 0; i < profiles.length; i += batchSize) {
+    batches.push(profiles.slice(i, i + batchSize));
+  }
+  
+  logger('info', 'Smart batching created', {
+    totalProfiles: profiles.length,
+    batchSize,
+    batchCount: batches.length,
+    analysisType
+  });
+  
+  return batches;
+    }
     
     // Parse and validate request
     const body = await c.req.json() as BulkAnalysisRequest;
@@ -89,20 +114,23 @@ const batchAnalyze = async (profiles: string[], analysisType: string, context: a
       profileCount
     });
 
-    // Process profiles in parallel with concurrency limit
+// Process profiles with smart batching
     const results: AnalysisResponse[] = [];
     const errors: Array<{ profile: string; error: string }> = [];
     
-    const BATCH_SIZE = 5;
+    const smartBatches = createSmartBatches(profiles, analysis_type);
     const processingContext = { user_id, business_id, business, env: c.env, requestId };
 
-    for (let i = 0; i < profiles.length; i += BATCH_SIZE) {
-      const batch = profiles.slice(i, i + BATCH_SIZE);
+    for (let batchIndex = 0; batchIndex < smartBatches.length; batchIndex++) {
+      const batch = smartBatches[batchIndex];
       
+      logger('info', `Processing batch ${batchIndex + 1}/${smartBatches.length}`, {
+        batchSize: batch.length,
+        analysisType: analysis_type
+      });
+
       const batchPromises = batch.map(async (profile) => {
         try {
-          logger('info', `Processing profile ${i + batch.indexOf(profile) + 1}/${profileCount}`, { profile });
-          
           const result = await processProfileComplete(profile, analysis_type, processingContext);
           return { success: true, result };
           
@@ -124,12 +152,15 @@ const batchAnalyze = async (profiles: string[], analysisType: string, context: a
         }
       });
 
-      // Log batch progress
-      logger('info', `Batch ${Math.floor(i / BATCH_SIZE) + 1} completed`, {
-        processed: Math.min(i + BATCH_SIZE, profiles.length),
-        total: profiles.length,
+      // Brief pause between batches to avoid overwhelming APIs
+      if (batchIndex < smartBatches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      logger('info', `Batch ${batchIndex + 1} completed`, {
         successful: results.length,
-        errors: errors.length
+        errors: errors.length,
+        remaining: profiles.length - (results.length + errors.length)
       });
     }
 
@@ -201,40 +232,72 @@ async function processProfileComplete(
   context: { user_id: string, business_id: string, business: any, env: any, requestId: string }
 ): Promise<AnalysisResponse> {
   try {
-    // Import analyze handler to reuse logic
-    const { handleAnalyze } = await import('./analyze.js');
+    const username = extractUsername(profileUrl);
+    logger('info', 'Bulk processing profile', { username, analysisType });
+
+    // STEP 1: Scrape profile
+    const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
+    const profileData = await scrapeInstagramProfile(username, analysisType as any, context.env);
+
+    // STEP 2: Direct analysis (no pipeline overhead)
+    const { DirectAnalysisExecutor } = await import('../services/direct-analysis.js');
+    const directExecutor = new DirectAnalysisExecutor(context.env, context.requestId);
     
-    // Create mock request object for internal processing
-    const mockRequest = {
-      json: async () => ({
-        profile_url: profileUrl,
-        username: extractUsername(profileUrl),
-        analysis_type: analysisType,
-        business_id: context.business_id,
-        user_id: context.user_id
-      }),
-      header: () => null,
-      query: () => null
-    };
-    
-    const mockContext = {
-      env: context.env,
-      json: (data: any) => ({ data }),
-      req: mockRequest
-    };
-    
-    // Process through main analyze pipeline
-    const response = await handleAnalyze(mockContext as any);
-    const responseData = response.data;
-    
-    if (!responseData.success) {
-      throw new Error(responseData.error || 'Analysis failed');
+    let directResult: any;
+    switch (analysisType) {
+      case 'light':
+        directResult = await directExecutor.executeLight(profileData, context.business);
+        break;
+      case 'deep':
+        directResult = await directExecutor.executeDeep(profileData, context.business);
+        break;
+      case 'xray':
+        directResult = await directExecutor.executeXRay(profileData, context.business);
+        break;
+      default:
+        throw new Error(`Unsupported analysis type: ${analysisType}`);
     }
-    
-    return responseData.data;
-    
+
+    // STEP 3: Build response (simplified)
+    const analysisResult: AnalysisResponse = {
+      run_id: `bulk-${Date.now()}-${username}`,
+      profile: {
+        username: profileData.username,
+        displayName: profileData.displayName,
+        followersCount: profileData.followersCount,
+        isVerified: profileData.isVerified,
+        profilePicUrl: profileData.profilePicUrl,
+        dataQuality: profileData.dataQuality || 'medium',
+        scraperUsed: profileData.scraperUsed || 'unknown'
+      },
+      analysis: {
+        overall_score: directResult.analysisData.score,
+        niche_fit_score: directResult.analysisData.niche_fit,
+        engagement_score: directResult.analysisData.engagement_score,
+        type: analysisType as any,
+        confidence_level: directResult.analysisData.confidence_level,
+        summary_text: directResult.analysisData.quick_summary,
+        audience_quality: directResult.analysisData.audience_quality,
+        selling_points: directResult.analysisData.selling_points || [],
+        reasons: directResult.analysisData.reasons || []
+      },
+      credits: {
+        used: analysisType === 'deep' ? 2 : analysisType === 'xray' ? 3 : 1,
+        remaining: 0, // Will be calculated in bulk handler
+        actual_cost: directResult.costDetails.actual_cost
+      },
+      metadata: {
+        request_id: context.requestId,
+        analysis_completed_at: new Date().toISOString(),
+        schema_version: '3.1',
+        system_used: 'bulk_direct'
+      }
+    };
+
+    return analysisResult;
+
   } catch (error: any) {
-    logger('error', 'Profile processing failed', { 
+    logger('error', 'Bulk profile processing failed', { 
       profileUrl, 
       error: error.message,
       requestId: context.requestId 
@@ -242,7 +305,6 @@ async function processProfileComplete(
     throw error;
   }
 }
-
 function calculateBulkCosts(results: AnalysisResponse[]): {
   totalCredits: number;
   totalActualCost: number;
