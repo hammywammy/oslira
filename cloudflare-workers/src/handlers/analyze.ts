@@ -437,7 +437,13 @@ async function executeOptimizedAnalysis(
   // Execute direct analysis based on type
   switch (analysisType) {
     case 'light':
-      directResult = await directExecutor.executeLight(profileData, business);
+// Get enriched business context
+const { fetchBusinessProfile } = await import('../services/database.js');
+const enrichedBusiness = business.business_one_liner || business.business_context_pack ? 
+  business : 
+  await fetchBusinessProfile(business.business_id || business.id, business.user_id, env);
+
+directResult = await directExecutor.executeLight(profileData, enrichedBusiness);
       break;
     case 'deep':
       directResult = await directExecutor.executeDeep(profileData, business);
