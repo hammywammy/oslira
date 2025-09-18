@@ -5,6 +5,8 @@ import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
 import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
+import { FeatureFlagManager } from '../utils/feature-flags.js';
+import { PerformanceMonitor } from '../utils/performance-monitor.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -25,20 +27,28 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       analysis_type, 
       business_id, 
       user_id,
-workflow = analysis_type === 'light' ? 'light_fast' : 
+workflow = analysis_type === 'light' ? 'light_speed' : 
            analysis_type === 'deep' ? 'deep_fast' : 
            analysis_type === 'xray' ? 'xray_complete' : 'auto',
       model_tier = analysis_type === 'light' ? 'economy' : 'balanced',
       force_model
     } = normalizeRequest(body);
 
-    logger('info', 'Request validated', { 
+// Initialize feature flags for A/B testing
+    const featureFlags = new FeatureFlagManager(c.env);
+    const useOptimizedSystem = featureFlags.shouldUseOptimizedSystem(requestId);
+    
+    featureFlags.logFlagStatus(requestId);
+    
+    logger('info', 'Request validated with A/B testing', { 
       requestId, 
       username, 
       analysis_type, 
       business_id,
       workflow,
-      model_tier
+      model_tier,
+      useOptimizedSystem,
+      rolloutPercentage: featureFlags.getPercentage()
     });
 
 // Start all non-dependent operations in parallel
@@ -93,45 +103,109 @@ const [userResult, business] = await Promise.all([
         requestId
       ), 400);
     }
-    // ANALYSIS: Execute pipeline system
+
+    // OPTIMIZATION: Pre-screen for light analysis
+    if (analysis_type === 'light') {
+      const { preScreenProfile } = await import('../services/prompts.js');
+      const preScreen = preScreenProfile(profileData, business);
+      
+      if (!preScreen.shouldProcess) {
+        // Return early result without AI call
+        const earlyResult = {
+          run_id: 'pre-screen-' + requestId,
+          profile: {
+            username: profileData.username,
+            displayName: profileData.displayName,
+            followersCount: profileData.followersCount,
+            isVerified: profileData.isVerified,
+            profilePicUrl: profileData.profilePicUrl,
+            dataQuality: 'low',
+            scraperUsed: profileData.scraperUsed || 'unknown'
+          },
+          analysis: {
+            overall_score: preScreen.earlyScore || 0,
+            niche_fit_score: 0,
+            engagement_score: 0,
+            type: analysis_type,
+            confidence_level: 0.9,
+            summary_text: preScreen.reason || 'Pre-screened as low quality',
+            audience_quality: 'Low'
+          },
+          credits: { used: 0, remaining: userResult.credits },
+          metadata: {
+            request_id: requestId,
+            analysis_completed_at: new Date().toISOString(),
+            schema_version: '3.1',
+            system_used: 'pre_screen'
+          }
+        };
+        
+        logger('info', 'Profile pre-screened - early exit', { 
+          username: profileData.username,
+          reason: preScreen.reason,
+          score: preScreen.earlyScore
+        });
+        
+        return c.json(createStandardResponse(true, earlyResult, undefined, requestId));
+      }
+    }
+    
+// ANALYSIS: A/B test between optimized and legacy systems
     let orchestrationResult;
+    const systemUsed = useOptimizedSystem ? 'optimized_direct' : 'legacy_pipeline';
+    
     try {
-      logger('info', 'Using pipeline system', { workflow, model_tier, requestId });
+      logger('info', `Using ${systemUsed} system`, { 
+        analysis_type, 
+        useOptimizedSystem,
+        requestId 
+      });
 
-      // Get business context if available
-      const enrichedBusiness = business.business_one_liner || business.business_context_pack ? 
-        business : 
-        await fetchBusinessProfile(business_id, user_id, c.env);
+      if (useOptimizedSystem) {
+        // Use new optimized direct execution
+        orchestrationResult = await executeOptimizedAnalysis(profileData, business, analysis_type, c.env, requestId);
+      } else {
+        // Use legacy pipeline system
+        orchestrationResult = await executeLegacyPipelineAnalysis(profileData, business, analysis_type, workflow, model_tier, c.env, requestId);
+      }
 
-      // Create pipeline context
-      const pipelineContext: PipelineContext = {
-        profile: profileData,
-        business: enrichedBusiness,
-        analysis_type: analysis_type,
-        workflow,
-        model_tier: model_tier as 'premium' | 'balanced' | 'economy'
-      };
+      // Import direct analysis executor
+      const { DirectAnalysisExecutor } = await import('../services/direct-analysis.js');
+      const directExecutor = new DirectAnalysisExecutor(c.env, requestId);
 
-      // Execute pipeline
-      const executor = new PipelineExecutor(c.env, requestId);
-      const pipelineResult = await executor.execute(pipelineContext);
+      let directResult: any;
+      
+      // Execute direct analysis based on type
+      switch (analysis_type) {
+        case 'light':
+          directResult = await directExecutor.executeLight(profileData, business);
+          break;
+        case 'deep':
+          directResult = await directExecutor.executeDeep(profileData, business);
+          break;
+        case 'xray':
+          directResult = await directExecutor.executeXRay(profileData, business);
+          break;
+        default:
+          throw new Error(`Unknown analysis type: ${analysis_type}`);
+      }
 
-      // Transform pipeline result to match interface
+      // Transform direct result to match interface
       orchestrationResult = {
-        result: transformPipelineResult(pipelineResult, analysis_type),
+        result: directResult.analysisData,
         totalCost: {
-          actual_cost: pipelineResult.costs.reduce((sum, c) => sum + c.cost, 0),
-          tokens_in: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_in, 0),
-          tokens_out: pipelineResult.costs.reduce((sum, c) => sum + c.tokens_out, 0),
-          blocks_used: pipelineResult.costs.map(c => c.stage),
-          total_blocks: pipelineResult.costs.length
+          actual_cost: directResult.costDetails.actual_cost,
+          tokens_in: directResult.costDetails.tokens_in,
+          tokens_out: directResult.costDetails.tokens_out,
+          blocks_used: [directResult.costDetails.block_type],
+          total_blocks: 1
         },
         performance: {
-          ...pipelineResult.performance,
-          total_ms: Object.values(pipelineResult.performance).reduce((sum: number, time: number) => sum + time, 0)
+          [directResult.costDetails.block_type]: directResult.costDetails.processing_duration_ms,
+          total_ms: directResult.costDetails.processing_duration_ms
         },
         verdict: 'success',
-        workflow_used: pipelineResult.workflow_used
+        workflow_used: 'direct_execution'
       };
 
       logger('info', 'Pipeline analysis completed', {
@@ -244,6 +318,50 @@ const [userResult, business] = await Promise.all([
         lead_id 
       });
 
+      // Record performance metrics for A/B testing
+    try {
+      const performanceMonitor = new PerformanceMonitor(c.env);
+      
+      const creditCost = analysis_type === 'deep' ? 2 : analysis_type === 'xray' ? 3 : 1;
+      const revenue = creditCost * 0.30; // $0.30 per credit
+      const marginPercentage = Math.round(((revenue - orchestrationResult.totalCost.actual_cost) / revenue) * 100);
+
+      const metrics = {
+        requestId,
+        analysisType: analysis_type,
+        systemUsed: useOptimizedSystem ? 'optimized_direct' as const : 'legacy_pipeline' as const,
+        username: profileData.username,
+        
+        // Timing metrics
+        totalDurationMs: orchestrationResult.performance.total_ms,
+        scrapingDurationMs: 0, // Would need to track separately
+        analysisDurationMs: orchestrationResult.performance.total_ms,
+        
+        // Cost metrics
+        actualCost: orchestrationResult.totalCost.actual_cost,
+        creditsUsed: creditCost,
+        marginPercentage,
+        
+        // Quality metrics
+        overallScore: analysisResult.score,
+        confidenceLevel: analysisResult.confidence_level || 0.7,
+        dataQuality: profileData.dataQuality || 'medium',
+        
+        // System metrics
+        blocksUsed: orchestrationResult.totalCost.blocks_used,
+        modelUsed: orchestrationResult.totalCost.blocks_used[0] || 'unknown',
+        tokensIn: orchestrationResult.totalCost.tokens_in,
+        tokensOut: orchestrationResult.totalCost.tokens_out
+      };
+
+      performanceMonitor.recordMetrics(metrics);
+    } catch (monitoringError: any) {
+      logger('warn', 'Performance monitoring failed', { 
+        error: monitoringError.message, 
+        requestId 
+      });
+    }
+
     } catch (saveError: any) {
       logger('error', 'Database save or credit update failed', { 
         error: saveError.message,
@@ -350,90 +468,99 @@ const [userResult, business] = await Promise.all([
   }
 }
 
-function transformPipelineResult(pipelineResult: any, analysisType: string): any {
-  // Extract the final analysis result based on analysis type
-  const mainAnalysisKey = 'main_analysis';
-  const mainResult = pipelineResult.results[mainAnalysisKey] || 
-                     pipelineResult.results.analysis ||
-                     pipelineResult.results[`${analysisType}_analysis`];
+async function executeOptimizedAnalysis(
+  profileData: any,
+  business: any,
+  analysisType: string,
+  env: any,
+  requestId: string
+): Promise<any> {
+  // Import direct analysis executor
+  const { DirectAnalysisExecutor } = await import('../services/direct-analysis.js');
+  const directExecutor = new DirectAnalysisExecutor(env, requestId);
+
+  let directResult: any;
   
-  if (!mainResult) {
-    throw new Error('No analysis result found in pipeline output');
-  }
-  
-  // For X-Ray, flatten the nested payload structure
-  let flattenedResult = { ...mainResult };
-  if (analysisType === 'xray' && mainResult.xray_payload) {
-    flattenedResult = {
-      ...mainResult,
-      copywriter_profile: mainResult.xray_payload.copywriter_profile,
-      commercial_intelligence: mainResult.xray_payload.commercial_intelligence,
-      persuasion_strategy: mainResult.xray_payload.persuasion_strategy
-    };
+  // Execute direct analysis based on type
+  switch (analysisType) {
+    case 'light':
+      directResult = await directExecutor.executeLight(profileData, business);
+      break;
+    case 'deep':
+      directResult = await directExecutor.executeDeep(profileData, business);
+      break;
+    case 'xray':
+      directResult = await directExecutor.executeXRay(profileData, business);
+      break;
+    default:
+      throw new Error(`Unknown analysis type: ${analysisType}`);
   }
 
-  // For X-Ray, merge stage1 + market completion
-if (analysisType === 'xray' && pipelineResult.results.market_completion) {
-  const stage1 = mainResult.xray_payload || {};
-  const stage2 = pipelineResult.results.market_completion;
-  
-  flattenedResult = {
-    ...mainResult,
-    copywriter_profile: {
-      ...stage1.copywriter_profile,
-      demographics: stage2.complete_demographics,
-      psychographics: stage2.complete_psychographics,
-      current_struggles: stage2.current_struggles,
-      night_worries: stage2.night_worries,
-      worst_case_scenarios: stage2.worst_case_scenarios,
-      ideal_outcomes: stage2.ideal_outcomes,
-      aspirational_goals: stage2.aspirational_goals,
-      emotional_rewards: stage2.emotional_rewards
+  // Transform direct result to match interface
+  return {
+    result: directResult.analysisData,
+    totalCost: {
+      actual_cost: directResult.costDetails.actual_cost,
+      tokens_in: directResult.costDetails.tokens_in,
+      tokens_out: directResult.costDetails.tokens_out,
+      blocks_used: [directResult.costDetails.block_type],
+      total_blocks: 1
     },
-    commercial_intelligence: {
-      ...stage1.commercial_intelligence,
-      one_big_promise: stage2.one_big_promise,
-      existing_solution_gaps: stage2.existing_solution_gaps,
-      product_service_details: stage2.product_service_details,
-      key_benefits: stage2.key_benefits,
-      common_objections: stage2.common_objections,
-      implementation_concerns: stage2.implementation_concerns,
-      time_commitment_worries: stage2.time_commitment_worries
+    performance: {
+      [directResult.costDetails.block_type]: directResult.costDetails.processing_duration_ms,
+      total_ms: directResult.costDetails.processing_duration_ms
     },
-    persuasion_strategy: stage1.persuasion_strategy
+    verdict: 'success',
+    workflow_used: 'direct_execution'
   };
 }
-  
-  // Ensure required fields for database save
-  const transformedResult = {
-    ...flattenedResult,
-    // Ensure summary_text is present
-    quick_summary: mainResult.quick_summary || 
-                   mainResult.summary_text || 
-                   `${analysisType} analysis completed - Score: ${mainResult.score || 0}/100`,
-    
-    // Ensure confidence_level is present
-    confidence_level: mainResult.confidence_level || 
-                     mainResult.confidence || 
-                     (analysisType === 'light' ? 0.6 : analysisType === 'deep' ? 0.75 : 0.85),
-    
-    // Add pipeline-specific metadata for debugging/monitoring
-    pipeline_metadata: {
-      triage: pipelineResult.results.triage,
-      preprocessor: pipelineResult.results.preprocessor,
-      context: pipelineResult.results.context_generation,
-      workflow_used: pipelineResult.workflow_used,
-      stages_executed: Object.keys(pipelineResult.results)
-    }
-  };
-  
-  logger('info', 'Pipeline result transformation', {
+
+async function executeLegacyPipelineAnalysis(
+  profileData: any,
+  business: any,
+  analysisType: string,
+  workflow: string,
+  modelTier: string,
+  env: any,
+  requestId: string
+): Promise<any> {
+  // Get business context if available
+  const { fetchBusinessProfile } = await import('../services/database.js');
+  const enrichedBusiness = business.business_one_liner || business.business_context_pack ? 
+    business : 
+    await fetchBusinessProfile(business.business_id, business.user_id, env);
+
+  // Create pipeline context
+  const { PipelineExecutor } = await import('../services/pipeline-executor.js');
+  const pipelineContext = {
+    profile: profileData,
+    business: enrichedBusiness,
     analysis_type: analysisType,
-    has_quick_summary: !!transformedResult.quick_summary,
-    has_confidence_level: !!transformedResult.confidence_level,
-    quick_summary: transformedResult.quick_summary,
-    confidence_level: transformedResult.confidence_level
-  });
+    workflow,
+    model_tier: modelTier as 'premium' | 'balanced' | 'economy'
+  };
+
+  // Execute pipeline
+  const executor = new PipelineExecutor(env, requestId);
+  const pipelineResult = await executor.execute(pipelineContext);
+
+  // Transform pipeline result to match interface
+  const transformPipelineResult = (await import('./analyze.js')).transformPipelineResult;
   
-  return transformedResult;
+  return {
+    result: transformPipelineResult(pipelineResult, analysisType),
+    totalCost: {
+      actual_cost: pipelineResult.costs.reduce((sum: number, c: any) => sum + c.cost, 0),
+      tokens_in: pipelineResult.costs.reduce((sum: number, c: any) => sum + c.tokens_in, 0),
+      tokens_out: pipelineResult.costs.reduce((sum: number, c: any) => sum + c.tokens_out, 0),
+      blocks_used: pipelineResult.costs.map((c: any) => c.stage),
+      total_blocks: pipelineResult.costs.length
+    },
+    performance: {
+      ...pipelineResult.performance,
+      total_ms: Object.values(pipelineResult.performance).reduce((sum: number, time: number) => sum + time, 0)
+    },
+    verdict: 'success',
+    workflow_used: pipelineResult.workflow_used
+  };
 }
