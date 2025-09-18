@@ -169,53 +169,6 @@ const [userResult, business] = await Promise.all([
         orchestrationResult = await executeLegacyPipelineAnalysis(profileData, business, analysis_type, workflow, model_tier, c.env, requestId);
       }
 
-      // Import direct analysis executor
-      const { DirectAnalysisExecutor } = await import('../services/direct-analysis.js');
-      const directExecutor = new DirectAnalysisExecutor(c.env, requestId);
-
-      let directResult: any;
-      
-      // Execute direct analysis based on type
-      switch (analysis_type) {
-        case 'light':
-          directResult = await directExecutor.executeLight(profileData, business);
-          break;
-        case 'deep':
-          directResult = await directExecutor.executeDeep(profileData, business);
-          break;
-        case 'xray':
-          directResult = await directExecutor.executeXRay(profileData, business);
-          break;
-        default:
-          throw new Error(`Unknown analysis type: ${analysis_type}`);
-      }
-
-      // Transform direct result to match interface
-      orchestrationResult = {
-        result: directResult.analysisData,
-        totalCost: {
-          actual_cost: directResult.costDetails.actual_cost,
-          tokens_in: directResult.costDetails.tokens_in,
-          tokens_out: directResult.costDetails.tokens_out,
-          blocks_used: [directResult.costDetails.block_type],
-          total_blocks: 1
-        },
-        performance: {
-          [directResult.costDetails.block_type]: directResult.costDetails.processing_duration_ms,
-          total_ms: directResult.costDetails.processing_duration_ms
-        },
-        verdict: 'success',
-        workflow_used: 'direct_execution'
-      };
-
-      logger('info', 'Pipeline analysis completed', {
-        username: profileData.username,
-        workflow_used: pipelineResult.workflow_used,
-        stages_executed: Object.keys(pipelineResult.results).length,
-        total_cost: orchestrationResult.totalCost.actual_cost,
-        requestId
-      });
-
       // Handle early exit
       if (orchestrationResult.verdict === 'early_exit') {
         return c.json(createStandardResponse(true, {
