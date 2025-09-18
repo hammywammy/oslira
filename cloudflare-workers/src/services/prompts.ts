@@ -614,12 +614,21 @@ export function buildSpeedLightAnalysisPrompt(
   profile: ProfileData, 
   business: BusinessProfile
 ): string {    
-  return `Score @${profile.username} (${profile.followersCount} followers) for: ${business.business_one_liner || business.target_audience || business.business_name}
+  const prompt = `Score @${profile.username} (${profile.followersCount} followers) for: ${business.business_one_liner || business.target_audience || business.business_name}
 
 Bio: "${profile.bio || 'No bio'}"
 Business: ${profile.isBusinessAccount ? 'Yes' : 'No'}
 
 Return JSON: {"score": 0-100, "summary": "one sentence why", "confidence": 0.8}`;
+
+  logger('info', 'Speed light analysis prompt', { 
+    prompt, 
+    business_one_liner: business.business_one_liner,
+    target_audience: business.target_audience,
+    business_name: business.business_name
+  });
+
+  return prompt;
 }
 
 export function getSpeedLightAnalysisJsonSchema() {
