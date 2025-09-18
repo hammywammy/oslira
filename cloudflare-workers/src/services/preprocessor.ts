@@ -133,11 +133,10 @@ async function cachePreprocessor(cacheKey: string, result: PreprocessorResult, e
   try {
     if (!env.R2_CACHE_BUCKET) return;
     
-    const cacheData = {
-      result,
-      expires: Date.now() + (48 * 60 * 60 * 1000) // 48 hours
-    };
-    
+const cacheData = {
+  result,
+  expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+};
     await env.R2_CACHE_BUCKET.put(cacheKey, JSON.stringify(cacheData));
   } catch (error: any) {
     console.warn('R2 cache write failed:', error.message);
