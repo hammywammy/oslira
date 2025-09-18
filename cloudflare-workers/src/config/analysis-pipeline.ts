@@ -55,16 +55,14 @@ export const ANALYSIS_PIPELINE_CONFIG = {
       ]
     } as WorkflowConfig,
 
-    light_ultra_fast: {
-  name: 'light_ultra_fast',
-  description: 'Single-stage light analysis with micro model',
+light_speed: {
+  name: 'light_speed',
+  description: 'Ultra-fast light analysis - single nano call only',
   stages: [
     { 
-      name: 'light_analysis', 
-      type: 'analysis', 
-      required: true, 
-      model_tier: 'economy',
-      model_override: 'gpt-5-nano' // Force cheapest model
+      name: 'speed_light_analysis', 
+      type: 'speed_analysis', 
+      required: true
     }
   ]
 } as WorkflowConfig,
@@ -208,37 +206,14 @@ deep_fast: {
   },
 
 analysis_mappings: {
-  triage: {
-    premium: 'gpt-5-nano',
-    balanced: 'gpt-5-nano', 
-    economy: 'gpt-5-nano'
-  },
-  preprocessor: {
-    premium: 'gpt-5-nano',
-    balanced: 'gpt-5-nano',
-    economy: 'gpt-5-nano'
-  },
-  light: {
-    premium: 'gpt-5-nano',
-    balanced: 'gpt-5-nano',
-    economy: 'gpt-5-nano'
-  },
-  deep: {
-    premium: 'gpt-5',
-    balanced: 'gpt-5',
-    economy: 'gpt-5-mini'
-  },
-xray: {
-  premium: 'claude-opus-4-1-20250805',
-  balanced: 'gpt-5', 
-  economy: 'gpt-5'
+  triage: 'gpt-5-nano',
+  preprocessor: 'gpt-5-nano',
+  light: 'gpt-5-nano',
+  speed_analysis: 'gpt-5-nano',
+  deep: 'gpt-5-mini',
+  xray: 'gpt-5',
+  context: 'gpt-5-mini'
 },
-context: {
-  premium: 'gpt-5-mini',
-  balanced: 'gpt-5-mini',
-  economy: 'gpt-5-mini'
-}
-  },
 
   // Default Settings
   defaults: {
