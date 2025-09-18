@@ -33,11 +33,14 @@ export class UniversalAIAdapter {
     this.requestId = requestId;
   }
 
-  async executeRequest(request: UniversalRequest): Promise<UniversalResponse> {
+async executeRequest(request: UniversalRequest): Promise<UniversalResponse> {
     const modelConfig = ANALYSIS_PIPELINE_CONFIG.models[request.model_name];
     if (!modelConfig) {
       throw new Error(`Unknown model: ${request.model_name}`);
     }
+
+    // Log token usage for optimization tracking
+    this.logTokenUsage(request.user_prompt, request.model_name, this.requestId);
 
 try {
     return await this.executeModelCall(modelConfig, request);
@@ -53,6 +56,21 @@ try {
         return await this.executeModelCall(backupConfig, request);
       }
     }
+
+  private estimateTokenCount(text: string): number {
+    // Rough estimation: 4 characters = 1 token
+    return Math.ceil(text.length / 4);
+  }
+
+  private logTokenUsage(prompt: string, modelName: string, requestId: string): void {
+    const estimatedTokens = this.estimateTokenCount(prompt);
+    logger('info', 'Token usage estimate', {
+      model: modelName,
+      estimated_input_tokens: estimatedTokens,
+      prompt_length: prompt.length,
+      requestId
+    });
+  }
     throw error;
   }
 }
@@ -270,25 +288,16 @@ private calculateCost(inputTokens: number, outputTokens: number, config: ModelCo
 
 export function selectModel(
   stage: string, 
-  modelTier: 'premium' | 'balanced' | 'economy',
+  modelTier?: 'premium' | 'balanced' | 'economy',
   context?: { triage?: { lead_score: number }, tokenCount?: number }
 ): string {
   const mapping = ANALYSIS_PIPELINE_CONFIG.analysis_mappings[stage];
   
-  // For short prompts, always use nano model regardless of tier
-  if (context?.tokenCount && context.tokenCount < 500) {
-    return 'gpt-5-nano';
+  // Simple direct lookup - no complex routing
+  if (typeof mapping === 'string') {
+    return mapping;
   }
   
-  // High-value leads get upgraded
-  if (context?.triage?.lead_score && context.triage.lead_score > 80) {
-    return mapping.premium || mapping.balanced;
-  }
-  
-  // Low-value leads get downgraded
-  if (context?.triage?.lead_score && context.triage.lead_score < 30) {
-    return 'gpt-5-nano';
-  }
-  
-  return mapping[modelTier];
+  // Fallback for any remaining object-style mappings
+  return mapping.balanced || mapping.economy || 'gpt-5-nano';
 }
