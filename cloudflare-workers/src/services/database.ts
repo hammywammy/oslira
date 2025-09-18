@@ -242,13 +242,15 @@ export async function insertAnalysisPayload(
         };
         break;
         
-      case 'xray':
-        structuredPayload = {
-          copywriter_profile: analysisData.copywriter_profile || {},
-          commercial_intelligence: analysisData.commercial_intelligence || {},
-          persuasion_strategy: analysisData.persuasion_strategy || {}
-        };
-        break;
+case 'xray':
+  // Extract from xray_payload if it exists, otherwise from root
+  const xrayData = analysisData.xray_payload || analysisData;
+  structuredPayload = {
+    copywriter_profile: xrayData.copywriter_profile || {},
+    commercial_intelligence: xrayData.commercial_intelligence || {},
+    persuasion_strategy: xrayData.persuasion_strategy || {}
+  };
+  break;
         
       default:
         structuredPayload = analysisData;
