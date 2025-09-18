@@ -245,20 +245,8 @@ async function cacheProfileData(
   try {
     if (!env.R2_CACHE_BUCKET) return;
     
-    // Dynamic TTL based on data quality and analysis type
-    const baseTTL = {
-      'light': 4 * 60 * 60 * 1000,  // 4 hours
-      'deep': 6 * 60 * 60 * 1000,   // 6 hours  
-      'xray': 8 * 60 * 60 * 1000    // 8 hours
-    };
-    
-    const qualityMultiplier = {
-      'high': 1.5,
-      'medium': 1.0,
-      'low': 0.5
-    };
-    
-    const cacheTTL = baseTTL[analysisType] * qualityMultiplier[profileData.dataQuality || 'medium'];
+    // Fixed 24-hour TTL for all profiles
+    const cacheTTL = 24 * 60 * 60 * 1000; // 24 hours
     
     const cacheData = {
       profile: profileData,
