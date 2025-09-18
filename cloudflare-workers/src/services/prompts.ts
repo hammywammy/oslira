@@ -658,28 +658,13 @@ export function buildSpeedLightAnalysisPrompt(
   const followRatio = profile.followingCount > 0 ? 
     Math.round(profile.followersCount / profile.followingCount) : 0;
     
-  return `LEAD SCORE for ${business.target_audience}
+  return `Quick score: @${profile.username} for ${business.business_name || business.target_audience}
 
-@${profile.username} - ${profile.followersCount.toLocaleString()} followers (${followRatio}:1 ratio)
+${profile.followersCount} followers | ${profile.isBusinessAccount ? 'Business' : 'Personal'}
 Bio: "${profile.bio || 'No bio'}"
-Status: ${profile.isBusinessAccount ? 'Business' : 'Personal'} | ${profile.isVerified ? 'Verified' : 'Unverified'}
-Contact: ${profile.externalUrl ? 'Website linked' : 'No link'} | ${profile.bio?.includes('@') || profile.bio?.includes('email') ? 'Email signals' : 'DM only'}
-Activity: ${profile.postsCount} posts, ${profile.latestPosts?.length || 0} recent
+${profile.externalUrl ? 'Has website' : 'No website'}
 
-Return JSON:
-{
-  "score": 0-100,
-  "engagement_score": 0-100, 
-  "niche_fit": 0-100,
-  "quick_summary": "One sentence: why this lead fits/doesn't fit",
-  "confidence_level": 0.6,
-  "light_payload": {
-    "insights": ["Key insight 1", "Key insight 2"],
-    "audience_quality": "High|Medium|Low",
-    "basic_demographics": "Observable demographics or 'None'",
-    "engagement_summary": "Engagement assessment based on follower tier"
-  }
-}`;
+Rate fit 0-100, write one summary line. JSON format only.`;
 }
 
 export function getSpeedLightAnalysisJsonSchema() {
