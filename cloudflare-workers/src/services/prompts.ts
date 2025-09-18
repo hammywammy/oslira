@@ -614,7 +614,7 @@ export function buildSpeedLightAnalysisPrompt(
   profile: ProfileData, 
   business: BusinessProfile
 ): string {    
-  return `Score @${profile.username} (${profile.followersCount} followers) for ${business.target_audience || business.business_name}
+  return `Score @${profile.username} (${profile.followersCount} followers) for: ${business.business_one_liner || business.target_audience || business.business_name}
 
 Bio: "${profile.bio || 'No bio'}"
 Business: ${profile.isBusinessAccount ? 'Yes' : 'No'}
