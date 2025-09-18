@@ -13,7 +13,7 @@ USE_DIRECT_ANALYSIS = "false"
 USE_SMART_BATCHING = "false"
 ENABLE_PRE_SCREENING = "false"
 USE_COMPRESSED_PROMPTS = "false"
-ROLLOUT_PERCENTAGE = "0"
+ROLLOUT_PERCENTAGE = "100"
 
 [env.staging]
 name = "oslira-api-stg"
