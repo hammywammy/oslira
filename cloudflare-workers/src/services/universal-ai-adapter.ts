@@ -93,21 +93,25 @@ private async callGPTChat(config: ModelConfig, request: UniversalRequest): Promi
   const openaiKey = await getApiKey('OPENAI_API_KEY', this.env);
   if (!openaiKey) throw new Error('OpenAI API key not available');
 
-  const body = {
-    model: config.name,
-    messages: [
-      { role: 'system', content: request.system_prompt },
-      { role: 'user', content: request.user_prompt }
-    ],
-    max_tokens: request.max_tokens,
-    temperature: request.temperature || 0.7,
-    ...(request.json_schema && {
-      response_format: {
-        type: 'json_schema',
-        json_schema: request.json_schema
-      }
-    })
-  };
+const body = {
+  model: config.name,
+  messages: [
+    { role: 'system', content: request.system_prompt },
+    { role: 'user', content: request.user_prompt }
+  ],
+  max_completion_tokens: request.max_tokens,
+  // Constrain reasoning for GPT-5 models
+  ...(config.name.includes('gpt-5') && {
+    reasoning_effort: 'low',
+    max_reasoning_tokens: 500  // Force minimal reasoning
+  }),
+  ...(request.json_schema && {
+    response_format: {
+      type: 'json_schema',
+      json_schema: request.json_schema
+    }
+  })
+};
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
