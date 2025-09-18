@@ -38,7 +38,7 @@ export class DirectAnalysisExecutor {
       model_name: 'gpt-5-nano',
       system_prompt: 'You are a lead scoring specialist. Analyze Instagram profiles quickly for business collaboration potential. Return valid JSON only.',
       user_prompt: buildSpeedLightAnalysisPrompt(profile, business),
-      max_tokens: 800,
+      max_tokens: 2500,
       json_schema: getLightAnalysisJsonSchema(),
       response_format: 'json',
       temperature: 0.3
