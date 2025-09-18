@@ -126,6 +126,16 @@ deep_fast: {
     { name: 'preprocessor', type: 'preprocessor', required: false, model_tier: 'economy' },
     { name: 'main_analysis', type: 'analysis', required: true, model_tier: 'balanced' }
   ]
+} as WorkflowConfig,
+
+    xray_complete: {
+  name: 'xray_complete', 
+  description: 'Two-stage comprehensive X-Ray analysis',
+  stages: [
+    { name: 'triage', type: 'triage', required: true, model_tier: 'economy' },
+    { name: 'xray_stage1', type: 'analysis', required: true, model_tier: 'balanced' },
+    { name: 'market_completion', type: 'market_completion', required: true, model_tier: 'economy' }
+  ]
 } as WorkflowConfig
   },
 
