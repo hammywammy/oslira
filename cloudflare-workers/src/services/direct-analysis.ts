@@ -35,10 +35,10 @@ export class DirectAnalysisExecutor {
     });
 
 const response = await this.aiAdapter.executeRequest({
-  model_name: 'gpt-5-nano',
+  model_name: 'gpt-5-mini',
   system_prompt: 'Rate leads fast. Return JSON only.',
   user_prompt: buildSpeedLightAnalysisPrompt(profile, business),
-  max_tokens: 2500                                                   ,
+  max_tokens: 800,  // Can reduce since mini is more efficient
   json_schema: getLightAnalysisJsonSchema(),
   response_format: 'json',
   temperature: 0.0
