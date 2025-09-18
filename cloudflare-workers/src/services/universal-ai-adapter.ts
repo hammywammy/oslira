@@ -42,20 +42,24 @@ async executeRequest(request: UniversalRequest): Promise<UniversalResponse> {
     // Log token usage for optimization tracking
     this.logTokenUsage(request.user_prompt, request.model_name, this.requestId);
 
-try {
-    return await this.executeModelCall(modelConfig, request);
-  } catch (error: any) {
-    logger('warn', `Primary model ${request.model_name} failed, trying backup`, { 
-      error: error.message,
-      requestId: this.requestId 
-    });
+    try {
+      return await this.executeModelCall(modelConfig, request);
+    } catch (error: any) {
+      logger('warn', `Primary model ${request.model_name} failed, trying backup`, { 
+        error: error.message,
+        requestId: this.requestId 
+      });
 
-    if (modelConfig.backup) {
-      const backupConfig = ANALYSIS_PIPELINE_CONFIG.models[modelConfig.backup];
-      if (backupConfig) {
-        return await this.executeModelCall(backupConfig, request);
+      if (modelConfig.backup) {
+        const backupConfig = ANALYSIS_PIPELINE_CONFIG.models[modelConfig.backup];
+        if (backupConfig) {
+          return await this.executeModelCall(backupConfig, request);
+        }
       }
+
+      throw error;
     }
+  }
 
   private estimateTokenCount(text: string): number {
     // Rough estimation: 4 characters = 1 token
@@ -71,10 +75,7 @@ try {
       requestId
     });
   }
-    throw error;
-  }
-}
-
+  
 private async executeModelCall(config: ModelConfig, request: UniversalRequest): Promise<UniversalResponse> {
   switch (config.api_format) {
     case 'gpt5_responses':
