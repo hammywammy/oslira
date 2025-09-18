@@ -472,10 +472,6 @@ Always return valid JSON only. Do not include markdown formatting or code blocks
   `;
 }
 
-// ===============================================================================
-// X-RAY ANALYSIS PROMPTS
-// ===============================================================================
-
 export function buildXRayAnalysisPrompt(
   profile: ProfileData, 
   business: BusinessProfile,
@@ -484,186 +480,89 @@ export function buildXRayAnalysisPrompt(
     preprocessor?: any;
   }
 ): string {
-  const engagementInfo = (profile.engagement?.postsAnalyzed || 0) > 0 
-    ? `REAL ENGAGEMENT DATA: ${profile.engagement?.engagementRate}% rate (${profile.engagement?.avgLikes} avg likes, ${profile.engagement?.avgComments} avg comments across ${profile.engagement?.postsAnalyzed} posts)`
-    : `Estimated engagement based on ${profile.followersCount.toLocaleString()} followers`;
-
-  const triageContext = context?.triage ? `
-## STRATEGIC CONTEXT
-- **Lead Quality**: ${context.triage.lead_score}/100 (${Math.round(context.triage.confidence * 100)}% confidence)
-- **Analysis Focus**: ${context.triage.focus_points?.join(' | ') || 'Comprehensive profile'}
-` : '';
-
-  const preprocessorContext = context?.preprocessor ? `
-## BEHAVIORAL INTELLIGENCE
-- **Content Strategy**: ${context.preprocessor.content_themes?.join(' + ') || 'Unknown themes'}
-- **Engagement Drivers**: ${context.preprocessor.engagement_patterns || 'Unknown patterns'}
-- **Brand Relationships**: ${context.preprocessor.brand_mentions?.length > 0 ? context.preprocessor.brand_mentions.join(', ') : 'No brand connections visible'}
-- **Business Readiness**: ${context.preprocessor.contact_readiness || 'Unknown'}
-- **Collaboration Track Record**: ${context.preprocessor.collaboration_history || 'No evidence'}
-` : '';
-
-  const contentInfo = (profile.latestPosts?.length || 0) > 0 
-    ? `Recent content analysis: ${profile.latestPosts.slice(0, 5).map(p => `"${p.caption?.slice(0, 150) || 'Visual content'}"...`).join(' | ')}`
-    : 'Content analysis limited - profile access restricted';
-
-  return `
-  # X-RAY ANALYSIS: Deep Psychological & Commercial Profiling
+  return `# X-RAY STAGE 1: Observable Data Extraction
 
 ## PROFILE INTELLIGENCE
 - **Handle**: @${profile.username} (${profile.followersCount.toLocaleString()} followers)
-- **Verification**: ${profile.isVerified ? 'VERIFIED ✓ (trust signal)' : 'Unverified'}
-- **Account Type**: ${profile.isBusinessAccount ? 'Business Account' : 'Personal/Creator'}
-- **Bio Signals**: "${profile.bio || 'No bio'}"
-- **Link Strategy**: ${profile.externalUrl ? `Active (${profile.externalUrl.includes('linktr') ? 'Linktree' : 'Direct site'})` : 'No external link'}
-
-## BEHAVIORAL DATA
-${(profile.engagement?.postsAnalyzed || 0) > 0 
-  ? `MEASURED BEHAVIOR from ${profile.engagement.postsAnalyzed} posts:
-    - Engagement: ${profile.engagement.engagementRate}% (${profile.engagement.avgLikes} likes, ${profile.engagement.avgComments} comments avg)
-    - Comment Ratio: ${((profile.engagement.avgComments/profile.engagement.avgLikes)*100).toFixed(1)}% (community engagement signal)
-    - Per-Post Reach: ~${((profile.engagement.avgLikes/profile.followersCount)*100).toFixed(1)}% of audience`
-  : 'Limited behavioral data - assessment based on profile signals'}
+- **Bio**: "${profile.bio || 'No bio'}"
+- **Account**: ${profile.isVerified ? 'Verified' : 'Unverified'} | ${profile.isBusinessAccount ? 'Business' : 'Personal'}
+- **Link**: ${profile.externalUrl || 'No external link'}
 
 ## CONTENT PATTERNS
 ${(profile.latestPosts?.length || 0) > 0 
-  ? `${profile.latestPosts.length} recent posts reveal:
-    ${profile.latestPosts.slice(0, 5).map(p => {
-      const wordCount = (p.caption || '').split(' ').length;
-      const hasQuestion = (p.caption || '').includes('?');
-      const hasEmoji = /[\u{1F300}-\u{1F9FF}]/u.test(p.caption || '');
-      const hasCTA = /(link|bio|shop|swipe|save|comment|share|tag)/i.test(p.caption || '');
-      return `- ${p.likesCount} likes: ${wordCount} words, ${hasQuestion ? 'question' : 'statement'}, ${hasEmoji ? 'emojis' : 'no emojis'}, ${hasCTA ? 'CTA present' : 'no CTA'}`;
-    }).join('\n    ')}`
-  : 'No content patterns available'}
+  ? `${profile.latestPosts.length} posts analyzed:
+    ${profile.latestPosts.slice(0, 5).map(p => 
+      `- "${(p.caption || '').slice(0, 100)}..." (${p.likesCount} likes, ${p.commentsCount} comments)`
+    ).join('\n    ')}`
+  : 'No content available'}
 
-## BUSINESS CONTEXT
-- **Your Company**: ${business.name} (${business.industry})
-- **Your Audience**: ${business.target_audience}
-- **Your Goal**: ${business.value_proposition}
+## TASK: Extract Observable Data Only
 
-## X-RAY INTELLIGENCE EXTRACTION
+Generate ONLY what you can observe from Instagram. No speculation beyond clear patterns.
 
-### SCORING (same as deep but with psychological confidence)
-- **score**: Partnership value (0-100)
-- **engagement_score**: Audience quality (0-100)
-- **niche_fit**: Strategic alignment (0-100)
-- **confidence_level**: ${profile.latestPosts?.length >= 5 ? '0.8-0.95' : '0.3-0.5'}
+### SCORING
+- **score**: Partnership viability (0-100)
+- **engagement_score**: Audience quality (0-100) 
+- **niche_fit**: Business alignment (0-100)
+- **confidence_level**: 0.7-0.9
 
-### COPYWRITER PROFILE - Extract from Instagram patterns only
+### OBSERVABLE EXTRACTION
 
-**demographics**:
-Extract observable + infer missing from niche patterns:
-- Age Range: [Infer from content sophistication, cultural references, tech usage, business stage indicators]
-- Gender Identity: [From name, pronouns, content style if evident; otherwise state 'inferred from content patterns']  
-- Income Level: [Estimate from lifestyle signals, business account status, tools mentioned, audience size monetization potential]
-- Professional Background: [Bio + inferred career stage from content authority level and teaching approach]
-- Education Level: [Content complexity, vocabulary, concept familiarity, teaching methodology]
-- Family Status: [References to family, time allocation patterns, content scheduling, life stage indicators]
-- Geographic Location: [Bio location, cultural references, timezone activity, language patterns]
-- Cultural Background: [Language use, cultural references, value systems, community affiliations]
-- Values & Beliefs: [Explicit + inferred from content themes, causes supported, language choices]
-- Social Status: [Influence level, community position, verification status, collaboration patterns]
+**demographics**: Age/gender/location/income ONLY if clearly evident. Otherwise state "insufficient_data"
 
-**psychographics**:
-Deep behavioral inference from content + niche positioning:
-- Core Personality Traits: [Extract from content tone + infer typical traits for faith-forward entrepreneurs in education niche]
-- Hobbies & Interests: [Mentioned + likely interests for copywriting educators: business books, skill development, faith content]
-- Day-to-Day Routines: [Posting patterns + typical schedules for content creators in this niche]
-- Media Consumption: [Referenced + infer: business podcasts, educational YouTube, copywriting resources, faith content]
-- Buying Psychology: [Infer from niche: ROI-focused, proof-driven, community-influenced decisions]
-- Decision-Making Style: [Caption style + niche patterns: research-heavy, value-alignment priority, testimonial-weighted]
-- Community & Social Circles: [Explicit + infer: entrepreneur networks, faith communities, copywriting circles, online education groups]
+**psychographics**: Communication style, posting patterns, interests ONLY from visible content
 
-**pain_points** (2-6 from content):
-Look for complaint patterns, questions asked, problems mentioned:
-- "Posts about specific topics suggest frustration with relevant issues"
-- "Asking followers about problems indicates struggle with those areas"
-- "Collaboration requests suggest need for partnerships"
-**current_struggles**: [Daily operational frustrations inferred from niche challenges],
-**night_worries**: [Anxiety triggers common to copywriting educators: student success, income stability, platform changes],
-**worst_case_scenarios**: [Nightmare outcomes they work to avoid: audience loss, reputation damage, income disruption],
-**ideal_outcomes**: [Success vision for copywriting educators],
-**aspirational_goals**: [Bigger life visions beyond immediate business],
-**emotional_rewards**: [Internal satisfaction drivers: impact, recognition, financial freedom],
-**one_big_promise**: [Primary transformation they offer students],
-**existing_solution_gaps**: [Market problems in copywriting education space],
-**implementation_concerns**: [Typical objections to new tools/services],
-**time_commitment_worries**: [Bandwidth concerns for busy educators]
+**pain_points**: Problems/frustrations mentioned in posts or bio. Maximum 3-5 specific observations.
 
-**dreams_desires** (2-6 from content):
-From aspirational posts, goals mentioned, celebration posts:
-- "Celebrates achievements suggesting their values and priorities"
-- "Posts about future goals indicating their desires and aspirations"
-- "Hashtags show aspiration toward specific outcomes or lifestyles"
+**dreams_desires**: Goals/aspirations mentioned in posts or bio. Maximum 3-5 specific observations.
 
-### COMMERCIAL INTELLIGENCE - Based on observable signals
-
-**budget_tier**:
-- "luxury": Verified + >1M followers + brand collabs visible
-- "premium": 100k-1M followers + business account + professional content
-- "mid-market": 10k-100k followers + consistent posting
-- "low-budget": <10k followers or inconsistent activity
-
-**decision_role**:
-- "primary": Solopreneur/creator (no team visible)
-- "influencer": Part of network (collabs/mentions visible)
-- "gatekeeper": Business account with team mentions
-- "researcher": Asks audience for input frequently
-
-**buying_stage** (for partnerships):
-- "ready-to-buy": Email in bio + past collabs + business account
-- "product-aware": Mentions partnerships but no clear CTA
-- "solution-aware": Business account but no collab history
-- "problem-aware": Growing but not monetizing
-- "unaware": Personal account, no business signals
-
-**objections** (2-5 based on patterns):
-- From low engagement: "Audience quality concerns"
-- From irregular posting: "Consistency issues"
-- From no collab history: "Unproven partnership record"
-- From caption style: "Brand voice misalignment"
-
-### PERSUASION STRATEGY - How to approach based on their patterns
-
-**primary_angle**:
-- "transformation": If posts show before/after, growth, change
-- "status": If posts show achievements, milestones, recognition
-- "convenience": If posts emphasize ease, simplicity, efficiency
-- "fear-of-missing-out": If posts use urgency, limited time, exclusive
-- "social-proof": If posts show testimonials, community, numbers
-- "authority": If posts teach, guide, demonstrate expertise
-
-**hook_style** (based on their content style):
-- "problem-agitation": If they discuss pain points
-- "curiosity-gap": If they use questions, teasers
-- "social-proof": If they showcase results, testimonials
-- "authority-positioning": If they teach, educate
-- "story-based": If they share personal narratives
-
-**proof_elements** (3-7 they'd respond to):
-Based on what THEY use in content:
-- Numbers/metrics if they share stats
-- Visual proof if they post before/afters
-- Testimonials if they share feedback
-- Process proof if they show behind-scenes
-- Authority proof if they cite sources
-
-**communication_style** (match their tone):
-- "casual-friendly": Heavy emoji use, informal language
-- "professional": Business language, formal structure
-- "authoritative": Educational, factual, structured
-- "empathetic": Personal stories, emotional language
-- "energetic": Exclamations, caps, enthusiasm markers
-
-## CRITICAL REQUIREMENT
-Every insight must reference observable Instagram behavior. No external assumptions.
-Mark any field as "insufficient_data" if you can't defend it from the profile.
-
-Always return valid JSON only. Do not include markdown formatting or code blocks. This is intelligence for high-stakes outreach - be precise.
-  `;
+Return valid JSON without markdown formatting.`;
 }
 
+export function buildMarketCompletionPrompt(
+  profile: ProfileData,
+  business: BusinessProfile, 
+  stage1Result: any
+): string {
+  return `# X-RAY STAGE 2: Market Research Completion
+
+## STAGE 1 OBSERVABLE DATA
+${JSON.stringify(stage1Result, null, 2)}
+
+## BUSINESS CONTEXT
+- **Industry**: ${business.industry || 'Business tools/education'}
+- **Target**: ${business.target_audience}
+- **Niche**: Copywriting education / faith-forward entrepreneurship
+
+## TASK: Complete Client Brief Using Industry Knowledge
+
+Fill missing demographic/market data using copywriting education industry standards:
+
+### COMPLETE DEMOGRAPHICS
+Age Range, Gender Identity, Income Level, Professional Background, Education Level, Family Status, Geographic Location, Cultural Background, Values & Beliefs, Social Status
+
+### COMPLETE PSYCHOGRAPHICS  
+Core Personality Traits, Hobbies & Interests, Day-to-Day Routines, Media Consumption, Buying Psychology, Decision-Making Style, Community & Social Circles
+
+### ADD MARKET RESEARCH SECTIONS
+**current_struggles**: Daily operational challenges for copywriting educators
+**night_worries**: Income/reputation concerns for online course creators
+**worst_case_scenarios**: Business failure fears in education space
+**ideal_outcomes**: Success definitions for copywriting educators
+**aspirational_goals**: Wealth/lifestyle goals beyond immediate business
+**emotional_rewards**: Recognition/impact satisfaction drivers
+**one_big_promise**: Typical transformation copywriting educators offer
+**existing_solution_gaps**: Current market problems in copywriting education
+**product_service_details**: Standard offering structures for this niche
+**key_benefits**: Common value propositions for copywriting tools
+**common_objections**: Price/trust/time concerns for educators
+**implementation_concerns**: Technical/workflow adoption barriers
+**time_commitment_worries**: Bandwidth concerns for content creators
+
+Base responses on industry standards for copywriting education market, not profile speculation.
+
+Return complete expanded profile with all sections filled.`;
+}
 // ===============================================================================
 // OUTREACH MESSAGE PROMPTS
 // ===============================================================================
