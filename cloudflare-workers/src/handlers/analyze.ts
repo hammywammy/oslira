@@ -25,8 +25,9 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       analysis_type, 
       business_id, 
       user_id,
-      workflow = analysis_type === 'light' ? 'light_fast' : 
-                 analysis_type === 'deep' ? 'deep_fast' : 'auto',
+workflow = analysis_type === 'light' ? 'light_fast' : 
+           analysis_type === 'deep' ? 'deep_fast' : 
+           analysis_type === 'xray' ? 'xray_complete' : 'auto',
       model_tier = analysis_type === 'light' ? 'economy' : 'balanced',
       force_model
     } = normalizeRequest(body);
@@ -370,6 +371,38 @@ function transformPipelineResult(pipelineResult: any, analysisType: string): any
       persuasion_strategy: mainResult.xray_payload.persuasion_strategy
     };
   }
+
+  // For X-Ray, merge stage1 + market completion
+if (analysisType === 'xray' && pipelineResult.results.market_completion) {
+  const stage1 = mainResult.xray_payload || {};
+  const stage2 = pipelineResult.results.market_completion;
+  
+  flattenedResult = {
+    ...mainResult,
+    copywriter_profile: {
+      ...stage1.copywriter_profile,
+      demographics: stage2.complete_demographics,
+      psychographics: stage2.complete_psychographics,
+      current_struggles: stage2.current_struggles,
+      night_worries: stage2.night_worries,
+      worst_case_scenarios: stage2.worst_case_scenarios,
+      ideal_outcomes: stage2.ideal_outcomes,
+      aspirational_goals: stage2.aspirational_goals,
+      emotional_rewards: stage2.emotional_rewards
+    },
+    commercial_intelligence: {
+      ...stage1.commercial_intelligence,
+      one_big_promise: stage2.one_big_promise,
+      existing_solution_gaps: stage2.existing_solution_gaps,
+      product_service_details: stage2.product_service_details,
+      key_benefits: stage2.key_benefits,
+      common_objections: stage2.common_objections,
+      implementation_concerns: stage2.implementation_concerns,
+      time_commitment_worries: stage2.time_commitment_worries
+    },
+    persuasion_strategy: stage1.persuasion_strategy
+  };
+}
   
   // Ensure required fields for database save
   const transformedResult = {
