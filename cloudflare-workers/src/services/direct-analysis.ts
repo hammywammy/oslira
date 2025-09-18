@@ -34,15 +34,15 @@ export class DirectAnalysisExecutor {
       requestId: this.requestId 
     });
 
-    const response = await this.aiAdapter.executeRequest({
-      model_name: 'gpt-5-nano',
-      system_prompt: 'You are a lead scoring specialist. Analyze Instagram profiles quickly for business collaboration potential. Return valid JSON only.',
-      user_prompt: buildSpeedLightAnalysisPrompt(profile, business),
-      max_tokens: 2500,
-      json_schema: getLightAnalysisJsonSchema(),
-      response_format: 'json',
-      temperature: 0.3
-    });
+const response = await this.aiAdapter.executeRequest({
+  model_name: 'gpt-5-nano',
+  system_prompt: 'Rate leads fast. Return JSON only.',
+  user_prompt: buildSpeedLightAnalysisPrompt(profile, business),
+  max_tokens: 800,
+  json_schema: getLightAnalysisJsonSchema(),
+  response_format: 'json',
+  temperature: 0.1
+});
 
     const processingTime = Date.now() - startTime;
     const analysisData = JSON.parse(response.content);
