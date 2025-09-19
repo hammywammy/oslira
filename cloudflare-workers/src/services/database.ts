@@ -429,7 +429,7 @@ export async function updateCreditsAndTransaction(
   cost: number,
   analysisType: string,
   run_id: string,
-  costDetails?: {
+  costDetails: {
     actual_cost: number;
     tokens_in: number;
     tokens_out: number;
@@ -438,8 +438,7 @@ export async function updateCreditsAndTransaction(
     processing_duration_ms?: number;
     blocks_used?: string[];
   },
-  env: Env,
-  lead_id?: string // ADD LEAD_ID PARAMETER
+  env: Env
 ): Promise<void> {
   const headers = createHeaders(env);
 
@@ -480,15 +479,13 @@ export async function updateCreditsAndTransaction(
       type: 'use',
       description: `${analysisType} analysis`,
       run_id: run_id,
-      lead_id: lead_id || null, // ADD LEAD_ID TO TRANSACTION
-      actual_cost: costDetails?.actual_cost || null,
-      tokens_in: costDetails?.tokens_in || null,
-      tokens_out: costDetails?.tokens_out || null,
-      model_used: costDetails?.model_used || null,
-      block_type: costDetails?.block_type || null,
-      processing_duration_ms: costDetails?.processing_duration_ms || null,
-      blocks_used: costDetails?.blocks_used?.join('+') || null,
-      margin: cost - (costDetails?.actual_cost || 0) // Track profit margin
+actual_cost: costDetails.actual_cost,
+      tokens_in: costDetails.tokens_in,
+      tokens_out: costDetails.tokens_out,
+      model_used: costDetails.model_used,
+      block_type: costDetails.block_type,
+      processing_duration_ms: costDetails.processing_duration_ms || null,
+      blocks_used: costDetails.blocks_used?.join('+') || null,
     };
 
     logger('info', 'Transaction data prepared', {
