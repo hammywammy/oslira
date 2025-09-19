@@ -11,39 +11,18 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
   try {
     logger('info', 'Analysis request received', { requestId });
 
-    // Parse and validate request with pipeline support
-    const body = await c.req.json() as AnalysisRequest & {
-      workflow?: string;           // 'micro_only', 'auto', 'full'
-      model_tier?: string;        // 'premium', 'balanced', 'economy'
-      force_model?: string;       // Override specific model
-    };
-    
-    const { 
-      profile_url, 
-      username, 
-      analysis_type, 
-      business_id, 
-      user_id,
-workflow = analysis_type === 'light' ? 'light_speed' : 
-           analysis_type === 'deep' ? 'deep_fast' : 
-           analysis_type === 'xray' ? 'xray_complete' : 'auto',
-      model_tier = analysis_type === 'light' ? 'economy' : 'balanced',
-      force_model
-    } = normalizeRequest(body);
+    // Parse and validate request
+    const body = await c.req.json() as AnalysisRequest;
+    const { profile_url, username, analysis_type, business_id, user_id } = normalizeRequest(body);
 
-// Start all non-dependent operations in parallel
-const [userResult, business] = await Promise.all([
-  fetchUserAndCredits(user_id, c.env),
-  fetchBusinessProfile(business_id, user_id, c.env)
-]);
+    // Start all non-dependent operations in parallel
+    const [userResult, business] = await Promise.all([
+      fetchUserAndCredits(user_id, c.env),
+      fetchBusinessProfile(business_id, user_id, c.env)
+    ]);
 
     if (!userResult.isValid) {
-      return c.json(createStandardResponse(
-        false, 
-        undefined, 
-        userResult.error, 
-        requestId
-      ), 400);
+      return c.json(createStandardResponse(false, undefined, userResult.error, requestId), 400);
     }
 
     // Check credit requirements
@@ -84,13 +63,12 @@ const [userResult, business] = await Promise.all([
       ), 400);
     }
 
-    // OPTIMIZATION: Pre-screen for light analysis
+    // Pre-screen for light analysis (early exit optimization)
     if (analysis_type === 'light') {
       const { preScreenProfile } = await import('../services/prompts.js');
       const preScreen = preScreenProfile(profileData, business);
       
       if (!preScreen.shouldProcess) {
-        // Return early result without AI call
         const earlyResult = {
           run_id: 'pre-screen-' + requestId,
           profile: {
@@ -130,59 +108,49 @@ const [userResult, business] = await Promise.all([
       }
     }
     
-// ANALYSIS: A/B test between optimized and legacy systems
-    let orchestrationResult;
-    const systemUsed = useOptimizedSystem ? 'optimized_direct' : 'legacy_pipeline';
+    // DIRECT ANALYSIS - Single optimized system
+    let analysisResult;
+    let costDetails;
+    let processingTime;
     
     try {
-      logger('info', `Using ${systemUsed} system`, { 
-        analysis_type, 
-        useOptimizedSystem,
-        requestId 
-      });
+      logger('info', 'Executing direct analysis', { analysis_type, requestId });
 
-      if (useOptimizedSystem) {
-        // Use new optimized direct execution
-        orchestrationResult = await executeOptimizedAnalysis(profileData, business, analysis_type, c.env, requestId);
-      } else {
-        // Use legacy pipeline system
-        orchestrationResult = await executeLegacyPipelineAnalysis(profileData, business, analysis_type, workflow, model_tier, c.env, requestId);
+      const { DirectAnalysisExecutor } = await import('../services/direct-analysis.js');
+      const directExecutor = new DirectAnalysisExecutor(c.env, requestId);
+      
+      let directResult;
+      switch (analysis_type) {
+        case 'light':
+          directResult = await directExecutor.executeLight(profileData, business);
+          break;
+        case 'deep':
+          directResult = await directExecutor.executeDeep(profileData, business);
+          break;
+        case 'xray':
+          directResult = await directExecutor.executeXRay(profileData, business);
+          break;
+        default:
+          throw new Error(`Unsupported analysis type: ${analysis_type}`);
       }
 
-      // Handle early exit
-      if (orchestrationResult.verdict === 'early_exit') {
-        return c.json(createStandardResponse(true, {
-          ...orchestrationResult.result,
-          performance: orchestrationResult.performance,
-          credits_used: 0, // No credits charged for early exit
-        }, undefined, requestId));
-      }
+      analysisResult = directResult.analysisData;
+      costDetails = directResult.costDetails;
+      processingTime = directResult.costDetails.processing_duration_ms;
 
-      // Handle analysis error
-      if (orchestrationResult.verdict === 'error') {
-        return c.json(createStandardResponse(
-          false, 
-          undefined, 
-          `Analysis failed: ${orchestrationResult.result.error}`, 
-          requestId
-        ), 500);
-      }
-
-    } catch (orchestrationError: any) {
-      logger('error', 'Analysis orchestration failed', { 
-        error: orchestrationError.message,
-        system: 'pipeline',
+    } catch (analysisError: any) {
+      logger('error', 'Direct analysis failed', { 
+        error: analysisError.message,
+        analysis_type,
         requestId
       });
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        `Analysis orchestration failed: ${orchestrationError.message}`, 
+        `Analysis failed: ${analysisError.message}`, 
         requestId
       ), 500);
     }
-
-    const analysisResult = orchestrationResult.result;
 
     // PREPARE DATA FOR DATABASE (3-TABLE STRUCTURE)
     const leadData = {
@@ -194,7 +162,7 @@ const [userResult, business] = await Promise.all([
       bio: profileData.bio,
       external_url: profileData.externalUrl,
       followersCount: profileData.followersCount,
-      followsCount: profileData.followingCount,  // Use followsCount to match scraper
+      followsCount: profileData.followingCount,
       postsCount: profileData.postsCount,
       is_verified: profileData.isVerified,
       is_private: profileData.isPrivate,
@@ -218,20 +186,15 @@ const [userResult, business] = await Promise.all([
         username: profileData.username 
       });
 
-      // Step 3: Update user credits with lead_id
-      const primaryModel = orchestrationResult.totalCost.blocks_used.length > 0 
-        ? orchestrationResult.totalCost.blocks_used[orchestrationResult.totalCost.blocks_used.length - 1]
-        : 'unknown';
-
-      const costDetails = {
-        actual_cost: orchestrationResult.totalCost.actual_cost,
-        tokens_in: orchestrationResult.totalCost.tokens_in,
-        tokens_out: orchestrationResult.totalCost.tokens_out,
-        model_used: primaryModel.substring(0, 20), // Truncate to DB limit
-        block_type: 'pipeline',
-        processing_duration_ms: orchestrationResult.performance.total_ms,
-        blocks_used: orchestrationResult.totalCost.blocks_used,
-        system_used: 'pipeline'
+      // Step 3: Update user credits with enhanced cost tracking
+      const enhancedCostDetails = {
+        actual_cost: costDetails.actual_cost,
+        tokens_in: costDetails.tokens_in,
+        tokens_out: costDetails.tokens_out,
+        model_used: costDetails.model_used,
+        block_type: costDetails.block_type,
+        processing_duration_ms: processingTime,
+        blocks_used: [costDetails.block_type]
       };
 
       await updateCreditsAndTransaction(
@@ -239,7 +202,7 @@ const [userResult, business] = await Promise.all([
         creditCost, 
         analysis_type, 
         run_id,
-        costDetails,
+        enhancedCostDetails,
         c.env,
         lead_id
       );
@@ -248,52 +211,10 @@ const [userResult, business] = await Promise.all([
         user_id, 
         creditCost, 
         run_id, 
-        lead_id 
+        lead_id,
+        actual_cost: costDetails.actual_cost,
+        margin: creditCost - costDetails.actual_cost
       });
-
-      // Record performance metrics for A/B testing
-    try {
-      const performanceMonitor = new PerformanceMonitor(c.env);
-      
-      const creditCost = analysis_type === 'deep' ? 2 : analysis_type === 'xray' ? 3 : 1;
-      const revenue = creditCost * 0.30; // $0.30 per credit
-      const marginPercentage = Math.round(((revenue - orchestrationResult.totalCost.actual_cost) / revenue) * 100);
-
-      const metrics = {
-        requestId,
-        analysisType: analysis_type,
-        systemUsed: useOptimizedSystem ? 'optimized_direct' as const : 'legacy_pipeline' as const,
-        username: profileData.username,
-        
-        // Timing metrics
-        totalDurationMs: orchestrationResult.performance.total_ms,
-        scrapingDurationMs: 0, // Would need to track separately
-        analysisDurationMs: orchestrationResult.performance.total_ms,
-        
-        // Cost metrics
-        actualCost: orchestrationResult.totalCost.actual_cost,
-        creditsUsed: creditCost,
-        marginPercentage,
-        
-        // Quality metrics
-        overallScore: analysisResult.score,
-        confidenceLevel: analysisResult.confidence_level || 0.7,
-        dataQuality: profileData.dataQuality || 'medium',
-        
-        // System metrics
-        blocksUsed: orchestrationResult.totalCost.blocks_used,
-        modelUsed: orchestrationResult.totalCost.blocks_used[0] || 'unknown',
-        tokensIn: orchestrationResult.totalCost.tokens_in,
-        tokensOut: orchestrationResult.totalCost.tokens_out
-      };
-
-      performanceMonitor.recordMetrics(metrics);
-    } catch (monitoringError: any) {
-      logger('warn', 'Performance monitoring failed', { 
-        error: monitoringError.message, 
-        requestId 
-      });
-    }
 
     } catch (saveError: any) {
       logger('error', 'Database save or credit update failed', { 
@@ -357,22 +278,19 @@ const [userResult, business] = await Promise.all([
       credits: {
         used: creditCost,
         remaining: userResult.credits - creditCost,
-        actual_cost: orchestrationResult.totalCost.actual_cost,
-        margin: creditCost - orchestrationResult.totalCost.actual_cost
+        actual_cost: costDetails.actual_cost,
+        margin: creditCost - costDetails.actual_cost
       },
       metadata: {
         request_id: requestId,
         analysis_completed_at: new Date().toISOString(),
         schema_version: '3.1',
-        system_used: 'pipeline',
-        workflow_used: orchestrationResult.workflow_used,
-        orchestration: {
-          blocks_used: orchestrationResult.totalCost.blocks_used,
-          performance_ms: orchestrationResult.performance,
-          total_cost: orchestrationResult.totalCost.actual_cost,
-          pipeline_stages: Object.keys(orchestrationResult.performance),
-          model_tier: model_tier,
-          workflow: workflow
+        system_used: 'direct_analysis',
+        performance: {
+          processing_duration_ms: processingTime,
+          model_used: costDetails.model_used,
+          block_type: costDetails.block_type,
+          tokens_processed: costDetails.tokens_in + costDetails.tokens_out
         }
       }
     };
@@ -384,69 +302,15 @@ const [userResult, business] = await Promise.all([
       overall_score: analysisResult.score,
       confidence: analysisResult.confidence_level,
       dataQuality: profileData.dataQuality,
-      systemUsed: 'pipeline',
-      workflowUsed: orchestrationResult.workflow_used
+      system: 'direct_analysis',
+      processing_time: processingTime,
+      actual_cost: costDetails.actual_cost
     });
 
     return c.json(createStandardResponse(true, responseData, undefined, requestId));
 
   } catch (error: any) {
     logger('error', 'Analysis request failed', { error: error.message, requestId });
-    return c.json(createStandardResponse(
-      false, 
-      undefined, 
-      error.message, 
-      requestId
-    ), 500);
+    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
-}
-
-async function executeOptimizedAnalysis(
-  profileData: any,
-  business: any,
-  analysisType: string,
-  env: any,
-  requestId: string
-): Promise<any> {
-  // Enrich business context
-  const { fetchBusinessProfile } = await import('../services/database.js');
-  const enrichedBusiness = business.business_one_liner ? 
-    business : 
-    await fetchBusinessProfile(business.business_id, business.user_id, env);
-
-  const { DirectAnalysisExecutor } = await import('../services/direct-analysis.js');
-  const directExecutor = new DirectAnalysisExecutor(env, requestId);
-
-  let directResult: any;
-  switch (analysisType) {
-    case 'light':
-      directResult = await directExecutor.executeLight(profileData, enrichedBusiness);
-      break;
-    case 'deep':
-      directResult = await directExecutor.executeDeep(profileData, business);
-      break;
-    case 'xray':
-      directResult = await directExecutor.executeXRay(profileData, business);
-      break;
-    default:
-      throw new Error(`Unknown analysis type: ${analysisType}`);
-  }
-
-  // Transform direct result to match interface
-  return {
-    result: directResult.analysisData,
-    totalCost: {
-      actual_cost: directResult.costDetails.actual_cost,
-      tokens_in: directResult.costDetails.tokens_in,
-      tokens_out: directResult.costDetails.tokens_out,
-      blocks_used: [directResult.costDetails.block_type],
-      total_blocks: 1
-    },
-    performance: {
-      [directResult.costDetails.block_type]: directResult.costDetails.processing_duration_ms,
-      total_ms: directResult.costDetails.processing_duration_ms
-    },
-    verdict: 'success',
-    workflow_used: 'direct_execution'
-  };
 }
