@@ -49,36 +49,6 @@ app.get('/', (c) => {
 
 app.get('/health', (c) => c.json({ status: 'healthy', timestamp: new Date().toISOString() }));
 
-// A/B Testing Status Endpoint
-app.get('/health/ab-test', async (c) => {
-  const { PerformanceMonitor } = await import('./utils/performance-monitor.js');
-  const { FeatureFlagManager } = await import('./utils/feature-flags.js');
-  
-  const performanceMonitor = new PerformanceMonitor(c.env);
-  const featureFlags = new FeatureFlagManager(c.env);
-  
-  const comparison = performanceMonitor.getSystemComparison();
-  
-  return c.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    abTesting: {
-      rolloutPercentage: featureFlags.getPercentage(),
-      flags: {
-        USE_DIRECT_ANALYSIS: featureFlags.isEnabled('USE_DIRECT_ANALYSIS'),
-        USE_SMART_BATCHING: featureFlags.isEnabled('USE_SMART_BATCHING'),
-        ENABLE_PRE_SCREENING: featureFlags.isEnabled('ENABLE_PRE_SCREENING'),
-        USE_COMPRESSED_PROMPTS: featureFlags.isEnabled('USE_COMPRESSED_PROMPTS')
-      },
-      performanceComparison: comparison
-    },
-    deployment: {
-      version: 'v3.2.0-optimized',
-      phase: 'ab_testing',
-      canRollback: true
-    }
-  });
-});
 
 // ===============================================================================
 // LAZY LOADED ENDPOINTS
