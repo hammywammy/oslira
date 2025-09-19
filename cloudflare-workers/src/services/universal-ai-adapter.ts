@@ -1,5 +1,6 @@
 import { getApiKey } from './enhanced-config-manager.js';
 import { logger } from '../utils/logger.js';
+import { ANALYSIS_PIPELINE_CONFIG, type ModelConfig } from '../config/analysis-pipeline.js';
 
 export interface UniversalRequest {
   model_name: string;
