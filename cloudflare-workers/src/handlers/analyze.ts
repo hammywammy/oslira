@@ -3,7 +3,6 @@ import type { Env, AnalysisRequest, ProfileData, AnalysisResult, AnalysisRespons
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
-import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
@@ -449,55 +448,5 @@ async function executeOptimizedAnalysis(
     },
     verdict: 'success',
     workflow_used: 'direct_execution'
-  };
-}
-
-async function executeLegacyPipelineAnalysis(
-  profileData: any,
-  business: any,
-  analysisType: string,
-  workflow: string,
-  modelTier: string,
-  env: any,
-  requestId: string
-): Promise<any> {
-  // Get business context if available
-  const { fetchBusinessProfile } = await import('../services/database.js');
-  const enrichedBusiness = business.business_one_liner || business.business_context_pack ? 
-    business : 
-    await fetchBusinessProfile(business.business_id, business.user_id, env);
-
-  // Create pipeline context
-  const { PipelineExecutor } = await import('../services/pipeline-executor.js');
-  const pipelineContext = {
-    profile: profileData,
-    business: enrichedBusiness,
-    analysis_type: analysisType,
-    workflow,
-    model_tier: modelTier as 'premium' | 'balanced' | 'economy'
-  };
-
-  // Execute pipeline
-  const executor = new PipelineExecutor(env, requestId);
-  const pipelineResult = await executor.execute(pipelineContext);
-
-  // Transform pipeline result to match interface
-  const transformPipelineResult = (await import('./analyze.js')).transformPipelineResult;
-  
-  return {
-    result: transformPipelineResult(pipelineResult, analysisType),
-    totalCost: {
-      actual_cost: pipelineResult.costs.reduce((sum: number, c: any) => sum + c.cost, 0),
-      tokens_in: pipelineResult.costs.reduce((sum: number, c: any) => sum + c.tokens_in, 0),
-      tokens_out: pipelineResult.costs.reduce((sum: number, c: any) => sum + c.tokens_out, 0),
-      blocks_used: pipelineResult.costs.map((c: any) => c.stage),
-      total_blocks: pipelineResult.costs.length
-    },
-    performance: {
-      ...pipelineResult.performance,
-      total_ms: Object.values(pipelineResult.performance).reduce((sum: number, time: number) => sum + time, 0)
-    },
-    verdict: 'success',
-    workflow_used: pipelineResult.workflow_used
   };
 }
