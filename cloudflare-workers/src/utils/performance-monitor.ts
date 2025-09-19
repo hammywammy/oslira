@@ -96,15 +96,4 @@ export class PerformanceMonitor {
       }
     };
   }
-
-  private calculateAverages(metrics: PerformanceMetrics[]): any {
-    const count = metrics.length;
-    return {
-      count,
-      avgDuration: Math.round(metrics.reduce((sum, m) => sum + m.totalDurationMs, 0) / count),
-      avgCost: Math.round(metrics.reduce((sum, m) => sum + m.actualCost, 0) / count * 100) / 100,
-      avgScore: Math.round(metrics.reduce((sum, m) => sum + m.overallScore, 0) / count),
-      avgMargin: Math.round(metrics.reduce((sum, m) => sum + m.marginPercentage, 0) / count)
-    };
-  }
 }
