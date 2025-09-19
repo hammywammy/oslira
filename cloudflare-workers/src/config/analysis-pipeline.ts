@@ -37,106 +37,6 @@ export interface ModelConfig {
 
 // Master Pipeline Configuration
 export const ANALYSIS_PIPELINE_CONFIG = {
-  // Workflow Definitions
-  workflows: {
-    // Quick assessment only
-    micro_only: {
-      name: 'micro_only',
-      description: 'Triage and basic analysis only',
-      stages: [
-        { name: 'triage', type: 'triage', required: true, model_tier: 'economy' },
-        { 
-          name: 'light_analysis', 
-          type: 'analysis', 
-          required: true, 
-          model_tier: 'economy',
-          conditions: [{ field: 'analysis_type', operator: '==', value: 'light' }]
-        }
-      ]
-    } as WorkflowConfig,
-
-light_speed: {
-  name: 'light_speed',
-  description: 'Ultra-fast light analysis - single nano call only',
-  stages: [
-    { 
-      name: 'speed_light_analysis', 
-      type: 'speed_analysis', 
-      required: true
-    }
-  ]
-} as WorkflowConfig,
-
-auto: {
-  name: 'auto',
-  description: 'AI decides preprocessing based on data quality',
-  stages: [
-    { name: 'triage', type: 'triage', required: true, model_tier: 'economy' },
-    { 
-      name: 'preprocessor', 
-      type: 'preprocessor', 
-      required: false, 
-      model_tier: 'economy',
-      conditions: [
-        { field: 'triage.data_richness', operator: '>', value: 70 },
-        { field: 'analysis_type', operator: '==', value: 'deep', skip_if_true: false }
-      ]
-    },
-    { 
-      name: 'main_analysis', 
-      type: 'analysis', 
-      required: true,
-      model_tier: 'balanced'
-    }
-  ]
-} as WorkflowConfig,
-
-    // Run everything regardless
-    full: {
-      name: 'full',
-      description: 'Complete analysis pipeline - all stages',
-      stages: [
-        { name: 'context_generation', type: 'context', required: true, model_tier: 'economy' },
-        { name: 'triage', type: 'triage', required: true, model_tier: 'economy' },
-        { name: 'preprocessor', type: 'preprocessor', required: true, model_tier: 'economy' },
-        { name: 'main_analysis', type: 'analysis', required: true, model_tier: 'balanced' }
-      ]
-    } as WorkflowConfig,
-
-    // Add after existing workflows
-light_fast: {
-  name: 'light_fast',
-  description: 'Speed-optimized light analysis - single stage only',
-  stages: [
-    { 
-      name: 'light_analysis', 
-      type: 'analysis', 
-      required: true, 
-      model_tier: 'economy'
-    }
-  ]
-} as WorkflowConfig,
-
-deep_fast: {
-  name: 'deep_fast',
-  description: 'Speed-optimized deep analysis with caching',
-  stages: [
-    { name: 'preprocessor', type: 'preprocessor', required: false, model_tier: 'economy' },
-    { name: 'main_analysis', type: 'analysis', required: true, model_tier: 'balanced' }
-  ]
-} as WorkflowConfig,
-
-    xray_complete: {
-  name: 'xray_complete', 
-  description: 'Two-stage comprehensive X-Ray analysis',
-  stages: [
-    { name: 'triage', type: 'triage', required: true, model_tier: 'economy' },
-    { name: 'xray_stage1', type: 'analysis', required: true, model_tier: 'balanced' },
-    { name: 'market_completion', type: 'market_completion', required: true, model_tier: 'economy' }
-  ]
-} as WorkflowConfig
-  },
-
   // Model Configurations
   models: {
 'claude-opus-4-1-20250805': {
@@ -214,12 +114,4 @@ analysis_mappings: {
   xray: 'gpt-5',
   context: 'gpt-5-mini'
 },
-
-  // Default Settings
-  defaults: {
-    workflow: 'auto',
-    model_tier: 'balanced',
-    max_retries: 3,
-    timeout_ms: 30000
-  }
 };
