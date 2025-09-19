@@ -1,10 +1,9 @@
 import { Context } from 'hono';
-import type { Env, AnalysisRequest, ProfileData, AnalysisResult, AnalysisResponse } from '../types/interfaces.js';
+import type { Env, AnalysisRequest, ProfileData, AnalysisResponse } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
-import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
-import { ANALYSIS_PIPELINE_CONFIG } from '../config/analysis-pipeline.js';
+import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile } from '../services/database.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -178,16 +177,12 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       // Step 1: Save analysis to database
       run_id = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
       
-      // Step 2: Get lead_id for credit transaction
-      lead_id = await getLeadIdFromRun(run_id, c.env);
-      
-      logger('info', 'Database save successful', { 
-        run_id, 
-        lead_id,
+logger('info', 'Database save successful', { 
+        run_id,
         username: profileData.username 
       });
 
-      // Step 3: Update user credits with enhanced cost tracking
+      // Step 2: Update user credits with enhanced cost tracking
       const enhancedCostDetails = {
         actual_cost: costDetails.actual_cost,
         tokens_in: costDetails.tokens_in,
@@ -204,10 +199,9 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
         analysis_type, 
         run_id,
         enhancedCostDetails,
-        c.env,
-        lead_id
+        c.env
       );
-
+      
       logger('info', 'Credits updated successfully', { 
         user_id, 
         creditCost, 
