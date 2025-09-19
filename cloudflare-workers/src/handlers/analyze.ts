@@ -5,8 +5,6 @@ import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
 import { PipelineExecutor, type PipelineContext } from '../services/pipeline-executor.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
-import { FeatureFlagManager } from '../utils/feature-flags.js';
-import { PerformanceMonitor } from '../utils/performance-monitor.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
