@@ -1,7 +1,7 @@
 import { ANALYSIS_PIPELINE_CONFIG, type WorkflowConfig, type AnalysisStage } from '../config/analysis-pipeline.js';
 import { UniversalAIAdapter, selectModel } from './universal-ai-adapter.js';
 import { logger } from '../utils/logger.js';
-import { buildXRayAnalysisPrompt, buildDeepAnalysisPrompt, buildLightAnalysisPrompt, buildMarketCompletionPrompt, getTriageJsonSchema, getPreprocessorJsonSchema, getLightAnalysisJsonSchema, getDeepAnalysisJsonSchema, getXRayAnalysisJsonSchema } from './prompts.js';
+import { buildXRayAnalysisPrompt, buildDeepAnalysisPrompt, buildMarketCompletionPrompt, getTriageJsonSchema, getPreprocessorJsonSchema, getLightAnalysisJsonSchema, getDeepAnalysisJsonSchema, getXRayAnalysisJsonSchema } from './prompts.js';
 
 export interface PipelineContext {
   profile: any;
