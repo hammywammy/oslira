@@ -34,23 +34,6 @@ workflow = analysis_type === 'light' ? 'light_speed' :
       force_model
     } = normalizeRequest(body);
 
-// Initialize feature flags for A/B testing
-    const featureFlags = new FeatureFlagManager(c.env);
-    const useOptimizedSystem = featureFlags.shouldUseOptimizedSystem(requestId);
-    
-    featureFlags.logFlagStatus(requestId);
-    
-    logger('info', 'Request validated with A/B testing', { 
-      requestId, 
-      username, 
-      analysis_type, 
-      business_id,
-      workflow,
-      model_tier,
-      useOptimizedSystem,
-      rolloutPercentage: featureFlags.getPercentage()
-    });
-
 // Start all non-dependent operations in parallel
 const [userResult, business] = await Promise.all([
   fetchUserAndCredits(user_id, c.env),
