@@ -1,6 +1,56 @@
 import { getApiKey } from './enhanced-config-manager.js';
 import { logger } from '../utils/logger.js';
-import { ANALYSIS_PIPELINE_CONFIG, type ModelConfig } from '../config/analysis-pipeline.js';
+
+interface ModelConfig {
+  name: string;
+  provider: 'openai' | 'claude';
+  intelligence: number;
+  cost_per_1m_in: number;
+  cost_per_1m_out: number;
+  max_context: number;
+  api_format: 'gpt5_responses' | 'gpt_chat' | 'claude_messages';
+  backup?: string;
+}
+
+const MODEL_CONFIGS: Record<string, ModelConfig> = {
+  'gpt-5': {
+    name: 'gpt-5',
+    provider: 'openai',
+    intelligence: 96,
+    cost_per_1m_in: 1.25,
+    cost_per_1m_out: 10.00,
+    max_context: 128000,
+    api_format: 'gpt5_responses',
+    backup: 'gpt-5-mini'
+  },
+  'gpt-5-mini': {
+    name: 'gpt-5-mini',
+    provider: 'openai',
+    intelligence: 80,
+    cost_per_1m_in: 0.25,
+    cost_per_1m_out: 2.00,
+    max_context: 64000,
+    api_format: 'gpt5_responses'
+  },
+  'gpt-5-nano': {
+    name: 'gpt-5-nano',
+    provider: 'openai',
+    intelligence: 64,
+    cost_per_1m_in: 0.05,
+    cost_per_1m_out: 0.40,
+    max_context: 64000,
+    api_format: 'gpt5_responses'
+  }
+};
+
+const ANALYSIS_MAPPINGS: Record<string, string> = {
+  triage: 'gpt-5-nano',
+  preprocessor: 'gpt-5-nano', 
+  light: 'gpt-5-nano',
+  deep: 'gpt-5-mini',
+  xray: 'gpt-5',
+  context: 'gpt-5-mini'
+};
 
 export interface UniversalRequest {
   model_name: string;
