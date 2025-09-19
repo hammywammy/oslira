@@ -4,6 +4,7 @@ import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
 import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
+import { ANALYSIS_PIPELINE_CONFIG } from '../config/analysis-pipeline.js';
 
 export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
@@ -108,7 +109,7 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       }
     }
     
-    // DIRECT ANALYSIS - Single optimized system
+// DIRECT ANALYSIS - Single optimized system
     let analysisResult;
     let costDetails;
     let processingTime;
