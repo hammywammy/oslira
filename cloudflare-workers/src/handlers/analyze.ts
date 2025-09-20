@@ -170,14 +170,13 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
       profile_url
     };
 
-    // SAVE TO DATABASE AND UPDATE CREDITS
+// SAVE TO DATABASE AND UPDATE CREDITS
     let run_id: string;
-    let lead_id: string;
     try {
       // Step 1: Save analysis to database
       run_id = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
       
-logger('info', 'Database save successful', { 
+      logger('info', 'Database save successful', { 
         run_id,
         username: profileData.username 
       });
@@ -201,12 +200,11 @@ logger('info', 'Database save successful', {
         enhancedCostDetails,
         c.env
       );
-      
+
       logger('info', 'Credits updated successfully', { 
         user_id, 
         creditCost, 
-        run_id, 
-        lead_id,
+        run_id,
         actual_cost: costDetails.actual_cost,
         margin: creditCost - costDetails.actual_cost
       });
