@@ -83,7 +83,7 @@ export class UniversalAIAdapter {
   }
 
 async executeRequest(request: UniversalRequest): Promise<UniversalResponse> {
-    const modelConfig = ANALYSIS_PIPELINE_CONFIG.models[request.model_name];
+    const modelConfig = MODEL_CONFIGS[request.model_name];
     if (!modelConfig) {
       throw new Error(`Unknown model: ${request.model_name}`);
     }
@@ -99,8 +99,8 @@ async executeRequest(request: UniversalRequest): Promise<UniversalResponse> {
         requestId: this.requestId 
       });
 
-      if (modelConfig.backup) {
-        const backupConfig = ANALYSIS_PIPELINE_CONFIG.models[modelConfig.backup];
+if (modelConfig.backup) {
+        const backupConfig = MODEL_CONFIGS[modelConfig.backup];
         if (backupConfig) {
           return await this.executeModelCall(backupConfig, request);
         }
@@ -340,18 +340,6 @@ private calculateCost(inputTokens: number, outputTokens: number, config: ModelCo
 }
 }
 
-export function selectModel(
-  stage: string, 
-  modelTier?: 'premium' | 'balanced' | 'economy',
-  context?: { triage?: { lead_score: number }, tokenCount?: number }
-): string {
-  const mapping = ANALYSIS_PIPELINE_CONFIG.analysis_mappings[stage];
-  
-  // Simple direct lookup - no complex routing
-  if (typeof mapping === 'string') {
-    return mapping;
-  }
-  
-  // Fallback for any remaining object-style mappings
-  return mapping.balanced || mapping.economy || 'gpt-5-nano';
+export function selectModel(stage: string): string {
+  return ANALYSIS_MAPPINGS[stage] || 'gpt-5-nano';
 }
