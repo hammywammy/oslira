@@ -175,10 +175,9 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
     let lead_id: string;
     try {
       // Step 1: Save analysis to database
-      run_id = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
-      
-      // Step 2: Get lead_id for credit transaction
-      lead_id = await getLeadIdFromRun(run_id, c.env);
+      const saveResult = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
+      run_id = saveResult.run_id;
+      lead_id = saveResult.lead_id;
       
       logger('info', 'Database save successful', { 
         run_id,
