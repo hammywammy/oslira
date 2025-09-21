@@ -302,7 +302,7 @@ export async function saveCompleteAnalysis(
   analysisData: any,
   analysisType: string,
   env: Env
-): Promise<string> {
+): Promise<{ run_id: string; lead_id: string }> {
   try {
     logger('info', 'Starting complete analysis save', { 
       username: leadData.username,
@@ -335,13 +335,13 @@ export async function saveCompleteAnalysis(
       );
     }
 
-    logger('info', 'Complete analysis save successful', { 
+logger('info', 'Complete analysis save successful', { 
       lead_id, 
       run_id, 
       analysisType 
     });
     
-    return run_id; // Return run_id instead of lead_id for new system
+    return { run_id, lead_id };
 
   } catch (error: any) {
     logger('error', 'saveCompleteAnalysis failed', { error: error.message });
