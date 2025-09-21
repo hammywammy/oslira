@@ -438,7 +438,8 @@ export async function updateCreditsAndTransaction(
     processing_duration_ms?: number;
     blocks_used?: string[];
   },
-  env: Env
+  env: Env,
+  lead_id?: string
 ): Promise<void> {
   const headers = createHeaders(env);
 
