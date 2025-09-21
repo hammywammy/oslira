@@ -196,15 +196,14 @@ export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Resp
         blocks_used: [costDetails.block_type]
       };
 
-      await updateCreditsAndTransaction(
-        user_id, 
-        creditCost, 
-        analysis_type, 
-        run_id,
-        enhancedCostDetails,
-        c.env,
-        lead_id
-      );
+await updateCreditsAndTransaction(
+  user_id, 
+  creditCost, 
+  analysis_type, 
+  run_id,
+  enhancedCostDetails,
+  c.env
+);
 
       logger('info', 'Credits updated successfully', { 
         user_id, 
