@@ -142,17 +142,17 @@ private async callGPTChat(config: ModelConfig, request: UniversalRequest): Promi
   const openaiKey = await getApiKey('OPENAI_API_KEY', this.env);
   if (!openaiKey) throw new Error('OpenAI API key not available');
 
-const body = {
+  const body = {
   model: config.name,
-  messages: [
+  messages: [  
     { role: 'system', content: request.system_prompt },
     { role: 'user', content: request.user_prompt }
   ],
   max_completion_tokens: request.max_tokens,
-  // Force minimal reasoning for GPT-5 models
+  // Limit reasoning tokens for GPT-5 models to ensure output space
   ...(config.name.includes('gpt-5') && {
     reasoning_effort: 'low',
-    max_reasoning_tokens: 100
+    max_reasoning_tokens: Math.min(500, Math.floor(request.max_tokens * 0.25))
   }),
   ...(request.json_schema && {
     response_format: {
