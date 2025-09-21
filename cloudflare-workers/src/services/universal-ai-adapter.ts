@@ -207,11 +207,16 @@ private async callGPT5Responses(config: ModelConfig, request: UniversalRequest):
 
 const body = {
   model: config.name,
-  messages: [  // ✅ CORRECT
+  messages: [
     { role: 'system', content: request.system_prompt },
     { role: 'user', content: request.user_prompt }
   ],
-  max_completion_tokens: request.max_tokens, // ✅ CORRECT
+  max_completion_tokens: request.max_tokens,
+  // Aggressive reasoning limits for GPT-5 speed optimization
+  ...(config.name.includes('gpt-5') && {
+    reasoning_effort: 'low',
+    max_reasoning_tokens: 50
+  }),
   ...(request.json_schema && {
     response_format: {
       type: 'json_schema',
@@ -219,6 +224,21 @@ const body = {
     }
   })
 };
+  
+
+  const body = {
+  model: config.name,
+  messages: [  
+    { role: 'system', content: request.system_prompt },
+    { role: 'user', content: request.user_prompt }
+  ],
+  max_completion_tokens: request.max_tokens,
+  // Aggressive reasoning limits for speed
+  ...(config.name.includes('gpt-5') && {
+    reasoning_effort: 'low',
+    max_reasoning_tokens: request.analysis_type === 'light' ? 50 : 
+                         request.analysis_type === 'deep' ? 200 : 400
+  }),
 
   logger('info', '📤 GPT-5 Request Body', {
     model: body.model,
