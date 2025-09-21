@@ -149,10 +149,10 @@ const body = {
     { role: 'user', content: request.user_prompt }
   ],
   max_completion_tokens: request.max_tokens,
-  // Constrain reasoning for GPT-5 models
+  // Force minimal reasoning for GPT-5 models
   ...(config.name.includes('gpt-5') && {
     reasoning_effort: 'low',
-    max_reasoning_tokens: 500  // Force minimal reasoning
+    max_reasoning_tokens: 100
   }),
   ...(request.json_schema && {
     response_format: {
