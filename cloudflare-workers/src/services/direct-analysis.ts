@@ -124,7 +124,7 @@ private async executeCoreScoring(profile: ProfileData, business: any): Promise<a
     model_name: 'gpt-5-mini',
     system_prompt: 'Score influencer fit for business partnership. Focus on metrics and alignment.',
     user_prompt: `Score @${profile.username} (${profile.followersCount} followers) for: ${business.business_one_liner}\n\nBio: "${profile.bio}"\nVerified: ${profile.isVerified}\nBusiness: ${profile.isBusinessAccount}\n\nReturn scores (0-100) and brief summary with confidence level.`,
-    max_tokens: 800,
+    max_tokens: 1500,
     json_schema: {
       name: 'CoreScoring',
       strict: true,
@@ -170,7 +170,7 @@ private async executeStrategyAnalysis(profile: ProfileData, business: any): Prom
     model_name: 'gpt-5-mini',
     system_prompt: 'Generate comprehensive partnership strategy and audience insights for influencer collaboration.',
     user_prompt: `Strategic analysis for @${profile.username} partnership with: ${business.business_name}\n\nProfile: ${profile.followersCount} followers, "${profile.bio}"\nBusiness: ${business.business_one_liner}\n\nGenerate detailed partnership strategy, selling points, audience insights, and risk assessment.`,
-    max_tokens: 2000,
+    max_tokens: 3000,
     json_schema: {
       name: 'StrategyAnalysis',
       strict: true,
@@ -215,7 +215,7 @@ private async executeOutreachGeneration(profile: ProfileData, business: any): Pr
     model_name: 'gpt-5-mini',
     system_prompt: 'Write personalized outreach message for influencer partnership. Be specific and compelling.',
     user_prompt: `Write outreach message for @${profile.username}\n\nInfluencer: ${profile.followersCount} followers, "${profile.bio}"\nBusiness: ${business.business_name} - ${business.business_one_liner}\n\nWrite personalized, professional outreach message that references specific details about their profile and offers clear value.`,
-    max_tokens: 600,
+    max_tokens: `1500,
     json_schema: {
       name: 'OutreachMessage',
       strict: true,
