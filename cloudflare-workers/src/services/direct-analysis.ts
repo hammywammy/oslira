@@ -38,10 +38,11 @@ const response = await this.aiAdapter.executeRequest({
   model_name: 'gpt-5-mini',
   system_prompt: 'Rate leads fast. Return JSON only.',
   user_prompt: buildSpeedLightAnalysisPrompt(profile, business),
-  max_tokens: 2000,  // Can reduce since mini is more efficient
+  max_tokens: 2000,
   json_schema: getLightAnalysisJsonSchema(),
   response_format: 'json',
-  temperature: 0.0
+  temperature: 0.0,
+  analysis_type: 'light'
 });
 
     const processingTime = Date.now() - startTime;
@@ -68,15 +69,16 @@ const response = await this.aiAdapter.executeRequest({
       requestId: this.requestId 
     });
 
-    const response = await this.aiAdapter.executeRequest({
-      model_name: 'gpt-5-mini',
-      system_prompt: 'You are a partnership analysis specialist. Generate detailed collaboration strategies for Instagram influencers. Return valid JSON only.',
-      user_prompt: buildDeepAnalysisPrompt(profile, business),
-      max_tokens: 1500,
-      json_schema: getDeepAnalysisJsonSchema(),
-      response_format: 'json',
-      temperature: 0.4
-    });
+const response = await this.aiAdapter.executeRequest({
+  model_name: 'gpt-5-mini',
+  system_prompt: 'You are a partnership analysis specialist. Generate detailed collaboration strategies for Instagram influencers. Return valid JSON only.',
+  user_prompt: buildDeepAnalysisPrompt(profile, business),
+  max_tokens: 1500,
+  json_schema: getDeepAnalysisJsonSchema(),
+  response_format: 'json',
+  temperature: 0.4,
+  analysis_type: 'deep'
+});
 
     const processingTime = Date.now() - startTime;
     const analysisData = JSON.parse(response.content);
@@ -109,7 +111,8 @@ const response = await this.aiAdapter.executeRequest({
       max_tokens: 2000,
       json_schema: getXRayAnalysisJsonSchema(),
       response_format: 'json',
-      temperature: 0.5
+      temperature: 0.5,
+  analysis_type: 'xray'
     });
 
     const processingTime = Date.now() - startTime;
