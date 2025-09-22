@@ -144,9 +144,10 @@ const runData = {
       niche_fit_score: Math.round(parseFloat(analysisResult.niche_fit) || 0),
       engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0),
       
-      // Quick reference data - FIXED TO ENSURE NON-NULL VALUES
-      summary_text: analysisResult.quick_summary || 
-                   analysisResult.summary_text || 
+// Quick reference data - Use AI's actual summary with score context
+      summary_text: analysisResult.summary || 
+                   analysisResult.quick_summary || 
+                   analysisResult.summary_text ||
                    `${analysisType} analysis completed - Score: ${Math.round(parseFloat(analysisResult.score) || 0)}/100`,
       confidence_level: parseFloat(analysisResult.confidence_level) || 
                        parseFloat(analysisResult.confidence) || 
