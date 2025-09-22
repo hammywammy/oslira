@@ -5,7 +5,7 @@ import type { ProfileData } from '../types/interfaces.js';
 
 export interface DirectAnalysisResult {
   analysisData: any;
-  costDetails: {
+  costDetails: { 
     actual_cost: number;
     tokens_in: number;
     tokens_out: number;
