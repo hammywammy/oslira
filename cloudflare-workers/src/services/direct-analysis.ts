@@ -215,7 +215,7 @@ private async executeOutreachGeneration(profile: ProfileData, business: any): Pr
     model_name: 'gpt-5-mini',
     system_prompt: 'Write personalized outreach message for influencer partnership. Be specific and compelling.',
     user_prompt: `Write outreach message for @${profile.username}\n\nInfluencer: ${profile.followersCount} followers, "${profile.bio}"\nBusiness: ${business.business_name} - ${business.business_one_liner}\n\nWrite personalized, professional outreach message that references specific details about their profile and offers clear value.`,
-    max_tokens: `1500,
+    max_tokens: 1500,
     json_schema: {
       name: 'OutreachMessage',
       strict: true,
@@ -275,4 +275,4 @@ private async executeOutreachGeneration(profile: ProfileData, business: any): Pr
         processing_duration_ms: processingTime
       }
     };
-  }
+  }}
