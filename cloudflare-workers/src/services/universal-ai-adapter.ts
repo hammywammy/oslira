@@ -197,7 +197,7 @@ private async callGPT5Responses(config: ModelConfig, request: UniversalRequest):
   const openaiKey = await getApiKey('OPENAI_API_KEY', this.env);
   if (!openaiKey) throw new Error('OpenAI API key not available');
 
-  logger('info', '🚀 GPT-5 Request Starting', {
+logger('info', '🚀 GPT-5 Request Starting', {
     model: config.name,
     max_tokens: request.max_tokens,
     has_json_schema: !!request.json_schema,
@@ -225,7 +225,15 @@ const body = {
     }
   })
 };
-  
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${openaiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
 
   logger('info', '📥 GPT-5 Response Status', {
     status: response.status,
