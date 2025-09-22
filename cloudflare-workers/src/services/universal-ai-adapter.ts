@@ -155,7 +155,7 @@ logger('info', '🚀 GPT-5 Request Starting', {
 
 const body = {
   model: config.name,
-  messages: [  
+  messages: [
     { role: 'system', content: request.system_prompt },
     { role: 'user', content: request.user_prompt }
   ],
@@ -164,11 +164,9 @@ const body = {
   ...(request.temperature !== undefined && !config.name.includes('gpt-5') && {
     temperature: request.temperature
   }),
-  // Aggressive reasoning limits for speed
+  // Speed optimization for all GPT-5 models
   ...(config.name.includes('gpt-5') && {
-    reasoning_effort: 'low',
-    max_reasoning_tokens: request.analysis_type === 'light' ? 50 : 
-                         request.analysis_type === 'deep' ? 200 : 400
+    reasoning_effort: request.analysis_type === 'light' ? 'minimal' : 'low'
   }),
   ...(request.json_schema && {
     response_format: {
@@ -177,6 +175,15 @@ const body = {
     }
   })
 };
+
+  logger('info', '📤 GPT-5 Request Body', {
+    model: body.model,
+    max_completion_tokens: body.max_completion_tokens,
+    reasoning_effort: body.reasoning_effort,
+    has_temperature: 'temperature' in body,
+    has_json_schema: !!body.response_format,
+    requestId: this.requestId
+  });
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
