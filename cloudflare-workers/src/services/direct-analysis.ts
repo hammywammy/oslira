@@ -123,7 +123,7 @@ private async executeCoreScoring(profile: ProfileData, business: any): Promise<a
   const response = await this.aiAdapter.executeRequest({
     model_name: 'gpt-5-mini',
     system_prompt: 'Score influencer fit for business partnership. Focus on metrics and alignment.',
-    user_prompt: `Score @${profile.username} (${profile.followersCount} followers) for: ${business.business_one_liner}\n\nBio: "${profile.bio}"\nVerified: ${profile.isVerified}\nBusiness: ${profile.isBusinessAccount}\n\nReturn scores (0-100) and brief summary with confidence level.`,
+    user_prompt: `@${profile.username} (${profile.followersCount}): "${profile.bio}" vs ${business.business_one_liner}. Score 0-100 for niche fit, engagement potential, overall match.`,
     max_tokens: 1500,
     json_schema: {
       name: 'CoreScoring',
@@ -169,7 +169,7 @@ private async executeStrategyAnalysis(profile: ProfileData, business: any): Prom
   const response = await this.aiAdapter.executeRequest({
     model_name: 'gpt-5-mini',
     system_prompt: 'Generate comprehensive partnership strategy and audience insights for influencer collaboration.',
-    user_prompt: `Strategic analysis for @${profile.username} partnership with: ${business.business_name}\n\nProfile: ${profile.followersCount} followers, "${profile.bio}"\nBusiness: ${business.business_one_liner}\n\nGenerate detailed partnership strategy, selling points, audience insights, and risk assessment.`,
+    user_prompt: `Partnership strategy: @${profile.username} (${profile.followersCount}) + ${business.business_name}. Bio: "${profile.bio}". Generate campaign plan, selling points, audience analysis.`,
     max_tokens: 3000,
     json_schema: {
       name: 'StrategyAnalysis',
@@ -214,7 +214,7 @@ private async executeOutreachGeneration(profile: ProfileData, business: any): Pr
   const response = await this.aiAdapter.executeRequest({
     model_name: 'gpt-5-mini',
     system_prompt: 'Write personalized outreach message for influencer partnership. Be specific and compelling.',
-    user_prompt: `Write outreach message for @${profile.username}\n\nInfluencer: ${profile.followersCount} followers, "${profile.bio}"\nBusiness: ${business.business_name} - ${business.business_one_liner}\n\nWrite personalized, professional outreach message that references specific details about their profile and offers clear value.`,
+   user_prompt: `Outreach to @${profile.username}: ${profile.followersCount} followers, "${profile.bio}". ${business.business_name} offers ${business.business_one_liner}. Write personalized message.`,
     max_tokens: 1500,
     json_schema: {
       name: 'OutreachMessage',
