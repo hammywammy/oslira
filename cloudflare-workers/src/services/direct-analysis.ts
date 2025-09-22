@@ -137,15 +137,16 @@ private async executeCoreScoring(profile: ProfileData, business: any): Promise<a
           niche_fit: { type: 'integer', minimum: 0, maximum: 100 },
           quick_summary: { type: 'string', maxLength: 200 },
           confidence_level: { type: 'number', minimum: 0, maximum: 1 },
-          engagement_breakdown: {
-            type: 'object',
-            properties: {
-              avg_likes: { type: 'integer' },
-              avg_comments: { type: 'integer' },
-              engagement_rate: { type: 'number' }
-            },
-            required: ['avg_likes', 'avg_comments', 'engagement_rate']
-          }
+engagement_breakdown: {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    avg_likes: { type: 'integer' },
+    avg_comments: { type: 'integer' },
+    engagement_rate: { type: 'number' }
+  },
+  required: ['avg_likes', 'avg_comments', 'engagement_rate']
+}
         },
         required: ['score', 'engagement_score', 'niche_fit', 'quick_summary', 'confidence_level', 'engagement_breakdown']
       }
