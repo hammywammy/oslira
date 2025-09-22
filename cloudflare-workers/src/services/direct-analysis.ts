@@ -185,6 +185,37 @@ Score 0-100 for niche fit, engagement, overall match. Generate partnership strat
   };
 }
 
+  private async executeOutreachGeneration(profile: ProfileData, business: any): Promise<any> {
+  const response = await this.aiAdapter.executeRequest({
+    model_name: 'gpt-5-mini',
+    system_prompt: 'Write personalized outreach message for influencer partnership. Be specific and compelling.',
+    user_prompt: `Outreach to @${profile.username}: ${profile.followersCount} followers, "${profile.bio}". ${business.business_name} offers ${business.business_one_liner}. Write personalized message.`,
+    max_tokens: 1500,
+    json_schema: {
+      name: 'OutreachMessage',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          outreach_message: { type: 'string', maxLength: 1000 }
+        },
+        required: ['outreach_message']
+      }
+    },
+    response_format: 'json',
+    temperature: 0.6,
+    analysis_type: 'deep_outreach'
+  });
+
+  const result = JSON.parse(response.content);
+  return {
+    ...result,
+    cost: response.usage.total_cost,
+    tokens_in: response.usage.input_tokens,
+    tokens_out: response.usage.output_tokens
+  };
+}
   async executeXRay(profile: ProfileData, business: any): Promise<DirectAnalysisResult> {
     const startTime = Date.now();
     
