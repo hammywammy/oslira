@@ -164,9 +164,9 @@ const body = {
   ...(request.temperature !== undefined && !config.name.includes('gpt-5') && {
     temperature: request.temperature
   }),
-  // Speed optimization for all GPT-5 models
+// Speed optimization for all GPT-5 models
   ...(config.name.includes('gpt-5') && {
-    reasoning_effort: request.analysis_type === 'light' ? 'minimal' : 'low'
+    reasoning_effort: request.analysis_type === 'light' ? 'low' : 'medium'
   }),
   ...(request.json_schema && {
     response_format: {
