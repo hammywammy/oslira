@@ -38,7 +38,7 @@ const response = await this.aiAdapter.executeRequest({
   model_name: 'gpt-5-mini',
   system_prompt: 'Rate leads fast. Return JSON only.',
   user_prompt: buildSpeedLightAnalysisPrompt(profile, business),
-  max_tokens: 2000,
+  max_tokens: 5000,
   json_schema: getLightAnalysisJsonSchema(),
   response_format: 'json',
   temperature: 0.0,
