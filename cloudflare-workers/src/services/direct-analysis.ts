@@ -313,7 +313,7 @@ Score 0-100 for niche fit, engagement, overall match. Generate partnership strat
       actual_cost: totalCost,
       tokens_in: totalTokensIn,
       tokens_out: totalTokensOut,
-      model_used: 'gpt-5-mini-xray-parallel',
+      model_used: 'gpt-5-mini',
       block_type: 'optimized_xray',
       processing_duration_ms: processingTime
     }
