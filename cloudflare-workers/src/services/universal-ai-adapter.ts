@@ -60,6 +60,7 @@ export interface UniversalRequest {
   temperature?: number;
   json_schema?: any;
   response_format?: 'json' | 'text';
+  analysis_type?: string;
 }
 
 export interface UniversalResponse {
@@ -212,10 +213,10 @@ const body = {
     { role: 'user', content: request.user_prompt }
   ],
   max_completion_tokens: request.max_tokens,
-  // Aggressive reasoning limits for GPT-5 speed optimization
-  ...(config.name.includes('gpt-5') && {
-    reasoning_effort: 'low',
-    max_reasoning_tokens: 50
+  temperature: request.temperature || 0.0,
+  // Speed optimization ONLY for light analysis
+  ...(config.name.includes('gpt-5') && request.analysis_type === 'light' && {
+    reasoning_effort: config.name.includes('nano') ? 'minimal' : 'low'
   }),
   ...(request.json_schema && {
     response_format: {
