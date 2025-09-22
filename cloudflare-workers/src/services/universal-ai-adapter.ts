@@ -227,39 +227,6 @@ const body = {
 };
   
 
-  const body = {
-  model: config.name,
-  messages: [  
-    { role: 'system', content: request.system_prompt },
-    { role: 'user', content: request.user_prompt }
-  ],
-  max_completion_tokens: request.max_tokens,
-  // Aggressive reasoning limits for speed
-  ...(config.name.includes('gpt-5') && {
-    reasoning_effort: 'low',
-    max_reasoning_tokens: request.analysis_type === 'light' ? 50 : 
-                         request.analysis_type === 'deep' ? 200 : 400
-  }),
-
-  logger('info', '📤 GPT-5 Request Body', {
-    model: body.model,
-    input_length: body.input?.length,
-    max_output_tokens: body.max_output_tokens,
-    has_response_format: !!body.response_format,
-    response_format_type: body.response_format?.type,
-    temperature: body.temperature,
-    requestId: this.requestId
-  });
-
-const response = await fetch('https://api.openai.com/v1/chat/completions', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${openaiKey}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify(body)
-});
-
   logger('info', '📥 GPT-5 Response Status', {
     status: response.status,
     statusText: response.statusText,
