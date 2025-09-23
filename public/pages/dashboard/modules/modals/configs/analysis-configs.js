@@ -20,14 +20,17 @@ registerDefaultConfigs() {
 
     // Deep Analysis Configuration  
     this.configs.set('deep', {
-        components: [
-            'heroHeader',
-            'metricsGrid',
-            'aiSummary',
-            'sellingPoints',
-            'outreachMessage',
-            'engagementInsights'
-        ]
+    components: [
+        'heroHeader',           // Your existing header with profile/score
+        'deepSummary',          // New - shows deep_summary
+        'sellingPoints',        // Existing - shows selling_points from payload
+        'outreachMessage',      // Existing - shows outreach_message from payload
+        'engagementBreakdown',  // New - shows engagement metrics
+        'payloadAudienceInsights', // New - shows audience_insights 
+        'reasons',              // Existing - shows reasons array
+        'latestPosts',          // New - shows latest_posts (when available)
+        'aiSummary'             // Existing fallback
+    ]
     });
 
     // X-Ray Analysis Configuration
