@@ -941,7 +941,7 @@ removeExistingModals() {
             modal.remove();
         }
     });
-}
+}}
 
 // Export for module system - CORRECT FORMAT
 if (typeof module !== 'undefined' && module.exports) {
