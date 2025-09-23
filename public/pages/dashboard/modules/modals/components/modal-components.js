@@ -170,9 +170,9 @@ getPayloadData(lead, analysisData) {
                         <div class="relative z-10">
                             <!-- Profile Section -->
 <div class="flex items-center justify-between mb-8 stagger-reveal" style="animation-delay: 0.1s;">
-    <div class="flex space-x-6">
-        <!-- Profile image container - positioned independently -->
-        <div class="relative hover-3d flex-shrink-0" style="transform: translateY(-8px);">
+    <div class="flex items-center space-x-6">
+        <!-- Profile image container - aligned with text -->
+        <div class="relative hover-3d flex-shrink-0">
             <!-- Pulsing rings around profile -->
             <div class="pulse-ring w-20 h-20"></div>
             <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
@@ -181,7 +181,8 @@ getPayloadData(lead, analysisData) {
                  alt="Profile" 
                  class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect object-cover"
                  onerror="this.src='/assets/images/default-avatar.png'">
-            ${(lead.is_verified_account || lead.is_verified) ? `
+            ${(lead.is_verified_account || lead.is_verified) ?
+`
                 <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
                     <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
@@ -190,7 +191,7 @@ getPayloadData(lead, analysisData) {
             ` : ''}
         </div>
         
-        <!-- Text content container - keeps original positioning -->
+        <!-- Text content container - aligned with profile image -->
         <div class="flex flex-col justify-center space-y-2">
             <h1 class="text-3xl font-bold text-white count-up">
                 ${lead.display_name || lead.full_name || lead.username}
