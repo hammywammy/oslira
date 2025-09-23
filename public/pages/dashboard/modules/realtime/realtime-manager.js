@@ -341,44 +341,36 @@ handleConnectionFailure() {
     // AUTHENTICATION HANDLING - EXTRACTED FROM dashboard.js lines 5700-5780
     // ===============================================================================
     
-    async waitForAuth(timeout = 10000) {
-        console.log('🔐 [RealtimeManager] Waiting for authentication...');
+async waitForAuth(timeout = 5000) {
+    console.log('🔐 [RealtimeManager] Waiting for authentication...');
+    
+    return new Promise((resolve) => {
+        let attempts = 0;
+        const maxAttempts = timeout / 100;
         
-        return new Promise((resolve) => {
-            let attempts = 0;
-            const maxAttempts = timeout / 100;
+        const checkAuth = async () => {
+            const user = this.osliraApp?.user;
             
-const checkAuth = async () => {
-    const user = this.osliraApp?.user;
-    let session = null;
-    
-    try {
-        const { data: { session: currentSession } } = await this.supabase.auth.getSession();
-        session = currentSession;
-    } catch (error) {
-        // Fallback check
-        session = this.supabase?.auth?.session;
-    }
-    
-    if (user && session) {
-        console.log('✅ [RealtimeManager] Authentication ready');
-        resolve(true);
-        return;
-    }
+            // Simplified auth check - just verify user exists
+            if (user && user.id) {
+                console.log('✅ [RealtimeManager] User authentication confirmed');
+                resolve(true);
+                return;
+            }
                 
-                attempts++;
-                if (attempts >= maxAttempts) {
-                    console.warn('⚠️ [RealtimeManager] Authentication timeout');
-                    resolve(false);
-                    return;
-                }
-                
-                setTimeout(checkAuth, 100);
-            };
+            attempts++;
+            if (attempts >= maxAttempts) {
+                console.warn('⚠️ [RealtimeManager] Authentication timeout after', timeout, 'ms');
+                resolve(false);
+                return;
+            }
             
-            checkAuth();
-        });
-    }
+            setTimeout(checkAuth, 100);
+        };
+        
+        checkAuth();
+    });
+}
     
     handleAuthChange(authData) {
         if (authData.user) {
