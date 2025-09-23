@@ -31,7 +31,7 @@ class AnalysisFunctions {
     return this;
 }
     
-    async openLeadAnalysisModal(leadId) {
+async openLeadAnalysisModal(leadId) {
     console.log('🔍 Opening lead analysis modal for:', leadId);
     
     try {
@@ -45,17 +45,28 @@ class AnalysisFunctions {
             throw new Error('Lead manager not found');
         }
         
+        // Add loading modal with timeout protection
         showLoadingModal();
+        const loadingTimeout = setTimeout(() => {
+            removeExistingModals();
+            showErrorModal('Analysis modal timed out. Please try again.');
+        }, 10000);
         
-        const { lead, analysisData } = await leadManager.viewLead(leadId);
-        
-        if (!lead) {
-            throw new Error('Lead not found');
-        }
+        try {
+            const { lead, analysisData } = await leadManager.viewLead(leadId);
+            clearTimeout(loadingTimeout);
+            
+            if (!lead) {
+                throw new Error('Lead not found');
+            }
 
-        removeExistingModals();
-        createLeadAnalysisModalStructure();
-        buildAnalysisModalHTML(lead, analysisData, leadId);
+            removeExistingModals();
+            createLeadAnalysisModalStructure();
+            buildAnalysisModalHTML(lead, analysisData, leadId);
+        } catch (error) {
+            clearTimeout(loadingTimeout);
+            throw error;
+        }
         
         // Animate modal entry
         setTimeout(() => {
