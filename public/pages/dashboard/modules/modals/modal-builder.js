@@ -97,13 +97,13 @@ const modalContent = `
     // CONTENT WRAPPER METHODS
     // ===============================================================================
     
-    wrapInContentContainer(content) {
-        return `
-            <div class="p-8 space-y-8 bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100">
-                ${content}
-            </div>
-        `;
-    }
+wrapInContentContainer(content) {
+    return `
+        <div class="p-8 space-y-8 bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 max-w-4xl mx-auto border border-gray-200/60 rounded-2xl shadow-lg backdrop-blur-sm">
+            ${content}
+        </div>
+    `;
+}
 
     // ===============================================================================
     // HELPER METHODS FOR COMPONENT MAPPING
