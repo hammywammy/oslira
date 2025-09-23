@@ -387,73 +387,87 @@ class ModalComponents {
             }
         });
 
-        // ===============================================================================
-        // SELLING POINTS COMPONENT
-        // ===============================================================================
-        this.registerComponent('sellingPoints', {
-            condition: (lead, analysisData) => analysisData?.selling_points && analysisData.selling_points.length > 0,
-            render: (lead, analysisData) => `
-                <!-- Selling Points with Staggered Animation -->
-                <div class="group rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-100 p-8 shadow-2xl border border-yellow-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.5s;">
-                    <div class="flex items-center space-x-4 mb-6">
-                        <div class="p-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
-                            <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">Key Selling Points</h3>
+// Update existing sellingPoints condition to check payload
+this.registerComponent('sellingPoints', {
+    condition: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return (analysisData?.selling_points && analysisData.selling_points.length > 0) ||
+               (payload?.selling_points && payload.selling_points.length > 0);
+    },
+    render: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        const sellingPoints = payload?.selling_points || analysisData?.selling_points || [];
+        
+        return `
+            <!-- Your existing selling points HTML with payload data -->
+            <div class="group rounded-3xl bg-gradient-to-br from-yellow-50 to-orange-100 p-8 shadow-2xl border border-yellow-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.5s;">
+                <div class="flex items-center space-x-4 mb-6">
+                    <div class="p-4 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                        <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        ${analysisData.selling_points.map((point, index) => `
-                            <div class="group/item flex items-start space-x-4 p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-yellow-200/50 hover-3d shimmer-effect transition-all duration-500 hover:bg-white hover:shadow-xl count-up" style="animation-delay: ${0.6 + (index * 0.1)}s;">
-                                <div class="w-10 h-10 bg-gradient-to-br from-yellow-500 to-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-lg">
-                                    ${index + 1}
-                                </div>
-                                <span class="text-gray-700 font-medium leading-relaxed">${point}</span>
-                            </div>
-                        `).join('')}
-                    </div>
+                    <h3 class="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">Key Selling Points</h3>
                 </div>
-            `
-        });
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${sellingPoints.map((point, index) => `
+                        <div class="group/item flex items-start space-x-4 p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-yellow-200/50 hover-3d shimmer-effect transition-all duration-500 hover:bg-white hover:shadow-xl count-up" style="animation-delay: ${0.6 + (index * 0.1)}s;">
+                            <div class="w-10 h-10 bg-gradient-to-br from-yellow-500 to-orange-500 text-white rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 group-hover/item:scale-110 transition-transform duration-300 shadow-lg">
+                                ${index + 1}
+                            </div>
+                            <span class="text-gray-700 font-medium leading-relaxed">${point}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+});
 
-        // ===============================================================================
-        // OUTREACH MESSAGE COMPONENT
-        // ===============================================================================
-        this.registerComponent('outreachMessage', {
-            condition: (lead, analysisData) => analysisData?.outreach_message,
-            render: (lead, analysisData) => `
-                <!-- Outreach Message with Glowing Border -->
-                <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 to-pink-100 p-8 shadow-2xl border-2 border-purple-200/50 hover-3d stagger-reveal" style="animation-delay: 0.6s;">
-                    <!-- Animated border gradient -->
-                    <div class="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-1000"></div>
-                    
-                    <div class="relative z-10">
-                        <div class="flex items-center justify-between mb-6">
-                            <div class="flex items-center space-x-4">
-                                <div class="p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
-                                    <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.405L3 21l2.595-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
-                                    </svg>
-                                </div>
-                                <h3 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Ready-to-Send Message</h3>
+// Update existing outreachMessage condition to check payload
+this.registerComponent('outreachMessage', {
+    condition: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return analysisData?.outreach_message || payload?.outreach_message;
+    },
+    render: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        const outreachMessage = payload?.outreach_message || analysisData?.outreach_message;
+        
+        return `
+            <!-- Your existing outreach message HTML with payload data -->
+            <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50 to-pink-100 p-8 shadow-2xl border-2 border-purple-200/50 hover-3d stagger-reveal" style="animation-delay: 0.6s;">
+                <!-- Keep your existing animated border and styling -->
+                <div class="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 opacity-20 blur-xl group-hover:opacity-40 transition-opacity duration-1000"></div>
+                
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-4">
+                            <div class="p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                                <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.405L3 21l2.595-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
+                                </svg>
                             </div>
-                            <button onclick="copyOutreachMessage()" class="group/btn relative overflow-hidden px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 shimmer-effect">
-                                <span class="relative z-10 flex items-center space-x-2">
-                                    <svg class="w-5 h-5 group-hover/btn:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                    </svg>
-                                    <span>Copy Message</span>
-                                </span>
-                            </button>
+                            <h3 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Ready-to-Send Message</h3>
                         </div>
-                        <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border-2 border-purple-200/50 shadow-inner">
-                            <p class="text-gray-700 leading-relaxed text-lg font-light" id="outreachMessage">${analysisData.outreach_message}</p>
-                        </div>
+                        <!-- Keep your existing copy button styling -->
+                        <button onclick="copyOutreachMessage()" class="group/btn relative overflow-hidden px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-semibold shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 shimmer-effect">
+                            <span class="relative z-10 flex items-center space-x-2">
+                                <svg class="w-5 h-5 group-hover/btn:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                                <span>Copy Message</span>
+                            </span>
+                        </button>
+                    </div>
+                    <div class="bg-white/90 backdrop-blur-sm rounded-2xl p-6 border-2 border-purple-200/50 shadow-inner">
+                        <p class="text-gray-700 leading-relaxed text-lg font-light" id="outreachMessage">${outreachMessage}</p>
                     </div>
                 </div>
-            `
-        });
+            </div>
+        `;
+    }
+});
 
         // ===============================================================================
         // ENGAGEMENT INSIGHTS COMPONENT
@@ -617,6 +631,127 @@ class ModalComponents {
                 </div>
             `
         });
+
+        // ===============================================================================
+// DEEP PAYLOAD-AWARE COMPONENTS (ADDITIONS)
+// ===============================================================================
+
+// Helper method to get payload data with proper fallbacks
+getPayloadData(lead, analysisData) {
+    // Check if we have nested payloads from database query
+    if (analysisData?.payloads?.[0]?.analysis_data) {
+        return analysisData.payloads[0].analysis_data;
+    }
+    
+    // Check if analysisData itself has payload structure  
+    if (analysisData?.deep_payload) {
+        return analysisData.deep_payload;
+    }
+    
+    // Fallback to direct analysisData
+    return analysisData || {};
+}
+
+// 1. DEEP SUMMARY COMPONENT (NEW - matches your styling)
+this.registerComponent('deepSummary', {
+    condition: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return lead.analysis_type === 'deep' && payload.deep_summary;
+    },
+    render: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return `
+            <!-- Deep Summary with your existing styling pattern -->
+            <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50 to-indigo-100 p-8 shadow-2xl border border-blue-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.4s;">
+                <!-- Floating geometric shapes matching your pattern -->
+                <div class="absolute top-4 right-4 w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full opacity-30 group-hover:scale-150 transition-transform duration-1000" style="animation: float 4s ease-in-out infinite;"></div>
+                <div class="absolute bottom-8 left-8 w-6 h-6 bg-gradient-to-br from-indigo-400 to-blue-500 rotate-45 opacity-20 group-hover:rotate-180 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite; animation-delay: 1s;"></div>
+                
+                <div class="relative z-10">
+                    <div class="flex items-center space-x-4 mb-6">
+                        <div class="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                            <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Deep Analysis Insights</h3>
+                    </div>
+                    <p class="text-gray-700 leading-relaxed text-lg font-light">${payload.deep_summary}</p>
+                </div>
+            </div>
+        `;
+    }
+});
+
+// 2. ENHANCED ENGAGEMENT BREAKDOWN (NEW - using your metrics style)
+this.registerComponent('engagementBreakdown', {
+    condition: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return lead.analysis_type === 'deep' && payload.engagement_breakdown;
+    },
+    render: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        const metrics = payload.engagement_breakdown || {};
+        
+        return `
+            <!-- Enhanced Engagement Breakdown matching your metrics grid style -->
+            <div class="group rounded-3xl bg-gradient-to-br from-pink-50 to-rose-100 p-8 shadow-2xl border border-pink-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.6s;">
+                <div class="flex items-center space-x-4 mb-6">
+                    <div class="p-4 bg-gradient-to-br from-pink-500 to-rose-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                        <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold bg-gradient-to-r from-pink-600 to-rose-600 bg-clip-text text-transparent">Detailed Engagement Metrics</h3>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="text-center p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-pink-200/50 hover-3d transition-all duration-300">
+                        <div class="text-3xl font-bold text-pink-700 count-up" data-target="${metrics.avg_likes || 0}">0</div>
+                        <div class="text-sm text-pink-600/80 mt-2">Average Likes</div>
+                    </div>
+                    <div class="text-center p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-pink-200/50 hover-3d transition-all duration-300">
+                        <div class="text-3xl font-bold text-pink-700 count-up" data-target="${metrics.avg_comments || 0}">0</div>
+                        <div class="text-sm text-pink-600/80 mt-2">Average Comments</div>
+                    </div>
+                    <div class="text-center p-6 bg-white/80 backdrop-blur-sm rounded-2xl border border-pink-200/50 hover-3d transition-all duration-300">
+                        <div class="text-3xl font-bold text-pink-700 count-up" data-target="${Math.round(metrics.engagement_rate || 0)}">0</div>
+                        <div class="text-sm text-pink-600/80 mt-2">Engagement Rate %</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+});
+
+// 3. AUDIENCE INSIGHTS ENHANCED (NEW - your existing one is good, this adds payload support)
+this.registerComponent('payloadAudienceInsights', {
+    condition: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return lead.analysis_type === 'deep' && payload.audience_insights;
+    },
+    render: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return `
+            <!-- Payload-aware Audience Insights -->
+            <div class="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-50 to-green-100 p-8 shadow-2xl border border-emerald-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.7s;">
+                <div class="absolute top-4 left-4 w-10 h-10 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full opacity-20 group-hover:scale-150 transition-transform duration-1000" style="animation: float 3s ease-in-out infinite;"></div>
+                
+                <div class="relative z-10">
+                    <div class="flex items-center space-x-4 mb-6">
+                        <div class="p-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                            <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">Audience Intelligence</h3>
+                    </div>
+                    <p class="text-gray-700 leading-relaxed text-lg font-light">${payload.audience_insights}</p>
+                </div>
+            </div>
+        `;
+    }
+});
 
     }
 
