@@ -36,6 +36,31 @@ if (leadRenderer && !leadRenderer.initialized) {
     leadRenderer.initialized = true;
 }
 
+// Initialize ResearchHandlers to set up global handlers
+console.log('🔧 [DashboardCore] Initializing ResearchHandlers...');
+if (window.ResearchHandlers) {
+    new window.ResearchHandlers();
+    console.log('✅ [DashboardCore] ResearchHandlers initialized');
+} else {
+    console.warn('⚠️ [DashboardCore] ResearchHandlers class not found');
+}
+
+// Populate ResearchModal with HTML content
+console.log('🔧 [DashboardCore] Populating ResearchModal...');
+if (window.ResearchModal) {
+    const researchModal = new window.ResearchModal(container);
+    const modalHTML = researchModal.renderModal();
+    const modalContainer = document.getElementById('researchModal');
+    if (modalContainer) {
+        modalContainer.outerHTML = modalHTML;
+        console.log('✅ [DashboardCore] ResearchModal populated with content');
+    } else {
+        console.warn('⚠️ [DashboardCore] #researchModal container not found');
+    }
+} else {
+    console.warn('⚠️ [DashboardCore] ResearchModal class not found');
+}
+
 // Load lead data after UI and renderer are ready
 console.log('📊 [DashboardCore] Loading lead data...');
 const leadManager = container.get('leadManager');
