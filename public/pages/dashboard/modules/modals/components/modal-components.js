@@ -170,8 +170,9 @@ getPayloadData(lead, analysisData) {
                         <div class="relative z-10">
                             <!-- Profile Section -->
 <div class="flex items-center justify-between mb-8 stagger-reveal" style="animation-delay: 0.1s;">
-    <div class="flex items-center space-x-6">
-        <div class="relative hover-3d flex-shrink-0 self-start -mt-2">
+    <div class="flex space-x-6">
+        <!-- Profile image container - positioned independently -->
+        <div class="relative hover-3d flex-shrink-0" style="transform: translateY(-8px);">
             <!-- Pulsing rings around profile -->
             <div class="pulse-ring w-20 h-20"></div>
             <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
@@ -180,37 +181,38 @@ getPayloadData(lead, analysisData) {
                  alt="Profile" 
                  class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect object-cover"
                  onerror="this.src='/assets/images/default-avatar.png'">
-                                        ${(lead.is_verified_account || lead.is_verified) ? `
-                                            <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
-                                                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-                                                </svg>
-                                            </div>
-                                        ` : ''}
-                                    </div>
-                                    
-                                    <div class="space-y-2">
-                                        <h1 class="text-3xl font-bold text-white count-up">
-                                            ${lead.display_name || lead.full_name || lead.username}
-                                        </h1>
-                                        <p class="text-xl text-white/90 count-up" style="animation-delay: 0.2s;">@${lead.username}</p>
-                                        
-                                        ${lead.profile_url ? `
-                                            <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
-                                               class="inline-flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm font-semibold">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                                </svg>
-                                                <span>View Profile</span>
-                                            </a>
-                                        ` : ''}
-                                        
-                                        <div class="flex items-center space-x-3">
-                                            ${(lead.is_business_account) ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Business</span>' : ''}
-                                            ${(lead.is_private_account || lead.is_private) ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Private</span>' : ''}
-                                        </div>
-                                    </div>
-                                </div>
+            ${(lead.is_verified_account || lead.is_verified) ? `
+                <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
+                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
+                    </svg>
+                </div>
+            ` : ''}
+        </div>
+        
+        <!-- Text content container - keeps original positioning -->
+        <div class="flex flex-col justify-center space-y-2">
+            <h1 class="text-3xl font-bold text-white count-up">
+                ${lead.display_name || lead.full_name || lead.username}
+            </h1>
+            <p class="text-xl text-white/90 count-up" style="animation-delay: 0.2s;">@${lead.username}</p>
+            
+            ${lead.profile_url ? `
+                <a href="${lead.profile_url}" target="_blank" rel="noopener noreferrer" 
+                   class="inline-flex items-center space-x-2 px-4 py-2 bg-white/20 backdrop-blur-sm text-white rounded-xl border border-white/30 hover:bg-white/30 transition-all duration-300 text-sm font-semibold">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    <span>View Profile</span>
+                </a>
+            ` : ''}
+            
+            <div class="flex items-center space-x-3">
+                ${(lead.is_business_account) ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Business</span>' : ''}
+                ${(lead.is_private_account || lead.is_private) ? '<span class="px-3 py-1 bg-white/20 backdrop-blur-sm text-sm rounded-full border border-white/30 hover-3d shimmer-effect">Private</span>' : ''}
+            </div>
+        </div>
+    </div>
                                 
                                 <!-- Animated Score Ring -->
                                 <div class="relative">
