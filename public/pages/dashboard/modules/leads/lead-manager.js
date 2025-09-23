@@ -31,45 +31,35 @@ class LeadManager {
     // MAIN DATA LOADING - FIXED VERSION
     // ===============================================================================
     
-    async loadDashboardData() {
-        try {
-            console.log('🔄 [LeadManager] Loading dashboard data...');
-            this.stateManager.setState('isLoading', true);
-            this.stateManager.setState('loadingMessage', 'Loading leads...');
-            this.eventBus.emit('dashboard:loading:start', 'leads');
-            
-            // Get current user and business
-            const user = this.osliraApp?.user;
-            const selectedBusiness = this.stateManager.getState('selectedBusiness');
-            const selectedBusinessId = selectedBusiness?.id || localStorage.getItem('selectedBusinessId');
-            
-            if (!user || !selectedBusinessId) {
-                throw new Error('User or business not found');
-            }
-            
-            console.log('📊 [LeadManager] Loading leads for:', {
-                userId: user.id,
-                businessId: selectedBusinessId
-            });
-
-            // Debug supabase client
-            console.log('🔍 [LeadManager] Debug - supabase instance:', this.supabase);
-            console.log('🔍 [LeadManager] Debug - supabase type:', typeof this.supabase);
-            console.log('🔍 [LeadManager] Debug - supabase.from type:', typeof this.supabase?.from);
-            
-            if (!this.supabase) {
-                console.warn('⚠️ [LeadManager] Supabase client not available, skipping load');
-                // Still update state with empty array so empty state displays
-                this.stateManager.batchUpdate({
-                    'leads': [],
-                    'allLeads': [], 
-                    'filteredLeads': []
-                });
-                this.stateManager.setState('selectedLeads', new Set());
-                this.stateManager.setState('isLoading', false);
-                this.eventBus.emit('dashboard:loading:end', 'leads');
-                return [];
-            }
+async loadDashboardData() {
+    try {
+        console.log('🔄 [LeadManager] Loading dashboard data...');
+        this.stateManager.setState('isLoading', true);
+        this.stateManager.setState('loadingMessage', 'Loading leads...');
+        this.eventBus.emit('dashboard:loading:start', 'leads');
+        
+        // Wait for authentication with proper timeout
+        const user = await this.waitForValidUser(5000);
+        if (!user) {
+            throw new Error('Authentication timeout - user not available');
+        }
+        
+        // Wait for business selection with timeout
+        const selectedBusinessId = await this.waitForValidBusiness(3000);
+        if (!selectedBusinessId) {
+            throw new Error('Business selection timeout');
+        }
+        
+        // Wait for Supabase client with timeout
+        const supabaseClient = await this.waitForSupabaseClient(3000);
+        if (!supabaseClient) {
+            throw new Error('Supabase client timeout');
+        }
+        
+        console.log('📊 [LeadManager] Loading leads for:', {
+            userId: user.id,
+            businessId: selectedBusinessId
+        });
             
             // Execute database query
             const { data: leads, error: leadsError } = await this.supabase
@@ -199,7 +189,85 @@ class LeadManager {
             this.eventBus.emit('dashboard:loading:end', 'leads');
         }
     }
-    
+    async waitForValidUser(timeout = 5000) {
+    return new Promise((resolve) => {
+        let attempts = 0;
+        const maxAttempts = timeout / 100;
+        
+        const checkUser = () => {
+            const user = this.osliraApp?.user;
+            if (user && user.id) {
+                resolve(user);
+                return;
+            }
+            
+            attempts++;
+            if (attempts >= maxAttempts) {
+                console.warn('⚠️ [LeadManager] User wait timeout');
+                resolve(null);
+                return;
+            }
+            
+            setTimeout(checkUser, 100);
+        };
+        
+        checkUser();
+    });
+}
+
+async waitForValidBusiness(timeout = 3000) {
+    return new Promise((resolve) => {
+        let attempts = 0;
+        const maxAttempts = timeout / 100;
+        
+        const checkBusiness = () => {
+            const selectedBusiness = this.stateManager.getState('selectedBusiness');
+            const selectedBusinessId = selectedBusiness?.id || localStorage.getItem('selectedBusinessId');
+            
+            if (selectedBusinessId) {
+                resolve(selectedBusinessId);
+                return;
+            }
+            
+            attempts++;
+            if (attempts >= maxAttempts) {
+                console.warn('⚠️ [LeadManager] Business wait timeout');
+                resolve(null);
+                return;
+            }
+            
+            setTimeout(checkBusiness, 100);
+        };
+        
+        checkBusiness();
+    });
+}
+
+async waitForSupabaseClient(timeout = 3000) {
+    return new Promise((resolve) => {
+        let attempts = 0;
+        const maxAttempts = timeout / 100;
+        
+        const checkSupabase = () => {
+            const client = this.supabase;
+            if (client && typeof client.from === 'function') {
+                resolve(client);
+                return;
+            }
+            
+            attempts++;
+            if (attempts >= maxAttempts) {
+                console.warn('⚠️ [LeadManager] Supabase client wait timeout');
+                resolve(null);
+                return;
+            }
+            
+            setTimeout(checkSupabase, 100);
+        };
+        
+        checkSupabase();
+    });
+}
     // ===============================================================================
     // LEAD DETAILS
     // ===============================================================================
