@@ -169,17 +169,17 @@ getPayloadData(lead, analysisData) {
                         
                         <div class="relative z-10">
                             <!-- Profile Section -->
-                            <div class="flex items-center justify-between mb-8 stagger-reveal" style="animation-delay: 0.1s;">
-<div class="flex items-center space-x-6">
-    <div class="relative hover-3d flex-shrink-0">
-        <!-- Pulsing rings around profile -->
-        <div class="pulse-ring w-20 h-20"></div>
-        <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
-        
-        <img src="${profileImageUrl}" 
-             alt="Profile" 
-             class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect object-cover"
-             onerror="this.src='/assets/images/default-avatar.png'">
+<div class="flex items-start justify-between mb-8 stagger-reveal" style="animation-delay: 0.1s;">
+    <div class="flex items-start space-x-6">
+        <div class="relative hover-3d flex-shrink-0 -mt-4">
+            <!-- Pulsing rings around profile -->
+            <div class="pulse-ring w-20 h-20"></div>
+            <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
+            
+            <img src="${profileImageUrl}" 
+                 alt="Profile" 
+                 class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect object-cover"
+                 onerror="this.src='/assets/images/default-avatar.png'">
                                         ${(lead.is_verified_account || lead.is_verified) ? `
                                             <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
                                                 <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
