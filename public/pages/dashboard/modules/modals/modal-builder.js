@@ -98,9 +98,12 @@ const modalContent = `
     // ===============================================================================
     
 wrapInContentContainer(content) {
+    // Split content into individual components and add spacing
+    const contentWithSpacing = content.replace(/(<\/div>\s*<div class="group)/g, '</div><div style="margin-top: 32px;" class="group');
+    
     return `
-        <div class="p-8 space-y-8 bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 max-w-4xl mx-auto border border-gray-200/60 rounded-2xl shadow-lg backdrop-blur-sm">
-            ${content}
+        <div style="margin: 0 24px 24px 24px; border: 1px solid rgba(229, 231, 235, 0.6); border-radius: 1rem; padding: 24px;" class="bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 shadow-lg backdrop-blur-sm">
+            ${contentWithSpacing}
         </div>
     `;
 }
