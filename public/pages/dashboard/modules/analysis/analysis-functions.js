@@ -296,6 +296,8 @@ setupGlobalMethods() {
     window.contactLead = (leadId) => this.contactLead(leadId);
     window.showContactSuccess = () => this.showContactSuccess();
     window.showCopySuccess = () => this.showCopySuccess();
+    window.showErrorModal = (message) => this.showErrorModal(message);
+    window.closeErrorModal = () => this.removeExistingModals();
     
     // Additional analysis modal methods
     window.showAnalysisModal = (username = '') => this.showAnalysisModal(username);
@@ -884,32 +886,61 @@ async buildAnalysisModal(leadId) {
         document.body.style.overflow = '';
     }
 
-    showErrorModal(message) {
-        const errorHTML = `
-            <div id="errorModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
-                    <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
-                        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+showErrorModal(message) {
+    console.log('🚨 [AnalysisFunctions] Showing error modal:', message);
+    
+    // Remove any existing modals first
+    this.removeExistingModals();
+    
+    const errorModal = `
+        <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="opacity: 0; transition: opacity 0.3s ease;">
+            <div class="bg-white rounded-2xl p-8 max-w-md mx-4 shadow-2xl transform scale-95 transition-transform duration-300">
+                <div class="flex items-center space-x-4 mb-6">
+                    <div class="p-3 bg-red-100 rounded-full">
+                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 6.5c-.77.833-.192 2.5 1.732 2.5z"/>
                         </svg>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Error</h3>
-                    <p class="text-gray-500 mb-4">${message}</p>
-                    <button onclick="closeErrorModal()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                        Close
-                    </button>
+                    <h3 class="text-xl font-bold text-gray-900">Error</h3>
                 </div>
+                <p class="text-gray-700 mb-6">${message}</p>
+                <button onclick="closeErrorModal()" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors duration-200">
+                    Close
+                </button>
             </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', errorHTML);
-    }
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', errorModal);
+    
+    // Animate in
+    setTimeout(() => {
+        const modal = document.getElementById('errorModal');
+        if (modal) {
+            modal.style.opacity = '1';
+            const content = modal.querySelector('div > div');
+            if (content) {
+                content.style.transform = 'scale(1)';
+            }
+        }
+    }, 10);
+}
 
-    generateAnalysisModalContent(lead, analysisData, profileImageUrl, mainScore, summaryText, isDeepAnalysis) {
-        // Return the complete HTML content for the modal
-        // This would be the same HTML structure you currently have in buildAnalysisModalHTML
-        // I'm keeping this method separate for clarity but you'd put your full HTML generation here
-        return `<!-- Your existing modal HTML content -->`;
-    }  
+removeExistingModals() {
+    const existingModals = [
+        'errorModal',
+        'loadingModal', 
+        'leadAnalysisModal',
+        'analysisModal',
+        'bulkModal'
+    ];
+    
+    existingModals.forEach(modalId => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.remove();
+        }
+    });
 }
 
 // Export for module system - CORRECT FORMAT
