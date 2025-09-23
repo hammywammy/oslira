@@ -109,6 +109,23 @@ class ModalComponents {
         });
     }
 
+
+// Helper method to get payload data with proper fallbacks
+getPayloadData(lead, analysisData) {
+    // Check if we have nested payloads from database query
+    if (analysisData?.payloads?.[0]?.analysis_data) {
+        return analysisData.payloads[0].analysis_data;
+    }
+    
+    // Check if analysisData itself has payload structure  
+    if (analysisData?.deep_payload) {
+        return analysisData.deep_payload;
+    }
+    
+    // Fallback to direct analysisData
+    return analysisData || {};
+}
+
     // ===============================================================================
     // DEFAULT COMPONENTS LIBRARY
     // ===============================================================================
@@ -631,26 +648,6 @@ this.registerComponent('outreachMessage', {
                 </div>
             `
         });
-
-        // ===============================================================================
-// DEEP PAYLOAD-AWARE COMPONENTS (ADDITIONS)
-// ===============================================================================
-
-// Helper method to get payload data with proper fallbacks
-getPayloadData(lead, analysisData) {
-    // Check if we have nested payloads from database query
-    if (analysisData?.payloads?.[0]?.analysis_data) {
-        return analysisData.payloads[0].analysis_data;
-    }
-    
-    // Check if analysisData itself has payload structure  
-    if (analysisData?.deep_payload) {
-        return analysisData.deep_payload;
-    }
-    
-    // Fallback to direct analysisData
-    return analysisData || {};
-}
 
 // 1. DEEP SUMMARY COMPONENT (NEW - matches your styling)
 this.registerComponent('deepSummary', {
