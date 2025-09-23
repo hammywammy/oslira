@@ -217,31 +217,26 @@ export async function insertAnalysisPayload(
     // Structure payload based on analysis type
     let structuredPayload;
     
-    switch (analysisType) {
-      case 'light':
-        structuredPayload = {
-          insights: analysisData.selling_points || [],
-          audience_quality: analysisData.audience_quality || 'Unknown',
-          basic_demographics: analysisData.engagement_insights || null,
-          engagement_summary: `Avg engagement: ${analysisData.engagement_score || 0}%`
-        };
-        break;
-        
-      case 'deep':
-        structuredPayload = {
-          deep_summary: analysisData.deep_summary || null,
-          selling_points: analysisData.selling_points || [],
-          outreach_message: analysisData.outreach_message || null,
-          engagement_breakdown: {
-            avg_likes: parseInt(analysisData.avg_likes) || 0,
-            avg_comments: parseInt(analysisData.avg_comments) || 0,
-            engagement_rate: parseFloat(analysisData.engagement_rate) || 0
-          },
-          latest_posts: analysisData.latest_posts || null,
-          audience_insights: analysisData.engagement_insights || null,
-          reasons: analysisData.reasons || []
-        };
-        break;
+    switch (analysisType) {        
+case 'deep':
+    // Handle both old flat structure and new nested deep_payload structure
+    const deepData = analysisData.deep_payload || analysisData;
+    const engagementData = deepData.engagement_breakdown || {};
+    
+    structuredPayload = {
+        deep_summary: deepData.deep_summary || null,
+        selling_points: deepData.selling_points || [],
+        outreach_message: deepData.outreach_message || null,
+        engagement_breakdown: {
+            avg_likes: parseInt(engagementData.avg_likes) || parseInt(analysisData.avg_likes) || 0,
+            avg_comments: parseInt(engagementData.avg_comments) || parseInt(analysisData.avg_comments) || 0,
+            engagement_rate: parseFloat(engagementData.engagement_rate) || parseFloat(analysisData.engagement_rate) || 0
+        },
+        latest_posts: deepData.latest_posts || null,
+        audience_insights: deepData.audience_insights || analysisData.engagement_insights || null,
+        reasons: deepData.reasons || []
+    };
+    break;
         
 case 'xray':
   // Extract from xray_payload if it exists, otherwise from root
