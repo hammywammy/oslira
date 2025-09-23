@@ -753,6 +753,36 @@ this.registerComponent('payloadAudienceInsights', {
     }
 });
 
+// LATEST POSTS COMPONENT (for when data exists)
+this.registerComponent('latestPosts', {
+    condition: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return lead.analysis_type === 'deep' && payload.latest_posts && payload.latest_posts.length > 0;
+    },
+    render: (lead, analysisData) => {
+        const payload = this.getPayloadData(lead, analysisData);
+        return `
+            <!-- Latest Posts Analysis -->
+            <div class="group rounded-3xl bg-gradient-to-br from-violet-50 to-purple-100 p-8 shadow-2xl border border-violet-200/50 hover-3d shimmer-effect stagger-reveal" style="animation-delay: 0.8s;">
+                <div class="flex items-center space-x-4 mb-6">
+                    <div class="p-4 bg-gradient-to-br from-violet-500 to-purple-600 rounded-3xl shadow-xl group-hover:rotate-12 transition-transform duration-500">
+                        <svg class="w-8 h-8 text-white subtle-icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">Recent Content Analysis</h3>
+                </div>
+                <div class="space-y-4">
+                    ${payload.latest_posts.map((post, index) => `
+                        <div class="p-4 bg-white/80 backdrop-blur-sm rounded-xl border border-violet-200/50 hover-3d transition-all duration-300 count-up" style="animation-delay: ${0.9 + (index * 0.1)}s;">
+                            <p class="text-gray-700 font-medium">${post}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+});
     }
 
     // ===============================================================================
