@@ -172,7 +172,7 @@ getPayloadData(lead, analysisData) {
 <div class="flex items-start justify-between mb-8 stagger-reveal" style="animation-delay: 0.1s;">
     <div class="flex items-start space-x-6">
         <!-- Profile image container - raised up to align with title -->
-        <div class="relative hover-3d flex-shrink-0" style="margin-top: -8px;">
+        <div class="relative hover-3d flex-shrink-0" style="margin-top: -105px;">
             <!-- Pulsing rings around profile -->
             <div class="pulse-ring w-20 h-20"></div>
             <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
