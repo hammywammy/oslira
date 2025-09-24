@@ -27,7 +27,9 @@ await this.initializeSidebar();
             this.setupGlobalCompatibility();
             
             this.initialized = true;
-            console.log('✅ [Dashboard] Initialization complete');
+// After container setup
+window.enhancedAnalysisQueue = this.container.get('analysisQueue');
+console.log('✅ [Dashboard] Initialization complete');
             
             return this;
             
