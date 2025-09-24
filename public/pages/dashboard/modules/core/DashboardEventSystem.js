@@ -65,8 +65,8 @@ class DashboardEventSystem {
      */
     static setupAnalysisEvents(eventBus, container) {
         // Analysis completed - refresh data
-        eventBus.on(window.DASHBOARD_EVENTS.ANALYSIS_COMPLETED, async (data) => {
-            console.log('🎯 [DashboardEventSystem] Analysis completed:', data.username);
+eventBus.on(window.DASHBOARD_EVENTS.ANALYSIS_COMPLETED, async (data) => {
+    console.log('🎯 [DashboardEventSystem] Analysis completed:', data.username || data.analysis?.username);
             
             try {
                 // Refresh dashboard data
