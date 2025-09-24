@@ -153,7 +153,60 @@ class ResearchHandlers {
 
             console.log('🚀 [ResearchHandlers] API payload prepared:', apiPayload);
 
-            // 7. TEST WORKER CONNECTIVITY FIRST
+            // 7. TRY ENHANCED QUEUE SYSTEM FIRST
+            console.log('🎯 [ResearchHandlers] Attempting to use enhanced analysis queue...');
+            
+            // Get the analysis queue from multiple possible sources
+            const analysisQueue = window.analysisQueue || 
+                                window.dashboard?._app?.container?.get('analysisQueue') ||
+                                window.debugUtils?.analysisQueue;
+
+            if (analysisQueue && typeof analysisQueue.startSingleAnalysis === 'function') {
+                console.log('✅ [ResearchHandlers] Enhanced queue available, using queue system');
+                
+                try {
+                    // Close modal immediately to show queue
+                    this.closeResearchModal();
+                    
+                    // Use the enhanced queue system
+                    const result = await analysisQueue.startSingleAnalysis(
+                        cleanUsername,
+                        analysisType,
+                        business.id,
+                        apiPayload
+                    );
+                    
+                    if (result.success) {
+                        console.log('✅ [ResearchHandlers] Analysis queued successfully');
+                        // Queue handles completion and refresh automatically
+                        return { success: true, data: result.result };
+                    } else {
+                        console.error('❌ [ResearchHandlers] Queue analysis failed:', result.error);
+                        // Fall through to direct API call
+                    }
+                } catch (queueError) {
+                    console.error('❌ [ResearchHandlers] Queue system error:', queueError);
+                    // Fall through to direct API call
+                }
+            } else {
+                console.warn('⚠️ [ResearchHandlers] Enhanced queue not available, falling back to direct API');
+            }
+
+            // 8. FALLBACK: DIRECT API CALL WITH PROGRESS INDICATION
+            console.log('🌐 [ResearchHandlers] Using direct API call fallback...');
+            
+            // Show some visual feedback since we don't have queue
+            const modal = document.getElementById('researchModal');
+            const submitButton = modal?.querySelector('button[onclick*="submitResearch"]');
+            let originalButtonText = 'Start Research';
+            
+            if (submitButton) {
+                originalButtonText = submitButton.textContent;
+                submitButton.textContent = 'Processing...';
+                submitButton.disabled = true;
+            }
+
+            // Test worker connectivity first
             console.log('🧪 [ResearchHandlers] Testing worker connectivity...');
             try {
                 const healthResponse = await fetch(`${workerUrl}/health`, {
@@ -166,16 +219,20 @@ class ResearchHandlers {
                     const healthData = await healthResponse.json();
                     console.log('✅ [ResearchHandlers] Worker is reachable:', healthData);
                 } else {
-                    console.error('❌ [ResearchHandlers] Worker health check failed');
-                    return;
+                    throw new Error('Worker health check failed');
                 }
             } catch (healthError) {
                 console.error('💥 [ResearchHandlers] Worker not reachable:', healthError);
+                
+                // Reset button
+                if (submitButton) {
+                    submitButton.textContent = originalButtonText;
+                    submitButton.disabled = false;
+                }
                 return;
             }
 
-            // 8. MAKE API CALL
-            console.log('🌐 [ResearchHandlers] Calling Cloudflare Worker...');
+            // Make the API call
             const apiUrl = `${workerUrl}/v1/analyze`;
             console.log('📡 [ResearchHandlers] API endpoint:', apiUrl);
 
@@ -190,6 +247,12 @@ class ResearchHandlers {
             
             console.log('📨 [ResearchHandlers] API response status:', response.status);
             
+            // Reset button state
+            if (submitButton) {
+                submitButton.textContent = originalButtonText;
+                submitButton.disabled = false;
+            }
+            
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('❌ [ResearchHandlers] API error:', {
@@ -203,37 +266,50 @@ class ResearchHandlers {
             const result = await response.json();
             console.log('✅ [ResearchHandlers] API success:', result);
 
-            // 9. CLOSE MODAL AND REFRESH
+            // Close modal and refresh
             this.closeResearchModal();
-
-            // Refresh the leads table
-            console.log('🔄 [ResearchHandlers] Refreshing leads table...');
-            try {
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                if (window.DashboardApp?.instance?.refreshLeads) {
-                    await window.DashboardApp.instance.refreshLeads();
-                    console.log('✅ [ResearchHandlers] Leads refreshed via DashboardApp instance');
-                } else if (window.dashboard?._app?.refreshLeads) {
-                    await window.dashboard._app.refreshLeads();
-                    console.log('✅ [ResearchHandlers] Leads refreshed via dashboard app');
-                } else {
-                    if (window.DashboardEventBus?.instance) {
-                        window.DashboardEventBus.instance.emit('data:refresh', { source: 'api-success' });
-                        console.log('✅ [ResearchHandlers] Refresh event emitted');
-                    } else {
-                        console.log('🔄 [ResearchHandlers] Using page reload fallback');
-                        window.location.reload();
-                    }
-                }
-            } catch (refreshError) {
-                console.error('❌ [ResearchHandlers] Refresh failed:', refreshError);
-                setTimeout(() => window.location.reload(), 2000);
-            }
+            await this.refreshDashboardData();
             
         } catch (error) {
             console.error('💥 [ResearchHandlers] Unexpected error:', error);
             this.closeResearchModal();
+            
+            // Reset button if it exists
+            const modal = document.getElementById('researchModal');
+            const submitButton = modal?.querySelector('button[onclick*="submitResearch"]');
+            if (submitButton) {
+                submitButton.textContent = 'Start Research';
+                submitButton.disabled = false;
+            }
+        }
+    }
+
+    async refreshDashboardData() {
+        console.log('🔄 [ResearchHandlers] Refreshing leads table...');
+        try {
+            // Add small delay for processing
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Try multiple refresh methods in order of preference
+            if (window.DashboardApp?.instance?.refreshLeads) {
+                await window.DashboardApp.instance.refreshLeads();
+                console.log('✅ [ResearchHandlers] Leads refreshed via DashboardApp instance');
+            } else if (window.dashboard?._app?.refreshLeads) {
+                await window.dashboard._app.refreshLeads();
+                console.log('✅ [ResearchHandlers] Leads refreshed via dashboard app');
+            } else if (window.debugUtils?.leadManager?.loadDashboardData) {
+                await window.debugUtils.leadManager.loadDashboardData();
+                console.log('✅ [ResearchHandlers] Leads refreshed via debugUtils');
+            } else if (window.DashboardEventBus?.instance) {
+                window.DashboardEventBus.instance.emit('data:refresh', { source: 'api-success' });
+                console.log('✅ [ResearchHandlers] Refresh event emitted');
+            } else {
+                console.log('🔄 [ResearchHandlers] Using page reload fallback');
+                window.location.reload();
+            }
+        } catch (refreshError) {
+            console.error('❌ [ResearchHandlers] Refresh failed:', refreshError);
+            setTimeout(() => window.location.reload(), 2000);
         }
     }
 
