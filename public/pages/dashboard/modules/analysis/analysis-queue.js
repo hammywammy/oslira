@@ -73,13 +73,12 @@ class AnalysisQueue {
         this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
         this.renderQueue();
         
-        // Emit completion event
-        const eventType = success ? DASHBOARD_EVENTS.ANALYSIS_COMPLETED : DASHBOARD_EVENTS.ANALYSIS_FAILED;
-        this.eventBus.emit(eventType, {
-            analysisId,
-            analysis,
-            success
-        });
+// Emit success event for dashboard refresh
+this.eventBus.emit(DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
+    analysisId,
+    username: analysis.username, // Use the username from analysis object
+    result
+});
         
         // Auto-remove after delay
         setTimeout(() => {
