@@ -335,7 +335,7 @@ class AnalysisQueue {
     }, 16); // 60fps max
 }
     
-    actualrenderQueue() {
+    actualRenderQueue() {
         const container = document.getElementById('analysis-queue-container');
         if (!container) return;
         
