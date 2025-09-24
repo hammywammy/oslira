@@ -26,6 +26,70 @@ export class DirectAnalysisExecutor {
     this.aiAdapter = new UniversalAIAdapter(env, requestId);
   }
 
+  private parseJsonResponse(content: string, analysisType: string): any {
+  try {
+    // Clean the response first
+    let cleanContent = content.trim();
+    
+    // Fix common JSON issues from GPT responses
+    cleanContent = cleanContent
+      .replace(/,\s*"confidence"/, ', "confidence"')  // Fix spacing
+      .replace(/,\s*}/, '}')                          // Remove trailing commas
+      .replace(/,$/, '');                             // Remove trailing comma at end
+    
+    logger('info', 'Parsing JSON response', {
+      original_length: content.length,
+      cleaned_length: cleanContent.length,
+      analysis_type: analysisType,
+      first_50_chars: cleanContent.substring(0, 50),
+      requestId: this.requestId
+    });
+    
+    const parsed = JSON.parse(cleanContent);
+    
+    // Fix summary punctuation if needed
+    if (parsed.summary && !parsed.summary.match(/[.!?]$/)) {
+      parsed.summary = parsed.summary.replace(/,$/, '.').trim();
+      logger('info', 'Fixed summary punctuation', {
+        original: content.match(/"summary":\s*"([^"]+)"/)?.[1],
+        fixed: parsed.summary,
+        requestId: this.requestId
+      });
+    }
+    
+    return parsed;
+    
+  } catch (parseError: any) {
+    logger('error', 'JSON parse failed, attempting recovery', {
+      error: parseError.message,
+      content_preview: content.substring(0, 200),
+      analysis_type: analysisType,
+      requestId: this.requestId
+    });
+    
+    // Fallback: try to extract values manually
+    const scoreMatch = content.match(/"score":\s*(\d+)/);
+    const summaryMatch = content.match(/"summary":\s*"([^"]+)"/);
+    const confidenceMatch = content.match(/"confidence":\s*([\d.]+)/);
+    
+    const fallbackResult = {
+      score: scoreMatch ? parseInt(scoreMatch[1]) : 0,
+      summary: summaryMatch ? summaryMatch[1].replace(/,$/, '.') : 'Analysis completed',
+      confidence: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5,
+      niche_fit: scoreMatch ? parseInt(scoreMatch[1]) : 0,
+      engagement_score: scoreMatch ? Math.max(20, parseInt(scoreMatch[1]) - 10) : 0,
+      confidence_level: confidenceMatch ? parseFloat(confidenceMatch[1]) : 0.5
+    };
+    
+    logger('info', 'JSON recovery successful', {
+      extracted_values: fallbackResult,
+      requestId: this.requestId
+    });
+    
+    return fallbackResult;
+  }
+}
+
   async executeLight(profile: ProfileData, business: any): Promise<DirectAnalysisResult> {
     const startTime = Date.now();
     
@@ -46,7 +110,7 @@ const response = await this.aiAdapter.executeRequest({
 });
 
     const processingTime = Date.now() - startTime;
-    const analysisData = JSON.parse(response.content);
+    const analysisData = this.parseJsonResponse(response.content, 'light analysis');
 
     return {
       analysisData,
@@ -176,7 +240,7 @@ Score 0-100 for niche fit, engagement, overall match. Generate partnership strat
     analysis_type: 'deep_merged'
   });
 
-  const result = JSON.parse(response.content);
+  const result = this.parseJsonResponse(response.content, 'light analysis');
   return {
     ...result,
     cost: response.usage.total_cost,
@@ -208,7 +272,7 @@ Score 0-100 for niche fit, engagement, overall match. Generate partnership strat
     analysis_type: 'deep_outreach'
   });
 
-  const result = JSON.parse(response.content);
+  const result = this.parseJsonResponse(response.content, 'light analysis');
   return {
     ...result,
     cost: response.usage.total_cost,
@@ -334,7 +398,7 @@ Extract observable demographics, psychographics, pain points, and dreams/desires
     analysis_type: 'xray_psych'
   });
 
-  const result = JSON.parse(response.content);
+  const result = this.parseJsonResponse(response.content, 'light analysis');
   return {
     ...result,
     cost: response.usage.total_cost,
@@ -407,7 +471,7 @@ Determine budget tier, decision role, buying stage, objections, and optimal pers
     analysis_type: 'xray_commercial'
   });
 
-  const result = JSON.parse(response.content);
+  const result = this.parseJsonResponse(response.content, 'light analysis');
   return {
     ...result,
     cost: response.usage.total_cost,
