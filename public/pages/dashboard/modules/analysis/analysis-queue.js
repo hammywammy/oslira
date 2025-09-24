@@ -1,11 +1,10 @@
-//public/pages/dashboard/modules/analysis/analysis-queue.js
+//public/pages/dashboard/modules/analysis/enhanced-analysis-queue.js
 
 /**
- * OSLIRA ANALYSIS QUEUE MODULE  
- * Handles analysis queue management, progress tracking, and API coordination
- * Extracted from dashboard.js - maintains exact functionality
+ * ENHANCED OSLIRA ANALYSIS QUEUE MODULE  
+ * Complete revamp with Tailwind, Lucide icons, glassmorphism, and dopamine-driven UX
  */
-class AnalysisQueue {
+class EnhancedAnalysisQueue {
     constructor(container) {
         this.container = container;
         this.eventBus = container.get('eventBus');
@@ -13,53 +12,258 @@ class AnalysisQueue {
         this.supabase = container.get('supabase');
         this.osliraApp = container.get('osliraApp');
         
-        // Queue configuration - EXACT FROM ORIGINAL
+        // Queue configuration
         this.activeAnalyses = new Map();
         this.maxVisible = 5;
-        this.autoHideDelay = 10000;
+        this.autoHideDelay = 12000; // Increased for better UX
         
-        // Create queue container
-        this.setupQueueContainer();
+        // Enhanced configuration
+        this.smoothProgressEnabled = true;
+        this.soundEnabled = false; // Can be toggled in settings
+        this.animationSpeed = 300;
         
-        console.log('🚀 [AnalysisQueue] Initialized');
+        // Analysis stages configuration
+        this.analysisStages = {
+            light: [
+                { text: "🔍 Scanning profile...", duration: 2000, color: "text-blue-500" },
+                { text: "📊 Analyzing engagement...", duration: 3000, color: "text-amber-500" },
+                { text: "🎯 Calculating scores...", duration: 2500, color: "text-green-500" },
+                { text: "✨ Finalizing results...", duration: 1500, color: "text-purple-500" }
+            ],
+            deep: [
+                { text: "🔍 Scanning @profile...", duration: 3000, color: "text-blue-500" },
+                { text: "📊 Deep engagement analysis...", duration: 4000, color: "text-amber-500" },
+                { text: "🎯 Advanced scoring...", duration: 3500, color: "text-green-500" },
+                { text: "🤖 Generating insights...", duration: 2500, color: "text-purple-500" },
+                { text: "✉️ Crafting outreach...", duration: 2000, color: "text-cyan-500" },
+                { text: "✨ Finalizing results...", duration: 1000, color: "text-indigo-500" }
+            ],
+            xray: [
+                { text: "🔍 Deep profile scan...", duration: 4000, color: "text-blue-500" },
+                { text: "📊 X-Ray engagement analysis...", duration: 5000, color: "text-amber-500" },
+                { text: "🧠 AI pattern recognition...", duration: 4000, color: "text-green-500" },
+                { text: "🎯 Precision scoring...", duration: 3000, color: "text-purple-500" },
+                { text: "🤖 Advanced insights...", duration: 3000, color: "text-cyan-500" },
+                { text: "✉️ Custom outreach...", duration: 2500, color: "text-indigo-500" },
+                { text: "✨ Finalizing X-Ray...", duration: 1500, color: "text-pink-500" }
+            ]
+        };
+        
+        this.setupEnhancedContainer();
+        this.injectStyles();
+        
+        console.log('🚀 [EnhancedAnalysisQueue] Initialized with dopamine features');
     }
     
     async init() {
-        // Listen for cleanup events
         this.eventBus.on('dashboard:cleanup', this.cleanup.bind(this));
-        
-        console.log('✅ [AnalysisQueue] Event listeners initialized');
+        console.log('✅ [EnhancedAnalysisQueue] Event listeners initialized');
     }
     
     // ===============================================================================
-    // QUEUE MANAGEMENT - EXTRACTED FROM dashboard.js lines 3200-3400
+    // ENHANCED CONTAINER SETUP
     // ===============================================================================
     
-    // EXTRACTED FROM dashboard.js lines 3300-3350
+    setupEnhancedContainer() {
+        const existing = document.getElementById('analysis-queue-container');
+        if (existing) existing.remove();
+        
+        const container = document.createElement('div');
+        container.id = 'analysis-queue-container';
+        container.className = 'enhanced-analysis-queue';
+        container.style.cssText = `
+            position: fixed;
+            top: 120px;
+            right: 24px;
+            z-index: 9999;
+            width: 380px;
+            max-height: 600px;
+            display: none;
+            transform: translateX(400px);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        `;
+        
+        document.body.appendChild(container);
+        console.log('🏗️ [EnhancedAnalysisQueue] Enhanced container created');
+    }
+    
+    injectStyles() {
+        if (document.getElementById('enhanced-queue-styles')) return;
+        
+        const styles = document.createElement('style');
+        styles.id = 'enhanced-queue-styles';
+        styles.textContent = `
+            /* Enhanced Queue Animations */
+            .enhanced-analysis-queue.show {
+                display: block !important;
+                transform: translateX(0) !important;
+            }
+            
+            .queue-item-enter {
+                animation: slideInRight 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            }
+            
+            .queue-item-exit {
+                animation: slideOutRight 0.3s ease-in-out forwards;
+            }
+            
+            @keyframes slideInRight {
+                from { transform: translateX(100px); opacity: 0; scale: 0.9; }
+                to { transform: translateX(0); opacity: 1; scale: 1; }
+            }
+            
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; scale: 1; }
+                to { transform: translateX(100px); opacity: 0; scale: 0.9; }
+            }
+            
+            @keyframes pulseGlow {
+                0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+                50% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+            }
+            
+            @keyframes progressShimmer {
+                0% { background-position: -200px 0; }
+                100% { background-position: calc(200px + 100%) 0; }
+            }
+            
+            @keyframes celebrationBounce {
+                0%, 20%, 50%, 80%, 100% { transform: translateY(0) scale(1); }
+                40% { transform: translateY(-8px) scale(1.05); }
+                60% { transform: translateY(-4px) scale(1.02); }
+            }
+            
+            @keyframes countUp {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            .progress-shimmer {
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(255, 255, 255, 0.4),
+                    transparent
+                );
+                background-size: 200px 100%;
+                animation: progressShimmer 1.5s infinite;
+            }
+            
+            .celebrating {
+                animation: celebrationBounce 0.6s ease-out;
+            }
+            
+            .pulse-glow {
+                animation: pulseGlow 2s infinite;
+            }
+            
+            .smooth-progress {
+                transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            .hover-lift {
+                transition: all 0.2s ease-out;
+            }
+            
+            .hover-lift:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+            }
+            
+            .minimized {
+                max-height: 60px;
+                overflow: hidden;
+            }
+            
+            .queue-header-minimized .queue-details {
+                display: none;
+            }
+            
+            /* Glassmorphism styles */
+            .glass-card {
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            
+            .glass-card-dark {
+                background: rgba(15, 23, 42, 0.9);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid rgba(71, 85, 105, 0.3);
+            }
+        `;
+        
+        document.head.appendChild(styles);
+    }
+    
+    // ===============================================================================
+    // ENHANCED QUEUE MANAGEMENT
+    // ===============================================================================
+    
+    addAnalysis(username, analysisType = 'light', businessId = null) {
+        const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        const analysis = {
+            id: analysisId,
+            username: username.replace('@', ''),
+            analysisType,
+            businessId,
+            status: 'starting',
+            progress: 0,
+            currentStage: 0,
+            totalStages: this.analysisStages[analysisType].length,
+            message: 'Initializing analysis...',
+            startTime: Date.now(),
+            endTime: null,
+            duration: null,
+            estimatedTimeRemaining: this.getEstimatedDuration(analysisType),
+            isMinimized: false,
+            celebrationShown: false
+        };
+        
+        this.activeAnalyses.set(analysisId, analysis);
+        this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
+        
+        this.showQueue();
+        this.renderQueue();
+        
+        // Emit events
+        this.eventBus.emit(window.DASHBOARD_EVENTS.QUEUE_ITEM_ADDED, { analysisId, analysis });
+        this.eventBus.emit(window.DASHBOARD_EVENTS.ANALYSIS_STARTED, { analysisId, username, analysisType });
+        
+        console.log(`➕ [EnhancedAnalysisQueue] Added analysis: @${username} (${analysisType})`);
+        return analysisId;
+    }
+    
     updateAnalysis(analysisId, updates) {
         const analysis = this.activeAnalyses.get(analysisId);
-        if (analysis) {
-            Object.assign(analysis, updates);
-            
-            // Update state
-            this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
-            
-            // Update UI
-            this.renderQueue();
-            
-            // Emit event
-            this.eventBus.emit(DASHBOARD_EVENTS.ANALYSIS_PROGRESS, {
-                analysisId,
-                updates,
-                analysis
-            });
-            
-            console.log(`🔄 [AnalysisQueue] Updated analysis ${analysisId}:`, updates);
+        if (!analysis) return;
+        
+        // Handle smooth progress updates
+        if (updates.progress !== undefined && this.smoothProgressEnabled) {
+            this.smoothProgressUpdate(analysisId, updates.progress);
         }
+        
+        Object.assign(analysis, updates);
+        
+        // Calculate estimated time remaining
+        if (analysis.status === 'analyzing' && updates.progress) {
+            analysis.estimatedTimeRemaining = this.calculateTimeRemaining(analysis);
+        }
+        
+        this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
+        this.renderQueue();
+        
+        this.eventBus.emit(window.DASHBOARD_EVENTS.ANALYSIS_PROGRESS, {
+            analysisId, updates, analysis
+        });
+        
+        console.log(`🔄 [EnhancedAnalysisQueue] Updated: ${analysisId}`, updates);
     }
     
-    // EXTRACTED FROM dashboard.js lines 3400-3480
-    completeAnalysis(analysisId, success = true, message = null) {
+    completeAnalysis(analysisId, success = true, message = null, result = null) {
         const analysis = this.activeAnalyses.get(analysisId);
         if (!analysis) return;
         
@@ -68,41 +272,43 @@ class AnalysisQueue {
         analysis.message = message || (success ? 'Analysis completed!' : 'Analysis failed');
         analysis.endTime = Date.now();
         analysis.duration = Math.round((analysis.endTime - analysis.startTime) / 1000);
+        analysis.estimatedTimeRemaining = 0;
         
-        // Update state and UI
+        // Trigger celebration animation for successful completions
+        if (success && !analysis.celebrationShown) {
+            this.triggerCelebration(analysisId, result);
+            analysis.celebrationShown = true;
+        }
+        
         this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
         this.renderQueue();
         
-// Emit success event for dashboard refresh
-this.eventBus.emit(DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
-    analysisId,
-    username: analysis.username, // Use the username from analysis object
-    result
-});
+        // Emit completion event
+        this.eventBus.emit(window.DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
+            analysisId, username: analysis.username, result
+        });
         
         // Auto-remove after delay
         setTimeout(() => {
             this.removeAnalysis(analysisId);
         }, this.autoHideDelay);
         
-        console.log(`${success ? '✅' : '❌'} [AnalysisQueue] ${success ? 'Completed' : 'Failed'} analysis for @${analysis.username}`);
+        console.log(`${success ? '✅' : '❌'} [EnhancedAnalysisQueue] ${success ? 'Completed' : 'Failed'}: @${analysis.username}`);
     }
     
-    // EXTRACTED FROM dashboard.js lines 3500-3580
     removeAnalysis(analysisId) {
         const analysis = this.activeAnalyses.get(analysisId);
         if (!analysis) return;
         
-        // Add removing class for animation
         const element = document.getElementById(`queue-item-${analysisId}`);
         if (element) {
-            element.classList.add('removing');
+            element.classList.add('queue-item-exit');
             setTimeout(() => {
                 this.activeAnalyses.delete(analysisId);
                 this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
                 this.renderQueue();
                 this.maybeHideQueue();
-            }, 300); // Match CSS animation duration
+            }, this.animationSpeed);
         } else {
             this.activeAnalyses.delete(analysisId);
             this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
@@ -110,16 +316,235 @@ this.eventBus.emit(DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
             this.maybeHideQueue();
         }
         
-        // Emit event
-        this.eventBus.emit(DASHBOARD_EVENTS.QUEUE_ITEM_REMOVED, {
-            analysisId,
-            analysis
-        });
-        
-        console.log(`🗑️ [AnalysisQueue] Removed analysis for @${analysis.username}`);
+        this.eventBus.emit(window.DASHBOARD_EVENTS.QUEUE_ITEM_REMOVED, { analysisId, analysis });
+        console.log(`🗑️ [EnhancedAnalysisQueue] Removed: @${analysis.username}`);
     }
     
-    // EXTRACTED FROM dashboard.js lines 3600-3650
+    // ===============================================================================
+    // ENHANCED UI RENDERING
+    // ===============================================================================
+    
+    renderQueue() {
+        const container = document.getElementById('analysis-queue-container');
+        if (!container) return;
+        
+        const analyses = Array.from(this.activeAnalyses.values()).sort(
+            (a, b) => b.startTime - a.startTime
+        );
+        
+        if (analyses.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        const needsScroll = analyses.length > this.maxVisible;
+        const visibleAnalyses = needsScroll ? analyses.slice(0, this.maxVisible) : analyses;
+        
+        container.innerHTML = `
+            <div class="space-y-3">
+                ${visibleAnalyses.map(analysis => this.renderEnhancedQueueItem(analysis)).join('')}
+                ${this.renderQueueFooter(analyses.length, needsScroll)}
+            </div>
+        `;
+        
+        // Add enter animations to new items
+        setTimeout(() => {
+            container.querySelectorAll('.queue-item-new').forEach(item => {
+                item.classList.remove('queue-item-new');
+                item.classList.add('queue-item-enter');
+            });
+        }, 50);
+        
+        this.eventBus.emit(window.DASHBOARD_EVENTS.QUEUE_UPDATED, {
+            count: analyses.length,
+            visible: visibleAnalyses.length
+        });
+    }
+    
+    renderEnhancedQueueItem(analysis) {
+        const elapsed = Math.round((Date.now() - analysis.startTime) / 1000);
+        const timeText = this.formatElapsedTime(elapsed);
+        const progressPercentage = Math.min(100, Math.max(0, analysis.progress));
+        const statusConfig = this.getEnhancedStatusConfig(analysis.status);
+        const profileInitial = analysis.username.charAt(0).toUpperCase();
+        const isActive = analysis.status === 'starting' || analysis.status === 'analyzing';
+        const isCompleted = analysis.status === 'completed';
+        const isFailed = analysis.status === 'failed';
+        
+        return `
+            <div id="queue-item-${analysis.id}" 
+                 class="queue-item-new glass-card hover-lift rounded-xl p-4 border shadow-lg transition-all duration-200 ${analysis.isMinimized ? 'minimized' : ''} ${isCompleted ? 'celebrating' : ''} ${isActive ? 'pulse-glow' : ''}"
+                 data-analysis-id="${analysis.id}">
+                
+                <!-- Header -->
+                <div class="queue-header ${analysis.isMinimized ? 'queue-header-minimized' : ''} flex items-center justify-between mb-3">
+                    <div class="flex items-center space-x-3">
+                        <!-- Profile Avatar -->
+                        <div class="relative">
+                            <div class="w-10 h-10 ${statusConfig.bgColor} rounded-full flex items-center justify-center font-semibold text-white shadow-lg">
+                                ${profileInitial}
+                            </div>
+                            <div class="absolute -bottom-1 -right-1 w-5 h-5 ${statusConfig.badgeColor} rounded-full flex items-center justify-center">
+                                ${statusConfig.icon}
+                            </div>
+                        </div>
+                        
+                        <!-- Username and Type -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center space-x-2">
+                                <h4 class="font-semibold text-gray-900 truncate">@${analysis.username}</h4>
+                                <span class="px-2 py-1 text-xs font-medium ${statusConfig.typeColor} ${statusConfig.typeBg} rounded-md uppercase tracking-wide">
+                                    ${analysis.analysisType}
+                                </span>
+                            </div>
+                            <div class="queue-details">
+                                <p class="text-sm text-gray-600 mt-1">${analysis.message}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex items-center space-x-2">
+                        ${analysis.estimatedTimeRemaining > 0 ? `
+                            <div class="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                                ~${Math.ceil(analysis.estimatedTimeRemaining / 1000)}s
+                            </div>
+                        ` : ''}
+                        <div class="text-xs text-gray-400">${timeText}</div>
+                        <button onclick="enhancedAnalysisQueue.toggleMinimize('${analysis.id}')" 
+                                class="p-1 hover:bg-gray-100 rounded-md transition-colors">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${analysis.isMinimized ? 'M19 9l-7 7-7-7' : 'M5 15l7-7 7 7'}"/>
+                            </svg>
+                        </button>
+                        ${isActive ? `
+                            <button onclick="enhancedAnalysisQueue.removeAnalysis('${analysis.id}')" 
+                                    class="p-1 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                ${!analysis.isMinimized ? `
+                    <!-- Progress Section -->
+                    ${isActive ? `
+                        <div class="space-y-3">
+                            <!-- Progress Bar -->
+                            <div class="relative">
+                                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="h-full ${statusConfig.progressBg} smooth-progress progress-shimmer rounded-full" 
+                                         style="width: ${progressPercentage}%"></div>
+                                </div>
+                                <div class="flex justify-between items-center mt-2">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-xs font-medium ${statusConfig.textColor}">${analysis.currentStage + 1}/${analysis.totalStages}</span>
+                                        <span class="text-xs text-gray-500">Stage</span>
+                                    </div>
+                                    <span class="text-sm font-semibold text-gray-700 count-animation">${progressPercentage}%</span>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Completion Actions -->
+                    ${isCompleted ? `
+                        <div class="mt-4 flex space-x-2">
+                            <button onclick="dashboard.viewLatestLead('${analysis.username}')" 
+                                    class="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                                <span>View Results</span>
+                            </button>
+                            <button onclick="enhancedAnalysisQueue.removeAnalysis('${analysis.id}')" 
+                                    class="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    ` : ''}
+                    
+                    ${isFailed ? `
+                        <div class="mt-4 flex space-x-2">
+                            <button onclick="enhancedAnalysisQueue.retryAnalysis('${analysis.id}')" 
+                                    class="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:from-amber-600 hover:to-orange-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                <span>Retry</span>
+                            </button>
+                            <button onclick="enhancedAnalysisQueue.removeAnalysis('${analysis.id}')" 
+                                    class="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    ` : ''}
+                ` : ''}
+            </div>
+        `;
+    }
+    
+    renderQueueFooter(totalCount, needsScroll) {
+        const completedCount = Array.from(this.activeAnalyses.values())
+            .filter(a => a.status === 'completed' || a.status === 'failed').length;
+        
+        return `
+            ${needsScroll ? `
+                <div class="glass-card rounded-lg p-3 text-center">
+                    <p class="text-sm text-gray-600">+${totalCount - this.maxVisible} more analyses</p>
+                </div>
+            ` : ''}
+            ${completedCount > 0 ? `
+                <div class="flex justify-center">
+                    <button onclick="enhancedAnalysisQueue.clearCompleted()" 
+                            class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        <span>Clear Completed</span>
+                    </button>
+                </div>
+            ` : ''}
+        `;
+    }
+    
+    // ===============================================================================
+    // ENHANCED INTERACTIONS
+    // ===============================================================================
+    
+    toggleMinimize(analysisId) {
+        const analysis = this.activeAnalyses.get(analysisId);
+        if (!analysis) return;
+        
+        analysis.isMinimized = !analysis.isMinimized;
+        this.renderQueue();
+    }
+    
+    retryAnalysis(analysisId) {
+        const analysis = this.activeAnalyses.get(analysisId);
+        if (!analysis) return;
+        
+        // Reset analysis state
+        analysis.status = 'starting';
+        analysis.progress = 0;
+        analysis.currentStage = 0;
+        analysis.message = 'Retrying analysis...';
+        analysis.startTime = Date.now();
+        analysis.celebrationShown = false;
+        
+        this.renderQueue();
+        this.startStageBasedProgress(analysisId);
+        
+        console.log(`🔄 [EnhancedAnalysisQueue] Retrying: @${analysis.username}`);
+    }
+    
     clearCompleted() {
         const completed = Array.from(this.activeAnalyses.entries()).filter(
             ([_, analysis]) => analysis.status === 'completed' || analysis.status === 'failed'
@@ -129,273 +554,368 @@ this.eventBus.emit(DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
         
         if (completed.length > 0) {
             this.osliraApp?.showMessage(`Cleared ${completed.length} completed analyses`, 'success');
-            console.log(`🧹 [AnalysisQueue] Cleared ${completed.length} completed items`);
         }
     }
     
     // ===============================================================================
-    // UI MANAGEMENT - EXTRACTED FROM dashboard.js lines 4350-4850
+    // ENHANCED PROGRESS & ANIMATIONS
     // ===============================================================================
     
-    // EXTRACTED FROM dashboard.js lines 4350-4400
-    setupQueueContainer() {
-        // Remove existing container if it exists
-        const existing = document.getElementById('analysis-queue-container');
-        if (existing) {
-            existing.remove();
-        }
+    startStageBasedProgress(analysisId) {
+        const analysis = this.activeAnalyses.get(analysisId);
+        if (!analysis) return;
         
-        const container = document.createElement('div');
-        container.id = 'analysis-queue-container';
-        container.className = 'analysis-queue';
-        container.style.display = 'none'; // Hidden by default
+        const stages = this.analysisStages[analysis.analysisType];
+        let currentStage = 0;
         
-        document.body.appendChild(container);
-        console.log('🏗️ [AnalysisQueue] Queue container created');
-    }
-    
-    // EXTRACTED FROM dashboard.js lines 3700-3850
-    renderQueue() {
-        const container = document.getElementById('analysis-queue-container');
-        if (!container) return;
-        
-        const analyses = Array.from(this.activeAnalyses.values()).sort(
-            (a, b) => b.startTime - a.startTime
-        ); // Newest first
-        
-        if (analyses.length === 0) {
-            container.innerHTML = '';
-            this.stateManager.setState('queueVisible', false);
-            return;
-        }
-        
-        // Create scrollable container if needed
-        const needsScroll = analyses.length > this.maxVisible;
-        const visibleAnalyses = needsScroll ? analyses.slice(0, this.maxVisible) : analyses;
-        
-        container.innerHTML = `
-            <div style="max-height: ${this.maxVisible * 90}px; overflow-y: ${needsScroll ? 'auto' : 'visible'}; padding-right: 8px;">
-                ${visibleAnalyses.map((analysis) => this.renderQueueItem(analysis)).join('')}
-            </div>
-            ${needsScroll ? `
-                <div style="text-align: center; padding: 8px; background: rgba(255,255,255,0.9); border-radius: 8px; margin-top: 8px;">
-                    <span style="font-size: 12px; color: var(--text-secondary);">
-                        +${analyses.length - this.maxVisible} more items
-                    </span>
-                </div>
-            ` : ''}
-            ${this.hasCompletedItems() ? `
-                <div style="text-align: center; padding: 8px; margin-top: 8px;">
-                    <button onclick="analysisQueue.clearCompleted()" 
-                            class="btn btn-small"
-                            style="font-size: 11px; padding: 6px 12px;">
-                        Clear Completed
-                    </button>
-                </div>
-            ` : ''}
-        `;
-        
-        // Emit queue update event
-        this.eventBus.emit(DASHBOARD_EVENTS.QUEUE_UPDATED, {
-            count: analyses.length,
-            visible: visibleAnalyses.length
-        });
-    }
-    
-    // EXTRACTED FROM dashboard.js lines 3900-4100
-    renderQueueItem(analysis) {
-        const statusConfig = this.getStatusConfig(analysis.status);
-        const elapsed = Math.round((Date.now() - analysis.startTime) / 1000);
-        const timeText = elapsed < 60 ? `${elapsed}s` : `${Math.round(elapsed / 60)}m`;
-        
-        return `
-            <div id="queue-item-${analysis.id}" 
-                 class="queue-item ${analysis.status}"
-                 style="margin-bottom: 12px;">
-                
-                <!-- Header -->
-                <div class="queue-header">
-                    <div class="queue-username">
-                        <span style="font-size: 16px;">${statusConfig.icon}</span>
-                        <span>@${analysis.username}</span>
-                        <span class="queue-type" style="background: ${statusConfig.color};">
-                            ${analysis.analysisType.toUpperCase()}
-                        </span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 11px; color: var(--text-secondary);">${timeText}</span>
-                        ${analysis.status === 'starting' || analysis.status === 'analyzing' ? 
-                            `<button onclick="analysisQueue.removeAnalysis('${analysis.id}')" 
-                                     style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 4px;">
-                                ✕
-                             </button>` 
-                            : ''
-                        }
-                    </div>
-                </div>
-                
-                <!-- Progress Bar -->
-                ${analysis.status === 'starting' || analysis.status === 'analyzing' ? `
-                    <div class="progress-container" style="margin: 8px 0;">
-                        <div class="progress-bar" style="width: 100%; height: 4px; background: rgba(0,0,0,0.1); border-radius: 2px; overflow: hidden;">
-                            <div class="progress-fill" style="height: 100%; background: ${statusConfig.color}; width: ${analysis.progress}%; transition: width 0.3s ease;"></div>
-                        </div>
-                        <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
-                            ${analysis.message}
-                        </div>
-                    </div>
-                ` : ''}
-                
-                <!-- Actions for completed -->
-                ${analysis.status === 'completed' ? `
-                    <div class="queue-actions">
-                        <button onclick="dashboard.viewLatestLead('${analysis.username}')" 
-                                class="btn primary-btn">
-                            View Results
-                        </button>
-                        <button onclick="analysisQueue.removeAnalysis('${analysis.id}')" 
-                                class="btn btn-small">
-                            Dismiss
-                        </button>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-    }
-    
-    // EXTRACTED FROM dashboard.js lines 4250-4300
-    getStatusConfig(status) {
-        const configs = {
-            starting: { icon: '⏳', color: '#f59e0b' },
-            analyzing: { icon: '🔄', color: '#3b82f6' },
-            completed: { icon: '✅', color: '#10b981' },
-            failed: { icon: '❌', color: '#ef4444' }
+        const progressStage = () => {
+            if (currentStage >= stages.length || analysis.status !== 'analyzing') return;
+            
+            const stage = stages[currentStage];
+            const progressPerStage = 100 / stages.length;
+            const targetProgress = Math.round((currentStage + 1) * progressPerStage);
+            
+            this.updateAnalysis(analysisId, {
+                currentStage,
+                progress: targetProgress,
+                message: stage.text.replace('@profile', `@${analysis.username}`),
+                estimatedTimeRemaining: this.calculateStageTimeRemaining(analysis, currentStage)
+            });
+            
+            currentStage++;
+            setTimeout(progressStage, stage.duration);
         };
+        
+        // Start with analyzing status
+        setTimeout(() => {
+            this.updateAnalysis(analysisId, { status: 'analyzing' });
+            progressStage();
+        }, 500);
+    }
+    
+    smoothProgressUpdate(analysisId, targetProgress) {
+        const analysis = this.activeAnalyses.get(analysisId);
+        if (!analysis) return;
+        
+        const currentProgress = analysis.progress || 0;
+        const progressDiff = targetProgress - currentProgress;
+        const steps = 20;
+        const stepSize = progressDiff / steps;
+        const stepDelay = 50;
+        
+        let currentStep = 0;
+        const smoothStep = () => {
+            if (currentStep >= steps || analysis.status === 'completed' || analysis.status === 'failed') {
+                analysis.progress = targetProgress;
+                return;
+            }
+            
+            analysis.progress = Math.round(currentProgress + (stepSize * currentStep));
+            this.renderQueue();
+            
+            currentStep++;
+            setTimeout(smoothStep, stepDelay);
+        };
+        
+        smoothStep();
+    }
+    
+    triggerCelebration(analysisId, result = null) {
+        const element = document.getElementById(`queue-item-${analysisId}`);
+        if (!element) return;
+        
+        // Add celebration animation
+        element.classList.add('celebrating');
+        
+        // Create confetti effect for high scores
+        if (result && result.overall_score >= 80) {
+            this.createConfettiEffect(element);
+        }
+        
+        // Play success sound if enabled
+        if (this.soundEnabled) {
+            this.playSuccessSound();
+        }
+        
+        // Remove celebration class after animation
+        setTimeout(() => {
+            element.classList.remove('celebrating');
+        }, 600);
+        
+        console.log('🎉 [EnhancedAnalysisQueue] Celebration triggered for analysis:', analysisId);
+    }
+    
+    createConfettiEffect(element) {
+        const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
+        const confettiCount = 15;
+        
+        for (let i = 0; i < confettiCount; i++) {
+            setTimeout(() => {
+                const confetti = document.createElement('div');
+                confetti.style.cssText = `
+                    position: absolute;
+                    width: 8px;
+                    height: 8px;
+                    background: ${colors[Math.floor(Math.random() * colors.length)]};
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 10000;
+                    animation: confettiFall 1.5s ease-out forwards;
+                `;
+                
+                const rect = element.getBoundingClientRect();
+                confetti.style.left = `${rect.left + Math.random() * rect.width}px`;
+                confetti.style.top = `${rect.top}px`;
+                
+                document.body.appendChild(confetti);
+                
+                // Remove confetti after animation
+                setTimeout(() => confetti.remove(), 1500);
+            }, i * 50);
+        }
+        
+        // Add confetti animation if not exists
+        if (!document.getElementById('confetti-animation')) {
+            const style = document.createElement('style');
+            style.id = 'confetti-animation';
+            style.textContent = `
+                @keyframes confettiFall {
+                    0% {
+                        transform: translateY(0) rotate(0deg);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: translateY(200px) rotate(360deg);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    playSuccessSound() {
+        try {
+            // Create a simple success sound using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+        } catch (error) {
+            console.warn('[EnhancedAnalysisQueue] Sound playback failed:', error);
+        }
+    }
+    
+    // ===============================================================================
+    // UTILITY FUNCTIONS
+    // ===============================================================================
+    
+    getEnhancedStatusConfig(status) {
+        const configs = {
+            starting: {
+                icon: `<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>`,
+                bgColor: 'bg-gradient-to-br from-amber-400 to-orange-500',
+                badgeColor: 'bg-amber-500',
+                progressBg: 'bg-gradient-to-r from-amber-400 to-orange-500',
+                textColor: 'text-amber-600',
+                typeColor: 'text-amber-700',
+                typeBg: 'bg-amber-100'
+            },
+            analyzing: {
+                icon: `<svg class="w-3 h-3 text-white animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>`,
+                bgColor: 'bg-gradient-to-br from-blue-400 to-blue-600',
+                badgeColor: 'bg-blue-500',
+                progressBg: 'bg-gradient-to-r from-blue-400 to-purple-500',
+                textColor: 'text-blue-600',
+                typeColor: 'text-blue-700',
+                typeBg: 'bg-blue-100'
+            },
+            completed: {
+                icon: `<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>`,
+                bgColor: 'bg-gradient-to-br from-green-400 to-emerald-600',
+                badgeColor: 'bg-green-500',
+                progressBg: 'bg-gradient-to-r from-green-400 to-emerald-500',
+                textColor: 'text-green-600',
+                typeColor: 'text-green-700',
+                typeBg: 'bg-green-100'
+            },
+            failed: {
+                icon: `<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>`,
+                bgColor: 'bg-gradient-to-br from-red-400 to-red-600',
+                badgeColor: 'bg-red-500',
+                progressBg: 'bg-gradient-to-r from-red-400 to-red-500',
+                textColor: 'text-red-600',
+                typeColor: 'text-red-700',
+                typeBg: 'bg-red-100'
+            }
+        };
+        
         return configs[status] || configs.starting;
     }
     
-    // EXTRACTED FROM dashboard.js lines 4150-4180
+    getEstimatedDuration(analysisType) {
+        const durations = {
+            light: 9000,  // 9 seconds
+            deep: 16000,  // 16 seconds
+            xray: 23000   // 23 seconds
+        };
+        return durations[analysisType] || durations.light;
+    }
+    
+    calculateTimeRemaining(analysis) {
+        const elapsed = Date.now() - analysis.startTime;
+        const totalEstimated = this.getEstimatedDuration(analysis.analysisType);
+        const progressRatio = analysis.progress / 100;
+        const estimatedElapsed = totalEstimated * progressRatio;
+        const remaining = Math.max(0, totalEstimated - elapsed);
+        return remaining;
+    }
+    
+    calculateStageTimeRemaining(analysis, currentStage) {
+        const stages = this.analysisStages[analysis.analysisType];
+        const remainingStages = stages.slice(currentStage);
+        return remainingStages.reduce((total, stage) => total + stage.duration, 0);
+    }
+    
+    formatElapsedTime(seconds) {
+        if (seconds < 60) {
+            return `${seconds}s`;
+        } else {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+    }
+    
+    // ===============================================================================
+    // QUEUE VISIBILITY MANAGEMENT
+    // ===============================================================================
+    
     showQueue() {
         const container = document.getElementById('analysis-queue-container');
         if (container) {
             container.style.display = 'block';
+            // Trigger animation after display is set
+            setTimeout(() => {
+                container.classList.add('show');
+            }, 10);
             this.stateManager.setState('queueVisible', true);
         }
     }
     
-    // EXTRACTED FROM dashboard.js lines 4200-4230
     maybeHideQueue() {
         if (this.activeAnalyses.size === 0) {
             const container = document.getElementById('analysis-queue-container');
             if (container) {
-                container.style.display = 'none';
+                container.classList.remove('show');
+                setTimeout(() => {
+                    container.style.display = 'none';
+                }, 400); // Match transition duration
                 this.stateManager.setState('queueVisible', false);
             }
         }
     }
     
-    hasCompletedItems() {
-        return Array.from(this.activeAnalyses.values()).some(
-            analysis => analysis.status === 'completed' || analysis.status === 'failed'
-        );
-    }
-    
     // ===============================================================================
-    // ANALYSIS EXECUTION - EXTRACTED FROM dashboard.js lines 4450-4750
+    // ANALYSIS EXECUTION (Enhanced)
     // ===============================================================================
     
-    // EXTRACTED FROM dashboard.js lines 4450-4550
     async startSingleAnalysis(username, analysisType, businessId, requestData) {
         const analysisId = this.addAnalysis(username, analysisType, businessId);
         
         try {
-            // Start progress simulation
-            this.simulateProgress(analysisId);
-            
-            // Update to analyzing status
-            setTimeout(() => {
-                this.updateAnalysis(analysisId, {
-                    status: 'analyzing',
-                    progress: 20,
-                    message: 'Scraping Instagram profile...'
-                });
-            }, 1000);
+            // Start enhanced progress simulation
+            this.startStageBasedProgress(analysisId);
             
             // Call the actual API
             const result = await this.callAnalysisAPI(requestData);
             
             if (result.success) {
-                this.completeAnalysis(analysisId, true, 'Analysis completed successfully!');
+                this.completeAnalysis(analysisId, true, 'Analysis completed successfully!', result.data);
                 
                 // Emit success event for dashboard refresh
-                this.eventBus.emit(DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
+                this.eventBus.emit(window.DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
                     analysisId,
-                    username,
-                    result
+                    username: username.replace('@', ''),
+                    result: result.data
                 });
                 
-                return result;
+                return { success: true, analysisId, result: result.data };
             } else {
                 this.completeAnalysis(analysisId, false, result.error || 'Analysis failed');
-                throw new Error(result.error || 'Analysis failed');
+                return { success: false, analysisId, error: result.error };
             }
             
         } catch (error) {
-            console.error('❌ [AnalysisQueue] Analysis failed:', error);
-            this.completeAnalysis(analysisId, false, error.message);
-            throw error;
+            console.error('❌ [EnhancedAnalysisQueue] Analysis failed:', error);
+            this.completeAnalysis(analysisId, false, 'Network error occurred');
+            return { success: false, analysisId, error: error.message };
         }
     }
     
-    // EXTRACTED FROM dashboard.js lines 4600-4750
     async startBulkAnalysis(leads, analysisType, businessId) {
-        console.log(`🚀 [AnalysisQueue] Starting bulk analysis: ${leads.length} profiles`);
+        console.log(`🚀 [EnhancedAnalysisQueue] Starting bulk analysis: ${leads.length} leads (${analysisType})`);
         
         const results = [];
-        const user = this.osliraApp?.user;
+        const maxConcurrent = 3; // Limit concurrent analyses
         
-        if (!user) {
-            throw new Error('User authentication required');
-        }
-        
-        // Process each lead sequentially to avoid overwhelming the API
-        for (const lead of leads) {
-            try {
+        // Process leads in chunks
+        for (let i = 0; i < leads.length; i += maxConcurrent) {
+            const chunk = leads.slice(i, i + maxConcurrent);
+            const chunkPromises = chunk.map(async (lead) => {
+                const username = lead.username || lead;
                 const requestData = {
-                    username: lead.username.replace('@', ''),
-                    analysis_type: analysisType,
-                    business_id: businessId,
-                    user_id: user.id,
-                    platform: 'instagram'
+                    username: username.replace('@', ''),
+                    analysisType,
+                    business_id: businessId
                 };
                 
-                const result = await this.startSingleAnalysis(
-                    lead.username,
-                    analysisType,
-                    businessId,
-                    requestData
-                );
-                
-                results.push({
-                    username: lead.username,
-                    success: true,
-                    result
-                });
-                
-                // Small delay between requests
+                try {
+                    const result = await this.startSingleAnalysis(username, analysisType, businessId, requestData);
+                    return {
+                        username,
+                        success: result.success,
+                        error: result.error,
+                        data: result.result
+                    };
+                } catch (error) {
+                    return {
+                        username,
+                        success: false,
+                        error: error.message
+                    };
+                }
+            });
+            
+            const chunkResults = await Promise.all(chunkPromises);
+            results.push(...chunkResults);
+            
+            // Brief delay between chunks to prevent API overload
+            if (i + maxConcurrent < leads.length) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                
-            } catch (error) {
-                console.error(`❌ [AnalysisQueue] Failed to analyze ${lead.username}:`, error);
-                results.push({
-                    username: lead.username,
-                    success: false,
-                    error: error.message
-                });
             }
         }
         
-        console.log('✅ [AnalysisQueue] Bulk analysis completed:', {
+        console.log('✅ [EnhancedAnalysisQueue] Bulk analysis completed:', {
             total: leads.length,
             successful: results.filter(r => r.success).length,
             failed: results.filter(r => !r.success).length
@@ -405,45 +925,7 @@ this.eventBus.emit(DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
     }
     
     // ===============================================================================
-    // PROGRESS SIMULATION - EXTRACTED FROM dashboard.js
-    // ===============================================================================
-    
-    simulateProgress(analysisId) {
-        const analysis = this.activeAnalyses.get(analysisId);
-        if (!analysis) return;
-        
-        const steps = [
-            { progress: 10, message: 'Connecting to Instagram...', delay: 500 },
-            { progress: 30, message: 'Downloading profile data...', delay: 1500 },
-            { progress: 50, message: 'Analyzing engagement patterns...', delay: 2000 },
-            { progress: 70, message: analysis.analysisType === 'deep' 
-                ? 'Deep analysis in progress...' 
-                : 'Processing insights...', delay: 2500 },
-            { progress: 85, message: analysis.analysisType === 'deep' 
-                ? 'Generating outreach message...' 
-                : 'Finalizing results...', delay: 2000 },
-            { progress: 95, message: 'Saving to database...', delay: 1000 }
-        ];
-        
-        let currentStep = 0;
-        const updateProgress = () => {
-            if (currentStep < steps.length && analysis.status === 'analyzing') {
-                const step = steps[currentStep];
-                this.updateAnalysis(analysisId, {
-                    progress: step.progress,
-                    message: step.message
-                });
-                currentStep++;
-                setTimeout(updateProgress, step.delay);
-            }
-        };
-        
-        // Start after initial delay
-        setTimeout(updateProgress, 100);
-    }
-    
-    // ===============================================================================
-    // API INTEGRATION
+    // API INTEGRATION (Enhanced)
     // ===============================================================================
     
     async callAnalysisAPI(requestData) {
@@ -453,82 +935,126 @@ this.eventBus.emit(DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
                 throw new Error('No valid session token');
             }
             
-            // Use the existing API endpoint
-            const apiUrl = 'https://ai-outreach-api.oslira.workers.dev/analyze';
+            // Enhanced API call with timeout and retry logic
+            const apiUrl = 'https://ai-outreach-api.oslira.workers.dev/v1/analyze';
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session.data.session.access_token}`,
-                    'Content-Type': 'application/json'
+                    'User-Agent': 'Oslira-Dashboard/1.0'
                 },
-                body: JSON.stringify(requestData)
+                body: JSON.stringify(requestData),
+                signal: controller.signal
             });
             
+            clearTimeout(timeoutId);
+            
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`API request failed: ${response.status} ${errorText}`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
             }
             
             const result = await response.json();
-            return result;
+            return { success: true, data: result };
             
         } catch (error) {
-            console.error('❌ [AnalysisQueue] API call failed:', error);
-            return {
-                success: false,
-                error: error.message
-            };
+            if (error.name === 'AbortError') {
+                throw new Error('Analysis timeout - please try again');
+            }
+            
+            console.error('❌ [EnhancedAnalysisQueue] API call failed:', error);
+            return { success: false, error: error.message };
         }
     }
     
     // ===============================================================================
-    // UTILITY METHODS
+    // SETTINGS & CONFIGURATION
     // ===============================================================================
     
-    generateId() {
-        return 'analysis_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    updateSettings(settings) {
+        if (settings.smoothProgressEnabled !== undefined) {
+            this.smoothProgressEnabled = settings.smoothProgressEnabled;
+        }
+        if (settings.soundEnabled !== undefined) {
+            this.soundEnabled = settings.soundEnabled;
+        }
+        if (settings.animationSpeed !== undefined) {
+            this.animationSpeed = settings.animationSpeed;
+        }
+        if (settings.autoHideDelay !== undefined) {
+            this.autoHideDelay = settings.autoHideDelay;
+        }
+        
+        console.log('⚙️ [EnhancedAnalysisQueue] Settings updated:', settings);
     }
     
+    // ===============================================================================
+    // CLEANUP
+    // ===============================================================================
+    
+    cleanup() {
+        // Clear all active analyses
+        this.activeAnalyses.clear();
+        
+        // Hide and remove container
+        const container = document.getElementById('analysis-queue-container');
+        if (container) {
+            container.remove();
+        }
+        
+        // Remove injected styles
+        const styles = document.getElementById('enhanced-queue-styles');
+        if (styles) {
+            styles.remove();
+        }
+        
+        // Remove confetti styles
+        const confettiStyles = document.getElementById('confetti-animation');
+        if (confettiStyles) {
+            confettiStyles.remove();
+        }
+        
+        console.log('🧹 [EnhancedAnalysisQueue] Cleanup completed');
+    }
+    
+    // ===============================================================================
+    // PUBLIC METHODS FOR GLOBAL ACCESS
+    // ===============================================================================
+    
+    // Expose methods for onclick handlers
     getQueueStats() {
         const analyses = Array.from(this.activeAnalyses.values());
-        
         return {
             total: analyses.length,
-            starting: analyses.filter(a => a.status === 'starting').length,
             analyzing: analyses.filter(a => a.status === 'analyzing').length,
             completed: analyses.filter(a => a.status === 'completed').length,
             failed: analyses.filter(a => a.status === 'failed').length
         };
     }
     
-    isAnalyzing(username) {
-        return Array.from(this.activeAnalyses.values()).some(
-            analysis => analysis.username.toLowerCase() === username.toLowerCase() &&
-                       (analysis.status === 'starting' || analysis.status === 'analyzing')
-        );
+    getAllAnalyses() {
+        return Array.from(this.activeAnalyses.values());
     }
     
-    async cleanup() {
-        console.log('🧹 [AnalysisQueue] Cleaning up...');
-        
-        // Clear all active analyses
-        this.activeAnalyses.clear();
-        this.stateManager.setState('analysisQueue', new Map());
-        
-        // Hide and remove queue container
-        const container = document.getElementById('analysis-queue-container');
-        if (container) {
-            container.remove();
-        }
-        
-        console.log('✅ [AnalysisQueue] Cleanup completed');
+    getAnalysis(analysisId) {
+        return this.activeAnalyses.get(analysisId);
     }
 }
 
-// Export for global use
+// ===============================================================================
+// GLOBAL SETUP AND EXPORT
+// ===============================================================================
+
+// Make available globally for onclick handlers
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AnalysisQueue };
+    module.exports = EnhancedAnalysisQueue;
 } else {
-    window.AnalysisQueue = AnalysisQueue;
+    window.EnhancedAnalysisQueue = EnhancedAnalysisQueue;
+    
+    // Global function bindings for onclick handlers
+    window.enhancedAnalysisQueue = null; // Will be set by dashboard initialization
 }
