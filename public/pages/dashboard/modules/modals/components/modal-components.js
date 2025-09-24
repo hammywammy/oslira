@@ -24,12 +24,12 @@ class ModalComponents {
     // UTILITY METHODS
     // ===============================================================================
     
-    getProfileImageUrl(lead) {
-        const url = lead.profile_picture_url || lead.profile_pic_url;
-        return url ? 
-            `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=160&h=160&fit=cover&mask=circle` : 
-            '/assets/images/default-avatar.png';
-    }
+getProfileImageUrl(lead) {
+    const url = lead.profile_picture_url || lead.profile_pic_url;
+    return url ? 
+        `https://images.weserv.nl/?url=${encodeURIComponent(url)}&w=160&h=160&fit=cover&mask=circle` : 
+        '/assets/images/default-avatar.jpg';
+}
 
     getScoreGradient(score) {
         if (score >= 85) return 'from-emerald-400 via-green-500 to-teal-600';
@@ -181,10 +181,10 @@ getPayloadData(lead, analysisData) {
             <div class="pulse-ring w-20 h-20"></div>
             <div class="pulse-ring w-20 h-20" style="animation-delay: 0.5s;"></div>
             
-            <img src="${profileImageUrl}" 
-                 alt="Profile" 
-                 class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect object-cover"
-                 onerror="this.src='/assets/images/default-avatar.png'">
+<img src="${profileImageUrl}" 
+     alt="Profile" 
+     class="relative w-20 h-20 rounded-full border-3 border-white/40 shadow-2xl shimmer-effect object-cover"
+     onerror="this.src='/assets/images/default-avatar.jpg'">
             ${(lead.is_verified_account || lead.is_verified) ?
 `
                 <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center border-3 border-white shadow-xl hover-3d">
