@@ -19,15 +19,21 @@ class DashboardHeader {
             
             <!-- Right Actions -->
             <div class="flex items-center space-x-4">
-<!-- Research New Lead Button -->
+                <!-- Research New Lead Button -->
                 <button onclick="openResearchModal()" class="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium rounded-xl hover:shadow-lg transition-all flex items-center space-x-2">
                     <i data-feather="plus" class="w-4 h-4"></i>
                     <span>Research New Lead</span>
                 </button>
+            </div>
+        </div>
+    </div>
+</div>`;
+    }
 
     setupEventHandlers() {
         // No notification handlers needed
     }
+}
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = DashboardHeader;
