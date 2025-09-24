@@ -721,20 +721,20 @@ async buildAnalysisModal(leadId) {
         
         const modalHTML = `
             <div id="leadAnalysisModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="opacity: 0;">
-                <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden" style="transform: scale(0.95); transition: transform 0.2s ease;">
-                    <!-- Close button -->
-                    <div class="absolute top-4 right-4 z-10">
-                        <button onclick="closeLeadAnalysisModal()" class="p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white transition-colors">
-                            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
-                    </div>
-                    
-                    <div id="modalContent" class="overflow-y-auto max-h-[90vh]">
-                        <!-- Content will be populated by buildAnalysisModalHTML -->
-                    </div>
-                </div>
+<div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col" style="transform: scale(0.95); transition: transform 0.2s ease;">
+    <!-- Close button -->
+    <div class="absolute top-4 right-4 z-10">
+        <button onclick="closeLeadAnalysisModal()" class="p-2 rounded-full bg-white/90 backdrop-blur-sm shadow-lg hover:bg-white transition-colors">
+            <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+    </div>
+    
+    <div id="modalContent" class="overflow-y-auto flex-1" style="min-height: 0;">
+        <!-- Content will be populated by buildAnalysisModalHTML -->
+    </div>
+</div>
             </div>
         `;
         
