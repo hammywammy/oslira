@@ -24,29 +24,29 @@ class AnalysisQueue {
         
         // Analysis stages configuration
         this.analysisStages = {
-            light: [
-                { text: "🔍 Scanning profile...", duration: 2000, color: "text-blue-500" },
-                { text: "📊 Analyzing engagement...", duration: 3000, color: "text-amber-500" },
-                { text: "🎯 Calculating scores...", duration: 2500, color: "text-green-500" },
-                { text: "✨ Finalizing results...", duration: 1500, color: "text-purple-500" }
-            ],
-            deep: [
-                { text: "🔍 Scanning @profile...", duration: 3000, color: "text-blue-500" },
-                { text: "📊 Deep engagement analysis...", duration: 4000, color: "text-amber-500" },
-                { text: "🎯 Advanced scoring...", duration: 3500, color: "text-green-500" },
-                { text: "🤖 Generating insights...", duration: 2500, color: "text-purple-500" },
-                { text: "✉️ Crafting outreach...", duration: 2000, color: "text-cyan-500" },
-                { text: "✨ Finalizing results...", duration: 1000, color: "text-indigo-500" }
-            ],
-            xray: [
-                { text: "🔍 Deep profile scan...", duration: 4000, color: "text-blue-500" },
-                { text: "📊 X-Ray engagement analysis...", duration: 5000, color: "text-amber-500" },
-                { text: "🧠 AI pattern recognition...", duration: 4000, color: "text-green-500" },
-                { text: "🎯 Precision scoring...", duration: 3000, color: "text-purple-500" },
-                { text: "🤖 Advanced insights...", duration: 3000, color: "text-cyan-500" },
-                { text: "✉️ Custom outreach...", duration: 2500, color: "text-indigo-500" },
-                { text: "✨ Finalizing X-Ray...", duration: 1500, color: "text-pink-500" }
-            ]
+this.analysisStages = {
+    light: [
+        { text: "🔍 Scanning profile...", duration: 2250, color: "text-blue-500" },
+        { text: "📊 Analyzing engagement...", duration: 2750, color: "text-amber-500" },
+        { text: "🎯 Calculating scores...", duration: 2500, color: "text-green-500" },
+        { text: "✨ Finalizing results...", duration: 1500, color: "text-purple-500" }
+    ],
+    deep: [
+        { text: "🔍 Scanning @profile...", duration: 4000, color: "text-blue-500" },
+        { text: "📊 Deep engagement analysis...", duration: 4000, color: "text-amber-500" },
+        { text: "🎯 Advanced scoring...", duration: 4000, color: "text-green-500" },
+        { text: "🤖 Generating insights...", duration: 4000, color: "text-purple-500" },
+        { text: "✉️ Crafting outreach...", duration: 4000, color: "text-cyan-500" },
+        { text: "✨ Finalizing results...", duration: 4000, color: "text-indigo-500" }
+    ],
+    xray: [
+        { text: "🔍 Deep profile scan...", duration: 4200, color: "text-blue-500" },
+        { text: "📊 X-Ray engagement analysis...", duration: 4200, color: "text-amber-500" },
+        { text: "🎯 Advanced scoring...", duration: 4200, color: "text-green-500" },
+        { text: "🤖 Generating insights...", duration: 4200, color: "text-purple-500" },
+        { text: "✉️ Crafting outreach...", duration: 4200, color: "text-cyan-500" },
+        { text: "✨ Finalizing results...", duration: 4000, color: "text-indigo-500" }
+    ]
         };
         
         this.setupEnhancedContainer();
@@ -237,14 +237,15 @@ class AnalysisQueue {
         return analysisId;
     }
     
-    updateAnalysis(analysisId, updates) {
-        const analysis = this.activeAnalyses.get(analysisId);
-        if (!analysis) return;
-        
-        // Handle smooth progress updates
-        if (updates.progress !== undefined && this.smoothProgressEnabled) {
-            this.smoothProgressUpdate(analysisId, updates.progress);
-        }
+updateAnalysis(analysisId, updates) {
+    const analysis = this.activeAnalyses.get(analysisId);
+    if (!analysis) return;
+    
+    // Handle smooth progress updates
+    if (updates.progress !== undefined && this.smoothProgressEnabled) {
+        this.smoothProgressUpdate(analysisId, updates.progress);
+        return; // Don't immediately update progress, let smoothProgressUpdate handle it
+    }
         
         Object.assign(analysis, updates);
         
@@ -783,14 +784,14 @@ class AnalysisQueue {
         return configs[status] || configs.starting;
     }
     
-    getEstimatedDuration(analysisType) {
-        const durations = {
-            light: 9000,  // 9 seconds
-            deep: 16000,  // 16 seconds
-            xray: 23000   // 23 seconds
-        };
-        return durations[analysisType] || durations.light;
-    }
+getEstimatedDuration(analysisType) {
+    const durations = {
+        light: 9000,  // 9 seconds
+        deep: 24000,  // 24 seconds
+        xray: 25000   // 25 seconds
+    };
+    return durations[analysisType] || durations.light;
+}
     
     calculateTimeRemaining(analysis) {
         const elapsed = Date.now() - analysis.startTime;
