@@ -224,48 +224,6 @@ export async function handleMigrateToAWS(c: Context): Promise<Response> {
   }
 }
 
-export async function handleTestApiKey(c: Context): Promise<Response> {
-  const requestId = generateRequestId();
-  
-  try {
-    // Verify admin access
-    if (!verifyAdminAccess(c)) {
-      return c.json(createStandardResponse(false, undefined, 'Unauthorized access', requestId), 401);
-    }
-    
-    const { keyName, keyValue } = await c.req.json();
-    
-    if (!keyName) {
-      return c.json(createStandardResponse(false, undefined, 'keyName is required', requestId), 400);
-    }
-    
-    // If keyValue is provided, test that value, otherwise get from enhanced config
-    let valueToTest = keyValue;
-    if (!valueToTest) {
-      const configManager = getEnhancedConfigManager(c.env);
-      valueToTest = await configManager.getConfig(keyName);
-    }
-    
-    if (!valueToTest) {
-      return c.json(createStandardResponse(false, undefined, 'No key value to test', requestId), 400);
-    }
-    
-    const testResult = await testApiKey(keyName, valueToTest, c.env);
-    
-    logger('info', 'API key tested via enhanced admin', { 
-      keyName, 
-      success: testResult.success, 
-      requestId 
-    });
-    
-    return c.json(createStandardResponse(true, testResult, undefined, requestId));
-    
-  } catch (error: any) {
-    logger('error', 'Enhanced API key test failed', { error: error.message, requestId });
-    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
-  }
-}
-
 export async function handleGetAuditLog(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
