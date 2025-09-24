@@ -224,7 +224,6 @@ export async function handleMigrateToAWS(c: Context): Promise<Response> {
   }
 }
 
-<<<<<<< HEAD
 export async function handleTestApiKey(c: Context): Promise<Response> {
   const requestId = generateRequestId();
   
@@ -266,8 +265,6 @@ export async function handleTestApiKey(c: Context): Promise<Response> {
     return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 }
-=======
->>>>>>> staging
 
 export async function handleGetAuditLog(c: Context): Promise<Response> {
   const requestId = generateRequestId();
