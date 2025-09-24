@@ -112,11 +112,11 @@ async loadDashboardData() {
                         business_id: lead.business_id,
                         first_discovered_at: lead.first_discovered_at,
                         
-                        // Backward compatibility fields
-                        profile_pic_url: lead.profile_picture_url,
-                        followers_count: lead.follower_count,
-                        platform: lead.platform_type || 'instagram',
-                        created_at: lead.first_discovered_at,
+// Backward compatibility fields
+profile_pic_url: lead.profile_picture_url,
+followers_count: lead.follower_count,
+platform: lead.platform_type || 'instagram',
+created_at: latestRun?.created_at || lead.first_discovered_at, // Use run date, fallback to lead date
                         
                         // Analysis data from runs table (via JOIN)
                         score: latestRun?.overall_score || 0,
