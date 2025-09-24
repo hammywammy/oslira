@@ -47,32 +47,7 @@ class DashboardStyles {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
-    
-    /* Notification badge */
-    .notification-badge::after {
-        content: attr(data-count);
-        position: absolute;
-        top: -2px;
-        right: -2px;
-        background: #ef4444;
-        color: white;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        font-size: 11px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 18px;
-        text-align: center;
-    }
-    
-    /* Force notifications dropdown above everything */
-    #notificationsDropdown {
-        z-index: 99999 !important;
-        position: fixed !important;
-    }
+
     
     /* Ensure priority cards don't interfere */
     .hover-lift {
