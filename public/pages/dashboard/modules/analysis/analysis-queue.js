@@ -5,12 +5,17 @@
  * Complete revamp with Tailwind, Lucide icons, glassmorphism, and dopamine-driven UX
  */
 class AnalysisQueue {
-    constructor(container) {
-        this.container = container;
-        this.eventBus = container.get('eventBus');
-        this.stateManager = container.get('stateManager');
-        this.supabase = container.get('supabase');
-        this.osliraApp = container.get('osliraApp');
+constructor(container) {
+    this.container = container;
+    this.eventBus = container.get('eventBus');
+    this.stateManager = container.get('stateManager');
+    this.supabase = container.get('supabase');
+    this.osliraApp = container.get('osliraApp');
+    
+    // Validate Supabase client during construction
+    if (!this.supabase) {
+        console.warn('⚠️ [EnhancedAnalysisQueue] No Supabase client from container, will use SimpleAuth fallback');
+    }
         
         // Queue configuration
         this.activeAnalyses = new Map();
@@ -905,38 +910,89 @@ getEstimatedDuration(analysisType) {
     // ANALYSIS EXECUTION (Enhanced)
     // ===============================================================================
     
-    async startSingleAnalysis(username, analysisType, businessId, requestData) {
-        const analysisId = this.addAnalysis(username, analysisType, businessId);
+async startSingleAnalysis(username, analysisType, businessId, requestData) {
+    console.log('🚀 [EnhancedAnalysisQueue] Starting single analysis:', { username, analysisType, businessId });
+    
+    // 1. VALIDATE SUPABASE CLIENT
+    if (!this.supabase) {
+        console.error('❌ [EnhancedAnalysisQueue] No Supabase client available');
+        throw new Error('Database connection not configured');
+    }
+
+    // 2. GET FRESH SUPABASE CLIENT FROM SIMPLEAUTH IF NEEDED  
+    let supabaseClient = this.supabase;
+    
+    // If our injected client is missing URL, get it from SimpleAuth
+    if (!supabaseClient.supabaseUrl && window.SimpleAuth?.supabase) {
+        console.log('🔄 [EnhancedAnalysisQueue] Getting fresh Supabase client from SimpleAuth');
+        supabaseClient = window.SimpleAuth.supabase();
         
-        try {
-            // Start enhanced progress simulation
-            this.startStageBasedProgress(analysisId);
-            
-            // Call the actual API
-            const result = await this.callAnalysisAPI(requestData);
-            
-            if (result.success) {
-                this.completeAnalysis(analysisId, true, 'Analysis completed successfully!', result.data);
-                
-                // Emit success event for dashboard refresh
-                this.eventBus.emit(window.DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
-                    analysisId,
-                    username: username.replace('@', ''),
-                    result: result.data
-                });
-                
-                return { success: true, analysisId, result: result.data };
-            } else {
-                this.completeAnalysis(analysisId, false, result.error || 'Analysis failed');
-                return { success: false, analysisId, error: result.error };
-            }
-            
-        } catch (error) {
-            console.error('❌ [EnhancedAnalysisQueue] Analysis failed:', error);
-            this.completeAnalysis(analysisId, false, 'Network error occurred');
-            return { success: false, analysisId, error: error.message };
+        if (!supabaseClient) {
+            throw new Error('Unable to get Supabase client from SimpleAuth');
         }
     }
+    
+    // 3. VERIFY SESSION
+    const session = await supabaseClient.auth.getSession();
+    if (!session?.data?.session) {
+        throw new Error('No valid session - please log in again');
+    }
+    
+    console.log('✅ [EnhancedAnalysisQueue] Session validated:', {
+        userId: session.data.session.user.id,
+        hasToken: !!session.data.session.access_token
+    });
+    
+    // 4. CREATE ANALYSIS QUEUE ITEM
+    const analysisId = this.addAnalysis(username, analysisType, businessId);
+    
+    try {
+        // 5. START PROGRESS SIMULATION
+        this.startStageBasedProgress(analysisId);
+        
+        // 6. CALL API WITH VALIDATED DATA
+        console.log('🔥 [EnhancedAnalysisQueue] Calling analysis API with payload:', requestData);
+        const result = await this.callAnalysisAPI(requestData);
+        
+        // 7. HANDLE SUCCESS
+        if (result.success) {
+            this.completeAnalysis(analysisId, true, 'Analysis completed successfully!', result.data);
+            
+            // Emit success event for dashboard refresh
+            this.eventBus.emit(window.DASHBOARD_EVENTS.ANALYSIS_COMPLETED, {
+                analysisId,
+                username: username.replace('@', ''),
+                result: result.data
+            });
+            
+            console.log('✅ [EnhancedAnalysisQueue] Analysis completed successfully:', analysisId);
+            return { success: true, analysisId, result: result.data };
+            
+        } else {
+            // 8. HANDLE FAILURE
+            console.error('❌ [EnhancedAnalysisQueue] Analysis failed:', result.error);
+            this.completeAnalysis(analysisId, false, result.error || 'Analysis failed');
+            return { success: false, analysisId, error: result.error };
+        }
+        
+    } catch (error) {
+        // 9. HANDLE EXCEPTIONS
+        console.error('❌ [EnhancedAnalysisQueue] Analysis exception:', error);
+        
+        // Determine error type for better user messaging
+        let errorMessage = 'Network error occurred';
+        if (error.message.includes('session')) {
+            errorMessage = 'Please refresh and log in again';
+        } else if (error.message.includes('timeout')) {
+            errorMessage = 'Analysis timed out - please try again';
+        } else if (error.message.includes('credits')) {
+            errorMessage = 'Insufficient credits for analysis';
+        }
+        
+        this.completeAnalysis(analysisId, false, errorMessage);
+        return { success: false, analysisId, error: error.message };
+    }
+}
     
     async startBulkAnalysis(leads, analysisType, businessId) {
         console.log(`🚀 [EnhancedAnalysisQueue] Starting bulk analysis: ${leads.length} leads (${analysisType})`);
