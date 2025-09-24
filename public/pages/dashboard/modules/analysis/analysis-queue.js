@@ -586,30 +586,56 @@ updateAnalysis(analysisId, updates) {
     // ENHANCED PROGRESS & ANIMATIONS
     // ===============================================================================
     
-    startStageBasedProgress(analysisId) {
-        const analysis = this.activeAnalyses.get(analysisId);
-        if (!analysis) return;
+startStageBasedProgress(analysisId) {
+    const analysis = this.activeAnalyses.get(analysisId);
+    if (!analysis) return;
+    
+    const stages = this.analysisStages[analysis.analysisType];
+    let currentStage = 0;
+    
+    // Create continuous progress within each stage
+    const progressStage = () => {
+        if (currentStage >= stages.length || analysis.status !== 'analyzing') return;
         
-        const stages = this.analysisStages[analysis.analysisType];
-        let currentStage = 0;
+        const stage = stages[currentStage];
+        const progressPerStage = 100 / stages.length;
+        const stageStartProgress = currentStage * progressPerStage;
+        const stageEndProgress = (currentStage + 1) * progressPerStage;
         
-        const progressStage = () => {
-            if (currentStage >= stages.length || analysis.status !== 'analyzing') return;
+        // Update stage info immediately
+        this.updateAnalysis(analysisId, {
+            currentStage,
+            message: stage.text.replace('@profile', `@${analysis.username}`),
+            estimatedTimeRemaining: this.calculateStageTimeRemaining(analysis, currentStage)
+        });
+        
+        // Smooth progress within this stage
+        const smoothProgressInStage = () => {
+            const steps = 30; // Number of progress updates within stage
+            const stepSize = progressPerStage / steps;
+            const stepDelay = stage.duration / steps;
             
-            const stage = stages[currentStage];
-            const progressPerStage = 100 / stages.length;
-            const targetProgress = Math.round((currentStage + 1) * progressPerStage);
+            let step = 0;
+            const stepUpdate = () => {
+                if (step >= steps || analysis.status !== 'analyzing') {
+                    currentStage++;
+                    setTimeout(progressStage, 100); // Brief pause between stages
+                    return;
+                }
+                
+                const currentProgress = stageStartProgress + (step * stepSize);
+                analysis.progress = Math.round(currentProgress);
+                this.renderQueue();
+                
+                step++;
+                setTimeout(stepUpdate, stepDelay);
+            };
             
-            this.updateAnalysis(analysisId, {
-                currentStage,
-                progress: targetProgress,
-                message: stage.text.replace('@profile', `@${analysis.username}`),
-                estimatedTimeRemaining: this.calculateStageTimeRemaining(analysis, currentStage)
-            });
-            
-            currentStage++;
-            setTimeout(progressStage, stage.duration);
+            stepUpdate();
         };
+        
+        smoothProgressInStage();
+    };
         
         // Start with analyzing status
         setTimeout(() => {
@@ -622,19 +648,22 @@ smoothProgressUpdate(analysisId, targetProgress) {
     const analysis = this.activeAnalyses.get(analysisId);
     if (!analysis) return;
     
+    // Skip if already animating to prevent conflicts
+    if (analysis.isAnimating) return;
+    analysis.isAnimating = true;
+    
     const currentProgress = analysis.progress || 0;
     const progressDiff = targetProgress - currentProgress;
-    const steps = 30; // More steps for smoother animation
+    const steps = 20;
     const stepSize = progressDiff / steps;
-    const stepDelay = 33; // ~30fps for smooth animation
+    const stepDelay = 50;
     
     let currentStep = 0;
     const smoothStep = () => {
         if (currentStep >= steps || analysis.status === 'completed' || analysis.status === 'failed') {
             analysis.progress = targetProgress;
+            analysis.isAnimating = false;
             this.renderQueue();
-            // Update state after smooth animation completes
-            this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
             return;
         }
         
