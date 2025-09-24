@@ -32,6 +32,14 @@ class LeadManager {
     // ===============================================================================
     
 async loadDashboardData() {
+    // Prevent duplicate loading
+    if (this.isLoading) {
+        console.log('⚠️ [LeadManager] Already loading, skipping duplicate call');
+        return;
+    }
+    
+    this.isLoading = true;
+    
     try {
         console.log('🔄 [LeadManager] Loading dashboard data...');
         this.stateManager.setState('isLoading', true);
@@ -170,23 +178,23 @@ created_at: latestRun?.created_at || lead.first_discovered_at, // Use run date, 
 
             return enrichedLeads;
 
-        } catch (error) {
-            console.error('❌ [LeadManager] Error loading leads:', error);
-            this.eventBus.emit('dashboard:data:error', error);
-            
-            // Ensure empty state shows on error
-            this.stateManager.batchUpdate({
-                'leads': [],
-                'allLeads': [],
-                'filteredLeads': []
-            });
-            this.stateManager.setState('selectedLeads', new Set());
-            
-            throw error;
-            
-        } finally {
+} catch (error) {
+    console.error('❌ [LeadManager] Error loading leads:', error);
+    this.eventBus.emit('dashboard:data:error', error);
+    
+    // Ensure empty state shows on error
+    this.stateManager.batchUpdate({
+        'leads': [],
+        'allLeads': [],
+        'filteredLeads': []
+    });
+    this.stateManager.setState('selectedLeads', new Set());
+    
+    throw error;
+} finally {
             this.stateManager.setState('isLoading', false);
             this.eventBus.emit('dashboard:loading:end', 'leads');
+        his.isLoading = false;
         }
     }
     async waitForValidUser(timeout = 5000) {
