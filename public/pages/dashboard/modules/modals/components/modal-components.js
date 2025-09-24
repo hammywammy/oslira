@@ -110,16 +110,20 @@ class ModalComponents {
     }
 
 
-// Helper method to get payload data with proper fallbacks
 getPayloadData(lead, analysisData) {
-    // Check if we have nested payloads from database query
-    if (analysisData?.payloads?.[0]?.analysis_data) {
+    // Check if there are payloads with analysis_data structure
+    if (analysisData?.payloads && analysisData.payloads.length > 0 && analysisData.payloads[0]?.analysis_data) {
         return analysisData.payloads[0].analysis_data;
     }
     
     // Check if analysisData itself has payload structure  
     if (analysisData?.deep_payload) {
         return analysisData.deep_payload;
+    }
+    
+    // Check if analysisData itself has xray_payload structure
+    if (analysisData?.xray_payload) {
+        return analysisData.xray_payload;
     }
     
     // Fallback to direct analysisData
