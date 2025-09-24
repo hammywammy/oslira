@@ -241,26 +241,41 @@ updateAnalysis(analysisId, updates) {
     
     // Handle smooth progress updates
     if (updates.progress !== undefined && this.smoothProgressEnabled) {
+        // Create a copy of updates without progress for immediate assignment
+        const updatesWithoutProgress = { ...updates };
+        delete updatesWithoutProgress.progress;
+        
+        // Apply non-progress updates immediately
+        Object.assign(analysis, updatesWithoutProgress);
+        
+        // Start smooth progress animation (don't update progress immediately)
         this.smoothProgressUpdate(analysisId, updates.progress);
-        return; // Don't immediately update progress, let smoothProgressUpdate handle it
-    }
         
-        Object.assign(analysis, updates);
-        
-        // Calculate estimated time remaining
-        if (analysis.status === 'analyzing' && updates.progress) {
-            analysis.estimatedTimeRemaining = this.calculateTimeRemaining(analysis);
-        }
-        
+        // Early return to avoid double update
         this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
-        this.renderQueue();
-        
         this.eventBus.emit(window.DASHBOARD_EVENTS.ANALYSIS_PROGRESS, {
-            analysisId, updates, analysis
+            analysisId, updates: updatesWithoutProgress, analysis
         });
-        
-        console.log(`🔄 [EnhancedAnalysisQueue] Updated: ${analysisId}`, updates);
+        return;
     }
+    
+    // Regular update for non-progress changes
+    Object.assign(analysis, updates);
+    
+    // Calculate estimated time remaining
+    if (analysis.status === 'analyzing' && updates.progress) {
+        analysis.estimatedTimeRemaining = this.calculateTimeRemaining(analysis);
+    }
+    
+    this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
+    this.renderQueue();
+    
+    this.eventBus.emit(window.DASHBOARD_EVENTS.ANALYSIS_PROGRESS, {
+        analysisId, updates, analysis
+    });
+    
+    console.log(`🔄 [EnhancedAnalysisQueue] Updated: ${analysisId}`, updates);
+}
     
     completeAnalysis(analysisId, success = true, message = null, result = null) {
         const analysis = this.activeAnalyses.get(analysisId);
@@ -603,32 +618,35 @@ updateAnalysis(analysisId, updates) {
         }, 500);
     }
     
-    smoothProgressUpdate(analysisId, targetProgress) {
-        const analysis = this.activeAnalyses.get(analysisId);
-        if (!analysis) return;
-        
-        const currentProgress = analysis.progress || 0;
-        const progressDiff = targetProgress - currentProgress;
-        const steps = 20;
-        const stepSize = progressDiff / steps;
-        const stepDelay = 50;
-        
-        let currentStep = 0;
-        const smoothStep = () => {
-            if (currentStep >= steps || analysis.status === 'completed' || analysis.status === 'failed') {
-                analysis.progress = targetProgress;
-                return;
-            }
-            
-            analysis.progress = Math.round(currentProgress + (stepSize * currentStep));
+smoothProgressUpdate(analysisId, targetProgress) {
+    const analysis = this.activeAnalyses.get(analysisId);
+    if (!analysis) return;
+    
+    const currentProgress = analysis.progress || 0;
+    const progressDiff = targetProgress - currentProgress;
+    const steps = 30; // More steps for smoother animation
+    const stepSize = progressDiff / steps;
+    const stepDelay = 33; // ~30fps for smooth animation
+    
+    let currentStep = 0;
+    const smoothStep = () => {
+        if (currentStep >= steps || analysis.status === 'completed' || analysis.status === 'failed') {
+            analysis.progress = targetProgress;
             this.renderQueue();
-            
-            currentStep++;
-            setTimeout(smoothStep, stepDelay);
-        };
+            // Update state after smooth animation completes
+            this.stateManager.setState('analysisQueue', new Map(this.activeAnalyses));
+            return;
+        }
         
-        smoothStep();
-    }
+        analysis.progress = Math.round(currentProgress + (stepSize * currentStep));
+        this.renderQueue();
+        
+        currentStep++;
+        setTimeout(smoothStep, stepDelay);
+    };
+    
+    smoothStep();
+}
     
     triggerCelebration(analysisId, result = null) {
         const element = document.getElementById(`queue-item-${analysisId}`);
