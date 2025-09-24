@@ -194,7 +194,7 @@ created_at: latestRun?.created_at || lead.first_discovered_at, // Use run date, 
 } finally {
             this.stateManager.setState('isLoading', false);
             this.eventBus.emit('dashboard:loading:end', 'leads');
-        his.isLoading = false;
+        this.isLoading = false;
         }
     }
     async waitForValidUser(timeout = 5000) {
