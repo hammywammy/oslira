@@ -16,27 +16,16 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = """
-      default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app https://*.oslira.com;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com https://*.oslira.com;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.oslira.com;
-      font-src 'self' https://fonts.gstatic.com https://*.oslira.com;
-      img-src 'self' data: https: blob: https://images.weserv.nl;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://api.oslira.com https://api-staging.oslira.com https://*.oslira.com;
-      frame-src https://js.stripe.com https://*.oslira.com;
-      object-src 'none';
-      base-uri 'self';
-      form-action 'self' https://*.stripe.com https://*.oslira.com;
 Content-Security-Policy = """
-      default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app https://oslira.org https://*.oslira.org;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com https://oslira.org https://*.oslira.org; 
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://oslira.org https://*.oslira.org;
-      font-src 'self' https://fonts.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com https://oslira.org https://*.oslira.org;
+      default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app https://oslira.org https://*.oslira.org https://*.oslira.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com https://oslira.org https://*.oslira.org https://*.oslira.com; 
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://oslira.org https://*.oslira.org https://*.oslira.com;
+      font-src 'self' https://fonts.gstatic.com https://unpkg.com https://cdnjs.cloudflare.com https://oslira.org https://*.oslira.org https://*.oslira.com;
       img-src 'self' data: https: blob: https://images.weserv.nl https://ui-avatars.com https://oslira.org https://*.oslira.org;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://*.sentry.io https://api.oslira.com https://api-staging.oslira.com https://unpkg.com https://oslira.org https://*.oslira.org https://api.uptimerobot.com;
+      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.workers.dev https://*.stripe.com https://api.stripe.com https://browser.sentry-cdn.com https://sentry.io https://*.sentry.io https://api.oslira.com https://api-staging.oslira.com https://unpkg.com https://oslira.org https://*.oslira.org https://*.oslira.com https://api.uptimerobot.com;
       object-src 'none';
       base-uri 'self';
-      form-action 'self' https://*.stripe.com https://oslira.org https://*.oslira.org;
+      form-action 'self' https://*.stripe.com https://oslira.org https://*.oslira.org https://*.oslira.com;
     """
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
