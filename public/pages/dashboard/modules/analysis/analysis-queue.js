@@ -935,8 +935,17 @@ class AnalysisQueue {
                 throw new Error('No valid session token');
             }
             
-            // Enhanced API call with timeout and retry logic
-            const apiUrl = 'https://ai-outreach-api.oslira.workers.dev/v1/analyze';
+// Get worker URL from config like ResearchHandlers does
+let workerUrl;
+if (window.OsliraConfig?.getWorkerUrl) {
+    workerUrl = await window.OsliraConfig.getWorkerUrl();
+} else if (window.OsliraEnv?.WORKER_URL) {
+    workerUrl = window.OsliraEnv.WORKER_URL;
+} else {
+    workerUrl = 'https://api-staging.oslira.com'; // Fallback
+}
+const apiUrl = `${workerUrl}/v1/analyze`;
+            
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
             
