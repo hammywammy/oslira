@@ -4,7 +4,7 @@
  * ENHANCED OSLIRA ANALYSIS QUEUE MODULE  
  * Complete revamp with Tailwind, Lucide icons, glassmorphism, and dopamine-driven UX
  */
-class EnhancedAnalysisQueue {
+class AnalysisQueue {
     constructor(container) {
         this.container = container;
         this.eventBus = container.get('eventBus');
@@ -411,14 +411,14 @@ class EnhancedAnalysisQueue {
                             </div>
                         ` : ''}
                         <div class="text-xs text-gray-400">${timeText}</div>
-                        <button onclick="enhancedAnalysisQueue.toggleMinimize('${analysis.id}')" 
+                        <button onclick="analysisQueue.toggleMinimize('${analysis.id}')"
                                 class="p-1 hover:bg-gray-100 rounded-md transition-colors">
                             <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${analysis.isMinimized ? 'M19 9l-7 7-7-7' : 'M5 15l7-7 7 7'}"/>
                             </svg>
                         </button>
                         ${isActive ? `
-                            <button onclick="enhancedAnalysisQueue.removeAnalysis('${analysis.id}')" 
+                            <button onclick="analysisQueue.removeAnalysis('${analysis.id}')"
                                     class="p-1 hover:bg-red-50 hover:text-red-600 rounded-md transition-colors">
                                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -460,7 +460,7 @@ class EnhancedAnalysisQueue {
                                 </svg>
                                 <span>View Results</span>
                             </button>
-                            <button onclick="enhancedAnalysisQueue.removeAnalysis('${analysis.id}')" 
+                            <button onclick="analysisQueue.removeAnalysis('${analysis.id}')"
                                     class="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -471,14 +471,14 @@ class EnhancedAnalysisQueue {
                     
                     ${isFailed ? `
                         <div class="mt-4 flex space-x-2">
-                            <button onclick="enhancedAnalysisQueue.retryAnalysis('${analysis.id}')" 
+                            <button onclick="analysisQueue.retryAnalysis('${analysis.id}')"
                                     class="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:from-amber-600 hover:to-orange-700 transition-all duration-200 flex items-center justify-center space-x-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                 </svg>
                                 <span>Retry</span>
                             </button>
-                            <button onclick="enhancedAnalysisQueue.removeAnalysis('${analysis.id}')" 
+                            <button onclick="analysisQueue.removeAnalysis('${analysis.id}')"
                                     class="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -503,7 +503,7 @@ class EnhancedAnalysisQueue {
             ` : ''}
             ${completedCount > 0 ? `
                 <div class="flex justify-center">
-                    <button onclick="enhancedAnalysisQueue.clearCompleted()" 
+                    <button onclick="analysisQueue.clearCompleted()" 
                             class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors flex items-center space-x-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -1053,8 +1053,8 @@ class EnhancedAnalysisQueue {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = EnhancedAnalysisQueue;
 } else {
-    window.EnhancedAnalysisQueue = EnhancedAnalysisQueue;
+    window.AnalysisQueue = AnalysisQueue;
     
     // Global function bindings for onclick handlers
-    window.enhancedAnalysisQueue = null; // Will be set by dashboard initialization
+    window.analysisQueue = null; // Will be set by dashboard initialization
 }
