@@ -32,10 +32,17 @@ class LeadRenderer {
     // EVENT HANDLERS
     // ===============================================================================
     
-    handleLeadsChanged(leads) {
+handleLeadsChanged(leads) {
+    // Debounce rapid re-renders
+    if (this.renderTimeout) {
+        clearTimeout(this.renderTimeout);
+    }
+    this.renderTimeout = setTimeout(() => {
         console.log('🔄 [LeadRenderer] Leads data changed, re-rendering');
         this.displayLeads(leads);
-    }
+        this.renderTimeout = null;
+    }, 50);
+}
     
     handleFilteredLeadsChanged(filteredLeads) {
         console.log('🔄 [LeadRenderer] Filtered leads changed, re-rendering');
