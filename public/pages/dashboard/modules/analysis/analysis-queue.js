@@ -1051,56 +1051,76 @@ async startSingleAnalysis(username, analysisType, businessId, requestData) {
     // ===============================================================================
     
     async callAnalysisAPI(requestData) {
-        try {
-            const session = await this.supabase.auth.getSession();
-            if (!session?.data?.session?.access_token) {
-                throw new Error('No valid session token');
+    try {
+        // 1. USE SIMPLEAUTH CLIENT FOR SESSION - AVOID UNDEFINED URL
+        let supabaseClient = this.supabase;
+        if (!supabaseClient || !supabaseClient.supabaseUrl) {
+            if (window.SimpleAuth?.supabase) {
+                supabaseClient = window.SimpleAuth.supabase();
+                console.log('🔄 [EnhancedAnalysisQueue] Using SimpleAuth client for session');
+            } else {
+                throw new Error('No Supabase client available');
             }
-            
-// Get worker URL from config like ResearchHandlers does
-let workerUrl;
-if (window.OsliraConfig?.getWorkerUrl) {
-    workerUrl = await window.OsliraConfig.getWorkerUrl();
-} else if (window.OsliraEnv?.WORKER_URL) {
-    workerUrl = window.OsliraEnv.WORKER_URL;
-} else {
-    workerUrl = 'https://api-staging.oslira.com'; // Fallback
-}
-const apiUrl = `${workerUrl}/v1/analyze`;
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.data.session.access_token}`,
-                    'User-Agent': 'Oslira-Dashboard/1.0'
-                },
-                body: JSON.stringify(requestData),
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const result = await response.json();
-            return { success: true, data: result };
-            
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                throw new Error('Analysis timeout - please try again');
-            }
-            
-            console.error('❌ [EnhancedAnalysisQueue] API call failed:', error);
-            return { success: false, error: error.message };
         }
+        
+        const session = await supabaseClient.auth.getSession();
+        if (!session?.data?.session?.access_token) {
+            throw new Error('No valid session token');
+        }
+        
+        // 2. GET WORKER URL FROM CONFIG
+        let workerUrl;
+        if (window.OsliraConfig?.getWorkerUrl) {
+            workerUrl = await window.OsliraConfig.getWorkerUrl();
+        } else if (window.OsliraEnv?.WORKER_URL) {
+            workerUrl = window.OsliraEnv.WORKER_URL;
+        } else {
+            workerUrl = 'https://api-staging.oslira.com'; // Fallback
+        }
+        const apiUrl = `${workerUrl}/v1/analyze`;
+        
+        console.log('🔥 [EnhancedAnalysisQueue] API call details:', {
+            apiUrl,
+            hasToken: !!session.data.session.access_token,
+            requestData
+        });
+        
+        // 3. MAKE API REQUEST TO WORKER (NO USER TABLE QUERIES)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.data.session.access_token}`,
+                'User-Agent': 'Oslira-Dashboard/1.0'
+            },
+            body: JSON.stringify(requestData),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // 4. HANDLE RESPONSE
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        console.log('✅ [EnhancedAnalysisQueue] API call successful');
+        return { success: true, data: result };
+        
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            throw new Error('Analysis timeout - please try again');
+        }
+        
+        console.error('❌ [EnhancedAnalysisQueue] API call failed:', error);
+        return { success: false, error: error.message };
     }
+}
     
     // ===============================================================================
     // SETTINGS & CONFIGURATION
