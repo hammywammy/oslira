@@ -216,40 +216,6 @@ Score 0-100 for niche fit, engagement, overall match. Generate partnership strat
     tokens_out: response.usage.output_tokens
   };
 }
-  async executeXRay(profile: ProfileData, business: any): Promise<DirectAnalysisResult> {
-    const startTime = Date.now();
-    
-    logger('info', 'Direct X-Ray analysis starting', { 
-      username: profile.username, 
-      requestId: this.requestId 
-    });
-
-    const response = await this.aiAdapter.executeRequest({
-      model_name: 'gpt-5',
-      system_prompt: 'You are a consumer psychology expert. Extract deep demographic and psychographic insights from Instagram profiles. Return valid JSON only.',
-      user_prompt: buildXRayAnalysisPrompt(profile, business),
-      max_tokens: 2000,
-      json_schema: getXRayAnalysisJsonSchema(),
-      response_format: 'json',
-      temperature: 0.5,
-  analysis_type: 'xray'
-    });
-
-    const processingTime = Date.now() - startTime;
-    const analysisData = JSON.parse(response.content);
-
-    return {
-      analysisData,
-      costDetails: {
-        actual_cost: response.usage.total_cost,
-        tokens_in: response.usage.input_tokens,
-        tokens_out: response.usage.output_tokens,
-        model_used: response.model_used,
-        block_type: 'direct_xray',
-        processing_duration_ms: processingTime
-      }
-    };
-  }
 
   async executeXRay(profile: ProfileData, business: any): Promise<DirectAnalysisResult> {
   const startTime = Date.now();
