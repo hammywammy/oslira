@@ -465,12 +465,19 @@ function getFieldValue(fieldId) {
     // ONBOARDING SUBMISSION
     // =============================================================================
     
-    function showSubmissionProgress() {
+function showSubmissionProgress() {
         const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
         if (submitButton) {
             submitButton.disabled = true;
             submitButton.textContent = 'Creating Profile...';
             submitButton.classList.add('loading');
+        }
+    }
+    
+    function updateSubmissionMessage(message) {
+        const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
+        if (submitButton) {
+            submitButton.textContent = message;
         }
     }
 
@@ -499,7 +506,7 @@ const formData = {
     monthly_lead_goal: getFieldValue('monthly-lead-goal') ? 
         parseInt(getFieldValue('monthly-lead-goal')) : null,
     primary_objective: getFieldValue('primary-objective'),
-    communication_style: getFieldValue('communication-tone') || null, // Handle null properly
+    communication_style: getFieldValue('communication-tone') || null,
     team_size: getFieldValue('team-size'),
     campaign_manager: getFieldValue('campaign-manager'),
     challenges: Array.isArray(getFieldValue('challenges')) ? 
@@ -507,7 +514,7 @@ const formData = {
     integrations: Array.isArray(getFieldValue('integrations')) ? 
         getFieldValue('integrations') : [],
     
-    // Auto-generated legacy fields (optional)
+    // Auto-generated legacy fields
     target_problems: Array.isArray(getFieldValue('challenges')) && getFieldValue('challenges').length > 0 ? 
         'Main challenges: ' + getFieldValue('challenges').join(', ') : null,
     value_proposition: 'Value proposition to be refined during campaign setup',
@@ -518,29 +525,65 @@ const formData = {
     call_to_action: 'Call-to-action strategy to be developed during campaign creation'
 };
         
-        console.log('📝 [Onboarding] Submitting profile data directly...');
+        console.log('📝 [Onboarding] Creating profile and generating business context...');
         
-// Verify API client is properly initialized
+// Verify API client
 if (!window.OsliraApiClient || typeof window.OsliraApiClient.request !== 'function') {
     throw new Error('API client not properly initialized. Please refresh the page.');
 }
 
-console.log('📤 [Onboarding] Sending data to API:', formData);
-
-const response = await window.OsliraApiClient.request('/business-profiles', {
+// Step 1: Create business profile
+console.log('📤 [Onboarding] Creating business profile...');
+const profileResponse = await window.OsliraApiClient.request('/business-profiles', {
     method: 'POST',
     body: JSON.stringify(formData)
 });
 
-console.log('📥 [Onboarding] API response:', response);
-        
-if (!response || !response.success) {
-    const errorMsg = response?.error || 'Failed to create business profile';
-    console.error('❌ [Onboarding] API Error:', errorMsg);
-    throw new Error(errorMsg);
+if (!profileResponse || !profileResponse.success) {
+    throw new Error(profileResponse?.error || 'Failed to create business profile');
+}
+
+const profileId = profileResponse.data.id;
+const userId = profileResponse.data.user_id;
+console.log('✅ [Onboarding] Profile created:', profileId);
+
+// Step 2: Generate business context
+updateSubmissionMessage('Generating business intelligence...');
+console.log('🤖 [Onboarding] Generating business context...');
+
+const contextResponse = await window.OsliraApiClient.request('/v1/generate-business-context', {
+    method: 'POST',
+    body: JSON.stringify({
+        business_data: formData,
+        user_id: userId,
+        request_type: 'onboarding'
+    })
+});
+
+if (contextResponse && contextResponse.success) {
+    console.log('✅ [Onboarding] Business context generated successfully');
+    
+    // Step 3: Update profile with generated context
+    console.log('📝 [Onboarding] Updating profile with AI context...');
+    const updateResponse = await window.OsliraApiClient.request(`/business-profiles/${profileId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+            business_one_liner: contextResponse.data.business_one_liner,
+            business_context_pack: contextResponse.data.business_context_pack,
+            context_version: contextResponse.data.context_version
+        })
+    });
+    
+    if (updateResponse && updateResponse.success) {
+        console.log('✅ [Onboarding] Profile updated with business context');
+    } else {
+        console.warn('⚠️ [Onboarding] Failed to update profile with context, continuing anyway');
+    }
+} else {
+    console.warn('⚠️ [Onboarding] Context generation failed, continuing without it');
 }
         
-        console.log('✅ [Onboarding] Profile created successfully:', response.data);
+        console.log('✅ [Onboarding] Onboarding complete, redirecting...');
         
         // Redirect to dashboard
         window.location.href = '/dashboard/';
