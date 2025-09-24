@@ -22,8 +22,6 @@ class AnalysisQueue {
         this.soundEnabled = false; // Can be toggled in settings
         this.animationSpeed = 300;
         
-        // Analysis stages configuration
-        this.analysisStages = {
 this.analysisStages = {
     light: [
         { text: "🔍 Scanning profile...", duration: 2250, color: "text-blue-500" },
