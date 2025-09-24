@@ -4,11 +4,6 @@
   "description": "AI-powered lead generation platform frontend",
   "type": "module",
   "scripts": {
-<<<<<<< HEAD
-    "build": "node build-with-aws-config.js",
-    "dev": "npm run build && python -m http.server 8000",
-    "start": "npm run dev"
-=======
     "build": "npm run build:tailwind && node build-with-aws-config.js",
     "build:tailwind": "npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --minify",
     "build:tailwind:watch": "npx tailwindcss -i src/styles.css -o public/assets/css/tailwind.css --watch",
@@ -17,7 +12,6 @@
     "start": "npm run dev",
     "clean": "node -e \"const fs = require('fs'); try { fs.unlinkSync('public/env-config.js'); console.log('✅ Cleaned env-config.js'); } catch(e) { console.log('ℹ️  No file to clean'); }\"",
     "clean:backups": "find . -name '*.backup.*' -delete && echo '✅ Backup files cleaned'"
->>>>>>> staging
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.38.0"
