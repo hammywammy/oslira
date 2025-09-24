@@ -131,18 +131,6 @@ window.submitResearch = function() {
     }
 };
 
-window.toggleNotifications = function() {
-    if (window.dashboard?.container?.get('dashboardHeader')) {
-        window.dashboard.container.get('dashboardHeader').toggleNotifications();
-    } else {
-        // Fallback direct DOM manipulation
-        const dropdown = document.getElementById('notificationsDropdown');
-        if (dropdown) {
-            dropdown.classList.toggle('hidden');
-        }
-    }
-};
-
 window.filterByPriority = function(priority) {
     if (window.dashboard?.container?.get('statsCards')) {
         window.dashboard.container.get('statsCards').filterByPriority(priority);
@@ -157,15 +145,6 @@ window.clearAllSelections = function() {
     }
 };
 
-// Close dropdowns when clicking outside
-document.addEventListener('click', function(event) {
-    const notifDropdown = document.getElementById('notificationsDropdown');
-    const notifButton = event.target.closest('.notification-badge');
-    
-    if (notifDropdown && !notifButton && !notifDropdown.contains(event.target)) {
-        notifDropdown.classList.add('hidden');
-    }
-});
 </script>
 </body>
 </html>
