@@ -73,6 +73,7 @@ try {
         initialized: true
     };
 }
+    window.analysisQueue = this.app.container.get('analysisQueue');
 }
     
 async initializeSidebar() {
