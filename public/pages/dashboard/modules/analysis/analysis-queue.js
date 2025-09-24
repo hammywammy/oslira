@@ -131,21 +131,21 @@ this.analysisStages = {
                 60% { transform: translateY(-4px) scale(1.02); }
             }
             
-            @keyframes countUp {
-                from { opacity: 0; transform: translateY(10px); }
-                to { opacity: 1; transform: translateY(0); }
-            }
+@keyframes countUpStatic {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
             
-            .progress-shimmer {
-                background: linear-gradient(
-                    90deg,
-                    transparent,
-                    rgba(255, 255, 255, 0.4),
-                    transparent
-                );
-                background-size: 200px 100%;
-                animation: progressShimmer 1.5s infinite;
-            }
+.progress-shimmer {
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+    );
+    background-size: 200px 100%;
+    animation: progressShimmer 1.5s infinite;
+}
             
             .celebrating {
                 animation: celebrationBounce 0.6s ease-out;
@@ -468,7 +468,7 @@ updateAnalysis(analysisId, updates) {
                                         <span class="text-xs font-medium ${statusConfig.textColor}">${analysis.currentStage + 1}/${analysis.totalStages}</span>
                                         <span class="text-xs text-gray-500">Stage</span>
                                     </div>
-                                    <span class="text-sm font-semibold text-gray-700 count-animation">${progressPercentage}%</span>
+                                    <span class="text-sm font-semibold text-gray-700" id="progress-${analysis.id}">${progressPercentage}%</span>
                                 </div>
                             </div>
                         </div>
