@@ -1050,42 +1050,47 @@ async startSingleAnalysis(username, analysisType, businessId, requestData) {
     // API INTEGRATION (Enhanced)
     // ===============================================================================
     
-    async callAnalysisAPI(requestData) {
+async callAnalysisAPI(requestData) {
+    console.log('🔥 [EnhancedAnalysisQueue] Starting API call with:', requestData);
+    
     try {
-        // 1. USE SIMPLEAUTH CLIENT FOR SESSION - AVOID UNDEFINED URL
-        let supabaseClient = this.supabase;
-        if (!supabaseClient || !supabaseClient.supabaseUrl) {
-            if (window.SimpleAuth?.supabase) {
-                supabaseClient = window.SimpleAuth.supabase();
-                console.log('🔄 [EnhancedAnalysisQueue] Using SimpleAuth client for session');
-            } else {
-                throw new Error('No Supabase client available');
-            }
+        // 1. GET FRESH SUPABASE CLIENT FOR SESSION ONLY
+        let supabaseClient;
+        if (window.SimpleAuth?.supabase) {
+            supabaseClient = window.SimpleAuth.supabase();
+            console.log('✅ [EnhancedAnalysisQueue] Using SimpleAuth client');
+        } else {
+            throw new Error('SimpleAuth not available - cannot get session');
         }
         
+        // 2. GET SESSION
         const session = await supabaseClient.auth.getSession();
         if (!session?.data?.session?.access_token) {
             throw new Error('No valid session token');
         }
         
-        // 2. GET WORKER URL FROM CONFIG
+        console.log('✅ [EnhancedAnalysisQueue] Session validated:', {
+            hasToken: !!session.data.session.access_token,
+            userId: session.data.session.user.id
+        });
+        
+        // 3. GET WORKER URL
         let workerUrl;
         if (window.OsliraConfig?.getWorkerUrl) {
             workerUrl = await window.OsliraConfig.getWorkerUrl();
         } else if (window.OsliraEnv?.WORKER_URL) {
             workerUrl = window.OsliraEnv.WORKER_URL;
         } else {
-            workerUrl = 'https://api-staging.oslira.com'; // Fallback
+            workerUrl = 'https://api-staging.oslira.com';
         }
         const apiUrl = `${workerUrl}/v1/analyze`;
         
-        console.log('🔥 [EnhancedAnalysisQueue] API call details:', {
-            apiUrl,
-            hasToken: !!session.data.session.access_token,
-            requestData
+        console.log('🔥 [EnhancedAnalysisQueue] Calling API:', {
+            url: apiUrl,
+            payload: requestData
         });
         
-        // 3. MAKE API REQUEST TO WORKER (NO USER TABLE QUERIES)
+        // 4. MAKE API CALL (NO DATABASE QUERIES)
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000);
         
@@ -1102,7 +1107,12 @@ async startSingleAnalysis(username, analysisType, businessId, requestData) {
         
         clearTimeout(timeoutId);
         
-        // 4. HANDLE RESPONSE
+        console.log('📨 [EnhancedAnalysisQueue] API response:', {
+            status: response.status,
+            ok: response.ok
+        });
+        
+        // 5. HANDLE RESPONSE
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
@@ -1114,6 +1124,7 @@ async startSingleAnalysis(username, analysisType, businessId, requestData) {
         
     } catch (error) {
         if (error.name === 'AbortError') {
+            console.error('⏰ [EnhancedAnalysisQueue] Request timed out');
             throw new Error('Analysis timeout - please try again');
         }
         
