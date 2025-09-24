@@ -365,7 +365,7 @@ async waitForSupabaseClient(timeout = 3000) {
 if (latestRun.payloads && latestRun.payloads.length > 0) {
     const payload = latestRun.payloads[0].analysis_data;
     if (payload) {
-        // New payload structure mapping
+        // Deep analysis fields
         analysisData.reasons = payload.reasons || [];
         analysisData.deep_summary = payload.deep_summary;
         analysisData.latest_posts = payload.latest_posts;
@@ -377,6 +377,17 @@ if (latestRun.payloads && latestRun.payloads.length > 0) {
             avg_comments: 0,
             engagement_rate: 0
         };
+        
+        // X-Ray analysis fields - ADD THIS SECTION
+        if (payload.copywriter_profile) {
+            analysisData.copywriter_profile = payload.copywriter_profile;
+        }
+        if (payload.commercial_intelligence) {
+            analysisData.commercial_intelligence = payload.commercial_intelligence;
+        }
+        if (payload.persuasion_strategy) {
+            analysisData.persuasion_strategy = payload.persuasion_strategy;
+        }
         
         // Legacy compatibility for older fields
         analysisData.audience_quality = 'Medium'; // Default since not in new format
