@@ -16,7 +16,6 @@
 [[headers]]
   for = "/*"
   [headers.values]
-<<<<<<< HEAD
     Content-Security-Policy = """
       default-src 'self' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://*.netlify.app https://*.oslira.com;
       script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co https://*.workers.dev https://*.stripe.com https://js.stripe.com https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://*.jsdelivr.net https://js.sentry-cdn.com https://browser.sentry-cdn.com https://*.oslira.com;
@@ -39,7 +38,6 @@ Content-Security-Policy = """
       object-src 'none';
       base-uri 'self';
       form-action 'self' https://*.stripe.com https://oslira.org https://*.oslira.org;
->>>>>>> staging
     """
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
