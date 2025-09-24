@@ -426,8 +426,6 @@ async function testApiKey(keyName: string, keyValue: string, env: any): Promise<
     };
   }
 }
-<<<<<<< HEAD
-=======
 
 async function testOpenAIKey(apiKey: string): Promise<{ success: boolean; message: string; details?: any }> {
   try {
@@ -564,4 +562,3 @@ async function testStripeKey(secretKey: string): Promise<{ success: boolean; mes
     };
   }
 }
->>>>>>> staging
