@@ -323,8 +323,19 @@ class AnalysisQueue {
     // ===============================================================================
     // ENHANCED UI RENDERING
     // ===============================================================================
-    
     renderQueue() {
+    // Debounce renders to prevent spam
+    if (this.renderDebounce) {
+        clearTimeout(this.renderDebounce);
+    }
+    
+    this.renderDebounce = setTimeout(() => {
+        this.actualRenderQueue();
+        this.renderDebounce = null;
+    }, 16); // 60fps max
+}
+    
+    actualrenderQueue() {
         const container = document.getElementById('analysis-queue-container');
         if (!container) return;
         
