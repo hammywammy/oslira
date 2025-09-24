@@ -1,85 +1,498 @@
-import type { Env, User, BusinessProfile } from '../types/interfaces.js';
+import type { Env } from '../types/interfaces.js';
 import { fetchJson } from '../utils/helpers.js';
 import { logger } from '../utils/logger.js';
 
-export async function fetchUserAndCredits(user_id: string, env: Env): Promise<{ user: User; credits: number }> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
+// ===============================================================================
+// SHARED UTILITIES
+// ===============================================================================
 
-  const usersResponse = await fetchJson<User[]>(
-    `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}&select=*`, 
-    { headers }
-  );
+const createHeaders = (env: Env) => ({
+  apikey: env.SUPABASE_SERVICE_ROLE,
+  Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
+  'Content-Type': 'application/json'
+});
 
-  if (!usersResponse.length) {
-    throw new Error('User not found');
+const createPreferHeaders = (env: Env, prefer: string) => ({
+  ...createHeaders(env),
+  Prefer: prefer
+});
+
+// ===============================================================================
+// LEADS TABLE OPERATIONS
+// ===============================================================================
+
+export async function upsertLead(
+  leadData: any,
+  env: Env
+): Promise<string> {
+  try {
+    logger('info', 'Upserting lead record', { 
+      username: leadData.username,
+      business_id: leadData.business_id
+    });
+
+    logger('info', 'Upserting lead record', { 
+  username: leadData.username,
+  business_id: leadData.business_id,
+  raw_following_data: {
+    followingCount: leadData.followingCount,
+    following_count: leadData.following_count,
+    postsCount: leadData.postsCount,
+    posts_count: leadData.posts_count,
+    followersCount: leadData.followersCount,
+    followers_count: leadData.followers_count
   }
+});
 
-  const user = usersResponse[0];
-  const credits = user.credits || 0;
+    const cleanLeadData = {
+      user_id: leadData.user_id,
+      business_id: leadData.business_id,
+      username: leadData.username,
+      display_name: leadData.full_name || leadData.displayName || null,
+      profile_picture_url: leadData.profile_pic_url || leadData.profilePicUrl || null,
+      bio_text: leadData.bio || null,
+      external_website_url: leadData.external_url || leadData.externalUrl || null,
+      
+  follower_count: parseInt(leadData.followersCount || leadData.follower_count || '0'),
+  following_count: parseInt(leadData.followsCount || leadData.followingCount || leadData.following_count || '0'),
+  post_count: parseInt(leadData.postsCount || leadData.post_count || '0'),
+      
+      // Profile attributes
+      is_verified_account: leadData.is_verified || leadData.isVerified || false,
+      is_private_account: leadData.is_private || leadData.isPrivate || false,
+      is_business_account: leadData.is_business_account || leadData.isBusinessAccount || false,
+      
+      // Platform info
+      platform_type: 'instagram',
+      profile_url: leadData.profile_url || `https://instagram.com/${leadData.username}`,
+      
+      // Update timestamp
+      last_updated_at: new Date().toISOString()
+    };
 
-  return { user, credits };
+    logger('info', 'Clean lead data before upsert', {
+  username: cleanLeadData.username,
+  follower_count: cleanLeadData.followersCount,
+  following_count: cleanLeadData.following_count,
+  post_count: cleanLeadData.post_count,
+  original_fields_available: {
+    followingCount: !!leadData.followingCount,
+    following_count: !!leadData.following_count,
+    postsCount: !!leadData.postsCount,
+    posts_count: !!leadData.posts_count
+  }
+});
+
+    // Use UPSERT to handle duplicates
+    const upsertQuery = `${env.SUPABASE_URL}/rest/v1/leads?on_conflict=user_id,username,business_id`;
+
+    const leadResponse = await fetch(upsertQuery, {
+      method: 'POST',
+      headers: createPreferHeaders(env, 'return=representation,resolution=merge-duplicates'),
+      body: JSON.stringify(cleanLeadData)
+    });
+
+    if (!leadResponse.ok) {
+      const errorText = await leadResponse.text();
+      throw new Error(`Failed to upsert lead: ${leadResponse.status} - ${errorText}`);
+    }
+
+    const leadResult = await leadResponse.json();
+    if (!leadResult || !leadResult.length) {
+      throw new Error('Failed to create/update lead record - no data returned');
+    }
+
+    const lead_id = leadResult[0].lead_id;
+    logger('info', 'Lead upserted successfully', { lead_id, username: leadData.username });
+    
+    return lead_id;
+
+  } catch (error: any) {
+    logger('error', 'upsertLead failed', { error: error.message });
+    throw new Error(`Lead upsert failed: ${error.message}`);
+  }
 }
 
-export async function fetchBusinessProfile(business_id: string, user_id: string, env: Env): Promise<BusinessProfile> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
+// ===============================================================================
+// RUNS TABLE OPERATIONS
+// ===============================================================================
 
-  const businesses = await fetchJson<BusinessProfile[]>(
-    `${env.SUPABASE_URL}/rest/v1/business_profiles?id=eq.${business_id}&user_id=eq.${user_id}&select=*`,
-    { headers }
-  );
+export async function insertAnalysisRun(
+  lead_id: string,
+  user_id: string,
+  business_id: string,
+  analysisType: string,
+  analysisResult: any,
+  env: Env
+): Promise<string> {
+  try {
+    logger('info', 'Inserting analysis run', { 
+      lead_id, 
+      analysisType,
+      score: analysisResult.score
+    });
 
-  if (!businesses.length) {
-    throw new Error('Business profile not found or access denied');
+const runData = {
+      lead_id,
+      user_id,
+      business_id,
+      analysis_type: analysisType,
+      analysis_version: '1.0',
+      
+      // Universal scores (required for all analysis types)
+      overall_score: Math.round(parseFloat(analysisResult.score) || 0),
+      niche_fit_score: Math.round(parseFloat(analysisResult.niche_fit) || 0),
+      engagement_score: Math.round(parseFloat(analysisResult.engagement_score) || 0),
+      
+// Quick reference data - Use AI's actual summary with score context
+      summary_text: analysisResult.summary || 
+                   analysisResult.quick_summary || 
+                   analysisResult.summary_text ||
+                   `${analysisType} analysis completed - Score: ${Math.round(parseFloat(analysisResult.score) || 0)}/100`,
+      confidence_level: parseFloat(analysisResult.confidence_level) || 
+                       parseFloat(analysisResult.confidence) || 
+                       (analysisType === 'light' ? 0.6 : analysisType === 'deep' ? 0.75 : 0.85),
+      
+      // Processing metadata
+      run_status: 'completed',
+      ai_model_used: analysisResult.pipeline_metadata?.workflow_used || 'pipeline_system',
+      analysis_completed_at: new Date().toISOString()
+    };
+
+    logger('info', 'Run data prepared for database insert', {
+      lead_id,
+      analysis_type: analysisType,
+      summary_text: runData.summary_text,
+      confidence_level: runData.confidence_level,
+      summary_length: runData.summary_text?.length,
+      confidence_is_number: typeof runData.confidence_level === 'number'
+    });
+    const runResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/runs`, {
+      method: 'POST',
+      headers: createPreferHeaders(env, 'return=representation'),
+      body: JSON.stringify(runData)
+    });
+
+    if (!runResponse.ok) {
+      const errorText = await runResponse.text();
+      throw new Error(`Failed to insert run: ${runResponse.status} - ${errorText}`);
+    }
+
+    const runResult = await runResponse.json();
+    if (!runResult || !runResult.length) {
+      throw new Error('Failed to create run record - no data returned');
+    }
+
+    const run_id = runResult[0].run_id;
+    logger('info', 'Analysis run inserted successfully', { run_id, analysisType });
+    
+    return run_id;
+
+  } catch (error: any) {
+    logger('error', 'insertAnalysisRun failed', { error: error.message });
+    throw new Error(`Run insert failed: ${error.message}`);
   }
-
-  return businesses[0];
 }
+
+// ===============================================================================
+// PAYLOADS TABLE OPERATIONS
+// ===============================================================================
+
+export async function insertAnalysisPayload(
+  run_id: string,
+  lead_id: string,
+  user_id: string,
+  business_id: string,
+  analysisType: string,
+  analysisData: any,
+  env: Env
+): Promise<string> {
+  try {
+    logger('info', 'Inserting analysis payload', { 
+      run_id, 
+      analysisType,
+      dataKeys: Object.keys(analysisData || {}).length
+    });
+
+    // Structure payload based on analysis type
+    let structuredPayload;
+    
+    switch (analysisType) {        
+case 'deep':
+    // Handle both old flat structure and new nested deep_payload structure
+    const deepData = analysisData.deep_payload || analysisData;
+    const engagementData = deepData.engagement_breakdown || {};
+    
+    structuredPayload = {
+        deep_summary: deepData.deep_summary || null,
+        selling_points: deepData.selling_points || [],
+        outreach_message: deepData.outreach_message || null,
+        engagement_breakdown: {
+            avg_likes: parseInt(engagementData.avg_likes) || parseInt(analysisData.avg_likes) || 0,
+            avg_comments: parseInt(engagementData.avg_comments) || parseInt(analysisData.avg_comments) || 0,
+            engagement_rate: parseFloat(engagementData.engagement_rate) || parseFloat(analysisData.engagement_rate) || 0
+        },
+        latest_posts: deepData.latest_posts || null,
+        audience_insights: deepData.audience_insights || analysisData.engagement_insights || null,
+        reasons: deepData.reasons || []
+    };
+    break;
+        
+case 'xray':
+  // Extract from xray_payload if it exists, otherwise from root
+  const xrayData = analysisData.xray_payload || analysisData;
+  structuredPayload = {
+    copywriter_profile: xrayData.copywriter_profile || {},
+    commercial_intelligence: xrayData.commercial_intelligence || {},
+    persuasion_strategy: xrayData.persuasion_strategy || {}
+  };
+  break;
+        
+      default:
+        structuredPayload = analysisData;
+    }
+
+    const payloadData = {
+      run_id,
+      lead_id,
+      user_id,
+      business_id,
+      analysis_type: analysisType,
+      analysis_data: structuredPayload,
+      data_size_bytes: JSON.stringify(structuredPayload).length
+    };
+
+    const payloadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/payloads`, {
+      method: 'POST',
+      headers: createPreferHeaders(env, 'return=representation'),
+      body: JSON.stringify(payloadData)
+    });
+
+    if (!payloadResponse.ok) {
+      const errorText = await payloadResponse.text();
+      throw new Error(`Failed to insert payload: ${payloadResponse.status} - ${errorText}`);
+    }
+
+    const payloadResult = await payloadResponse.json();
+    if (!payloadResult || !payloadResult.length) {
+      throw new Error('Failed to create payload record - no data returned');
+    }
+
+    const payload_id = payloadResult[0].payload_id;
+    logger('info', 'Analysis payload inserted successfully', { payload_id, analysisType });
+    
+    return payload_id;
+
+  } catch (error: any) {
+    logger('error', 'insertAnalysisPayload failed', { error: error.message });
+    throw new Error(`Payload insert failed: ${error.message}`);
+  }
+}
+
+// ===============================================================================
+// MAIN SAVE FUNCTION (Replaces saveLeadAndAnalysis)
+// ===============================================================================
+
+export async function saveCompleteAnalysis(
+  leadData: any,
+  analysisData: any,
+  analysisType: string,
+  env: Env
+): Promise<{ run_id: string; lead_id: string }> {
+  try {
+    logger('info', 'Starting complete analysis save', { 
+      username: leadData.username,
+      analysisType
+    });
+
+    // Step 1: Upsert lead record
+    const lead_id = await upsertLead(leadData, env);
+
+    // Step 2: Insert analysis run
+    const run_id = await insertAnalysisRun(
+      lead_id,
+      leadData.user_id,
+      leadData.business_id,
+      analysisType,
+      analysisData, // Always use analysisData parameter
+      env
+    );
+
+    // Step 3: Insert analysis payload (if we have analysis data)
+    if (analysisData && (analysisType === 'deep' || analysisType === 'xray')) {
+      await insertAnalysisPayload(
+        run_id,
+        lead_id,
+        leadData.user_id,
+        leadData.business_id,
+        analysisType,
+        analysisData,
+        env
+      );
+    }
+
+logger('info', 'Complete analysis save successful', { 
+      lead_id, 
+      run_id, 
+      analysisType 
+    });
+    
+    return { run_id, lead_id };
+
+  } catch (error: any) {
+    logger('error', 'saveCompleteAnalysis failed', { error: error.message });
+    throw new Error(`Complete analysis save failed: ${error.message}`);
+  }
+}
+
+// ===============================================================================
+// QUERY FUNCTIONS FOR DASHBOARD
+// ===============================================================================
+
+export async function getDashboardLeads(
+  user_id: string,
+  business_id: string,
+  env: Env,
+  limit: number = 50
+): Promise<any[]> {
+  try {
+    const query = `
+      ${env.SUPABASE_URL}/rest/v1/leads?
+      select=lead_id,username,display_name,profile_picture_url,follower_count,is_verified_account,
+      runs(run_id,analysis_type,overall_score,niche_fit_score,engagement_score,summary_text,confidence_level,created_at)
+      &user_id=eq.${user_id}
+      &business_id=eq.${business_id}
+      &order=runs.created_at.desc
+      &limit=${limit}
+    `;
+
+    const response = await fetch(query, { headers: createHeaders(env) });
+
+    if (!response.ok) {
+      throw new Error(`Dashboard query failed: ${response.status}`);
+    }
+
+    const results = await response.json();
+    logger('info', 'Dashboard leads retrieved', { count: results.length });
+    
+    return results;
+
+  } catch (error: any) {
+    logger('error', 'getDashboardLeads failed', { error: error.message });
+    throw new Error(`Dashboard query failed: ${error.message}`);
+  }
+}
+
+export async function getAnalysisDetails(
+  run_id: string,
+  user_id: string,
+  env: Env
+): Promise<any> {
+  try {
+    const query = `
+      ${env.SUPABASE_URL}/rest/v1/runs?
+      select=*,leads(*),payloads(analysis_data)
+      &run_id=eq.${run_id}
+      &leads.user_id=eq.${user_id}
+    `;
+
+    const response = await fetch(query, { headers: createHeaders(env) });
+
+    if (!response.ok) {
+      throw new Error(`Analysis details query failed: ${response.status}`);
+    }
+
+    const results = await response.json();
+    if (!results.length) {
+      throw new Error('Analysis not found or access denied');
+    }
+
+    logger('info', 'Analysis details retrieved', { run_id });
+    return results[0];
+
+  } catch (error: any) {
+    logger('error', 'getAnalysisDetails failed', { error: error.message });
+    throw new Error(`Analysis details query failed: ${error.message}`);
+  }
+}
+
+// ===============================================================================
+// CREDIT SYSTEM (ENHANCED WITH SHARED HEADERS)
+// ===============================================================================
 
 export async function updateCreditsAndTransaction(
   user_id: string,
   cost: number,
-  newBalance: number,
-  description: string,
-  transactionType: 'use' | 'add',
+  analysisType: string,
+  run_id: string,
+  costDetails: {
+    actual_cost: number;
+    tokens_in: number;
+    tokens_out: number;
+    model_used: string;
+    block_type: string;
+    processing_duration_ms?: number;
+    blocks_used?: string[];
+  },
   env: Env,
   lead_id?: string
 ): Promise<void> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
+  const headers = createHeaders(env);
 
   try {
-    logger('info', `Updating user ${user_id} credits to ${newBalance}`);
-    
+    // Get current user data to calculate new balance
+    const userResponse = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/users?select=credits&id=eq.${user_id}`,
+      { headers }
+    );
+
+    if (!userResponse.ok) {
+      throw new Error(`Failed to fetch user: ${userResponse.status}`);
+    }
+
+    const users = await userResponse.json();
+    if (!users.length) {
+      throw new Error('User not found');
+    }
+
+    const currentCredits = users[0].credits || 0;
+    const newBalance = Math.max(0, currentCredits - cost);
+
+    // Update user credits
     await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/users?id=eq.${user_id}`,
       {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({
-          credits: newBalance
-        })
+        body: JSON.stringify({ credits: newBalance })
       },
       10000
     );
 
+// Create transaction record with enhanced cost tracking
     const transactionData = {
-      user_id: user_id,
-      amount: transactionType === 'use' ? -cost : cost,
-      type: transactionType,
-      description: description,
-      lead_id: lead_id || null
+      user_id,
+      amount: -cost,
+      type: 'use',
+      description: `${analysisType} analysis`,
+      run_id: run_id,
+actual_cost: costDetails.actual_cost,
+      tokens_in: costDetails.tokens_in,
+      tokens_out: costDetails.tokens_out,
+      model_used: costDetails.model_used,
+      block_type: costDetails.block_type,
+      processing_duration_ms: costDetails.processing_duration_ms || null,
+      blocks_used: costDetails.blocks_used?.join('+') || null,
     };
+
+    logger('info', 'Transaction data prepared', {
+      user_id,
+      run_id,
+      lead_id,
+      amount: transactionData.amount,
+      description: transactionData.description,
+      has_lead_id: !!lead_id
+    });
 
     await fetchJson(
       `${env.SUPABASE_URL}/rest/v1/credit_transactions`,
@@ -91,151 +504,92 @@ export async function updateCreditsAndTransaction(
       10000
     );
 
+    logger('info', 'Credits and transaction updated successfully', { 
+      user_id, 
+      cost, 
+      newBalance,
+      margin: transactionData.margin 
+    });
+
   } catch (error: any) {
     logger('error', 'updateCreditsAndTransaction error:', error.message);
     throw new Error(`Failed to update credits: ${error.message}`);
   }
 }
 
-export async function saveLeadAndAnalysis(
-  leadData: any,
-  analysisData: any | null,
-  analysisType: string,
-  env: Env
-): Promise<string> {
-  const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE,
-    Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE}`,
-    'Content-Type': 'application/json'
-  };
-
+export async function fetchUserAndCredits(user_id: string, env: Env): Promise<any> {
   try {
-    logger('info', 'Saving to leads table with complete data mapping', { 
-      username: leadData.username,
-      hasQuickSummary: !!leadData.quick_summary
-    });
-    
-    const cleanLeadData = {
-      ...leadData,
-      score: Math.round(parseFloat(leadData.score) || 0),
-      followers_count: parseInt(leadData.followers_count) || 0,
-      quick_summary: leadData.quick_summary || null
+    const response = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/users?select=*&id=eq.${user_id}`,
+      { headers: createHeaders(env) }
+    );
+
+    if (!response.ok) {
+      throw new Error(`User fetch failed: ${response.status}`);
+    }
+
+    const users = await response.json();
+    if (!users.length) {
+      return { isValid: false, error: 'User not found' };
+    }
+
+    const user = users[0];
+    return {
+      isValid: true,
+      credits: user.credits || 0,
+      userId: user.id
     };
 
-    logger('info', 'Lead data being saved', {
-      username: cleanLeadData.username,
-      score: cleanLeadData.score,
-      followers: cleanLeadData.followers_count,
-      hasQuickSummary: !!cleanLeadData.quick_summary
-    });
+  } catch (error: any) {
+    logger('error', 'fetchUserAndCredits failed', { error: error.message });
+    return { isValid: false, error: error.message };
+  }
+}
 
-    const leadResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/leads`, {
-      method: 'POST',
-      headers: { ...headers, Prefer: 'return=representation' },
-      body: JSON.stringify(cleanLeadData)
-    });
+export async function fetchBusinessProfile(business_id: string, user_id: string, env: Env): Promise<any> {
+  try {
+    const response = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/business_profiles?select=*,business_one_liner,business_context_pack,context_version,context_updated_at&id=eq.${business_id}&user_id=eq.${user_id}`,
+      { headers: createHeaders(env) }
+    );
 
-    if (!leadResponse.ok) {
-      const errorText = await leadResponse.text();
-      throw new Error(`Failed to save to leads table: ${leadResponse.status} - ${errorText}`);
+    if (!response.ok) {
+      throw new Error(`Business profile fetch failed: ${response.status}`);
     }
 
-    const leadResult = await leadResponse.json();
-    if (!leadResult || !leadResult.length) {
-      throw new Error('Failed to create lead record - no data returned');
+    const profiles = await response.json();
+    if (!profiles.length) {
+      throw new Error('Business profile not found or access denied');
     }
 
-    const lead_id = leadResult[0].id;
-
-    logger('info', 'Lead saved successfully', { 
-      lead_id, 
-      username: leadData.username,
-      analysisType
-    });
-
-    // Save analysis data for deep analysis with complete field mapping
-    if (analysisType === 'deep' && analysisData) {
-      logger('info', 'Saving complete analysis data to lead_analyses table');
-      
-      const cleanAnalysisData = {
-        ...analysisData,
-        lead_id: lead_id,
-        
-        // Core scores
-        score: Math.round(parseFloat(analysisData.score) || 0),
-        engagement_score: Math.round(parseFloat(analysisData.engagement_score) || 0),
-        score_niche_fit: Math.round(parseFloat(analysisData.score_niche_fit) || 0),
-        score_total: Math.round(parseFloat(analysisData.score_total) || 0),
-        niche_fit: Math.round(parseFloat(analysisData.niche_fit) || 0),
-        
-        // Real engagement data (CRITICAL FIX)
-        avg_likes: parseInt(analysisData.avg_likes) || 0,
-        avg_comments: parseInt(analysisData.avg_comments) || 0,
-        engagement_rate: parseFloat(analysisData.engagement_rate) || 0,
-        
-        // Analysis results
-        audience_quality: analysisData.audience_quality || 'Unknown',
-        engagement_insights: analysisData.engagement_insights || 'No insights available',
-        selling_points: analysisData.selling_points || null,
-        reasons: analysisData.reasons || null,
-        
-        // Structured data fields
-        latest_posts: analysisData.latest_posts || null,
-        engagement_data: analysisData.engagement_data || null,
-        analysis_data: analysisData.analysis_data || null,
-        
-        // Summaries and messages
-        deep_summary: analysisData.deep_summary || null,
-        outreach_message: analysisData.outreach_message || null,
-        
-        created_at: new Date().toISOString()
-      };
-
-      logger('info', 'Complete analysis data being saved', {
-        lead_id,
-        score: cleanAnalysisData.score,
-        engagement_score: cleanAnalysisData.engagement_score,
-        niche_fit: cleanAnalysisData.niche_fit,
-        avg_likes: cleanAnalysisData.avg_likes,
-        avg_comments: cleanAnalysisData.avg_comments,
-        engagement_rate: cleanAnalysisData.engagement_rate,
-        hasDeepSummary: !!cleanAnalysisData.deep_summary,
-        hasLatestPosts: !!cleanAnalysisData.latest_posts,
-        hasEngagementData: !!cleanAnalysisData.engagement_data,
-        hasAnalysisData: !!cleanAnalysisData.analysis_data
-      });
-
-      const analysisResponse = await fetch(`${env.SUPABASE_URL}/rest/v1/lead_analyses`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(cleanAnalysisData)
-      });
-
-      if (!analysisResponse.ok) {
-        const errorText = await analysisResponse.text();
-        logger('error', 'Failed to save analysis data', { error: errorText });
-        
-        // Rollback lead record
-        try {
-          await fetch(`${env.SUPABASE_URL}/rest/v1/leads?id=eq.${lead_id}`, {
-            method: 'DELETE',
-            headers
-          });
-          logger('info', 'Rolled back lead record due to analysis save failure');
-        } catch (rollbackError) {
-          logger('error', 'Failed to rollback lead record', { error: rollbackError });
-        }
-        
-        throw new Error(`Failed to save analysis data: ${analysisResponse.status} - ${errorText}`);
-      }
-
-      logger('info', 'Complete analysis data saved successfully with all fields populated');
-    }
-
-    return lead_id;
+    return profiles[0];
 
   } catch (error: any) {
-    logger('error', 'saveLeadAndAnalysis failed', { error: error.message });
-    throw new Error(`Database save failed: ${error.message}`);
+    logger('error', 'fetchBusinessProfile failed', { error: error.message });
+    throw new Error(`Business profile fetch failed: ${error.message}`);
+  }
+}
+
+export async function getLeadIdFromRun(run_id: string, env: Env): Promise<string> {
+  try {
+    const response = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/runs?select=lead_id&run_id=eq.${run_id}`,
+      { headers: createHeaders(env) }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch run: ${response.status}`);
+    }
+
+    const runs = await response.json();
+    if (!runs.length) {
+      throw new Error('Run not found');
+    }
+
+    return runs[0].lead_id;
+
+  } catch (error: any) {
+    logger('error', 'getLeadIdFromRun failed', { error: error.message, run_id });
+    throw new Error(`Failed to get lead_id from run: ${error.message}`);
   }
 }

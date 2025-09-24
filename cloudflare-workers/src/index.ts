@@ -7,11 +7,26 @@ import { createStandardResponse } from './utils/response.js';
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
-  origin: ['https://oslira.netlify.app', 'https://osliratest.netlify.app', 'http://localhost:8000', 'https://oslira.com'],
+  origin: '*',  // Allow all origins temporarily for debugging
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: false  // Set to false when using wildcard origin
 }));
+
+app.get('/debug/raw-env', async (c) => {
+  return c.json({
+    allEnvKeys: Object.keys(c.env),
+    awsKeys: {
+      AWS_ACCESS_KEY_ID: typeof c.env.AWS_ACCESS_KEY_ID,
+      AWS_SECRET_ACCESS_KEY: typeof c.env.AWS_SECRET_ACCESS_KEY,
+    },
+    rawAccess: {
+      directAccessKeyId: c.env['AWS_ACCESS_KEY_ID'],
+      directSecretKey: c.env['AWS_SECRET_ACCESS_KEY']
+    }
+  });
+});
+
 
 // ===============================================================================
 // BASIC ENDPOINTS
@@ -34,51 +49,6 @@ app.get('/', (c) => {
 
 app.get('/health', (c) => c.json({ status: 'healthy', timestamp: new Date().toISOString() }));
 
-app.get('/config', async (c) => {
-  try {
-    const { getEnhancedConfigManager } = await import('./services/enhanced-config-manager.js');
-    const configManager = getEnhancedConfigManager(c.env);
-    
-    // Get SUPABASE_ANON_KEY from AWS/Supabase instead of environment
-    const supabaseAnonKey = await configManager.getConfig('SUPABASE_ANON_KEY');
-    
-    if (!supabaseAnonKey) {
-      // Fallback to environment variable if not found in AWS/Supabase
-      const fallbackKey = c.env.SUPABASE_ANON_KEY;
-      if (!fallbackKey) {
-        logger('error', 'SUPABASE_ANON_KEY not found in any source');
-        return c.json({ error: 'Configuration incomplete' }, 500);
-      }
-      return c.json({
-        supabaseUrl: c.env.SUPABASE_URL,
-        supabaseAnonKey: fallbackKey,
-        workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-        configSource: 'environment_fallback',
-        message: 'Using fallback configuration'
-      });
-    }
-
-    return c.json({
-      supabaseUrl: c.env.SUPABASE_URL,
-      supabaseAnonKey: supabaseAnonKey,
-      workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-      configSource: 'enhanced_config_manager',
-      message: 'Configuration loaded from AWS/Supabase'
-    });
-    
-  } catch (error: any) {
-    logger('error', 'Config endpoint error', { error: error.message });
-    
-    // Final fallback to environment variables
-    return c.json({
-      supabaseUrl: c.env.SUPABASE_URL,
-      supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
-      workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-      configSource: 'environment_emergency_fallback',
-      message: 'Using emergency fallback configuration'
-    });
-  }
-});
 
 // ===============================================================================
 // LAZY LOADED ENDPOINTS
@@ -95,16 +65,6 @@ app.post('/v1/bulk-analyze', async (c) => {
   return handleBulkAnalyze(c);
 });
 
-// Legacy redirects
-app.post('/analyze', async (c) => {
-  const { handleLegacyAnalyze } = await import('./handlers/legacy.js');
-  return handleLegacyAnalyze(c);
-});
-
-app.post('/bulk-analyze', async (c) => {
-  const { handleLegacyBulkAnalyze } = await import('./handlers/legacy.js');
-  return handleLegacyBulkAnalyze(c);
-});
 
 // Billing endpoints
 app.post('/stripe-webhook', async (c) => {
@@ -131,48 +91,6 @@ app.get('/analytics/summary', async (c) => {
 app.post('/ai/generate-insights', async (c) => {
   const { handleGenerateInsights } = await import('./handlers/analytics.js');
   return handleGenerateInsights(c);
-});
-
-// Debug endpoints
-app.get('/debug-engagement/:username', async (c) => {
-  const { handleDebugEngagement } = await import('./handlers/debug.js');
-  return handleDebugEngagement(c);
-});
-
-app.get('/debug-scrape/:username', async (c) => {
-  const { handleDebugScrape } = await import('./handlers/debug.js');
-  return handleDebugScrape(c);
-});
-
-app.get('/debug-parsing/:username', async (c) => {
-  const { handleDebugParsing } = await import('./handlers/debug.js');
-  return handleDebugParsing(c);
-});
-
-app.get('/debug-env', async (c) => {
-  const { handleDebugEnv } = await import('./handlers/test.js');
-  return handleDebugEnv(c);
-});
-
-// Test endpoints
-app.get('/test-supabase', async (c) => {
-  const { handleTestSupabase } = await import('./handlers/test.js');
-  return handleTestSupabase(c);
-});
-
-app.get('/test-apify', async (c) => {
-  const { handleTestApify } = await import('./handlers/test.js');
-  return handleTestApify(c);
-});
-
-app.get('/test-openai', async (c) => {
-  const { handleTestOpenAI } = await import('./handlers/test.js');
-  return handleTestOpenAI(c);
-});
-
-app.post('/test-post', async (c) => {
-  const { handleTestPost } = await import('./handlers/test.js');
-  return handleTestPost(c);
 });
 
 // Add these enhanced admin endpoints to your existing routes
@@ -202,24 +120,37 @@ app.post('/admin/test-key', async (c) => {
   return handleTestApiKey(c);
 });
 
-app.post('/admin/get-config', async (c) => {
-  const { handleGetConfig } = await import('./handlers/admin.js');
-  return handleGetConfig(c);
+// Business context generation endpoint
+app.post('/v1/generate-business-context', async (c) => {
+  const { handleGenerateBusinessContext } = await import('./handlers/generate-business-context.js');
+  return handleGenerateBusinessContext(c);
 });
 
-// Updated config endpoint that reads from Supabase
-app.get('/config', (c) => {
-  const env = getEnvironment(c.env); // Your new env helper
-  
-  return c.json({
-    supabaseUrl: c.env.SUPABASE_URL,
-    supabaseAnonKey: c.env.SUPABASE_ANON_KEY,
-    workerUrl: new URL(c.req.url).origin.replace(/\/$/, ''),
-    environment: env, // 🔥 ADD THIS
-    configSource: 'supabase_app_config_table',
-    message: 'Frontend should load additional config from Supabase'
-  });
+app.post('/business-profiles', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
 });
+
+app.get('/business-profiles', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
+app.get('/business-profiles/:id', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
+app.put('/business-profiles/:id', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
+app.delete('/business-profiles/:id', async (c) => {
+  const { handleBusinessProfiles } = await import('./handlers/business-profiles.js');
+  return handleBusinessProfiles(c);
+});
+
 
 // ===============================================================================
 // ERROR HANDLING

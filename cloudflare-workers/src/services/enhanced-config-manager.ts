@@ -1,7 +1,13 @@
 import type { Env } from '../types/interfaces.js';
 import { fetchJson } from '../utils/helpers.js';
-import { logger } from '../utils/logger.js';
 import { getAWSSecretsManager } from './aws-secrets-manager.js';
+
+// Local logging function to avoid import issues in Worker environment
+function logger(level: 'info' | 'warn' | 'error', message: string, data?: any, requestId?: string) {
+  const timestamp = new Date().toISOString();
+  const logData = { timestamp, level, message, requestId, ...data };
+  console.log(JSON.stringify(logData));
+}
 
 interface ConfigItem {
   key_name: string;
@@ -27,14 +33,31 @@ class EnhancedConfigManager {
     'SUPABASE_ANON_KEY'
   ];
 
-  constructor(private env: Env) {
-    try {
-      this.awsSecrets = getAWSSecretsManager(env);
-    } catch (error) {
-      logger('warn', 'AWS Secrets Manager not available, falling back to Supabase only');
-      this.awsSecrets = null;
+constructor(private env: Env) {
+  // Log what we actually receive
+  console.log('EnhancedConfigManager env keys:', Object.keys(env));
+  console.log('AWS vars check:', {
+    AWS_ACCESS_KEY_ID: typeof env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: typeof env.AWS_SECRET_ACCESS_KEY,
+    values: {
+      accessKey: env.AWS_ACCESS_KEY_ID?.substring(0, 4) + '...',
+      secretKey: env.AWS_SECRET_ACCESS_KEY?.substring(0, 4) + '...'
     }
+  });
+
+  try {
+    this.awsSecrets = getAWSSecretsManager(env);
+    logger('info', 'AWS Secrets Manager initialized successfully');
+  } catch (error: any) {
+    logger('error', 'AWS Secrets Manager initialization failed', { 
+      error: error.message,
+      hasAccessKey: !!env.AWS_ACCESS_KEY_ID,
+      hasSecretKey: !!env.AWS_SECRET_ACCESS_KEY,
+      region: env.AWS_REGION
+    });
+    this.awsSecrets = null;
   }
+}
 
   async getConfig(keyName: string): Promise<string> {
     // Check cache first
@@ -251,10 +274,13 @@ class EnhancedConfigManager {
 
     return status;
   }
-
 private async getFromSupabase(keyName: string): Promise<string> {
-  // Get the service role key from AWS first
-  const serviceRoleKey = await this.getConfig('SUPABASE_SERVICE_ROLE');
+  // FIXED: Use environment variable directly to avoid circular dependency
+  const serviceRoleKey = this.env.SUPABASE_SERVICE_ROLE;
+  
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE not found in environment variables');
+  }
   
   const headers = {
     apikey: serviceRoleKey,

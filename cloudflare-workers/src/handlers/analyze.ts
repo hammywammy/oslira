@@ -1,295 +1,314 @@
-import type { Context } from 'hono';
-import type { Env, AnalysisRequest, ProfileData, BusinessProfile, AnalysisResult, User } from '../types/interfaces.js';
+import { Context } from 'hono';
+import type { Env, AnalysisRequest, ProfileData, AnalysisResponse } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { normalizeRequest } from '../utils/validation.js';
-import { fetchUserAndCredits, fetchBusinessProfile, saveLeadAndAnalysis, updateCreditsAndTransaction } from '../services/database.js';
-import { scrapeInstagramProfile } from '../services/instagram-scraper.js';
-import { performAIAnalysis, generateOutreachMessage } from '../services/ai-analysis.js';
-import { calculateConfidenceLevel } from '../utils/validation.js';
-import { getEnvironment } from '../utils/env.js';
+import { saveCompleteAnalysis, updateCreditsAndTransaction, fetchUserAndCredits, fetchBusinessProfile, getLeadIdFromRun } from '../services/database.js';
 
-export async function handleAnalyze(c: Context): Promise<Response> {
+export async function handleAnalyze(c: Context<{ Bindings: Env }>): Promise<Response> {
   const requestId = generateRequestId();
   
   try {
-    const body = await c.req.json();
-    const data = normalizeRequest(body);
-    const { username, analysis_type, business_id, user_id, profile_url } = data;
-    
-    logger('info', 'Enterprise analysis request started', { 
-      username, 
-      analysisType: analysis_type, 
-      requestId
-    });
-    
+    logger('info', 'Analysis request received', { requestId });
+
+    // Parse and validate request
+    const body = await c.req.json() as AnalysisRequest;
+    const { profile_url, username, analysis_type, business_id, user_id } = normalizeRequest(body);
+
+    // Start all non-dependent operations in parallel
     const [userResult, business] = await Promise.all([
       fetchUserAndCredits(user_id, c.env),
       fetchBusinessProfile(business_id, user_id, c.env)
     ]);
-    
-    const creditCost = analysis_type === 'deep' ? 2 : 1;
+
+    if (!userResult.isValid) {
+      return c.json(createStandardResponse(false, undefined, userResult.error, requestId), 400);
+    }
+
+    // Check credit requirements
+    const creditCost = analysis_type === 'deep' ? 2 : analysis_type === 'xray' ? 3 : 1;
     if (userResult.credits < creditCost) {
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        'Insufficient credits', 
+        `Insufficient credits. Required: ${creditCost}, Available: ${userResult.credits}`, 
         requestId
-      ), 402);
+      ), 400);
     }
-    
-    // SCRAPE PROFILE
+
+    // Scrape profile with error handling
     let profileData: ProfileData;
     try {
-      logger('info', 'Starting profile scraping', { username });
+      const { scrapeInstagramProfile } = await import('../services/instagram-scraper.js');
       profileData = await scrapeInstagramProfile(username, analysis_type, c.env);
-      logger('info', 'Profile scraped successfully', { 
-        username: profileData.username, 
+      
+      if (!profileData.username) {
+        throw new Error('Profile scraping failed - no username returned');
+      }
+      
+      logger('info', 'Profile scraping completed', { 
+        username: profileData.username,
         followers: profileData.followersCount,
-        postsFound: profileData.latestPosts?.length || 0,
-        hasRealEngagement: (profileData.engagement?.postsAnalyzed || 0) > 0,
         dataQuality: profileData.dataQuality,
-        scraperUsed: profileData.scraperUsed
+        requestId
       });
+      
     } catch (scrapeError: any) {
-      logger('error', 'Profile scraping failed', { 
-        username, 
-        error: scrapeError.message 
-      });
-      
-      let errorMessage = 'Failed to retrieve profile data';
-      if (scrapeError.message.includes('not found')) {
-        errorMessage = 'Instagram profile not found';
-      } else if (scrapeError.message.includes('private')) {
-        errorMessage = 'This Instagram profile is private';
-      } else if (scrapeError.message.includes('rate limit') || scrapeError.message.includes('429')) {
-        errorMessage = 'Instagram is temporarily limiting requests. Please try again in a few minutes.';
-      } else if (scrapeError.message.includes('timeout')) {
-        errorMessage = 'Profile scraping timed out. Please try again.';
-      }
-      
+      logger('error', 'Profile scraping failed', { error: scrapeError.message, requestId });
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        errorMessage, 
+        `Profile scraping failed: ${scrapeError.message}`, 
         requestId
-      ), 500);
+      ), 400);
     }
 
-    // AI ANALYSIS
-    let analysisResult: AnalysisResult;
+    // Pre-screen for light analysis (early exit optimization)
+    if (analysis_type === 'light') {
+      const { preScreenProfile } = await import('../services/prompts.js');
+      const preScreen = preScreenProfile(profileData, business);
+      
+      if (!preScreen.shouldProcess) {
+        const earlyResult = {
+          run_id: 'pre-screen-' + requestId,
+          profile: {
+            username: profileData.username,
+            displayName: profileData.displayName,
+            followersCount: profileData.followersCount,
+            isVerified: profileData.isVerified,
+            profilePicUrl: profileData.profilePicUrl,
+            dataQuality: 'low',
+            scraperUsed: profileData.scraperUsed || 'unknown'
+          },
+          analysis: {
+            overall_score: preScreen.earlyScore || 0,
+            niche_fit_score: 0,
+            engagement_score: 0,
+            type: analysis_type,
+            confidence_level: 0.9,
+            summary_text: preScreen.reason || 'Pre-screened as low quality',
+            audience_quality: 'Low'
+          },
+          credits: { used: 0, remaining: userResult.credits },
+          metadata: {
+            request_id: requestId,
+            analysis_completed_at: new Date().toISOString(),
+            schema_version: '3.1',
+            system_used: 'pre_screen'
+          }
+        };
+        
+        logger('info', 'Profile pre-screened - early exit', { 
+          username: profileData.username,
+          reason: preScreen.reason,
+          score: preScreen.earlyScore
+        });
+        
+        return c.json(createStandardResponse(true, earlyResult, undefined, requestId));
+      }
+    }
+    
+// DIRECT ANALYSIS - Single optimized system
+    let analysisResult;
+    let costDetails;
+    let processingTime;
+    
     try {
-      logger('info', 'Starting AI analysis');
-      analysisResult = await performAIAnalysis(profileData, business, analysis_type, c.env, requestId);
-      logger('info', 'AI analysis completed', { 
-        score: analysisResult.score,
-        engagementScore: analysisResult.engagement_score,
-        nicheFit: analysisResult.niche_fit,
-        confidence: analysisResult.confidence_level,
-        hasQuickSummary: !!analysisResult.quick_summary,
-        hasDeepSummary: !!analysisResult.deep_summary
+      logger('info', 'Executing direct analysis', { analysis_type, requestId });
+
+      const { DirectAnalysisExecutor } = await import('../services/direct-analysis.js');
+      const directExecutor = new DirectAnalysisExecutor(c.env, requestId);
+      
+      let directResult;
+      switch (analysis_type) {
+        case 'light':
+          directResult = await directExecutor.executeLight(profileData, business);
+          break;
+        case 'deep':
+          directResult = await directExecutor.executeDeep(profileData, business);
+          break;
+        case 'xray':
+          directResult = await directExecutor.executeXRay(profileData, business);
+          break;
+        default:
+          throw new Error(`Unsupported analysis type: ${analysis_type}`);
+      }
+
+      analysisResult = directResult.analysisData;
+      costDetails = directResult.costDetails;
+      processingTime = directResult.costDetails.processing_duration_ms;
+
+    } catch (analysisError: any) {
+      logger('error', 'Direct analysis failed', { 
+        error: analysisError.message,
+        analysis_type,
+        requestId
       });
-    } catch (aiError: any) {
-      logger('error', 'AI analysis failed', { error: aiError.message });
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        'AI analysis failed', 
+        `Analysis failed: ${analysisError.message}`, 
         requestId
       ), 500);
     }
 
-    // GENERATE OUTREACH MESSAGE FOR DEEP ANALYSIS
-    let outreachMessage = '';
-    if (analysis_type === 'deep') {
-      try {
-        logger('info', 'Generating outreach message');
-        outreachMessage = await generateOutreachMessage(profileData, business, analysisResult, c.env, requestId);
-        logger('info', 'Outreach message generated', { length: outreachMessage.length });
-      } catch (messageError: any) {
-        logger('warn', 'Message generation failed (non-fatal)', { error: messageError.message });
-      }
-    }
-
-    // PREPARE LEAD DATA
+    // PREPARE DATA FOR DATABASE (3-TABLE STRUCTURE)
     const leadData = {
-      user_id: user_id,
-      business_id: business_id,
+      user_id,
+      business_id,
       username: profileData.username,
-      platform: 'instagram',
-      profile_url: profile_url,
-      profile_pic_url: profileData.profilePicUrl || null,
-      score: analysisResult.score || 0,
-      analysis_type: analysis_type,
-      followers_count: profileData.followersCount || 0,
-      created_at: new Date().toISOString(),
-      quick_summary: analysisResult.quick_summary || null,
-      env: getEnvironment(c.env)
+      full_name: profileData.displayName,
+      profile_pic_url: profileData.profilePicUrl,
+      bio: profileData.bio,
+      external_url: profileData.externalUrl,
+      followersCount: profileData.followersCount,
+      followsCount: profileData.followingCount,
+      postsCount: profileData.postsCount,
+      is_verified: profileData.isVerified,
+      is_private: profileData.isPrivate,
+      is_business_account: profileData.isBusinessAccount || false,
+      profile_url
     };
 
-    // PREPARE ANALYSIS DATA FOR DEEP ANALYSIS
-    let analysisData = null;
-    if (analysis_type === 'deep') {
-      analysisData = {
-        user_id: user_id,
-        username: profileData.username,
-        analysis_type: 'deep',
-        score: analysisResult.score || 0,
-        engagement_score: analysisResult.engagement_score || 0,
-        score_niche_fit: analysisResult.niche_fit || 0,
-        score_total: analysisResult.score || 0,
-        niche_fit: analysisResult.niche_fit || 0,
-        avg_likes: profileData.engagement?.avgLikes || 0,
-        avg_comments: profileData.engagement?.avgComments || 0,
-        engagement_rate: profileData.engagement?.engagementRate || 0,
-        audience_quality: analysisResult.audience_quality || 'Unknown',
-        engagement_insights: analysisResult.engagement_insights || 'No insights available',
-        selling_points: Array.isArray(analysisResult.selling_points) ? 
-          analysisResult.selling_points : 
-          (analysisResult.selling_points ? [analysisResult.selling_points] : null),
-        reasons: Array.isArray(analysisResult.reasons) ? analysisResult.reasons : 
-          (Array.isArray(analysisResult.selling_points) ? analysisResult.selling_points : null),
-        latest_posts: (profileData.latestPosts?.length || 0) > 0 ? 
-          JSON.stringify(profileData.latestPosts.slice(0, 12)) : null,
-        engagement_data: profileData.engagement ? JSON.stringify({
-          avgLikes: profileData.engagement.avgLikes,
-          avgComments: profileData.engagement.avgComments,
-          engagementRate: profileData.engagement.engagementRate,
-          totalEngagement: profileData.engagement.totalEngagement,
-          postsAnalyzed: profileData.engagement.postsAnalyzed,
-          dataQuality: profileData.dataQuality,
-          scraperUsed: profileData.scraperUsed,
-          dataSource: 'real_scraped_data',
-          calculationMethod: 'manual_averaging_from_posts'
-        }) : JSON.stringify({
-          dataSource: 'no_real_data_available',
-          reason: 'scraping_failed_or_private_account',
-          scraperUsed: profileData.scraperUsed,
-          estimatedData: false
-        }),
-        analysis_data: JSON.stringify({
-          confidence_level: analysisResult.confidence_level || calculateConfidenceLevel(profileData, analysis_type),
-          scraper_used: profileData.scraperUsed,
-          data_quality: profileData.dataQuality,
-          posts_found: profileData.latestPosts?.length || 0,
-          posts_with_engagement: profileData.latestPosts?.filter(p => p.likesCount > 0 || p.commentsCount > 0).length || 0,
-          real_engagement_available: (profileData.engagement?.postsAnalyzed || 0) > 0,
-          follower_count: profileData.followersCount,
-          verification_status: profileData.isVerified,
-          account_type: profileData.isPrivate ? 'private' : 'public',
-          analysis_timestamp: new Date().toISOString(),
-          ai_model_used: 'gpt-5'
-        }),
-        outreach_message: outreachMessage || null,
-        deep_summary: analysisResult.deep_summary || null,
-        env: getEnvironment(c.env),
-        created_at: new Date().toISOString()
-      };
-    }
-
-    // SAVE TO DATABASE
+// SAVE TO DATABASE AND UPDATE CREDITS
+    let run_id: string;
     let lead_id: string;
     try {
-      logger('info', 'Saving data to database');
-      lead_id = await saveLeadAndAnalysis(leadData, analysisData, analysis_type, c.env);
-      logger('info', 'Database save successful', { lead_id });
-    } catch (saveError: any) {
-      logger('error', 'Database save failed', { error: saveError.message });
-      return c.json(createStandardResponse(
-        false, 
-        undefined, 
-        `Database save failed: ${saveError.message}`, 
-        requestId
-      ), 500);
-    }
-
-    // UPDATE CREDITS
-    try {
-      await updateCreditsAndTransaction(
-        user_id,
-        creditCost,
-        userResult.credits - creditCost,
-        `${analysis_type} analysis for @${profileData.username}`,
-        'use',
-        c.env,
-        lead_id
-      );
-      logger('info', 'Credits updated successfully', { 
-        creditCost, 
-        remainingCredits: userResult.credits - creditCost 
+      // Step 1: Save analysis to database
+      const saveResult = await saveCompleteAnalysis(leadData, analysisResult, analysis_type, c.env);
+      run_id = saveResult.run_id;
+      lead_id = saveResult.lead_id;
+      
+      logger('info', 'Database save successful', { 
+        run_id,
+        lead_id,
+        username: profileData.username 
       });
-    } catch (creditError: any) {
-      logger('error', 'Credit update failed', { error: creditError.message });
+
+      // Step 3: Update user credits with enhanced cost tracking
+      const enhancedCostDetails = {
+        actual_cost: costDetails.actual_cost,
+        tokens_in: costDetails.tokens_in,
+        tokens_out: costDetails.tokens_out,
+        model_used: costDetails.model_used,
+        block_type: costDetails.block_type,
+        processing_duration_ms: processingTime,
+        blocks_used: [costDetails.block_type]
+      };
+
+await updateCreditsAndTransaction(
+  user_id, 
+  creditCost, 
+  analysis_type, 
+  run_id,
+  enhancedCostDetails,
+  c.env
+);
+
+      logger('info', 'Credits updated successfully', { 
+        user_id, 
+        creditCost, 
+        run_id,
+        lead_id,
+        actual_cost: costDetails.actual_cost,
+        margin: creditCost - costDetails.actual_cost
+      });
+
+    } catch (saveError: any) {
+      logger('error', 'Database save or credit update failed', { 
+        error: saveError.message,
+        username: profileData.username,
+        requestId
+      });
       return c.json(createStandardResponse(
         false, 
         undefined, 
-        `Failed to log credit transaction: ${creditError.message}`, 
+        `Database operation failed: ${saveError.message}`,
         requestId
       ), 500);
     }
 
-    // PREPARE RESPONSE
-    const responseData = {
-      lead_id,
+    // BUILD RESPONSE
+    const responseData: AnalysisResponse = {
+      run_id: run_id,
       profile: {
         username: profileData.username,
         displayName: profileData.displayName,
         followersCount: profileData.followersCount,
         isVerified: profileData.isVerified,
         profilePicUrl: profileData.profilePicUrl,
-        dataQuality: profileData.dataQuality,
-        scraperUsed: profileData.scraperUsed
+        dataQuality: profileData.dataQuality || 'medium',
+        scraperUsed: profileData.scraperUsed || 'unknown'
       },
       analysis: {
-        score: analysisResult.score,
+        overall_score: analysisResult.score,
+        niche_fit_score: analysisResult.niche_fit,
+        engagement_score: analysisResult.engagement_score,
         type: analysis_type,
         confidence_level: analysisResult.confidence_level,
-        quick_summary: analysisResult.quick_summary,
+        summary_text: analysisResult.quick_summary,
+        
+        // Additional analysis fields based on type
+        audience_quality: analysisResult.audience_quality,
+        selling_points: analysisResult.selling_points || [],
+        reasons: analysisResult.reasons || [],
+        
+        // Deep analysis fields
         ...(analysis_type === 'deep' && {
-          engagement_score: analysisResult.engagement_score,
-          niche_fit: analysisResult.niche_fit,
-          audience_quality: analysisResult.audience_quality,
-          selling_points: analysisResult.selling_points,
-          reasons: analysisResult.reasons,
-          outreach_message: outreachMessage,
           deep_summary: analysisResult.deep_summary,
-          engagement_data: profileData.engagement ? {
+          outreach_message: analysisResult.outreach_message,
+          engagement_breakdown: profileData.engagement ? {
             avg_likes: profileData.engagement.avgLikes,
             avg_comments: profileData.engagement.avgComments,
             engagement_rate: profileData.engagement.engagementRate,
             posts_analyzed: profileData.engagement.postsAnalyzed,
             data_source: 'real_scraped_calculation'
-          } : {
-            data_source: 'no_real_data_available',
-            avg_likes: 0,
-            avg_comments: 0,
-            engagement_rate: 0
-          }
+          } : null
+        }),
+        
+        // X-Ray analysis fields
+        ...(analysis_type === 'xray' && {
+          copywriter_profile: analysisResult.copywriter_profile || {},
+          commercial_intelligence: analysisResult.commercial_intelligence || {},
+          persuasion_strategy: analysisResult.persuasion_strategy || {}
         })
       },
       credits: {
         used: creditCost,
-        remaining: userResult.credits - creditCost
+        remaining: userResult.credits - creditCost,
+        actual_cost: costDetails.actual_cost,
+        margin: creditCost - costDetails.actual_cost
+      },
+      metadata: {
+        request_id: requestId,
+        analysis_completed_at: new Date().toISOString(),
+        schema_version: '3.1',
+        system_used: 'direct_analysis',
+        performance: {
+          processing_duration_ms: processingTime,
+          model_used: costDetails.model_used,
+          block_type: costDetails.block_type,
+          tokens_processed: costDetails.tokens_in + costDetails.tokens_out
+        }
       }
     };
 
     logger('info', 'Analysis completed successfully', { 
-      lead_id, 
+      run_id, 
+      lead_id,
       username: profileData.username, 
-      score: analysisResult.score,
+      overall_score: analysisResult.score,
       confidence: analysisResult.confidence_level,
-      dataQuality: profileData.dataQuality
+      dataQuality: profileData.dataQuality,
+      system: 'direct_analysis',
+      processing_time: processingTime,
+      actual_cost: costDetails.actual_cost
     });
 
     return c.json(createStandardResponse(true, responseData, undefined, requestId));
 
   } catch (error: any) {
     logger('error', 'Analysis request failed', { error: error.message, requestId });
-    return c.json(createStandardResponse(
-      false, 
-      undefined, 
-      error.message, 
-      requestId
-    ), 500);
+    return c.json(createStandardResponse(false, undefined, error.message, requestId), 500);
   }
 }

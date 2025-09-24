@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 export async function fetchJson<T>(url: string, options: RequestInit, timeoutMs: number = 10000): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -77,21 +78,4 @@ export async function callWithRetry<T>(
   }
   
   throw new Error(`All ${retries} attempts failed for ${url}`);
-}
-
-export function extractPostThemes(posts: PostData[]): string {
-  if (!posts || posts.length === 0) return 'content themes not available';
-  
-  const allHashtags = posts.flatMap(post => post.hashtags || []);
-  const hashtagCounts = allHashtags.reduce((acc, tag) => {
-    acc[tag] = (acc[tag] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const topHashtags = Object.entries(hashtagCounts)
-    .sort(([,a], [,b]) => b - a)
-    .slice(0, 3)
-    .map(([tag]) => tag.replace('#', ''));
-    
-  return topHashtags.length > 0 ? topHashtags.join(', ') : 'content themes not available';
 }

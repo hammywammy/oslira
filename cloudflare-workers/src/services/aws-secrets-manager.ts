@@ -1,5 +1,11 @@
 import type { Env } from '../types/interfaces.js';
-import { logger } from '../utils/logger.js';
+
+// Local logging function to avoid import issues in Worker environment
+function logger(level: 'info' | 'warn' | 'error', message: string, data?: any) {
+  const timestamp = new Date().toISOString();
+  const logData = { timestamp, level, message, ...data };
+  console.log(JSON.stringify(logData));
+}
 
 interface SecretValue {
   apiKey: string;
@@ -12,16 +18,29 @@ export class AWSSecretsManager {
   private accessKeyId: string;
   private secretAccessKey: string;
   private region: string;
+  private configured: boolean;
 
-  constructor(env: Env) {
-    this.accessKeyId = env.AWS_ACCESS_KEY_ID;
-    this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY;
-    this.region = env.AWS_REGION || 'us-east-1';
+constructor(env: Env) {
+  // Cloudflare Workers environment variables are accessed directly
+  this.accessKeyId = env.AWS_ACCESS_KEY_ID || '';
+  this.secretAccessKey = env.AWS_SECRET_ACCESS_KEY || '';
+  this.region = env.AWS_REGION || 'us-east-1';
 
-    if (!this.accessKeyId || !this.secretAccessKey) {
-      throw new Error('AWS credentials not configured');
-    }
+  if (!this.accessKeyId || !this.secretAccessKey) {
+    logger('error', 'AWS credentials not configured', {
+      hasAccessKey: !!this.accessKeyId,
+      hasSecretKey: !!this.secretAccessKey
+    });
+    // Don't throw - gracefully degrade to Supabase-only mode
+    this.configured = false;
+  } else {
+    this.configured = true;
   }
+}
+
+isConfigured(): boolean {
+  return this.configured;
+}
 
   async getSecret(secretName: string): Promise<string> {
     try {
