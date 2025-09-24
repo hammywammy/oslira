@@ -230,7 +230,6 @@ const DASHBOARD_EVENTS = {
     // UI
     MODAL_OPENED: 'ui:modal:opened',
     MODAL_CLOSED: 'ui:modal:closed',
-    NOTIFICATION_SHOW: 'ui:notification:show',
     
     // Errors
     ERROR: 'dashboard:error',
