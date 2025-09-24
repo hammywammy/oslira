@@ -159,14 +159,18 @@ this.analysisStages = {
                 transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
             
-            .hover-lift {
-                transition: all 0.2s ease-out;
-            }
-            
-            .hover-lift:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
-            }
+.hover-lift {
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.hover-lift.analyzing {
+    pointer-events: none; /* Disable hover during analysis */
+}
             
             .minimized {
                 max-height: 60px;
@@ -397,22 +401,27 @@ updateAnalysis(analysisId, updates) {
         const isFailed = analysis.status === 'failed';
         
         return `
-            <div id="queue-item-${analysis.id}" 
-                 class="queue-item-new glass-card hover-lift rounded-xl p-4 border shadow-lg transition-all duration-200 ${analysis.isMinimized ? 'minimized' : ''} ${isCompleted ? 'celebrating' : ''} ${isActive ? 'pulse-glow' : ''}"
+<div id="queue-item-${analysis.id}" 
+     class="queue-item-new glass-card hover-lift rounded-xl p-4 border shadow-lg transition-all duration-200 ${analysis.isMinimized ? 'minimized' : ''} ${isCompleted ? 'celebrating' : ''} ${isActive ? 'pulse-glow analyzing' : ''}"
                  data-analysis-id="${analysis.id}">
                 
                 <!-- Header -->
                 <div class="queue-header ${analysis.isMinimized ? 'queue-header-minimized' : ''} flex items-center justify-between mb-3">
                     <div class="flex items-center space-x-3">
-                        <!-- Profile Avatar -->
-                        <div class="relative">
-                            <div class="w-10 h-10 ${statusConfig.bgColor} rounded-full flex items-center justify-center font-semibold text-white shadow-lg">
-                                ${profileInitial}
-                            </div>
-                            <div class="absolute -bottom-1 -right-1 w-5 h-5 ${statusConfig.badgeColor} rounded-full flex items-center justify-center">
-                                ${statusConfig.icon}
-                            </div>
-                        </div>
+<!-- Profile Avatar -->
+<div class="relative">
+    <div class="w-10 h-10 ${statusConfig.bgColor} rounded-full flex items-center justify-center font-semibold text-white shadow-lg">
+        ${profileInitial}
+    </div>
+    <div class="absolute -bottom-1 -right-1 w-5 h-5 ${statusConfig.badgeColor} rounded-full flex items-center justify-center">
+        ${statusConfig.icon}
+    </div>
+    ${isActive ? `
+        <div class="absolute inset-0 rounded-full border-2 border-blue-500 opacity-75">
+            <div class="absolute inset-0 rounded-full border-t-2 border-blue-600 animate-spin"></div>
+        </div>
+    ` : ''}
+</div>
                         
                         <!-- Username and Type -->
                         <div class="flex-1 min-w-0">
