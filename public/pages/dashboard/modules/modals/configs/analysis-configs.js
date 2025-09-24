@@ -33,18 +33,16 @@ registerDefaultConfigs() {
     ]
     });
 
-    // X-Ray Analysis Configuration
-    this.configs.set('xray', {
-        components: [
-            'heroHeader',
-            'metricsGrid', 
-            'aiSummary',
-            'sellingPoints',
-            'outreachMessage',
-            'engagementInsights',
-            'reasons'
-        ]
-    });
+// X-Ray Analysis Configuration
+this.configs.set('xray', {
+    components: [
+        'heroHeader',
+        'copywriterProfile',
+        'commercialIntelligence', 
+        'persuasionStrategy',
+        'aiSummary'
+    ]
+});
 }
 
     getConfig(analysisType) {
