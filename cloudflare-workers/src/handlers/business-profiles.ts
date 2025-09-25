@@ -196,12 +196,6 @@ async function handleCreateProfile(
     // Sanitize and prepare data
     const profileData = sanitizeBusinessProfileData(body, userId);
     
-    // Generate legacy fields if not provided
-    profileData.target_problems = profileData.target_problems || generateLegacyTargetProblems(body);
-    profileData.value_proposition = profileData.value_proposition || generateLegacyValueProposition(body);
-    profileData.message_example = profileData.message_example || generateLegacyMessageExample(body);
-    profileData.success_outcome = profileData.success_outcome || generateLegacySuccessOutcome(body);
-    profileData.call_to_action = profileData.call_to_action || generateLegacyCallToAction(body);
     
     logger('info', 'Profile data prepared for database', {
       userId,
