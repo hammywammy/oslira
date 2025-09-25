@@ -150,7 +150,7 @@ industry_profile: {
     characteristics: { type: 'array', items: { type: 'string' } },
     competitive_landscape: { type: 'string' }
   },
-  required: ['category', 'characteristics']
+  required: ['category', 'characteristics', 'competitive_landscape']
 },
 audience_intelligence: {
   type: 'object',
