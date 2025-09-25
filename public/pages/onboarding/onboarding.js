@@ -628,8 +628,8 @@ const { data: sessionData, error: sessionError } = await authSystem.supabase.aut
                     // 5. UPDATE PROFILE WITH GENERATED CONTEXT
                     console.log('📝 [Onboarding] Updating profile with AI context...');
                     
-                    const updateResponse = await fetch(`${workerUrl}/business-profiles/${profileId}`, {
-                        method: 'PATCH',
+const updateResponse = await fetch(`${workerUrl}/business-profiles/${profileId}`, {
+    method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${session.access_token}`
