@@ -175,17 +175,62 @@ class AuthManager {
         
         console.log('🔐 [Auth] User signed out');
     }
+    async ensureUserExists() {
+    if (!this.user) return;
     
-    async loadUserBusinesses() {
-        if (!this.supabase || !this.user) {
-            return;
+    try {
+        // Check if user exists
+        const { data: existingUser, error: fetchError } = await this.supabase
+            .from('users')
+            .select('id')
+            .eq('id', this.user.id)
+            .single();
+            
+        if (fetchError && fetchError.code === 'PGRST116') {
+            // User doesn't exist, create them
+            console.log('🔧 [Auth] Creating user record for authenticated user...');
+            
+            const userData = {
+                id: this.user.id,
+                email: this.user.email,
+                full_name: this.user.user_metadata?.full_name || this.user.user_metadata?.name,
+                created_via: this.user.app_metadata?.provider || 'email',
+                onboarding_completed: false
+            };
+            
+            const { error: createError } = await this.supabase
+                .from('users')
+                .insert(userData);
+                
+            if (createError) {
+                console.error('❌ [Auth] Failed to create user record:', createError);
+                throw createError;
+            }
+            
+            console.log('✅ [Auth] User record created successfully');
+        } else if (fetchError) {
+            console.error('❌ [Auth] Error checking user existence:', fetchError);
+            throw fetchError;
         }
+    } catch (error) {
+        console.error('❌ [Auth] Failed to ensure user exists:', error);
+        throw error;
+    }
+}
+    
+async loadUserBusinesses() {
+    if (!this.supabase || !this.user) {
+        return;
+    }
+    
+    try {
+        // Ensure user exists in database before loading businesses
+        await this.ensureUserExists();
         
-        try {
-            const { data: businesses, error } = await this.supabase
-                .from('business_profiles')
-                .select('*')
-                .eq('user_id', this.user.id);
+        const { data: businesses, error } = await this.supabase
+            .from('business_profiles')
+            .select('*')
+            .eq('user_id', this.user.id);
             
             if (error) {
                 console.error('❌ [Auth] Failed to load businesses:', error);
