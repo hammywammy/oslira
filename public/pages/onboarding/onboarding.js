@@ -192,6 +192,10 @@ function showStep(stepNumber) {
         targetStep.classList.add('active');
         targetStep.style.display = 'block';
         console.log(`[Onboarding] Step ${stepNumber} is now visible`);
+     // Clear any error messages and show onboarding form
+hideElement('error-state');
+hideElement('loading-state');
+showElement('onboarding-form');
     } else {
         console.error(`[Onboarding] Step ${stepNumber} element not found!`);
     }
@@ -496,13 +500,14 @@ async function submitOnboarding() {
     try {
         showSubmissionProgress();
         
-        // 1. VERIFY AUTHENTICATION FIRST
-        if (!window.SimpleAuth?.supabase) {
-            throw new Error('Authentication system not available');
-        }
-        
-        // Get fresh session
-        const { data: sessionData, error: sessionError } = await window.SimpleAuth.supabase().auth.getSession();
+// Use the correct auth system
+const authSystem = window.OsliraAuth || window.SimpleAuth;
+if (!authSystem?.supabase) {
+    throw new Error('Authentication system not available');
+}
+
+// Get fresh session
+const { data: sessionData, error: sessionError } = await authSystem.supabase().auth.getSession();
         if (sessionError || !sessionData?.session) {
             console.error('❌ [Onboarding] No valid session:', sessionError);
             throw new Error('Authentication expired. Please refresh the page and log in again.');
@@ -655,11 +660,11 @@ async function submitOnboarding() {
             console.warn('⚠️ [Onboarding] Context generation failed, continuing without it:', contextError);
         }
         
-        // 6. UPDATE USER ONBOARDING STATUS
-        const { error: updateUserError } = await window.SimpleAuth.supabase()
-            .from('users')
-            .update({ onboarding_completed: true })
-            .eq('id', user.id);
+// 5. UPDATE USER ONBOARDING STATUS
+const { error: updateUserError } = await authSystem.supabase()
+    .from('users')
+    .update({ onboarding_completed: true })
+    .eq('id', user.id);
             
         if (updateUserError) {
             console.warn('⚠️ [Onboarding] Failed to update user status:', updateUserError);
