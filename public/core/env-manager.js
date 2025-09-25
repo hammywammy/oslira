@@ -71,17 +71,27 @@ console.log('🌍 [Env] Environment & Page Setup:', {
             '/auth/': 'auth', 
             '/auth/callback': 'auth-callback',
             
-            // Main app pages
-            '/dashboard': 'dashboard',
-            '/onboarding': 'onboarding', 
-            '/settings': 'settings',
-            '/subscription': 'subscription',
-            '/analytics': 'analytics',
-            '/campaigns': 'campaigns',
-            '/leads': 'leads',
-            '/messages': 'messages',
-            '/integrations': 'integrations',
-            '/admin': 'admin',
+// Main app pages
+'/dashboard': 'dashboard',
+'/dashboard/': 'dashboard',
+'/onboarding': 'onboarding',
+'/onboarding/': 'onboarding', 
+'/settings': 'settings',
+'/settings/': 'settings',
+'/subscription': 'subscription',
+'/subscription/': 'subscription',
+'/analytics': 'analytics',
+'/analytics/': 'analytics',
+'/campaigns': 'campaigns',
+'/campaigns/': 'campaigns',
+'/leads': 'leads',
+'/leads/': 'leads',
+'/messages': 'messages',
+'/messages/': 'messages',
+'/integrations': 'integrations',
+'/integrations/': 'integrations',
+'/admin': 'admin',
+'/admin/': 'admin',
              
             // Footer pages (public)
             '/footer/about': 'about',
@@ -124,11 +134,18 @@ this._pageType = this.classifyPage(this._currentPage);
     detectCurrentPage() {
         console.log('🔍 [Env] Detecting page for pathname:', this.pathname);
         
-        // Exact match first (most reliable)
-        if (this.pageMap[this.pathname]) {
-            console.log('🔍 [Env] Exact match found:', this.pageMap[this.pathname]);
-            return this.pageMap[this.pathname];
-        }
+// Exact match first (most reliable)
+if (this.pageMap[this.pathname]) {
+    console.log('🔍 [Env] Exact match found:', this.pageMap[this.pathname]);
+    return this.pageMap[this.pathname];
+}
+
+// Try without trailing slash
+const pathWithoutSlash = this.pathname.replace(/\/$/, '');
+if (this.pageMap[pathWithoutSlash]) {
+    console.log('🔍 [Env] Match found without trailing slash:', this.pageMap[pathWithoutSlash]);
+    return this.pageMap[pathWithoutSlash];
+}
         
         // Pattern matching for dynamic paths
         if (this.pathname.startsWith('/auth/callback')) {
