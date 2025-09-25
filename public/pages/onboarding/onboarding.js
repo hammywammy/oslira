@@ -508,7 +508,7 @@ if (!window.OsliraAuth?.supabase) {
 }
 
 // Get fresh session
-const { data: sessionData, error: sessionError } = await window.OsliraAuth.supabase.auth.getSession();
+const { data: sessionData, error: sessionError } = await authSystem.supabase.auth.getSession();
         if (sessionError || !sessionData?.session) {
             console.error('❌ [Onboarding] No valid session:', sessionError);
             throw new Error('Authentication expired. Please refresh the page and log in again.');
@@ -661,8 +661,7 @@ const { data: sessionData, error: sessionError } = await window.OsliraAuth.supab
             console.warn('⚠️ [Onboarding] Context generation failed, continuing without it:', contextError);
         }
         
-// 5. UPDATE USER ONBOARDING STATUS
-const { error: updateUserError } = await window.OsliraAuth.supabase
+const { error: updateUserError } = await authSystem.supabase
     .from('users')
     .update({ onboarding_completed: true })
     .eq('id', user.id);
