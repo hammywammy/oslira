@@ -224,16 +224,42 @@ async createOsliraAppGlobal() {
                 return null;
             }
             
-const { data: userData, error } = await this.auth.supabase()
+// First try to get user data, if not found, create user record
+let { data: userData, error } = await this.auth.supabase()
     .from('users')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
-                
-            if (error) {
-                console.error('❌ [SimpleApp] Error fetching user data:', error);
-                return null;
-            }
+    .select('*')
+    .eq('id', session.user.id)
+    .single();
+    
+if (error && error.code === 'PGRST116') {
+    // User doesn't exist in database, create them
+    console.log('🔧 [SimpleApp] Creating user record for OAuth user...');
+    
+    const newUserData = {
+        id: session.user.id,
+        email: session.user.email,
+        full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
+        created_via: 'google',
+        onboarding_completed: false
+    };
+    
+    const { data: createdUser, error: createError } = await this.auth.supabase()
+        .from('users')
+        .insert(newUserData)
+        .select()
+        .single();
+        
+    if (createError) {
+        console.error('❌ [SimpleApp] Failed to create user record:', createError);
+        return null;
+    }
+    
+    userData = createdUser;
+    console.log('✅ [SimpleApp] User record created successfully');
+} else if (error) {
+    console.error('❌ [SimpleApp] Error fetching user data:', error);
+    return null;
+}
             
             return userData;
         } catch (error) {
