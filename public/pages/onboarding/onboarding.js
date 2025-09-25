@@ -502,12 +502,13 @@ async function submitOnboarding() {
         
 // Use the correct auth system
 const authSystem = window.OsliraAuth || window.SimpleAuth;
-if (!authSystem?.supabase) {
+// 1. VERIFY AUTHENTICATION FIRST
+if (!window.OsliraAuth?.supabase) {
     throw new Error('Authentication system not available');
 }
 
 // Get fresh session
-const { data: sessionData, error: sessionError } = await authSystem.supabase().auth.getSession();
+const { data: sessionData, error: sessionError } = await window.OsliraAuth.supabase.auth.getSession();
         if (sessionError || !sessionData?.session) {
             console.error('❌ [Onboarding] No valid session:', sessionError);
             throw new Error('Authentication expired. Please refresh the page and log in again.');
@@ -661,7 +662,7 @@ const { data: sessionData, error: sessionError } = await authSystem.supabase().a
         }
         
 // 5. UPDATE USER ONBOARDING STATUS
-const { error: updateUserError } = await authSystem.supabase()
+const { error: updateUserError } = await window.OsliraAuth.supabase
     .from('users')
     .update({ onboarding_completed: true })
     .eq('id', user.id);
