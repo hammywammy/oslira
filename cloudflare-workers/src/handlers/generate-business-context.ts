@@ -142,57 +142,57 @@ function getBusinessContextJsonSchema() {
           type: 'object',
           additionalProperties: false,
           properties: {
-industry_profile: {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    category: { type: 'string' },
-    characteristics: { type: 'array', items: { type: 'string' } },
-    competitive_landscape: { type: 'string' }
-  },
-  required: ['category', 'characteristics', 'competitive_landscape']
-},
-audience_intelligence: {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    demographics: { type: 'string' },
-    psychographics: { type: 'string' },
-    core_pain_points: { type: 'array', items: { type: 'string' } },
-    decision_triggers: { type: 'array', items: { type: 'string' } }
-  },
-  required: ['demographics', 'core_pain_points']
-},
-value_framework: {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    primary_benefits: { type: 'array', items: { type: 'string' } },
-    unique_differentiators: { type: 'array', items: { type: 'string' } },
-    proof_points: { type: 'array', items: { type: 'string' } }
-  },
-  required: ['primary_benefits']
-},
-communication_DNA: {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    tone_style: { type: 'string' },
-    key_messaging_themes: { type: 'array', items: { type: 'string' } },
-    language_preferences: { type: 'array', items: { type: 'string' } }
-  },
-  required: ['tone_style']
-},
-outreach_strategy: {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    optimal_approach_angles: { type: 'array', items: { type: 'string' } },
-    partnership_value_props: { type: 'array', items: { type: 'string' } },
-    collaboration_formats: { type: 'array', items: { type: 'string' } }
-  },
-  required: ['optimal_approach_angles']
-},
+            industry_profile: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                category: { type: 'string' },
+                characteristics: { type: 'array', items: { type: 'string' } },
+                competitive_landscape: { type: 'string' }
+              },
+              required: ['category', 'characteristics', 'competitive_landscape']
+            },
+            audience_intelligence: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                demographics: { type: 'string' },
+                psychographics: { type: 'string' },
+                core_pain_points: { type: 'array', items: { type: 'string' } },
+                decision_triggers: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['demographics', 'psychographics', 'core_pain_points', 'decision_triggers']
+            },
+            value_framework: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                primary_benefits: { type: 'array', items: { type: 'string' } },
+                unique_differentiators: { type: 'array', items: { type: 'string' } },
+                proof_points: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['primary_benefits', 'unique_differentiators', 'proof_points']
+            },
+            communication_DNA: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                tone_style: { type: 'string' },
+                key_messaging_themes: { type: 'array', items: { type: 'string' } },
+                language_preferences: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['tone_style', 'key_messaging_themes', 'language_preferences']
+            },
+            outreach_strategy: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                optimal_approach_angles: { type: 'array', items: { type: 'string' } },
+                partnership_value_props: { type: 'array', items: { type: 'string' } },
+                collaboration_formats: { type: 'array', items: { type: 'string' } }
+              },
+              required: ['optimal_approach_angles', 'partnership_value_props', 'collaboration_formats']
+            },
             personalization_hooks: {
               type: 'array',
               items: { type: 'string' },
