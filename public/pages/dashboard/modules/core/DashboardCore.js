@@ -119,13 +119,17 @@ await leadManager.loadDashboardData();
  */
 static async renderDashboardUI(container) {
     try {
-        // Render header
+        // Render header with new split button
         const dashboardHeader = container.get('dashboardHeader');
         if (dashboardHeader && dashboardHeader.renderHeader) {
             document.getElementById('dashboard-header').innerHTML = dashboardHeader.renderHeader();
+            // Setup header event handlers
+            if (dashboardHeader.setupEventHandlers) {
+                dashboardHeader.setupEventHandlers();
+            }
         }
         
-        // Render stats cards
+        // Render redesigned stats cards
         const statsCards = container.get('statsCards');
         if (statsCards) {
             if (statsCards.renderPriorityCards) {
@@ -134,18 +138,26 @@ static async renderDashboardUI(container) {
             if (statsCards.renderPerformanceMetrics) {
                 document.getElementById('performance-metrics').innerHTML = statsCards.renderPerformanceMetrics();
             }
+            // Setup stats cards event handlers
+            if (statsCards.setupEventHandlers) {
+                statsCards.setupEventHandlers();
+            }
         }
         
-// Render leads table - check for correct container ID
-const leadsTable = container.get('leadsTable');
-if (leadsTable && leadsTable.renderTableContainer) {
-    const leadsSection = document.getElementById('leads-section');
-    if (leadsSection) {
-        leadsSection.innerHTML = leadsTable.renderTableContainer();
-    } else {
-        console.error('❌ [DashboardCore] leads-section element not found');
-    }
-}
+        // Render leads table with export functionality
+        const leadsTable = container.get('leadsTable');
+        if (leadsTable && leadsTable.renderTableContainer) {
+            const leadsSection = document.getElementById('leads-section');
+            if (leadsSection) {
+                leadsSection.innerHTML = leadsTable.renderTableContainer();
+                // Setup leads table event handlers
+                if (leadsTable.setupEventHandlers) {
+                    leadsTable.setupEventHandlers();
+                }
+            } else {
+                console.error('❌ [DashboardCore] leads-section element not found');
+            }
+        }
         
         // Render insights panel
         const insightsPanel = container.get('insightsPanel');
@@ -154,67 +166,22 @@ if (leadsTable && leadsTable.renderTableContainer) {
         }
 
         // Inject dashboard styles
-const stylesContainer = document.getElementById('dynamic-styles');
-if (stylesContainer && window.DashboardStyles) {
-    stylesContainer.innerHTML = window.DashboardStyles.getInlineStyles();
-}
+        const stylesContainer = document.getElementById('dynamic-styles');
+        if (stylesContainer && window.DashboardStyles) {
+            stylesContainer.innerHTML = window.DashboardStyles.getInlineStyles();
+        }
         
         // Initialize Feather icons after rendering
         if (window.feather) {
             window.feather.replace();
         }
         
-        console.log('✅ [DashboardCore] Dashboard UI rendered');
+        console.log('✅ [DashboardCore] Dashboard UI rendered with new components');
         
     } catch (error) {
         console.error('❌ [DashboardCore] UI rendering failed:', error);
     }
 }
-    
-    /**
-     * Setup initial dashboard data
-     */
-    static async setupInitialData(container) {
-        console.log('📊 [DashboardCore] Setting up initial data...');
-        
-        try {
-            // Initialize state defaults
-            const stateManager = container.get('stateManager');
-            stateManager.batchUpdate({
-                'pageSize': 25,
-                'currentPage': 1,
-                'filteredLeads': [],
-                'visibleLeads': [],
-                'selectedLeads': new Set()
-            });
-            
-            // Wait for authentication
-            const isAuthReady = await this.waitForAuth(10000);
-            if (!isAuthReady) {
-                console.warn('⚠️ [DashboardCore] Authentication not ready, showing empty state');
-                this.displayEmptyState(stateManager);
-                return;
-            }
-            
-            // Verify user data
-            const osliraApp = container.get('osliraApp');
-            if (!osliraApp?.user) {
-                throw new Error('User data not loaded');
-            }
-            
-            console.log('👤 [DashboardCore] User authenticated:', osliraApp.user.email);
-            
-            
-        } catch (error) {
-            console.error('❌ [DashboardCore] Initial data setup failed:', error);
-            
-            if (this.isSchemaError(error)) {
-                this.handleSchemaError(container);
-            } else {
-                throw error;
-            }
-        }
-    }
     
     /**
      * Wait for authentication to be ready
