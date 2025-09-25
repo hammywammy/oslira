@@ -38,16 +38,16 @@ export async function handleGenerateBusinessContext(c: Context<{ Bindings: Env }
     
     const prompt = buildBusinessContextPrompt(business_data);
     
-    const response = await aiAdapter.executeRequest({
-      model_name: modelName,
-      system_prompt: 'You are a business intelligence analyst specializing in creating comprehensive business profiles for B2B outreach. Generate structured business context data that will be used for AI-powered influencer outreach personalization.',
-      user_prompt: prompt,
-      max_tokens: 1000,
-      json_schema: getBusinessContextJsonSchema(),
-      response_format: 'json',
-      temperature: 0.3
-    });
-
+const response = await aiAdapter.executeRequest({
+  model_name: modelName,
+  system_prompt: 'You are a business intelligence analyst specializing in creating comprehensive business profiles for B2B outreach. Generate structured business context data that will be used for AI-powered influencer outreach personalization.',
+  user_prompt: prompt,
+  max_tokens: 2500,
+  json_schema: getBusinessContextJsonSchema(),
+  response_format: 'json',
+  temperature: 0.3,
+  reasoning_effort: 'low'
+});
     const contextResult = JSON.parse(response.content);
     
     logger('info', 'Business context generated successfully', {
