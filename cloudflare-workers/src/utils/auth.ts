@@ -87,7 +87,7 @@ async function verifyJWTSignature(token: string, env: Env): Promise<boolean> {
     const response = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
       headers: {
         'Authorization': `Bearer ${token}`,
-        'apikey': env.SUPABASE_ANON_KEY
+        'apikey': env.SUPABASE_SERVICE_ROLE  // ✅ USE SERVICE ROLE KEY
       }
     });
 
