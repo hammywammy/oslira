@@ -464,36 +464,10 @@ closeDropdown() {
         }
     }
 
-    /**
-     * Setup modal observer to auto-close dropdown when modals open
-     */
-    setupModalObserver() {
-        const observer = new MutationObserver(() => {
-            if (!this.isDropdownOpen) return;
-
-            const modals = document.querySelectorAll(
-                '#leadAnalysisModal, #researchModal, #bulkModal, #analysisModal'
-            );
-            
-            const hasVisibleModal = Array.from(modals).some(modal => 
-                modal && !modal.classList.contains('hidden') && 
-                modal.offsetParent !== null
-            );
-            
-            if (hasVisibleModal) {
-                this.closeDropdown();
-            }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class', 'style']
-        });
-
-        this.modalObserver = observer;
-    }
+setupModalObserver() {
+    // No observer needed - dropdown handles outside clicks properly
+    console.log('✅ [DashboardHeader] Modal observer disabled');
+}
 
     /**
      * Setup cleanup handlers for page unload
