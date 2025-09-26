@@ -91,21 +91,21 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Store reference to this for the observer
+const headerInstance = this;
+
 // Hide dropdown when any modal opens
 const observer = new MutationObserver(() => {
-    // Only check for modals, not the dropdown itself
-    if (this.isDropdownOpen) {
-        const modals = document.querySelectorAll('#leadAnalysisModal, #researchModal, #bulkModal');
-        const hasVisibleModal = Array.from(modals).some(modal => 
-            modal && !modal.classList.contains('hidden') && modal.offsetParent !== null
-        );
-        
-        if (hasVisibleModal) {
-            const dropdown = document.getElementById('researchDropdown');
-            if (dropdown) {
-                dropdown.remove();
-                this.isDropdownOpen = false;
-            }
+    const modals = document.querySelectorAll('#leadAnalysisModal, #researchModal, #bulkModal');
+    const hasVisibleModal = Array.from(modals).some(modal => 
+        modal && !modal.classList.contains('hidden') && modal.offsetParent !== null
+    );
+    
+    if (hasVisibleModal && headerInstance.isDropdownOpen) {
+        const dropdown = document.getElementById('researchDropdown');
+        if (dropdown) {
+            dropdown.remove();
+            headerInstance.isDropdownOpen = false;
         }
     }
 });
