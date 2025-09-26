@@ -11,7 +11,7 @@ class DashboardHeader {
     renderHeader() {
         return `
 <div class="pt-6 px-6 pb-6">
-    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible;">
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible; z-index: 100;">
         <div class="flex items-center justify-between">
             <!-- Dashboard Title -->
             <div>
@@ -93,66 +93,66 @@ class DashboardHeader {
         });
     }
 
-    createAndShowDropdown() {
-        // Get button position for centering
-        const button = document.getElementById('dropdown-arrow-btn');
-        const buttonRect = button.getBoundingClientRect();
-        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-        
-        // Create dropdown
-        const dropdown = document.createElement('div');
-        dropdown.id = 'researchDropdown';
-        dropdown.innerHTML = `
-            <div style="padding: 8px 0;">
-                <div data-type="single" style="display: flex; align-items: center; padding: 10px 16px; cursor: pointer; transition: background 0.2s;">
-                    <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #818cf8, #a855f7); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
-                        <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                    </div>
-                    <div>
-                        <div style="font-weight: 600; color: #1f2937; font-size: 14px;">Research Single</div>
-                        <div style="color: #6b7280; font-size: 12px;">One profile analysis</div>
-                    </div>
+ createAndShowDropdown() {
+    // Get button container for proper centering
+    const buttonContainer = document.getElementById('main-button-container');
+    
+    // Create dropdown
+    const dropdown = document.createElement('div');
+    dropdown.id = 'researchDropdown';
+    dropdown.innerHTML = `
+        <div style="padding: 8px 0;">
+            <div data-type="single" style="display: flex; align-items: center; padding: 10px 16px; cursor: pointer; transition: background 0.2s;">
+                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                    <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                 </div>
-                <div data-type="bulk" style="display: flex; align-items: center; padding: 10px 16px; cursor: pointer; transition: background 0.2s;">
-                    <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #fb923c, #f97316); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
-                        <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
-                    </div>
-                    <div>
-                        <div style="font-weight: 600; color: #1f2937; font-size: 14px;">Bulk Analyze</div>
-                        <div style="color: #6b7280; font-size: 12px;">Multiple leads at once</div>
-                    </div>
+                <div>
+                    <div style="font-weight: 600; color: #1f2937; font-size: 14px;">Research Single</div>
+                    <div style="color: #6b7280; font-size: 12px;">One profile analysis</div>
                 </div>
             </div>
-        `;
+            <div data-type="bulk" style="display: flex; align-items: center; padding: 10px 16px; cursor: pointer; transition: background 0.2s;">
+                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                    <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
+                </div>
+                <div>
+                    <div style="font-weight: 600; color: #1f2937; font-size: 14px;">Bulk Analyze</div>
+                    <div style="color: #6b7280; font-size: 12px;">Multiple leads at once</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Position dropdown properly centered and attached
+    dropdown.style.cssText = `
+        position: absolute !important;
+        top: calc(100% + 8px) !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: 220px !important;
+        background: white !important;
+        border-radius: 12px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+        border: 1px solid rgba(0,0,0,0.1) !important;
+        z-index: 999999 !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    `;
+    
+    // Add hover effects and click handlers
+    dropdown.querySelectorAll('[data-type]').forEach(item => {
+        item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f9fafb');
+        item.addEventListener('mouseleave', () => item.style.backgroundColor = 'transparent');
         
-        // Position dropdown centered under button
-        dropdown.style.cssText = `
-            position: fixed !important;
-            top: ${buttonRect.bottom + scrollTop + 8}px !important;
-            left: ${buttonRect.left + (buttonRect.width / 2) - 110}px !important;
-            width: 220px !important;
-            background: white !important;
-            border-radius: 12px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-            border: 1px solid rgba(0,0,0,0.1) !important;
-            z-index: 999999 !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-        `;
-        
-        // Add hover effects and click handlers
-        dropdown.querySelectorAll('[data-type]').forEach(item => {
-            item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f9fafb');
-            item.addEventListener('mouseleave', () => item.style.backgroundColor = 'transparent');
-            
-            item.addEventListener('click', () => {
-                this.selectResearchType(item.dataset.type);
-                dropdown.remove();
-                this.isDropdownOpen = false;
-            });
+        item.addEventListener('click', () => {
+            this.selectResearchType(item.dataset.type);
+            dropdown.remove();
+            this.isDropdownOpen = false;
         });
-        
-        document.body.appendChild(dropdown);
-    }
+    });
+    
+    // Append to the button's relative container instead of body
+    buttonContainer.parentElement.appendChild(dropdown);
+}
 
     selectResearchType(type) {
         this.currentMode = type;
