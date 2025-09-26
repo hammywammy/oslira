@@ -435,19 +435,19 @@ dropdown.style.cssText = `
         console.log('✅ [DashboardHeader] Mode switched to:', mode);
     }
 
-    /**
-     * Update button text based on current mode
-     */
-    updateButtonText() {
-        const textElement = document.getElementById('main-research-text');
-        if (!textElement) return;
+updateButtonText() {
+    const textElement = document.getElementById('main-research-text');
+    const buttonContainer = document.getElementById('main-button-container');
+    if (!textElement || !buttonContainer) return;
 
-        if (this.currentMode === 'single') {
-            textElement.textContent = 'Research New Lead';
-        } else if (this.currentMode === 'bulk') {
-            textElement.textContent = 'Bulk Analyze';
-        }
+    if (this.currentMode === 'single') {
+        textElement.textContent = 'Research New Lead';
+        buttonContainer.className = 'bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
+    } else if (this.currentMode === 'bulk') {
+        textElement.textContent = 'Bulk Analyze';
+        buttonContainer.className = 'bg-gradient-to-r from-orange-500 via-orange-600 to-red-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
     }
+}
 
     /**
      * Handle clicks outside the dropdown to close it
@@ -499,22 +499,17 @@ setupModalObserver() {
         }
     }
 
-    /**
-     * Open bulk analysis modal
-     */
-    openBulkModal() {
-        console.log('📊 [DashboardHeader] Opening bulk modal...');
-        
-        if (window.dashboard?.container?.get('modalManager')) {
-            window.dashboard.container.get('modalManager').openModal('bulkModal');
-        } else if (window.showBulkModal) {
-            window.showBulkModal();
-        } else if (window.openBulkModal) {
-            window.openBulkModal();
-        } else {
-            console.error('❌ [DashboardHeader] No bulk modal function available');
-        }
+openBulkModal() {
+    console.log('📊 [DashboardHeader] Opening bulk modal...');
+    
+    const modal = document.getElementById('bulkModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        console.log('✅ [DashboardHeader] Bulk modal opened');
+    } else {
+        console.error('❌ [DashboardHeader] Bulk modal element not found');
     }
+}
 
     /**
      * Initialize Feather icons in the header
