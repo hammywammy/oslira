@@ -13,133 +13,125 @@ class BulkModal {
 
 renderBulkModal() {
     return `
-<div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden">
+    <div class="flex items-center justify-center min-h-screen p-6">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden">
+            
             <!-- Header -->
-            <div class="bg-gradient-to-r from-orange-500 to-red-600 p-6 text-white">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h2 class="text-2xl font-bold">Bulk Analysis</h2>
-                        <p class="text-orange-100 mt-1">Upload and analyze multiple leads at once</p>
-                    </div>
-                    <button onclick="closeBulkModal()" class="p-2 hover:bg-white/20 rounded-lg transition-colors">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-8 pb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-2xl font-bold text-gray-900">Bulk Analysis</h2>
+                    <button onclick="closeBulkModal()" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                        <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
                 </div>
+                <p class="text-gray-600">Upload a CSV with Instagram usernames to analyze multiple leads</p>
             </div>
 
             <!-- Content -->
-            <div class="p-6 overflow-y-auto max-h-[70vh]">
-                <form id="bulkForm" onsubmit="submitBulkAnalysis(event)">
-                    
-                    <!-- CSV Upload Section -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-3">Upload CSV File</label>
-                        <div id="upload-area" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center transition-colors hover:border-orange-400 hover:bg-orange-50/30">
-                            <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)" class="hidden">
-                            <div id="upload-placeholder" class="text-gray-500">
-                                <svg class="w-12 h-12 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                </svg>
-                                <p class="text-lg font-medium mb-2">Drop your CSV file here or click to browse</p>
-                                <p class="text-sm text-gray-400">CSV should have a 'username' column with social media handles</p>
-                                <button type="button" onclick="document.getElementById('csvFile').click()" 
-                                        class="mt-3 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors">
-                                    Choose File
-                                </button>
-                            </div>
-                            <div id="file-preview" class="hidden">
-                                <!-- File preview will be populated here -->
+            <div class="px-8 pb-8 space-y-6">
+                
+                <!-- CSV Upload Section -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-900 mb-3">Upload CSV File</label>
+                    <div class="flex items-center space-x-4">
+                        <!-- Example CSV -->
+                        <div class="flex-1">
+                            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                                <div class="text-xs font-medium text-gray-700 mb-2">Example CSV format:</div>
+                                <div class="bg-white border border-gray-100 rounded-lg p-3 text-sm font-mono text-gray-600">
+                                    <div>hamzawilx</div>
+                                    <div>noahskipslegday</div>
+                                    <div>hormozi</div>
+                                </div>
+                                <div class="text-xs text-gray-500 mt-2">Just usernames, no column headers, no @ symbols</div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Analysis Type Selection -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-3">Analysis Type</label>
-                        <div class="grid grid-cols-3 gap-3">
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="bulkAnalysisType" value="light" checked onchange="updateBulkCostCalculation()" class="sr-only">
-                                <div class="analysis-option border-2 border-gray-200 rounded-xl p-4 text-center hover:border-blue-300 transition-all">
-                                    <div class="text-2xl mb-2">⚡</div>
-                                    <div class="font-semibold text-sm">Light</div>
-                                    <div class="text-xs text-gray-500">1 credit</div>
+                        
+                        <!-- Upload Area -->
+                        <div class="flex-1">
+                            <div class="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-orange-300 hover:bg-orange-50/30 transition-all cursor-pointer">
+                                <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)" class="hidden">
+                                <div onclick="document.getElementById('csvFile').click()">
+                                    <svg class="w-8 h-8 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                    </svg>
+                                    <div class="text-sm font-medium text-gray-700">Drop CSV here</div>
+                                    <div class="text-xs text-gray-500 mt-1">or click to browse</div>
                                 </div>
-                            </label>
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="bulkAnalysisType" value="deep" onchange="updateBulkCostCalculation()" class="sr-only">
-                                <div class="analysis-option border-2 border-gray-200 rounded-xl p-4 text-center hover:border-purple-300 transition-all">
-                                    <div class="text-2xl mb-2">🔍</div>
-                                    <div class="font-semibold text-sm">Deep</div>
-                                    <div class="text-xs text-gray-500">2 credits</div>
-                                </div>
-                            </label>
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="bulkAnalysisType" value="xray" onchange="updateBulkCostCalculation()" class="sr-only">
-                                <div class="analysis-option border-2 border-gray-200 rounded-xl p-4 text-center hover:border-orange-300 transition-all">
-                                    <div class="text-2xl mb-2">🎯</div>
-                                    <div class="font-semibold text-sm">X-Ray</div>
-                                    <div class="text-xs text-gray-500">3 credits</div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Credit Calculation -->
-                    <div id="credit-calculation" class="mb-6 hidden">
-                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
-                            <div class="flex items-center justify-between mb-2">
-                                <span class="font-semibold text-gray-700">Cost Calculation</span>
+                            </div>
+                            
+                            <!-- File Preview -->
+                            <div id="file-preview" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
                                 <div class="flex items-center space-x-2">
-                                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold" id="leads-count">0 leads</span>
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span id="file-name" class="text-sm font-medium text-green-800"></span>
                                 </div>
-                            </div>
-                            <div class="text-sm text-gray-600 space-y-1">
-                                <div class="flex justify-between">
-                                    <span>Current Credits:</span>
-                                    <span id="current-credits" class="font-semibold">2,000</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span>Total Cost:</span>
-                                    <span id="total-cost" class="font-semibold text-orange-600">-0</span>
-                                </div>
-                                <div class="border-t border-blue-200 pt-1 mt-2">
-                                    <div class="flex justify-between">
-                                        <span class="font-semibold">Credits After:</span>
-                                        <span id="credits-after" class="font-semibold text-green-600">2,000</span>
-                                    </div>
-                                </div>
+                                <div id="leads-count" class="text-xs text-green-600 mt-1"></div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Platform Selection -->
-                    <div class="mb-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-3">Platform</label>
-                        <select id="bulkPlatform" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all">
-                            <option value="instagram">Instagram</option>
-                            <option value="twitter">Twitter/X</option>
-                            <option value="linkedin">LinkedIn</option>
-                            <option value="tiktok">TikTok</option>
-                        </select>
+                <!-- Analysis Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-900 mb-3">Analysis Type</label>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="bulkAnalysisType" value="light" checked onchange="updateBulkCostCalculation()" class="sr-only">
+                            <div class="analysis-option border-2 border-orange-200 bg-orange-50 rounded-xl p-4 text-center hover:border-orange-300 transition-all">
+                                <div class="text-2xl mb-2">⚡</div>
+                                <div class="font-semibold text-sm text-gray-900">Light</div>
+                                <div class="text-xs text-gray-600">1 credit</div>
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="bulkAnalysisType" value="deep" onchange="updateBulkCostCalculation()" class="sr-only">
+                            <div class="analysis-option border-2 border-gray-200 rounded-xl p-4 text-center hover:border-purple-300 hover:bg-purple-50 transition-all">
+                                <div class="text-2xl mb-2">🔍</div>
+                                <div class="font-semibold text-sm text-gray-900">Deep</div>
+                                <div class="text-xs text-gray-600">2 credits</div>
+                            </div>
+                        </label>
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="bulkAnalysisType" value="xray" onchange="updateBulkCostCalculation()" class="sr-only">
+                            <div class="analysis-option border-2 border-gray-200 rounded-xl p-4 text-center hover:border-blue-300 hover:bg-blue-50 transition-all">
+                                <div class="text-2xl mb-2">🎯</div>
+                                <div class="font-semibold text-sm text-gray-900">X-Ray</div>
+                                <div class="text-xs text-gray-600">3 credits</div>
+                            </div>
+                        </label>
                     </div>
+                </div>
 
-                </form>
-            </div>
+                <!-- Platform (Instagram only) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-900 mb-3">Platform</label>
+                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 rounded-lg flex items-center justify-center">
+                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073z"/>
+                                <path d="M12 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">Instagram</div>
+                            <div class="text-xs text-gray-600">Analyzing Instagram profiles</div>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Footer -->
-            <div class="bg-gray-50 px-6 py-4 flex justify-between items-center border-t">
-                <button onclick="closeBulkModal()" 
-                        class="px-6 py-3 text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
-                    Cancel
-                </button>
-                <button id="bulk-submit-btn" onclick="submitBulkAnalysis(event)" disabled
-                        class="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                    Upload File First
-                </button>
+                <!-- Submit Button -->
+                <div class="pt-4">
+                    <button id="bulk-submit-btn" onclick="submitBulkAnalysis(event)" disabled
+                            class="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                        Upload File First
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -186,32 +178,33 @@ renderBulkModal() {
         };
     }
 
-    parseCSVFile(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const csv = e.target.result;
-            const lines = csv.split('\n').filter(line => line.trim());
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-            
-            const usernameIndex = headers.findIndex(h => h.includes('username') || h.includes('handle') || h.includes('user'));
-            
-            if (usernameIndex === -1) {
-                alert('CSV must contain a username column');
-                return;
-            }
+parseCSVFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const csv = e.target.result;
+        const lines = csv.split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .map(line => line.replace(/^@/, '')); // Remove @ if present
+        
+        this.parsedData = lines;
+        this.displayFilePreview(file.name, lines.length);
+        this.updateCostDisplay();
+        
+        const submitBtn = document.getElementById('bulk-submit-btn');
+        if (lines.length > 0) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = `Analyze ${lines.length} Profiles`;
+        }
+    };
+    reader.readAsText(file);
+}
 
-            this.parsedData = lines.slice(1)
-                .map(line => {
-                    const values = line.split(',');
-                    return values[usernameIndex]?.trim().replace('@', '');
-                })
-                .filter(username => username && username.length > 0);
-
-            this.displayFilePreview();
-            this.updateCostDisplay();
-        };
-        reader.readAsText(file);
-    }
+displayFilePreview(fileName, count) {
+    document.getElementById('file-name').textContent = fileName;
+    document.getElementById('leads-count').textContent = `${count} usernames found`;
+    document.getElementById('file-preview').classList.remove('hidden');
+}
 
     displayFilePreview() {
         const placeholder = document.getElementById('upload-placeholder');
