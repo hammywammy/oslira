@@ -75,25 +75,19 @@ if (window.ResearchHandlers) {
     console.warn('⚠️ [DashboardCore] ResearchHandlers class not found');
 }
 
-// Initialize Dashboard Header event handlers with retry mechanism
-console.log('🔧 [DashboardCore] Initializing Dashboard Header handlers...');
+console.log('🔧 [DashboardCore] Initializing Dashboard Header...');
 const dashboardHeader = container.get('dashboardHeader');
-if (dashboardHeader && dashboardHeader.setupEventHandlers) {
-    // Ensure DOM elements exist before handler setup
-    await this.waitForDOMElement('#main-button-container', 5000);
-    
-    dashboardHeader.setupEventHandlers();
-    
-    // Verify dropdown functionality works
-    setTimeout(() => {
-        if (typeof window.toggleResearchDropdown === 'function') {
-            console.log('✅ [DashboardCore] Dashboard Header dropdown verified');
-        } else {
-            console.warn('⚠️ [DashboardCore] Dashboard Header dropdown not properly initialized');
-        }
-    }, 500);
-    
-    console.log('✅ [DashboardCore] Dashboard Header handlers initialized');
+if (dashboardHeader) {
+    try {
+        // Use the new async initialize method
+        await dashboardHeader.initialize();
+        console.log('✅ [DashboardCore] Dashboard Header fully initialized');
+    } catch (error) {
+        console.error('❌ [DashboardCore] Dashboard Header initialization failed:', error);
+        // Continue with other initialization even if header fails
+    }
+} else {
+    console.warn('⚠️ [DashboardCore] Dashboard Header not found in container');
 }
 
 // Populate ResearchModal with HTML content
