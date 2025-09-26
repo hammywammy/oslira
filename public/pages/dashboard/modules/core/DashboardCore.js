@@ -75,16 +75,6 @@ if (window.ResearchHandlers) {
     console.warn('⚠️ [DashboardCore] ResearchHandlers class not found');
 }
 
-// Dashboard Header initialized by TimingManager - just setup UI
-console.log('🔧 [DashboardCore] Setting up Dashboard Header UI...');
-const dashboardHeader = container.get('dashboardHeader');
-if (dashboardHeader && dashboardHeader.renderHeader) {
-    document.getElementById('dashboard-header').innerHTML = dashboardHeader.renderHeader();
-    console.log('✅ [DashboardCore] Dashboard Header UI rendered');
-} else {
-    console.warn('⚠️ [DashboardCore] Dashboard Header not available');
-}
-
 // Populate ResearchModal with HTML content
 console.log('🔧 [DashboardCore] Populating ResearchModal...');
 if (window.ResearchModal) {
