@@ -58,6 +58,14 @@ await businessManager.loadBusinesses();
 console.log('🎨 [DashboardCore] Rendering dashboard UI...');
 await this.renderDashboardUI(container);
 
+// Initialize DashboardHeader after DOM is rendered
+console.log('🔧 [DashboardCore] Initializing DashboardHeader...');
+const dashboardHeader = container.get('dashboardHeader');
+if (dashboardHeader && !dashboardHeader.initialized) {
+    await dashboardHeader.initialize();
+    console.log('✅ [DashboardCore] DashboardHeader initialized with event handlers');
+}
+
 // Initialize LeadRenderer after UI is rendered
 console.log('🔧 [DashboardCore] Initializing LeadRenderer...');
 const leadRenderer = container.get('leadRenderer');
