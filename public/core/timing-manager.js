@@ -326,20 +326,30 @@ async waitForSimpleApp() {
         console.log('✅ [TimingManager] LeadManager ready (data loading deferred)');
     }
 
-    async initializeDashboardHeader() {
+async initializeDashboardHeader() {
     await this.waitForGlobal('DashboardHeader', 3000);
     
     // Wait for container to have the header instance
     let attempts = 0;
     while (attempts < 50) {
         const container = window.dashboard?.container;
-        const header = container?.get('dashboardHeader');
-        if (header) {
-            if (!header.initialized) {
-                await header.initialize();
-                console.log('✅ [TimingManager] DashboardHeader initialized properly');
+        if (container) {
+            // Force instantiate the header factory if it doesn't exist
+            let header = null;
+            try {
+                header = container.get('dashboardHeader');
+            } catch (error) {
+                // Factory not instantiated yet, trigger it
+                console.log('🔧 [TimingManager] Instantiating DashboardHeader factory...');
             }
-            return;
+            
+            if (header) {
+                if (!header.initialized) {
+                    await header.initialize();
+                    console.log('✅ [TimingManager] DashboardHeader initialized properly');
+                }
+                return;
+            }
         }
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
