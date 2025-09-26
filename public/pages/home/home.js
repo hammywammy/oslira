@@ -23,7 +23,7 @@ let conversionTrackingEnabled = true;
 // Conversion tracking state
 const conversionState = {
   demoUsed: false,
-  ctaClicked: false,run
+  ctaClicked: false,
   socialProofShown: false,
   timeOnPage: 0,
   scrollDepth: 0
