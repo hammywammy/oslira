@@ -22,25 +22,30 @@ renderHeader() {
             <div class="flex items-center space-x-4">
                 <!-- Dynamic Research Button with Dropdown -->
                 <div class="relative">
-                    <!-- Split Button Container -->
-                    <div class="flex rounded-xl overflow-hidden shadow-lg">
-                        <!-- Main Research Button -->
-                        <button id="main-research-btn" onclick="handleMainButtonClick()" 
-                                class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium hover:shadow-lg transition-all flex items-center space-x-2 border-r border-purple-400/30">
-                            <i data-feather="plus" class="w-4 h-4"></i>
-                            <span id="main-research-text">Research New Lead</span>
-                        </button>
-                        
-                        <!-- Dropdown Arrow Button -->
-                        <button id="dropdown-arrow-btn" onclick="toggleResearchDropdown()" 
-                                class="px-3 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:shadow-lg transition-all">
-                            <i data-feather="chevron-down" class="w-4 h-4"></i>
-                        </button>
-                    </div>
+<!-- Unified Button Container -->
+<div class="bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+    <div class="flex">
+        <!-- Main Research Button -->
+        <button id="main-research-btn" onclick="handleMainButtonClick()" 
+                class="px-6 py-3 text-white font-medium hover:bg-white/10 transition-all duration-200 flex items-center space-x-2 flex-1 rounded-l-xl">
+            <i data-feather="plus" class="w-4 h-4"></i>
+            <span id="main-research-text">Research New Lead</span>
+        </button>
+        
+        <!-- Dropdown Divider -->
+        <div class="w-px bg-white/20 my-2"></div>
+        
+        <!-- Dropdown Arrow Button -->
+        <button id="dropdown-arrow-btn" onclick="toggleResearchDropdown()" 
+                class="px-3 py-3 text-white hover:bg-white/10 transition-all duration-200 rounded-r-xl">
+            <i data-feather="chevron-down" class="w-4 h-4"></i>
+        </button>
+    </div>
+</div>
                     
-                    <!-- Dropdown Menu - Fixed positioned and properly centered -->
-                    <div id="researchDropdown" class="hidden fixed w-56 bg-white rounded-xl shadow-2xl border border-gray-200/60 z-[9999]" 
-                         style="top: 120px; right: 50%; transform: translateX(50%); backdrop-filter: blur(16px);">
+<!-- Dropdown Menu - Absolute positioned relative to button -->
+<div id="researchDropdown" class="hidden absolute top-full left-0 w-56 bg-white rounded-2xl shadow-2xl border border-gray-200/60 z-[9999] mt-2" 
+     style="backdrop-filter: blur(16px);">
                         <div class="py-3">
                             <button onclick="selectResearchType('single'); closeResearchDropdown();" 
                                     class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-indigo-50 transition-all duration-200">
@@ -79,19 +84,9 @@ setupEventHandlers() {
     // Register global functions
     window.toggleResearchDropdown = () => {
         const dropdown = document.getElementById('researchDropdown');
-        const button = document.querySelector('[onclick*="toggleResearchDropdown"]');
-        
         if (dropdown) {
             this.isDropdownOpen = !this.isDropdownOpen;
             if (this.isDropdownOpen) {
-                // Position dropdown relative to button
-                const rect = button.getBoundingClientRect();
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                
-                dropdown.style.top = (rect.bottom + scrollTop + 8) + 'px';
-                dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-                dropdown.style.transform = 'none';
-                
                 dropdown.classList.remove('hidden');
             } else {
                 dropdown.classList.add('hidden');
@@ -139,14 +134,18 @@ setupEventHandlers() {
 }
 
 updateButtonState() {
+    const buttonContainer = document.querySelector('.flex.rounded-xl.overflow-hidden.shadow-lg');
     const mainBtn = document.getElementById('main-research-btn');
     const mainText = document.getElementById('main-research-text');
     const arrowBtn = document.getElementById('dropdown-arrow-btn');
     
     if (this.currentMode === 'bulk') {
-        // Switch to bulk mode styling
-        mainBtn.className = 'px-6 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white font-medium hover:shadow-lg transition-all flex items-center space-x-2 border-r border-red-400/30';
-        arrowBtn.className = 'px-3 py-3 bg-gradient-to-r from-orange-500 to-red-600 text-white hover:shadow-lg transition-all';
+        // Smooth transition to bulk mode
+        buttonContainer.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        // Switch to bulk mode styling with smoother gradient
+        mainBtn.className = 'px-6 py-3 bg-gradient-to-r from-orange-400 via-orange-500 to-red-500 text-white font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2';
+        arrowBtn.className = 'px-3 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg transition-all duration-300 border-l border-orange-400/20';
         mainText.textContent = 'Bulk Analyze Leads';
         
         // Update icon
@@ -156,9 +155,12 @@ updateButtonState() {
             if (window.feather) feather.replace();
         }
     } else {
-        // Switch to single mode styling
-        mainBtn.className = 'px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-medium hover:shadow-lg transition-all flex items-center space-x-2 border-r border-purple-400/30';
-        arrowBtn.className = 'px-3 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:shadow-lg transition-all';
+        // Smooth transition to single mode
+        buttonContainer.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        // Switch to single mode styling with smoother gradient
+        mainBtn.className = 'px-6 py-3 bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 text-white font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2';
+        arrowBtn.className = 'px-3 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:shadow-lg transition-all duration-300 border-l border-indigo-400/20';
         mainText.textContent = 'Research New Lead';
         
         // Update icon
