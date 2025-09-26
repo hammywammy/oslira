@@ -201,9 +201,13 @@ parseCSVFile(file) {
 }
 
 displayFilePreview(fileName, count) {
-    document.getElementById('file-name').textContent = fileName;
-    document.getElementById('leads-count').textContent = `${count} usernames found`;
-    document.getElementById('file-preview').classList.remove('hidden');
+    const fileNameEl = document.getElementById('file-name');
+    const leadsCountEl = document.getElementById('leads-count');
+    const filePreviewEl = document.getElementById('file-preview');
+    
+    if (fileNameEl) fileNameEl.textContent = fileName;
+    if (leadsCountEl) leadsCountEl.textContent = `${count} usernames found`;
+    if (filePreviewEl) filePreviewEl.classList.remove('hidden');
     
     // Switch example to show actual uploaded usernames
     const csvExample = document.getElementById('csv-example');
