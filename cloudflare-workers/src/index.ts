@@ -60,6 +60,11 @@ app.post('/v1/analyze', async (c) => {
   return handleAnalyze(c);
 });
 
+app.post('/v1/analyze-anonymous', async (c) => {
+  const { handleAnonymousAnalyze } = await import('./handlers/anonymous-analyze.js');
+  return handleAnonymousAnalyze(c);
+});
+
 app.post('/v1/bulk-analyze', async (c) => {
   const { handleBulkAnalyze } = await import('./handlers/bulk-analyze.js');
   return handleBulkAnalyze(c);
