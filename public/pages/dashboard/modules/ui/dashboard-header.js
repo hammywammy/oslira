@@ -43,33 +43,34 @@ renderHeader() {
     </div>
 </div>
                     
-<!-- Dropdown Menu - Absolute positioned relative to button -->
-<div id="researchDropdown" class="hidden absolute top-full left-0 w-56 bg-white rounded-2xl shadow-2xl border border-gray-200/60 z-[9999] mt-2" 
-     style="backdrop-filter: blur(16px);">
-                        <div class="py-3">
-                            <button onclick="selectResearchType('single'); closeResearchDropdown();" 
-                                    class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-indigo-50 transition-all duration-200">
-                                <div class="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center">
-                                    <i data-feather="user-plus" class="w-5 h-5 text-indigo-600"></i>
-                                </div>
-                                <div>
-                                    <div class="font-semibold text-gray-800">Research Single Lead</div>
-                                    <div class="text-sm text-gray-500">Analyze one profile in detail</div>
-                                </div>
-                            </button>
-                            
-                            <button onclick="selectResearchType('bulk'); closeResearchDropdown();" 
-                                    class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-orange-50 transition-all duration-200">
-                                <div class="w-10 h-10 bg-gradient-to-br from-orange-100 to-red-100 rounded-xl flex items-center justify-center">
-                                    <i data-feather="layers" class="w-5 h-5 text-orange-600"></i>
-                                </div>
-                                <div>
-                                    <div class="font-semibold text-gray-800">Bulk Analyze</div>
-                                    <div class="text-sm text-gray-500">Process multiple leads at once</div>
-                                </div>
-                            </button>
-                        </div>
-                    </div>
+<!-- Dropdown Menu - Compact and clean -->
+<div id="researchDropdown" class="hidden absolute top-full right-0 w-48 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200/50 z-[9999] mt-2 overflow-hidden">
+    <div class="py-1">
+        <button onclick="selectResearchType('single'); closeResearchDropdown();" 
+                class="w-full flex items-center space-x-3 px-3 py-2.5 text-left hover:bg-indigo-50 transition-colors duration-150">
+            <div class="w-8 h-8 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i data-feather="user-plus" class="w-4 h-4 text-indigo-600"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="font-medium text-gray-800 text-sm">Research Single</div>
+                <div class="text-xs text-gray-500 truncate">One profile analysis</div>
+            </div>
+        </button>
+        
+        <div class="mx-3 border-t border-gray-100"></div>
+        
+        <button onclick="selectResearchType('bulk'); closeResearchDropdown();" 
+                class="w-full flex items-center space-x-3 px-3 py-2.5 text-left hover:bg-orange-50 transition-colors duration-150">
+            <div class="w-8 h-8 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i data-feather="layers" class="w-4 h-4 text-orange-600"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="font-medium text-gray-800 text-sm">Bulk Analyze</div>
+                <div class="text-xs text-gray-500 truncate">Multiple leads at once</div>
+            </div>
+        </button>
+    </div>
+</div>
                 </div>
             </div>
         </div>
@@ -134,37 +135,24 @@ setupEventHandlers() {
 }
 
 updateButtonState() {
-    const buttonContainer = document.querySelector('.flex.rounded-xl.overflow-hidden.shadow-lg');
-    const mainBtn = document.getElementById('main-research-btn');
+    const buttonContainer = document.querySelector('.bg-gradient-to-r');
     const mainText = document.getElementById('main-research-text');
-    const arrowBtn = document.getElementById('dropdown-arrow-btn');
+    const icon = document.querySelector('#main-research-btn i');
     
     if (this.currentMode === 'bulk') {
-        // Smooth transition to bulk mode
-        buttonContainer.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-        
-        // Switch to bulk mode styling with smoother gradient
-        mainBtn.className = 'px-6 py-3 bg-gradient-to-r from-orange-400 via-orange-500 to-red-500 text-white font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2';
-        arrowBtn.className = 'px-3 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg transition-all duration-300 border-l border-orange-400/20';
+        // Switch to bulk mode
+        buttonContainer.className = 'bg-gradient-to-r from-orange-400 via-orange-500 to-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
         mainText.textContent = 'Bulk Analyze Leads';
         
-        // Update icon
-        const icon = mainBtn.querySelector('i');
         if (icon) {
             icon.setAttribute('data-feather', 'layers');
             if (window.feather) feather.replace();
         }
     } else {
-        // Smooth transition to single mode
-        buttonContainer.style.transition = 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-        
-        // Switch to single mode styling with smoother gradient
-        mainBtn.className = 'px-6 py-3 bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 text-white font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2';
-        arrowBtn.className = 'px-3 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:shadow-lg transition-all duration-300 border-l border-indigo-400/20';
+        // Switch to single mode
+        buttonContainer.className = 'bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
         mainText.textContent = 'Research New Lead';
         
-        // Update icon
-        const icon = mainBtn.querySelector('i');
         if (icon) {
             icon.setAttribute('data-feather', 'plus');
             if (window.feather) feather.replace();
