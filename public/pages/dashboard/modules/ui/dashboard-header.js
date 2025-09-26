@@ -79,17 +79,40 @@ window.openBulkAnalysisModal = () => {
     window.openBulkModal && window.openBulkModal();
 };
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            const dropdown = document.getElementById('researchDropdown');
-            const isDropdownButton = e.target.closest('[onclick*="toggleResearchDropdown"]');
-            const isDropdownContent = e.target.closest('#researchDropdown');
-            
-            if (dropdown && !isDropdownButton && !isDropdownContent) {
-                dropdown.remove();
-                this.isDropdownOpen = false;
-            }
-        });
+// Close dropdown when clicking outside or when modals open
+document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('researchDropdown');
+    const isDropdownButton = e.target.closest('[onclick*="toggleResearchDropdown"]');
+    const isDropdownContent = e.target.closest('#researchDropdown');
+    
+    if (dropdown && !isDropdownButton && !isDropdownContent) {
+        dropdown.remove();
+        this.isDropdownOpen = false;
+    }
+});
+
+// Hide dropdown when any modal opens
+const observer = new MutationObserver(() => {
+    const modals = document.querySelectorAll('#leadAnalysisModal, #researchModal, #bulkModal');
+    const hasVisibleModal = Array.from(modals).some(modal => 
+        modal && !modal.classList.contains('hidden') && modal.offsetParent !== null
+    );
+    
+    if (hasVisibleModal) {
+        const dropdown = document.getElementById('researchDropdown');
+        if (dropdown) {
+            dropdown.remove();
+            this.isDropdownOpen = false;
+        }
+    }
+});
+
+observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'style']
+});
     }
 
  createAndShowDropdown() {
