@@ -244,6 +244,12 @@ setupInitPhases() {
             await this.initializeSupabaseClient();
             return;
         }
+
+        // Dashboard header needs special handling
+if (itemName === 'dashboard-header') {
+    await this.initializeDashboardHeader();
+    return;
+}
         
         // Authentication system
         if (itemName === 'auth-manager') {
@@ -319,6 +325,27 @@ async waitForSimpleApp() {
         // Lead manager should NOT auto-load data during init
         console.log('✅ [TimingManager] LeadManager ready (data loading deferred)');
     }
+
+    async initializeDashboardHeader() {
+    await this.waitForGlobal('DashboardHeader', 3000);
+    
+    // Wait for container to have the header instance
+    let attempts = 0;
+    while (attempts < 50) {
+        const container = window.dashboard?.container;
+        const header = container?.get('dashboardHeader');
+        if (header) {
+            if (!header.initialized) {
+                await header.initialize();
+                console.log('✅ [TimingManager] DashboardHeader initialized properly');
+            }
+            return;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    console.warn('⚠️ [TimingManager] DashboardHeader container instance not found');
+}
     
     async waitForGlobal(globalName, timeout = 3000) {
         return new Promise((resolve, reject) => {
