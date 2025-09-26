@@ -147,6 +147,16 @@ window.clearAllSelections = function() {
     }
 };
 
+window.openBulkModal = function() {
+    if (window.dashboard?.container?.get('modalManager')) {
+        window.dashboard.container.get('modalManager').openModal('bulkModal');
+    } else if (window.showBulkModal) {
+        window.showBulkModal();
+    } else {
+        console.error('Bulk modal functionality not available');
+    }
+};
+
 window.handleMainButtonClick = function() {
     // Get current mode from dashboard header
     const headerManager = window.dashboard?.container?.get('dashboardHeader');
