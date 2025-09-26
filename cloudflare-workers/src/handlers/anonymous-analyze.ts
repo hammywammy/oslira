@@ -8,7 +8,7 @@ import type { Env } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { withScraperRetry } from '../utils/scraper-error-handler.js';
-import { getScraperConfigs } from '../services/scraper-configs.js';
+import { getScraperConfigsAdvanced } from '../services/scraper-configs.js';
 
 // ===============================================================================
 // RATE LIMITING WITH CLOUDFLARE KV
@@ -71,7 +71,7 @@ async function checkRateLimit(c: Context<{ Bindings: Env }>): Promise<{ allowed:
 
 async function performAnonymousAnalysis(username: string, env: Env) {
   // Get basic profile data using cost-effective scraper
-  const scraperConfigs = getScraperConfigs('profile', 'light');
+ const scraperConfigs = getScraperConfigsAdvanced('profile', 'light');
   
   const profileData = await withScraperRetry(
     scraperConfigs.map(config => () => scrapeProfile(username, config, env)),
