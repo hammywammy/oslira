@@ -11,7 +11,7 @@ class DashboardHeader {
     renderHeader() {
         return `
 <div class="pt-6 px-6 pb-6">
-    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible; z-index: 100;">
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible; z-index: 1;">
         <div class="flex items-center justify-between">
             <!-- Dashboard Title -->
             <div>
