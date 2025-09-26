@@ -23,7 +23,7 @@ let conversionTrackingEnabled = true;
 // Conversion tracking state
 const conversionState = {
   demoUsed: false,
-  ctaClicked: false,
+  ctaClicked: false,run
   socialProofShown: false,
   timeOnPage: 0,
   scrollDepth: 0
@@ -151,22 +151,64 @@ async function runInstagramDemo(handle) {
   const btnText = demoBtn.querySelector('.demo-btn-text');
   const btnLoading = demoBtn.querySelector('.demo-btn-loading');
   
-  console.log('🔍 [Home] Running demo for:', handle);
+  console.log('🔍 [Home] Running anonymous analysis for:', handle);
   
   // Track demo usage
   conversionState.demoUsed = true;
   trackConversionEvent('demo_started', { handle });
   
   try {
+    // Check if user is logged in - if so, redirect to dashboard
+    const isLoggedIn = localStorage.getItem('oslira_token');
+    if (isLoggedIn) {
+      window.location.href = '/dashboard';
+      return;
+    }
+    
     // Show loading state
     btnText.classList.add('hidden');
     btnLoading.classList.remove('hidden');
     demoBtn.disabled = true;
     
-    // Simulate AI analysis (realistic timing)
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Call anonymous analysis endpoint
+    const response = await fetch(`${ENV_MANAGER.WORKER_URL}/v1/analyze-anonymous`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: handle.replace('@', '')
+      })
+    });
     
-    // Generate demo results
+    const result = await response.json();
+    
+    if (!response.ok) {
+      if (response.status === 429) {
+        // Rate limit hit - show login modal
+        showRateLimitModal(result.metadata?.remaining || 0, result.metadata?.resetIn || 24);
+        return;
+      }
+      throw new Error(result.error || 'Analysis failed');
+    }
+    
+    // Show real analysis results in modal
+    showAnonymousResultsModal(result.data, handle);
+    
+    // Track successful analysis
+    trackConversionEvent('anonymous_analysis_completed', { 
+      handle, 
+      score: result.data.insights.overall_score,
+      remaining: result.metadata?.remaining || 0
+    });
+    
+  } catch (error) {
+    console.error('❌ [Home] Anonymous analysis error:', error);
+    trackConversionEvent('anonymous_analysis_error', { handle, error: error.message });
+    
+    // Show error and fallback to demo
+    console.log('🔄 [Home] Falling back to demo mode...');
+    await new Promise(resolve => setTimeout(resolve, 1000));
     const demoData = generateDemoResults(handle);
     displayDemoResults(demoData);
     
@@ -174,17 +216,11 @@ async function runInstagramDemo(handle) {
     demoResults.classList.remove('hidden');
     demoResults.classList.add('animate-slide-in-up');
     
-    // Track successful demo
-    trackConversionEvent('demo_completed', { handle, demoData });
-    
     // Show upgrade modal after delay
     setTimeout(() => {
       showDemoUpgradeModal();
     }, 3000);
     
-  } catch (error) {
-    console.error('❌ [Home] Demo error:', error);
-    trackConversionEvent('demo_error', { handle, error: error.message });
   } finally {
     // Reset button state
     btnText.classList.remove('hidden');
@@ -818,6 +854,178 @@ function setupAnimations() {
     });
   }
 }
+
+// ===============================================================================
+// ANONYMOUS RESULTS MODAL - REAL ANALYSIS WITH CONVERSION GATE
+// ===============================================================================
+
+function showAnonymousResultsModal(analysisData, handle) {
+  // Remove existing modal if any
+  const existingModal = document.getElementById('anonymous-results-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  const { profile, insights } = analysisData;
+  const score = insights.overall_score;
+  const summary = insights.account_summary;
+  const engagementInsights = insights.engagement_insights || [];
+  
+  // Create modal HTML
+  const modalHTML = `
+    <div id="anonymous-results-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        <!-- Header -->
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                ${handle.charAt(1).toUpperCase()}
+              </div>
+              <div>
+                <h2 class="text-xl font-bold text-gray-900">${handle}</h2>
+                <p class="text-sm text-gray-600">${profile.followersCount?.toLocaleString() || 'N/A'} followers</p>
+              </div>
+            </div>
+            <button onclick="closeAnonymousResultsModal()" class="p-2 hover:bg-gray-100 rounded-full">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        
+        <!-- Content -->
+        <div class="p-6 space-y-6">
+          <!-- Score -->
+          <div class="text-center">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full text-white font-bold text-2xl">
+              ${score}
+            </div>
+            <p class="mt-2 text-lg font-semibold text-gray-900">Overall Score</p>
+            <p class="text-sm text-gray-600">Partnership Potential</p>
+          </div>
+          
+          <!-- Summary -->
+          <div class="bg-gray-50 rounded-xl p-4">
+            <h3 class="font-semibold text-gray-900 mb-2">Account Summary</h3>
+            <p class="text-gray-700">${summary}</p>
+          </div>
+          
+          <!-- Insights Section -->
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-4">Engagement Insights</h3>
+            <div class="space-y-3">
+              <!-- Show first 2 insights -->
+              ${engagementInsights.slice(0, 2).map((insight, index) => `
+                <div class="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                  <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    ${index + 1}
+                  </div>
+                  <p class="text-gray-700 text-sm">${insight}</p>
+                </div>
+              `).join('')}
+              
+              <!-- Blurred insights 3-5 -->
+              <div class="relative">
+                <div class="space-y-3 filter blur-sm">
+                  ${engagementInsights.slice(2).map((insight, index) => `
+                    <div class="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                      <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        ${index + 3}
+                      </div>
+                      <p class="text-gray-700 text-sm">${insight}</p>
+                    </div>
+                  `).join('')}
+                </div>
+                
+                <!-- Overlay -->
+                <div class="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent flex items-center justify-center">
+                  <div class="text-center p-4">
+                    <div class="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-lg font-semibold shadow-lg">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                      </svg>
+                      <span>3 More Insights</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Login to see full analysis + outreach strategies</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- CTA Section -->
+          <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white text-center">
+            <h3 class="font-bold text-lg mb-2">Get Complete Analysis</h3>
+            <p class="text-blue-100 mb-4">See all insights + personalized outreach strategies for your business</p>
+            <button onclick="redirectToAuth()" class="bg-white text-blue-600 font-bold px-6 py-3 rounded-lg hover:bg-gray-100 transition-colors">
+              Start Free Trial
+            </button>
+            <p class="text-xs text-blue-200 mt-2">25 complete analyses included</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Add to DOM
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Track modal shown
+  trackConversionEvent('anonymous_results_modal_shown', { handle, score });
+}
+
+function showRateLimitModal(remaining, resetIn) {
+  const modalHTML = `
+    <div id="rate-limit-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-center">
+        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-gray-900 mb-2">Daily Limit Reached</h3>
+        <p class="text-gray-600 mb-6">You've used your 3 free analyses today. Reset in ${resetIn} hours.</p>
+        <button onclick="redirectToAuth()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">
+          Login for Unlimited Analysis
+        </button>
+        <button onclick="closeRateLimitModal()" class="w-full mt-3 text-gray-500 hover:text-gray-700">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  trackConversionEvent('rate_limit_modal_shown', { remaining, resetIn });
+}
+
+function closeAnonymousResultsModal() {
+  const modal = document.getElementById('anonymous-results-modal');
+  if (modal) {
+    modal.remove();
+    trackConversionEvent('anonymous_results_modal_closed');
+  }
+}
+
+function closeRateLimitModal() {
+  const modal = document.getElementById('rate-limit-modal');
+  if (modal) {
+    modal.remove();
+    trackConversionEvent('rate_limit_modal_closed');
+  }
+}
+
+function redirectToAuth() {
+  trackConversionEvent('anonymous_conversion_attempt');
+  window.location.href = '/auth';
+}
+
+// Add global functions
+window.closeAnonymousResultsModal = closeAnonymousResultsModal;
+window.closeRateLimitModal = closeRateLimitModal;
+window.redirectToAuth = redirectToAuth;
 
 // =============================================================================
 // PAGE VISIBILITY & ENGAGEMENT TRACKING
