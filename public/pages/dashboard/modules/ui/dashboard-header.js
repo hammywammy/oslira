@@ -60,19 +60,20 @@ class DashboardHeader {
             }
         };
 
-        // Dropdown toggle with proper positioning
-        window.toggleResearchDropdown = () => {
-            const existingDropdown = document.getElementById('researchDropdown');
-            
-            if (existingDropdown) {
-                existingDropdown.remove();
-                this.isDropdownOpen = false;
-                return;
-            }
+// Dropdown toggle with proper positioning - capture this context
+const headerInstance = this;
+window.toggleResearchDropdown = () => {
+    const existingDropdown = document.getElementById('researchDropdown');
+    
+    if (existingDropdown) {
+        existingDropdown.remove();
+        headerInstance.isDropdownOpen = false;
+        return;
+    }
 
-            this.createAndShowDropdown();
-            this.isDropdownOpen = true;
-        };
+    headerInstance.createAndShowDropdown();
+    headerInstance.isDropdownOpen = true;
+};
 
 // Placeholder functions for modals
 window.openBulkAnalysisModal = () => {
