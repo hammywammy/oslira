@@ -54,8 +54,8 @@
 </div>
             
             <!-- Mobile Menu Button -->
-            <button id="mobile-menu-button" class="md:hidden p-2 rounded-lg hover:bg-gray-100">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<button id="mobile-menu-button" class="md:hidden p-2 rounded-lg hover:bg-gray-100" aria-label="Toggle mobile menu">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
@@ -99,29 +99,26 @@
                             so you can focus on writing copy that converts.
                         </p>
 
-                        <!-- Interactive Demo Teaser -->
-                        <div class="hero-demo-container">
-<h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-    Analyze any Instagram account. Enter a handle:
-</h1>
-<p class="text-xl text-gray-600 mb-8">Get instant insights on any Instagram account</p>
-                            <div class="demo-input-container">
-<input 
-    type="text" 
-    id="demo-handle-input"
-    placeholder="@instagram_handle"
-    class="demo-input"
->
-<button id="demo-analyze-btn" class="demo-btn">
-    <span class="demo-btn-text">Quick Analysis</span>
-                                    <span class="demo-btn-loading hidden">
-                                        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle>
-                                            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" class="opacity-75"></path>
-                                        </svg>
-                                    </span>
-                                </button>
-                            </div>
+<div class="hero-demo-container">
+<p class="demo-intro-text">Try the AI analysis below:</p>
+<div class="demo-input-container">
+    <input 
+        type="text" 
+        id="demo-handle-input"
+        placeholder="@instagram_handle"
+        class="demo-input"
+    >
+    <button id="demo-analyze-btn" class="demo-analyze-btn">
+        <span class="demo-btn-text">Quick Analysis</span>
+        <span class="demo-btn-loading hidden">
+            <svg class="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Analyzing...
+        </span>
+    </button>
+</div>
                             
                             <!-- Demo Results Preview -->
                             <div id="demo-results" class="demo-results hidden">
