@@ -170,10 +170,6 @@ static async renderDashboardUI(container) {
         const dashboardHeader = container.get('dashboardHeader');
         if (dashboardHeader && dashboardHeader.renderHeader) {
             document.getElementById('dashboard-header').innerHTML = dashboardHeader.renderHeader();
-            // Setup header event handlers
-            if (dashboardHeader.setupEventHandlers) {
-                dashboardHeader.setupEventHandlers();
-            }
         }
         
         // Render redesigned stats cards
