@@ -45,6 +45,14 @@ if (window.ResearchHandlers) {
     console.warn('⚠️ [DashboardCore] ResearchHandlers class not found');
 }
 
+// Initialize Dashboard Header event handlers
+console.log('🔧 [DashboardCore] Initializing Dashboard Header handlers...');
+const dashboardHeader = container.get('dashboardHeader');
+if (dashboardHeader && dashboardHeader.setupEventHandlers) {
+    dashboardHeader.setupEventHandlers();
+    console.log('✅ [DashboardCore] Dashboard Header handlers initialized');
+}
+
 // Populate ResearchModal with HTML content
 console.log('🔧 [DashboardCore] Populating ResearchModal...');
 if (window.ResearchModal) {
