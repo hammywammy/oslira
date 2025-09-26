@@ -73,7 +73,7 @@ if (window.ResearchModal) {
 console.log('🔧 [DashboardCore] Populating BulkModal...');
 if (window.BulkModal) {
     const bulkModal = new window.BulkModal(container);
-    const modalHTML = bulkModal.renderModal();
+    const modalHTML = bulkModal.renderBulkModal();
     const modalContainer = document.getElementById('bulkModal');
     if (modalContainer) {
         modalContainer.innerHTML = modalHTML;
