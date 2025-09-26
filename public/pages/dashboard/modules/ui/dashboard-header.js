@@ -176,31 +176,26 @@ class DashboardHeader {
             console.log('✅ [DashboardHeader] Dropdown toggle handler attached');
         }
 
-        // Global click handler for closing dropdown
-        document.addEventListener('click', this.handleOutsideClick);
-
         // Modal observer for auto-close dropdown
         this.setupModalObserver();
 
         console.log('✅ [DashboardHeader] All event handlers setup complete');
     }
 
-    /**
-     * Remove existing event handlers to prevent duplicates
-     */
-    removeEventHandlers() {
-        const mainButton = document.getElementById('main-research-btn');
-        if (mainButton) {
-            mainButton.removeEventListener('click', this.handleMainButtonClick);
-        }
-
-        const dropdownButton = document.getElementById('dropdown-arrow-btn');
-        if (dropdownButton) {
-            dropdownButton.removeEventListener('click', this.toggleDropdown);
-        }
-
-        document.removeEventListener('click', this.handleOutsideClick);
+removeEventHandlers() {
+    const mainButton = document.getElementById('main-research-btn');
+    if (mainButton) {
+        mainButton.removeEventListener('click', this.handleMainButtonClick);
     }
+
+    const dropdownButton = document.getElementById('dropdown-arrow-btn');
+    if (dropdownButton) {
+        dropdownButton.removeEventListener('click', this.toggleDropdown);
+    }
+
+    // Only remove if it was added
+    document.removeEventListener('click', this.handleOutsideClick);
+}
 
     /**
      * Handle main button clicks
@@ -218,65 +213,70 @@ class DashboardHeader {
         }
     }
 
-    /**
-     * Toggle dropdown visibility
-     */
-    toggleDropdown(event) {
-        event.preventDefault();
-        event.stopPropagation();
+toggleDropdown(event) {
+    event.preventDefault();
+    event.stopPropagation();
 
-        console.log('🔄 [DashboardHeader] Dropdown toggle clicked, open:', this.isDropdownOpen);
+    console.log('🔄 [DashboardHeader] Dropdown toggle clicked, open:', this.isDropdownOpen);
 
-        if (this.isDropdownOpen) {
-            this.closeDropdown();
-        } else {
-            this.openDropdown();
-        }
+    if (this.isDropdownOpen) {
+        this.closeDropdown();
+    } else {
+        // Delay the outside click handler setup to prevent immediate closure
+        this.openDropdown();
+        
+        // Remove and re-add the outside click handler after a brief delay
+        // to prevent the current click from immediately closing the dropdown
+        document.removeEventListener('click', this.handleOutsideClick);
+        setTimeout(() => {
+            if (this.isDropdownOpen) {
+                document.addEventListener('click', this.handleOutsideClick);
+            }
+        }, 10);
+    }
+}
+
+openDropdown() {
+    if (this.isDropdownOpen) return;
+
+    console.log('📖 [DashboardHeader] Opening dropdown...');
+
+    this.createDropdown();
+    this.isDropdownOpen = true;
+
+    // Update arrow icon
+    const arrow = document.querySelector('#dropdown-arrow-btn i[data-feather="chevron-down"]');
+    if (arrow) {
+        arrow.style.transform = 'rotate(180deg)';
     }
 
-    /**
-     * Open the dropdown
-     */
-    openDropdown() {
-        if (this.isDropdownOpen) return;
+    // Don't add the outside click handler immediately - it will be added by toggleDropdown
+    console.log('✅ [DashboardHeader] Dropdown opened successfully');
+}
 
-        console.log('📖 [DashboardHeader] Opening dropdown...');
+closeDropdown() {
+    if (!this.isDropdownOpen) return;
 
-        this.createDropdown();
-        this.isDropdownOpen = true;
+    console.log('📕 [DashboardHeader] Closing dropdown...');
 
-        // Update arrow icon
-        const arrow = document.querySelector('#dropdown-arrow-btn i[data-feather="chevron-down"]');
-        if (arrow) {
-            arrow.style.transform = 'rotate(180deg)';
-        }
-
-        console.log('✅ [DashboardHeader] Dropdown opened successfully');
+    if (this.dropdownElement) {
+        this.dropdownElement.remove();
+        this.dropdownElement = null;
     }
 
-    /**
-     * Close the dropdown
-     */
-    closeDropdown() {
-        if (!this.isDropdownOpen) return;
+    this.isDropdownOpen = false;
 
-        console.log('📕 [DashboardHeader] Closing dropdown...');
+    // Remove the outside click handler when dropdown closes
+    document.removeEventListener('click', this.handleOutsideClick);
 
-        if (this.dropdownElement) {
-            this.dropdownElement.remove();
-            this.dropdownElement = null;
-        }
-
-        this.isDropdownOpen = false;
-
-        // Reset arrow icon
-        const arrow = document.querySelector('#dropdown-arrow-btn i[data-feather="chevron-down"]');
-        if (arrow) {
-            arrow.style.transform = 'rotate(0deg)';
-        }
-
-        console.log('✅ [DashboardHeader] Dropdown closed successfully');
+    // Reset arrow icon
+    const arrow = document.querySelector('#dropdown-arrow-btn i[data-feather="chevron-down"]');
+    if (arrow) {
+        arrow.style.transform = 'rotate(0deg)';
     }
+
+    console.log('✅ [DashboardHeader] Dropdown closed successfully');
+}
 
     /**
      * Create and display the dropdown
