@@ -222,17 +222,17 @@ toggleDropdown(event) {
     if (this.isDropdownOpen) {
         this.closeDropdown();
     } else {
-        // Delay the outside click handler setup to prevent immediate closure
+        // Remove any existing outside click handler before opening
+        document.removeEventListener('click', this.handleOutsideClick);
+        
         this.openDropdown();
         
-        // Remove and re-add the outside click handler after a brief delay
-        // to prevent the current click from immediately closing the dropdown
-        document.removeEventListener('click', this.handleOutsideClick);
-        setTimeout(() => {
+        // Add the outside click handler on next tick to prevent immediate closure
+        requestAnimationFrame(() => {
             if (this.isDropdownOpen) {
                 document.addEventListener('click', this.handleOutsideClick);
             }
-        }, 10);
+        });
     }
 }
 
