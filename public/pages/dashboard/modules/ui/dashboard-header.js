@@ -502,7 +502,7 @@ setupModalObserver() {
 openBulkModal() {
     console.log('📊 [DashboardHeader] Opening bulk modal...');
     
-    const modal = document.getElementById('bulkModal');
+    const modal = document.querySelector('#bulkModal > div');
     if (modal) {
         modal.classList.remove('hidden');
         console.log('✅ [DashboardHeader] Bulk modal opened');
