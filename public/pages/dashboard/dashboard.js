@@ -60,8 +60,14 @@ class DashboardInitializer {
                 throw new Error('DashboardApp not available on window object');
             }
             
-            this.app = new window.DashboardApp();
-            await this.app.init();
+this.app = new DashboardApp();
+await this.app.init();
+
+// CRITICAL: Expose container globally for TimingManager
+window.dashboard = {
+    container: this.app.container,
+    app: this.app
+};
             
             // Set global reference for onclick handlers after successful initialization
             if (this.app && this.app.container) {
