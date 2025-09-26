@@ -40,12 +40,12 @@ renderBulkModal() {
                         <!-- Example CSV -->
                         <div class="flex-1">
                             <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                                <div class="text-xs font-medium text-gray-700 mb-2">Example CSV format:</div>
-                                <div class="bg-white border border-gray-100 rounded-lg p-3 text-sm font-mono text-gray-600">
-                                    <div>hamzawilx</div>
-                                    <div>noahskipslegday</div>
-                                    <div>hormozi</div>
-                                </div>
+<div class="text-xs font-medium text-gray-700 mb-2">Example CSV format:</div>
+<div id="csv-example" class="bg-white border border-gray-100 rounded-lg p-3 text-sm font-mono text-gray-600">
+    <div>nasa</div>
+    <div>instagram</div>
+    <div>hormozi</div>
+</div>
                                 <div class="text-xs text-gray-500 mt-2">Just usernames, no column headers, no @ symbols</div>
                             </div>
                         </div>
@@ -204,8 +204,20 @@ displayFilePreview(fileName, count) {
     document.getElementById('file-name').textContent = fileName;
     document.getElementById('leads-count').textContent = `${count} usernames found`;
     document.getElementById('file-preview').classList.remove('hidden');
+    
+    // Switch example to show actual uploaded usernames
+    const csvExample = document.getElementById('csv-example');
+    if (csvExample && this.parsedData.length > 0) {
+        const displayUsernames = this.parsedData.slice(0, 3); // Show first 3
+        csvExample.innerHTML = displayUsernames.map(username => `<div>${username}</div>`).join('');
+        
+        // Update label
+        const label = csvExample.previousElementSibling;
+        if (label) {
+            label.textContent = 'Your uploaded usernames:';
+        }
+    }
 }
-
     displayFilePreview() {
         const placeholder = document.getElementById('upload-placeholder');
         const preview = document.getElementById('file-preview');
