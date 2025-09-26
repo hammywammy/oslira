@@ -38,8 +38,8 @@ class DashboardHeader {
                         </button>
                     </div>
                     
-                    <!-- Dropdown Menu -->
-                    <div id="researchDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50">
+<!-- Dropdown Menu -->
+<div id="researchDropdown" class="hidden fixed w-64 bg-white rounded-xl shadow-lg border border-gray-200 z-50" style="top: 120px; right: 20px;">
                         <div class="py-2">
                             <button onclick="openResearchModal(); closeResearchDropdown();" 
                                     class="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-purple-50 transition-colors">
@@ -95,17 +95,23 @@ class DashboardHeader {
 
     setupEventHandlers() {
         // Register global functions
-        window.toggleResearchDropdown = () => {
-            const dropdown = document.getElementById('researchDropdown');
-            if (dropdown) {
-                this.isDropdownOpen = !this.isDropdownOpen;
-                if (this.isDropdownOpen) {
-                    dropdown.classList.remove('hidden');
-                } else {
-                    dropdown.classList.add('hidden');
-                }
-            }
-        };
+window.toggleResearchDropdown = () => {
+    const dropdown = document.getElementById('researchDropdown');
+    if (dropdown) {
+        this.isDropdownOpen = !this.isDropdownOpen;
+        if (this.isDropdownOpen) {
+            // Move to body and position dynamically
+            dropdown.style.position = 'fixed';
+            dropdown.style.top = '120px';
+            dropdown.style.right = '20px';
+            dropdown.style.zIndex = '9999';
+            document.body.appendChild(dropdown);
+            dropdown.classList.remove('hidden');
+        } else {
+            dropdown.classList.add('hidden');
+        }
+    }
+};
 
         window.closeResearchDropdown = () => {
             const dropdown = document.getElementById('researchDropdown');
