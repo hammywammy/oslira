@@ -653,6 +653,46 @@
     @apply hidden;
   }
 
+  .mobile-sticky-cta {
+  @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40 transform translate-y-full transition-transform duration-300 md:hidden;
+}
+
+.mobile-cta-btn {
+  @apply w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-4 rounded-lg flex items-center justify-center space-x-2 shadow-lg;
+}
+
+.mobile-cta-text {
+  @apply text-lg font-bold;
+}
+
+.mobile-cta-arrow {
+  @apply text-xl font-bold transform transition-transform group-hover:translate-x-1;
+}
+
+.social-proof-notifications {
+  @apply fixed top-20 right-4 z-30 space-y-2 pointer-events-none;
+}
+
+.notification-popup {
+  @apply bg-white border border-gray-200 rounded-lg shadow-lg p-3 transform translate-x-full transition-all duration-300 pointer-events-auto;
+}
+
+.notification-popup.show {
+  @apply translate-x-0;
+}
+
+.urgency-element {
+  @apply bg-red-50 border border-red-200 rounded-lg p-4 mb-6;
+}
+
+.urgency-text {
+  @apply text-red-800 text-center font-medium;
+}
+
+.final-urgency {
+  @apply text-gray-600 text-center mt-4;
+}
+
   /* =============================================================================
      ANIMATIONS & MICRO-INTERACTIONS
      ============================================================================= */
