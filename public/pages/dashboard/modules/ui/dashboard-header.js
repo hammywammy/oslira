@@ -69,41 +69,51 @@ class DashboardHeader {
 </div>`;
     }
 
-    /**
-     * Initialize the header with proper event handling
-     */
-    async initialize() {
-        if (this.initialized) {
-            console.log('⚠️ [DashboardHeader] Already initialized');
-            return;
-        }
-
-        console.log('🔧 [DashboardHeader] Starting initialization...');
-
-        try {
-            // Wait for DOM elements to be available
-            await this.waitForDOMElements();
-            
-            // Setup all event handlers
-            this.setupEventHandlers();
-            
-            // Initialize Feather icons for the header
-            this.initializeIcons();
-            
-            // Setup global functions for backwards compatibility
-            this.setupGlobalFunctions();
-            
-            // Setup cleanup handlers
-            this.setupCleanupHandlers();
-            
-            this.initialized = true;
-            console.log('✅ [DashboardHeader] Initialization completed');
-            
-        } catch (error) {
-            console.error('❌ [DashboardHeader] Initialization failed:', error);
-            throw error;
-        }
+async initialize() {
+    if (this.initialized) {
+        console.log('⚠️ [DashboardHeader] Already initialized, skipping');
+        return;
     }
+    
+    if (this._initializing) {
+        console.log('⚠️ [DashboardHeader] Already initializing, waiting...');
+        return this._initPromise;
+    }
+    
+    this._initializing = true;
+    this._initPromise = this._performInitialization();
+    return this._initPromise;
+}
+
+async _performInitialization() {
+    console.log('🔧 [DashboardHeader] Starting initialization...');
+
+    try {
+        // Wait for DOM elements to be available
+        await this.waitForDOMElements();
+        
+        // Setup all event handlers
+        this.setupEventHandlers();
+        
+        // Initialize Feather icons for the header
+        this.initializeIcons();
+        
+        // Setup global functions for backwards compatibility
+        this.setupGlobalFunctions();
+        
+        // Setup cleanup handlers
+        this.setupCleanupHandlers();
+        
+        this.initialized = true;
+        this._initializing = false;
+        console.log('✅ [DashboardHeader] Initialization completed');
+        
+    } catch (error) {
+        this._initializing = false;
+        console.error('❌ [DashboardHeader] Initialization failed:', error);
+        throw error;
+    }
+}
 
     /**
      * Wait for required DOM elements to be available
@@ -542,22 +552,10 @@ closeDropdown() {
         }
     }
 
-    /**
-     * Setup global functions for backwards compatibility
-     */
-    setupGlobalFunctions() {
-        // Global toggle function for backwards compatibility
-        window.toggleResearchDropdown = this.toggleDropdown;
-        
-        // Global main button function
-        window.handleMainButtonClick = this.handleMainButtonClick;
-        
-        // Global mode switch function
-        window.switchHeaderMode = this.switchMode;
-        
-        console.log('✅ [DashboardHeader] Global functions exposed');
-    }
-
+setupGlobalFunctions() {
+    // No global functions - use proper dependency injection only
+    console.log('✅ [DashboardHeader] Skipping global function pollution');
+}
     /**
      * Get current header state
      */
@@ -569,31 +567,24 @@ closeDropdown() {
         };
     }
 
-    /**
-     * Cleanup resources and event listeners
-     */
-    cleanup() {
-        console.log('🧹 [DashboardHeader] Cleaning up...');
-        
-        this.removeEventHandlers();
-        
-        if (this.modalObserver) {
-            this.modalObserver.disconnect();
-        }
-        
-        if (this.dropdownElement) {
-            this.dropdownElement.remove();
-        }
-        
-        // Clean up global functions
-        delete window.toggleResearchDropdown;
-        delete window.handleMainButtonClick;
-        delete window.switchHeaderMode;
-        
-        this.initialized = false;
-        
-        console.log('✅ [DashboardHeader] Cleanup completed');
+cleanup() {
+    console.log('🧹 [DashboardHeader] Cleaning up...');
+    
+    this.removeEventHandlers();
+    
+    if (this.modalObserver) {
+        this.modalObserver.disconnect();
     }
+    
+    if (this.dropdownElement) {
+        this.dropdownElement.remove();
+    }
+    
+    this.initialized = false;
+    this._initializing = false;
+    
+    console.log('✅ [DashboardHeader] Cleanup completed');
+}
 
     /**
      * Debug method to check header state
