@@ -5,12 +5,13 @@ class DashboardHeader {
         this.container = container;
         this.eventBus = container.get('eventBus');
         this.isDropdownOpen = false;
+        this.currentMode = 'single'; // 'single' or 'bulk'
     }
 
-renderHeader() {
-    return `
+    renderHeader() {
+        return `
 <div class="pt-6 px-6 pb-6">
-    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6">
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible;">
         <div class="flex items-center justify-between">
             <!-- Dashboard Title -->
             <div>
@@ -21,144 +22,168 @@ renderHeader() {
             <!-- Right Actions -->
             <div class="flex items-center space-x-4">
                 <!-- Dynamic Research Button with Dropdown -->
-                <div class="relative">
-<!-- Unified Button Container -->
-<div class="bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
-    <div class="flex">
-        <!-- Main Research Button -->
-        <button id="main-research-btn" onclick="handleMainButtonClick()" 
-                class="px-6 py-3 text-white font-medium hover:bg-white/10 transition-all duration-200 flex items-center space-x-2 flex-1 rounded-l-xl">
-            <i data-feather="plus" class="w-4 h-4"></i>
-            <span id="main-research-text">Research New Lead</span>
-        </button>
-        
-        <!-- Dropdown Divider -->
-        <div class="w-px bg-white/20 my-2"></div>
-        
-        <!-- Dropdown Arrow Button -->
-        <button id="dropdown-arrow-btn" onclick="toggleResearchDropdown()" 
-                class="px-3 py-3 text-white hover:bg-white/10 transition-all duration-200 rounded-r-xl">
-            <i data-feather="chevron-down" class="w-4 h-4"></i>
-        </button>
-    </div>
-</div>
-                    
-<!-- Dropdown Menu - Compact and clean -->
-<div id="researchDropdown" class="hidden absolute top-full right-0 w-48 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-gray-200/50 z-[9999] mt-2 overflow-hidden">
-    <div class="py-1">
-        <button onclick="selectResearchType('single'); closeResearchDropdown();" 
-                class="w-full flex items-center space-x-3 px-3 py-2.5 text-left hover:bg-indigo-50 transition-colors duration-150">
-            <div class="w-8 h-8 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <i data-feather="user-plus" class="w-4 h-4 text-indigo-600"></i>
-            </div>
-            <div class="min-w-0 flex-1">
-                <div class="font-medium text-gray-800 text-sm">Research Single</div>
-                <div class="text-xs text-gray-500 truncate">One profile analysis</div>
-            </div>
-        </button>
-        
-        <div class="mx-3 border-t border-gray-100"></div>
-        
-        <button onclick="selectResearchType('bulk'); closeResearchDropdown();" 
-                class="w-full flex items-center space-x-3 px-3 py-2.5 text-left hover:bg-orange-50 transition-colors duration-150">
-            <div class="w-8 h-8 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                <i data-feather="layers" class="w-4 h-4 text-orange-600"></i>
-            </div>
-            <div class="min-w-0 flex-1">
-                <div class="font-medium text-gray-800 text-sm">Bulk Analyze</div>
-                <div class="text-xs text-gray-500 truncate">Multiple leads at once</div>
-            </div>
-        </button>
-    </div>
-</div>
+                <div class="relative" style="z-index: 100; isolation: isolate;">
+                    <!-- Unified Button Container -->
+                    <div id="main-button-container" class="bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div class="flex">
+                            <!-- Main Research Button -->
+                            <button id="main-research-btn" onclick="handleMainButtonClick()" 
+                                    class="px-6 py-3 text-white font-medium hover:bg-white/10 transition-all duration-200 flex items-center space-x-2 flex-1 rounded-l-xl">
+                                <i data-feather="plus" class="w-4 h-4"></i>
+                                <span id="main-research-text">Research New Lead</span>
+                            </button>
+                            
+                            <!-- Dropdown Divider -->
+                            <div class="w-px bg-white/20 my-2"></div>
+                            
+                            <!-- Dropdown Arrow Button -->
+                            <button id="dropdown-arrow-btn" onclick="toggleResearchDropdown()" 
+                                    class="px-3 py-3 text-white hover:bg-white/10 transition-all duration-200 rounded-r-xl">
+                                <i data-feather="chevron-down" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>`;
-}
+    }
 
-setupEventHandlers() {
-    // Track current mode
-    this.currentMode = 'single'; // 'single' or 'bulk'
-    
-    // Register global functions
-    window.toggleResearchDropdown = () => {
-        const dropdown = document.getElementById('researchDropdown');
-        if (dropdown) {
-            this.isDropdownOpen = !this.isDropdownOpen;
-            if (this.isDropdownOpen) {
-                dropdown.classList.remove('hidden');
-            } else {
-                dropdown.classList.add('hidden');
+    setupEventHandlers() {
+        // Main button click handler
+        window.handleMainButtonClick = () => {
+            if (this.currentMode === 'single') {
+                window.openResearchModal && window.openResearchModal();
+            } else if (this.currentMode === 'bulk') {
+                window.openBulkAnalysisModal && window.openBulkAnalysisModal();
             }
-        }
-    };
+        };
 
-    window.closeResearchDropdown = () => {
-        const dropdown = document.getElementById('researchDropdown');
-        if (dropdown) {
-            dropdown.classList.add('hidden');
-            this.isDropdownOpen = false;
-        }
-    };
+        // Dropdown toggle with proper positioning
+        window.toggleResearchDropdown = () => {
+            const existingDropdown = document.getElementById('researchDropdown');
+            
+            if (existingDropdown) {
+                existingDropdown.remove();
+                this.isDropdownOpen = false;
+                return;
+            }
 
-    window.selectResearchType = (type) => {
+            this.createAndShowDropdown();
+            this.isDropdownOpen = true;
+        };
+
+        // Placeholder functions for modals
+        window.openBulkAnalysisModal = () => {
+            console.log('Opening bulk analysis modal...');
+            // TODO: Implement bulk analysis modal
+        };
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('researchDropdown');
+            const isDropdownButton = e.target.closest('[onclick*="toggleResearchDropdown"]');
+            const isDropdownContent = e.target.closest('#researchDropdown');
+            
+            if (dropdown && !isDropdownButton && !isDropdownContent) {
+                dropdown.remove();
+                this.isDropdownOpen = false;
+            }
+        });
+    }
+
+    createAndShowDropdown() {
+        // Get button position for centering
+        const button = document.getElementById('dropdown-arrow-btn');
+        const buttonRect = button.getBoundingClientRect();
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Create dropdown
+        const dropdown = document.createElement('div');
+        dropdown.id = 'researchDropdown';
+        dropdown.innerHTML = `
+            <div style="padding: 8px 0;">
+                <div data-type="single" style="display: flex; align-items: center; padding: 10px 16px; cursor: pointer; transition: background 0.2s;">
+                    <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #818cf8, #a855f7); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; color: #1f2937; font-size: 14px;">Research Single</div>
+                        <div style="color: #6b7280; font-size: 12px;">One profile analysis</div>
+                    </div>
+                </div>
+                <div data-type="bulk" style="display: flex; align-items: center; padding: 10px 16px; cursor: pointer; transition: background 0.2s;">
+                    <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #fb923c, #f97316); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; color: #1f2937; font-size: 14px;">Bulk Analyze</div>
+                        <div style="color: #6b7280; font-size: 12px;">Multiple leads at once</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Position dropdown centered under button
+        dropdown.style.cssText = `
+            position: fixed !important;
+            top: ${buttonRect.bottom + scrollTop + 8}px !important;
+            left: ${buttonRect.left + (buttonRect.width / 2) - 110}px !important;
+            width: 220px !important;
+            background: white !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+            border: 1px solid rgba(0,0,0,0.1) !important;
+            z-index: 999999 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        `;
+        
+        // Add hover effects and click handlers
+        dropdown.querySelectorAll('[data-type]').forEach(item => {
+            item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f9fafb');
+            item.addEventListener('mouseleave', () => item.style.backgroundColor = 'transparent');
+            
+            item.addEventListener('click', () => {
+                this.selectResearchType(item.dataset.type);
+                dropdown.remove();
+                this.isDropdownOpen = false;
+            });
+        });
+        
+        document.body.appendChild(dropdown);
+    }
+
+    selectResearchType(type) {
         this.currentMode = type;
         this.updateButtonState();
-    };
+    }
 
-    window.handleMainButtonClick = () => {
-        if (this.currentMode === 'single') {
-            window.openResearchModal && window.openResearchModal();
-        } else if (this.currentMode === 'bulk') {
-            window.openBulkAnalysisModal && window.openBulkAnalysisModal();
-        }
-    };
-
-    // Placeholder functions for modals
-    window.openBulkAnalysisModal = () => {
-        console.log('🔄 Opening bulk analysis modal...');
-        // TODO: Implement bulk analysis modal
-    };
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        const dropdown = document.getElementById('researchDropdown');
-        const button = e.target.closest('[onclick*="toggleResearchDropdown"]');
+    updateButtonState() {
+        const buttonContainer = document.getElementById('main-button-container');
+        const mainText = document.getElementById('main-research-text');
+        const icon = document.querySelector('#main-research-btn i');
         
-        if (dropdown && !button && !dropdown.contains(e.target)) {
-            dropdown.classList.add('hidden');
-            this.isDropdownOpen = false;
-        }
-    });
-}
-
-updateButtonState() {
-    const buttonContainer = document.querySelector('.bg-gradient-to-r');
-    const mainText = document.getElementById('main-research-text');
-    const icon = document.querySelector('#main-research-btn i');
-    
-    if (this.currentMode === 'bulk') {
-        // Switch to bulk mode
-        buttonContainer.className = 'bg-gradient-to-r from-orange-400 via-orange-500 to-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
-        mainText.textContent = 'Bulk Analyze Leads';
-        
-        if (icon) {
-            icon.setAttribute('data-feather', 'layers');
-            if (window.feather) feather.replace();
-        }
-    } else {
-        // Switch to single mode
-        buttonContainer.className = 'bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
-        mainText.textContent = 'Research New Lead';
-        
-        if (icon) {
-            icon.setAttribute('data-feather', 'plus');
-            if (window.feather) feather.replace();
+        if (this.currentMode === 'bulk') {
+            // Switch to bulk mode
+            buttonContainer.className = 'bg-gradient-to-r from-orange-400 via-orange-500 to-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
+            mainText.textContent = 'Bulk Analyze Leads';
+            
+            if (icon) {
+                icon.setAttribute('data-feather', 'layers');
+                if (window.feather) window.feather.replace();
+            }
+        } else {
+            // Switch to single mode
+            buttonContainer.className = 'bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
+            mainText.textContent = 'Research New Lead';
+            
+            if (icon) {
+                icon.setAttribute('data-feather', 'plus');
+                if (window.feather) window.feather.replace();
+            }
         }
     }
-}
 }
 
 if (typeof module !== 'undefined' && module.exports) {
