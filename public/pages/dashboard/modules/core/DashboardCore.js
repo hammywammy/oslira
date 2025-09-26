@@ -66,14 +66,6 @@ if (leadRenderer && !leadRenderer.initialized) {
     leadRenderer.initialized = true;
 }
 
-// Initialize ResearchHandlers to set up global handlers
-console.log('🔧 [DashboardCore] Initializing ResearchHandlers...');
-if (window.ResearchHandlers) {
-    new window.ResearchHandlers();
-    console.log('✅ [DashboardCore] ResearchHandlers initialized');
-} else {
-    console.warn('⚠️ [DashboardCore] ResearchHandlers class not found');
-}
 
 // Populate ResearchModal with HTML content
 console.log('🔧 [DashboardCore] Populating ResearchModal...');
@@ -160,19 +152,14 @@ await leadManager.loadDashboardData();
         
         throw new Error('SimpleAuth Supabase client not ready after timeout');
     }
-
-/**
- * Render all dashboard UI components
- */
 static async renderDashboardUI(container) {
     try {
-        // Render header with new split button
+        // ONLY render HTML, no initialization
         const dashboardHeader = container.get('dashboardHeader');
         if (dashboardHeader && dashboardHeader.renderHeader) {
             document.getElementById('dashboard-header').innerHTML = dashboardHeader.renderHeader();
         }
         
-        // Render redesigned stats cards
         const statsCards = container.get('statsCards');
         if (statsCards) {
             if (statsCards.renderPriorityCards) {
@@ -181,40 +168,26 @@ static async renderDashboardUI(container) {
             if (statsCards.renderPerformanceMetrics) {
                 document.getElementById('performance-metrics').innerHTML = statsCards.renderPerformanceMetrics();
             }
-            // Setup stats cards event handlers
-            if (statsCards.setupEventHandlers) {
-                statsCards.setupEventHandlers();
-            }
         }
         
-        // Render leads table with export functionality
         const leadsTable = container.get('leadsTable');
         if (leadsTable && leadsTable.renderTableContainer) {
             const leadsSection = document.getElementById('leads-section');
             if (leadsSection) {
                 leadsSection.innerHTML = leadsTable.renderTableContainer();
-                // Setup leads table event handlers
-                if (leadsTable.setupEventHandlers) {
-                    leadsTable.setupEventHandlers();
-                }
-            } else {
-                console.error('❌ [DashboardCore] leads-section element not found');
             }
         }
         
-        // Render insights panel
         const insightsPanel = container.get('insightsPanel');
         if (insightsPanel && insightsPanel.renderInsightsPanel) {
             document.getElementById('insights-panel').innerHTML = insightsPanel.renderInsightsPanel();
         }
 
-        // Inject dashboard styles
         const stylesContainer = document.getElementById('dynamic-styles');
         if (stylesContainer && window.DashboardStyles) {
             stylesContainer.innerHTML = window.DashboardStyles.getInlineStyles();
         }
         
-        // Initialize Feather icons after rendering
         if (window.feather) {
             window.feather.replace();
         }
