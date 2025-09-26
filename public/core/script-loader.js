@@ -60,8 +60,8 @@ this.coreScripts = [
                     '/pages/dashboard/modules/leads/lead-manager.js',
                     '/pages/dashboard/modules/leads/lead-renderer.js',
                     
-                    // Modals (KEEP THESE - they're different functions)
-                    '/pages/dashboard/modules/modals/research-modal.js',
+'/pages/dashboard/modules/modals/research-modal.js',
+'/pages/dashboard/modules/modals/bulk-modal.js',
                     '/pages/dashboard/modules/ui/stats-cards.js',
                     
                     // Real-time systems
