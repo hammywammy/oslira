@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
+import { cors } from 'hono/cors'; 
 import type { Env } from './types/interfaces.js';
 import { generateRequestId, logger } from './utils/logger.js';
 import { createStandardResponse } from './utils/response.js';
