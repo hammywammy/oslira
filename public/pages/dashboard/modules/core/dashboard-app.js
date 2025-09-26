@@ -149,7 +149,11 @@ class DashboardApp {
             return new ModalManager(container);
         }, []);
         // Register UI components
-container.registerFactory('dashboardHeader', () => new window.DashboardHeader(container));
+container.registerFactory('dashboardHeader', () => {
+    const header = new DashboardHeader(container);
+    console.log('🏭 [DependencyContainer] DashboardHeader factory created');
+    return header;
+});
 container.registerFactory('statsCards', () => {
     const instance = new window.StatsCards(container);
     if (instance.init) instance.init();
