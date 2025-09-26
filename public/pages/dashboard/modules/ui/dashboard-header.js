@@ -11,7 +11,7 @@ class DashboardHeader {
     renderHeader() {
         return `
 <div class="pt-6 px-6 pb-6">
-    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible; z-index: 100;">
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible; z-index: 10;">
         <div class="flex items-center justify-between">
             <!-- Dashboard Title -->
             <div>
@@ -145,20 +145,19 @@ observer.observe(document.body, {
         </div>
     `;
     
-    // Position dropdown properly centered and attached
-    dropdown.style.cssText = `
-        position: absolute !important;
-        top: calc(100% + 8px) !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
-        width: 220px !important;
-        background: white !important;
-        border-radius: 12px !important;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-        border: 1px solid rgba(0,0,0,0.1) !important;
-        z-index: 999999 !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-    `;
+dropdown.style.cssText = `
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 220px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    z-index: 30 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+`;
     
     // Add hover effects and click handlers
     dropdown.querySelectorAll('[data-type]').forEach(item => {
