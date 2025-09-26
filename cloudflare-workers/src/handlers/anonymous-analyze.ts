@@ -89,7 +89,7 @@ async function performAnonymousAnalysis(username: string, env: Env) {
 }
 
 async function scrapeProfile(username: string, config: any, env: Env) {
-  const url = `https://api.apify.com/v2/acts/${config.endpoint}/run-sync-get-dataset-items?token=${env.APIFY_TOKEN}`;
+  const url = `https://api.apify.com/v2/acts/${config.endpoint}/run-sync-get-dataset-items?token=${env.APIFY_API_TOKEN}`;
   
   const response = await fetch(url, {
     method: 'POST',
@@ -166,90 +166,7 @@ Focus on general appeal, authenticity, and business potential.`;
 // MAIN HANDLER
 // ===============================================================================
 
-export async function handleAnonymousAnalyze(c: Context<{ Bindings: Env }>) {
-  const requestId = generateRequestId();
-  
-  try {
-    // Check rate limiting first
-    const rateLimit = await checkRateLimit(c);
-    
-    if (!rateLimit.allowed) {
-      return c.json(createStandardResponse(
-        false,
-        undefined,
-        `Daily limit reached. Reset in ${rateLimit.resetIn} hours.`,
-        requestId,
-        { remaining: 0, resetIn: rateLimit.resetIn }
-      ), 429);
-    }
-    
-    // Parse request
-    const body = await c.req.json();
-    const { username } = body;
-    
-    if (!username) {
-      return c.json(createStandardResponse(false, undefined, 'Username required', requestId), 400);
-    }
-    
-    // Clean username
-    const cleanUsername = username.replace(/[@\s]/g, '');
-    
-    logger('info', 'Anonymous analysis started', { username: cleanUsername, requestId });
-    
-    // Check cache first (6 hour cache)
-    const cacheKey = `anon_analysis:${cleanUsername}`;
-    const cached = await c.env.OSLIRA_KV.get(cacheKey);
-    
-    if (cached) {
-      const cachedData = JSON.parse(cached);
-      return c.json(createStandardResponse(
-        true,
-        cachedData,
-        'Analysis complete',
-        requestId,
-        { remaining: rateLimit.remaining, cached: true }
-      ));
-    }
-    
-    // Perform analysis
-    const analysisResult = await performAnonymousAnalysis(cleanUsername, c.env);
-    
-    // Cache result for 6 hours
-    await c.env.OSLIRA_KV.put(cacheKey, JSON.stringify(analysisResult), { expirationTtl: 6 * 60 * 60 });
-    
-    logger('info', 'Anonymous analysis completed', { 
-      username: cleanUsername, 
-      score: analysisResult.insights.overall_score,
-      requestId 
-    });
-    
-    return c.json(createStandardResponse(
-      true,
-      analysisResult,
-      'Analysis complete',
-      requestId,
-      { remaining: rateLimit.remaining, cached: false }
-    ));
-    
-  } catch (error) {
-    logger('error', 'Anonymous analysis failed', { 
-      error: error.message, 
-      requestId 
-    });
-    
-    return c.json(createStandardResponse(
-      false,
-      undefined,
-      'Analysis failed. Please try again.',
-      requestId
-    ), 500);
-  }
-}
-
-// ===============================================================================
-// MAIN HANDLER
-// ===============================================================================
-
+// Keep only this version (around line 174):
 export async function handleAnonymousAnalyze(c: Context<{ Bindings: Env }>) {
   const requestId = generateRequestId();
   
