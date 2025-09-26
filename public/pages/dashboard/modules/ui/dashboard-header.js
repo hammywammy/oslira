@@ -41,7 +41,7 @@ class DashboardHeader {
             <!-- Right Actions -->
             <div class="flex items-center space-x-4">
                 <!-- Dynamic Research Button with Dropdown -->
-                <div class="relative" style="z-index: 100; isolation: isolate;">
+                <div class="relative" style="z-index: 100; isolation: isolate; position: relative;">
                     <!-- Unified Button Container -->
                     <div id="main-button-container" class="bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
                         <div class="flex">
@@ -344,8 +344,8 @@ closeDropdown() {
         // Add click handlers for options
         this.setupDropdownHandlers(this.dropdownElement);
 
-        // Add to DOM
-        document.body.appendChild(this.dropdownElement);
+// Add to button container to maintain relative positioning
+buttonContainer.appendChild(this.dropdownElement);
 
         // Force reflow for positioning
         this.dropdownElement.offsetHeight;
@@ -363,22 +363,22 @@ closeDropdown() {
         const top = rect.bottom + 8;
         const left = rect.left + (rect.width / 2);
 
-        dropdown.style.cssText = `
-            position: fixed !important;
-            top: ${top}px !important;
-            left: ${left}px !important;
-            transform: translateX(-50%) !important;
-            width: 220px !important;
-            background: white !important;
-            border-radius: 12px !important;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-            border: 1px solid rgba(0,0,0,0.1) !important;
-            z-index: 99999 !important;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-            opacity: 0 !important;
-            transform: translateX(-50%) translateY(-10px) !important;
-            transition: all 0.2s ease !important;
-        `;
+dropdown.style.cssText = `
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 220px !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    z-index: 99999 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    opacity: 0 !important;
+    transform: translateX(-50%) translateY(-10px) !important;
+    transition: all 0.2s ease !important;
+`;
 
         // Animate in
         requestAnimationFrame(() => {
