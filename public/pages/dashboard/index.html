@@ -147,6 +147,33 @@ window.clearAllSelections = function() {
     }
 };
 
+window.handleMainButtonClick = function() {
+    // Get current mode from dashboard header
+    const headerManager = window.dashboard?.container?.get('dashboardHeader');
+    if (!headerManager) {
+        console.error('Dashboard header not available');
+        return;
+    }
+    
+    const currentMode = headerManager.currentMode || 'single';
+    
+    if (currentMode === 'bulk') {
+        // Open bulk modal
+        if (window.dashboard?.container?.get('modalManager')) {
+            window.dashboard.container.get('modalManager').openModal('bulkModal');
+        } else if (window.showBulkModal) {
+            window.showBulkModal();
+        }
+    } else {
+        // Open research modal for single lead
+        if (window.dashboard?.container?.get('researchHandlers')) {
+            window.dashboard.container.get('researchHandlers').openResearchModal();
+        } else if (window.openResearchModal) {
+            window.openResearchModal();
+        }
+    }
+};
+
 </script>
 </body>
 </html>
