@@ -92,9 +92,6 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Store reference to this for the observer
-const headerInstance = this;
-
 // Hide dropdown when any modal opens
 const observer = new MutationObserver(() => {
     const modals = document.querySelectorAll('#leadAnalysisModal, #researchModal, #bulkModal');
