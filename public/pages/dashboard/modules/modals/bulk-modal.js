@@ -11,8 +11,8 @@ class BulkModal {
         this.analysisType = 'light';
     }
 
-renderBulkModal() {
-    return `
+    renderBulkModal() {
+        return `
 <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden">
     <div class="flex items-center justify-center min-h-screen p-6">
         <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden">
@@ -40,12 +40,12 @@ renderBulkModal() {
                         <!-- Example CSV -->
                         <div class="flex-1">
                             <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
-<div class="text-xs font-medium text-gray-700 mb-2">Example CSV format:</div>
-<div id="csv-example" class="bg-white border border-gray-100 rounded-lg p-3 text-sm font-mono text-gray-600">
-    <div>nasa</div>
-    <div>instagram</div>
-    <div>hormozi</div>
-</div>
+                                <div id="csv-label" class="text-xs font-medium text-gray-700 mb-2">Example CSV format:</div>
+                                <div id="csv-example" class="bg-white border border-gray-100 rounded-lg p-3 text-sm font-mono text-gray-600">
+                                    <div>nasa</div>
+                                    <div>instagram</div>
+                                    <div>hormozi</div>
+                                </div>
                                 <div class="text-xs text-gray-500 mt-2">Just usernames, no column headers, no @ symbols</div>
                             </div>
                         </div>
@@ -108,19 +108,40 @@ renderBulkModal() {
                     </div>
                 </div>
 
-                <!-- Platform (Instagram only) -->
+                <!-- Platform -->
                 <div>
                     <label class="block text-sm font-medium text-gray-900 mb-3">Platform</label>
-                    <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 rounded-lg flex items-center justify-center">
-                            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073z"/>
-                                <path d="M12 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                            </svg>
+                    <select id="bulkPlatform" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white">
+                        <option value="instagram">📸 Instagram</option>
+                    </select>
+                </div>
+
+                <!-- Credit Calculation -->
+                <div id="credit-calculation" class="hidden">
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-semibold text-gray-700">Cost Calculation</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                                    <span id="leads-display"></span> leads
+                                </span>
+                            </div>
                         </div>
-                        <div>
-                            <div class="font-medium text-gray-900">Instagram</div>
-                            <div class="text-xs text-gray-600">Analyzing Instagram profiles</div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Current Credits:</span>
+                                <span id="current-credits" class="font-semibold text-gray-900"></span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Total Cost:</span>
+                                <span id="total-cost" class="font-semibold text-red-600"></span>
+                            </div>
+                            <div class="border-t border-blue-200 pt-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm font-medium text-gray-700">Credits After:</span>
+                                    <span id="credits-after" class="font-semibold"></span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -150,22 +171,41 @@ renderBulkModal() {
             }
         };
 
-        // Analysis type change
+        // Analysis type change with visual feedback
         window.updateBulkCostCalculation = () => {
-            this.analysisType = document.querySelector('input[name="bulkAnalysisType"]:checked').value;
-            this.updateCostDisplay();
+            const selectedRadio = document.querySelector('input[name="bulkAnalysisType"]:checked');
+            if (selectedRadio) {
+                this.analysisType = selectedRadio.value;
+                
+                // Update visual selection
+                document.querySelectorAll('.analysis-option').forEach(option => {
+                    option.classList.remove('border-orange-200', 'bg-orange-50', 'border-purple-200', 'bg-purple-50', 'border-blue-200', 'bg-blue-50');
+                    option.classList.add('border-gray-200');
+                });
+                
+                const selectedOption = selectedRadio.closest('label').querySelector('.analysis-option');
+                if (this.analysisType === 'light') {
+                    selectedOption.classList.add('border-orange-200', 'bg-orange-50');
+                } else if (this.analysisType === 'deep') {
+                    selectedOption.classList.add('border-purple-200', 'bg-purple-50');
+                } else if (this.analysisType === 'xray') {
+                    selectedOption.classList.add('border-blue-200', 'bg-blue-50');
+                }
+                
+                this.updateCostDisplay();
+            }
         };
 
         // Modal controls
         window.openBulkModal = () => {
-            const modal = document.getElementById('bulkModal');
+            const modal = document.querySelector('#bulkModal > div');
             if (modal) {
                 modal.classList.remove('hidden');
             }
         };
 
         window.closeBulkModal = () => {
-            const modal = document.getElementById('bulkModal');
+            const modal = document.querySelector('#bulkModal > div');
             if (modal) {
                 modal.classList.add('hidden');
                 this.resetModal();
@@ -178,72 +218,49 @@ renderBulkModal() {
         };
     }
 
-parseCSVFile(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const csv = e.target.result;
-        const lines = csv.split('\n')
-            .map(line => line.trim())
-            .filter(line => line.length > 0)
-            .map(line => line.replace(/^@/, '')); // Remove @ if present
-        
-        this.parsedData = lines;
-        this.displayFilePreview(file.name, lines.length);
-        this.updateCostDisplay();
-        
-        const submitBtn = document.getElementById('bulk-submit-btn');
-        if (lines.length > 0) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = `Analyze ${lines.length} Profiles`;
-        }
-    };
-    reader.readAsText(file);
-}
-
-displayFilePreview(fileName, count) {
-    const fileNameEl = document.getElementById('file-name');
-    const leadsCountEl = document.getElementById('leads-count');
-    const filePreviewEl = document.getElementById('file-preview');
-    
-    if (fileNameEl) fileNameEl.textContent = fileName;
-    if (leadsCountEl) leadsCountEl.textContent = `${count} usernames found`;
-    if (filePreviewEl) filePreviewEl.classList.remove('hidden');
-    
-    // Switch example to show actual uploaded usernames
-    const csvExample = document.getElementById('csv-example');
-    if (csvExample && this.parsedData.length > 0) {
-        const displayUsernames = this.parsedData.slice(0, 3); // Show first 3
-        csvExample.innerHTML = displayUsernames.map(username => `<div>${username}</div>`).join('');
-        
-        // Update label
-        const label = csvExample.previousElementSibling;
-        if (label) {
-            label.textContent = 'Your uploaded usernames:';
-        }
+    parseCSVFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const csv = e.target.result;
+            const lines = csv.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .map(line => line.replace(/^@/, '')); // Remove @ if present
+            
+            this.parsedData = lines;
+            this.displayFilePreview(file.name, lines.length);
+            this.updateCostDisplay();
+            
+            const submitBtn = document.getElementById('bulk-submit-btn');
+            if (lines.length > 0) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = `Analyze ${lines.length} Profiles`;
+            }
+        };
+        reader.readAsText(file);
     }
-}
-    displayFilePreview() {
-        const placeholder = document.getElementById('upload-placeholder');
-        const preview = document.getElementById('file-preview');
-        const submitBtn = document.getElementById('bulk-submit-btn');
 
-        placeholder.classList.add('hidden');
-        preview.classList.remove('hidden');
+    displayFilePreview(fileName, count) {
+        const fileNameEl = document.getElementById('file-name');
+        const leadsCountEl = document.getElementById('leads-count');
+        const filePreviewEl = document.getElementById('file-preview');
         
-        preview.innerHTML = `
-            <div class="text-center">
-                <svg class="w-8 h-8 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <p class="font-semibold text-green-700">File uploaded successfully!</p>
-                <p class="text-sm text-gray-600 mt-1">${this.parsedData.length} usernames found</p>
-                <p class="text-xs text-gray-500 mt-1">${this.uploadedFile.name}</p>
-                <button onclick="this.resetUpload()" class="text-orange-500 text-xs mt-2 hover:underline">Upload different file</button>
-            </div>
-        `;
-
-        submitBtn.disabled = false;
-        submitBtn.textContent = `Analyze ${this.parsedData.length} Leads`;
+        if (fileNameEl) fileNameEl.textContent = fileName;
+        if (leadsCountEl) leadsCountEl.textContent = `${count} usernames found`;
+        if (filePreviewEl) filePreviewEl.classList.remove('hidden');
+        
+        // Switch example to show actual uploaded usernames
+        const csvExample = document.getElementById('csv-example');
+        const csvLabel = document.getElementById('csv-label');
+        if (csvExample && this.parsedData.length > 0) {
+            const displayUsernames = this.parsedData.slice(0, 3); // Show first 3
+            csvExample.innerHTML = displayUsernames.map(username => `<div>${username}</div>`).join('');
+            
+            // Update label
+            if (csvLabel) {
+                csvLabel.textContent = 'Your uploaded usernames:';
+            }
+        }
     }
 
     updateCostDisplay() {
@@ -253,13 +270,20 @@ displayFilePreview(fileName, count) {
         const totalCost = this.parsedData.length * costPerLead;
         const creditsAfter = this.currentCredits - totalCost;
 
-        document.getElementById('leads-count').textContent = `${this.parsedData.length} leads`;
-        document.getElementById('current-credits').textContent = this.currentCredits.toLocaleString();
-        document.getElementById('total-cost').textContent = `-${totalCost}`;
-        document.getElementById('credits-after').textContent = creditsAfter.toLocaleString();
-        document.getElementById('credits-after').className = creditsAfter >= 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
+        const leadsDisplayEl = document.getElementById('leads-display');
+        const currentCreditsEl = document.getElementById('current-credits');
+        const totalCostEl = document.getElementById('total-cost');
+        const creditsAfterEl = document.getElementById('credits-after');
+        const calculationEl = document.getElementById('credit-calculation');
 
-        document.getElementById('credit-calculation').classList.remove('hidden');
+        if (leadsDisplayEl) leadsDisplayEl.textContent = this.parsedData.length;
+        if (currentCreditsEl) currentCreditsEl.textContent = this.currentCredits.toLocaleString();
+        if (totalCostEl) totalCostEl.textContent = `-${totalCost}`;
+        if (creditsAfterEl) {
+            creditsAfterEl.textContent = creditsAfter.toLocaleString();
+            creditsAfterEl.className = creditsAfter >= 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
+        }
+        if (calculationEl) calculationEl.classList.remove('hidden');
     }
 
     processBulkAnalysis() {
@@ -281,16 +305,55 @@ displayFilePreview(fileName, count) {
     resetModal() {
         this.uploadedFile = null;
         this.parsedData = [];
-        document.getElementById('bulkForm').reset();
-        document.getElementById('upload-placeholder').classList.remove('hidden');
-        document.getElementById('file-preview').classList.add('hidden');
-        document.getElementById('credit-calculation').classList.add('hidden');
-        document.getElementById('bulk-submit-btn').disabled = true;
-        document.getElementById('bulk-submit-btn').textContent = 'Upload File First';
+        
+        // Reset file input
+        const csvFileEl = document.getElementById('csvFile');
+        if (csvFileEl) csvFileEl.value = '';
+        
+        // Reset UI elements
+        const filePreviewEl = document.getElementById('file-preview');
+        const calculationEl = document.getElementById('credit-calculation');
+        const submitBtnEl = document.getElementById('bulk-submit-btn');
+        const csvExampleEl = document.getElementById('csv-example');
+        const csvLabelEl = document.getElementById('csv-label');
+        
+        if (filePreviewEl) filePreviewEl.classList.add('hidden');
+        if (calculationEl) calculationEl.classList.add('hidden');
+        if (submitBtnEl) {
+            submitBtnEl.disabled = true;
+            submitBtnEl.textContent = 'Upload File First';
+        }
+        
+        // Reset example CSV
+        if (csvExampleEl) {
+            csvExampleEl.innerHTML = '<div>nasa</div><div>instagram</div><div>hormozi</div>';
+        }
+        if (csvLabelEl) {
+            csvLabelEl.textContent = 'Example CSV format:';
+        }
+        
+        // Reset analysis type selection
+        const lightRadio = document.querySelector('input[name="bulkAnalysisType"][value="light"]');
+        if (lightRadio) {
+            lightRadio.checked = true;
+            this.analysisType = 'light';
+        }
+        
+        // Reset visual selection
+        document.querySelectorAll('.analysis-option').forEach(option => {
+            option.classList.remove('border-orange-200', 'bg-orange-50', 'border-purple-200', 'bg-purple-50', 'border-blue-200', 'bg-blue-50');
+            option.classList.add('border-gray-200');
+        });
+        
+        const lightOption = document.querySelector('input[name="bulkAnalysisType"][value="light"]')?.closest('label').querySelector('.analysis-option');
+        if (lightOption) {
+            lightOption.classList.add('border-orange-200', 'bg-orange-50');
+        }
     }
 
     resetUpload() {
-        document.getElementById('csvFile').value = '';
+        const csvFileEl = document.getElementById('csvFile');
+        if (csvFileEl) csvFileEl.value = '';
         this.resetModal();
     }
 }
