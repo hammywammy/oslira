@@ -11,7 +11,7 @@ class DashboardHeader {
     renderHeader() {
         return `
 <div class="pt-6 px-6 pb-6">
-    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible; z-index: 1;">
+    <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-6" style="position: relative; overflow: visible; z-index: 100;">
         <div class="flex items-center justify-between">
             <!-- Dashboard Title -->
             <div>
@@ -74,11 +74,10 @@ class DashboardHeader {
             this.isDropdownOpen = true;
         };
 
-        // Placeholder functions for modals
-        window.openBulkAnalysisModal = () => {
-            console.log('Opening bulk analysis modal...');
-            // TODO: Implement bulk analysis modal
-        };
+// Placeholder functions for modals
+window.openBulkAnalysisModal = () => {
+    window.openBulkModal && window.openBulkModal();
+};
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
