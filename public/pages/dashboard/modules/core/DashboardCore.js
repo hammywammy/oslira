@@ -62,11 +62,28 @@ if (window.ResearchModal) {
     if (modalContainer) {
         modalContainer.outerHTML = modalHTML;
         console.log('✅ [DashboardCore] ResearchModal populated with content');
-    } else {
-        console.warn('⚠️ [DashboardCore] #researchModal container not found');
-    }
+} else {
+    console.warn('⚠️ [DashboardCore] #researchModal container not found');
+}
 } else {
     console.warn('⚠️ [DashboardCore] ResearchModal class not found');
+}
+
+// Initialize and populate BulkModal
+console.log('🔧 [DashboardCore] Populating BulkModal...');
+if (window.BulkModal) {
+    const bulkModal = new window.BulkModal(container);
+    const modalHTML = bulkModal.renderModal();
+    const modalContainer = document.getElementById('bulkModal');
+    if (modalContainer) {
+        modalContainer.innerHTML = modalHTML;
+        bulkModal.setupEventHandlers();
+        console.log('✅ [DashboardCore] BulkModal populated with content');
+    } else {
+        console.warn('⚠️ [DashboardCore] #bulkModal container not found');
+    }
+} else {
+    console.warn('⚠️ [DashboardCore] BulkModal class not found');
 }
 
 // Load lead data after UI and renderer are ready
