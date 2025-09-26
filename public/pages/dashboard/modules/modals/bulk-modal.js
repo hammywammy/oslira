@@ -7,8 +7,23 @@ class BulkModal {
         this.stateManager = container.get('stateManager');
         this.uploadedFile = null;
         this.parsedData = [];
-        this.currentCredits = 2000; // This should come from user state
+        this.duplicateCount = 0;
         this.analysisType = 'light';
+        
+        // Get real credits from user state
+        this.currentCredits = this.getUserCredits();
+    }
+
+    getUserCredits() {
+        // Get from actual user state - adapt this to your system
+        if (window.OsliraApp?.user?.credits) {
+            return window.OsliraApp.user.credits;
+        }
+        if (this.stateManager?.getState('user')?.credits) {
+            return this.stateManager.getState('user').credits;
+        }
+        // Fallback - you should replace this with actual user credit retrieval
+        return 1500;
     }
 
     renderBulkModal() {
@@ -28,10 +43,23 @@ class BulkModal {
                     </button>
                 </div>
                 <p class="text-gray-600">Upload a CSV with Instagram usernames to analyze multiple leads</p>
+                <div class="mt-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-sm text-blue-800 font-medium">Maximum 50 leads per analysis</p>
+                </div>
             </div>
 
             <!-- Content -->
             <div class="px-8 pb-8 space-y-6">
+                
+                <!-- Error Messages -->
+                <div id="error-message" class="hidden p-4 bg-red-50 border border-red-200 rounded-xl">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span id="error-text" class="text-sm font-medium text-red-800"></span>
+                    </div>
+                </div>
                 
                 <!-- CSV Upload Section -->
                 <div>
@@ -41,7 +69,7 @@ class BulkModal {
                         <div class="flex-1">
                             <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
                                 <div id="csv-label" class="text-xs font-medium text-gray-700 mb-2">Example CSV format:</div>
-                                <div id="csv-example" class="bg-white border border-gray-100 rounded-lg p-3 text-sm font-mono text-gray-600">
+                                <div id="csv-example" class="bg-white border border-gray-100 rounded-lg p-3 text-sm font-mono text-gray-600 max-h-32 overflow-y-auto">
                                     <div>nasa</div>
                                     <div>instagram</div>
                                     <div>hormozi</div>
@@ -72,6 +100,7 @@ class BulkModal {
                                     <span id="file-name" class="text-sm font-medium text-green-800"></span>
                                 </div>
                                 <div id="leads-count" class="text-xs text-green-600 mt-1"></div>
+                                <div id="duplicate-info" class="text-xs text-yellow-600 mt-1 hidden"></div>
                             </div>
                         </div>
                     </div>
@@ -160,14 +189,16 @@ class BulkModal {
     }
 
     setupEventHandlers() {
+        const self = this;
+        
         // File upload handler
         window.handleFileUpload = (event) => {
             const file = event.target.files[0];
             if (file && file.type === 'text/csv') {
-                this.uploadedFile = file;
-                this.parseCSVFile(file);
+                self.uploadedFile = file;
+                self.parseCSVFile(file);
             } else {
-                alert('Please select a valid CSV file');
+                self.showError('Please select a valid CSV file');
             }
         };
 
@@ -175,7 +206,7 @@ class BulkModal {
         window.updateBulkCostCalculation = () => {
             const selectedRadio = document.querySelector('input[name="bulkAnalysisType"]:checked');
             if (selectedRadio) {
-                this.analysisType = selectedRadio.value;
+                self.analysisType = selectedRadio.value;
                 
                 // Update visual selection
                 document.querySelectorAll('.analysis-option').forEach(option => {
@@ -184,15 +215,15 @@ class BulkModal {
                 });
                 
                 const selectedOption = selectedRadio.closest('label').querySelector('.analysis-option');
-                if (this.analysisType === 'light') {
+                if (self.analysisType === 'light') {
                     selectedOption.classList.add('border-orange-200', 'bg-orange-50');
-                } else if (this.analysisType === 'deep') {
+                } else if (self.analysisType === 'deep') {
                     selectedOption.classList.add('border-purple-200', 'bg-purple-50');
-                } else if (this.analysisType === 'xray') {
+                } else if (self.analysisType === 'xray') {
                     selectedOption.classList.add('border-blue-200', 'bg-blue-50');
                 }
                 
-                this.updateCostDisplay();
+                self.updateCostDisplay();
             }
         };
 
@@ -208,53 +239,159 @@ class BulkModal {
             const modal = document.querySelector('#bulkModal > div');
             if (modal) {
                 modal.classList.add('hidden');
-                this.resetModal();
+                self.resetModal();
             }
         };
 
         window.submitBulkAnalysis = (event) => {
             event.preventDefault();
-            this.processBulkAnalysis();
+            self.processBulkAnalysis();
         };
+    }
+
+    isValidUsername(username) {
+        // Check for valid Instagram username format
+        // Must be 1-30 characters, alphanumeric, periods, underscores only
+        const usernameRegex = /^[a-zA-Z0-9._]{1,30}$/;
+        
+        // Remove @ if present
+        const cleanUsername = username.replace(/^@/, '');
+        
+        // Check if it contains invalid characters
+        if (!usernameRegex.test(cleanUsername)) {
+            return false;
+        }
+        
+        // Check for consecutive periods (not allowed on Instagram)
+        if (cleanUsername.includes('..')) {
+            return false;
+        }
+        
+        // Check if it starts or ends with a period
+        if (cleanUsername.startsWith('.') || cleanUsername.endsWith('.')) {
+            return false;
+        }
+        
+        return true;
     }
 
     parseCSVFile(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
-            const csv = e.target.result;
-            const lines = csv.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0)
-                .map(line => line.replace(/^@/, '')); // Remove @ if present
-            
-            this.parsedData = lines;
-            this.displayFilePreview(file.name, lines.length);
-            this.updateCostDisplay();
-            
-            const submitBtn = document.getElementById('bulk-submit-btn');
-            if (lines.length > 0) {
-                submitBtn.disabled = false;
-                submitBtn.textContent = `Analyze ${lines.length} Profiles`;
+            try {
+                this.hideError();
+                
+                const csv = e.target.result;
+                const lines = csv.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+                
+                // Validate CSV format - should be simple list, no commas in valid usernames
+                const invalidLines = lines.filter(line => {
+                    // Check if line contains comma (indicates multiple columns)
+                    if (line.includes(',')) {
+                        return true;
+                    }
+                    // Check if line contains tab or semicolon
+                    if (line.includes('\t') || line.includes(';')) {
+                        return true;
+                    }
+                    return false;
+                });
+                
+                if (invalidLines.length > 0) {
+                    this.showError('Invalid CSV format. File should contain only usernames, one per line, no columns or separators.');
+                    return;
+                }
+                
+                // Clean and validate usernames
+                const usernames = lines.map(line => {
+                    const cleaned = line.replace(/^@/, '').trim();
+                    return cleaned;
+                });
+                
+                // Check for invalid usernames
+                const invalidUsernames = usernames.filter(username => !this.isValidUsername(username));
+                if (invalidUsernames.length > 0) {
+                    this.showError(`Invalid usernames detected: ${invalidUsernames.slice(0, 3).join(', ')}${invalidUsernames.length > 3 ? '...' : ''}. Only alphanumeric characters, periods, and underscores allowed.`);
+                    return;
+                }
+                
+                // Check for too many leads
+                if (usernames.length > 50) {
+                    this.showError(`Too many leads! Maximum 50 allowed, you uploaded ${usernames.length}. Please reduce your list.`);
+                    return;
+                }
+                
+                // Remove duplicates and count them
+                const uniqueUsernames = [...new Set(usernames.map(u => u.toLowerCase()))];
+                this.duplicateCount = usernames.length - uniqueUsernames.length;
+                this.parsedData = uniqueUsernames;
+                
+                this.displayFilePreview(file.name, uniqueUsernames.length);
+                this.updateCostDisplay();
+                
+                const submitBtn = document.getElementById('bulk-submit-btn');
+                if (uniqueUsernames.length > 0) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = `Analyze ${uniqueUsernames.length} Profiles`;
+                } else {
+                    this.showError('No valid usernames found in the file.');
+                }
+                
+            } catch (error) {
+                this.showError('Failed to parse CSV file. Please check the file format.');
+                console.error('CSV parsing error:', error);
             }
         };
         reader.readAsText(file);
+    }
+
+    showError(message) {
+        const errorEl = document.getElementById('error-message');
+        const errorTextEl = document.getElementById('error-text');
+        
+        if (errorEl && errorTextEl) {
+            errorTextEl.textContent = message;
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    hideError() {
+        const errorEl = document.getElementById('error-message');
+        if (errorEl) {
+            errorEl.classList.add('hidden');
+        }
     }
 
     displayFilePreview(fileName, count) {
         const fileNameEl = document.getElementById('file-name');
         const leadsCountEl = document.getElementById('leads-count');
         const filePreviewEl = document.getElementById('file-preview');
+        const duplicateInfoEl = document.getElementById('duplicate-info');
         
         if (fileNameEl) fileNameEl.textContent = fileName;
-        if (leadsCountEl) leadsCountEl.textContent = `${count} usernames found`;
+        if (leadsCountEl) leadsCountEl.textContent = `${count} unique usernames found`;
         if (filePreviewEl) filePreviewEl.classList.remove('hidden');
         
-        // Switch example to show actual uploaded usernames
+        // Show duplicate info if any
+        if (duplicateInfoEl && this.duplicateCount > 0) {
+            duplicateInfoEl.textContent = `${this.duplicateCount} duplicate usernames removed`;
+            duplicateInfoEl.classList.remove('hidden');
+        } else if (duplicateInfoEl) {
+            duplicateInfoEl.classList.add('hidden');
+        }
+        
+        // Switch example to show actual uploaded usernames (up to 20)
         const csvExample = document.getElementById('csv-example');
         const csvLabel = document.getElementById('csv-label');
         if (csvExample && this.parsedData.length > 0) {
-            const displayUsernames = this.parsedData.slice(0, 3); // Show first 3
+            const displayUsernames = this.parsedData.slice(0, 20); // Show up to 20
             csvExample.innerHTML = displayUsernames.map(username => `<div>${username}</div>`).join('');
+            
+            if (this.parsedData.length > 20) {
+                csvExample.innerHTML += `<div class="text-gray-400 text-xs mt-2">... and ${this.parsedData.length - 20} more</div>`;
+            }
             
             // Update label
             if (csvLabel) {
@@ -284,27 +421,66 @@ class BulkModal {
             creditsAfterEl.className = creditsAfter >= 0 ? 'font-semibold text-green-600' : 'font-semibold text-red-600';
         }
         if (calculationEl) calculationEl.classList.remove('hidden');
+
+        // Update submit button if insufficient credits
+        const submitBtn = document.getElementById('bulk-submit-btn');
+        if (submitBtn && creditsAfter < 0) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Insufficient Credits';
+            submitBtn.classList.add('bg-gray-400');
+            submitBtn.classList.remove('bg-gradient-to-r', 'from-orange-500', 'to-red-600');
+        } else if (submitBtn && this.parsedData.length > 0) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = `Analyze ${this.parsedData.length} Profiles`;
+            submitBtn.classList.remove('bg-gray-400');
+            submitBtn.classList.add('bg-gradient-to-r', 'from-orange-500', 'to-red-600');
+        }
     }
 
     processBulkAnalysis() {
-        const platform = document.getElementById('bulkPlatform').value;
-        const analysisType = document.querySelector('input[name="bulkAnalysisType"]:checked').value;
-        
-        console.log('Processing bulk analysis:', {
-            platform,
-            analysisType,
-            leads: this.parsedData.length,
-            usernames: this.parsedData
-        });
+        try {
+            const platform = document.getElementById('bulkPlatform').value;
+            const analysisType = document.querySelector('input[name="bulkAnalysisType"]:checked').value;
+            
+            console.log('Processing bulk analysis:', {
+                platform,
+                analysisType,
+                leads: this.parsedData.length,
+                usernames: this.parsedData,
+                duplicatesRemoved: this.duplicateCount
+            });
 
-        // TODO: Integrate with your existing analysis system
-        alert(`Bulk analysis started for ${this.parsedData.length} leads with ${analysisType} analysis`);
-        this.closeBulkModal();
+            // TODO: Integrate with your existing analysis system
+            // Example integration:
+            if (this.container && this.container.get('analysisQueue')) {
+                const analysisQueue = this.container.get('analysisQueue');
+                analysisQueue.startBulkAnalysis({
+                    usernames: this.parsedData,
+                    analysisType,
+                    platform,
+                    businessId: this.stateManager?.getState('selectedBusiness')?.id
+                });
+            }
+
+            alert(`Bulk analysis started for ${this.parsedData.length} leads with ${analysisType} analysis`);
+            
+            // Close modal using proper method reference
+            const modal = document.querySelector('#bulkModal > div');
+            if (modal) {
+                modal.classList.add('hidden');
+                this.resetModal();
+            }
+            
+        } catch (error) {
+            console.error('Bulk analysis processing error:', error);
+            this.showError('Failed to start bulk analysis. Please try again.');
+        }
     }
 
     resetModal() {
         this.uploadedFile = null;
         this.parsedData = [];
+        this.duplicateCount = 0;
         
         // Reset file input
         const csvFileEl = document.getElementById('csvFile');
@@ -316,12 +492,17 @@ class BulkModal {
         const submitBtnEl = document.getElementById('bulk-submit-btn');
         const csvExampleEl = document.getElementById('csv-example');
         const csvLabelEl = document.getElementById('csv-label');
+        const duplicateInfoEl = document.getElementById('duplicate-info');
         
         if (filePreviewEl) filePreviewEl.classList.add('hidden');
         if (calculationEl) calculationEl.classList.add('hidden');
+        if (duplicateInfoEl) duplicateInfoEl.classList.add('hidden');
+        
         if (submitBtnEl) {
             submitBtnEl.disabled = true;
             submitBtnEl.textContent = 'Upload File First';
+            submitBtnEl.classList.remove('bg-gray-400');
+            submitBtnEl.classList.add('bg-gradient-to-r', 'from-orange-500', 'to-red-600');
         }
         
         // Reset example CSV
@@ -331,6 +512,9 @@ class BulkModal {
         if (csvLabelEl) {
             csvLabelEl.textContent = 'Example CSV format:';
         }
+        
+        // Hide any errors
+        this.hideError();
         
         // Reset analysis type selection
         const lightRadio = document.querySelector('input[name="bulkAnalysisType"][value="light"]');
@@ -349,12 +533,6 @@ class BulkModal {
         if (lightOption) {
             lightOption.classList.add('border-orange-200', 'bg-orange-50');
         }
-    }
-
-    resetUpload() {
-        const csvFileEl = document.getElementById('csvFile');
-        if (csvFileEl) csvFileEl.value = '';
-        this.resetModal();
     }
 }
 
