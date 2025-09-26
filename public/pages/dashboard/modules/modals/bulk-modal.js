@@ -11,9 +11,9 @@ class BulkModal {
         this.analysisType = 'light';
     }
 
-    renderBulkModal() {
-        return `
-<div id="bulkModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
+renderBulkModal() {
+    return `
+<div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             <!-- Header -->
