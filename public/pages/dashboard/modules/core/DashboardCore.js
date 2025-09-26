@@ -5,7 +5,37 @@
  * Handles dependency resolution, authentication, and core setup
  */
 class DashboardCore {
-    
+
+    /**
+ * Wait for DOM element to exist
+ */
+static async waitForDOMElement(selector, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        const element = document.querySelector(selector);
+        if (element) {
+            resolve(element);
+            return;
+        }
+        
+        const observer = new MutationObserver(() => {
+            const element = document.querySelector(selector);
+            if (element) {
+                observer.disconnect();
+                resolve(element);
+            }
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        setTimeout(() => {
+            observer.disconnect();
+            reject(new Error(`Element ${selector} not found within ${timeout}ms`));
+        }, timeout);
+    });
+}
     /**
      * Main initialization flow
      */
@@ -45,11 +75,24 @@ if (window.ResearchHandlers) {
     console.warn('⚠️ [DashboardCore] ResearchHandlers class not found');
 }
 
-// Initialize Dashboard Header event handlers
+// Initialize Dashboard Header event handlers with retry mechanism
 console.log('🔧 [DashboardCore] Initializing Dashboard Header handlers...');
 const dashboardHeader = container.get('dashboardHeader');
 if (dashboardHeader && dashboardHeader.setupEventHandlers) {
+    // Ensure DOM elements exist before handler setup
+    await this.waitForDOMElement('#main-button-container', 5000);
+    
     dashboardHeader.setupEventHandlers();
+    
+    // Verify dropdown functionality works
+    setTimeout(() => {
+        if (typeof window.toggleResearchDropdown === 'function') {
+            console.log('✅ [DashboardCore] Dashboard Header dropdown verified');
+        } else {
+            console.warn('⚠️ [DashboardCore] Dashboard Header dropdown not properly initialized');
+        }
+    }, 500);
+    
     console.log('✅ [DashboardCore] Dashboard Header handlers initialized');
 }
 
