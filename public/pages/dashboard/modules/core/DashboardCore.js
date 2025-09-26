@@ -75,19 +75,14 @@ if (window.ResearchHandlers) {
     console.warn('⚠️ [DashboardCore] ResearchHandlers class not found');
 }
 
-console.log('🔧 [DashboardCore] Initializing Dashboard Header...');
+// Dashboard Header initialized by TimingManager - just setup UI
+console.log('🔧 [DashboardCore] Setting up Dashboard Header UI...');
 const dashboardHeader = container.get('dashboardHeader');
-if (dashboardHeader) {
-    try {
-        // Use the new async initialize method
-        await dashboardHeader.initialize();
-        console.log('✅ [DashboardCore] Dashboard Header fully initialized');
-    } catch (error) {
-        console.error('❌ [DashboardCore] Dashboard Header initialization failed:', error);
-        // Continue with other initialization even if header fails
-    }
+if (dashboardHeader && dashboardHeader.renderHeader) {
+    document.getElementById('dashboard-header').innerHTML = dashboardHeader.renderHeader();
+    console.log('✅ [DashboardCore] Dashboard Header UI rendered');
 } else {
-    console.warn('⚠️ [DashboardCore] Dashboard Header not found in container');
+    console.warn('⚠️ [DashboardCore] Dashboard Header not available');
 }
 
 // Populate ResearchModal with HTML content
