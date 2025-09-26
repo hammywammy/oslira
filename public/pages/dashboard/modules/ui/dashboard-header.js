@@ -1,13 +1,32 @@
 //public/pages/dashboard/modules/ui/dashboard-header.js
 
+/**
+ * DASHBOARD HEADER - Complete Rewrite with Proper Initialization
+ * Handles header rendering, dropdown functionality, and event management
+ */
 class DashboardHeader {
     constructor(container) {
         this.container = container;
-        this.eventBus = container.get('eventBus');
+        this.eventBus = container?.get('eventBus');
         this.isDropdownOpen = false;
         this.currentMode = 'single'; // 'single' or 'bulk'
+        this.initialized = false;
+        this.dropdownElement = null;
+        
+        // Bind methods to preserve context
+        this.toggleDropdown = this.toggleDropdown.bind(this);
+        this.createDropdown = this.createDropdown.bind(this);
+        this.closeDropdown = this.closeDropdown.bind(this);
+        this.handleOutsideClick = this.handleOutsideClick.bind(this);
+        this.handleMainButtonClick = this.handleMainButtonClick.bind(this);
+        this.switchMode = this.switchMode.bind(this);
+        
+        console.log('🔧 [DashboardHeader] Instance created');
     }
 
+    /**
+     * Render the complete header HTML
+     */
     renderHeader() {
         return `
 <div class="pt-6 px-6 pb-6">
@@ -27,7 +46,7 @@ class DashboardHeader {
                     <div id="main-button-container" class="bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">
                         <div class="flex">
                             <!-- Main Research Button -->
-                            <button id="main-research-btn" onclick="handleMainButtonClick()" 
+                            <button id="main-research-btn" data-header-action="main-click"
                                     class="px-6 py-3 text-white font-medium hover:bg-white/10 transition-all duration-200 flex items-center space-x-2 flex-1 rounded-l-xl">
                                 <i data-feather="plus" class="w-4 h-4"></i>
                                 <span id="main-research-text">Research New Lead</span>
@@ -37,9 +56,9 @@ class DashboardHeader {
                             <div class="w-px bg-white/20 my-2"></div>
                             
                             <!-- Dropdown Arrow Button -->
-                            <button id="dropdown-arrow-btn" onclick="toggleResearchDropdown()" 
+                            <button id="dropdown-arrow-btn" data-header-action="dropdown-toggle"
                                     class="px-3 py-3 text-white hover:bg-white/10 transition-all duration-200 rounded-r-xl">
-                                <i data-feather="chevron-down" class="w-4 h-4"></i>
+                                <i data-feather="chevron-down" class="w-4 h-4 transition-transform duration-200"></i>
                             </button>
                         </div>
                     </div>
@@ -50,166 +69,622 @@ class DashboardHeader {
 </div>`;
     }
 
+    /**
+     * Initialize the header with proper event handling
+     */
+    async initialize() {
+        if (this.initialized) {
+            console.log('⚠️ [DashboardHeader] Already initialized');
+            return;
+        }
+
+        console.log('🔧 [DashboardHeader] Starting initialization...');
+
+        try {
+            // Wait for DOM elements to be available
+            await this.waitForDOMElements();
+            
+            // Setup all event handlers
+            this.setupEventHandlers();
+            
+            // Initialize Feather icons for the header
+            this.initializeIcons();
+            
+            // Setup global functions for backwards compatibility
+            this.setupGlobalFunctions();
+            
+            // Setup cleanup handlers
+            this.setupCleanupHandlers();
+            
+            this.initialized = true;
+            console.log('✅ [DashboardHeader] Initialization completed');
+            
+        } catch (error) {
+            console.error('❌ [DashboardHeader] Initialization failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Wait for required DOM elements to be available
+     */
+    async waitForDOMElements() {
+        const requiredElements = [
+            '#main-button-container',
+            '#main-research-btn',
+            '#dropdown-arrow-btn'
+        ];
+
+        for (const selector of requiredElements) {
+            await this.waitForElement(selector, 10000);
+        }
+        
+        console.log('✅ [DashboardHeader] All required DOM elements found');
+    }
+
+    /**
+     * Wait for a specific element to appear in the DOM
+     */
+    waitForElement(selector, timeout = 5000) {
+        return new Promise((resolve, reject) => {
+            const element = document.querySelector(selector);
+            if (element) {
+                resolve(element);
+                return;
+            }
+
+            const observer = new MutationObserver(() => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    observer.disconnect();
+                    resolve(element);
+                }
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            setTimeout(() => {
+                observer.disconnect();
+                reject(new Error(`Element ${selector} not found within ${timeout}ms`));
+            }, timeout);
+        });
+    }
+
+    /**
+     * Setup all event handlers for the header
+     */
     setupEventHandlers() {
+        console.log('🔧 [DashboardHeader] Setting up event handlers...');
+
+        // Remove any existing listeners to prevent duplicates
+        this.removeEventHandlers();
+
         // Main button click handler
-        window.handleMainButtonClick = () => {
-            if (this.currentMode === 'single') {
-                window.openResearchModal && window.openResearchModal();
-            } else if (this.currentMode === 'bulk') {
-                window.openBulkAnalysisModal && window.openBulkAnalysisModal();
+        const mainButton = document.getElementById('main-research-btn');
+        if (mainButton) {
+            mainButton.addEventListener('click', this.handleMainButtonClick);
+            console.log('✅ [DashboardHeader] Main button handler attached');
+        }
+
+        // Dropdown toggle handler
+        const dropdownButton = document.getElementById('dropdown-arrow-btn');
+        if (dropdownButton) {
+            dropdownButton.addEventListener('click', this.toggleDropdown);
+            console.log('✅ [DashboardHeader] Dropdown toggle handler attached');
+        }
+
+        // Global click handler for closing dropdown
+        document.addEventListener('click', this.handleOutsideClick);
+
+        // Modal observer for auto-close dropdown
+        this.setupModalObserver();
+
+        console.log('✅ [DashboardHeader] All event handlers setup complete');
+    }
+
+    /**
+     * Remove existing event handlers to prevent duplicates
+     */
+    removeEventHandlers() {
+        const mainButton = document.getElementById('main-research-btn');
+        if (mainButton) {
+            mainButton.removeEventListener('click', this.handleMainButtonClick);
+        }
+
+        const dropdownButton = document.getElementById('dropdown-arrow-btn');
+        if (dropdownButton) {
+            dropdownButton.removeEventListener('click', this.toggleDropdown);
+        }
+
+        document.removeEventListener('click', this.handleOutsideClick);
+    }
+
+    /**
+     * Handle main button clicks
+     */
+    handleMainButtonClick(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        console.log('🔘 [DashboardHeader] Main button clicked, mode:', this.currentMode);
+
+        if (this.currentMode === 'single') {
+            this.openResearchModal();
+        } else if (this.currentMode === 'bulk') {
+            this.openBulkModal();
+        }
+    }
+
+    /**
+     * Toggle dropdown visibility
+     */
+    toggleDropdown(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        console.log('🔄 [DashboardHeader] Dropdown toggle clicked, open:', this.isDropdownOpen);
+
+        if (this.isDropdownOpen) {
+            this.closeDropdown();
+        } else {
+            this.openDropdown();
+        }
+    }
+
+    /**
+     * Open the dropdown
+     */
+    openDropdown() {
+        if (this.isDropdownOpen) return;
+
+        console.log('📖 [DashboardHeader] Opening dropdown...');
+
+        this.createDropdown();
+        this.isDropdownOpen = true;
+
+        // Update arrow icon
+        const arrow = document.querySelector('#dropdown-arrow-btn i[data-feather="chevron-down"]');
+        if (arrow) {
+            arrow.style.transform = 'rotate(180deg)';
+        }
+
+        console.log('✅ [DashboardHeader] Dropdown opened successfully');
+    }
+
+    /**
+     * Close the dropdown
+     */
+    closeDropdown() {
+        if (!this.isDropdownOpen) return;
+
+        console.log('📕 [DashboardHeader] Closing dropdown...');
+
+        if (this.dropdownElement) {
+            this.dropdownElement.remove();
+            this.dropdownElement = null;
+        }
+
+        this.isDropdownOpen = false;
+
+        // Reset arrow icon
+        const arrow = document.querySelector('#dropdown-arrow-btn i[data-feather="chevron-down"]');
+        if (arrow) {
+            arrow.style.transform = 'rotate(0deg)';
+        }
+
+        console.log('✅ [DashboardHeader] Dropdown closed successfully');
+    }
+
+    /**
+     * Create and display the dropdown
+     */
+    createDropdown() {
+        // Remove any existing dropdown
+        const existingDropdown = document.getElementById('research-dropdown');
+        if (existingDropdown) {
+            existingDropdown.remove();
+        }
+
+        // Get button container for positioning
+        const buttonContainer = document.getElementById('main-button-container');
+        if (!buttonContainer) {
+            console.error('❌ [DashboardHeader] Button container not found for dropdown positioning');
+            return;
+        }
+
+        // Create dropdown element
+        this.dropdownElement = document.createElement('div');
+        this.dropdownElement.id = 'research-dropdown';
+        this.dropdownElement.className = 'dashboard-header-dropdown';
+
+        // Set dropdown content
+        this.dropdownElement.innerHTML = `
+            <div class="dropdown-content">
+                <div class="dropdown-option" data-mode="single">
+                    <div class="option-icon single-icon">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </div>
+                    <div class="option-text">
+                        <div class="option-title">Research Single</div>
+                        <div class="option-subtitle">One profile analysis</div>
+                    </div>
+                </div>
+                <div class="dropdown-option" data-mode="bulk">
+                    <div class="option-icon bulk-icon">
+                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+                        </svg>
+                    </div>
+                    <div class="option-text">
+                        <div class="option-title">Bulk Analyze</div>
+                        <div class="option-subtitle">Multiple leads at once</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Apply styles
+        this.styleDropdown(this.dropdownElement, buttonContainer);
+
+        // Add click handlers for options
+        this.setupDropdownHandlers(this.dropdownElement);
+
+        // Add to DOM
+        document.body.appendChild(this.dropdownElement);
+
+        // Force reflow for positioning
+        this.dropdownElement.offsetHeight;
+
+        console.log('✅ [DashboardHeader] Dropdown created and positioned');
+    }
+
+    /**
+     * Apply styles to dropdown element
+     */
+    styleDropdown(dropdown, buttonContainer) {
+        const rect = buttonContainer.getBoundingClientRect();
+        
+        // Calculate position
+        const top = rect.bottom + 8;
+        const left = rect.left + (rect.width / 2);
+
+        dropdown.style.cssText = `
+            position: fixed !important;
+            top: ${top}px !important;
+            left: ${left}px !important;
+            transform: translateX(-50%) !important;
+            width: 220px !important;
+            background: white !important;
+            border-radius: 12px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+            border: 1px solid rgba(0,0,0,0.1) !important;
+            z-index: 99999 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+            opacity: 0 !important;
+            transform: translateX(-50%) translateY(-10px) !important;
+            transition: all 0.2s ease !important;
+        `;
+
+        // Animate in
+        requestAnimationFrame(() => {
+            dropdown.style.opacity = '1';
+            dropdown.style.transform = 'translateX(-50%) translateY(0)';
+        });
+    }
+
+    /**
+     * Setup dropdown option handlers
+     */
+    setupDropdownHandlers(dropdown) {
+        const options = dropdown.querySelectorAll('.dropdown-option');
+        
+        options.forEach(option => {
+            // Hover effects
+            option.addEventListener('mouseenter', () => {
+                option.style.backgroundColor = '#f9fafb';
+            });
+            
+            option.addEventListener('mouseleave', () => {
+                option.style.backgroundColor = 'transparent';
+            });
+
+            // Click handler
+            option.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const mode = option.dataset.mode;
+                this.switchMode(mode);
+            });
+        });
+    }
+
+    /**
+     * Switch between single and bulk modes
+     */
+    switchMode(mode) {
+        if (mode === this.currentMode) {
+            this.closeDropdown();
+            return;
+        }
+
+        console.log('🔄 [DashboardHeader] Switching mode from', this.currentMode, 'to', mode);
+
+        this.currentMode = mode;
+        this.updateButtonText();
+        this.closeDropdown();
+
+        // Emit mode change event
+        if (this.eventBus) {
+            this.eventBus.emit('header:mode-changed', { mode });
+        }
+
+        console.log('✅ [DashboardHeader] Mode switched to:', mode);
+    }
+
+    /**
+     * Update button text based on current mode
+     */
+    updateButtonText() {
+        const textElement = document.getElementById('main-research-text');
+        if (!textElement) return;
+
+        if (this.currentMode === 'single') {
+            textElement.textContent = 'Research New Lead';
+        } else if (this.currentMode === 'bulk') {
+            textElement.textContent = 'Bulk Analyze';
+        }
+    }
+
+    /**
+     * Handle clicks outside the dropdown to close it
+     */
+    handleOutsideClick(event) {
+        if (!this.isDropdownOpen) return;
+
+        const dropdown = document.getElementById('research-dropdown');
+        const dropdownButton = document.getElementById('dropdown-arrow-btn');
+        
+        if (dropdown && !dropdown.contains(event.target) && 
+            dropdownButton && !dropdownButton.contains(event.target)) {
+            this.closeDropdown();
+        }
+    }
+
+    /**
+     * Setup modal observer to auto-close dropdown when modals open
+     */
+    setupModalObserver() {
+        const observer = new MutationObserver(() => {
+            if (!this.isDropdownOpen) return;
+
+            const modals = document.querySelectorAll(
+                '#leadAnalysisModal, #researchModal, #bulkModal, #analysisModal'
+            );
+            
+            const hasVisibleModal = Array.from(modals).some(modal => 
+                modal && !modal.classList.contains('hidden') && 
+                modal.offsetParent !== null
+            );
+            
+            if (hasVisibleModal) {
+                this.closeDropdown();
+            }
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
+
+        this.modalObserver = observer;
+    }
+
+    /**
+     * Setup cleanup handlers for page unload
+     */
+    setupCleanupHandlers() {
+        window.addEventListener('beforeunload', () => {
+            this.cleanup();
+        });
+
+        window.addEventListener('pagehide', () => {
+            this.cleanup();
+        });
+    }
+
+    /**
+     * Open research modal based on current mode
+     */
+    openResearchModal() {
+        console.log('🔍 [DashboardHeader] Opening research modal...');
+        
+        if (window.dashboard?.container?.get('researchHandlers')) {
+            window.dashboard.container.get('researchHandlers').openResearchModal();
+        } else if (window.ResearchHandlers) {
+            new window.ResearchHandlers().openResearchModal();
+        } else if (window.openResearchModal) {
+            window.openResearchModal();
+        } else {
+            console.error('❌ [DashboardHeader] No research modal function available');
+        }
+    }
+
+    /**
+     * Open bulk analysis modal
+     */
+    openBulkModal() {
+        console.log('📊 [DashboardHeader] Opening bulk modal...');
+        
+        if (window.dashboard?.container?.get('modalManager')) {
+            window.dashboard.container.get('modalManager').openModal('bulkModal');
+        } else if (window.showBulkModal) {
+            window.showBulkModal();
+        } else if (window.openBulkModal) {
+            window.openBulkModal();
+        } else {
+            console.error('❌ [DashboardHeader] No bulk modal function available');
+        }
+    }
+
+    /**
+     * Initialize Feather icons in the header
+     */
+    initializeIcons() {
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+            console.log('✅ [DashboardHeader] Feather icons initialized');
+        }
+    }
+
+    /**
+     * Setup global functions for backwards compatibility
+     */
+    setupGlobalFunctions() {
+        // Global toggle function for backwards compatibility
+        window.toggleResearchDropdown = this.toggleDropdown;
+        
+        // Global main button function
+        window.handleMainButtonClick = this.handleMainButtonClick;
+        
+        // Global mode switch function
+        window.switchHeaderMode = this.switchMode;
+        
+        console.log('✅ [DashboardHeader] Global functions exposed');
+    }
+
+    /**
+     * Get current header state
+     */
+    getState() {
+        return {
+            mode: this.currentMode,
+            dropdownOpen: this.isDropdownOpen,
+            initialized: this.initialized
+        };
+    }
+
+    /**
+     * Cleanup resources and event listeners
+     */
+    cleanup() {
+        console.log('🧹 [DashboardHeader] Cleaning up...');
+        
+        this.removeEventHandlers();
+        
+        if (this.modalObserver) {
+            this.modalObserver.disconnect();
+        }
+        
+        if (this.dropdownElement) {
+            this.dropdownElement.remove();
+        }
+        
+        // Clean up global functions
+        delete window.toggleResearchDropdown;
+        delete window.handleMainButtonClick;
+        delete window.switchHeaderMode;
+        
+        this.initialized = false;
+        
+        console.log('✅ [DashboardHeader] Cleanup completed');
+    }
+
+    /**
+     * Debug method to check header state
+     */
+    debug() {
+        return {
+            initialized: this.initialized,
+            mode: this.currentMode,
+            dropdownOpen: this.isDropdownOpen,
+            container: !!this.container,
+            eventBus: !!this.eventBus,
+            domElements: {
+                buttonContainer: !!document.getElementById('main-button-container'),
+                mainButton: !!document.getElementById('main-research-btn'),
+                dropdownButton: !!document.getElementById('dropdown-arrow-btn'),
+                dropdown: !!document.getElementById('research-dropdown')
             }
         };
-
-// Dropdown toggle with proper positioning - capture this context
-const headerInstance = this;
-window.toggleResearchDropdown = () => {
-    const existingDropdown = document.getElementById('researchDropdown');
-    
-    if (existingDropdown) {
-        existingDropdown.remove();
-        headerInstance.isDropdownOpen = false;
-        return;
     }
+}
 
-    headerInstance.createAndShowDropdown();
-    headerInstance.isDropdownOpen = true;
-};
+// CSS Styles for the dropdown (inject into page if needed)
+const DROPDOWN_CSS = `
+<style id="dashboard-header-dropdown-styles">
+.dashboard-header-dropdown {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
 
-// Placeholder functions for modals
-window.openBulkAnalysisModal = () => {
-    window.openBulkModal && window.openBulkModal();
-};
+.dropdown-content {
+    padding: 8px 0;
+}
 
-// Close dropdown when clicking outside or when modals open
-document.addEventListener('click', (e) => {
-    const dropdown = document.getElementById('researchDropdown');
-    const isDropdownButton = e.target.closest('[onclick*="toggleResearchDropdown"]');
-    const isDropdownContent = e.target.closest('#researchDropdown');
-    
-    if (dropdown && !isDropdownButton && !isDropdownContent) {
-        dropdown.remove();
-        this.isDropdownOpen = false;
-    }
-});
+.dropdown-option {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
 
-// Hide dropdown when any modal opens
-const observer = new MutationObserver(() => {
-    const modals = document.querySelectorAll('#leadAnalysisModal, #researchModal, #bulkModal');
-    const hasVisibleModal = Array.from(modals).some(modal => 
-        modal && !modal.classList.contains('hidden') && modal.offsetParent !== null
-    );
-    
-    if (hasVisibleModal && headerInstance.isDropdownOpen) {
-        const dropdown = document.getElementById('researchDropdown');
-        if (dropdown) {
-            dropdown.remove();
-            headerInstance.isDropdownOpen = false;
-        }
-    }
-});
+.dropdown-option:hover {
+    background-color: #f9fafb;
+}
 
-observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['class', 'style']
-});
-    }
+.option-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: white;
+}
 
- createAndShowDropdown() {
-    // Get button container for proper centering
-    const buttonContainer = document.getElementById('main-button-container');
-    
-    // Create dropdown
-    const dropdown = document.createElement('div');
-    dropdown.id = 'researchDropdown';
-    dropdown.innerHTML = `
-        <div style="padding: 8px 0;">
-            <div data-type="single" style="display: flex; align-items: center; padding: 10px 16px; cursor: pointer; transition: background 0.2s;">
-                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
-                    <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                </div>
-                <div>
-                    <div style="font-weight: 600; color: #1f2937; font-size: 14px;">Research Single</div>
-                    <div style="color: #6b7280; font-size: 12px;">One profile analysis</div>
-                </div>
-            </div>
-            <div data-type="bulk" style="display: flex; align-items: center; padding: 10px 16px; cursor: pointer; transition: background 0.2s;">
-                <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
-                    <svg width="16" height="16" fill="white" viewBox="0 0 24 24"><path d="M9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-                </div>
-                <div>
-                    <div style="font-weight: 600; color: #1f2937; font-size: 14px;">Bulk Analyze</div>
-                    <div style="color: #6b7280; font-size: 12px;">Multiple leads at once</div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-dropdown.style.cssText = `
-    position: absolute !important;
-    top: calc(100% + 8px) !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    width: 220px !important;
-    background: white !important;
-    border-radius: 12px !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-    border: 1px solid rgba(0,0,0,0.1) !important;
-    z-index: 30 !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+.single-icon {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.bulk-icon {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.option-text {
+    flex: 1;
+}
+
+.option-title {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.option-subtitle {
+    color: #6b7280;
+    font-size: 12px;
+}
+</style>
 `;
-    
-    // Add hover effects and click handlers
-    dropdown.querySelectorAll('[data-type]').forEach(item => {
-        item.addEventListener('mouseenter', () => item.style.backgroundColor = '#f9fafb');
-        item.addEventListener('mouseleave', () => item.style.backgroundColor = 'transparent');
-        
-        item.addEventListener('click', () => {
-            this.selectResearchType(item.dataset.type);
-            dropdown.remove();
-            this.isDropdownOpen = false;
-        });
-    });
-    
-    // Append to the button's relative container instead of body
-    buttonContainer.parentElement.appendChild(dropdown);
+
+// Inject CSS if not already present
+if (typeof document !== 'undefined' && !document.getElementById('dashboard-header-dropdown-styles')) {
+    document.head.insertAdjacentHTML('beforeend', DROPDOWN_CSS);
 }
 
-    selectResearchType(type) {
-        this.currentMode = type;
-        this.updateButtonState();
-    }
-
-    updateButtonState() {
-        const buttonContainer = document.getElementById('main-button-container');
-        const mainText = document.getElementById('main-research-text');
-        const icon = document.querySelector('#main-research-btn i');
-        
-        if (this.currentMode === 'bulk') {
-            // Switch to bulk mode
-            buttonContainer.className = 'bg-gradient-to-r from-orange-400 via-orange-500 to-red-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
-            mainText.textContent = 'Bulk Analyze Leads';
-            
-            if (icon) {
-                icon.setAttribute('data-feather', 'layers');
-                if (window.feather) window.feather.replace();
-            }
-        } else {
-            // Switch to single mode
-            buttonContainer.className = 'bg-gradient-to-r from-indigo-400 via-indigo-500 to-purple-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300';
-            mainText.textContent = 'Research New Lead';
-            
-            if (icon) {
-                icon.setAttribute('data-feather', 'plus');
-                if (window.feather) window.feather.replace();
-            }
-        }
-    }
-}
-
+// Export for module systems
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = DashboardHeader;
 } else {
     window.DashboardHeader = DashboardHeader;
 }
+
+console.log('📄 [DashboardHeader] Complete rewrite loaded successfully');
