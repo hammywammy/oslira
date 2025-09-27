@@ -114,19 +114,29 @@ function setupInstagramDemo() {
   
   console.log('🎮 [Home] Setting up Instagram demo...');
   
-  // Demo button click handler
-  demoBtn.addEventListener('click', async () => {
-    const handle = demoInput.value.trim();
-    
-    if (!handle) {
-      demoInput.focus();
-      demoInput.classList.add('animate-wiggle');
-      setTimeout(() => demoInput.classList.remove('animate-wiggle'), 500);
-      return;
-    }
-    
+// Demo button click handler  
+demoBtn.addEventListener('click', async () => {
+  const handle = demoInput.value.trim();
+  
+  if (!handle) {
+    demoInput.focus();
+    demoInput.classList.add('animate-wiggle');
+    setTimeout(() => demoInput.classList.remove('animate-wiggle'), 500);
+    return;
+  }
+  
+  // Ensure function exists before calling
+  if (typeof runInstagramDemo === 'function') {
     await runInstagramDemo(handle);
-  });
+  } else {
+    console.error('❌ [Home] runInstagramDemo function not available');
+    // Fallback to demo mode
+    const demoData = generateDemoResults(handle);
+    displayDemoResults(demoData);
+    const demoResults = document.getElementById('demo-results');
+    demoResults.classList.remove('hidden');
+  }
+});
   
   // Enter key support
   demoInput.addEventListener('keypress', (e) => {
