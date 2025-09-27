@@ -131,22 +131,23 @@ function updateNavigationButtons() {
     const prevButton = document.getElementById('back-btn');
     const nextButton = document.getElementById('next-btn');
     const submitButton = document.getElementById('finish-btn');
+    const skipButton = document.getElementById('skip-btn');
     
     // Show/hide previous button
     if (prevButton) {
         prevButton.style.display = currentStep > 1 ? 'inline-flex' : 'none';
     }
     
-    // Update next/submit button
+    // Update next/submit button and skip button
     if (currentStep === totalSteps) {
         if (nextButton) nextButton.style.display = 'none';
         if (submitButton) submitButton.style.display = 'inline-flex';
+        if (skipButton) skipButton.style.display = 'none'; // Hide skip on final step
     } else {
         if (nextButton) nextButton.style.display = 'inline-flex';
         if (submitButton) submitButton.style.display = 'none';
+        if (skipButton) skipButton.style.display = 'inline-flex'; // Show skip on other steps
     }
-    
-    console.log(`[Onboarding] Navigation buttons updated for step ${currentStep}`);
 }
     
     function updateProgress() {
