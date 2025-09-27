@@ -494,7 +494,17 @@ function showSubmissionProgress() {
         }
     }
     
+// Global submission state to prevent duplicates
+let isSubmissionInProgress = false;
+
 async function submitOnboarding() {
+    // Immediate duplicate check with hard block
+    if (isSubmissionInProgress) {
+        console.warn('🚨 [Onboarding] Duplicate submission blocked');
+        return;
+    }
+    
+    isSubmissionInProgress = true;
     console.log('📤 [Onboarding] Starting submission process');
     
     try {
@@ -676,8 +686,13 @@ const { error: updateUserError } = await authSystem.supabase
         // Redirect to dashboard
         window.location.href = '/dashboard/';
         
-    } catch (error) {
+} catch (error) {
+        // Reset submission state on error
+        isSubmissionInProgress = false;
+        
         console.error('❌ [Onboarding] Submission failed:', error);
+        
+        // Show user-friendly error message
         
         // Show user-friendly error message
         const errorMessage = error.message.includes('Invalid signature') 
