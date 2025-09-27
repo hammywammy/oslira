@@ -4,18 +4,19 @@
 
 class OnboardingRules {
     constructor() {
-        this.TOTAL_STEPS = 9;
+        this.TOTAL_STEPS = 10;
         
 this.STEP_FIELDS = {
-    1: ['company-name', 'industry', 'company-size'],  // Tell us about your business
-    2: ['primary-objective'],                          // What's primary objective
-    3: ['challenges'],                                 // What challenges are you facing
-    4: ['target-description'],                         // ICP
-    5: ['communication-tone'],                         // How do you prefer to communicate
-    6: ['budget', 'monthly-lead-goal'],               // Budget and goals
-    7: ['team-size', 'campaign-manager'],             // Team setup
-    8: ['integrations'],                              // Connect your tools (optional)
-    9: ['phone-number', 'sms-opt-in']                 // Phone number with SMS opt-in (optional)
+    1: ['company-name', 'industry', 'company-size'],
+    2: ['primary-objective'],
+    3: ['challenges'],
+    4: ['target-description'],
+    5: ['communication-tone'],
+    6: ['budget', 'monthly-lead-goal'],
+    7: ['team-size', 'campaign-manager'],
+    8: ['integrations'],
+    9: ['phone-number', 'sms-opt-in'],
+    10: []
 };
         
 this.VALIDATION_RULES = {
