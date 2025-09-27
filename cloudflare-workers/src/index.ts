@@ -61,13 +61,8 @@ app.post('/v1/analyze', async (c) => {
 });
 
 app.post('/v1/analyze-anonymous', async (c) => {
-  return c.json({
-    success: true,
-    message: "ANONYMOUS ENDPOINT WORKS",
-    timestamp: new Date().toISOString(),
-    method: c.req.method,
-    url: c.req.url
-  });
+  const { handleAnonymousAnalyze } = await import('./handlers/anonymous-analyze.js');
+  return handleAnonymousAnalyze(c);
 });
 
 app.post('/v1/bulk-analyze', async (c) => {
