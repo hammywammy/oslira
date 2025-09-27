@@ -29,6 +29,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupAnimations();
   initializeConversionOptimizations();
   
+  // CRITICAL: Call setupInstagramDemo directly
+  console.log('🔥 [Home] Calling setupInstagramDemo from DOMContentLoaded...');
+  setupInstagramDemo();
+  
   // Force footer initialization after scripts load
   setTimeout(async () => {
     if (window.FooterManager && !document.querySelector('.footer-main')) {
@@ -63,7 +67,8 @@ window.addEventListener('oslira:scripts:loaded', async () => {
 function initializeConversionOptimizations() {
   console.log('🎯 [Home] Initializing conversion optimizations...');
   
-  // Initialize demo functionality - handlers will be in homeHandlers.js
+  // CRITICAL: Ensure setupInstagramDemo is called
+  console.log('🔥 [Home] Calling setupInstagramDemo from initializeConversionOptimizations...');
   setupInstagramDemo();
   
   // Setup CTA tracking and optimization
@@ -86,7 +91,6 @@ function initializeConversionOptimizations() {
   
   console.log('✅ [Home] Conversion optimizations ready');
 }
-
 // =============================================================================
 // INSTAGRAM DEMO FUNCTIONALITY - UI SETUP ONLY
 // =============================================================================
