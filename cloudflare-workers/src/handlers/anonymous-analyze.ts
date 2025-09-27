@@ -44,10 +44,10 @@ async function checkRateLimit(c: Context<{ Bindings: Env }>): Promise<{ allowed:
       rateLimitData = { attempts: [], resetTime: nextReset.toISOString() };
     }
     
-    const remaining = Math.max(0, 3 - rateLimitData.attempts.length);
-    const resetIn = Math.ceil((nextReset.getTime() - now.getTime()) / (1000 * 60 * 60)); // Hours
-    
-    if (rateLimitData.attempts.length >= 3) {
+const remaining = Math.max(0, 1 - rateLimitData.attempts.length);
+const resetIn = Math.ceil((nextReset.getTime() - now.getTime()) / (1000 * 60 * 60)); // Hours
+
+if (rateLimitData.attempts.length >= 1) {
       return { allowed: false, remaining: 0, resetIn };
     }
     
@@ -60,10 +60,10 @@ async function checkRateLimit(c: Context<{ Bindings: Env }>): Promise<{ allowed:
     
     return { allowed: true, remaining: remaining - 1, resetIn };
     
-  } catch (error: any) {
+} catch (error: any) {
     logger('error', 'Rate limit check failed', { error: error.message, clientIP });
     // On error, allow the request (fail open)
-    return { allowed: true, remaining: 2, resetIn: 24 };
+    return { allowed: true, remaining: 0, resetIn: 24 };
   }
 }
 
