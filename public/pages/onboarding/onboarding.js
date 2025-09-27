@@ -393,6 +393,16 @@ function getFieldValue(fieldId) {
         const checkboxes = document.querySelectorAll('input[name="integrations"]:checked');
         return Array.from(checkboxes).map(cb => cb.value);
     }
+
+    if (fieldId === 'phone-number') {
+    const field = document.getElementById('phone-number');
+    return field ? field.value.trim() : '';
+}
+
+if (fieldId === 'sms-opt-in') {
+    const checkbox = document.querySelector('input[name="sms-opt-in"]:checked');
+    return checkbox ? checkbox.value : '';
+}
     
     // Handle regular input fields
     const field = document.getElementById(fieldId);
