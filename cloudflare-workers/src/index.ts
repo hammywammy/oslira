@@ -187,17 +187,18 @@ app.notFound(c => {
     timestamp: new Date().toISOString(),
     version: 'v3.1.0-modular',
     architecture: 'modular_with_lazy_loading',
-    available_endpoints: [
-      'GET / - Health check',
-      'GET /health - Simple health status',
-      'GET /config - Configuration',
-      'POST /v1/analyze - Main analysis endpoint',
-      'POST /v1/bulk-analyze - Bulk analysis',
-      'POST /billing/* - Stripe endpoints',
-      'GET /analytics/* - Analytics endpoints',
-      'GET /debug-* - Debug endpoints',
-      'GET /test-* - Test endpoints'
-    ]
+available_endpoints: [
+  'GET / - Health check',
+  'GET /health - Simple health status',
+  'GET /config - Configuration',
+  'POST /v1/analyze - Main analysis endpoint',
+  'POST /v1/analyze-anonymous - Anonymous analysis endpoint',
+  'POST /v1/bulk-analyze - Bulk analysis',
+  'POST /billing/* - Stripe endpoints',
+  'GET /analytics/* - Analytics endpoints',
+  'GET /debug-* - Debug endpoints',
+  'GET /test-* - Test endpoints'
+]
   }, 404);
 });
 
