@@ -7,15 +7,15 @@ class OnboardingRules {
         this.TOTAL_STEPS = 9;
         
 this.STEP_FIELDS = {
-    1: ['primary-objective'],
-    2: ['company-name', 'industry', 'company-size'],
-    3: ['target-description'],
-    4: ['budget', 'monthly-lead-goal'],
-    5: ['challenges'],
-    6: ['communication-tone'],
-    7: ['integrations'],
-    8: ['team-size', 'campaign-manager'],
-    9: []
+    1: ['company-name', 'industry', 'company-size'],  // Tell us about your business
+    2: ['primary-objective'],                          // What's primary objective
+    3: ['challenges'],                                 // What challenges are you facing
+    4: ['target-description'],                         // ICP
+    5: ['communication-tone'],                         // How do you prefer to communicate
+    6: ['budget', 'monthly-lead-goal'],               // Budget and goals
+    7: ['team-size', 'campaign-manager'],             // Team setup
+    8: ['integrations'],                              // Connect your tools (optional)
+    9: []                                             // Phone number with SMS opt-in (optional)
 };
         
 this.VALIDATION_RULES = {
