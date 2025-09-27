@@ -61,6 +61,12 @@ app.post('/debug/clear-rate-limit', async (c) => {
   return c.json({ success: true, message: `Rate limit cleared for ${clientIP}` });
 });
 
+// Public configuration endpoint (for Netlify Edge Function)
+app.get('/api/public-config', async (c) => {
+  const { handlePublicConfig } = await import('./handlers/public-config.js');
+  return handlePublicConfig(c);
+});
+
 // Main analysis endpoints
 app.post('/v1/analyze', async (c) => {
   const { handleAnalyze } = await import('./handlers/analyze.js');
