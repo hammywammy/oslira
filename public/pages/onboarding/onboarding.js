@@ -148,6 +148,8 @@ function updateNavigationButtons() {
         if (submitButton) submitButton.style.display = 'none';
         if (skipButton) skipButton.style.display = 'inline-flex'; // Show skip on other steps
     }
+    
+    console.log(`[Onboarding] Navigation buttons updated for step ${currentStep}/${totalSteps}`);
 }
     
     function updateProgress() {
@@ -201,8 +203,11 @@ showElement('onboarding-form');
         console.error(`[Onboarding] Step ${stepNumber} element not found!`);
     }
     
-    // Update progress
-    updateProgress();
+// Update progress
+updateProgress();
+
+// Update navigation buttons for current step
+updateNavigationButtons();
     
     // Focus on first input
     setTimeout(() => {
