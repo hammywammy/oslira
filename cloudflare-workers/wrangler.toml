@@ -11,7 +11,7 @@ APP_ENV = "production"
 FRONTEND_URL = "https://oslira.com"
 
 kv_namespaces = [
-  { binding = "OSLIRA_KV", id = "4d86f413c437481fac253bb9a6567f82" }
+  { binding = "OSLIRA_KV", id = "dd86f413c4374811ac253bb9a6567182" }
 ]
 
 [env.staging]
@@ -20,9 +20,8 @@ routes = [
   { pattern = "api-staging.oslira.com/*", zone_name = "oslira.com" }
 ]
 kv_namespaces = [
-  { binding = "OSLIRA_KV", id = "4d86f413c437481fac253bb9a6567f82" }
+  { binding = "OSLIRA_KV", id = "dd86f413c4374811ac253bb9a6567182" }
 ]
-
 [env.staging.vars]
 APP_ENV = "staging" 
 FRONTEND_URL = "https://osliratest.netlify.app"
