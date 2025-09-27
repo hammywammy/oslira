@@ -18,8 +18,9 @@ const conversionState = {
   scrollDepth: 0
 };
 
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Oslira conversion-optimized landing page loaded");
+// EMERGENCY: Execute immediately since DOM is already loaded
+async function initializeHomePage() {
+  console.log("🚀🚀🚀 EMERGENCY: Initializing home page IMMEDIATELY");
   
   // Prevent auto-redirect by blocking simple-app initialization
   window.preventSimpleAppInit = true;
@@ -30,18 +31,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   initializeConversionOptimizations();
   
   // CRITICAL: Call setupInstagramDemo directly
-  console.log('🔥 [Home] Calling setupInstagramDemo from DOMContentLoaded...');
+  console.log('🔥🔥🔥 [Home] EMERGENCY calling setupInstagramDemo...');
   setupInstagramDemo();
   
   // Force footer initialization after scripts load
   setTimeout(async () => {
     if (window.FooterManager && !document.querySelector('.footer-main')) {
-      console.log('🦶 [Home] Force-initializing footer from DOMContentLoaded...');
+      console.log('🦶 [Home] Force-initializing footer...');
       const footerManager = new window.FooterManager();
       footerManager.render('footer-container');
     }
   }, 3000);
-});
+}
+
+// Execute immediately if DOM ready, otherwise wait
+if (document.readyState === 'loading') {
+  console.log('🕐 [Home] DOM still loading - adding DOMContentLoaded listener');
+  document.addEventListener("DOMContentLoaded", initializeHomePage);
+} else {
+  console.log('🚀 [Home] DOM already loaded - executing immediately');
+  initializeHomePage();
+}
 
 // Listen for scripts loaded event to initialize footer - ONCE ONLY
 window.addEventListener('oslira:scripts:loaded', async () => {
@@ -781,3 +791,13 @@ window.HomeState = {
 };
 
 console.log('✅ [Home] Clean UI management loaded');
+
+// EMERGENCY FALLBACK - Execute after script loads
+console.log('🚨 [Home] EMERGENCY FALLBACK - Executing initialization...');
+setTimeout(() => {
+  if (!document.getElementById('demo-analyze-btn').onclick && 
+      !getEventListeners(document.getElementById('demo-analyze-btn')).click?.length) {
+    console.log('🚨 [Home] EMERGENCY - No event listeners detected, force initializing...');
+    initializeHomePage();
+  }
+}, 1000);
