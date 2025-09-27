@@ -15,19 +15,24 @@ this.STEP_FIELDS = {
     6: ['budget', 'monthly-lead-goal'],               // Budget and goals
     7: ['team-size', 'campaign-manager'],             // Team setup
     8: ['integrations'],                              // Connect your tools (optional)
-    9: []                                             // Phone number with SMS opt-in (optional)
+    9: ['phone-number', 'sms-opt-in']                 // Phone number with SMS opt-in (optional)
 };
         
 this.VALIDATION_RULES = {
-    'primary-objective': { required: true },
     'company-name': { required: true, minLength: 2 },
     'industry': { required: true },
     'company-size': { required: true },
+    'primary-objective': { required: true },
+    'challenges': { required: false },
     'target-description': { required: true, minLength: 10 },
-    'budget': { required: true },
     'communication-tone': { required: false },
+    'budget': { required: true },
+    'monthly-lead-goal': { required: false },
     'team-size': { required: false },
-    'campaign-manager': { required: false }
+    'campaign-manager': { required: false },
+    'integrations': { required: false },
+    'phone-number': { required: false },
+    'sms-opt-in': { required: false }
 };
         
         // Character limits for each field (optimized for AI summary generation)
