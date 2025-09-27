@@ -112,17 +112,17 @@ class ConfigManager {
         }
     }
     
-    getFallbackConfig() {
-        console.log('🔄 [Config] Using fallback configuration');
-        
-        return {
-            supabaseUrl: 'https://placeholder.supabase.co',
-            supabaseKey: 'placeholder-key',
-            workerUrl: window.OsliraEnv?.WORKER_URL || 'https://api.oslira.com',
-            environment: window.OsliraEnv?.ENV || 'development',
-            fallback: true
-        };
-    }
+getFallbackConfig() {
+    console.log('🔄 [Config] Using fallback configuration');
+    
+    return {
+        supabaseUrl: 'https://jswzzihuqtjqvobfosks.supabase.co',
+        supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ3NjcsImV4cCI6MjA1MDU1MDc2N30.Z7EQBfC8N4QQjl8uIi-cGLM4-MJb4LrUa1Dz6kqBWPU',
+        workerUrl: window.OsliraEnv?.WORKER_URL || 'https://api.oslira.com',
+        environment: window.OsliraEnv?.ENV || 'development',
+        fallback: true
+    };
+}
     
     // =============================================================================
     // CONFIGURATION PROCESSING
