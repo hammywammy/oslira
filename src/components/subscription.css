@@ -1,0 +1,1018 @@
+/* =============================================================================
+   SUBSCRIPTION PAGE CSS - MATCHES HOMEPAGE PATTERNS EXACTLY
+   Compatible with Tailwind 3, follows architectural patterns from home.css
+   ============================================================================= */
+
+@layer components {
+  /* =============================================================================
+     SUBSCRIPTION PAGE LAYOUT - FOLLOWS SIDEBAR + MAIN CONTENT PATTERN
+     ============================================================================= */
+  
+  .subscription-page-body {
+    @apply leading-normal bg-gradient-to-br from-gray-50 to-slate-100 text-base min-h-screen;
+  }
+
+  /* =============================================================================
+     SIDEBAR INTEGRATION - EXTENDS EXISTING SIDEBAR CSS
+     ============================================================================= */
+
+  .sidebar-subscription-status {
+    @apply bg-gradient-to-br from-teal-500 to-purple-600 p-5 rounded-xl mb-6 text-white;
+    margin: 0 1rem;
+  }
+
+  .sidebar-plan-name {
+    @apply text-lg font-bold text-white mb-1;
+  }
+
+  .sidebar-next-billing {
+    @apply text-xs text-gray-200 opacity-90;
+  }
+
+  .sidebar-user-info {
+    @apply pt-5 border-t border-gray-200/20 mt-auto;
+    margin: 0 1rem 1rem;
+  }
+
+  .sidebar-user-info p {
+    @apply text-sm text-gray-400 mb-2;
+  }
+
+  .sidebar-user-info a {
+    @apply text-purple-400 hover:text-purple-300 text-sm transition-colors duration-200;
+  }
+
+  /* =============================================================================
+     MAIN CONTENT AREA - FOLLOWS HOME PAGE CONTAINER PATTERNS
+     ============================================================================= */
+
+  .subscription-main-content {
+    @apply ml-64 min-h-screen p-6;
+    transition: margin-left 0.3s ease;
+  }
+
+  .subscription-main-content.sidebar-collapsed {
+    @apply ml-16;
+  }
+
+  /* =============================================================================
+     PAGE HEADER - MATCHES HOME PAGE HERO STYLING
+     ============================================================================= */
+
+  .subscription-page-header {
+    @apply glass-effect rounded-2xl p-8 mb-8 text-center relative overflow-hidden;
+  }
+
+  .subscription-page-header::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-teal-500;
+  }
+
+  .subscription-page-title {
+    @apply text-4xl lg:text-5xl font-bold text-gray-900 mb-4;
+  }
+
+  .subscription-page-subtitle {
+    @apply text-xl text-gray-600 max-w-2xl mx-auto;
+  }
+
+  /* =============================================================================
+     CURRENT SUBSCRIPTION CARD - HERO-STYLE GRADIENT
+     ============================================================================= */
+
+  .current-subscription-card {
+    @apply glass-effect rounded-2xl p-8 mb-8 relative overflow-hidden;
+  }
+
+  .current-subscription-gradient {
+    @apply absolute inset-0 bg-gradient-to-br from-blue-600 via-purple-600 to-teal-500 opacity-90;
+  }
+
+  .current-subscription-overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-black/20 to-transparent;
+  }
+
+  .current-subscription-content {
+    @apply relative z-10 text-center text-white;
+  }
+
+  .current-subscription-title {
+    @apply text-2xl font-semibold mb-4 opacity-90;
+  }
+
+  .current-plan-name {
+    @apply text-4xl font-bold mb-2 drop-shadow-lg;
+  }
+
+  .current-plan-details {
+    @apply text-lg opacity-90 mb-6;
+  }
+
+  .current-subscription-info-card {
+    @apply bg-white/15 backdrop-blur-lg rounded-xl p-4 inline-block;
+  }
+
+  .current-subscription-info {
+    @apply text-sm;
+  }
+
+  /* =============================================================================
+     PRICING SECTION - FOLLOWS HOME PAGE PATTERNS
+     ============================================================================= */
+
+  .pricing-section-header {
+    @apply text-center mb-10;
+  }
+
+  .pricing-section-title {
+    @apply text-3xl lg:text-4xl font-bold text-gray-900 mb-4;
+  }
+
+  .pricing-section-subtitle {
+    @apply text-lg text-gray-600;
+  }
+
+  .pricing-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto;
+  }
+
+  /* =============================================================================
+     PRICING CARDS - ENHANCED VERSION OF HOME PAGE CARDS
+     ============================================================================= */
+
+  .pricing-card {
+    @apply glass-effect rounded-2xl p-8 relative hover:shadow-xl transition-all duration-300 transform hover:scale-105;
+  }
+
+  .pricing-card.current-plan-card {
+    @apply border-2 border-teal-300 bg-gradient-to-br from-teal-50 to-blue-50;
+    box-shadow: 0 10px 40px rgba(20, 184, 166, 0.2);
+  }
+
+  .pricing-card-header {
+    @apply text-center mb-6;
+  }
+
+  .pricing-card-title {
+    @apply text-xl font-semibold text-gray-900 mb-3;
+  }
+
+  .pricing-card-price-container {
+    @apply flex items-baseline justify-center mb-2;
+  }
+
+  .pricing-card-currency {
+    @apply text-gray-500 text-lg;
+  }
+
+  .pricing-card-price {
+    @apply text-4xl font-bold text-gray-900;
+  }
+
+  .pricing-card-period {
+    @apply text-gray-600 text-sm;
+  }
+
+  .pricing-card-credits {
+    @apply px-3 py-1 rounded-full text-sm font-semibold mt-3 inline-block;
+  }
+
+  .pricing-card-credits.starter {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .pricing-card-credits.professional {
+    @apply bg-purple-50 text-purple-700;
+  }
+
+  .pricing-card-credits.agency {
+    @apply bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700;
+  }
+
+  .pricing-card-credits.enterprise {
+    @apply bg-gray-50 text-gray-700;
+  }
+
+  .pricing-card-savings {
+    @apply bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold mt-2 inline-block;
+  }
+
+  /* =============================================================================
+     PRICING CARD FEATURES LIST
+     ============================================================================= */
+
+  .pricing-card-features {
+    @apply space-y-3 mb-8 text-sm;
+  }
+
+  .pricing-card-feature {
+    @apply flex items-center text-gray-700;
+  }
+
+  .pricing-card-feature-icon {
+    @apply w-4 h-4 text-teal-500 mr-3 flex-shrink-0;
+  }
+
+  /* =============================================================================
+     PRICING CARD BUTTONS - EXTENDS BUTTON SYSTEM
+     ============================================================================= */
+
+  .pricing-card-button {
+    @apply w-full py-3 px-6 font-semibold rounded-lg transition-all duration-200 transform hover:scale-105;
+  }
+
+  .pricing-card-button.primary {
+    @apply btn-primary;
+  }
+
+  .pricing-card-button.secondary {
+    @apply btn-secondary;
+  }
+
+  .pricing-card-button.agency-special {
+    @apply bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg;
+  }
+
+  .pricing-card-button.current {
+    @apply bg-gray-300 text-gray-600 cursor-not-allowed;
+  }
+
+  .pricing-card-button:disabled {
+    @apply opacity-50 cursor-not-allowed transform-none;
+  }
+
+  /* =============================================================================
+     POPULAR BADGE - CONVERSION OPTIMIZATION
+     ============================================================================= */
+
+  .popular-badge {
+    @apply absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg z-10;
+  }
+
+  .current-badge {
+    @apply absolute -top-2 -right-2 bg-gradient-to-r from-teal-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10;
+  }
+
+  /* =============================================================================
+     BILLING MANAGEMENT SECTION
+     ============================================================================= */
+
+  .billing-section {
+    @apply glass-effect rounded-2xl p-8 mb-8 relative overflow-hidden;
+  }
+
+  .billing-section::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-teal-500;
+  }
+
+  .billing-header {
+    @apply flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6;
+  }
+
+  .billing-title {
+    @apply text-2xl font-bold text-gray-900 mb-2;
+  }
+
+  .billing-subtitle {
+    @apply text-gray-600;
+  }
+
+  .billing-manage-button {
+    @apply btn-secondary-outline mt-4 lg:mt-0 px-6 py-3 flex items-center gap-2;
+  }
+
+  .billing-info-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
+
+  .billing-info-card {
+    @apply bg-gray-50 rounded-xl p-6 border border-gray-200;
+  }
+
+  .billing-info-label {
+    @apply text-sm font-medium text-gray-500 mb-2;
+  }
+
+  .billing-info-value {
+    @apply text-lg font-semibold text-gray-900;
+  }
+
+  .billing-info-detail {
+    @apply text-sm text-gray-600 mt-1;
+  }
+
+  /* =============================================================================
+     USAGE HISTORY SECTION
+     ============================================================================= */
+
+  .usage-history-section {
+    @apply glass-effect rounded-2xl p-8 relative overflow-hidden;
+  }
+
+  .usage-history-section::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-teal-500;
+  }
+
+  .usage-history-header {
+    @apply flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6;
+  }
+
+  .usage-history-title {
+    @apply text-2xl font-bold text-gray-900 mb-2;
+  }
+
+  .usage-history-subtitle {
+    @apply text-gray-600;
+  }
+
+  .usage-history-filters {
+    @apply flex gap-2 mt-4 lg:mt-0;
+  }
+
+  .usage-history-filter {
+    @apply px-4 py-2 text-sm rounded-lg transition-colors;
+  }
+
+  .usage-history-filter.active {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .usage-history-filter.inactive {
+    @apply text-gray-600 hover:bg-gray-50;
+  }
+
+  /* =============================================================================
+     USAGE HISTORY TABLE
+     ============================================================================= */
+
+  .usage-table {
+    @apply w-full overflow-x-auto;
+  }
+
+  .usage-table table {
+    @apply w-full;
+  }
+
+  .usage-table th {
+    @apply text-left py-4 px-4 font-semibold text-gray-900 text-sm border-b border-gray-200;
+  }
+
+  .usage-table td {
+    @apply py-4 px-4 text-sm border-b border-gray-100;
+  }
+
+  .usage-table tr:hover {
+    @apply bg-gray-50 transition-colors;
+  }
+
+  .usage-status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .usage-status-badge.paid {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .usage-status-badge.free {
+    @apply bg-gray-100 text-gray-800;
+  }
+
+  .usage-status-badge.pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  /* =============================================================================
+     HELP & SUPPORT SECTION
+     ============================================================================= */
+
+  .help-section {
+    @apply glass-effect rounded-2xl p-8 mb-8 relative overflow-hidden;
+  }
+
+  .help-section::before {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-teal-500;
+  }
+
+  .help-section-header {
+    @apply text-center mb-6;
+  }
+
+  .help-section-title {
+    @apply text-2xl font-bold text-gray-900 mb-2;
+  }
+
+  .help-section-subtitle {
+    @apply text-gray-600;
+  }
+
+  .help-cards-grid {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-6;
+  }
+
+  .help-card {
+    @apply group bg-gray-50 rounded-xl p-6 text-center transition-all duration-200 hover:shadow-lg;
+  }
+
+  .help-card.help-center {
+    @apply hover:bg-blue-50;
+  }
+
+  .help-card.email-support {
+    @apply hover:bg-purple-50;
+  }
+
+  .help-card.live-chat {
+    @apply hover:bg-teal-50;
+  }
+
+  .help-card-icon {
+    @apply w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors;
+  }
+
+  .help-card-icon.help-center {
+    @apply bg-blue-100 group-hover:bg-blue-200;
+  }
+
+.help-card-icon.email-support {
+    @apply bg-purple-100 group-hover:bg-purple-200;
+  }
+
+  .help-card-icon.live-chat {
+    @apply bg-teal-100 group-hover:bg-teal-200;
+  }
+
+  .help-card-icon svg {
+    @apply w-6 h-6;
+  }
+
+  .help-card-icon.help-center svg {
+    @apply text-blue-600;
+  }
+
+  .help-card-icon.email-support svg {
+    @apply text-purple-600;
+  }
+
+  .help-card-icon.live-chat svg {
+    @apply text-teal-600;
+  }
+
+  .help-card-title {
+    @apply font-semibold text-gray-900 mb-2;
+  }
+
+  .help-card-description {
+    @apply text-sm text-gray-600;
+  }
+
+  /* =============================================================================
+     MODALS - MATCHES HOME PAGE MODAL PATTERNS
+     ============================================================================= */
+
+  .subscription-modal-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50;
+  }
+
+  .subscription-modal-content {
+    @apply bg-white rounded-2xl p-8 max-w-md mx-4 text-center;
+  }
+
+  .subscription-modal-icon {
+    @apply w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4;
+  }
+
+  .subscription-modal-icon.success {
+    @apply bg-green-100;
+  }
+
+  .subscription-modal-icon.error {
+    @apply bg-red-100;
+  }
+
+  .subscription-modal-icon svg {
+    @apply w-8 h-8;
+  }
+
+  .subscription-modal-icon.success svg {
+    @apply text-green-600;
+  }
+
+  .subscription-modal-icon.error svg {
+    @apply text-red-600;
+  }
+
+  .subscription-modal-title {
+    @apply text-xl font-bold text-gray-900 mb-2;
+  }
+
+  .subscription-modal-message {
+    @apply text-gray-600 mb-6;
+  }
+
+  .subscription-modal-button {
+    @apply w-full;
+  }
+
+  /* =============================================================================
+     LOADING STATES - FOLLOWS HOME PAGE LOADING PATTERNS
+     ============================================================================= */
+
+  .subscription-loading-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50;
+  }
+
+  .subscription-loading-content {
+    @apply bg-white rounded-2xl p-8 max-w-sm mx-4 text-center;
+  }
+
+  .subscription-loading-spinner {
+    @apply loading-spinner w-8 h-8 mx-auto mb-4;
+  }
+
+  .subscription-loading-title {
+    @apply text-lg font-semibold text-gray-900 mb-2;
+  }
+
+  .subscription-loading-message {
+    @apply text-sm text-gray-600;
+  }
+
+  /* =============================================================================
+     RESPONSIVE DESIGN - FOLLOWS HOME PAGE BREAKPOINTS
+     ============================================================================= */
+
+  @media (max-width: 1024px) {
+    .subscription-main-content {
+      @apply ml-16;
+    }
+
+    .pricing-grid {
+      @apply grid-cols-1 lg:grid-cols-2;
+    }
+
+    .billing-info-grid {
+      @apply grid-cols-1 md:grid-cols-2;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .subscription-main-content {
+      @apply ml-0 p-4;
+    }
+
+    .sidebar {
+      @apply transform -translate-x-full lg:translate-x-0;
+    }
+
+    .sidebar.mobile-open {
+      @apply translate-x-0;
+    }
+
+    .subscription-page-header {
+      @apply p-6;
+    }
+
+    .subscription-page-title {
+      @apply text-3xl;
+    }
+
+    .current-subscription-card {
+      @apply p-6;
+    }
+
+    .current-plan-name {
+      @apply text-3xl;
+    }
+
+    .pricing-grid {
+      @apply grid-cols-1 gap-4;
+    }
+
+    .pricing-card {
+      @apply p-6;
+    }
+
+    .billing-section,
+    .usage-history-section,
+    .help-section {
+      @apply p-6;
+    }
+
+    .billing-header,
+    .usage-history-header {
+      @apply flex-col items-start;
+    }
+
+    .billing-manage-button {
+      @apply mt-4 w-full justify-center;
+    }
+
+    .usage-history-filters {
+      @apply mt-4 w-full;
+    }
+
+    .usage-history-filter {
+      @apply flex-1 text-center;
+    }
+
+    .billing-info-grid {
+      @apply grid-cols-1;
+    }
+
+    .help-cards-grid {
+      @apply grid-cols-1;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .subscription-main-content {
+      @apply p-3;
+    }
+
+    .subscription-page-header {
+      @apply p-4 mb-6;
+    }
+
+    .subscription-page-title {
+      @apply text-2xl;
+    }
+
+    .subscription-page-subtitle {
+      @apply text-lg;
+    }
+
+    .current-subscription-card {
+      @apply p-4 mb-6;
+    }
+
+    .current-plan-name {
+      @apply text-2xl;
+    }
+
+    .pricing-card {
+      @apply p-4;
+    }
+
+    .pricing-card-price {
+      @apply text-3xl;
+    }
+
+    .billing-section,
+    .usage-history-section,
+    .help-section {
+      @apply p-4 mb-6;
+    }
+
+    .subscription-modal-content {
+      @apply p-6 mx-3;
+    }
+
+    .usage-table {
+      @apply text-xs;
+    }
+
+    .usage-table th,
+    .usage-table td {
+      @apply px-2 py-3;
+    }
+  }
+
+  /* =============================================================================
+     DARK MODE SUPPORT (if needed in future)
+     ============================================================================= */
+
+  @media (prefers-color-scheme: dark) {
+    .subscription-page-body {
+      @apply bg-gray-900;
+    }
+
+    .glass-effect {
+      @apply bg-gray-800/80 border-gray-700/20;
+    }
+
+    .subscription-page-title,
+    .pricing-card-title,
+    .billing-title,
+    .usage-history-title,
+    .help-section-title {
+      @apply text-gray-100;
+    }
+
+    .subscription-page-subtitle,
+    .billing-subtitle,
+    .usage-history-subtitle,
+    .help-section-subtitle {
+      @apply text-gray-300;
+    }
+
+    .pricing-card-price {
+      @apply text-gray-100;
+    }
+
+    .billing-info-card {
+      @apply bg-gray-700 border-gray-600;
+    }
+
+    .billing-info-value {
+      @apply text-gray-100;
+    }
+
+    .help-card {
+      @apply bg-gray-700;
+    }
+
+    .help-card:hover {
+      @apply bg-gray-600;
+    }
+  }
+
+  /* =============================================================================
+     ACCESSIBILITY ENHANCEMENTS
+     ============================================================================= */
+
+  .pricing-card:focus-within,
+  .help-card:focus-within {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  .pricing-card-button:focus-visible,
+  .billing-manage-button:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pricing-card,
+    .help-card,
+    .billing-manage-button,
+    .pricing-card-button {
+      @apply transition-none transform-none;
+    }
+
+    .pricing-card:hover,
+    .help-card:hover,
+    .pricing-card-button:hover {
+      @apply transform-none;
+    }
+
+    .subscription-loading-spinner {
+      animation: none;
+    }
+  }
+
+  /* =============================================================================
+     HIGH CONTRAST MODE
+     ============================================================================= */
+
+  @media (prefers-contrast: high) {
+    .pricing-card,
+    .billing-section,
+    .usage-history-section,
+    .help-section {
+      @apply border-2 border-gray-800;
+    }
+
+    .pricing-card-button,
+    .billing-manage-button {
+      @apply border-2 border-black;
+    }
+  }
+
+  /* =============================================================================
+     PRINT STYLES
+     ============================================================================= */
+
+  @media print {
+    .sidebar,
+    .subscription-modal-overlay,
+    .subscription-loading-overlay,
+    .help-section {
+      @apply hidden;
+    }
+
+    .subscription-main-content {
+      @apply ml-0;
+    }
+
+    .subscription-page-header,
+    .current-subscription-card,
+    .pricing-card,
+    .billing-section,
+    .usage-history-section {
+      @apply bg-white border border-gray-300 shadow-none;
+    }
+
+    .current-subscription-gradient,
+    .current-subscription-overlay {
+      @apply hidden;
+    }
+
+    .current-subscription-content {
+      @apply text-black;
+    }
+
+    .pricing-card-button,
+    .billing-manage-button {
+      @apply bg-white text-black border border-gray-400;
+    }
+
+    .text-gradient {
+      @apply text-black;
+      background: none;
+      -webkit-text-fill-color: initial;
+    }
+  }
+
+  /* =============================================================================
+     CUSTOM ANIMATIONS - MATCHES HOME PAGE PATTERNS
+     ============================================================================= */
+
+  @keyframes subscription-fade-in {
+    from {
+      @apply opacity-0 transform translate-y-4;
+    }
+    to {
+      @apply opacity-100 transform translate-y-0;
+    }
+  }
+
+  @keyframes subscription-scale-in {
+    from {
+      @apply opacity-0 transform scale-95;
+    }
+    to {
+      @apply opacity-100 transform scale-100;
+    }
+  }
+
+  .subscription-animate-in {
+    animation: subscription-fade-in 0.6s ease-out;
+  }
+
+  .subscription-modal-content {
+    animation: subscription-scale-in 0.3s ease-out;
+  }
+
+  /* =============================================================================
+     UTILITY CLASSES - SUBSCRIPTION SPECIFIC
+     ============================================================================= */
+
+  .subscription-hidden {
+    @apply hidden;
+  }
+
+  .subscription-visible {
+    @apply block;
+  }
+
+  .subscription-loading {
+    @apply opacity-50 pointer-events-none;
+  }
+
+  .subscription-disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* =============================================================================
+     CUSTOM SHADOWS FOR DEPTH
+     ============================================================================= */
+
+  .subscription-shadow-soft {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .subscription-shadow-medium {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  .subscription-shadow-strong {
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+  }
+
+  /* =============================================================================
+     INTEGRATION WITH EXISTING BUTTON SYSTEM
+     ============================================================================= */
+
+  .subscription-btn-primary {
+    @apply btn-primary;
+  }
+
+  .subscription-btn-secondary {
+    @apply btn-secondary;
+  }
+
+  .subscription-btn-outline {
+    @apply btn-secondary-outline;
+  }
+
+  /* =============================================================================
+     ERROR AND SUCCESS STATES
+     ============================================================================= */
+
+  .subscription-error-state {
+    @apply border-red-300 bg-red-50;
+  }
+
+  .subscription-success-state {
+    @apply border-green-300 bg-green-50;
+  }
+
+  .subscription-warning-state {
+    @apply border-yellow-300 bg-yellow-50;
+  }
+
+  /* =============================================================================
+     MOBILE STICKY ELEMENTS (if needed)
+     ============================================================================= */
+
+  .subscription-mobile-sticky {
+    @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-40;
+  }
+
+  @media (min-width: 768px) {
+    .subscription-mobile-sticky {
+      @apply hidden;
+    }
+  }
+
+  /* =============================================================================
+     COMPONENT STATE MANAGEMENT
+     ============================================================================= */
+
+  .pricing-card.processing {
+    @apply opacity-75 pointer-events-none;
+  }
+
+  .pricing-card.processing .pricing-card-button {
+    @apply bg-gray-400 text-gray-600;
+  }
+
+  .subscription-form-loading {
+    @apply relative overflow-hidden;
+  }
+
+  .subscription-form-loading::after {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent;
+    animation: subscription-loading-sweep 2s infinite;
+  }
+
+  @keyframes subscription-loading-sweep {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* =============================================================================
+     INTEGRATION READY CLASSES
+     ============================================================================= */
+
+  .subscription-ready {
+    @apply opacity-100 pointer-events-auto;
+  }
+
+  .subscription-initializing {
+    @apply opacity-0 pointer-events-none;
+  }
+
+  /* Smooth transition when page loads */
+  .subscription-page-body.show-content .subscription-main-content {
+    @apply subscription-ready;
+    transition: opacity 0.3s ease;
+  }
+
+  .subscription-page-body:not(.show-content) .subscription-main-content {
+    @apply subscription-initializing;
+  }
+}
+
+/* =============================================================================
+   COMPONENT LAYER EXTENSIONS
+   ============================================================================= */
+
+@layer utilities {
+  /* Subscription-specific utilities */
+  .subscription-text-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+  }
+
+  .subscription-border-gradient {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6, #14b8a6);
+    background-size: 400% 400%;
+    animation: subscription-gradient-shift 3s ease infinite;
+  }
+
+  @keyframes subscription-gradient-shift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+}
