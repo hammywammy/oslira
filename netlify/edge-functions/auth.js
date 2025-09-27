@@ -25,38 +25,65 @@ export default async function (request) {
 }
 
 async function handleConfig(request) {
-  // This endpoint provides ONLY the public configuration needed by the browser
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
-  const workerUrl = Deno.env.get('WORKER_URL');
-  const stagingPassword = Deno.env.get('STAGING_PASSWORD');
-
-  // Check if required variables are present
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing environment variables:', { 
-      hasUrl: !!supabaseUrl, 
-      hasKey: !!supabaseKey,
-      hasWorker: !!workerUrl 
+  try {
+    const url = new URL(request.url);
+    const hostname = url.hostname;
+    
+    // Environment detection
+    const isProduction = hostname === 'oslira.com';
+    const isStaging = hostname === 'oslira.org' || hostname.includes('osliratest');
+    
+    // Worker URL based on environment
+    const workerUrl = isProduction ? 
+      'https://api.oslira.com' : 
+      'https://api-staging.oslira.com';
+    
+    console.log('🔧 [Netlify Edge] Fetching config from Cloudflare Worker:', workerUrl);
+    
+    // Fetch configuration from your Cloudflare Worker (which has AWS access)
+    const configResponse = await fetch(`${workerUrl}/api/public-config`, {
+      headers: {
+        'User-Agent': 'Netlify-Edge-Function',
+        'Accept': 'application/json'
+      }
     });
     
-    return new Response(
-      JSON.stringify({ 
-        error: 'Configuration not available',
-        debug: {
-          hasUrl: !!supabaseUrl,
-          hasKey: !!supabaseKey,
-          hasWorker: !!workerUrl
-        }
-      }), 
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
+    if (!configResponse.ok) {
+      throw new Error(`Worker responded with ${configResponse.status}`);
+    }
+    
+    const config = await configResponse.json();
+    
+    console.log('✅ [Netlify Edge] Config fetched successfully from Worker');
+    
+    return new Response(JSON.stringify(config), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=300'
       }
-    );
+    });
+    
+  } catch (error) {
+    console.error('❌ [Netlify Edge] Failed to fetch config from Worker:', error);
+    
+    // Fallback configuration
+    const fallbackConfig = {
+      supabaseUrl: 'https://jswzzihuqtjqvobfosks.supabase.co',
+      supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impzd3p6aWh1cXRqcXZvYmZvc2tzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ5NzQ3NjcsImV4cCI6MjA1MDU1MDc2N30.Z7EQBfC8N4QQjl8uIi-cGLM4-MJb4LrUa1Dz6kqBWPU',
+      workerUrl,
+      fallback: true
+    };
+    
+    return new Response(JSON.stringify(fallbackConfig), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=60'
+      }
+    });
   }
+}
 
   // Return public configuration
   const config = {
