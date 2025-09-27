@@ -332,13 +332,11 @@ await this.loadScript('timing-manager', '/core/timing-manager.js');
         }
         
 // Load page scripts sequentially for dependency management
-for (const scriptPath of pageConfig.scripts) {
-    const scriptName = this.extractScriptName(scriptPath);
-    await this.loadScript(scriptName, scriptPath);
-}
-        
         try {
-            await Promise.all(loadPromises);
+            for (const scriptPath of pageConfig.scripts) {
+                const scriptName = this.extractScriptName(scriptPath);
+                await this.loadScript(scriptName, scriptPath);
+            }
             console.log(`✅ [ScriptLoader] All scripts loaded for ${pageName}`);
         } catch (error) {
             console.error(`❌ [ScriptLoader] Failed to load scripts for ${pageName}:`, error);
