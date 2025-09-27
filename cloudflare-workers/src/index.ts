@@ -61,10 +61,13 @@ app.post('/v1/analyze', async (c) => {
 });
 
 app.post('/v1/analyze-anonymous', async (c) => {
-  console.log('ANONYMOUS ROUTE HIT - IMPORTING HANDLER');
-  const { handleAnonymousAnalyze } = await import('./handlers/anonymous-analyze.js');
-  console.log('HANDLER IMPORTED, CALLING FUNCTION');
-  return handleAnonymousAnalyze(c);
+  return c.json({
+    success: true,
+    message: "ANONYMOUS ENDPOINT WORKS",
+    timestamp: new Date().toISOString(),
+    method: c.req.method,
+    url: c.req.url
+  });
 });
 
 app.post('/v1/bulk-analyze', async (c) => {
