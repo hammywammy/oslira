@@ -54,6 +54,13 @@ app.get('/health', (c) => c.json({ status: 'healthy', timestamp: new Date().toIS
 // LAZY LOADED ENDPOINTS
 // ===============================================================================
 
+app.post('/debug/clear-rate-limit', async (c) => {
+  const clientIP = c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For') || 'unknown';
+  const key = `rate_limit:${clientIP}`;
+  await c.env.OSLIRA_KV.delete(key);
+  return c.json({ success: true, message: `Rate limit cleared for ${clientIP}` });
+});
+
 // Main analysis endpoints
 app.post('/v1/analyze', async (c) => {
   const { handleAnalyze } = await import('./handlers/analyze.js');
