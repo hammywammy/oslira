@@ -118,6 +118,13 @@ async function generateAnonymousInsights(profileData: any, env: Env): Promise<an
       throw new Error('OpenAI API key not configured');
     }
 
+    logger('info', 'Starting GPT insights generation', {
+      username: profileData.username,
+      followersCount: profileData.followersCount,
+      postsCount: profileData.postsCount,
+      hasApiKey: !!openaiApiKey
+    });
+
     const prompt = `Analyze this Instagram profile for general marketing potential and provide insights:
 
 Profile Data:
@@ -131,6 +138,8 @@ Profile Data:
 - Business Account: ${profileData.isBusinessAccount || false}
 - Private Account: ${profileData.isPrivate || false}
 
+IMPORTANT: Return ONLY valid JSON without markdown code blocks or extra formatting.
+
 Provide a JSON response with:
 1. overall_score (0-100): Account quality and partnership potential
 2. account_summary: 2-3 sentence overview of the account's marketing appeal
@@ -140,47 +149,120 @@ Provide a JSON response with:
 
 Focus on general appeal, authenticity, and business partnership potential.`;
 
+    const requestBody = {
+      model: 'gpt-4o-mini',
+      messages: [{ 
+        role: 'user', 
+        content: prompt 
+      }],
+      max_tokens: 1000,
+      temperature: 0.7
+    };
+
+    logger('info', 'Sending OpenAI request', {
+      username: profileData.username,
+      model: requestBody.model,
+      maxTokens: requestBody.max_tokens,
+      promptLength: prompt.length
+    });
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openaiApiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ 
-          role: 'user', 
-          content: prompt 
-        }],
-        max_tokens: 1000,
-        temperature: 0.7
-      })
+      body: JSON.stringify(requestBody)
+    });
+
+    logger('info', 'OpenAI response received', {
+      username: profileData.username,
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
     });
 
     if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
+      const errorText = await response.text();
+      logger('error', 'OpenAI API error', {
+        username: profileData.username,
+        status: response.status,
+        error: errorText
+      });
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     
+    logger('info', 'OpenAI data parsed', {
+      username: profileData.username,
+      hasChoices: !!data.choices,
+      choicesLength: data.choices?.length || 0,
+      hasContent: !!data.choices?.[0]?.message?.content,
+      usage: data.usage,
+      contentPreview: data.choices?.[0]?.message?.content?.substring(0, 100) || 'No content'
+    });
+    
     if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response from OpenAI API');
+      throw new Error('Invalid response from OpenAI API - no content');
     }
 
+    const rawContent = data.choices[0].message.content;
+    
+    logger('info', 'Raw GPT response', {
+      username: profileData.username,
+      contentLength: rawContent.length,
+      startsWithCodeBlock: rawContent.startsWith('```'),
+      fullContent: rawContent
+    });
+
     try {
-      const insights = JSON.parse(data.choices[0].message.content);
+      // Clean the response - remove code blocks if present
+      let cleanContent = rawContent.trim();
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      logger('info', 'Cleaned GPT response', {
+        username: profileData.username,
+        originalLength: rawContent.length,
+        cleanedLength: cleanContent.length,
+        cleanedContent: cleanContent
+      });
+
+      const insights = JSON.parse(cleanContent);
+      
+      logger('info', 'GPT response parsed successfully', {
+        username: profileData.username,
+        overallScore: insights.overall_score,
+        hasAccountSummary: !!insights.account_summary,
+        insightsCount: insights.engagement_insights?.length || 0,
+        audienceQuality: insights.audience_quality,
+        allFields: Object.keys(insights)
+      });
       
       // Validate required fields
       if (!insights.overall_score || !insights.account_summary || !insights.engagement_insights) {
+        logger('error', 'Missing required fields in GPT response', {
+          username: profileData.username,
+          hasScore: !!insights.overall_score,
+          hasSummary: !!insights.account_summary,
+          hasInsights: !!insights.engagement_insights,
+          fields: Object.keys(insights)
+        });
         throw new Error('Missing required fields in GPT response');
       }
 
       return insights;
       
     } catch (parseError: any) {
-      logger('warn', 'Failed to parse GPT response, using fallback', { 
+      logger('error', 'Failed to parse GPT response, using fallback', { 
         username: profileData.username,
-        error: parseError.message 
+        error: parseError.message,
+        rawContent: rawContent,
+        contentType: typeof rawContent
       });
       
       // Fallback response with calculated insights
@@ -190,7 +272,8 @@ Focus on general appeal, authenticity, and business partnership potential.`;
   } catch (error: any) {
     logger('error', 'GPT insights generation failed', { 
       username: profileData.username,
-      error: error.message 
+      error: error.message,
+      stack: error.stack
     });
     
     // Return fallback insights
@@ -203,12 +286,30 @@ function generateFallbackInsights(profileData: any): any {
   const followingCount = profileData.followingCount || 0;
   const postsCount = profileData.postsCount || 0;
   
+  logger('info', 'Generating fallback insights', {
+    username: profileData.username,
+    followerCount,
+    followingCount,
+    postsCount,
+    isVerified: profileData.isVerified,
+    isBusinessAccount: profileData.isBusinessAccount,
+    isPrivate: profileData.isPrivate
+  });
+  
   // Calculate basic scores
   const followerScore = Math.min(100, Math.log10(followerCount + 1) * 20);
   const engagementScore = followerCount > 0 ? Math.min(100, (postsCount / (followerCount / 1000)) * 10) : 50;
   const accountScore = (profileData.isVerified ? 20 : 0) + (profileData.isBusinessAccount ? 15 : 0) + (!profileData.isPrivate ? 10 : 0);
   
   const overall_score = Math.round((followerScore + engagementScore + accountScore) / 3);
+  
+  logger('info', 'Fallback score calculation', {
+    username: profileData.username,
+    followerScore: Math.round(followerScore),
+    engagementScore: Math.round(engagementScore),
+    accountScore,
+    overall_score
+  });
   
   // Determine audience quality
   let audience_quality = 'low';
@@ -258,7 +359,7 @@ function generateFallbackInsights(profileData: any): any {
     }
   }
 
-  return {
+  const fallbackResult = {
     overall_score,
     account_summary: `${followerCount > 10000 ? 'Established' : 'Emerging'} content creator with ${audience_quality} audience quality and ${profileData.isBusinessAccount ? 'professional' : 'personal'} brand approach. ${profileData.isVerified ? 'Verified status adds credibility.' : 'Shows potential for growth and partnerships.'}`,
     engagement_insights: insights.slice(0, 5),
@@ -267,6 +368,13 @@ function generateFallbackInsights(profileData: any): any {
                           followerCount > 10000 ? 'Good fit for mid-tier brand partnerships' : 
                           'Ideal for niche and micro-influencer campaigns'
   };
+
+  logger('info', 'Fallback insights generated', {
+    username: profileData.username,
+    result: fallbackResult
+  });
+
+  return fallbackResult;
 }
 
 // ===============================================================================
