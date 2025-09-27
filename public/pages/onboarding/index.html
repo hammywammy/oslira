@@ -949,16 +949,16 @@
     
     <!-- Initialization fallback -->
     <script>
-    // Fallback timeout in case script loader fails completely
-    setTimeout(() => {
-        if (!window.OsliraEnv || !document.getElementById('onboarding-form').classList.contains('hidden')) {
-            console.error('❌ Script loader failed to initialize - showing error state');
-            const loadingState = document.getElementById('loading-state');
-            const errorState = document.getElementById('error-state');
-            if (loadingState) loadingState.style.display = 'none';
-            if (errorState) errorState.style.display = 'flex';
-        }
-    }, 8000);
+setTimeout(() => {
+    // Only show error if BOTH conditions are true: no env AND form is still hidden
+    if (!window.OsliraEnv && document.getElementById('onboarding-form').classList.contains('hidden')) {
+        console.error('❌ Script loader failed to initialize - showing error state');
+        const loadingState = document.getElementById('loading-state');
+        const errorState = document.getElementById('error-state');
+        if (loadingState) loadingState.style.display = 'none';
+        if (errorState) errorState.style.display = 'flex';
+    }
+}, 8000);
     </script>
 </body>
 </html>
