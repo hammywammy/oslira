@@ -138,16 +138,32 @@ function updateNavigationButtons() {
         prevButton.style.display = currentStep > 1 ? 'inline-flex' : 'none';
     }
     
-    // Update next/submit button and skip button
-    if (currentStep === totalSteps) {
-        if (nextButton) nextButton.style.display = 'none';
-        if (submitButton) submitButton.style.display = 'inline-flex';
-        if (skipButton) skipButton.style.display = 'none'; // Hide skip on final step
-    } else {
-        if (nextButton) nextButton.style.display = 'inline-flex';
-        if (submitButton) submitButton.style.display = 'none';
-        if (skipButton) skipButton.style.display = 'inline-flex'; // Show skip on other steps
+// Update next/submit button
+if (currentStep === totalSteps) {
+    if (nextButton) nextButton.style.display = 'none';
+    if (submitButton) submitButton.style.display = 'inline-flex';
+} else {
+    if (nextButton) nextButton.style.display = 'inline-flex';
+    if (submitButton) submitButton.style.display = 'none';
+}
+
+// Update button text for step 10
+if (currentStep === 10) {
+    const nextText = document.getElementById('next-text');
+    if (nextText) nextText.textContent = 'Continue';
+    if (submitButton) {
+        submitButton.innerHTML = `
+            <span class="onboarding-btn-content">
+                <i class="fas fa-arrow-right mr-3"></i>
+                Continue to Dashboard
+                <i class="onboarding-btn-arrow group-hover:translate-x-1 fas fa-arrow-right ml-3"></i>
+            </span>
+        `;
     }
+} else if (currentStep === 9) {
+    const nextText = document.getElementById('next-text');
+    if (nextText) nextText.textContent = 'Continue';
+}
     
     console.log(`[Onboarding] Navigation buttons updated for step ${currentStep}/${totalSteps}`);
 }
@@ -255,62 +271,23 @@ function prevStep() {
 function nextStep() {
     console.log(`[Onboarding] nextStep called, currentStep: ${currentStep}, totalSteps: ${totalSteps}`);
     
-    if (currentStep < totalSteps) {
-        // Validate current step before proceeding
-        if (!validator.validateStep(currentStep, getFieldValue)) {
-            console.log(`[Onboarding] Step ${currentStep} validation failed`);
-            
-            // Show validation error message
-            const errorDiv = document.getElementById('validation-error');
-            if (errorDiv) {
-                errorDiv.classList.remove('hidden');
-                errorDiv.style.display = 'block';
-                
-                // Hide error after 3 seconds
-                setTimeout(() => {
-                    errorDiv.classList.add('hidden');
-                    errorDiv.style.display = 'none';
-                }, 3000);
-            }
-            
-            return;
-        }
-        
-        validator.clearAllErrors();
-        
-        // Hide current step
-        const currentStepElement = document.getElementById(`step-${currentStep}`);
-        if (currentStepElement) {
-            currentStepElement.classList.remove('active');
-            currentStepElement.style.display = 'none';
-        }
-        
-        // Move to next step
-        currentStep++;
-        
-        // Show next step
-        const nextStepElement = document.getElementById(`step-${currentStep}`);
-        if (nextStepElement) {
-            nextStepElement.classList.add('active');
-            nextStepElement.style.display = 'block';
-            
-            // Focus first input in new step
-            const firstInput = nextStepElement.querySelector('input, textarea, select');
-            if (firstInput) {
-                setTimeout(() => firstInput.focus(), 100);
-            }
-        } else {
-            console.error(`Step ${currentStep} element not found!`);
-        }
-        
-        updateProgress();
-        updateNavigationButtons();
-        
-        console.log(`[Onboarding] Moved to step ${currentStep}`);
-    } else {
-        // At final step, submit instead
-        submitOnboarding();
+if (currentStep < totalSteps) {
+    // Validate current step before proceeding
+    if (!validator.validateStep(currentStep, getFieldValue)) {
+        console.log(`[Onboarding] Step ${currentStep} validation failed`);
+        // Show validation error
+        return;
     }
+    
+    // Move to next step
+    currentStep++;
+    showStep(currentStep);
+    updateProgress();
+    updateNavigationButtons();
+} else {
+    // At final step (step 10), submit
+    submitOnboarding();
+}
 }
     
     function updateNavigationButtons() {
