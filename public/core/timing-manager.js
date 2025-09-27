@@ -297,22 +297,33 @@ async waitForSimpleApp() {
     }
 }
     
-    async initializeSupabaseClient() {
-        let attempts = 0;
-        while (attempts < 50) {
-            if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
-                const client = window.SimpleAuth.supabase();
-                if (client?.from && typeof client.from === 'function') {
-                    window.OsliraSupabaseClient = client;
-                    console.log('✅ [TimingManager] Supabase client resolved and registered');
-                    return;
-                }
+async initializeSupabaseClient() {
+    let attempts = 0;
+    while (attempts < 50) {
+        if (window.SimpleAuth?.supabase && typeof window.SimpleAuth.supabase === 'function') {
+            const client = window.SimpleAuth.supabase();
+            if (client?.from && typeof client.from === 'function') {
+                window.OsliraSupabaseClient = client;
+                console.log('✅ [TimingManager] Supabase client resolved and registered');
+                return;
             }
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
         }
-        throw new Error('Supabase client resolution failed');
+        
+        // Also check auth manager client
+        if (window.OsliraAuth?.supabase?.from) {
+            window.OsliraSupabaseClient = window.OsliraAuth.supabase;
+            console.log('✅ [TimingManager] Supabase client resolved from auth manager');
+            return;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
     }
+    
+    // Don't throw - graceful degradation
+    console.warn('⚠️ [TimingManager] Supabase client not available - database features disabled');
+    window.OsliraSupabaseClient = null;
+}
     
     async initializeBusinessManager() {
         await this.waitForGlobal('BusinessManager', 3000);
