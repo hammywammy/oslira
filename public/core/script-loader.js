@@ -91,8 +91,8 @@ home: {
     '/pages/home/homeHandlers.js',  // Add the new handlers file
     '/core/footer/footer-manager.js'
   ],
-  stylesheets: ['/styles/home.css'],
-  requiresAuth: false
+  requiresAuth: false,
+ enableTailwind: true
 },
             
             'onboarding': {
