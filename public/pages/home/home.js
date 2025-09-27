@@ -128,14 +128,20 @@ function setupInstagramDemo() {
     
     console.log('🚀 [Home] Delegating to HomeHandlers...');
     
-    // Delegate to handlers in homeHandlers.js
+if (window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis) {
+  await window.HomeHandlers.runInstagramAnalysis(handle);
+} else {
+  console.error('❌ [Home] HomeHandlers not available, using fallback');
+  // Wait and retry
+  setTimeout(() => {
     if (window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis) {
-      await window.HomeHandlers.runInstagramAnalysis(handle);
+      window.HomeHandlers.runInstagramAnalysis(handle);
     } else {
-      console.error('❌ [Home] HomeHandlers not available, using fallback');
-      // Simple fallback
-      window.HomeHandlers.generateDemoResults(handle);
+      console.error('❌ [Home] HomeHandlers still unavailable after retry');
+      alert('Demo temporarily unavailable. Please refresh the page.');
     }
+  }, 1000);
+}
   });
   
   // Enter key support
