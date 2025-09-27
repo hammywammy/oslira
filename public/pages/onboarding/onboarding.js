@@ -470,13 +470,124 @@ function getFieldValue(fieldId) {
     // =============================================================================
     
 function showSubmissionProgress() {
-        const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
-        if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.textContent = 'Creating Profile...';
-            submitButton.classList.add('loading');
+    const timestamp = Date.now();
+    const callStack = new Error().stack;
+    
+    console.log('🚀 [SUBMISSION PROGRESS] Starting button lockdown', {
+        timestamp,
+        currentStep: window.currentStep,
+        totalSteps: window.totalSteps,
+        userAgent: navigator.userAgent,
+        callStack: callStack.split('\n').slice(0, 5)
+    });
+    
+    // Find ALL possible submission-related buttons with extensive logging
+    const selectors = [
+        '[onclick*="submitOnboarding"]',
+        '#finish-btn', 
+        '[onclick*="skipStep"]',
+        'button[onclick]'
+    ];
+    
+    let allButtons = [];
+    selectors.forEach(selector => {
+        const buttons = document.querySelectorAll(selector);
+        console.log(`🔍 [SUBMISSION PROGRESS] Found ${buttons.length} buttons with selector: ${selector}`);
+        allButtons = [...allButtons, ...Array.from(buttons)];
+    });
+    
+    // Remove duplicates and log each unique button
+    const uniqueButtons = [...new Set(allButtons)];
+    console.log(`📊 [SUBMISSION PROGRESS] Total unique buttons found: ${uniqueButtons.length}`);
+    
+    uniqueButtons.forEach((btn, index) => {
+        const beforeState = {
+            id: btn.id,
+            disabled: btn.disabled,
+            textContent: btn.textContent?.trim(),
+            onclick: btn.onclick?.toString().substring(0, 100),
+            pointerEvents: getComputedStyle(btn).pointerEvents,
+            display: getComputedStyle(btn).display,
+            visibility: getComputedStyle(btn).visibility
+        };
+        
+        console.log(`🔒 [SUBMISSION PROGRESS] Button ${index + 1} BEFORE disable:`, beforeState);
+        
+        // Disable the button
+        btn.disabled = true;
+        btn.style.pointerEvents = 'none';
+        
+        // Update text for submission buttons
+        if (btn.id === 'finish-btn' || btn.onclick?.toString().includes('submitOnboarding')) {
+            btn.textContent = 'Creating Profile...';
+            btn.classList.add('loading');
         }
-    }
+        
+        const afterState = {
+            id: btn.id,
+            disabled: btn.disabled,
+            textContent: btn.textContent?.trim(),
+            onclick: btn.onclick?.toString().substring(0, 100),
+            pointerEvents: getComputedStyle(btn).pointerEvents,
+            display: getComputedStyle(btn).display,
+            visibility: getComputedStyle(btn).visibility
+        };
+        
+        console.log(`✅ [SUBMISSION PROGRESS] Button ${index + 1} AFTER disable:`, afterState);
+        
+        // Verify the disable worked
+        if (!btn.disabled || getComputedStyle(btn).pointerEvents !== 'none') {
+            console.error(`🚨 [SUBMISSION PROGRESS] Button ${index + 1} FAILED to disable properly!`, {
+                expectedDisabled: true,
+                actualDisabled: btn.disabled,
+                expectedPointerEvents: 'none',
+                actualPointerEvents: getComputedStyle(btn).pointerEvents
+            });
+        }
+    });
+    
+    // Log DOM state after changes
+    console.log('📋 [SUBMISSION PROGRESS] Final DOM state:', {
+        totalButtonsProcessed: uniqueButtons.length,
+        finishBtnExists: !!document.getElementById('finish-btn'),
+        finishBtnDisabled: document.getElementById('finish-btn')?.disabled,
+        skipBtnExists: !!document.getElementById('skip-btn'),
+        skipBtnDisabled: document.getElementById('skip-btn')?.disabled,
+        processingTime: Date.now() - timestamp
+    });
+    
+    // Set up monitoring for any button clicks after this point
+    const postLockdownMonitor = (e) => {
+        const button = e.target.closest('button');
+        if (button && (
+            button.onclick?.toString().includes('submitOnboarding') ||
+            button.onclick?.toString().includes('skipStep') ||
+            button.id === 'finish-btn'
+        )) {
+            console.error('🚨 [SUBMISSION PROGRESS] BUTTON CLICK AFTER LOCKDOWN!', {
+                buttonId: button.id,
+                disabled: button.disabled,
+                pointerEvents: getComputedStyle(button).pointerEvents,
+                textContent: button.textContent?.trim(),
+                timestamp: Date.now(),
+                timeSinceLockdown: Date.now() - timestamp
+            });
+        }
+    };
+    
+    document.addEventListener('click', postLockdownMonitor, { once: false });
+    
+    // Remove monitor after 10 seconds
+    setTimeout(() => {
+        document.removeEventListener('click', postLockdownMonitor);
+        console.log('🔍 [SUBMISSION PROGRESS] Post-lockdown monitoring ended');
+    }, 10000);
+    
+    console.log('🎯 [SUBMISSION PROGRESS] Button lockdown complete', {
+        totalTime: Date.now() - timestamp,
+        success: true
+    });
+}
     
     function updateSubmissionMessage(message) {
         const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
