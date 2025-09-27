@@ -85,11 +85,15 @@ this.coreScripts = [
                 enableTailwind: true
             },
             
-            'home': {
-                scripts: ['/pages/home/home.js', '/core/footer/footer-manager.js'],
-                requiresAuth: false,
-                enableTailwind: true
-            },
+home: {
+  scripts: [
+    '/pages/home/home.js',
+    '/pages/home/homeHandlers.js',  // Add the new handlers file
+    '/core/footer/footer-manager.js'
+  ],
+  stylesheets: ['/styles/home.css'],
+  requiresAuth: false
+},
             
             'onboarding': {
                 scripts: [
