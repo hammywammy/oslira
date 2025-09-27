@@ -116,20 +116,27 @@ function setupInstagramDemo() {
   
 // Demo button click handler  
 demoBtn.addEventListener('click', async () => {
+  console.log('🔥 [Home] Quick Analysis button clicked!');
+  
   const handle = demoInput.value.trim();
+  console.log('🔍 [Home] Handle entered:', handle);
   
   if (!handle) {
+    console.log('⚠️ [Home] No handle entered, focusing input');
     demoInput.focus();
     demoInput.classList.add('animate-wiggle');
     setTimeout(() => demoInput.classList.remove('animate-wiggle'), 500);
     return;
   }
   
+  console.log('🚀 [Home] Starting analysis for:', handle);
+  
   // Ensure function exists before calling
   if (typeof runInstagramDemo === 'function') {
+    console.log('✅ [Home] runInstagramDemo function found, calling...');
     await runInstagramDemo(handle);
   } else {
-    console.error('❌ [Home] runInstagramDemo function not available');
+    console.error('❌ [Home] runInstagramDemo function not available, using fallback');
     // Fallback to demo mode
     const demoData = generateDemoResults(handle);
     displayDemoResults(demoData);
@@ -180,16 +187,22 @@ async function runInstagramDemo(handle) {
     btnLoading.classList.remove('hidden');
     demoBtn.disabled = true;
     
-    // Call anonymous analysis endpoint
-    const response = await fetch(`${ENV_MANAGER.WORKER_URL}/v1/analyze-anonymous`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: handle.replace('@', '')
-      })
-    });
+// Get worker URL from environment manager
+const workerUrl = window.OsliraEnv?.WORKER_URL || 'https://api-staging.oslira.com';
+console.log('🔧 [Home] Using worker URL:', workerUrl);
+
+// Call anonymous analysis endpoint
+const response = await fetch(`${workerUrl}/v1/analyze-anonymous`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    username: handle.replace('@', '')
+  })
+});
+
+console.log('📡 [Home] API response status:', response.status);
     
     const result = await response.json();
     
@@ -212,27 +225,33 @@ async function runInstagramDemo(handle) {
       remaining: result.metadata?.remaining || 0
     });
     
-  } catch (error) {
-    console.error('❌ [Home] Anonymous analysis error:', error);
-    trackConversionEvent('anonymous_analysis_error', { handle, error: error.message });
-    
-    // Show error and fallback to demo
-    console.log('🔄 [Home] Falling back to demo mode...');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    const demoData = generateDemoResults(handle);
-    displayDemoResults(demoData);
-    
-    // Show results with animation
-    demoResults.classList.remove('hidden');
-    demoResults.classList.add('animate-slide-in-up');
-    
-    // Show upgrade modal after delay
-    setTimeout(() => {
-      showDemoUpgradeModal();
-    }, 3000);
-    
-  } finally {
-    // Reset button state
+} catch (error) {
+  console.error('❌ [Home] Anonymous analysis error:', error);
+  console.error('❌ [Home] Error details:', {
+    message: error.message,
+    stack: error.stack,
+    handle: handle,
+    workerUrl: workerUrl
+  });
+  
+  trackConversionEvent('anonymous_analysis_error', { handle, error: error.message });
+  
+  // Show error and fallback to demo
+  console.log('🔄 [Home] Falling back to demo mode...');
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  const demoData = generateDemoResults(handle);
+  displayDemoResults(demoData);
+  
+  // Show results with animation
+  demoResults.classList.remove('hidden');
+  demoResults.classList.add('animate-slide-in-up');
+  
+  // Show upgrade modal after delay
+  setTimeout(() => {
+    showDemoUpgradeModal();
+  }, 3000);
+  
+} finally {
     btnText.classList.remove('hidden');
     btnLoading.classList.add('hidden');
     demoBtn.disabled = false;
