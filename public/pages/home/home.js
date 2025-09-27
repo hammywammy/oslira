@@ -92,73 +92,127 @@ function initializeConversionOptimizations() {
 // =============================================================================
 
 function setupInstagramDemo() {
-  console.log('🎮 [Home] setupInstagramDemo called!');
+  console.log('🔥🔥🔥 [Home] EMERGENCY setupInstagramDemo called!');
+  console.log('🔥🔥🔥 [Home] DOM Ready State:', document.readyState);
+  console.log('🔥🔥🔥 [Home] window.HomeHandlers exists:', !!window.HomeHandlers);
   
   const demoInput = document.getElementById('demo-handle-input');
   const demoBtn = document.getElementById('demo-analyze-btn');
   const demoResults = document.getElementById('demo-results');
   
-  console.log('🎮 [Home] Demo elements check:', {
+  console.log('🔥🔥🔥 [Home] EMERGENCY Demo elements check:', {
     input: !!demoInput,
+    inputElement: demoInput,
     button: !!demoBtn,
-    results: !!demoResults
+    buttonElement: demoBtn,
+    results: !!demoResults,
+    resultsElement: demoResults
   });
   
   if (!demoInput || !demoBtn || !demoResults) {
-    console.warn('⚠️ [Home] Demo elements not found');
+    console.error('🚨🚨🚨 [Home] EMERGENCY - Demo elements not found!');
+    console.error('🚨🚨🚨 [Home] HTML Structure Check:', document.body.innerHTML.includes('demo-handle-input'));
     return;
   }
   
-  console.log('🎮 [Home] Setting up Instagram demo UI...');
+  console.log('🔥🔥🔥 [Home] EMERGENCY Setting up Instagram demo UI...');
   
   // Demo button click handler - delegates to homeHandlers.js
-  demoBtn.addEventListener('click', async () => {
-    console.log('🔥 [Home] Quick Analysis button clicked!');
+  demoBtn.addEventListener('click', async (event) => {
+    console.log('🔥🔥🔥🔥🔥 [Home] EMERGENCY BUTTON CLICKED!!!');
+    console.log('🔥🔥🔥 [Home] Click Event:', event);
+    console.log('🔥🔥🔥 [Home] Button Element:', event.target);
     
     const handle = demoInput.value.trim();
-    console.log('🔍 [Home] Handle entered:', handle);
+    console.log('🔥🔥🔥 [Home] Handle entered:', handle);
+    console.log('🔥🔥🔥 [Home] Handle length:', handle.length);
+    console.log('🔥🔥🔥 [Home] Raw input value:', demoInput.value);
     
     if (!handle) {
-      console.log('⚠️ [Home] No handle entered, focusing input');
-      demoInput.focus();
+      console.log('🚨🚨🚨 [Home] EMERGENCY - No handle entered!');
+      
+      // RED SHAKE ANIMATION + ERROR MESSAGE
+      demoInput.style.borderColor = '#ef4444';
+      demoInput.style.backgroundColor = '#fee2e2';
       demoInput.classList.add('animate-wiggle');
-      setTimeout(() => demoInput.classList.remove('animate-wiggle'), 500);
+      demoInput.placeholder = 'Enter a username!';
+      
+      // Create error message
+      let errorMsg = document.getElementById('demo-error-msg');
+      if (!errorMsg) {
+        errorMsg = document.createElement('div');
+        errorMsg.id = 'demo-error-msg';
+        errorMsg.style.cssText = 'color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem; font-weight: 600;';
+        demoInput.parentNode.appendChild(errorMsg);
+      }
+      errorMsg.textContent = '⚠️ Please enter a username to analyze!';
+      
+      // Focus and shake
+      demoInput.focus();
+      setTimeout(() => {
+        demoInput.classList.remove('animate-wiggle');
+        demoInput.style.borderColor = '';
+        demoInput.style.backgroundColor = '';
+        if (errorMsg) errorMsg.remove();
+      }, 3000);
       return;
     }
     
-    console.log('🚀 [Home] Delegating to HomeHandlers...');
+    console.log('🔥🔥🔥 [Home] EMERGENCY Delegating to HomeHandlers...');
+    console.log('🔥🔥🔥 [Home] window.HomeHandlers check:', {
+      exists: !!window.HomeHandlers,
+      hasRunMethod: !!(window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis),
+      allMethods: window.HomeHandlers ? Object.keys(window.HomeHandlers) : 'NOT_AVAILABLE'
+    });
     
-if (window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis) {
-  await window.HomeHandlers.runInstagramAnalysis(handle);
-} else {
-  console.error('❌ [Home] HomeHandlers not available, using fallback');
-  // Wait and retry
-  setTimeout(() => {
+    // Delegate to handlers in homeHandlers.js
     if (window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis) {
-      window.HomeHandlers.runInstagramAnalysis(handle);
+      console.log('🔥🔥🔥 [Home] CALLING runInstagramAnalysis...');
+      await window.HomeHandlers.runInstagramAnalysis(handle);
     } else {
-      console.error('❌ [Home] HomeHandlers still unavailable after retry');
-      alert('Demo temporarily unavailable. Please refresh the page.');
+      console.error('🚨🚨🚨 [Home] EMERGENCY - HomeHandlers not available!');
+      console.error('🚨🚨🚨 [Home] Window object keys:', Object.keys(window));
+      
+      // FORCE SHOW SOMETHING
+      alert(`EMERGENCY MODE: Analyzing @${handle}... (HomeHandlers not loaded)`);
+      
+      // Wait and retry
+      setTimeout(() => {
+        console.log('🔄🔄🔄 [Home] RETRY after 1 second...');
+        if (window.HomeHandlers && window.HomeHandlers.runInstagramAnalysis) {
+          console.log('🔄🔄🔄 [Home] RETRY SUCCESS - calling runInstagramAnalysis');
+          window.HomeHandlers.runInstagramAnalysis(handle);
+        } else {
+          console.error('🚨🚨🚨 [Home] RETRY FAILED - still no HomeHandlers');
+          alert('Demo temporarily unavailable. Please refresh the page.');
+        }
+      }, 1000);
     }
-  }, 1000);
-}
   });
+  
+  console.log('🔥🔥🔥 [Home] EMERGENCY Event listener added to button!');
   
   // Enter key support
   demoInput.addEventListener('keypress', (e) => {
+    console.log('🔥🔥🔥 [Home] Key pressed:', e.key);
     if (e.key === 'Enter') {
+      console.log('🔥🔥🔥 [Home] Enter key - triggering click!');
       demoBtn.click();
     }
   });
   
   // Auto-clean input
   demoInput.addEventListener('input', (e) => {
+    console.log('🔥🔥🔥 [Home] Input changed:', e.target.value);
     let value = e.target.value;
     if (value.length > 0 && !value.startsWith('@')) {
       value = '@' + value.replace('@', '');
     }
     e.target.value = value;
+    console.log('🔥🔥🔥 [Home] Input cleaned to:', value);
   });
+  
+  console.log('🔥🔥🔥 [Home] EMERGENCY Setup complete!');
 }
 
 // =============================================================================
