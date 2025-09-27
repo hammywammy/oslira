@@ -1,607 +1,768 @@
-    <script src="https://js.stripe.com/v3/"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+// =============================================================================
+// SUBSCRIPTION PAGE JAVASCRIPT - PRODUCTION READY
+// Matches architecture patterns from homepage and dashboard
+// =============================================================================
 
-        // Global state
-        let supabase = null;
-        let currentUser = null;
-        let currentSession = null;
-        let stripe = null;
-        let config = null;
+// Global state management
+let subscriptionState = {
+    currentUser: null,
+    currentSession: null,
+    currentPlan: 'free',
+    isLoading: false,
+    stripe: null,
+    supabase: null,
+    config: null
+};
 
-        // Initialize page when DOM is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            initializePage();
-            setupEventListeners();
-        });
+// =============================================================================
+// PAGE INITIALIZATION - FOLLOWS SCRIPT-LOADER PATTERN
+// =============================================================================
 
-        // Set up all event listeners
-        function setupEventListeners() {
-            // Logout
-            document.getElementById('logout-link').addEventListener('click', function(e) {
-                e.preventDefault();
-                logout();
-            });
-
-            // Manage billing button
-            document.getElementById('manage-billing-btn').addEventListener('click', function(e) {
-                e.preventDefault();
-                manageBilling();
-            });
-
-            // Plan subscription buttons
-            document.querySelectorAll('.card-button').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const card = this.closest('.pricing-card');
-                    const plan = card.getAttribute('data-plan');
-                    const priceText = card.querySelector('.card-price').textContent;
-                    const price = parseInt(priceText.replace(/[^0-9]/g, ''));
-                    subscribeToplan(plan, price, this);
-                });
-            });
-        }
-
-        // Initialize page
-        async function initializePage() {
-            try {
-                // Wait for Supabase to be available
-                let attempts = 0;
-                while (typeof window.supabase === 'undefined' && attempts < 50) {
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    attempts++;
-                }
-
-                if (typeof window.supabase === 'undefined') {
-                    throw new Error('Supabase library not available');
-                }
-
-                // Get configuration from API
-                config = window.OsliraApp.config;
-                
-                // Initialize Supabase client
-                supabase = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
-                
-                // Initialize Stripe
-                if (config.stripePublishableKey) {
-                    stripe = Stripe(config.stripePublishableKey);
-                }
-                
-                // Check authentication
-                await checkAuth();
-                
-                // Load user data
-                await loadSubscriptionData();
-                await loadBillingHistory();
-                
-                // Handle URL parameters
-                handleUrlParams();
-
-            } catch (error) {
-                console.error('Page initialization failed:', error);
-        // Add this:
-        Alert.error('Page failed to load properly', {
-            details: error.message,
-            actions: [{ label: 'Refresh Page', action: 'reload' }],
-            sticky: true
-        });
-            }
-        }
-
-async function loadConfigFromAPI() {
-    const response = await fetch('/api/config');
-    if (!response.ok) {
-        throw new Error(`Config API returned ${response.status}`);
-    }
-    const configData = await response.json();
-    if (configData.error) {
-        Alert.error('Configuration failed to load', {
-    message: 'Unable to connect to payment services',
-    actions: [{ label: 'Refresh Page', action: 'reload' }],
-    sticky: true
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🏗️ [Subscription] Initializing subscription page...');
+    initializeSubscriptionPage();
 });
-        throw new Error(configData.error);
-    }
-    return configData;
-}
 
-        // Authentication check
-        async function checkAuth() {
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession();
-                
-                if (error || !session) {
-                    window.location.href = 'auth.html';
-                    return;
-                }
-                
-                currentSession = session;
-                currentUser = session.user;
-                document.getElementById('user-email').textContent = currentUser.email;
-                
-            } catch (err) {
-                console.error('Auth check failed:', err);
-Alert.error('Authentication failed', {
-    actions: [{ label: 'Go to Login', action: 'redirect:/auth.html' }]
-});
-            }
-        }
-
-function validatePaymentSetup() {
-    // Add validation logic here
-    if (!stripe) {
-        Alert.error('Payment system not ready', {
-            suggestions: ['Refresh the page', 'Check your connection'],
-            actions: [{ label: 'Refresh', action: 'reload' }]
-        });
-        return false;
-    }
-    return true;
-}
-
-        // Load subscription data
-        async function loadSubscriptionData() {
-            try {
-                const { data: userData, error } = await supabase
-                    .from('users')
-                    .select('subscription_plan, subscription_status, credits, billing_cycle_end')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (error) {
-                    console.warn('User data not accessible:', error);
-Alert.info({ 
-    message: 'Showing default plan information',
-    suggestions: ['Refresh the page to load your data']
-});
-updateUIWithPlan('free', 'active', 0, null);
-                    return;
-                }
-                
-                const plan = userData?.subscription_plan || 'free';
-                const status = userData?.subscription_status || 'active';
-                const credits = userData?.credits || 0;
-                const billingEnd = userData?.billing_cycle_end;
-                
-                updateUIWithPlan(plan, status, credits, billingEnd);
-                
-            } catch (err) {
-                console.error('Error loading subscription data:', err);
-Alert.warning({ 
-    message: 'Unable to load subscription details',
-    suggestions: ['Page will show basic info', 'Refresh to retry']
-});
-updateUIWithPlan('free', 'active', 0, null);
-            }
-        }
-
-        // Update UI with plan data
-        function updateUIWithPlan(plan, status, credits, billingEnd) {
-            const planNames = {
-                free: 'Free Plan',
-                starter: 'Starter Plan',
-                growth: 'Growth Plan',
-                professional: 'Professional Plan',
-                enterprise: 'Enterprise Plan'
-            };
-
-            const planCredits = {
-                free: 0,
-                starter: 50,
-                growth: 150,
-                professional: 500,
-                enterprise: 'Unlimited'
-            };
-
-            const planPrices = {
-                free: 0,
-                starter: 29,
-                growth: 79,
-                professional: 199,
-                enterprise: 499
-            };
-
-            const planName = planNames[plan] || 'Free Plan';
-            const planCredit = planCredits[plan] || 0;
-            const planPrice = planPrices[plan] || 0;
-
-            // Update current plan display
-            document.getElementById('current-plan-name').textContent = planName;
-            document.getElementById('sidebar-plan').textContent = planName;
-            
-            // Update plan details
-            if (plan === 'free') {
-                document.getElementById('plan-details').textContent = '0 monthly credits • Limited features';
-                document.getElementById('subscription-info').innerHTML = '💡 <strong>Upgrade today</strong> to unlock unlimited lead analysis and advanced features';
-            } else {
-                const creditText = planCredit === 'Unlimited' ? 'Unlimited' : `${planCredit} monthly`;
-                document.getElementById('plan-details').textContent = `${creditText} credits • Full features included`;
-                
-                if (billingEnd) {
-                    const nextBilling = new Date(billingEnd).toLocaleDateString();
-                    document.getElementById('subscription-info').innerHTML = `🔄 <strong>Next billing:</strong> ${nextBilling} • Auto-renewal enabled`;
-                    document.getElementById('sidebar-billing').textContent = `Next billing: ${nextBilling}`;
-                } else {
-                    document.getElementById('subscription-info').innerHTML = '✅ <strong>Active subscription</strong> • Auto-renewal enabled';
-                    document.getElementById('sidebar-billing').textContent = 'Active subscription';
-                }
-            }
-
-            // Update billing info
-            document.getElementById('billing-current-plan').textContent = planName;
-            document.getElementById('monthly-cost').textContent = `${planPrice}.00`;
-            
-            if (billingEnd) {
-                document.getElementById('next-billing-date').textContent = new Date(billingEnd).toLocaleDateString();
-            } else {
-                document.getElementById('next-billing-date').textContent = plan === 'free' ? 'No active subscription' : 'Contact support';
-            }
-
-            // Update credits display
-            if (planCredit === 'Unlimited') {
-                document.getElementById('credits-remaining').textContent = 'Unlimited';
-            } else {
-                document.getElementById('credits-remaining').textContent = `${credits} / ${planCredit}`;
-            }
-
-            // Update pricing cards
-            updatePricingCards(plan);
-        }
-
-        // Update pricing cards to show current plan
-        function updatePricingCards(currentPlan) {
-            document.querySelectorAll('.pricing-card').forEach(card => {
-                const cardPlan = card.getAttribute('data-plan');
-                const button = card.querySelector('.card-button');
-                
-                // Remove existing badges
-                const existingBadge = card.querySelector('.current-badge');
-                if (existingBadge) existingBadge.remove();
-                
-                if (cardPlan === currentPlan) {
-                    card.classList.add('current-plan-card');
-                    
-                    // Add current plan badge
-                    const badge = document.createElement('div');
-                    badge.className = 'current-badge';
-                    badge.textContent = 'Current Plan';
-                    card.appendChild(badge);
-                    
-                    button.textContent = 'Current Plan';
-                    button.classList.add('current');
-                    button.disabled = true;
-                } else {
-                    card.classList.remove('current-plan-card');
-                    
-                    button.classList.remove('current');
-                    button.disabled = false;
-                    
-                    if (cardPlan === 'enterprise') {
-                        button.textContent = 'Contact Sales';
-                    } else {
-                        button.textContent = currentPlan === 'free' ? 'Start Free Trial' : 'Switch Plan';
-                    }
-                }
-            });
-        }
-
-        // Load billing history
-        async function loadBillingHistory() {
-            try {
-                const { data: invoices, error } = await supabase
-                    .from('billing_history')
-                    .select('*')
-                    .eq('user_id', currentUser.id)
-                    .order('created_at', { ascending: false })
-                    .limit(10);
-                
-                const historyTable = document.getElementById('billing-history');
-                
-                if (error) {
-                    console.warn('Billing history not accessible:', error);
-Alert.info({ 
-    message: 'Billing history unavailable',
-    suggestions: ['Try refreshing the page', 'Check with support']
-});
-                    historyTable.innerHTML = `
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                                No billing history yet. Subscribe to a plan to see your invoices here.
-                            </td>
-                        </tr>
-                    `;
-                    return;
-                }
-                
-                if (invoices && invoices.length > 0) {
-                    historyTable.innerHTML = invoices.map(invoice => {
-                        const date = new Date(invoice.created_at).toLocaleDateString();
-                        const amount = `${(invoice.amount / 100).toFixed(2)}`;
-                        const status = invoice.status || 'pending';
-                        
-                        let statusClass = 'status-pending';
-                        if (status === 'paid') statusClass = 'status-paid';
-                        if (status === 'failed') statusClass = 'status-failed';
-                        
-                        return `
-                            <tr>
-                                <td>${date}</td>
-                                <td>${invoice.description || 'Monthly subscription'}</td>
-                                <td>${amount}</td>
-                                <td><span class="status-badge ${statusClass}">${status}</span></td>
-                                <td>
-                                    ${invoice.invoice_url ? 
-                                        `<a href="${invoice.invoice_url}" target="_blank" style="color: var(--primary-blue);">View</a>` : 
-                                        '-'
-                                    }
-                                </td>
-                            </tr>
-                        `;
-                    }).join('');
-                } else {
-                    historyTable.innerHTML = `
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-                                No billing history yet. Subscribe to a plan to see your invoices here.
-                            </td>
-                        </tr>
-                    `;
-                }
-                
-            } catch (err) {
-                console.error('Error loading billing history:', err);
-                document.getElementById('billing-history').innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 40px; color: var(--warning);">
-                            Unable to load billing history
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-
-        // Subscribe to plan - WITH CORRECT PRICE IDs
-        async function subscribeToplan(plan, price, buttonElement) {
-            if (plan === 'enterprise') {
-                Alert.info({ 
-    message: 'Enterprise plan inquiry',
-    suggestions: ['Check your email client', 'You can also contact us directly'],
-    actions: [{ label: 'Contact Support', action: 'redirect:/support' }]
-});
-window.open('mailto:support@oslira.com?subject=Enterprise%20Plan%20Inquiry&body=Please contact me to discuss pricing and features.', '_blank');
-                return;
-            }
-
-            const button = buttonElement;
-            const originalText = button.textContent;
-            
-            try {
-                button.textContent = '🔄 Processing...';
-                button.disabled = true;
-
-                // Check authentication
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                if (sessionError || !session) {
-                    Alert.error('Login required to subscribe', {
-    actions: [{ label: 'Go to Login', action: 'redirect:/auth.html' }]
-});
-                    window.location.href = 'auth.html';
-                    return;
-                }
-
-                // YOUR ACTUAL STRIPE PRICE IDs
-                const priceIds = {
-                    starter: 'price_1RkCKjJzvcRSqGG3Hq4WNNSU',     // Starter: $29/month
-                    growth: 'price_1RkCLGJzvcRSqGG3XqDyhYZN',      // Growth: $79/month  
-                    professional: 'price_1RkCLtJzvcRSqGG30FfJSpau' // Professional: $199/month
-                };
-
-                const priceId = priceIds[plan];
-                if (!priceId) {
-                    Alert.error('Plan configuration error', {
-    details: `Price ID not configured for plan: ${plan}`,
-    actions: [{ label: 'Contact Support', action: 'redirect:/support' }]
-});
-throw new Error('Price ID not configured for plan: ' + plan);
-                }
-
-                console.log(`🔄 Creating subscription for ${plan} with price_id: ${priceId}`);
-
-                // Create checkout session using your updated worker endpoint
-                const response = await fetch(`${config.workerUrl}/billing/create-checkout-session`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        price_id: priceId,
-                        customer_email: session.user.email,
-                        success_url: `${window.location.origin}/subscription.html?success=true&session_id={CHECKOUT_SESSION_ID}`,
-                        cancel_url: `${window.location.origin}/subscription.html?canceled=true`,
-                        metadata: {
-                            user_id: session.user.id,
-                            plan: plan
-                        },
-                        trial_period_days: 7
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('❌ Subscription creation failed:', errorData);
-                    throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                console.log('✅ Checkout session created:', data);
-                
-                if (!data.url) {
-                   Alert.error('Payment setup failed', {
-    message: 'Unable to create checkout session',
-    suggestions: ['Try again in a moment', 'Check your internet connection'],
-    actions: [{ label: 'Retry', action: 'retry' }]
-});
-throw new Error('No checkout URL received from server');
-                }
-
-                // Redirect to Stripe Checkout
-                window.location.href = data.url;
-
-            } catch (err) {
-    console.error('❌ Subscription error:', err);
-    showMessage('Subscription failed: ' + err.message, 'error');
-    
-    // Reset button with error handling
+async function initializeSubscriptionPage() {
     try {
-        button.textContent = originalText;
-        button.disabled = false;
+        console.log('🔧 [Subscription] Starting initialization sequence...');
+        
+        // Wait for core dependencies (following homepage pattern)
+        await waitForDependencies();
+        
+        // Initialize Supabase and Stripe
+        await initializeServices();
+        
+        // Setup authentication check
+        await checkAuthentication();
+        
+        // Load user subscription data
+        await loadSubscriptionData();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Initialize UI components
+        initializeUI();
+        
+        // Show content (following homepage pattern)
+        document.body.classList.add('show-content');
+        
+        console.log('✅ [Subscription] Page initialization complete');
+        
     } catch (error) {
-        console.error('Button reset failed:', error);
-        // Don't show alert for this - just log it
-    }
-}}
-
-        // Manage billing
-        async function manageBilling() {
-            try {
-                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                if (sessionError || !session) {
-                    Alert.error('Login required to manage billing', {
-    actions: [{ label: 'Go to Login', action: 'redirect:/auth.html' }]
-});
-                    return;
-                }
-
-                console.log('🔄 Creating billing portal session...');
-
-                const response = await fetch(`${config.workerUrl}/billing/create-portal-session`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        customer_email: session.user.email,
-                        return_url: window.location.href
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    console.error('❌ Portal creation failed:', errorData);
-                    Alert.error('Payment service error', {
-    details: errorData.error || `HTTP ${response.status}: ${response.statusText}`,
-    suggestions: ['Try again in a moment', 'Check your payment method'],
-    actions: [{ label: 'Retry', action: 'retry' }]
-});
-throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                console.log('✅ Portal session created');
-                
-                if (!data.url) {
-                    Alert.error('Billing portal unavailable', {
-    message: 'Unable to create billing session',
-    suggestions: ['Try again in a moment', 'Contact support'],
-    actions: [{ label: 'Retry', action: 'retry' }]
-});
-throw new Error('No portal URL received from server');
-                }
-
-                // Redirect to Stripe Customer Portal
-                window.location.href = data.url;
-
-            } catch (err) {
-                console.error('❌ Billing portal error:', err);
-                Alert.error('Unable to access billing portal', {
-    details: err.message,
-    suggestions: [
-        'Try refreshing the page',
-        'Check your internet connection',
-        'Contact support if issue continues'
-    ],
-    actions: [{ label: 'Try Again', action: 'retry' }]
-});
-            }
-        }
-
-        // Handle URL parameters
-        function handleUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            if (urlParams.get('success') === 'true') {
-                Alert.success({ 
-    message: 'Subscription activated! Welcome to your new plan.',
-    timeoutMs: 6000
-});
-                window.history.replaceState({}, document.title, window.location.pathname);
-                setTimeout(async () => {
-                    await loadSubscriptionData();
-                    await loadBillingHistory();
-                }, 1000);
-            }
-            
-            if (urlParams.get('canceled') === 'true') {
-                Alert.info({ 
-    message: 'Subscription setup was canceled',
-    suggestions: ['No charges were made', 'You can try again anytime']
-});
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-        }
-
-        // Show message function
-        function showMessage(text, type = 'success') {
-    // Legacy support - redirect to Alert system
-    if (type === 'error') {
-        Alert.error(text);
-    } else if (type === 'success') {
-        Alert.success({ message: text });
-    } else if (type === 'warning') {
-        Alert.warning({ message: text });
-    } else {
-        Alert.info({ message: text });
+        console.error('❌ [Subscription] Initialization failed:', error);
+        showErrorState('Failed to load subscription page. Please refresh and try again.');
     }
 }
 
-function checkNetworkAndRetry(operation, operationName) {
-    if (!navigator.onLine) {
-        Alert.error('No internet connection', {
-            suggestions: ['Check your internet connection', 'Try again when connected'],
-            actions: [{ label: 'Retry', action: 'retry' }]
-        });
+// =============================================================================
+// DEPENDENCY MANAGEMENT - MATCHES HOMEPAGE PATTERN
+// =============================================================================
+
+async function waitForDependencies() {
+    console.log('⏳ [Subscription] Waiting for dependencies...');
+    
+    // Wait for global objects to be available
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    while (attempts < maxAttempts) {
+        if (window.OsliraEnv && window.OsliraConfig && typeof window.supabase !== 'undefined') {
+            console.log('✅ [Subscription] Dependencies loaded');
+            return;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    
+    throw new Error('Dependencies failed to load within timeout');
+}
+
+// =============================================================================
+// SERVICE INITIALIZATION
+// =============================================================================
+
+async function initializeServices() {
+    console.log('🔧 [Subscription] Initializing services...');
+    
+    try {
+        // Initialize Supabase (following auth pattern)
+        subscriptionState.supabase = window.supabase;
+        
+        // Initialize Stripe
+        if (window.OsliraConfig && window.OsliraConfig.STRIPE_PUBLIC_KEY) {
+            subscriptionState.stripe = Stripe(window.OsliraConfig.STRIPE_PUBLIC_KEY);
+        }
+        
+        // Get config
+        subscriptionState.config = window.OsliraConfig;
+        
+        console.log('✅ [Subscription] Services initialized');
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Service initialization failed:', error);
+        throw error;
+    }
+}
+
+// =============================================================================
+// AUTHENTICATION CHECK - FOLLOWS DASHBOARD PATTERN
+// =============================================================================
+
+async function checkAuthentication() {
+    console.log('🔐 [Subscription] Checking authentication...');
+    
+    try {
+        const { data: { session }, error } = await subscriptionState.supabase.auth.getSession();
+        
+        if (error) {
+            console.error('❌ [Subscription] Session error:', error);
+            redirectToAuth();
+            return;
+        }
+        
+        if (!session) {
+            console.log('⚠️ [Subscription] No session found, redirecting to auth');
+            redirectToAuth();
+            return;
+        }
+        
+        subscriptionState.currentSession = session;
+        subscriptionState.currentUser = session.user;
+        
+        console.log('✅ [Subscription] User authenticated:', session.user.email);
+        
+        // Update UI with user info
+        updateUserInfo(session.user);
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Auth check failed:', error);
+        redirectToAuth();
+    }
+}
+
+function redirectToAuth() {
+    console.log('🔄 [Subscription] Redirecting to authentication...');
+    window.location.href = '/auth';
+}
+
+// =============================================================================
+// SUBSCRIPTION DATA LOADING
+// =============================================================================
+
+async function loadSubscriptionData() {
+    console.log('📊 [Subscription] Loading subscription data...');
+    
+    if (!subscriptionState.currentUser) {
+        console.error('❌ [Subscription] No user found for data loading');
         return;
     }
     
-    operation().catch(error => {
-        Alert.error(`${operationName} failed`, {
-            details: error.message,
-            suggestions: ['Check your connection', 'Try again in a moment'],
-            actions: [{ label: 'Retry', action: 'retry' }]
+    try {
+        showLoading();
+        
+        // Fetch user subscription data from database
+        const { data: profile, error: profileError } = await subscriptionState.supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', subscriptionState.currentUser.id)
+            .single();
+            
+        if (profileError) {
+            console.error('❌ [Subscription] Profile fetch error:', profileError);
+            throw profileError;
+        }
+        
+        // Fetch subscription details
+        const { data: subscription, error: subError } = await subscriptionState.supabase
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', subscriptionState.currentUser.id)
+            .single();
+            
+        if (subError && subError.code !== 'PGRST116') { // Not found is OK for free users
+            console.error('❌ [Subscription] Subscription fetch error:', subError);
+        }
+        
+        // Update state and UI
+        subscriptionState.currentPlan = subscription?.plan_name || 'free';
+        
+        updateSubscriptionUI(profile, subscription);
+        updatePricingCards(subscriptionState.currentPlan);
+        
+        console.log('✅ [Subscription] Data loaded successfully');
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Data loading failed:', error);
+        showErrorState('Failed to load subscription data');
+    } finally {
+        hideLoading();
+    }
+}
+
+// =============================================================================
+// UI UPDATE FUNCTIONS
+// =============================================================================
+
+function updateUserInfo(user) {
+    console.log('👤 [Subscription] Updating user info...');
+    
+    const emailElement = document.getElementById('user-email');
+    if (emailElement) {
+        emailElement.textContent = user.email;
+    }
+}
+
+function updateSubscriptionUI(profile, subscription) {
+    console.log('🎨 [Subscription] Updating subscription UI...');
+    
+    // Update current plan display
+    const planNameElement = document.getElementById('current-plan-name');
+    const planDetailsElement = document.getElementById('plan-details');
+    const subscriptionInfoElement = document.getElementById('subscription-info');
+    const sidebarPlanElement = document.getElementById('sidebar-plan');
+    const sidebarBillingElement = document.getElementById('sidebar-billing');
+    
+    // Plan information mapping
+    const planInfo = {
+        'free': {
+            name: 'Free Plan',
+            credits: '25',
+            details: '25 monthly credits • Limited features',
+            info: '💡 <strong>Upgrade today</strong> to unlock unlimited lead analysis and advanced features'
+        },
+        'starter': {
+            name: 'Starter Plan',
+            credits: '100',
+            details: '100 monthly credits • Basic features',
+            info: '🚀 You\'re on the <strong>Starter Plan</strong> with full access to basic features'
+        },
+        'professional': {
+            name: 'Professional Plan',
+            credits: '300',
+            details: '300 monthly credits • Advanced features',
+            info: '⭐ You\'re on the <strong>Professional Plan</strong> with advanced lead intelligence'
+        },
+        'agency': {
+            name: 'Agency Plan',
+            credits: '1000',
+            details: '1000 monthly credits • Premium features',
+            info: '🎯 You\'re on the <strong>Agency Plan</strong> with premium team collaboration features'
+        },
+        'enterprise': {
+            name: 'Enterprise Plan',
+            credits: 'Unlimited',
+            details: 'Unlimited credits • All features',
+            info: '🏢 You\'re on the <strong>Enterprise Plan</strong> with unlimited access'
+        }
+    };
+    
+    const currentPlanInfo = planInfo[subscriptionState.currentPlan] || planInfo['free'];
+    
+    if (planNameElement) {
+        planNameElement.textContent = currentPlanInfo.name;
+    }
+    
+    if (planDetailsElement) {
+        planDetailsElement.textContent = currentPlanInfo.details;
+    }
+    
+    if (subscriptionInfoElement) {
+        subscriptionInfoElement.innerHTML = currentPlanInfo.info;
+    }
+    
+    if (sidebarPlanElement) {
+        sidebarPlanElement.textContent = currentPlanInfo.name;
+    }
+    
+    // Update billing info
+    if (subscription && sidebarBillingElement) {
+        const nextBilling = new Date(subscription.current_period_end);
+        sidebarBillingElement.textContent = `Next billing: ${nextBilling.toLocaleDateString()}`;
+    } else if (sidebarBillingElement) {
+        sidebarBillingElement.textContent = 'Free plan - no billing';
+    }
+    
+    // Update credits display
+    const creditsElement = document.getElementById('credits-remaining');
+    if (creditsElement) {
+        const usedCredits = profile?.credits_used || 0;
+        const totalCredits = currentPlanInfo.credits;
+        
+        if (totalCredits === 'Unlimited') {
+            creditsElement.textContent = 'Unlimited';
+        } else {
+            const remaining = Math.max(0, parseInt(totalCredits) - usedCredits);
+            creditsElement.textContent = `${remaining} / ${totalCredits}`;
+        }
+    }
+    
+    // Update other billing info
+    updateBillingInfo(subscription);
+}
+
+function updateBillingInfo(subscription) {
+    console.log('💳 [Subscription] Updating billing info...');
+    
+    // Update payment method (placeholder - would come from Stripe)
+    const paymentMethodElement = document.getElementById('payment-method');
+    if (paymentMethodElement && subscription) {
+        paymentMethodElement.textContent = '•••• 4242';
+    }
+    
+    // Update next billing date
+    const nextBillingElement = document.getElementById('next-billing-date');
+    if (nextBillingElement && subscription) {
+        const nextBilling = new Date(subscription.current_period_end);
+        nextBillingElement.textContent = nextBilling.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
         });
+    }
+    
+    // Update monthly spend
+    const monthlySpendElement = document.getElementById('monthly-spend');
+    if (monthlySpendElement && subscription) {
+        const planPrices = {
+            'starter': '$15.00',
+            'professional': '$30.00',
+            'agency': '$80.00',
+            'enterprise': 'Custom'
+        };
+        monthlySpendElement.textContent = planPrices[subscription.plan_name] || '$0.00';
+    }
+}
+
+function updatePricingCards(currentPlan) {
+    console.log('🎨 [Subscription] Updating pricing cards for plan:', currentPlan);
+    
+    document.querySelectorAll('.pricing-card').forEach(card => {
+        const cardPlan = card.getAttribute('data-plan');
+        const button = card.querySelector('.card-button');
+        
+        // Remove existing badges
+        const existingBadge = card.querySelector('.current-badge');
+        if (existingBadge) existingBadge.remove();
+        
+        // Reset card styling
+        card.classList.remove('current-plan-card');
+        
+        if (cardPlan === currentPlan) {
+            card.classList.add('current-plan-card');
+            
+            // Add current plan badge
+            const badge = document.createElement('div');
+            badge.className = 'current-badge absolute -top-2 -right-2 bg-gradient-to-r from-teal-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg z-10';
+            badge.textContent = 'Current Plan';
+            card.appendChild(badge);
+            
+            button.textContent = 'Current Plan';
+            button.classList.add('current');
+            button.disabled = true;
+            button.classList.remove('btn-primary');
+            button.classList.add('bg-gray-300', 'text-gray-600', 'cursor-not-allowed');
+        } else {
+            button.classList.remove('current', 'bg-gray-300', 'text-gray-600', 'cursor-not-allowed');
+            button.classList.add('btn-primary');
+            button.disabled = false;
+            
+            if (cardPlan === 'enterprise') {
+                button.textContent = 'Contact Sales';
+            } else {
+                const upgradePhrases = {
+                    'starter': currentPlan === 'free' ? 'Start Free Trial' : 'Downgrade to Starter',
+                    'professional': 'Upgrade to Professional',
+                    'agency': 'Upgrade to Agency'
+                };
+                button.textContent = upgradePhrases[cardPlan] || `Choose ${cardPlan.charAt(0).toUpperCase() + cardPlan.slice(1)}`;
+            }
+        }
     });
 }
 
-        // Logout function
-        function logout() {
-            if (supabase) {
-                supabase.auth.signOut().then(() => {
-                    window.location.href = 'auth.html';
-                });
-            }
-        }
+// =============================================================================
+// EVENT LISTENERS SETUP
+// =============================================================================
 
-        // Listen for auth changes
-        window.addEventListener('load', () => {
-            if (supabase) {
-                supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_OUT' || !session) {
-        Alert.info({ 
-            message: 'You have been signed out',
-            actions: [{ label: 'Go to Login', action: 'redirect:/auth.html' }]
-        });
+function setupEventListeners() {
+    console.log('🎧 [Subscription] Setting up event listeners...');
+    
+    // Logout functionality
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', handleLogout);
     }
-});
-            }
+    
+    // Manage billing button
+    const manageBillingBtn = document.getElementById('manage-billing-btn');
+    if (manageBillingBtn) {
+        manageBillingBtn.addEventListener('click', handleManageBilling);
+    }
+    
+    // Plan subscription buttons
+    document.querySelectorAll('.card-button').forEach(button => {
+        button.addEventListener('click', handlePlanSelection);
+    });
+    
+    // Sidebar toggle (if exists)
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+    }
+    
+    console.log('✅ [Subscription] Event listeners set up');
+}
+
+// =============================================================================
+// EVENT HANDLERS
+// =============================================================================
+
+async function handleLogout(e) {
+    e.preventDefault();
+    console.log('🚪 [Subscription] Logging out...');
+    
+    try {
+        showLoading();
+        
+        const { error } = await subscriptionState.supabase.auth.signOut();
+        
+        if (error) {
+            console.error('❌ [Subscription] Logout error:', error);
+            showErrorModal('Failed to log out. Please try again.');
+            return;
+        }
+        
+        console.log('✅ [Subscription] Logged out successfully');
+        window.location.href = '/';
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Logout failed:', error);
+        showErrorModal('Failed to log out. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function handleManageBilling(e) {
+    e.preventDefault();
+    console.log('💳 [Subscription] Opening billing management...');
+    
+    try {
+        showLoading();
+        
+        // Call your backend to create a Stripe customer portal session
+        const response = await fetch('/api/create-portal-session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${subscriptionState.currentSession.access_token}`
+            },
+            body: JSON.stringify({
+                customer_id: subscriptionState.currentUser.id
+            })
         });
+        
+        if (!response.ok) {
+            throw new Error('Failed to create portal session');
+        }
+        
+        const { url } = await response.json();
+        window.location.href = url;
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Billing management failed:', error);
+        showErrorModal('Unable to open billing management. Please try again.');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function handlePlanSelection(e) {
+    e.preventDefault();
+    
+    const button = e.target;
+    const card = button.closest('.pricing-card');
+    const plan = card.getAttribute('data-plan');
+    const price = card.getAttribute('data-price');
+    
+    console.log('💰 [Subscription] Plan selected:', plan, 'Price:', price);
+    
+    // Disable button during processing
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = 'Processing...';
+    
+    try {
+        if (plan === 'enterprise') {
+            // Handle enterprise contact
+            window.open('mailto:sales@oslira.com?subject=Enterprise Plan Inquiry', '_blank');
+            return;
+        }
+        
+        if (plan === subscriptionState.currentPlan) {
+            console.log('⚠️ [Subscription] User selected current plan');
+            return;
+        }
+        
+        showLoading();
+        
+        // Create checkout session
+        await createCheckoutSession(plan, price);
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Plan selection failed:', error);
+        showErrorModal('Failed to process subscription change. Please try again.');
+    } finally {
+        hideLoading();
+        button.disabled = false;
+        button.textContent = originalText;
+    }
+}
+
+async function createCheckoutSession(plan, price) {
+    console.log('🛒 [Subscription] Creating checkout session for:', plan);
+    
+    try {
+        const response = await fetch('/api/create-checkout-session', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${subscriptionState.currentSession.access_token}`
+            },
+            body: JSON.stringify({
+                plan_name: plan,
+                price_id: getPriceId(plan),
+                customer_email: subscriptionState.currentUser.email
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to create checkout session');
+        }
+        
+        const { sessionId } = await response.json();
+        
+        // Redirect to Stripe Checkout
+        const { error } = await subscriptionState.stripe.redirectToCheckout({
+            sessionId: sessionId
+        });
+        
+        if (error) {
+            throw error;
+        }
+        
+    } catch (error) {
+        console.error('❌ [Subscription] Checkout session creation failed:', error);
+        throw error;
+    }
+}
+
+function getPriceId(plan) {
+    // Map plan names to Stripe price IDs (these would be from your config)
+    const priceIds = {
+        'starter': 'price_starter_monthly',
+        'professional': 'price_professional_monthly',
+        'agency': 'price_agency_monthly'
+    };
+    
+    return priceIds[plan];
+}
+
+function toggleSidebar() {
+    console.log('📱 [Subscription] Toggling sidebar...');
+    
+    const sidebar = document.getElementById('dashboard-sidebar');
+    const mainContent = document.querySelector('.main-content');
+    
+    if (sidebar && mainContent) {
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('sidebar-collapsed');
+    }
+}
+
+// =============================================================================
+// UI HELPER FUNCTIONS
+// =============================================================================
+
+function initializeUI() {
+    console.log('🎨 [Subscription] Initializing UI components...');
+    
+    // Initialize any tooltips, dropdowns, etc.
+    initializeTooltips();
+    
+    // Setup responsive behavior
+    setupResponsiveBehavior();
+    
+    console.log('✅ [Subscription] UI components initialized');
+}
+
+function initializeTooltips() {
+    // Add tooltip functionality if needed
+    console.log('💡 [Subscription] Tooltips initialized');
+}
+
+function setupResponsiveBehavior() {
+    // Handle mobile-specific behavior
+    const handleResize = () => {
+        const isMobile = window.innerWidth < 768;
+        
+        if (isMobile) {
+            // Mobile-specific adjustments
+            document.body.classList.add('mobile-view');
+        } else {
+            document.body.classList.remove('mobile-view');
+        }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial call
+}
+
+// =============================================================================
+// LOADING AND ERROR STATES
+// =============================================================================
+
+function showLoading() {
+    if (!subscriptionState.isLoading) {
+        subscriptionState.isLoading = true;
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('hidden');
+        }
+    }
+}
+
+function hideLoading() {
+    if (subscriptionState.isLoading) {
+        subscriptionState.isLoading = false;
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) {
+            loadingOverlay.classList.add('hidden');
+        }
+    }
+}
+
+function showSuccessModal(message = 'Operation completed successfully!') {
+    const modal = document.getElementById('success-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function showErrorModal(message = 'There was an error processing your request. Please try again.') {
+    const modal = document.getElementById('error-modal');
+    const messageElement = document.getElementById('error-message');
+    
+    if (messageElement) {
+        messageElement.textContent = message;
+    }
+    
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function showErrorState(message) {
+    console.error('💥 [Subscription] Error state:', message);
+    
+    // Show error in UI
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+        mainContent.innerHTML = `
+            <div class="glass-effect rounded-2xl p-8 text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.502 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Oops! Something went wrong</h2>
+                <p class="text-gray-600 mb-6">${message}</p>
+                <button onclick="location.reload()" class="btn-primary">
+                    Reload Page
+                </button>
+            </div>
+        `;
+    }
+}
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(amount);
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
+}
+
+// =============================================================================
+// MODAL CLOSE FUNCTIONS (Global scope for onclick handlers)
+// =============================================================================
+
+window.closeSuccessModal = function() {
+    const modal = document.getElementById('success-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    // Reload page to show updated data
+    location.reload();
+};
+
+window.closeErrorModal = function() {
+    const modal = document.getElementById('error-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.openLiveChat = function() {
+    // Placeholder for live chat integration
+    alert('Live chat feature coming soon! Please email support@oslira.com for immediate assistance.');
+};
+
+// =============================================================================
+// AUTHENTICATION STATE MONITORING
+// =============================================================================
+
+// Monitor auth state changes
+if (typeof window !== 'undefined' && window.supabase) {
+    window.supabase.auth.onAuthStateChange((event, session) => {
+        console.log('🔐 [Subscription] Auth state change:', event, session?.user?.email);
+        
+        if (event === 'SIGNED_OUT') {
+            window.location.href = '/auth';
+        } else if (event === 'SIGNED_IN' && session) {
+            subscriptionState.currentSession = session;
+            subscriptionState.currentUser = session.user;
+            loadSubscriptionData();
+        }
+    });
+}
+
+// =============================================================================
+// EXPORT FOR TESTING (if needed)
+// =============================================================================
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        subscriptionState,
+        initializeSubscriptionPage,
+        updatePricingCards,
+        formatCurrency,
+        formatDate
+    };
+}
+
+console.log('📦 [Subscription] JavaScript module loaded successfully');
