@@ -61,7 +61,9 @@ app.post('/v1/analyze', async (c) => {
 });
 
 app.post('/v1/analyze-anonymous', async (c) => {
+  console.log('ANONYMOUS ROUTE HIT - IMPORTING HANDLER');
   const { handleAnonymousAnalyze } = await import('./handlers/anonymous-analyze.js');
+  console.log('HANDLER IMPORTED, CALLING FUNCTION');
   return handleAnonymousAnalyze(c);
 });
 
