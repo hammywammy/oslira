@@ -77,10 +77,6 @@ window.addEventListener('oslira:scripts:loaded', async () => {
 function initializeConversionOptimizations() {
   console.log('🎯 [Home] Initializing conversion optimizations...');
   
-  // CRITICAL: Ensure setupInstagramDemo is called
-  console.log('🔥 [Home] Calling setupInstagramDemo from initializeConversionOptimizations...');
-  setupInstagramDemo();
-  
   // Setup CTA tracking and optimization
   setupCTAOptimizations();
   
@@ -795,8 +791,8 @@ console.log('✅ [Home] Clean UI management loaded');
 // EMERGENCY FALLBACK - Execute after script loads
 console.log('🚨 [Home] EMERGENCY FALLBACK - Executing initialization...');
 setTimeout(() => {
-  if (!document.getElementById('demo-analyze-btn').onclick && 
-      !getEventListeners(document.getElementById('demo-analyze-btn')).click?.length) {
+  const btn = document.getElementById('demo-analyze-btn');
+  if (btn && !btn.onclick && (!btn._eventListeners || !btn._eventListeners.click)) {
     console.log('🚨 [Home] EMERGENCY - No event listeners detected, force initializing...');
     initializeHomePage();
   }
