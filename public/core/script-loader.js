@@ -137,11 +137,14 @@ home: {
                 enableTailwind: true
             },
             
-            'subscription': {
-                scripts: ['/pages/subscription/subscription.js'],
-                requiresAuth: true,
-                enableTailwind: true
-            },
+'subscription': {
+    scripts: [
+        '/core/api-client.js',
+        '/pages/subscription/subscription.js'
+    ],
+    requiresAuth: true,
+    enableTailwind: true
+},
             
             'about': {
                 scripts: ['/core/footer/footer-manager.js', '/core/header/header-manager.js'],
