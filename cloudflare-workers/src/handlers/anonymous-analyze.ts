@@ -8,7 +8,9 @@ import type { Env } from '../types/interfaces.js';
 import { generateRequestId, logger } from '../utils/logger.js';
 import { createStandardResponse } from '../utils/response.js';
 import { withScraperRetry } from '../utils/scraper-error-handler.js';
-import { getScraperConfigsAdvanced } from '../services/scraper-configs.js';
+import { generateAnonymousInsights } from '../services/gpt-insights.js';
+import { getApiKey } from '../services/enhanced-config-manager.js';
+import { validateAndTransformScraperData } from '../services/scraper-configs.js';
 
 // ===============================================================================
 // RATE LIMITING WITH CLOUDFLARE KV
