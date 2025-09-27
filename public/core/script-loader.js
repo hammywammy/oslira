@@ -87,12 +87,12 @@ this.coreScripts = [
             
 home: {
   scripts: [
-    '/pages/home/home.js',
-    '/pages/home/homeHandlers.js',  // Add the new handlers file
+    '/pages/home/homeHandlers.js',  // Load handlers FIRST
+    '/pages/home/home.js',          // Then UI setup
     '/core/footer/footer-manager.js'
   ],
   requiresAuth: false,
- enableTailwind: true
+  enableTailwind: true
 },
             
             'onboarding': {
@@ -331,11 +331,11 @@ await this.loadScript('timing-manager', '/core/timing-manager.js');
             }
         }
         
-        // Load page scripts in parallel
-        const loadPromises = pageConfig.scripts.map(async (scriptPath) => {
-            const scriptName = this.extractScriptName(scriptPath);
-            return this.loadScript(scriptName, scriptPath);
-        });
+// Load page scripts sequentially for dependency management
+for (const scriptPath of pageConfig.scripts) {
+    const scriptName = this.extractScriptName(scriptPath);
+    await this.loadScript(scriptName, scriptPath);
+}
         
         try {
             await Promise.all(loadPromises);
