@@ -19,15 +19,13 @@ name = "oslira-api-stg"
 routes = [
   { pattern = "api-staging.oslira.com/*", zone_name = "oslira.com" }
 ]
+kv_namespaces = [
+  { binding = "OSLIRA_KV", id = "4d86f413c437481fac253bb9a6567f82" }
+]
 
 [env.staging.vars]
 APP_ENV = "staging" 
 FRONTEND_URL = "https://osliratest.netlify.app"
-
-[env.staging]
-kv_namespaces = [
-  { binding = "OSLIRA_KV", id = "4d86f413c437481fac253bb9a6567f82" }
-]
 
 [[r2_buckets]]
 binding = "R2_CACHE_BUCKET"
