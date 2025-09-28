@@ -488,7 +488,10 @@ if (fieldId === 'website') {
 let progressTracker = {
     startTime: null,
     currentProgress: 0,
+    targetProgress: 0,
     estimatedDuration: 25000, // Start with 25 seconds
+    actualElapsed: 0,
+    smoothingInterval: null,
     currentStep: 0,
     steps: [
         { name: 'Validating form data', weight: 5 },
@@ -508,12 +511,18 @@ function showSubmissionProgress() {
     // Initialize progress tracking
     progressTracker.startTime = Date.now();
     progressTracker.currentProgress = 0;
+    progressTracker.targetProgress = 0;
+    progressTracker.actualElapsed = 0;
     progressTracker.currentStep = 0;
 
-    // Create progress overlay
+    // Create progress overlay with blur
     const progressOverlay = document.createElement('div');
     progressOverlay.id = 'submission-progress-overlay';
-    progressOverlay.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50';
+    progressOverlay.className = 'fixed inset-0 flex items-center justify-center z-50';
+    progressOverlay.style.backdropFilter = 'blur(10px)';
+    progressOverlay.style.webkitBackdropFilter = 'blur(10px)';
+    progressOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+    
     progressOverlay.innerHTML = `
         <div class="max-w-lg mx-auto text-center p-8 bg-white rounded-2xl shadow-2xl border">
             <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -524,13 +533,13 @@ function showSubmissionProgress() {
             
             <!-- Progress Bar -->
             <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
-                <div id="progress-bar-fill" class="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+                <div id="progress-bar-fill" class="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
             </div>
             
             <!-- Progress Stats -->
             <div class="flex justify-between items-center text-sm">
                 <span id="progress-percentage" class="font-semibold text-gray-700">0%</span>
-                <span id="progress-time" class="text-gray-500">Estimating time...</span>
+                <span id="progress-time" class="text-gray-500">~25s remaining</span>
             </div>
             
             <!-- Progress Details -->
@@ -545,77 +554,110 @@ function showSubmissionProgress() {
     
     document.body.appendChild(progressOverlay);
     
-    // Start progress animation
-    startProgressAnimation();
+    // Start smooth progress animation
+    startSmoothProgressAnimation();
     
     // Store reference for cleanup
     window.submissionProgressOverlay = progressOverlay;
 }
 
-function startProgressAnimation() {
-    const progressInterval = setInterval(() => {
-        updateProgressDisplay();
-    }, 100); // Update every 100ms for smooth animation
+function startSmoothProgressAnimation() {
+    // Clear any existing interval
+    if (progressTracker.smoothingInterval) {
+        clearInterval(progressTracker.smoothingInterval);
+    }
     
-    // Store interval for cleanup
-    window.progressAnimationInterval = progressInterval;
+    // Smooth animation that runs every 50ms
+    progressTracker.smoothingInterval = setInterval(() => {
+        updateSmoothProgress();
+    }, 50);
+}
+
+function updateSmoothProgress() {
+    const now = Date.now();
+    progressTracker.actualElapsed = now - progressTracker.startTime;
+    
+    // If no target progress set, move slowly toward estimated progress based on time
+    if (progressTracker.targetProgress === 0) {
+        const timeBasedProgress = Math.min((progressTracker.actualElapsed / progressTracker.estimatedDuration) * 100, 95);
+        progressTracker.targetProgress = timeBasedProgress;
+    }
+    
+    // Smooth interpolation toward target progress (prevents jumps)
+    const progressDiff = progressTracker.targetProgress - progressTracker.currentProgress;
+    const smoothingFactor = 0.1; // How fast it catches up (lower = smoother)
+    progressTracker.currentProgress += progressDiff * smoothingFactor;
+    
+    // Ensure we don't exceed target
+    if (progressTracker.currentProgress > progressTracker.targetProgress) {
+        progressTracker.currentProgress = progressTracker.targetProgress;
+    }
+    
+    // Update display
+    updateProgressDisplay();
 }
 
 function updateProgressDisplay() {
-    const elapsed = Date.now() - progressTracker.startTime;
     const progressPercentageEl = document.getElementById('progress-percentage');
     const progressTimeEl = document.getElementById('progress-time');
     const progressBarFill = document.getElementById('progress-bar-fill');
     
     if (!progressPercentageEl || !progressTimeEl || !progressBarFill) return;
     
+    const displayProgress = Math.floor(progressTracker.currentProgress);
+    
     // Update progress bar and percentage
     progressBarFill.style.width = `${progressTracker.currentProgress}%`;
-    progressPercentageEl.textContent = `${Math.floor(progressTracker.currentProgress)}%`;
+    progressPercentageEl.textContent = `${displayProgress}%`;
     
-    // Calculate and update time estimate
+    // Calculate time remaining based on current progress and actual elapsed time
+    let remainingTime;
+    
     if (progressTracker.currentProgress > 5) {
-        const estimatedTotal = (elapsed / progressTracker.currentProgress) * 100;
-        const remaining = Math.max(0, (estimatedTotal - elapsed) / 1000);
-        
-        if (remaining > 60) {
-            progressTimeEl.textContent = `~${Math.ceil(remaining / 60)}m remaining`;
-        } else if (remaining > 0) {
-            progressTimeEl.textContent = `~${Math.ceil(remaining)}s remaining`;
-        } else {
-            progressTimeEl.textContent = 'Almost done...';
-        }
+        // Estimate based on actual progress rate
+        const progressRate = progressTracker.currentProgress / progressTracker.actualElapsed;
+        const estimatedTotal = 100 / progressRate;
+        remainingTime = Math.max(0, (estimatedTotal - progressTracker.actualElapsed) / 1000);
     } else {
-        progressTimeEl.textContent = `~${Math.ceil(progressTracker.estimatedDuration / 1000)}s remaining`;
+        // Use initial estimate
+        remainingTime = (progressTracker.estimatedDuration - progressTracker.actualElapsed) / 1000;
+    }
+    
+    // Update time display
+    if (remainingTime > 60) {
+        progressTimeEl.textContent = `~${Math.ceil(remainingTime / 60)}m remaining`;
+    } else if (remainingTime > 0) {
+        progressTimeEl.textContent = `~${Math.ceil(remainingTime)}s remaining`;
+    } else {
+        progressTimeEl.textContent = 'Almost done...';
     }
 }
 
-function setProgressStep(stepIndex, additionalProgress = 0) {
+function setProgressStep(stepIndex, stepProgress = 0) {
     if (stepIndex >= progressTracker.steps.length) return;
     
-    // Update current step
-    progressTracker.currentStep = stepIndex;
-    
-    // Calculate progress based on completed steps + additional progress within current step
-    let totalProgress = 0;
+    // Calculate target progress based on completed steps + current step progress
+    let targetProgress = 0;
     
     // Add weight of all completed steps
     for (let i = 0; i < stepIndex; i++) {
-        totalProgress += progressTracker.steps[i].weight;
+        targetProgress += progressTracker.steps[i].weight;
     }
     
     // Add partial progress of current step
-    totalProgress += (progressTracker.steps[stepIndex].weight * additionalProgress);
+    targetProgress += (progressTracker.steps[stepIndex].weight * stepProgress);
     
-    progressTracker.currentProgress = Math.min(totalProgress, 100);
+    // Set target (smooth animation will catch up)
+    progressTracker.targetProgress = Math.min(targetProgress, 100);
+    progressTracker.currentStep = stepIndex;
     
-    // Update step text
+    // Update step text immediately
     const stepTextEl = document.getElementById('progress-step-text');
     if (stepTextEl) {
         stepTextEl.textContent = progressTracker.steps[stepIndex].name;
     }
     
-    console.log(`📊 Progress: ${Math.floor(progressTracker.currentProgress)}% - ${progressTracker.steps[stepIndex].name}`);
+    console.log(`📊 Progress Target: ${Math.floor(progressTracker.targetProgress)}% - ${progressTracker.steps[stepIndex].name}`);
 }
 
 function updateSubmissionMessage(message) {
@@ -623,6 +665,31 @@ function updateSubmissionMessage(message) {
     if (stepTextEl) {
         stepTextEl.textContent = message;
     }
+}
+
+function cleanupProgressTracking() {
+    // Clear animation interval
+    if (progressTracker.smoothingInterval) {
+        clearInterval(progressTracker.smoothingInterval);
+        progressTracker.smoothingInterval = null;
+    }
+    
+    // Reset progress tracker
+    progressTracker = {
+        startTime: null,
+        currentProgress: 0,
+        targetProgress: 0,
+        estimatedDuration: 25000,
+        actualElapsed: 0,
+        smoothingInterval: null,
+        currentStep: 0,
+        steps: [
+            { name: 'Validating form data', weight: 5 },
+            { name: 'Creating business profile', weight: 15 },
+            { name: 'Generating AI insights', weight: 60 },
+            { name: 'Finalizing setup', weight: 20 }
+        ]
+    };
 }
 
 function hideSubmissionProgress() {
