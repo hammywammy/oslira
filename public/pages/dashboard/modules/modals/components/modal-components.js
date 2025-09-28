@@ -1032,36 +1032,208 @@ this.registerComponent('persuasionStrategy', {
         `;
     }
 });
+
+        // ===============================================================================
+        // TAB SYSTEM COMPONENTS
+        // ===============================================================================
+        
+        this.registerComponent('tabNavigation', {
+            render: (lead, analysisData, tabs) => {
+                if (!tabs || tabs.length <= 1) return '';
+                
+                const tabButtons = tabs.map(tab => `
+                    <button 
+                        data-tab="${tab.id}" 
+                        class="tab-button px-6 py-3 font-semibold rounded-lg transition-all duration-300 ${tab.id === tabs[0].id ? 'active' : ''}"
+                        role="tab"
+                        aria-selected="${tab.id === tabs[0].id ? 'true' : 'false'}"
+                        tabindex="0">
+                        ${tab.label}
+                    </button>
+                `).join('');
+
+                return `
+                    <div class="tab-navigation bg-gray-50 p-2 rounded-xl mb-6" role="tablist">
+                        <div class="flex space-x-2">
+                            ${tabButtons}
+                        </div>
+                    </div>
+                    
+                    <style>
+                        .tab-button {
+                            background: transparent;
+                            color: #6b7280;
+                            border: none;
+                            cursor: pointer;
+                        }
+                        
+                        .tab-button:hover {
+                            background: rgba(59, 130, 246, 0.1);
+                            color: #3b82f6;
+                        }
+                        
+                        .tab-button.active {
+                            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+                            color: white;
+                            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+                        }
+                        
+                        .tab-button:focus {
+                            outline: 2px solid #3b82f6;
+                            outline-offset: 2px;
+                        }
+                    </style>
+                `;
+            }
+        });
+
+        this.registerComponent('tabbedContainer', {
+            render: (lead, analysisData, tabs, components) => {
+                if (!tabs || tabs.length <= 1) {
+                    // No tabs - render components directly
+                    return components.join('');
+                }
+
+                const tabContents = tabs.map((tab, index) => {
+                    const tabComponents = components[tab.id] || [];
+                    const isActive = index === 0;
+                    
+                    return `
+                        <div 
+                            id="tab-content-${tab.id}" 
+                            class="tab-content" 
+                            role="tabpanel"
+                            aria-labelledby="tab-${tab.id}"
+                            style="display: ${isActive ? 'block' : 'none'}; opacity: ${isActive ? '1' : '0'}; transform: translateY(0); transition: all 0.3s ease;">
+                            ${tabComponents.join('')}
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="tabbed-container">
+                        ${this.getComponent('tabNavigation').render(lead, analysisData, tabs)}
+                        <div class="tab-content-wrapper">
+                            ${tabContents}
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // ===============================================================================
+        // PLACEHOLDER PERSONALITY COMPONENTS
+        // ===============================================================================
+        
+        this.registerComponent('personalityOverview', {
+            render: (lead, analysisData) => `
+                <div class="personality-overview bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200">
+                    <h3 class="text-xl font-bold text-purple-800 mb-4 flex items-center">
+                        <span class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm mr-3">🧠</span>
+                        Personality Overview
+                    </h3>
+                    <div class="text-gray-600">
+                        <p class="mb-3">Advanced personality analysis coming soon in this tab.</p>
+                        <div class="bg-white p-4 rounded-lg border border-purple-100">
+                            <p class="text-sm text-purple-600 font-medium">Future Features:</p>
+                            <ul class="text-sm text-gray-600 mt-2 space-y-1">
+                                <li>• DISC Personality Assessment</li>
+                                <li>• Communication Preferences</li>
+                                <li>• Behavioral Patterns</li>
+                                <li>• Motivation Drivers</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `
+        });
+
+        this.registerComponent('behaviorPatterns', {
+            render: (lead, analysisData) => `
+                <div class="behavior-patterns bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-200 mt-6">
+                    <h3 class="text-xl font-bold text-blue-800 mb-4 flex items-center">
+                        <span class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm mr-3">📊</span>
+                        Behavior Patterns
+                    </h3>
+                    <div class="text-gray-600">
+                        <p>Detailed behavioral analysis will be displayed here.</p>
+                    </div>
+                </div>
+            `
+        });
+
+        this.registerComponent('communicationStyle', {
+            render: (lead, analysisData) => `
+                <div class="communication-style bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200 mt-6">
+                    <h3 class="text-xl font-bold text-green-800 mb-4 flex items-center">
+                        <span class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm mr-3">💬</span>
+                        Communication Style
+                    </h3>
+                    <div class="text-gray-600">
+                        <p>Communication preferences and style analysis coming soon.</p>
+                    </div>
+                </div>
+            `
+        });
+
+        this.registerComponent('motivationDrivers', {
+            render: (lead, analysisData) => `
+                <div class="motivation-drivers bg-gradient-to-br from-yellow-50 to-orange-50 p-6 rounded-xl border border-yellow-200 mt-6">
+                    <h3 class="text-xl font-bold text-yellow-800 mb-4 flex items-center">
+                        <span class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white text-sm mr-3">🎯</span>
+                        Motivation Drivers
+                    </h3>
+                    <div class="text-gray-600">
+                        <p>Motivation and drive analysis will be available here.</p>
+                    </div>
+                </div>
+            `
+        });
     }
 
     // ===============================================================================
     // POST-RENDER INITIALIZATION
     // ===============================================================================
     
-    initializeAnimations(container, lead, analysisData) {
-        const isDeepAnalysis = lead.analysis_type === 'deep' || lead.analysis_type === 'xray';
-        const mainScore = this.getMainScore(lead, analysisData, isDeepAnalysis);
+initializeAnimations(modalContent, lead, analysisData) {
+    // Initialize tab system if tabs exist
+    const tabNavigation = modalContent.querySelector('.tab-navigation');
+    if (tabNavigation && window.TabSystem) {
+        const tabs = Array.from(modalContent.querySelectorAll('[data-tab]')).map(btn => ({
+            id: btn.getAttribute('data-tab'),
+            label: btn.textContent.trim()
+        }));
         
-        // Initialize score animation
-        setTimeout(() => {
-            const scoreDisplay = container.querySelector('#scoreDisplay');
-            const scoreRing = container.querySelector('#scoreRing');
-            
-            if (scoreDisplay && scoreRing) {
-                this.animateScoreAndCircle(scoreDisplay, scoreRing, mainScore);
-            }
-
-            // Initialize staggered reveals
-            this.initializeStaggeredReveals(container);
-            
-            // Trigger count-up animations
-            this.initializeCountUpAnimations(container);
-            
-            // Initialize particle systems
-            this.initializeParticleSystem(container);
-            
-        }, 100);
+        if (tabs.length > 0) {
+            const tabSystem = window.TabSystem.create('modalContent', tabs, tabs[0].id);
+            console.log('✅ [ModalComponents] Tab system initialized');
+        }
     }
+
+    // Keep existing animation code...
+    const isDeepAnalysis = lead.analysis_type === 'deep' || lead.analysis_type === 'xray';
+    const mainScore = this.getMainScore(lead, analysisData, isDeepAnalysis);
+    
+    // Initialize score animation
+    setTimeout(() => {
+        const scoreDisplay = modalContent.querySelector('#scoreDisplay');
+        const scoreRing = modalContent.querySelector('#scoreRing');
+        
+        if (scoreDisplay && scoreRing) {
+            this.animateScoreAndCircle(scoreDisplay, scoreRing, mainScore);
+        }
+
+        // Initialize staggered reveals
+        this.initializeStaggeredReveals(modalContent);
+        
+        // Trigger count-up animations
+        this.initializeCountUpAnimations(modalContent);
+        
+        // Initialize particle systems
+        this.initializeParticleSystem(modalContent);
+        
+    }, 100);
+}
 }
 
 // Export
