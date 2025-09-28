@@ -280,30 +280,33 @@ showCopySuccess(buttonElement = null) {
     }
 
 setupGlobalMethods() {
-    // Export methods to global scope for onclick handlers
-    if (!window.openLeadAnalysisModal) {
-    window.openLeadAnalysisModal = (leadId) => this.buildAnalysisModal(leadId);
-    window.closeLeadAnalysisModal = () => this.removeExistingModals();
-    window.showLoadingModal = () => this.showLoadingModal();
-    window.removeExistingModals = () => this.removeExistingModals();
-    window.createLeadAnalysisModalStructure = () => this.createLeadAnalysisModalStructure();
-    window.buildAnalysisModalHTML = (lead, analysisData, leadId) => this.buildAnalysisModalHTML(lead, analysisData, leadId);
-    window.copyOutreachMessage = (message) => this.copyOutreachMessage(message);
-    window.startDeepAnalysis = (leadId) => this.startDeepAnalysis(leadId);
-    window.contactLead = (leadId) => this.contactLead(leadId);
-    window.showContactSuccess = () => this.showContactSuccess();
-    window.showCopySuccess = () => this.showCopySuccess();
-    window.showErrorModal = (message) => this.showErrorModal(message);
-    window.closeErrorModal = () => this.removeExistingModals();
-    
-    // Additional analysis modal methods
-    window.showAnalysisModal = (username = '') => this.showAnalysisModal(username);
-    window.showBulkModal = () => this.showBulkModal();
-    window.handleAnalysisTypeChange = (type) => this.handleAnalysisTypeChange(type);
-    window.validateBulkForm = () => this.validateBulkForm();
-    window.processAnalysisForm = (event) => this.processAnalysisForm(event);
-    window.processBulkUpload = () => this.processBulkUpload();
-    window.handleFileUpload = (event) => this.handleFileUpload(event);
+    // Only setup globals if they don't already exist to prevent re-initialization
+    if (!window._osliraGlobalsInitialized) {
+        window.openLeadAnalysisModal = (leadId) => this.buildAnalysisModal(leadId);
+        window.closeLeadAnalysisModal = () => this.removeExistingModals();
+        window.showLoadingModal = () => this.showLoadingModal();
+        window.removeExistingModals = () => this.removeExistingModals();
+        window.createLeadAnalysisModalStructure = () => this.createLeadAnalysisModalStructure();
+        window.buildAnalysisModalHTML = (lead, analysisData, leadId) => this.buildAnalysisModalHTML(lead, analysisData, leadId);
+        window.copyOutreachMessage = (message) => this.copyOutreachMessage(message);
+        window.startDeepAnalysis = (leadId) => this.startDeepAnalysis(leadId);
+        window.contactLead = (leadId) => this.contactLead(leadId);
+        window.showContactSuccess = () => this.showContactSuccess();
+        window.showCopySuccess = () => this.showCopySuccess();
+        window.showErrorModal = (message) => this.showErrorModal(message);
+        window.closeErrorModal = () => this.removeExistingModals();
+        window.showAnalysisModal = (username = '') => this.showAnalysisModal(username);
+        window.showBulkModal = () => this.showBulkModal();
+        window.handleAnalysisTypeChange = (type) => this.handleAnalysisTypeChange(type);
+        window.validateBulkForm = () => this.validateBulkForm();
+        window.processAnalysisForm = (event) => this.processAnalysisForm(event);
+        window.processBulkUpload = () => this.processBulkUpload();
+        window.handleFileUpload = (event) => this.handleFileUpload(event);
+        
+        window._osliraGlobalsInitialized = true;
+        console.log('✅ [AnalysisFunctions] Global methods initialized');
+    } else {
+        console.log('⚠️ [AnalysisFunctions] Global methods already initialized, skipping');
     }
 }
 
