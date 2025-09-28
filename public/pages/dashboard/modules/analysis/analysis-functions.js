@@ -916,8 +916,7 @@ removeExistingModals() {
         'errorModal',
         'loadingModal', 
         'leadAnalysisModal',
-        'analysisModal',
-        'bulkModal'
+        'analysisModal'
     ];
     
     existingModals.forEach(modalId => {
