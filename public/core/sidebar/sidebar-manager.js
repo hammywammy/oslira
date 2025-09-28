@@ -13,6 +13,44 @@ class SidebarManager {
         console.log('🚀 [SidebarManager] Initializing...');
     }
 
+    async handleLogout() {
+    console.log('🔐 [SidebarManager] Logging out user...');
+    
+    try {
+        // Show loading state on button
+        const logoutBtn = document.querySelector('.sidebar-user-button');
+        if (logoutBtn) {
+            logoutBtn.disabled = true;
+            logoutBtn.textContent = 'Signing out...';
+        }
+        
+        // Use OsliraAuth for logout
+        if (window.OsliraAuth) {
+            await window.OsliraAuth.signOut();
+            console.log('✅ [SidebarManager] User signed out successfully');
+            
+            // Redirect to home page
+            window.location.href = '/';
+        } else {
+            console.error('❌ [SidebarManager] OsliraAuth not available');
+            throw new Error('Authentication system not available');
+        }
+    } catch (error) {
+        console.error('❌ [SidebarManager] Logout failed:', error);
+        
+        // Reset button state on error
+        const logoutBtn = document.querySelector('.sidebar-user-button');
+        if (logoutBtn) {
+            logoutBtn.disabled = false;
+            logoutBtn.textContent = 'Sign out';
+        }
+        
+        // Show error message
+        if (window.Alert && window.Alert.error) {
+            window.Alert.error('Failed to sign out. Please try again.');
+        }
+    }
+}
     // =========================================================================
     // PUBLIC API - CORE METHODS
     // =========================================================================
@@ -241,10 +279,10 @@ async updateUserInfo(user) {
             </div>
             
             <div class="sidebar-user-actions px-4 py-3 border-t border-gray-200/40 bg-gray-50/50">
-                <button onclick="window.handleLogout && window.handleLogout()" 
-                        class="sidebar-user-button w-full">
-                    Sign out
-                </button>
+<button onclick="window.sidebarManager.handleLogout()" 
+        class="sidebar-user-button w-full">
+    Sign out
+</button>
             </div>
         </div>
     </div>
