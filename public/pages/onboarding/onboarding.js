@@ -128,9 +128,9 @@ function showElement(elementId) {
 }
 
 function updateNavigationButtons() {
-    const prevButton = document.getElementById('back-btn');
-    const nextButton = document.getElementById('next-btn');
-    const submitButton = document.getElementById('finish-btn');
+    const prevButton = document.querySelector('[onclick="prevStep()"]');
+    const nextButton = document.querySelector('[onclick="nextStep()"]');
+    const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
     const skipButton = document.getElementById('skip-btn');
     
     // Show/hide previous button
@@ -138,14 +138,23 @@ function updateNavigationButtons() {
         prevButton.style.display = currentStep > 1 ? 'inline-flex' : 'none';
     }
     
-// Update next/submit button
-if (currentStep === totalSteps) {
-    if (nextButton) nextButton.style.display = 'none';
-    if (submitButton) submitButton.style.display = 'inline-flex';
-} else {
-    if (nextButton) nextButton.style.display = 'inline-flex';
-    if (submitButton) submitButton.style.display = 'none';
-}
+    // Show skip button only on steps 8 (integrations) and 9 (phone number)
+    if (skipButton) {
+        if (currentStep === 8 || currentStep === 9) {
+            skipButton.style.display = 'inline-flex';
+        } else {
+            skipButton.style.display = 'none';
+        }
+    }
+    
+    // Update next/submit button
+    if (currentStep === totalSteps) {
+        if (nextButton) nextButton.style.display = 'none';
+        if (submitButton) submitButton.style.display = 'inline-flex';
+    } else {
+        if (nextButton) nextButton.style.display = 'inline-flex';
+        if (submitButton) submitButton.style.display = 'none';
+    }
 
 // Update button text for step 10
 if (currentStep === 10) {
@@ -379,6 +388,21 @@ function getFieldValue(fieldId) {
 if (fieldId === 'sms-opt-in') {
     const checkbox = document.querySelector('input[name="sms-opt-in"]:checked');
     return checkbox ? checkbox.value : '';
+}
+
+    if (fieldId === 'target-size') {
+    const checkboxes = document.querySelectorAll('input[name="target-size"]:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+if (fieldId === 'communication') {
+    const checkboxes = document.querySelectorAll('input[name="communication"]:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+if (fieldId === 'website') {
+    const field = document.getElementById('website');
+    return field ? field.value.trim() : '';
 }
     
     // Handle regular input fields
