@@ -3,683 +3,576 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subscription & Billing | Oslira</title>
-    <meta name="description" content="Manage your Oslira subscription and billing preferences. Choose flexible monthly plans that scale with your business needs.">
-    <link rel="icon" type="image/png" href="/assets/images/oslira-logo.png">
-    
-    <!-- Preload critical CSS -->
-    <link rel="preload" href="/assets/css/tailwind.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="/assets/css/tailwind.css"></noscript>
-    
-    <!-- Critical above-fold styles -->
+    <title>Subscription Plans - Oslira</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { 
-            visibility: hidden; 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0;
-            padding: 0;
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            25% { background-position: 50% 25%; }
+            50% { background-position: 100% 50%; }
+            75% { background-position: 50% 75%; }
+            100% { background-position: 0% 50%; }
         }
-        .show-content { visibility: visible !important; }
-        
-        /* Custom gradient backgrounds */
-        .gradient-bg-1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
         }
-        .gradient-bg-2 {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
         }
-        .gradient-bg-3 {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #2D6CDF 0%, #8A6DF1 25%, #06B6D4 50%, #2D6CDF 75%, #8A6DF1 100%);
+            background-size: 400% 400%;
+            animation: gradientFlow 20s ease infinite;
         }
-        .gradient-bg-hero {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px rgba(45, 108, 223, 0.08),
+                       0 0 80px rgba(138, 109, 241, 0.05),
+                       inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(45, 108, 223, 0.15),
+                       0 0 100px rgba(138, 109, 241, 0.1),
+                       inset 0 0 0 1px rgba(255, 255, 255, 1);
+        }
+
+        .pricing-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .pricing-card.featured {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(237, 233, 254, 0.95) 100%);
+            border: 2px solid rgba(138, 109, 241, 0.3);
+            transform: scale(1.05);
+        }
+
+        .wave-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background-image: 
+                radial-gradient(ellipse at top left, rgba(45, 108, 223, 0.3) 0%, transparent 40%),
+                radial-gradient(ellipse at top right, rgba(138, 109, 241, 0.3) 0%, transparent 40%),
+                radial-gradient(ellipse at bottom center, rgba(6, 182, 212, 0.3) 0%, transparent 50%);
+            animation: float 30s ease-in-out infinite;
+        }
+
+        .floating-shape {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #2D6CDF 0%, #8A6DF1 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(138, 109, 241, 0.4);
+        }
+
+        .btn-gradient::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-gradient:hover::before {
+            left: 100%;
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #2D6CDF 0%, #8A6DF1 50%, #06B6D4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .badge-popular {
+            background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+            animation: shimmer 3s ease-in-out infinite;
+            background-size: 200% 100%;
+        }
+
+        .check-gradient {
+            background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
         }
     </style>
-    
-    <!-- Script loader initialization -->
-    <script src="/core/script-loader.js"></script>
 </head>
-<body class="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 min-h-screen">
-    <!-- Skip Navigation -->
-    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded-lg z-50">
-        Skip to main content
-    </a>
+<body class="gradient-bg min-h-screen relative overflow-x-hidden">
+    <!-- Wave Overlay -->
+    <div class="wave-overlay"></div>
 
-    <!-- Navigation Header -->
-    <nav class="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg shadow-blue-500/5">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-3">
-                    <img src="/assets/images/oslira-logo.png" alt="Oslira" class="w-8 h-8 rounded-lg shadow-md">
-                    <span class="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Oslira</span>
-                </div>
-                
-                <div class="flex items-center space-x-6">
-                    <a href="/dashboard" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Dashboard</a>
-                    <a href="/settings" class="text-gray-600 hover:text-blue-600 font-medium transition-colors">Settings</a>
-                    <button id="logout-btn" class="bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-all transform hover:scale-105">
-                        Sign Out
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
-    
-    <!-- Main Content -->
-    <main role="main" id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <!-- Floating Shapes -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="floating-shape absolute top-20 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+        <div class="floating-shape absolute top-40 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" style="animation-delay: -2s;"></div>
+        <div class="floating-shape absolute bottom-20 left-1/3 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl" style="animation-delay: -4s;"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         
-        <!-- Hero Header -->
+        <!-- Header -->
         <div class="text-center mb-16">
-            <div class="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 mb-6">
-                <span class="text-blue-600 font-medium text-sm">💳 Subscription Management</span>
-            </div>
-            
-            <h1 class="text-5xl lg:text-6xl font-bold mb-6">
-                <span class="bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 bg-clip-text text-transparent">
-                    Subscription &
-                </span>
-                <br>
-                <span class="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                    Billing
-                </span>
+            <h1 class="text-5xl md:text-7xl font-bold text-white mb-6">
+                Choose Your <span class="text-gradient">Perfect Plan</span>
             </h1>
-            
-            <p class="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                Scale your lead research with flexible plans designed for growing teams. 
-                Upgrade, downgrade, or cancel anytime with no long-term commitments.
+            <p class="text-xl text-white/80 max-w-2xl mx-auto">
+                Flexible monthly subscriptions that grow with your business
             </p>
         </div>
 
-        <!-- Current Plan Card -->
-        <div class="mb-16">
-            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-1 shadow-2xl">
-                <div class="relative bg-white rounded-3xl p-8 lg:p-12">
-                    <!-- Floating Elements -->
-                    <div class="absolute top-4 right-4 w-20 h-20 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-xl"></div>
-                    <div class="absolute bottom-4 left-4 w-16 h-16 bg-gradient-to-br from-pink-400/20 to-blue-400/20 rounded-full blur-xl"></div>
-                    
-                    <div class="relative text-center">
-                        <div class="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 mb-6">
-                            <span class="text-emerald-600 font-medium text-sm">✨ Your Current Plan</span>
-                        </div>
-                        
-                        <h2 class="text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-blue-900 bg-clip-text text-transparent" id="current-plan-name">
-                            Free Plan
-                        </h2>
-                        
-                        <p class="text-lg text-gray-600 mb-8" id="plan-details">
-                            25 monthly credits • Limited features
-                        </p>
-                        
-                        <div class="inline-flex items-center px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                            <span class="text-amber-700 font-medium" id="subscription-info">
-                                💡 <strong>Upgrade today</strong> to unlock unlimited lead analysis and advanced features
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pricing Section -->
-        <div class="mb-16">
-            <div class="text-center mb-12">
-                <h2 class="text-4xl lg:text-5xl font-bold mb-6">
-                    Choose Your <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Perfect Plan</span>
-                </h2>
-                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-                    Flexible monthly subscriptions that grow with your business
-                </p>
-            </div>
-
-            <!-- Pricing Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                
-                <!-- Starter Plan -->
-                <div class="pricing-card relative group" data-plan="starter">
-                    <div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl transform group-hover:scale-105 transition-transform duration-300"></div>
-                    <div class="relative bg-white rounded-3xl p-8 border border-blue-100 shadow-xl shadow-blue-500/10 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-300">
-                        
-                        <div class="text-center mb-8">
-                            <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                                <span class="text-2xl">🚀</span>
-                            </div>
-                            
-                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
-                            
-                            <div class="flex items-baseline justify-center mb-4">
-                                <span class="text-gray-500 text-xl">$</span>
-                                <span class="text-5xl font-bold text-gray-900">15</span>
-                                <span class="text-gray-500 ml-2">/month</span>
-                            </div>
-                            
-                            <div class="inline-flex items-center px-4 py-2 rounded-full bg-blue-50 border border-blue-200">
-                                <span class="text-blue-700 font-semibold text-sm">100 monthly credits</span>
-                            </div>
-                        </div>
-                        
-                        <ul class="space-y-4 mb-8">
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                100 lead analyses per month
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Basic lead intelligence
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Email support
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Analytics dashboard
-                            </li>
-                        </ul>
-                        
-                        <button class="card-button w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl" data-plan="starter" data-price="15">
-                            Choose Starter
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Professional Plan -->
-                <div class="pricing-card relative group" data-plan="professional">
-                    <div class="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl transform group-hover:scale-105 transition-transform duration-300"></div>
-                    <div class="relative bg-white rounded-3xl p-8 border border-purple-100 shadow-xl shadow-purple-500/10 hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-300">
-                        
-                        <div class="text-center mb-8">
-                            <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                                <span class="text-2xl">⚡</span>
-                            </div>
-                            
-                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Professional</h3>
-                            
-                            <div class="flex items-baseline justify-center mb-4">
-                                <span class="text-gray-500 text-xl">$</span>
-                                <span class="text-5xl font-bold text-gray-900">30</span>
-                                <span class="text-gray-500 ml-2">/month</span>
-                            </div>
-                            
-                            <div class="inline-flex items-center px-4 py-2 rounded-full bg-purple-50 border border-purple-200 mb-2">
-                                <span class="text-purple-700 font-semibold text-sm">300 monthly credits</span>
-                            </div>
-                            
-                            <div class="inline-flex items-center px-3 py-1 rounded-full bg-green-500 text-white text-xs font-bold">
-                                Save 50%
-                            </div>
-                        </div>
-                        
-                        <ul class="space-y-4 mb-8">
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                300 lead analyses per month
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Advanced lead intelligence
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Priority support
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                CRM integrations
-                            </li>
-                        </ul>
-                        
-                        <button class="card-button w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl" data-plan="professional" data-price="30">
-                            Choose Professional
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Agency Plan (Most Popular) -->
-                <div class="pricing-card relative group" data-plan="agency">
-                    <!-- Popular Badge -->
-                    <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                        <div class="bg-gradient-to-r from-orange-400 to-pink-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                            🔥 MOST POPULAR
-                        </div>
-                    </div>
-                    
-                    <div class="absolute inset-0 bg-gradient-to-br from-orange-50 to-pink-50 rounded-3xl transform group-hover:scale-105 transition-transform duration-300"></div>
-                    <div class="relative bg-white rounded-3xl p-8 border-2 border-orange-200 shadow-xl shadow-orange-500/20 hover:shadow-2xl hover:shadow-orange-500/30 transition-all duration-300">
-                        
-                        <div class="text-center mb-8">
-                            <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                                <span class="text-2xl">🎯</span>
-                            </div>
-                            
-                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Agency</h3>
-                            
-                            <div class="flex items-baseline justify-center mb-4">
-                                <span class="text-gray-500 text-xl">$</span>
-                                <span class="text-5xl font-bold text-gray-900">80</span>
-                                <span class="text-gray-500 ml-2">/month</span>
-                            </div>
-                            
-                            <div class="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-orange-50 to-pink-50 border border-orange-200 mb-2">
-                                <span class="text-orange-700 font-semibold text-sm">1000 monthly credits</span>
-                            </div>
-                            
-                            <div class="inline-flex items-center px-3 py-1 rounded-full bg-green-500 text-white text-xs font-bold">
-                                Save 73%
-                            </div>
-                        </div>
-                        
-                        <ul class="space-y-4 mb-8">
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                1000 lead analyses per month
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Premium intelligence
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                24/7 phone & chat support
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Team collaboration
-                            </li>
-                        </ul>
-                        
-                        <button class="card-button w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl" data-plan="agency" data-price="80">
-                            Choose Agency
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Enterprise Plan -->
-                <div class="pricing-card relative group" data-plan="enterprise">
-                    <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-slate-50 rounded-3xl transform group-hover:scale-105 transition-transform duration-300"></div>
-                    <div class="relative bg-white rounded-3xl p-8 border border-gray-200 shadow-xl shadow-gray-500/10 hover:shadow-2xl hover:shadow-gray-500/20 transition-all duration-300">
-                        
-                        <div class="text-center mb-8">
-                            <div class="w-16 h-16 bg-gradient-to-br from-gray-600 to-gray-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                                <span class="text-2xl">🏢</span>
-                            </div>
-                            
-                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
-                            
-                            <div class="flex items-baseline justify-center mb-4">
-                                <span class="text-3xl font-bold text-gray-900">Custom</span>
-                            </div>
-                            
-                            <div class="inline-flex items-center px-4 py-2 rounded-full bg-gray-50 border border-gray-200">
-                                <span class="text-gray-700 font-semibold text-sm">5000+ monthly credits</span>
-                            </div>
-                        </div>
-                        
-                        <ul class="space-y-4 mb-8">
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Unlimited analyses
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                Dedicated account manager
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                    </div>
-                                Custom integrations
-                            </li>
-                            <li class="flex items-center text-gray-700">
-                                <div class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                SLA guarantee
-                            </li>
-                        </ul>
-                        
-                        <button class="card-button w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl" data-plan="enterprise">
-                            Contact Sales
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Billing & Usage Analytics -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+        <!-- Pricing Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto mb-20">
             
-            <!-- Billing Information -->
-            <div class="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
-                <div class="flex items-center justify-between mb-8">
-                    <div>
-                        <h3 class="text-2xl font-bold text-gray-900 mb-2">Billing & Payment</h3>
-                        <p class="text-gray-600">Manage your payment methods and billing</p>
-                    </div>
-                    <button id="manage-billing-btn" class="bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 border border-blue-200 px-6 py-3 rounded-2xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md">
-                        <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <!-- Starter Plan -->
+            <div class="glass-card pricing-card rounded-3xl p-8 relative">
+                <div class="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 mb-6 mx-auto">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                
+                <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Starter</h3>
+                
+                <div class="text-center mb-6">
+                    <span class="text-gray-600 text-lg">$</span>
+                    <span class="text-5xl font-bold text-gray-900">15</span>
+                    <span class="text-gray-600">/month</span>
+                </div>
+                
+                <div class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold text-center mb-6">
+                    100 monthly credits
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">100 lead analyses per month</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">Basic lead intelligence</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">Email support</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">Analytics dashboard</span>
+                    </li>
+                </ul>
+                
+                <button class="w-full py-4 px-6 rounded-2xl font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 transition-all duration-200 transform hover:scale-105">
+                    Choose Starter
+                </button>
+            </div>
+
+            <!-- Professional Plan -->
+            <div class="glass-card pricing-card rounded-3xl p-8 relative">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        Save 50%
+                    </span>
+                </div>
+                
+                <div class="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 mb-6 mx-auto">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+                    </svg>
+                </div>
+                
+                <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Professional</h3>
+                
+                <div class="text-center mb-6">
+                    <span class="text-gray-600 text-lg">$</span>
+                    <span class="text-5xl font-bold text-gray-900">30</span>
+                    <span class="text-gray-600">/month</span>
+                </div>
+                
+                <div class="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold text-center mb-6">
+                    300 monthly credits
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">300 lead analyses per month</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">Advanced lead intelligence</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">Priority support</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">CRM integrations</span>
+                    </li>
+                </ul>
+                
+                <button class="w-full py-4 px-6 rounded-2xl font-semibold btn-gradient text-white hover:shadow-lg transition-all duration-200 transform hover:scale-105">
+                    Choose Professional
+                </button>
+            </div>
+
+            <!-- Agency Plan (Featured) -->
+            <div class="glass-card pricing-card featured rounded-3xl p-8 relative">
+                <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                    <span class="badge-popular text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
+                        🔥 MOST POPULAR
+                    </span>
+                </div>
+                
+                <div class="absolute -top-3 right-4">
+                    <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                        Save 73%
+                    </span>
+                </div>
+                
+                <div class="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 mb-6 mx-auto">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+                
+                <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Agency</h3>
+                
+                <div class="text-center mb-6">
+                    <span class="text-gray-600 text-lg">$</span>
+                    <span class="text-5xl font-bold text-gray-900">80</span>
+                    <span class="text-gray-600">/month</span>
+                </div>
+                
+                <div class="bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold text-center mb-6">
+                    1000 monthly credits
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700 font-semibold">1000 lead analyses per month</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700 font-semibold">Premium intelligence</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700 font-semibold">24/7 phone & chat support</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700 font-semibold">Team collaboration</span>
+                    </li>
+                </ul>
+                
+                <button class="w-full py-4 px-6 rounded-2xl font-semibold text-white shadow-xl transition-all duration-200 transform hover:scale-105" style="background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);">
+                    Choose Agency
+                </button>
+            </div>
+
+            <!-- Enterprise Plan -->
+            <div class="glass-card pricing-card rounded-3xl p-8 relative">
+                <div class="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-700 to-gray-900 mb-6 mx-auto">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                </div>
+                
+                <h3 class="text-2xl font-bold text-gray-900 text-center mb-2">Enterprise</h3>
+                
+                <div class="text-center mb-6">
+                    <span class="text-4xl font-bold text-gray-900">Custom</span>
+                </div>
+                
+                <div class="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-semibold text-center mb-6">
+                    5000+ monthly credits
+                </div>
+                
+                <ul class="space-y-4 mb-8">
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">Unlimited analyses</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">Dedicated account manager</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">Custom integrations</span>
+                    </li>
+                    <li class="flex items-start">
+                        <div class="w-5 h-5 rounded-full check-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <span class="ml-3 text-gray-700">SLA guarantee</span>
+                    </li>
+                </ul>
+                
+                <button class="w-full py-4 px-6 rounded-2xl font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-all duration-200 transform hover:scale-105">
+                    Contact Sales
+                </button>
+            </div>
+        </div>
+
+        <!-- Features Comparison Section -->
+        <div class="glass-card rounded-3xl p-12 max-w-6xl mx-auto mb-20">
+            <h2 class="text-4xl font-bold text-gray-900 text-center mb-12">
+                Compare <span class="text-gradient">Features</span>
+            </h2>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-4 px-4 text-gray-700 font-semibold">Features</th>
+                            <th class="text-center py-4 px-4 text-gray-700 font-semibold">Starter</th>
+                            <th class="text-center py-4 px-4 text-gray-700 font-semibold">Professional</th>
+                            <th class="text-center py-4 px-4 text-purple-600 font-semibold">Agency</th>
+                            <th class="text-center py-4 px-4 text-gray-700 font-semibold">Enterprise</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Monthly Lead Analyses</td>
+                            <td class="text-center py-4 px-4">100</td>
+                            <td class="text-center py-4 px-4">300</td>
+                            <td class="text-center py-4 px-4 font-bold text-purple-600">1000</td>
+                            <td class="text-center py-4 px-4">Unlimited</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">AI Intelligence Level</td>
+                            <td class="text-center py-4 px-4">Basic</td>
+                            <td class="text-center py-4 px-4">Advanced</td>
+                            <td class="text-center py-4 px-4 font-bold text-purple-600">Premium</td>
+                            <td class="text-center py-4 px-4">Premium+</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Support</td>
+                            <td class="text-center py-4 px-4">Email</td>
+                            <td class="text-center py-4 px-4">Priority Email</td>
+                            <td class="text-center py-4 px-4 font-bold text-purple-600">24/7 Phone & Chat</td>
+                            <td class="text-center py-4 px-4">Dedicated Manager</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">Team Members</td>
+                            <td class="text-center py-4 px-4">1</td>
+                            <td class="text-center py-4 px-4">3</td>
+                            <td class="text-center py-4 px-4 font-bold text-purple-600">10</td>
+                            <td class="text-center py-4 px-4">Unlimited</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">CRM Integrations</td>
+                            <td class="text-center py-4 px-4">
+                                <svg class="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </td>
+                            <td class="text-center py-4 px-4">
+                                <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                            </td>
+                            <td class="text-center py-4 px-4">
+                                <svg class="w-5 h-5 text-green-500 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                            </td>
+                            <td class="text-center py-4 px-4">Custom</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="py-4 px-4 text-gray-700">API Access</td>
+                            <td class="text-center py-4 px-4">
+                                <svg class="w-5 h-5 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </td>
+                            <td class="text-center py-4 px-4">Limited</td>
+                            <td class="text-center py-4 px-4 font-bold text-purple-600">Full</td>
+                            <td class="text-center py-4 px-4">Full + Priority</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="max-w-4xl mx-auto mb-20">
+            <h2 class="text-4xl font-bold text-white text-center mb-12">
+                Frequently Asked <span class="text-gradient">Questions</span>
+            </h2>
+            
+            <div class="space-y-4">
+                <details class="glass-card rounded-2xl p-6 group">
+                    <summary class="flex justify-between items-center cursor-pointer list-none">
+                        <span class="text-lg font-semibold text-gray-900">Can I change plans at any time?</span>
+                        <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
-                        Manage Billing
+                    </summary>
+                    <p class="mt-4 text-gray-700">
+                        Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately, and we'll prorate any differences in your next billing cycle.
+                    </p>
+                </details>
+                
+                <details class="glass-card rounded-2xl p-6 group">
+                    <summary class="flex justify-between items-center cursor-pointer list-none">
+                        <span class="text-lg font-semibold text-gray-900">What happens if I exceed my credit limit?</span>
+                        <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <p class="mt-4 text-gray-700">
+                        If you approach your monthly credit limit, we'll notify you via email. You can either upgrade your plan or purchase additional credits as needed. We'll never cut off your service unexpectedly.
+                    </p>
+                </details>
+                
+                <details class="glass-card rounded-2xl p-6 group">
+                    <summary class="flex justify-between items-center cursor-pointer list-none">
+                        <span class="text-lg font-semibold text-gray-900">Is there a free trial?</span>
+                        <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <p class="mt-4 text-gray-700">
+                        We offer a free plan with 25 monthly credits so you can test our platform. Additionally, all paid plans come with a 14-day money-back guarantee.
+                    </p>
+                </details>
+                
+                <details class="glass-card rounded-2xl p-6 group">
+                    <summary class="flex justify-between items-center cursor-pointer list-none">
+                        <span class="text-lg font-semibold text-gray-900">Can I cancel my subscription?</span>
+                        <svg class="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <p class="mt-4 text-gray-700">
+                        Absolutely. You can cancel your subscription at any time with no penalties or hidden fees. Your access will continue until the end of your current billing period.
+                    </p>
+                </details>
+            </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="text-center">
+            <div class="glass-card rounded-3xl p-12 max-w-3xl mx-auto">
+                <h2 class="text-4xl font-bold text-gray-900 mb-6">
+                    Ready to <span class="text-gradient">Supercharge</span> Your Lead Research?
+                </h2>
+                <p class="text-xl text-gray-700 mb-8">
+                    Join thousands of businesses using Oslira to find and qualify their perfect customers.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <button class="btn-gradient text-white font-semibold py-4 px-8 rounded-2xl transition-all duration-200 transform hover:scale-105">
+                        Start Free Trial
+                    </button>
+                    <button class="glass-card font-semibold py-4 px-8 rounded-2xl transition-all duration-200 transform hover:scale-105 text-gray-700">
+                        Schedule Demo
                     </button>
                 </div>
-
-                <div class="grid grid-cols-2 gap-6">
-                    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-                        <div class="flex items-center mb-3">
-                            <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center mr-3">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-gray-900">Payment Method</h4>
-                                <p class="text-sm text-gray-600">Your default card</p>
-                            </div>
-                        </div>
-                        <p class="text-lg font-bold text-gray-900" id="payment-method">•••• 4242</p>
-                        <p class="text-sm text-gray-600">Visa ending in 4242</p>
-                    </div>
-                    
-                    <div class="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-6 border border-emerald-100">
-                        <div class="flex items-center mb-3">
-                            <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center mr-3">
-                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-gray-900">Next Billing</h4>
-                                <p class="text-sm text-gray-600">Automatic renewal</p>
-                            </div>
-                        </div>
-                        <p class="text-lg font-bold text-gray-900" id="next-billing-date">Jan 15, 2025</p>
-                        <p class="text-sm text-gray-600">Monthly billing cycle</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Usage Analytics -->
-            <div class="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
-                <h3 class="text-2xl font-bold text-gray-900 mb-6">Usage Analytics</h3>
-                
-                <!-- Credits Usage -->
-                <div class="mb-8">
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-sm font-medium text-gray-700">Credits Used This Month</span>
-                        <span class="text-sm font-bold text-gray-900" id="credits-remaining">15 / 100</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500" style="width: 15%"></div>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-2">Resets on your billing date</p>
-                </div>
-                
-                <!-- Usage Stats -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-4 border border-purple-100">
-                        <div class="flex items-center mb-2">
-                            <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mr-2">
-                                <span class="text-white text-sm font-bold">$</span>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700">Monthly Spend</span>
-                        </div>
-                        <p class="text-xl font-bold text-gray-900" id="monthly-spend">$15.00</p>
-                    </div>
-                    
-                    <div class="bg-gradient-to-br from-orange-50 to-red-50 rounded-2xl p-4 border border-orange-100">
-                        <div class="flex items-center mb-2">
-                            <div class="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mr-2">
-                                <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <span class="text-sm font-medium text-gray-700">Total Analyses</span>
-                        </div>
-                        <p class="text-xl font-bold text-gray-900">247</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Help & Support -->
-        <div class="bg-gradient-to-br from-gray-50 to-blue-50 rounded-3xl p-12 border border-gray-200">
-            <div class="text-center mb-10">
-                <h3 class="text-3xl font-bold text-gray-900 mb-4">Need Help?</h3>
-                <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-                    Our support team is here to assist you with any questions about your subscription, billing, or account.
+                <p class="text-sm text-gray-600 mt-6">
+                    No credit card required • 14-day money-back guarantee
                 </p>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <a href="/help" class="group bg-white rounded-2xl p-8 text-center hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100">
-                    <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-900 mb-3">Help Center</h4>
-                    <p class="text-gray-600">Browse our comprehensive guides, tutorials, and frequently asked questions</p>
-                </a>
-
-                <a href="mailto:support@oslira.com" class="group bg-white rounded-2xl p-8 text-center hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100">
-                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                        </svg>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-900 mb-3">Email Support</h4>
-                    <p class="text-gray-600">Get personalized help via email - we respond within 24 hours guaranteed</p>
-                </a>
-
-                <div class="group bg-white rounded-2xl p-8 text-center hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-gray-100 cursor-pointer" onclick="openLiveChat()">
-                    <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                        </svg>
-                    </div>
-                    <h4 class="text-xl font-bold text-gray-900 mb-3">Live Chat</h4>
-                    <p class="text-gray-600">Chat with our support team in real-time for immediate assistance</p>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-3xl p-10 max-w-sm mx-4 text-center shadow-2xl">
-            <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
-            <h3 class="text-xl font-bold text-gray-900 mb-3">Processing...</h3>
-            <p class="text-gray-600">Please wait while we update your subscription</p>
         </div>
     </div>
 
-    <!-- Success Modal -->
-    <div id="success-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-3xl p-10 max-w-md mx-4 text-center shadow-2xl">
-            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-            </div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-4">Subscription Updated!</h3>
-            <p class="text-gray-600 mb-8">Your subscription has been successfully updated. You now have access to all the features of your new plan.</p>
-            <button onclick="closeSuccessModal()" class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 transform hover:scale-105">
-                Continue
-            </button>
+    <!-- Footer -->
+    <footer class="relative z-10 mt-20 py-8 border-t border-white/10">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-white/60 text-sm">
+                © 2025 Oslira. All rights reserved. • 
+                <a href="#" class="hover:text-white/80 transition">Terms</a> • 
+                <a href="#" class="hover:text-white/80 transition">Privacy</a> • 
+                <a href="#" class="hover:text-white/80 transition">Contact</a>
+            </p>
         </div>
-    </div>
-
-    <!-- Error Modal -->
-    <div id="error-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-3xl p-10 max-w-md mx-4 text-center shadow-2xl">
-            <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </div>
-            <h3 class="text-2xl font-bold text-gray-900 mb-4">Something went wrong</h3>
-            <p class="text-gray-600 mb-8" id="error-message">There was an error processing your request. Please try again.</p>
-            <button onclick="closeErrorModal()" class="w-full bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-200 transform hover:scale-105">
-                Try Again
-            </button>
-        </div>
-    </div>
-
-    <!-- JavaScript Functions -->
-    <script>
-        // Global variables for state management
-        let currentUserPlan = 'free';
-        let isLoading = false;
-
-        // Show success modal
-        function showSuccessModal() {
-            document.getElementById('success-modal').classList.remove('hidden');
-        }
-
-        // Close success modal
-        function closeSuccessModal() {
-            document.getElementById('success-modal').classList.add('hidden');
-            location.reload(); // Refresh to show updated data
-        }
-
-        // Show error modal
-        function showErrorModal(message = 'There was an error processing your request. Please try again.') {
-            document.getElementById('error-message').textContent = message;
-            document.getElementById('error-modal').classList.remove('hidden');
-        }
-
-        // Close error modal
-        function closeErrorModal() {
-            document.getElementById('error-modal').classList.add('hidden');
-        }
-
-        // Show loading overlay
-        function showLoading() {
-            if (!isLoading) {
-                isLoading = true;
-                document.getElementById('loading-overlay').classList.remove('hidden');
-            }
-        }
-
-        // Hide loading overlay
-        function hideLoading() {
-            if (isLoading) {
-                isLoading = false;
-                document.getElementById('loading-overlay').classList.add('hidden');
-            }
-        }
-
-        // Open live chat (placeholder function)
-        function openLiveChat() {
-            // This would integrate with your chat system
-            alert('Live chat feature coming soon! Please email support@oslira.com for immediate assistance.');
-        }
-
-        // Initialize page visibility
-        document.addEventListener('DOMContentLoaded', function() {
-            // Show content after CSS loads
-            document.body.classList.add('show-content');
-            
-            // Initialize any additional UI components
-            initializeSubscriptionPage();
-        });
-
-        // Placeholder for subscription page initialization
-        function initializeSubscriptionPage() {
-            console.log('Subscription page initialized');
-            // This will be handled by subscription.js when loaded by script-loader
-            
-            // Add click handlers for pricing cards
-            document.querySelectorAll('.card-button').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const plan = this.getAttribute('data-plan');
-                    const price = this.getAttribute('data-price');
-                    
-                    if (plan === 'enterprise') {
-                        window.open('mailto:sales@oslira.com?subject=Enterprise Plan Inquiry', '_blank');
-                        return;
-                    }
-                    
-                    showLoading();
-                    
-                    // Simulate API call
-                    setTimeout(() => {
-                        hideLoading();
-                        showSuccessModal();
-                    }, 2000);
-                });
-            });
-            
-            // Add logout handler
-            document.getElementById('logout-btn').addEventListener('click', function(e) {
-                e.preventDefault();
-                // Handle logout
-                console.log('Logout clicked');
-            });
-        }
-    </script>
+    </footer>
 </body>
 </html>
