@@ -35,6 +35,13 @@ closeModal(modalId) {
     if (modal) {
         modal.style.display = 'none';
         modal.classList.add('hidden');
+        
+        // Add hidden class back to child elements
+        const mainContent = modal.querySelector('.fixed');
+        if (mainContent) {
+            mainContent.classList.add('hidden');
+        }
+        
         this.activeModals.delete(modalId);
             
             // Clear any form data
@@ -58,9 +65,14 @@ openModal(modalId, data = {}) {
     // Close other modals first
     this.closeAllModals();
     
-    // Remove hidden class and set display
+    // Remove hidden class from modal AND its children
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
+    
+    // Remove hidden class from all child elements
+    const hiddenChildren = modal.querySelectorAll('.hidden');
+    hiddenChildren.forEach(child => child.classList.remove('hidden'));
+    
     this.activeModals.add(modalId);
         
         // Update state
