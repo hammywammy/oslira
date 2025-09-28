@@ -210,18 +210,25 @@ removeEventHandlers() {
     /**
      * Handle main button clicks
      */
-    handleMainButtonClick(event) {
-        event.preventDefault();
-        event.stopPropagation();
+handleMainButtonClick(event) {
+    event.preventDefault();
+    event.stopPropagation();
 
-        console.log('🔘 [DashboardHeader] Main button clicked, mode:', this.currentMode);
+    console.log('🔘 [DashboardHeader] Main button clicked, mode:', this.currentMode);
 
-        if (this.currentMode === 'single') {
-            this.openResearchModal();
-        } else if (this.currentMode === 'bulk') {
-            this.openBulkModal();
-        }
+    // Check if modal is already open to prevent toggle
+    const activeModal = window.dashboard?.container?.get('stateManager')?.getState('activeModal');
+    if (activeModal === 'bulkModal' && this.currentMode === 'bulk') {
+        console.log('⚠️ [DashboardHeader] Bulk modal already open, ignoring click');
+        return;
     }
+
+    if (this.currentMode === 'single') {
+        this.openResearchModal();
+    } else if (this.currentMode === 'bulk') {
+        this.openBulkModal();
+    }
+}
 
 toggleDropdown(event) {
     event.preventDefault();
@@ -502,8 +509,15 @@ setupModalObserver() {
 openBulkModal() {
     console.log('📊 [DashboardHeader] Opening bulk modal...');
     
+    // Check if already open
+    const activeModal = window.dashboard?.container?.get('stateManager')?.getState('activeModal');
+    if (activeModal === 'bulkModal') {
+        console.log('⚠️ [DashboardHeader] Bulk modal already open');
+        return;
+    }
+    
     // Use the modal manager if available to maintain state
-    if (window.dashboard?.container?.get('modalManager')) {
+    if (window.dashboard?.container?.get('modalManager')?.showBulkModal) {
         window.dashboard.container.get('modalManager').showBulkModal();
     } else if (window.showBulkModal) {
         window.showBulkModal();
