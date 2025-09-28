@@ -385,29 +385,13 @@ showBulkModal() {
     
     try {
         const modalManager = this.container.get('modalManager');
-        modalManager.showBulkModal(); // Use showBulkModal instead of openModal
-            if (!modal) return;
-            
-            // Reset form and state
-            this.resetBulkModal();
-            
-            // Load business profiles for bulk modal
-            setTimeout(async () => {
-                try {
-                    const businessManager = this.container.get('businessManager');
-                    if (businessManager) {
-                        await businessManager.loadBusinessProfilesForBulkModal();
-                    }
-                } catch (error) {
-                    console.error('❌ [AnalysisFunctions] Failed to load bulk business profiles:', error);
-                }
-            }, 100);
-            
-            console.log('✅ [AnalysisFunctions] Bulk modal opened');
-        } catch (error) {
-            console.error('❌ [AnalysisFunctions] Failed to open bulk modal:', error);
-        }
+        modalManager.showBulkModal(); // Use modalManager's method which handles reset
+        
+        console.log('✅ [AnalysisFunctions] Bulk modal opened');
+    } catch (error) {
+        console.error('❌ [AnalysisFunctions] Failed to open bulk modal:', error);
     }
+}
 
     // ===============================================================================
     // FORM HANDLERS
