@@ -505,13 +505,24 @@ openBulkModal() {
     // Use the modal manager if available to maintain state
     if (window.dashboard?.container?.get('modalManager')) {
         window.dashboard.container.get('modalManager').showBulkModal();
+    } else if (window.showBulkModal) {
+        window.showBulkModal();
     } else {
-        const modal = document.querySelector('#bulkModal > div');
+        // Try multiple selectors to find the bulk modal
+        const modalSelectors = ['#bulkModal', '#bulkModalContainer', '[id*="bulk"][id*="modal" i]'];
+        let modal = null;
+        
+        for (const selector of modalSelectors) {
+            modal = document.querySelector(selector);
+            if (modal) break;
+        }
+        
         if (modal) {
+            modal.style.display = 'block';
             modal.classList.remove('hidden');
             console.log('✅ [DashboardHeader] Bulk modal opened via direct DOM');
         } else {
-            console.error('❌ [DashboardHeader] Bulk modal element not found');
+            console.error('❌ [DashboardHeader] Bulk modal element not found with any selector');
         }
     }
 }
