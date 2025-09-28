@@ -492,11 +492,11 @@ updateBusinessIndicators() {
 }
 
 updateSidebarBusinessSelector() {
-    const businessSelect = document.getElementById('business-select');
+    const businessSelect = document.getElementById('sidebar-business-select');
     if (!businessSelect) {
         // Retry after sidebar is rendered
         setTimeout(() => {
-            const retrySelect = document.getElementById('business-select');
+            const retrySelect = document.getElementById('sidebar-business-select');
             if (retrySelect) {
                 this.populateBusinessSelector(retrySelect);
             } else {
