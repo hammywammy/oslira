@@ -299,26 +299,6 @@ if (currentStep < totalSteps) {
 }
 }
     
-    function updateNavigationButtons() {
-        const prevButton = document.querySelector('[onclick="prevStep()"]');
-        const nextButton = document.querySelector('[onclick="nextStep()"]');
-        const submitButton = document.querySelector('[onclick="submitOnboarding()"]');
-        
-        // Show/hide previous button
-        if (prevButton) {
-            prevButton.style.display = currentStep > 1 ? 'inline-flex' : 'none';
-        }
-        
-        // Update next/submit button
-        if (currentStep === totalSteps) {
-            if (nextButton) nextButton.style.display = 'none';
-            if (submitButton) submitButton.style.display = 'inline-flex';
-        } else {
-            if (nextButton) nextButton.style.display = 'inline-flex';
-            if (submitButton) submitButton.style.display = 'none';
-        }
-    }
-    
     // =============================================================================
     // DATA COLLECTION & UTILITIES
     // =============================================================================
