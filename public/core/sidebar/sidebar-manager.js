@@ -498,15 +498,21 @@ backdrop-filter: blur(16px) !important;
     });
 
 const hideWhenModalsPresent = () => {
-    // Only check for actually visible modals, don't force visibility
     const activeModals = document.querySelectorAll('[id*="Modal"][style*="opacity: 1"], [id*="Modal"]:not([style*="display: none"]):not(.hidden)');
     const hasActiveModal = activeModals.length > 0;
     
     if (hasActiveModal) {
         toggle.style.display = 'none';
+    } else {
+        // Only show if toggle was explicitly hidden, not on initial load
+        if (toggle.style.display === 'none') {
+            toggle.style.display = 'flex';
+        }
     }
-    // Don't force display: flex - let the initial state remain
 };
+
+// Set initial display state
+toggle.style.display = 'flex';
 
 // Run once on creation, then only when modals actually change
 hideWhenModalsPresent();
