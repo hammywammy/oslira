@@ -373,12 +373,19 @@ setupGlobalMethods() {
         }
     }
 
-    showBulkModal() {
-        console.log('📁 [AnalysisFunctions] Opening bulk analysis modal...');
-        
-        try {
-            const modalManager = this.container.get('modalManager');
-            const modal = modalManager.openModal('bulkModal');
+showBulkModal() {
+    console.log('📁 [AnalysisFunctions] Opening bulk analysis modal...');
+    
+    // Check if already open
+    const currentModal = this.container.get('stateManager').getState('activeModal');
+    if (currentModal === 'bulkModal') {
+        console.log('⚠️ [AnalysisFunctions] Bulk modal already open, skipping');
+        return;
+    }
+    
+    try {
+        const modalManager = this.container.get('modalManager');
+        modalManager.showBulkModal(); // Use showBulkModal instead of openModal
             if (!modal) return;
             
             // Reset form and state
