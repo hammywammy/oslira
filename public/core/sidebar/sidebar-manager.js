@@ -497,32 +497,34 @@ backdrop-filter: blur(16px) !important;
         this.toggleSidebar();
     });
 
-    // Hide toggle when modals are present
 const hideWhenModalsPresent = () => {
-    const modals = document.querySelectorAll('.fixed[style*="z-index: 50"], .fixed[style*="z-index: 9999"], #loadingModal, #leadAnalysisModal, #analysisModal, #bulkModal, #errorModal');
-    const hasVisibleModal = Array.from(modals).some(modal => 
-        modal.style.display !== 'none' && 
-        !modal.classList.contains('hidden') && 
-        modal.offsetParent !== null
-    );
+    // Only check for actually visible modals, don't force visibility
+    const activeModals = document.querySelectorAll('[id*="Modal"][style*="opacity: 1"], [id*="Modal"]:not([style*="display: none"]):not(.hidden)');
+    const hasActiveModal = activeModals.length > 0;
     
-    if (hasVisibleModal) {
+    if (hasActiveModal) {
         toggle.style.display = 'none';
-    } else {
-        toggle.style.display = 'flex';
     }
+    // Don't force display: flex - let the initial state remain
 };
 
-// Check immediately
+// Run once on creation, then only when modals actually change
 hideWhenModalsPresent();
 
-// Monitor for modal changes
-const observer = new MutationObserver(hideWhenModalsPresent);
-observer.observe(document.body, {
+// Simpler observer that only watches for modal-specific changes
+const modalObserver = new MutationObserver((mutations) => {
+    const modalChanged = mutations.some(mutation => 
+        mutation.target.id && mutation.target.id.includes('Modal')
+    );
+    if (modalChanged) {
+        hideWhenModalsPresent();
+    }
+});
+
+modalObserver.observe(document.body, {
     childList: true,
-    subtree: true,
     attributes: true,
-    attributeFilter: ['style', 'class']
+    attributeFilter: ['style']
 });
     
     // Add to body
