@@ -137,11 +137,11 @@ this.CHARACTER_LIMITS = {
             return { valid: false, message: 'Business name must be 50 characters or less' };
         }
         
-        const validPattern = /^[a-zA-Z0-9\s\-'&\.]+$/;
+const validPattern = /^[a-zA-Z0-9\s]+$/;
         if (!validPattern.test(trimmed)) {
             return { 
                 valid: false, 
-                message: 'Business name contains invalid characters. Only letters, numbers, spaces, hyphens, apostrophes, and periods are allowed.'
+                message: 'Business name can only contain letters, numbers, and spaces'
             };
         }
         
