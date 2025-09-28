@@ -22,6 +22,7 @@ this.STEP_FIELDS = {
 this.VALIDATION_RULES = {
     'company-name': { required: true, minLength: 2 },
     'industry': { required: true },
+    'industry-other': { required: true, maxLength: 30 },
     'company-size': { required: true },
     'website': { required: false },
     'primary-objective': { required: true },
@@ -39,12 +40,16 @@ this.VALIDATION_RULES = {
     'sms-opt-in': { required: false }
 };
         
-        // Character limits for each field (optimized for AI summary generation)
-        this.CHARACTER_LIMITS = {
+this.CHARACTER_LIMITS = {
             'business-name': {
                 min: 2,
                 max: 100,
                 reason: 'Business names are typically 2-100 characters'
+            },
+            'industry-other': {
+                min: 2,
+                max: 30,
+                reason: 'Custom industry name should be concise'
             },
 'target-description': {
     min: 20,
