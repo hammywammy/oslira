@@ -35,21 +35,17 @@ async openLeadAnalysisModal(leadId) {
     console.log('🔍 Opening lead analysis modal for:', leadId);
     
     try {
-        const modalManager = window.modalManager;
-        if (!modalManager || !modalManager.container) {
-            throw new Error('Modal manager not available');
-        }
-        
-        const leadManager = modalManager.container.get('leadManager');
+        // Use 'this' context instead of window.modalManager to avoid re-initialization
+        const leadManager = this.container.get('leadManager');
         if (!leadManager) {
             throw new Error('Lead manager not found');
         }
         
         // Add loading modal with timeout protection
-        showLoadingModal();
+        this.showLoadingModal();
         const loadingTimeout = setTimeout(() => {
-            removeExistingModals();
-            showErrorModal('Analysis modal timed out. Please try again.');
+            this.removeExistingModals();
+            this.showErrorModal('Analysis modal timed out. Please try again.');
         }, 10000);
         
         try {
@@ -285,6 +281,7 @@ showCopySuccess(buttonElement = null) {
 
 setupGlobalMethods() {
     // Export methods to global scope for onclick handlers
+    if (!window.openLeadAnalysisModal) {
     window.openLeadAnalysisModal = (leadId) => this.buildAnalysisModal(leadId);
     window.closeLeadAnalysisModal = () => this.removeExistingModals();
     window.showLoadingModal = () => this.showLoadingModal();
@@ -307,6 +304,7 @@ setupGlobalMethods() {
     window.processAnalysisForm = (event) => this.processAnalysisForm(event);
     window.processBulkUpload = () => this.processBulkUpload();
     window.handleFileUpload = (event) => this.handleFileUpload(event);
+    }
 }
 
     // ===============================================================================
