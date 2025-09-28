@@ -280,10 +280,7 @@ businessSelect.innerHTML = optionsHTML;
                 `<option value="${business.id}">${business.business_name || business.name || 'Unnamed Business'}</option>`
             ).join('');
             
-            bulkBusinessSelect.innerHTML = `
-                <option value="">Select business profile...</option>
-                ${optionsHTML}
-            `;
+businessSelect.innerHTML = optionsHTML;
             
             // Auto-select current business
             const currentBusiness = this.stateManager.getState('selectedBusiness');
@@ -522,10 +519,7 @@ populateBusinessSelector(businessSelect) {
         </option>`
     ).join('');
 
-    businessSelect.innerHTML = `
-        <option value="">Select business profile...</option>
-        ${optionsHTML}
-    `;
+businessSelect.innerHTML = optionsHTML;
 
     // Set current business as selected
     if (currentBusiness) {
