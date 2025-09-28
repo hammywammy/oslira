@@ -138,19 +138,24 @@
                     <div class="onboarding-form-group">
                         <label for="industry" class="onboarding-form-label">Industry *</label>
                         <div class="relative">
-                            <select id="industry" name="industry" required class="onboarding-form-input focus:outline-none hover:border-white/40">
-                                <option value="">Select your industry</option>
-                                <option value="technology">Technology</option>
-                                <option value="healthcare">Healthcare</option>
-                                <option value="finance">Finance</option>
-                                <option value="real-estate">Real Estate</option>
-                                <option value="retail">Retail</option>
-                                <option value="manufacturing">Manufacturing</option>
-                                <option value="consulting">Consulting</option>
-                                <option value="marketing">Marketing</option>
-                                <option value="education">Education</option>
-                                <option value="other">Other</option>
-                            </select>
+<select id="industry" name="industry" required class="onboarding-form-input focus:outline-none hover:border-white/40">
+    <option value="">Select your industry</option>
+    <option value="technology">Technology</option>
+    <option value="healthcare">Healthcare</option>
+    <option value="finance">Finance</option>
+    <option value="real-estate">Real Estate</option>
+    <option value="retail">Retail</option>
+    <option value="manufacturing">Manufacturing</option>
+    <option value="consulting">Consulting</option>
+    <option value="marketing">Marketing</option>
+    <option value="education">Education</option>
+    <option value="other">Other</option>
+</select>
+<input type="text" id="industry-other" name="industry-other" 
+       class="onboarding-form-input focus:outline-none hover:border-white/40 hidden" 
+       placeholder="Please specify your industry" 
+       maxlength="30"
+       style="margin-top: 0.75rem;">
                             <div class="onboarding-form-icon">
                                 <i class="fas fa-industry"></i>
                             </div>
