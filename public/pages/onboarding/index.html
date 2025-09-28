@@ -912,41 +912,38 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="onboarding-form-group">
                         <label for="phone-number" class="onboarding-form-label">Phone Number (Optional)</label>
 <div class="flex">
-                            <select id="country-code" name="country-code" class="onboarding-form-input w-20 rounded-r-none border-r-0 focus:outline-none hover:border-white/40">
-                                <option value="+1" data-country="US">🇺🇸 +1</option>
-                                <option value="+44" data-country="GB">🇬🇧 +44</option>
-                                <option value="+49" data-country="DE">🇩🇪 +49</option>
-                                <option value="+33" data-country="FR">🇫🇷 +33</option>
-                                <option value="+39" data-country="IT">🇮🇹 +39</option>
-                                <option value="+34" data-country="ES">🇪🇸 +34</option>
-                                <option value="+31" data-country="NL">🇳🇱 +31</option>
-                                <option value="+32" data-country="BE">🇧🇪 +32</option>
-                                <option value="+41" data-country="CH">🇨🇭 +41</option>
-                                <option value="+43" data-country="AT">🇦🇹 +43</option>
-                                <option value="+45" data-country="DK">🇩🇰 +45</option>
-                                <option value="+46" data-country="SE">🇸🇪 +46</option>
-                                <option value="+47" data-country="NO">🇳🇴 +47</option>
-                                <option value="+358" data-country="FI">🇫🇮 +358</option>
-                                <option value="+351" data-country="PT">🇵🇹 +351</option>
-                                <option value="+353" data-country="IE">🇮🇪 +353</option>
-                                <option value="+61" data-country="AU">🇦🇺 +61</option>
-                                <option value="+81" data-country="JP">🇯🇵 +81</option>
-                                <option value="+82" data-country="KR">🇰🇷 +82</option>
-                                <option value="+86" data-country="CN">🇨🇳 +86</option>
-                                <option value="+91" data-country="IN">🇮🇳 +91</option>
-                                <option value="+55" data-country="BR">🇧🇷 +55</option>
-                                <option value="+52" data-country="MX">🇲🇽 +52</option>
-                                <option value="+7" data-country="RU">🇷🇺 +7</option>
-                            </select>
-                            <div class="relative flex-1">
-                                <input type="tel" id="phone-number" name="phone-number" maxlength="20"
-                                       class="onboarding-form-input rounded-l-none focus:outline-none hover:border-white/40 pr-16" 
-                                       placeholder="123-456-7890">
-                                <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-400 font-mono">
-                                    <span id="phone-counter">0/20</span>
-                                </div>
-                            </div>
-                        </div>
+    <select id="country-code" name="country-code" class="onboarding-form-input w-32 rounded-r-none border-r-0 focus:outline-none hover:border-white/40">
+        <option value="+1" data-country="US">🇺🇸 +1</option>
+        <option value="+44" data-country="GB">🇬🇧 +44</option>
+        <option value="+49" data-country="DE">🇩🇪 +49</option>
+        <option value="+33" data-country="FR">🇫🇷 +33</option>
+        <option value="+39" data-country="IT">🇮🇹 +39</option>
+        <option value="+34" data-country="ES">🇪🇸 +34</option>
+        <option value="+31" data-country="NL">🇳🇱 +31</option>
+        <option value="+32" data-country="BE">🇧🇪 +32</option>
+        <option value="+41" data-country="CH">🇨🇭 +41</option>
+        <option value="+43" data-country="AT">🇦🇹 +43</option>
+        <option value="+45" data-country="DK">🇩🇰 +45</option>
+        <option value="+46" data-country="SE">🇸🇪 +46</option>
+        <option value="+47" data-country="NO">🇳🇴 +47</option>
+        <option value="+358" data-country="FI">🇫🇮 +358</option>
+        <option value="+351" data-country="PT">🇵🇹 +351</option>
+        <option value="+353" data-country="IE">🇮🇪 +353</option>
+        <option value="+61" data-country="AU">🇦🇺 +61</option>
+        <option value="+81" data-country="JP">🇯🇵 +81</option>
+        <option value="+82" data-country="KR">🇰🇷 +82</option>
+        <option value="+86" data-country="CN">🇨🇳 +86</option>
+        <option value="+91" data-country="IN">🇮🇳 +91</option>
+        <option value="+55" data-country="BR">🇧🇷 +55</option>
+        <option value="+52" data-country="MX">🇲🇽 +52</option>
+        <option value="+7" data-country="RU">🇷🇺 +7</option>
+    </select>
+    <div class="relative flex-1">
+        <input type="tel" id="phone-number" name="phone-number" maxlength="20"
+               class="onboarding-form-input rounded-l-none focus:outline-none hover:border-white/40" 
+               placeholder="123-456-7890">
+    </div>
+</div>
                     </div>
 
                     <script>
@@ -993,39 +990,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <p class="onboarding-step-description">Your AI-powered lead generation system is configured and ready to launch</p>
         </div>
 
-        <div class="onboarding-summary-final">
+<div class="onboarding-summary-final">
             <div class="text-center mb-8">
-                <div class="w-20 h-20 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <i class="fas fa-rocket text-white text-3xl"></i>
-                </div>
-                <h3 class="text-2xl font-bold text-white mb-4">Setup Complete!</h3>
+                <h3 class="text-2xl font-bold text-white mb-4">Ready to Go!</h3>
                 <p class="text-white/80 text-lg">Your profile has been created and our AI is ready to start finding high-quality leads tailored to your business.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white/5 rounded-xl p-6 text-center">
-                    <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-brain text-white"></i>
-                    </div>
-                    <h4 class="text-white font-semibold mb-2">AI Configured</h4>
-                    <p class="text-white/70 text-sm">Algorithms trained on your preferences</p>
-                </div>
-
-                <div class="bg-white/5 rounded-xl p-6 text-center">
-                    <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-users text-white"></i>
-                    </div>
-                    <h4 class="text-white font-semibold mb-2">ICP Defined</h4>
-                    <p class="text-white/70 text-sm">Target audience mapped and ready</p>
-                </div>
-
-                <div class="bg-white/5 rounded-xl p-6 text-center">
-                    <div class="w-12 h-12 bg-emerald-500 rounded-lg flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-cog text-white"></i>
-                    </div>
-                    <h4 class="text-white font-semibold mb-2">System Ready</h4>
-                    <p class="text-white/70 text-sm">All integrations and settings active</p>
-                </div>
             </div>
         </div>
 
