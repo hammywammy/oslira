@@ -12,43 +12,93 @@ class ModalBuilder {
     // MAIN BUILD METHOD
     // ===============================================================================
     
-    buildAnalysisModal(lead, analysisData) {
-        const analysisType = lead.analysis_type;
-        const config = this.configs.getConfig(analysisType);
-        const isPremium = this.components.isPremiumLead(
-            this.components.getMainScore(lead, analysisData, analysisType === 'deep' || analysisType === 'xray')
-        );
-        
-        console.log('🏗️ [ModalBuilder] Building modal for analysis type:', analysisType);
-        
-        // Build modal sections
-        const sections = config.components
-            .map(componentName => this.renderComponent(componentName, lead, analysisData))
-            .filter(section => section !== null)
-            .join('');
-        
-// Wrap in modal container with premium styling and content wrapper
-const modalContent = `
-    <div class="overflow-y-auto max-h-[90vh]">
-        <!-- Main Content - with premium glow if 90+ score -->
-        <div class="relative ${isPremium ? 'premium-modal-glow' : ''}" style="animation: staggerReveal 0.6s ease-out;">
-            ${sections}
-            ${this.wrapInContentContainer('')}
-        </div>
-        ${this.renderFooter()}
-    </div>
-`;
-
-        // Initialize animations after render
-        setTimeout(() => {
-            const modalContent = document.getElementById('modalContent');
-            if (modalContent) {
-                this.components.initializeAnimations(modalContent, lead, analysisData);
-            }
-        }, 50);
-
-        return modalContent;
+buildAnalysisModal(lead, analysisData) {
+    const analysisType = lead.analysis_type;
+    const config = this.configs.getConfig(analysisType);
+    const isPremium = this.components.isPremiumLead(
+        this.components.getMainScore(lead, analysisData, analysisType === 'deep' || analysisType === 'xray')
+    );
+    
+    console.log('🏗️ [ModalBuilder] Building modal for analysis type:', analysisType);
+    console.log('🏗️ [ModalBuilder] Has tabs:', config.hasTabs);
+    
+    let modalContent;
+    
+    if (config.hasTabs) {
+        modalContent = this.buildTabbedModal(lead, analysisData, config);
+    } else {
+        modalContent = this.buildStandardModal(lead, analysisData, config);
     }
+
+    // Wrap in modal container with premium styling
+    const finalContent = `
+        <div class="overflow-y-auto max-h-[90vh]">
+            <!-- Main Content - with premium glow if 90+ score -->
+            <div class="relative ${isPremium ? 'premium-modal-glow' : ''}" style="animation: staggerReveal 0.6s ease-out;">
+                ${modalContent}
+            </div>
+            ${this.renderFooter()}
+        </div>
+    `;
+
+    // Initialize animations after render
+    setTimeout(() => {
+        const modalContent = document.getElementById('modalContent');
+        if (modalContent) {
+            this.components.initializeAnimations(modalContent, lead, analysisData);
+        }
+    }, 50);
+
+    return finalContent;
+}
+
+    // ===============================================================================
+// TABBED MODAL BUILDER
+// ===============================================================================
+
+buildTabbedModal(lead, analysisData, config) {
+    console.log('🏗️ [ModalBuilder] Building tabbed modal with tabs:', config.tabs.map(t => t.id));
+    
+    // Render hero header (always displayed outside tabs)
+    const heroHeader = this.renderComponent('heroHeader', lead, analysisData);
+    
+    // Prepare tab components
+    const tabComponents = {};
+    config.tabs.forEach(tab => {
+        tabComponents[tab.id] = tab.components
+            .map(componentName => this.renderComponent(componentName, lead, analysisData))
+            .filter(component => component !== null);
+    });
+
+    // Render tabbed container
+    const tabbedContent = this.components.getComponent('tabbedContainer').render(
+        lead, 
+        analysisData, 
+        config.tabs, 
+        tabComponents
+    );
+
+    return `
+        ${heroHeader}
+        ${this.wrapInContentContainer(tabbedContent)}
+    `;
+}
+
+// ===============================================================================
+// STANDARD MODAL BUILDER (No Tabs)
+// ===============================================================================
+
+buildStandardModal(lead, analysisData, config) {
+    console.log('🏗️ [ModalBuilder] Building standard modal (no tabs)');
+    
+    // Build modal sections normally
+    const sections = config.components
+        .map(componentName => this.renderComponent(componentName, lead, analysisData))
+        .filter(section => section !== null)
+        .join('');
+
+    return this.wrapInContentContainer(sections);
+}
 
     // ===============================================================================
     // COMPONENT RENDERING
