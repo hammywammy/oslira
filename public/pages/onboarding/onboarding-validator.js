@@ -251,7 +251,7 @@ class OnboardingValidator {
     // REAL-TIME VALIDATION
     // =============================================================================
     
-    setupRealTimeValidation() {
+setupRealTimeValidation() {
         // Add input event listeners for real-time feedback
         const fields = document.querySelectorAll('input, textarea, select');
         
@@ -269,6 +269,13 @@ class OnboardingValidator {
                     this.validateField(field.id);
                 }
             });
+            
+            // Special handling for company-name - validate on input
+            if (field.id === 'company-name') {
+                field.addEventListener('input', () => {
+                    this.validateField(field.id);
+                });
+            }
         });
     }
     
@@ -395,8 +402,6 @@ if (!processedValue || processedValue.trim().length === 0) continue;
 validateBusinessLogic(fieldId, value) {
         switch (fieldId) {
             case 'company-name':
-                return this.rules.validateBusinessName(value);
-            case 'business-name':
                 return this.rules.validateBusinessName(value);
                 
             case 'success-outcome':
