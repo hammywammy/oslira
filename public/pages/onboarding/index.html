@@ -911,8 +911,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Phone number section (optional) -->
                     <div class="onboarding-form-group">
                         <label for="phone-number" class="onboarding-form-label">Phone Number (Optional)</label>
-                        <div class="flex gap-2">
-                            <select id="country-code" name="country-code" class="onboarding-form-input w-24 focus:outline-none hover:border-white/40">
+<div class="flex">
+                            <select id="country-code" name="country-code" class="onboarding-form-input w-20 rounded-r-none border-r-0 focus:outline-none hover:border-white/40">
                                 <option value="+1" data-country="US">🇺🇸 +1</option>
                                 <option value="+44" data-country="GB">🇬🇧 +44</option>
                                 <option value="+49" data-country="DE">🇩🇪 +49</option>
@@ -940,7 +940,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </select>
                             <div class="relative flex-1">
                                 <input type="tel" id="phone-number" name="phone-number" maxlength="20"
-                                       class="onboarding-form-input focus:outline-none hover:border-white/40 pr-16" 
+                                       class="onboarding-form-input rounded-l-none focus:outline-none hover:border-white/40 pr-16" 
                                        placeholder="123-456-7890">
                                 <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-400 font-mono">
                                     <span id="phone-counter">0/20</span>
