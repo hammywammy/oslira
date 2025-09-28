@@ -1110,14 +1110,14 @@ this.registerComponent('persuasionStrategy', {
                     `;
                 }).join('');
 
-                return `
-                    <div class="tabbed-container">
-                        ${this.getComponent('tabNavigation').render(lead, analysisData, tabs)}
-                        <div class="tab-content-wrapper">
-                            ${tabContents}
-                        </div>
-                    </div>
-                `;
+return `
+    <div class="tabbed-container">
+        ${this.getComponent('tabNavigation').render(lead, analysisData, tabs)}
+        <div class="tab-content-wrapper" style="margin-top: 32px;">
+            ${tabContents}
+        </div>
+    </div>
+`;
             }
         });
 
