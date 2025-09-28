@@ -66,10 +66,10 @@ this.CHARACTER_LIMITS = {
                 max: 800,
                 reason: 'Detailed success outcomes for AI summary generation'
             },
-            'phone-number': {
-                min: 10,
+'phone-number': {
+                min: 0,
                 max: 20,
-                reason: 'International phone numbers with formatting'
+                reason: 'Phone number without country code'
             }
         };
         
