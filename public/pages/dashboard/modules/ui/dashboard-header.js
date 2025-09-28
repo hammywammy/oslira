@@ -509,35 +509,13 @@ setupModalObserver() {
 openBulkModal() {
     console.log('📊 [DashboardHeader] Opening bulk modal...');
     
-    // Check if already open
-    const activeModal = window.dashboard?.container?.get('stateManager')?.getState('activeModal');
-    if (activeModal === 'bulkModal') {
-        console.log('⚠️ [DashboardHeader] Bulk modal already open');
-        return;
-    }
-    
-    // Use the modal manager if available to maintain state
-    if (window.dashboard?.container?.get('modalManager')?.showBulkModal) {
-        window.dashboard.container.get('modalManager').showBulkModal();
+    // Simplified: just delegate to analysis functions
+    if (window.dashboard?.container?.get('analysisFunctions')) {
+        window.dashboard.container.get('analysisFunctions').showBulkModal();
     } else if (window.showBulkModal) {
         window.showBulkModal();
     } else {
-        // Try multiple selectors to find the bulk modal
-        const modalSelectors = ['#bulkModal', '#bulkModalContainer', '[id*="bulk"][id*="modal" i]'];
-        let modal = null;
-        
-        for (const selector of modalSelectors) {
-            modal = document.querySelector(selector);
-            if (modal) break;
-        }
-        
-        if (modal) {
-            modal.style.display = 'block';
-            modal.classList.remove('hidden');
-            console.log('✅ [DashboardHeader] Bulk modal opened via direct DOM');
-        } else {
-            console.error('❌ [DashboardHeader] Bulk modal element not found with any selector');
-        }
+        console.error('❌ [DashboardHeader] No bulk modal function available');
     }
 }
 
