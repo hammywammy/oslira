@@ -392,8 +392,10 @@ if (!processedValue || processedValue.trim().length === 0) continue;
         return this.rules.validateCharacterLimit(fieldId, fieldValue);
     }
     
-    validateBusinessLogic(fieldId, value) {
+validateBusinessLogic(fieldId, value) {
         switch (fieldId) {
+            case 'company-name':
+                return this.rules.validateBusinessName(value);
             case 'business-name':
                 return this.rules.validateBusinessName(value);
                 
