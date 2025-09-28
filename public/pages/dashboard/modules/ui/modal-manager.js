@@ -30,11 +30,12 @@ class ModalManager {
     // MODAL CONTROL METHODS - EXTRACTED FROM ORIGINAL
     // ===============================================================================
     
-    closeModal(modalId) {
-        const modal = document.getElementById(modalId);
-        if (modal) {
-            modal.style.display = 'none';
-            this.activeModals.delete(modalId);
+closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+        this.activeModals.delete(modalId);
             
             // Clear any form data
             this.clearModalForm(modalId);
@@ -47,18 +48,20 @@ class ModalManager {
         }
     }
     
-    openModal(modalId, data = {}) {
-        const modal = document.getElementById(modalId);
-        if (!modal) {
-            console.error(`❌ [ModalManager] Modal not found: ${modalId}`);
-            return;
-        }
-        
-        // Close other modals first
-        this.closeAllModals();
-        
-        modal.style.display = 'flex';
-        this.activeModals.add(modalId);
+openModal(modalId, data = {}) {
+    const modal = document.getElementById(modalId);
+    if (!modal) {
+        console.error(`❌ [ModalManager] Modal not found: ${modalId}`);
+        return;
+    }
+    
+    // Close other modals first
+    this.closeAllModals();
+    
+    // Remove hidden class and set display
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    this.activeModals.add(modalId);
         
         // Update state
         this.stateManager.setState('activeModal', modalId);
