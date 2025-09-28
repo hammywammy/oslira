@@ -376,16 +376,9 @@ setupGlobalMethods() {
 showBulkModal() {
     console.log('📁 [AnalysisFunctions] Opening bulk analysis modal...');
     
-    // Check if already open
-    const currentModal = this.container.get('stateManager').getState('activeModal');
-    if (currentModal === 'bulkModal') {
-        console.log('⚠️ [AnalysisFunctions] Bulk modal already open, skipping');
-        return;
-    }
-    
     try {
         const modalManager = this.container.get('modalManager');
-        modalManager.showBulkModal(); // Use modalManager's method which handles reset
+        modalManager.showBulkModal(); // Let modal manager handle all state logic
         
         console.log('✅ [AnalysisFunctions] Bulk modal opened');
     } catch (error) {
