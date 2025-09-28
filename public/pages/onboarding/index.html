@@ -220,6 +220,28 @@
                 </div>
             </div>
 
+            <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const industrySelect = document.getElementById('industry');
+    const industryOther = document.getElementById('industry-other');
+    
+    if (industrySelect && industryOther) {
+        industrySelect.addEventListener('change', function() {
+            if (this.value === 'other') {
+                industryOther.classList.remove('hidden');
+                industryOther.style.display = 'block';
+                industryOther.required = true;
+            } else {
+                industryOther.classList.add('hidden');
+                industryOther.style.display = 'none';
+                industryOther.required = false;
+                industryOther.value = '';
+            }
+        });
+    }
+});
+</script>
+
             <!-- Step 2: Primary Objective (was step-1) -->
             <div id="step-2" class="onboarding-step">
                 <div class="onboarding-card">
