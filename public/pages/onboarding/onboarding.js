@@ -314,9 +314,27 @@ function getFieldValue(fieldId) {
         return value;
     }
     
-    if (fieldId === 'company-size') {
+if (fieldId === 'company-size') {
         const radioButton = document.querySelector('input[name="company-size"]:checked');
         return radioButton ? radioButton.value : '';
+    }
+    
+    if (fieldId === 'industry') {
+        const select = document.getElementById('industry');
+        const value = select ? select.value : '';
+        
+        // If "other" is selected, get the custom industry value
+        if (value === 'other') {
+            const otherInput = document.getElementById('industry-other');
+            return otherInput ? otherInput.value.trim() : '';
+        }
+        
+        return value;
+    }
+    
+    if (fieldId === 'industry-other') {
+        const input = document.getElementById('industry-other');
+        return input ? input.value.trim() : '';
     }
     
     if (fieldId === 'budget') {
