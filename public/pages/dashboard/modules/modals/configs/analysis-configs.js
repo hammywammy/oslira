@@ -9,8 +9,9 @@ class AnalysisConfigs {
     }
 
 registerDefaultConfigs() {
-    // Light Analysis Configuration
+    // Light Analysis Configuration - No tabs
     this.configs.set('light', {
+        hasTabs: false,
         components: [
             'heroHeader',
             'aiSummary',
@@ -18,31 +19,63 @@ registerDefaultConfigs() {
         ]
     });
 
-    // Deep Analysis Configuration  
+    // Deep Analysis Configuration - WITH TABS  
     this.configs.set('deep', {
-    components: [
-        'heroHeader',           // Your existing header with profile/score
-        'deepSummary',          // New - shows deep_summary
-        'sellingPoints',        // Existing - shows selling_points from payload
-        'outreachMessage',      // Existing - shows outreach_message from payload
-        'engagementBreakdown',  // New - shows engagement metrics
-        'payloadAudienceInsights', // New - shows audience_insights 
-        'reasons',              // Existing - shows reasons array
-        'latestPosts',          // New - shows latest_posts (when available)
-        'aiSummary'             // Existing fallback
-    ]
+        hasTabs: true,
+        tabs: [
+            {
+                id: 'analysis',
+                label: 'Analysis',
+                components: [
+                    'deepSummary',          // New - shows deep_summary
+                    'sellingPoints',        // Existing - shows selling_points from payload
+                    'outreachMessage',      // Existing - shows outreach_message from payload
+                    'engagementBreakdown',  // New - shows engagement metrics
+                    'payloadAudienceInsights', // New - shows audience_insights 
+                    'reasons',              // Existing - shows reasons array
+                    'latestPosts',          // New - shows latest_posts (when available)
+                    'aiSummary'             // Existing fallback
+                ]
+            },
+            {
+                id: 'personality',
+                label: 'Personality',
+                components: [
+                    'personalityOverview',
+                    'behaviorPatterns',
+                    'communicationStyle',
+                    'motivationDrivers'
+                ]
+            }
+        ]
     });
 
-// X-Ray Analysis Configuration
-this.configs.set('xray', {
-    components: [
-        'heroHeader',
-        'copywriterProfile',
-        'commercialIntelligence', 
-        'persuasionStrategy',
-        'aiSummary'
-    ]
-});
+    // X-Ray Analysis Configuration - WITH TABS
+    this.configs.set('xray', {
+        hasTabs: true,
+        tabs: [
+            {
+                id: 'analysis',
+                label: 'Analysis',
+                components: [
+                    'copywriterProfile',
+                    'commercialIntelligence', 
+                    'persuasionStrategy',
+                    'aiSummary'
+                ]
+            },
+            {
+                id: 'personality',
+                label: 'Personality',
+                components: [
+                    'personalityOverview',
+                    'behaviorPatterns',
+                    'communicationStyle',
+                    'motivationDrivers'
+                ]
+            }
+        ]
+    });
 }
 
     getConfig(analysisType) {
@@ -53,6 +86,24 @@ this.configs.set('xray', {
     registerAnalysisType(type, config) {
         this.configs.set(type, config);
     }
+    // Check if analysis type supports tabs
+hasTabs(analysisType) {
+    const config = this.getConfig(analysisType);
+    return config?.hasTabs || false;
+}
+
+// Get tab configuration for analysis type
+getTabs(analysisType) {
+    const config = this.getConfig(analysisType);
+    return config?.tabs || [];
+}
+
+// Get components for specific tab
+getTabComponents(analysisType, tabId) {
+    const tabs = this.getTabs(analysisType);
+    const tab = tabs.find(t => t.id === tabId);
+    return tab?.components || [];
+}
 }
 
 // Export
