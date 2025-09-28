@@ -484,6 +484,20 @@ if (fieldId === 'website') {
     // ONBOARDING SUBMISSION
     // =============================================================================
     
+// Progress tracking state
+let progressTracker = {
+    startTime: null,
+    currentProgress: 0,
+    estimatedDuration: 25000, // Start with 25 seconds
+    currentStep: 0,
+    steps: [
+        { name: 'Validating form data', weight: 5 },
+        { name: 'Creating business profile', weight: 15 },
+        { name: 'Generating AI insights', weight: 60 },
+        { name: 'Finalizing setup', weight: 20 }
+    ]
+};
+
 function showSubmissionProgress() {
     // Hide the entire onboarding form
     const onboardingForm = document.getElementById('onboarding-form');
@@ -491,158 +505,130 @@ function showSubmissionProgress() {
         onboardingForm.style.display = 'none';
     }
 
+    // Initialize progress tracking
+    progressTracker.startTime = Date.now();
+    progressTracker.currentProgress = 0;
+    progressTracker.currentStep = 0;
+
     // Create progress overlay
     const progressOverlay = document.createElement('div');
     progressOverlay.id = 'submission-progress-overlay';
-    progressOverlay.className = 'fixed inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center z-50';
+    progressOverlay.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50';
     progressOverlay.innerHTML = `
-        <div class="max-w-md mx-auto text-center p-8">
-            <div class="w-24 h-24 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
-                <i class="fas fa-cog text-white text-3xl animate-spin"></i>
+        <div class="max-w-lg mx-auto text-center p-8 bg-white rounded-2xl shadow-2xl border">
+            <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-brain text-white text-2xl"></i>
             </div>
-            <h2 class="text-3xl font-bold text-white mb-4">Creating Your Profile</h2>
-            <p class="text-white/80 text-lg mb-8">Setting up your AI-powered lead generation system...</p>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Generating Business Intelligence</h2>
+            <p id="progress-step-text" class="text-gray-600 mb-6">Validating form data...</p>
             
             <!-- Progress Bar -->
-            <div class="w-full bg-white/20 rounded-full h-3 mb-6">
-                <div id="submission-progress-bar" class="bg-gradient-to-r from-emerald-400 to-cyan-400 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+            <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+                <div id="progress-bar-fill" class="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
             </div>
             
-            <!-- Progress Steps -->
-            <div class="space-y-3 text-left">
-                <div id="step-auth" class="flex items-center text-white/70">
-                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
-                        <i class="fas fa-spinner animate-spin text-xs"></i>
-                    </div>
-                    <span>Verifying authentication...</span>
-                </div>
-                <div id="step-validate" class="flex items-center text-white/50">
-                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
-                        <span class="text-xs">2</span>
-                    </div>
-                    <span>Validating profile data...</span>
-                </div>
-                <div id="step-ai" class="flex items-center text-white/50">
-                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
-                        <span class="text-xs">3</span>
-                    </div>
-                    <span>Training AI algorithms...</span>
-                </div>
-                <div id="step-save" class="flex items-center text-white/50">
-                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
-                        <span class="text-xs">4</span>
-                    </div>
-                    <span>Saving profile...</span>
-                </div>
-                <div id="step-finalize" class="flex items-center text-white/50">
-                    <div class="w-6 h-6 rounded-full border-2 border-white/30 flex items-center justify-center mr-3">
-                        <span class="text-xs">5</span>
-                    </div>
-                    <span>Finalizing setup...</span>
-                </div>
+            <!-- Progress Stats -->
+            <div class="flex justify-between items-center text-sm">
+                <span id="progress-percentage" class="font-semibold text-gray-700">0%</span>
+                <span id="progress-time" class="text-gray-500">Estimating time...</span>
             </div>
             
-            <div class="mt-8 text-white/60 text-sm">
-                <span id="progress-time">Estimated time: 25 seconds</span>
+            <!-- Progress Details -->
+            <div class="mt-4 text-xs text-gray-400">
+                <div class="flex items-center justify-center space-x-2">
+                    <div class="animate-spin rounded-full h-3 w-3 border-b border-blue-500"></div>
+                    <span>Processing your business data</span>
+                </div>
             </div>
         </div>
     `;
     
     document.body.appendChild(progressOverlay);
     
-    // Start progress simulation
-    let currentProgress = 0;
-    let currentStepIndex = 0;
-    const steps = ['step-auth', 'step-validate', 'step-ai', 'step-save', 'step-finalize'];
-    const stepDurations = [3000, 5000, 8000, 6000, 3000]; // Total: 25 seconds
-    const stepNames = [
-        'Verifying authentication...',
-        'Validating profile data...',
-        'Training AI algorithms...',
-        'Saving profile...',
-        'Finalizing setup...'
-    ];
-    
-    const progressBar = document.getElementById('submission-progress-bar');
-    const progressTime = document.getElementById('progress-time');
-    
-    function updateProgressStep(stepIndex) {
-        // Mark previous steps as complete
-        for (let i = 0; i < stepIndex; i++) {
-            const stepEl = document.getElementById(steps[i]);
-            if (stepEl) {
-                stepEl.className = 'flex items-center text-emerald-400';
-                stepEl.querySelector('.w-6').innerHTML = '<i class="fas fa-check text-xs"></i>';
-                stepEl.querySelector('.w-6').className = 'w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center mr-3';
-            }
-        }
-        
-        // Update current step
-        if (stepIndex < steps.length) {
-            const currentStepEl = document.getElementById(steps[stepIndex]);
-            if (currentStepEl) {
-                currentStepEl.className = 'flex items-center text-white';
-                currentStepEl.querySelector('.w-6').innerHTML = '<i class="fas fa-spinner animate-spin text-xs"></i>';
-                currentStepEl.querySelector('.w-6').className = 'w-6 h-6 rounded-full border-2 border-emerald-400 flex items-center justify-center mr-3';
-            }
-        }
-    }
-    
-    function animateProgress() {
-        const totalDuration = 25000; // 25 seconds
-        const interval = 100; // Update every 100ms
-        const increment = (100 / totalDuration) * interval;
-        
-        const progressInterval = setInterval(() => {
-            currentProgress += increment;
-            
-            if (progressBar) {
-                progressBar.style.width = `${Math.min(currentProgress, 100)}%`;
-            }
-            
-            // Update time remaining
-            const timeRemaining = Math.max(0, Math.ceil((totalDuration - (currentProgress / 100 * totalDuration)) / 1000));
-            if (progressTime) {
-                if (timeRemaining > 0) {
-                    progressTime.textContent = `Estimated time remaining: ${timeRemaining} seconds`;
-                } else {
-                    progressTime.textContent = 'Almost done...';
-                }
-            }
-            
-            if (currentProgress >= 100) {
-                clearInterval(progressInterval);
-            }
-        }, interval);
-        
-        // Update steps at specific intervals
-        stepDurations.forEach((duration, index) => {
-            setTimeout(() => {
-                updateProgressStep(index + 1);
-            }, stepDurations.slice(0, index + 1).reduce((a, b) => a + b, 0));
-        });
-    }
-    
-    // Start the animation
-    updateProgressStep(0);
-    animateProgress();
+    // Start progress animation
+    startProgressAnimation();
     
     // Store reference for cleanup
     window.submissionProgressOverlay = progressOverlay;
 }
+
+function startProgressAnimation() {
+    const progressInterval = setInterval(() => {
+        updateProgressDisplay();
+    }, 100); // Update every 100ms for smooth animation
     
-function updateSubmissionMessage(message) {
-    // Update the progress overlay if it exists
-    const overlay = document.getElementById('submission-progress-overlay');
-    if (overlay) {
-        const progressText = overlay.querySelector('p');
-        if (progressText) {
-            progressText.textContent = message;
+    // Store interval for cleanup
+    window.progressAnimationInterval = progressInterval;
+}
+
+function updateProgressDisplay() {
+    const elapsed = Date.now() - progressTracker.startTime;
+    const progressPercentageEl = document.getElementById('progress-percentage');
+    const progressTimeEl = document.getElementById('progress-time');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    
+    if (!progressPercentageEl || !progressTimeEl || !progressBarFill) return;
+    
+    // Update progress bar and percentage
+    progressBarFill.style.width = `${progressTracker.currentProgress}%`;
+    progressPercentageEl.textContent = `${Math.floor(progressTracker.currentProgress)}%`;
+    
+    // Calculate and update time estimate
+    if (progressTracker.currentProgress > 5) {
+        const estimatedTotal = (elapsed / progressTracker.currentProgress) * 100;
+        const remaining = Math.max(0, (estimatedTotal - elapsed) / 1000);
+        
+        if (remaining > 60) {
+            progressTimeEl.textContent = `~${Math.ceil(remaining / 60)}m remaining`;
+        } else if (remaining > 0) {
+            progressTimeEl.textContent = `~${Math.ceil(remaining)}s remaining`;
+        } else {
+            progressTimeEl.textContent = 'Almost done...';
         }
+    } else {
+        progressTimeEl.textContent = `~${Math.ceil(progressTracker.estimatedDuration / 1000)}s remaining`;
+    }
+}
+
+function setProgressStep(stepIndex, additionalProgress = 0) {
+    if (stepIndex >= progressTracker.steps.length) return;
+    
+    // Update current step
+    progressTracker.currentStep = stepIndex;
+    
+    // Calculate progress based on completed steps + additional progress within current step
+    let totalProgress = 0;
+    
+    // Add weight of all completed steps
+    for (let i = 0; i < stepIndex; i++) {
+        totalProgress += progressTracker.steps[i].weight;
+    }
+    
+    // Add partial progress of current step
+    totalProgress += (progressTracker.steps[stepIndex].weight * additionalProgress);
+    
+    progressTracker.currentProgress = Math.min(totalProgress, 100);
+    
+    // Update step text
+    const stepTextEl = document.getElementById('progress-step-text');
+    if (stepTextEl) {
+        stepTextEl.textContent = progressTracker.steps[stepIndex].name;
+    }
+    
+    console.log(`📊 Progress: ${Math.floor(progressTracker.currentProgress)}% - ${progressTracker.steps[stepIndex].name}`);
+}
+
+function updateSubmissionMessage(message) {
+    const stepTextEl = document.getElementById('progress-step-text');
+    if (stepTextEl) {
+        stepTextEl.textContent = message;
     }
 }
 
 function hideSubmissionProgress() {
+    // Cleanup progress tracking
+    cleanupProgressTracking();
+    
     // Remove the progress overlay
     const overlay = window.submissionProgressOverlay || document.getElementById('submission-progress-overlay');
     if (overlay) {
@@ -654,6 +640,28 @@ function hideSubmissionProgress() {
     if (onboardingForm) {
         onboardingForm.style.display = 'block';
     }
+}
+
+function cleanupProgressTracking() {
+    // Clear animation interval
+    if (window.progressAnimationInterval) {
+        clearInterval(window.progressAnimationInterval);
+        window.progressAnimationInterval = null;
+    }
+    
+    // Reset progress tracker
+    progressTracker = {
+        startTime: null,
+        currentProgress: 0,
+        estimatedDuration: 25000,
+        currentStep: 0,
+        steps: [
+            { name: 'Validating form data', weight: 5 },
+            { name: 'Creating business profile', weight: 15 },
+            { name: 'Generating AI insights', weight: 60 },
+            { name: 'Finalizing setup', weight: 20 }
+        ]
+    };
 }
     
 // Global submission state to prevent duplicates
@@ -671,16 +679,19 @@ async function submitOnboarding() {
     
     try {
         showSubmissionProgress();
+        setProgressStep(0, 0.2); // Start validation step
         
-// Use the correct auth system
-const authSystem = window.OsliraAuth || window.SimpleAuth;
-// 1. VERIFY AUTHENTICATION FIRST
-if (!window.OsliraAuth?.supabase) {
-    throw new Error('Authentication system not available');
-}
+        // Use the correct auth system
+        const authSystem = window.OsliraAuth || window.SimpleAuth;
+        // 1. VERIFY AUTHENTICATION FIRST
+        if (!window.OsliraAuth?.supabase) {
+            throw new Error('Authentication system not available');
+        }
 
-// Get fresh session
-const { data: sessionData, error: sessionError } = await authSystem.supabase.auth.getSession();
+        setProgressStep(0, 0.6); // Auth check progress
+        
+        // Get fresh session
+        const { data: sessionData, error: sessionError } = await authSystem.supabase.auth.getSession();
         if (sessionError || !sessionData?.session) {
             console.error('❌ [Onboarding] No valid session:', sessionError);
             throw new Error('Authentication expired. Please refresh the page and log in again.');
@@ -694,6 +705,8 @@ const { data: sessionData, error: sessionError } = await authSystem.supabase.aut
             email: user.email,
             hasToken: !!session.access_token
         });
+
+        setProgressStep(1, 0.1); // Starting profile creation
 
         const formData = {
             business_name: getFieldValue('company-name'),
@@ -727,6 +740,7 @@ const { data: sessionData, error: sessionError } = await authSystem.supabase.aut
             user_id: user.id
         };
         
+        setProgressStep(1, 0.5); // Form data ready
         console.log('📝 [Onboarding] Creating profile and generating business context...');
         
         // 2. GET WORKER URL
@@ -740,6 +754,8 @@ const { data: sessionData, error: sessionError } = await authSystem.supabase.aut
         }
         
         console.log('🔧 [Onboarding] Using API URL:', workerUrl);
+
+        setProgressStep(1, 0.8); // Sending profile data
 
         // 3. CREATE BUSINESS PROFILE WITH DIRECT FETCH
         console.log('📤 [Onboarding] Creating business profile...');
@@ -773,11 +789,15 @@ const { data: sessionData, error: sessionError } = await authSystem.supabase.aut
         const userId = profileResult.data.user_id;
         console.log('✅ [Onboarding] Profile created:', profileId);
 
+        setProgressStep(2, 0.1); // Starting AI generation
+
         // 4. GENERATE BUSINESS CONTEXT
-        updateSubmissionMessage('Generating business intelligence...');
+        updateSubmissionMessage('Generating AI business insights...');
         console.log('🤖 [Onboarding] Generating business context...');
 
         try {
+            setProgressStep(2, 0.3); // AI processing started
+
             const contextResponse = await fetch(`${workerUrl}/v1/generate-business-context`, {
                 method: 'POST',
                 headers: {
@@ -791,17 +811,24 @@ const { data: sessionData, error: sessionError } = await authSystem.supabase.aut
                 })
             });
 
+            setProgressStep(2, 0.7); // AI processing in progress
+
             if (contextResponse.ok) {
                 const contextResult = await contextResponse.json();
                 
                 if (contextResult && contextResult.success) {
                     console.log('✅ [Onboarding] Business context generated successfully');
                     
+                    setProgressStep(2, 0.9); // AI generation complete
+                    
                     // 5. UPDATE PROFILE WITH GENERATED CONTEXT
+                    updateSubmissionMessage('Finalizing your profile...');
                     console.log('📝 [Onboarding] Updating profile with AI context...');
                     
-const updateResponse = await fetch(`${workerUrl}/business-profiles/${profileId}`, {
-    method: 'PUT',
+                    setProgressStep(3, 0.2); // Starting profile update
+                    
+                    const updateResponse = await fetch(`${workerUrl}/business-profiles/${profileId}`, {
+                        method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${session.access_token}`
@@ -812,6 +839,8 @@ const updateResponse = await fetch(`${workerUrl}/business-profiles/${profileId}`
                             context_version: contextResult.data.context_version
                         })
                     });
+                    
+                    setProgressStep(3, 0.5); // Profile update in progress
                     
                     if (updateResponse.ok) {
                         const updateResult = await updateResponse.json();
@@ -825,36 +854,46 @@ const updateResponse = await fetch(`${workerUrl}/business-profiles/${profileId}`
                     }
                 } else {
                     console.warn('⚠️ [Onboarding] Context generation unsuccessful, continuing without it');
+                    setProgressStep(2, 1.0); // Skip to next step
                 }
             } else {
                 console.warn('⚠️ [Onboarding] Context generation request failed, continuing without it');
+                setProgressStep(2, 1.0); // Skip to next step
             }
         } catch (contextError) {
             console.warn('⚠️ [Onboarding] Context generation failed, continuing without it:', contextError);
+            setProgressStep(2, 1.0); // Skip to next step
         }
         
-const { error: updateUserError } = await authSystem.supabase
-    .from('users')
-    .update({ onboarding_completed: true })
-    .eq('id', user.id);
+        setProgressStep(3, 0.7); // Updating user status
+        updateSubmissionMessage('Completing setup...');
+
+        // 6. UPDATE USER ONBOARDING STATUS
+        const { error: updateUserError } = await authSystem.supabase
+            .from('users')
+            .update({ onboarding_completed: true })
+            .eq('id', user.id);
             
         if (updateUserError) {
             console.warn('⚠️ [Onboarding] Failed to update user status:', updateUserError);
             // Continue anyway - the main business profile was created
         }
         
+        setProgressStep(3, 1.0); // Complete
+        updateSubmissionMessage('Setup complete! Redirecting...');
+        
         console.log('✅ [Onboarding] Onboarding complete, redirecting...');
         
-        // Redirect to dashboard
-        window.location.href = '/dashboard/';
+        // Small delay to show completion
+        setTimeout(() => {
+            window.location.href = '/dashboard/';
+        }, 1000);
         
-} catch (error) {
+    } catch (error) {
         // Reset submission state on error
         isSubmissionInProgress = false;
         
         console.error('❌ [Onboarding] Submission failed:', error);
-        
-        // Show user-friendly error message
         
         // Show user-friendly error message
         const errorMessage = error.message.includes('Invalid signature') 
@@ -865,8 +904,17 @@ const { error: updateUserError } = await authSystem.supabase
             ? 'Server error occurred while creating your profile. Please try again.'
             : 'An unexpected error occurred. Please try again.';
             
-        validator.showSubmissionError(errorMessage);
+        // Clean up progress and show error
+        cleanupProgressTracking();
         hideSubmissionProgress();
+        
+        // Show error via validator if available
+        if (validator && validator.showSubmissionError) {
+            validator.showSubmissionError(errorMessage);
+        } else {
+            // Fallback error display
+            alert(errorMessage);
+        }
         
         // If auth error, redirect to login after showing error
         if (error.message.includes('Authentication') || error.message.includes('Invalid signature')) {
