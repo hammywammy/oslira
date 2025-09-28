@@ -114,6 +114,107 @@ class SidebarManager {
             throw error;
         }
     }
+    async loadBusinessProfiles() {
+    console.log('💼 [SidebarManager] Loading business profiles...');
+    
+    try {
+        // Get businesses from Supabase
+        const businesses = await this.fetchBusinessProfiles();
+        const selectElement = document.getElementById('sidebar-business-select');
+        
+        if (!selectElement) {
+            console.warn('⚠️ [SidebarManager] Business select element not found');
+            return;
+        }
+        
+        // Clear any existing options
+        selectElement.innerHTML = '';
+        
+        if (!businesses || businesses.length === 0) {
+            // If no businesses, show a message
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No businesses found';
+            option.disabled = true;
+            selectElement.appendChild(option);
+            selectElement.disabled = true;
+            return;
+        }
+        
+        // Add all businesses without a placeholder
+        businesses.forEach((business, index) => {
+            const option = document.createElement('option');
+            option.value = business.id;
+            option.textContent = business.business_name;
+            selectElement.appendChild(option);
+        });
+        
+        // Auto-select the first business
+        if (businesses.length > 0) {
+            selectElement.value = businesses[0].id;
+            // Trigger the change event to load the first business
+            this.handleBusinessChange({ target: selectElement });
+        }
+        
+        console.log(`✅ [SidebarManager] Loaded ${businesses.length} business profiles`);
+        
+    } catch (error) {
+        console.error('❌ [SidebarManager] Failed to load business profiles:', error);
+    }
+}
+
+async fetchBusinessProfiles() {
+    try {
+        // Get current user
+        const user = window.OsliraAuth?.currentUser;
+        if (!user) {
+            console.warn('⚠️ [SidebarManager] No authenticated user');
+            return [];
+        }
+        
+        // Fetch businesses from Supabase
+        const { data: businesses, error } = await window.OsliraAuth.supabase()
+            .from('business_profiles')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        return businesses || [];
+        
+    } catch (error) {
+        console.error('❌ [SidebarManager] Failed to fetch businesses:', error);
+        return [];
+    }
+}
+
+handleBusinessChange(event) {
+    const businessId = event.target.value;
+    if (!businessId) return;
+    
+    console.log('🔄 [SidebarManager] Business changed to:', businessId);
+    
+    // Emit event for other components to react
+    if (this.eventBus) {
+        this.eventBus.emit('business:changed', businessId);
+    }
+    
+    // Store selected business in localStorage for persistence
+    localStorage.setItem('selectedBusinessId', businessId);
+    
+    // Update business manager if available
+    if (window.businessManager) {
+        window.businessManager.setCurrentBusiness(businessId);
+    }
+}
+    updateSelectedBusiness(businessId) {
+    const selectElement = document.getElementById('sidebar-business-select');
+    if (selectElement && selectElement.value !== businessId) {
+        selectElement.value = businessId;
+        console.log('✅ [SidebarManager] Updated selected business in dropdown');
+    }
+}
 
 async updateUserInfo(user) {
     try {
@@ -241,6 +342,10 @@ async updateUserInfo(user) {
                     <div class="nav-section">
                         <h4 class="nav-section-header">Account</h4>
                         <div class="nav-items">
+                        <a href="/subscription" data-page="Subscription" data-tooltip="Subscription" class="nav-item">
+                                <span class="nav-icon">💳</span>
+                                <span class="nav-text">Subscription</span>
+                            </a>
                             <a href="/settings" data-page="settings" data-tooltip="Settings" class="nav-item">
                                 <span class="nav-icon">⚙️</span>
                                 <span class="nav-text">Settings</span>
@@ -257,9 +362,11 @@ async updateUserInfo(user) {
             <!-- Business Header -->
             <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200/40">
                 <label class="text-xs text-gray-600 uppercase tracking-wider font-semibold">Active Business</label>
-                <select id="business-select" class="sidebar-business-select w-full mt-1 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
-                    <option value="">Loading...</option>
-                </select>
+<select id="sidebar-business-select" 
+        onchange="window.sidebarManager && window.sidebarManager.handleBusinessChange(event)"
+        class="w-full border border-gray-300 bg-gray-50 hover:bg-white hover:border-gray-400 focus:bg-white focus:border-blue-500 text-gray-200 rounded-lg px-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all">
+    <!-- Options will be dynamically loaded without placeholder -->
+</select>
             </div>
             
             <!-- User Details -->
@@ -511,22 +618,34 @@ observer.observe(document.body, {
 // =========================================================================
 
 initializeBusinessIntegration() {
-    console.log('🏢 [SidebarManager] Initializing business integration...');
+    console.log('💼 [SidebarManager] Initializing business integration...');
     
-    // Wait for business manager to be available
-    const waitForBusinessManager = setInterval(() => {
-        if (window.businessManager || this.businessManager) {
-            clearInterval(waitForBusinessManager);
-            const manager = window.businessManager || this.businessManager;
-            
-            // Trigger initial business selector update
-            manager.updateSidebarBusinessSelector();
-            console.log('✅ [SidebarManager] Business integration initialized');
+    // Load business profiles and auto-select first one
+    this.loadBusinessProfiles().then(() => {
+        console.log('✅ [SidebarManager] Business profiles loaded and auto-selected');
+        
+        // Restore previously selected business if available
+        const savedBusinessId = localStorage.getItem('selectedBusinessId');
+        if (savedBusinessId) {
+            const selectElement = document.getElementById('sidebar-business-select');
+            if (selectElement && selectElement.querySelector(`option[value="${savedBusinessId}"]`)) {
+                selectElement.value = savedBusinessId;
+                this.handleBusinessChange({ target: selectElement });
+            }
         }
-    }, 100);
+    });
     
-    // Clear interval after 5 seconds to prevent infinite polling
-    setTimeout(() => clearInterval(waitForBusinessManager), 5000);
+    // Listen for business changes from other components
+    if (this.eventBus) {
+        this.eventBus.on('business:changed', (businessId) => {
+            this.updateSelectedBusiness(businessId);
+        });
+        
+        // Listen for business list updates
+        this.eventBus.on('businesses:updated', () => {
+            this.loadBusinessProfiles();
+        });
+    }
 }
 
 setBusinessManager(businessManager) {
