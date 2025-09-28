@@ -102,6 +102,11 @@ Content-Security-Policy = """
   to = "pages/subscription/index.html"
   status = 200
 
+  [[redirects]]
+  from = "/automations"
+  to = "pages/automations/index.html"
+  status = 200
+
 # ===========================
 # 🔁 Footer Pages
 # ===========================
